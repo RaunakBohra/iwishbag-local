@@ -65,7 +65,8 @@ export interface StatusWorkflow {
 }
 
 export const useStatusManagement = () => {
-  const { quoteStatuses, orderStatuses, isLoading, error, refreshData, lastUpdated } = useStatusConfig();
+  const { quoteStatuses, orderStatuses, isLoading, error, refreshData, lastUpdated } =
+    useStatusConfig();
   const { toast } = useToast();
 
   // Hook now uses dynamic statuses from StatusConfigProvider - no more hardcoded defaults here!

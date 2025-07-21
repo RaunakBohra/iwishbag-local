@@ -49,7 +49,7 @@ export class CalculationDefaultsService {
   async getActiveDefaults(): Promise<GlobalCalculationDefaults> {
     // Check cache first
     const now = Date.now();
-    if (this.cache && (now - this.cacheTimestamp) < this.CACHE_DURATION) {
+    if (this.cache && now - this.cacheTimestamp < this.CACHE_DURATION) {
       return this.cache;
     }
 
@@ -72,14 +72,13 @@ export class CalculationDefaultsService {
 
       // Parse the configuration from JSONB
       const defaults = data.configuration as GlobalCalculationDefaults;
-      
+
       // Update cache
       this.cache = defaults;
       this.cacheTimestamp = now;
 
       console.log('✅ Loaded calculation defaults from database:', defaults.name);
       return defaults;
-
     } catch (error) {
       console.error('❌ Error loading calculation defaults:', error);
       return this.getHardcodedDefaults();
@@ -131,7 +130,7 @@ export class CalculationDefaultsService {
    */
   async calculateHandlingCharge(itemsTotal: number, currency: string = 'USD'): Promise<number> {
     const defaults = await this.getHandlingChargeDefaults();
-    
+
     // Check for currency-specific overrides
     const currencyDefaults = defaults.currency_specific?.[currency];
     const minimumFee = currencyDefaults?.minimum_fee ?? defaults.minimum_fee_usd;
@@ -158,12 +157,12 @@ export class CalculationDefaultsService {
    * Calculate insurance amount using configured defaults
    */
   async calculateInsurance(
-    itemsTotal: number, 
-    customerOptedIn: boolean, 
-    currency: string = 'USD'
+    itemsTotal: number,
+    customerOptedIn: boolean,
+    currency: string = 'USD',
   ): Promise<number> {
     const defaults = await this.getInsuranceDefaults();
-    
+
     // If customer hasn't opted in and insurance is optional, return 0
     if (!customerOptedIn && defaults.customer_optional) {
       return 0;
@@ -171,7 +170,8 @@ export class CalculationDefaultsService {
 
     // Check for currency-specific overrides
     const currencyDefaults = defaults.currency_specific?.[currency];
-    const coveragePercentage = currencyDefaults?.coverage_percentage ?? defaults.default_coverage_percentage;
+    const coveragePercentage =
+      currencyDefaults?.coverage_percentage ?? defaults.default_coverage_percentage;
     const minimumFee = currencyDefaults?.minimum_fee ?? defaults.minimum_fee_usd;
 
     const calculatedInsurance = itemsTotal * (coveragePercentage / 100);
@@ -188,17 +188,22 @@ export class CalculationDefaultsService {
   /**
    * Get default shipping cost using configured defaults
    */
-  async calculateDefaultShipping(weight: number, originCountry?: string, destinationCountry?: string): Promise<number> {
+  async calculateDefaultShipping(
+    weight: number,
+    originCountry?: string,
+    destinationCountry?: string,
+  ): Promise<number> {
     const defaults = await this.getShippingDefaults();
-    
+
     // Check for country-specific overrides
-    const routeKey = originCountry && destinationCountry ? `${originCountry}-${destinationCountry}` : undefined;
+    const routeKey =
+      originCountry && destinationCountry ? `${originCountry}-${destinationCountry}` : undefined;
     const countryDefaults = routeKey ? defaults.country_specific?.[routeKey] : undefined;
-    
+
     const baseCost = countryDefaults?.base_cost_usd ?? defaults.base_cost_usd;
     const costPerKg = countryDefaults?.cost_per_kg_usd ?? defaults.cost_per_kg_usd;
 
-    return baseCost + (weight * costPerKg);
+    return baseCost + weight * costPerKg;
   }
 
   /**
@@ -214,7 +219,7 @@ export class CalculationDefaultsService {
    */
   async logFallbackUsage(options: FallbackUsageOptions): Promise<void> {
     const defaults = await this.getActiveDefaults();
-    
+
     // Only log if fallback warnings are enabled
     if (!defaults.fallback_behavior.show_fallback_warnings) {
       return;
@@ -237,14 +242,14 @@ export class CalculationDefaultsService {
         quote_id: options.quote_id,
         value: options.fallback_value_used,
         reason: options.reason,
-        route: options.route_origin && options.route_destination 
-          ? `${options.route_origin} → ${options.route_destination}` 
-          : 'Unknown',
+        route:
+          options.route_origin && options.route_destination
+            ? `${options.route_origin} → ${options.route_destination}`
+            : 'Unknown',
       });
 
       // Store in database for analytics (optional table)
       await supabase.from('fallback_usage_logs').insert(logEntry);
-
     } catch (error) {
       console.error('Failed to log fallback usage:', error);
     }
@@ -267,20 +272,20 @@ export class CalculationDefaultsService {
       name: 'System Hardcoded Defaults',
       description: 'Fallback defaults when database configuration is unavailable',
       is_active: true,
-      
+
       handling_charge: {
         minimum_fee_usd: 5.0,
         percentage_of_value: 2.0,
         calculation_method: 'max',
       },
-      
+
       insurance: {
         default_coverage_percentage: 1.5,
         minimum_fee_usd: 0,
         customer_optional: true,
         default_opted_in: false,
       },
-      
+
       shipping: {
         base_cost_usd: 25.0,
         cost_per_kg_usd: 5.0,
@@ -289,18 +294,18 @@ export class CalculationDefaultsService {
         default_delivery_days: '7-14',
         default_carrier_name: 'Standard',
       },
-      
+
       payment_gateway: {
         percentage_fee: 2.9,
         fixed_fee_usd: 0.3,
       },
-      
+
       taxes: {
         default_sales_tax_percentage: 10.0,
         default_vat_percentage: 0.0,
         default_customs_percentage: 15.0,
       },
-      
+
       fallback_behavior: {
         use_fallbacks_when_route_missing: true,
         show_fallback_warnings: true,
@@ -342,7 +347,6 @@ export class CalculationDefaultsService {
       this.clearCache();
 
       return { success: true, data: data.configuration as GlobalCalculationDefaults };
-
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
@@ -362,9 +366,8 @@ export class CalculationDefaultsService {
         return { success: false, error: error.message };
       }
 
-      const configurations = data.map(item => item.configuration as GlobalCalculationDefaults);
+      const configurations = data.map((item) => item.configuration as GlobalCalculationDefaults);
       return { success: true, data: configurations };
-
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }

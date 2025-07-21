@@ -661,7 +661,11 @@ export class SmartCalculationEngine {
     const handlingFee = this.calculateRouteBasedHandlingSync(selectedShipping, itemsTotal, quote);
 
     // Calculate route-based insurance (sync version uses existing data or simple fallback)
-    const insuranceAmount = this.calculateRouteBasedInsuranceSync(selectedShipping, itemsTotal, quote);
+    const insuranceAmount = this.calculateRouteBasedInsuranceSync(
+      selectedShipping,
+      itemsTotal,
+      quote,
+    );
 
     console.log('💰 [DEBUG] SmartCalculationEngine fee calculations:', {
       itemsTotal,
@@ -693,7 +697,7 @@ export class SmartCalculationEngine {
       handlingFee +
       insuranceAmount +
       vatAmount;
-    
+
     // Get discount amount and subtract it from final total
     const discount = quote.calculation_data?.discount || 0;
     const finalTotal = subtotal + paymentGatewayFee - discount;
@@ -799,7 +803,11 @@ export class SmartCalculationEngine {
     // Calculate taxes and fees using route-based configuration
     const salesTax = itemsTotal * 0.1; // Standard 10% rate
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
-    const insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
+    const insuranceAmount = await this.calculateRouteBasedInsurance(
+      selectedShipping,
+      itemsTotal,
+      quote,
+    );
     const paymentGatewayFee =
       (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
 
@@ -816,7 +824,7 @@ export class SmartCalculationEngine {
       handlingFee +
       insuranceAmount +
       vatAmount;
-    
+
     // Get discount amount and subtract it from final total
     const discount = quote.calculation_data?.discount || 0;
     const finalTotal = subtotal + paymentGatewayFee - discount;
@@ -1013,8 +1021,8 @@ export class SmartCalculationEngine {
     // Use configurable defaults instead of hardcoded values
     try {
       const fallbackHandling = await calculationDefaultsService.calculateHandlingCharge(
-        itemsTotal, 
-        quote.currency
+        itemsTotal,
+        quote.currency,
       );
 
       // Log fallback usage for analytics
@@ -1029,10 +1037,9 @@ export class SmartCalculationEngine {
 
       console.log('📦 [DEBUG] Using configurable default handling calculation:', fallbackHandling);
       return fallbackHandling;
-
     } catch (error) {
       console.error('❌ Error calculating default handling charge:', error);
-      
+
       // Ultimate fallback to hardcoded values if service fails
       const legacyHandling = Math.max(5, itemsTotal * 0.02);
       console.log('📦 [DEBUG] Using hardcoded legacy handling calculation:', legacyHandling);
@@ -1105,7 +1112,7 @@ export class SmartCalculationEngine {
       const fallbackInsurance = await calculationDefaultsService.calculateInsurance(
         itemsTotal,
         customerOptedIn,
-        quote.currency
+        quote.currency,
       );
 
       // Log fallback usage for analytics
@@ -1118,18 +1125,20 @@ export class SmartCalculationEngine {
         reason: routeInsuranceConfig ? 'route_config_incomplete' : 'no_route_config',
       });
 
-      console.log('🛡️ [DEBUG] Using configurable default insurance calculation:', fallbackInsurance);
+      console.log(
+        '🛡️ [DEBUG] Using configurable default insurance calculation:',
+        fallbackInsurance,
+      );
       return fallbackInsurance;
-
     } catch (error) {
       console.error('❌ Error calculating default insurance:', error);
-      
+
       // Ultimate fallback to hardcoded values if service fails
       if (!customerOptedIn) {
         console.log('🛡️ [DEBUG] Customer opted out, returning 0 (hardcoded fallback)');
         return 0;
       }
-      
+
       const legacyInsurance = itemsTotal * 0.005; // 0.5%
       console.log('🛡️ [DEBUG] Using hardcoded legacy insurance calculation:', legacyInsurance);
       return legacyInsurance;

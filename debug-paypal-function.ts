@@ -23,14 +23,14 @@ serve(async (req) => {
     // Get the request body
     const body = await req.text();
     console.log('Request body:', body);
-    
+
     const parsedBody = JSON.parse(body);
     console.log('Parsed body:', parsedBody);
-    
+
     // Check required fields
     const { quoteIds, amount, currency, gateway } = parsedBody;
     console.log('Required fields:', { quoteIds, amount, currency, gateway });
-    
+
     if (!quoteIds || !amount || !currency) {
       console.error('Missing required fields');
       return new Response(
@@ -223,7 +223,6 @@ serve(async (req) => {
         },
       },
     );
-
   } catch (error) {
     console.error('Unexpected error:', error);
     return new Response(

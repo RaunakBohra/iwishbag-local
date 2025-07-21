@@ -26,7 +26,11 @@ serve(async (req) => {
     console.log(`🔐 Admin user ${user.email} accessing user emails`);
 
     // Fetch all profiles with their addresses
-    const { data: profiles, error: profilesError } = await supabaseClient.from('profiles').select('id, full_name, cod_enabled, internal_notes, created_at, user_addresses(id, address_line1, address_line2, city, country, postal_code, is_default)');
+    const { data: profiles, error: profilesError } = await supabaseClient
+      .from('profiles')
+      .select(
+        'id, full_name, cod_enabled, internal_notes, created_at, user_addresses(id, address_line1, address_line2, city, country, postal_code, is_default)',
+      );
 
     if (profilesError) {
       throw profilesError;

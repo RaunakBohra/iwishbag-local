@@ -36,19 +36,16 @@ serve(async (req) => {
   try {
     // Skip authentication for testing
     console.log('⚠️ SKIPPING AUTHENTICATION FOR TESTING');
-    
+
     // Validate method (but not authentication)
     if (req.method !== 'POST') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        {
-          status: 405,
-          headers: {
-            ...createCorsHeaders(req),
-            'Content-Type': 'application/json',
-          },
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: {
+          ...createCorsHeaders(req),
+          'Content-Type': 'application/json',
         },
-      );
+      });
     }
 
     const supabaseAdmin = createClient(
@@ -120,9 +117,9 @@ serve(async (req) => {
       );
     }
 
-    console.log('✅ PayPal gateway config found:', { 
-      test_mode: paypalGateway.test_mode, 
-      hasConfig: !!paypalGateway.config 
+    console.log('✅ PayPal gateway config found:', {
+      test_mode: paypalGateway.test_mode,
+      hasConfig: !!paypalGateway.config,
     });
 
     const config = paypalGateway.config || {};
@@ -169,7 +166,7 @@ serve(async (req) => {
 
     if (currency === 'NPR') {
       console.log('💱 Converting NPR to USD for PayPal...');
-      
+
       // Get Nepal's exchange rate settings
       const { data: nepalSettings, error: countryError } = await supabaseAdmin
         .from('country_settings')
@@ -198,7 +195,9 @@ serve(async (req) => {
       paypalAmount = amount / exchangeRate; // Convert NPR to USD
       paypalCurrency = 'USD';
 
-      console.log(`💱 Currency conversion: ${amount} NPR → ${paypalAmount.toFixed(2)} USD (rate: ${exchangeRate})`);
+      console.log(
+        `💱 Currency conversion: ${amount} NPR → ${paypalAmount.toFixed(2)} USD (rate: ${exchangeRate})`,
+      );
     }
 
     // Get OAuth token
@@ -289,7 +288,7 @@ serve(async (req) => {
       console.error('❌ PayPal order creation error:');
       console.error('Status:', orderResponse.status);
       console.error('Error data:', JSON.stringify(errorData, null, 2));
-      
+
       return new Response(
         JSON.stringify({
           error: 'Failed to create PayPal order',
@@ -355,7 +354,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     );
-
   } catch (error) {
     console.error('❌ Unexpected error:', error);
     console.error('Error name:', error.name);

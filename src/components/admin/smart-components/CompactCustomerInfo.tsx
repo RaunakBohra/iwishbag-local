@@ -72,7 +72,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     if (quote.customer_data?.profile?.avatar_url) {
       return quote.customer_data.profile.avatar_url;
     }
-    
+
     // If quote belongs to current user and no stored avatar, use auth context
     if (user && quote.user_id === user.id) {
       // Check OAuth profile pictures from auth metadata
@@ -83,29 +83,27 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
         return user.user_metadata.picture;
       }
     }
-    
+
     return null;
   };
 
   // Helper to get customer name from multiple possible sources
   const getCustomerName = () => {
     // First check stored quote data
-    const storedName = customerInfo?.name || 
-                      quote.customer_name || 
-                      quote.customer_data?.customer_name;
-    
+    const storedName =
+      customerInfo?.name || quote.customer_name || quote.customer_data?.customer_name;
+
     if (storedName) return storedName;
-    
+
     // If quote belongs to current user and no stored name, use auth context
     if (user && quote.user_id === user.id) {
-      const authName = user.user_metadata?.name || 
-                      user.user_metadata?.full_name;
+      const authName = user.user_metadata?.name || user.user_metadata?.full_name;
       if (authName) return authName;
-      
+
       // Fallback to email prefix for OAuth users
       if (user.email) return user.email.split('@')[0];
     }
-    
+
     return 'Anonymous Customer';
   };
 
@@ -120,39 +118,35 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       .slice(0, 2);
   };
 
-  // Helper to get customer email from multiple possible sources  
+  // Helper to get customer email from multiple possible sources
   const getCustomerEmail = () => {
     // First check stored quote data
-    const storedEmail = customerInfo?.email || 
-                       quote.email || 
-                       quote.customer_data?.email;
-    
+    const storedEmail = customerInfo?.email || quote.email || quote.customer_data?.email;
+
     if (storedEmail) return storedEmail;
-    
+
     // If quote belongs to current user, use auth context
     if (user && quote.user_id === user.id && user.email) {
       return user.email;
     }
-    
+
     return 'No email provided';
   };
 
   // Helper to get customer phone from multiple possible sources
   const getCustomerPhone = () => {
     // First check stored quote data
-    const storedPhone = customerInfo?.phone || 
-                       quote.customer_phone || 
-                       quote.customer_data?.customer_phone;
-    
+    const storedPhone =
+      customerInfo?.phone || quote.customer_phone || quote.customer_data?.customer_phone;
+
     if (storedPhone) return storedPhone;
-    
+
     // If quote belongs to current user, use auth context
     if (user && quote.user_id === user.id) {
-      const authPhone = user.user_metadata?.phone || 
-                       user.user_metadata?.phone_number;
+      const authPhone = user.user_metadata?.phone || user.user_metadata?.phone_number;
       if (authPhone) return authPhone;
     }
-    
+
     return 'No phone provided';
   };
 
@@ -164,22 +158,24 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     is_current_user: user && quote.user_id === user.id,
     customer_data: quote.customer_data,
     customerInfo,
-    auth_context: user ? {
-      name: user.user_metadata?.name,
-      full_name: user.user_metadata?.full_name,
-      email: user.email,
-      avatar_url: user.user_metadata?.avatar_url,
-      picture: user.user_metadata?.picture,
-      phone: user.user_metadata?.phone
-    } : null,
+    auth_context: user
+      ? {
+          name: user.user_metadata?.name,
+          full_name: user.user_metadata?.full_name,
+          email: user.email,
+          avatar_url: user.user_metadata?.avatar_url,
+          picture: user.user_metadata?.picture,
+          phone: user.user_metadata?.phone,
+        }
+      : null,
     resolved_data: {
       name: getCustomerName(),
       email: getCustomerEmail(),
       phone: getCustomerPhone(),
-      avatar: getCustomerAvatarUrl()
+      avatar: getCustomerAvatarUrl(),
     },
     shipping_address: shippingAddress,
-    is_anonymous: isAnonymous
+    is_anonymous: isAnonymous,
   });
 
   // Compact Header View (Always Visible)
@@ -189,18 +185,13 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
           <Avatar className="w-8 h-8">
-            <AvatarImage
-              src={getCustomerAvatarUrl() || undefined}
-              alt={getCustomerName()}
-            />
+            <AvatarImage src={getCustomerAvatarUrl() || undefined} alt={getCustomerName()} />
             <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
               {getCustomerInitials()}
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium text-gray-900">
-              {getCustomerName()}
-            </div>
+            <div className="font-medium text-gray-900">{getCustomerName()}</div>
             <div className="text-xs text-gray-500">
               {quote.quote_source || 'Unknown'} • {isAnonymous ? 'Guest' : 'Registered'}
             </div>
@@ -285,7 +276,6 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             Actions
           </TabsTrigger>
         </TabsList>
-
 
         <TabsContent value="address" className="p-4 pt-3">
           {formattedAddress ? (

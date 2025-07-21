@@ -48,7 +48,15 @@ serve(async (req) => {
   }
 
   // Declare variables at function scope for error handler access
-  let paymentId, amount, refundType, reason, notes, quoteId, notifyCustomer, originalTransaction, userId;
+  let paymentId,
+    amount,
+    refundType,
+    reason,
+    notes,
+    quoteId,
+    notifyCustomer,
+    originalTransaction,
+    userId;
 
   // Initialize admin client at function scope
   const supabaseAdmin = createClient(
@@ -87,7 +95,6 @@ serve(async (req) => {
         },
       );
     }
-
 
     // Get the user token from the Authorization header
     const authHeader = req.headers.get('authorization');

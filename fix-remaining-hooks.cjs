@@ -11,64 +11,52 @@ const fixes = [
       { from: 'final_total:', to: 'final_total_usd:' },
       { from: 'final_currency:', to: 'destination_currency:' },
       { from: '.final_total', to: '.final_total_usd' },
-      { from: '.final_currency', to: '.destination_currency' }
-    ]
+      { from: '.final_currency', to: '.destination_currency' },
+    ],
   },
   {
     file: 'src/scripts/check-specific-order.ts',
     replacements: [
       { from: 'final_total', to: 'final_total_usd' },
-      { from: 'final_currency', to: 'destination_currency' }
-    ]
+      { from: 'final_currency', to: 'destination_currency' },
+    ],
   },
   {
     file: 'src/hooks/useStatusTransitions.ts',
-    replacements: [
-      { from: 'final_total', to: 'final_total_usd' }
-    ]
+    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
   },
   {
     file: 'src/hooks/useQuoteState.ts',
-    replacements: [
-      { from: 'final_total', to: 'final_total_usd' }
-    ]
+    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
   },
   {
     file: 'src/hooks/useQuoteMutations.ts',
-    replacements: [
-      { from: 'final_total', to: 'final_total_usd' }
-    ]
+    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
   },
   {
     file: 'src/hooks/usePaginatedQuoteManagement.ts',
-    replacements: [
-      { from: 'final_total', to: 'final_total_usd' }
-    ]
+    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
   },
   {
     file: 'src/hooks/useOptimizedQuoteCalculation.ts',
     replacements: [
       { from: 'final_total:', to: 'final_total_usd:' },
-      { from: 'final_currency:', to: 'destination_currency:' }
-    ]
+      { from: 'final_currency:', to: 'destination_currency:' },
+    ],
   },
   {
     file: 'src/hooks/useEmailNotifications.ts',
-    replacements: [
-      { from: 'final_total', to: 'final_total_usd' }
-    ]
+    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
   },
   {
     file: 'src/hooks/useDueAmountManager.ts',
-    replacements: [
-      { from: 'final_total', to: 'final_total_usd' }
-    ]
-  }
+    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
+  },
 ];
 
 function fixFile(filePath, replacements) {
   const fullPath = path.join(process.cwd(), filePath);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.log(`⚠️  File not found: ${filePath}`);
     return false;
@@ -76,7 +64,7 @@ function fixFile(filePath, replacements) {
 
   let content = fs.readFileSync(fullPath, 'utf8');
   let modified = false;
-  
+
   replacements.forEach(({ from, to }) => {
     // Use global regex to replace all occurrences
     const regex = new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
@@ -99,7 +87,7 @@ function fixFile(filePath, replacements) {
 
 function main() {
   console.log('🔧 Starting final hook fixes...\n');
-  
+
   let totalFixed = 0;
   let totalFiles = 0;
 
@@ -117,7 +105,7 @@ function main() {
   console.log(`✅ Files modified: ${totalFixed}`);
   console.log(`⏭️  Files unchanged: ${totalFiles - totalFixed}`);
   console.log('='.repeat(60));
-  
+
   if (totalFixed > 0) {
     console.log('\n✅ ALL currency schema migration fixes complete!');
     console.log('🚀 Updated remaining references from:');

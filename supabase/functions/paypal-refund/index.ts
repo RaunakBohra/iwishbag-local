@@ -109,7 +109,7 @@ serve(async (req) => {
   let transaction = null;
   let captureId = null;
   let refundRequest: PayPalRefundRequest = null;
-  
+
   // Initialize Supabase client at function scope
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',

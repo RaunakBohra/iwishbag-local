@@ -12,7 +12,7 @@ serve(async (req) => {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     // Get eSewa configuration
@@ -51,7 +51,7 @@ serve(async (req) => {
     // Fix the URL if it's corrupted
     if (debugInfo.test_url_includes_e_pay || !debugInfo.urls_match) {
       console.log('🔧 Fixing corrupted eSewa URL...');
-      
+
       const fixedConfig = {
         ...config,
         test_url: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',

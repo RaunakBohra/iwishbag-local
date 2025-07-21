@@ -125,7 +125,9 @@ serve(async (req) => {
     if (expiredQuotes.length > 0) {
       console.log('📋 Recently expired quotes:');
       expiredQuotes.forEach((quote) => {
-        console.log(`  - ${quote.display_id || quote.id} (${quote.email}) - $${quote.final_total_usd}`);
+        console.log(
+          `  - ${quote.display_id || quote.id} (${quote.email}) - $${quote.final_total_usd}`,
+        );
       });
     }
 

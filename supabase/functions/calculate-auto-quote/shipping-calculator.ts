@@ -68,10 +68,12 @@
   // Add weight-based cost using converted weight (prioritize shipping_per_kg over cost_per_kg)
   const perKgRate = route.shipping_per_kg || route.cost_per_kg || 0;
   baseCost += convertedWeight * perKgRate;
-  
+
   // Log validation warnings
   if (!route.base_shipping_cost && !perKgRate) {
-    console.warn(`⚠️ Route ${route.origin_country}->${route.destination_country} has no shipping costs configured`);
+    console.warn(
+      `⚠️ Route ${route.origin_country}->${route.destination_country} has no shipping costs configured`,
+    );
   }
   // Add percentage-based cost
   const percentageCost = (price * (route.cost_percentage || 0)) / 100;
@@ -94,12 +96,13 @@
     min_days: 5,
     max_days: 10,
   };
-  
+
   // Format delivery days from delivery option
-  const deliveryDays = defaultOption.min_days && defaultOption.max_days 
-    ? `${defaultOption.min_days}-${defaultOption.max_days}`
-    : '5-10';
-    
+  const deliveryDays =
+    defaultOption.min_days && defaultOption.max_days
+      ? `${defaultOption.min_days}-${defaultOption.max_days}`
+      : '5-10';
+
   return {
     cost: Math.round(finalCost * 100) / 100,
     carrier: defaultOption.carrier || 'DHL',
@@ -188,20 +191,22 @@
     .eq('code', destinationCountry)
     .single();
   // Calculate customs duty with validation
-  const customsDuty = countrySettings && countrySettings.sales_tax != null
-    ? (itemPrice * (countrySettings.sales_tax || 0)) / 100
-    : 0;
-  
+  const customsDuty =
+    countrySettings && countrySettings.sales_tax != null
+      ? (itemPrice * (countrySettings.sales_tax || 0)) / 100
+      : 0;
+
   // Calculate VAT with validation
-  const vat = countrySettings && countrySettings.vat != null
-    ? ((itemPrice + shippingCost.cost + customsDuty) * (countrySettings.vat || 0)) / 100
-    : 0;
-    
+  const vat =
+    countrySettings && countrySettings.vat != null
+      ? ((itemPrice + shippingCost.cost + customsDuty) * (countrySettings.vat || 0)) / 100
+      : 0;
+
   // Log warning if country settings are missing critical fields
   if (countrySettings && (countrySettings.sales_tax == null || countrySettings.vat == null)) {
     console.warn(`⚠️ Missing tax fields for country ${destinationCountry}:`, {
       sales_tax: countrySettings.sales_tax,
-      vat: countrySettings.vat
+      vat: countrySettings.vat,
     });
   }
   // Calculate total

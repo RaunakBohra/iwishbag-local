@@ -69,7 +69,7 @@ serve(async (req) => {
   }
 
   let paymentTransactionId: string | undefined;
-  
+
   try {
     // Validate request method
     validateMethod(req, ['POST']);

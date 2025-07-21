@@ -62,7 +62,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
   const selectedOption = shippingOptions.find((opt) => opt.id === selectedOptionId);
 
   // Debug logging for component state
-  console.log('🔄 [DEBUG] CompactShippingOptions render:', {
+  console.log('[DEBUG] CompactShippingOptions render:', {
     selectedOptionId,
     selectedOption: selectedOption
       ? { id: selectedOption.id, carrier: selectedOption.carrier, cost: selectedOption.cost_usd }
@@ -180,7 +180,11 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                 disabled={isSaving}
                 className="h-6 w-6 p-0 text-green-600 hover:text-green-700"
               >
-                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {isSaving ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Save className="w-3 h-3" />
+                )}
               </Button>
             </div>
           ) : (
@@ -207,7 +211,11 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="h-6 w-6 p-0"
                   >
-                    {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    {isExpanded ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    )}
                   </Button>
                 )
               )}

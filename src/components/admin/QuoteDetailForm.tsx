@@ -69,12 +69,12 @@ export const QuoteDetailForm = ({
 
   // Handle shipping option selection from modal
   const handleShippingSelection = async (optionId: string) => {
-    const selectedOption = shippingOptions.find(option => option.id === optionId);
+    const selectedOption = shippingOptions.find((option) => option.id === optionId);
     if (selectedOption && onSelectShippingOption) {
       // Update the international shipping field with the selected option's cost
       form.setValue('international_shipping', selectedOption.cost_usd);
       form.setValue('selected_shipping_option', optionId);
-      
+
       // Call the parent's shipping selection handler
       await onSelectShippingOption(optionId);
     }
@@ -157,7 +157,6 @@ export const QuoteDetailForm = ({
 
       {/* Shipping & Costs Configuration - World Class Design */}
       <div className="space-y-4">
-
         {/* Section 1: Customs & Taxes */}
         <div className="border border-gray-200 rounded-lg">
           <div className="bg-gradient-to-r from-orange-50 to-yellow-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
@@ -532,27 +531,30 @@ export const QuoteDetailForm = ({
       <ShippingSelectionModal
         isOpen={showShippingModal}
         onClose={() => setShowShippingModal(false)}
-        quote={{
-          id: form.getValues('id'),
-          items: form.getValues('items')?.map((item, index) => ({
-            id: item.id || `item-${index}`,
-            name: item.product_name || '',
-            price_usd: Number(item.item_price) || 0,
-            weight_kg: Number(item.item_weight) || 0,
-            quantity: Number(item.quantity) || 1,
-            url: item.product_url || '',
-            image: item.image_url || '',
-            options: item.options || '',
-          })) || [],
-          origin_country: form.getValues('origin_country') || '',
-          destination_country: form.getValues('destination_country') || '',
-          final_total_usd: 0,
-          operational_data: {
-            shipping: {
-              selected_option: form.getValues('selected_shipping_option'),
+        quote={
+          {
+            id: form.getValues('id'),
+            items:
+              form.getValues('items')?.map((item, index) => ({
+                id: item.id || `item-${index}`,
+                name: item.product_name || '',
+                price_usd: Number(item.item_price) || 0,
+                weight_kg: Number(item.item_weight) || 0,
+                quantity: Number(item.quantity) || 1,
+                url: item.product_url || '',
+                image: item.image_url || '',
+                options: item.options || '',
+              })) || [],
+            origin_country: form.getValues('origin_country') || '',
+            destination_country: form.getValues('destination_country') || '',
+            final_total_usd: 0,
+            operational_data: {
+              shipping: {
+                selected_option: form.getValues('selected_shipping_option'),
+              },
             },
-          },
-        } as any}
+          } as any
+        }
         shippingOptions={shippingOptions}
         recommendations={recommendations}
         selectedOptionId={form.getValues('selected_shipping_option')}

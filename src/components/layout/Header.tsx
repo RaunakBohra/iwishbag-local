@@ -107,7 +107,7 @@ const Header = () => {
 
   const getDisplayName = () => {
     let fullName = '';
-    
+
     // Check for name in user metadata (from sign-up)
     if (user?.user_metadata?.name) {
       fullName = user.user_metadata.name;
@@ -119,11 +119,10 @@ const Header = () => {
     // Fallback to email prefix
     else if (user?.email) {
       fullName = user.email.split('@')[0];
-    }
-    else {
+    } else {
       fullName = 'Customer';
     }
-    
+
     // Extract first name and add greeting
     const firstName = fullName.split(' ')[0];
     return `Hi, ${firstName}`;

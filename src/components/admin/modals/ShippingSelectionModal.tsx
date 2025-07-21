@@ -88,7 +88,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
       filtered = filtered.filter(
         (option) =>
           option.carrier.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          option.name.toLowerCase().includes(searchQuery.toLowerCase())
+          option.name.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -96,7 +96,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
     switch (filterBy) {
       case 'recommended':
         filtered = filtered.filter((option) =>
-          recommendations.some((rec) => rec.option_id === option.id)
+          recommendations.some((rec) => rec.option_id === option.id),
         );
         break;
       case 'express':
@@ -113,7 +113,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
         return filtered.sort((a, b) => a.cost_usd - b.cost_usd);
       case 'speed':
         return filtered.sort(
-          (a, b) => parseInt(a.days.split('-')[0]) - parseInt(b.days.split('-')[0])
+          (a, b) => parseInt(a.days.split('-')[0]) - parseInt(b.days.split('-')[0]),
         );
       case 'recommendation':
         return filtered.sort((a, b) => {
@@ -318,8 +318,8 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
                                     option.confidence > 0.8
                                       ? 'bg-green-500'
                                       : option.confidence > 0.6
-                                      ? 'bg-yellow-500'
-                                      : 'bg-red-500'
+                                        ? 'bg-yellow-500'
+                                        : 'bg-red-500'
                                   }`}
                                 />
                                 <span className="font-medium">

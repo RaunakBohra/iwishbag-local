@@ -37,16 +37,19 @@ serve(async (req) => {
   try {
     // Get environment variables
     const TURNSTILE_SECRET_KEY = Deno.env.get('TURNSTILE_SECRET_KEY');
-    
+
     if (!TURNSTILE_SECRET_KEY) {
       console.error('TURNSTILE_SECRET_KEY not configured');
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Server configuration error' 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Server configuration error',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     // Parse request body
@@ -54,33 +57,40 @@ serve(async (req) => {
     const { token, action } = body;
 
     if (!token) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Token is required' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Token is required',
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     // Get client IP
-    const remoteIp = req.headers.get('cf-connecting-ip') || 
-                    req.headers.get('x-forwarded-for') || 
-                    req.headers.get('x-real-ip');
+    const remoteIp =
+      req.headers.get('cf-connecting-ip') ||
+      req.headers.get('x-forwarded-for') ||
+      req.headers.get('x-real-ip');
 
     // Verify with Cloudflare
     const formData = new FormData();
     formData.append('secret', TURNSTILE_SECRET_KEY);
     formData.append('response', token);
-    
+
     if (remoteIp) {
       formData.append('remoteip', remoteIp);
     }
 
-    const verificationResponse = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-      method: 'POST',
-      body: formData,
-    });
+    const verificationResponse = await fetch(
+      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+      {
+        method: 'POST',
+        body: formData,
+      },
+    );
 
     if (!verificationResponse.ok) {
       throw new Error(`Cloudflare API error: ${verificationResponse.status}`);
@@ -98,20 +108,23 @@ serve(async (req) => {
     });
 
     if (verificationData.success) {
-      return new Response(JSON.stringify({
-        success: true,
-        details: {
-          challengeTimestamp: verificationData.challenge_ts,
-          hostname: verificationData.hostname,
-          action: verificationData.action,
+      return new Response(
+        JSON.stringify({
+          success: true,
+          details: {
+            challengeTimestamp: verificationData.challenge_ts,
+            hostname: verificationData.hostname,
+            action: verificationData.action,
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
         },
-      }), {
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
+      );
     } else {
       const errorCodes = verificationData['error-codes'] || [];
       const errorMessage = getErrorMessage(errorCodes);
@@ -125,32 +138,37 @@ serve(async (req) => {
         ip: remoteIp,
       });
 
-      return new Response(JSON.stringify({
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+          errorCodes,
+        }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        },
+      );
+    }
+  } catch (error) {
+    console.error('Turnstile verification error:', error);
+
+    return new Response(
+      JSON.stringify({
         success: false,
-        error: errorMessage,
-        errorCodes,
-      }), {
-        status: 400,
-        headers: { 
+        error: 'Internal server error',
+      }),
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-      });
-    }
-
-  } catch (error) {
-    console.error('Turnstile verification error:', error);
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal server error',
-    }), {
-      status: 500,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
-    });
+    );
   }
 });
 
@@ -169,9 +187,7 @@ function getErrorMessage(errorCodes: string[]): string {
     return 'Security verification failed';
   }
 
-  const messages = errorCodes.map(code => 
-    errorMessages[code] || 'Security verification failed'
-  );
-  
+  const messages = errorCodes.map((code) => errorMessages[code] || 'Security verification failed');
+
   return messages[0]; // Return first (most relevant) error message
 }

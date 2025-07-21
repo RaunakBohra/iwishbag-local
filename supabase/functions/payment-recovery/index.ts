@@ -131,7 +131,8 @@ async function sendPaymentReminder(
       variables: {
         customer_name: user.first_name || 'Customer',
         order_amount: payment.quotes.final_total_usd,
-        order_currency: payment.quotes.destination_currency || user.preferred_display_currency || 'USD',
+        order_currency:
+          payment.quotes.destination_currency || user.preferred_display_currency || 'USD',
         product_name: payment.quotes.product_name || 'Your order',
         payment_link: `${Deno.env.get('SITE_URL') || 'https://your-site.com'}/checkout?quotes=${payment.quotes.id}`,
         transaction_id: payment.id,

@@ -2,26 +2,26 @@
  * Create a much simpler profile creation function to isolate the issue
  */
 
-import pg from 'pg'
-const { Client } = pg
+import pg from 'pg';
+const { Client } = pg;
 
 async function simpleProfileFix() {
-  console.log('🔧 Creating Simple Profile Creation Function...')
-  
+  console.log('🔧 Creating Simple Profile Creation Function...');
+
   const client = new Client({
     host: '127.0.0.1',
     port: 54322,
     database: 'postgres',
     user: 'postgres',
-    password: 'postgres'
-  })
+    password: 'postgres',
+  });
 
   try {
-    await client.connect()
+    await client.connect();
 
     // Create a super simple version that just creates a basic profile
-    console.log('1. Creating simple profile function...')
-    
+    console.log('1. Creating simple profile function...');
+
     await client.query(`
       CREATE OR REPLACE FUNCTION public.ensure_user_profile_simple(_user_id uuid)
       RETURNS boolean
@@ -52,13 +52,13 @@ async function simpleProfileFix() {
         RETURN FALSE;
       END;
       $function$;
-    `)
+    `);
 
-    console.log('✅ Simple profile function created')
+    console.log('✅ Simple profile function created');
 
     // Create simple role function
-    console.log('2. Creating simple role function...')
-    
+    console.log('2. Creating simple role function...');
+
     await client.query(`
       CREATE OR REPLACE FUNCTION public.ensure_user_role_simple(_user_id uuid)
       RETURNS boolean
@@ -89,13 +89,13 @@ async function simpleProfileFix() {
         RETURN FALSE;
       END;
       $function$;
-    `)
+    `);
 
-    console.log('✅ Simple role function created')
+    console.log('✅ Simple role function created');
 
     // Update trigger to use simple functions
-    console.log('3. Updating trigger to use simple functions...')
-    
+    console.log('3. Updating trigger to use simple functions...');
+
     await client.query(`
       CREATE OR REPLACE FUNCTION public.handle_new_user()
       RETURNS trigger
@@ -112,19 +112,18 @@ async function simpleProfileFix() {
         RETURN NEW;
       END;
       $function$;
-    `)
+    `);
 
-    console.log('✅ Trigger updated to use simple functions')
+    console.log('✅ Trigger updated to use simple functions');
 
-    console.log('\n🎉 Simple profile creation ready!')
-    console.log('Now test user signup again - it should work with minimal data.')
-
+    console.log('\n🎉 Simple profile creation ready!');
+    console.log('Now test user signup again - it should work with minimal data.');
   } catch (error) {
-    console.error('❌ Simple fix failed:', error.message)
-    console.error('   Stack:', error.stack)
+    console.error('❌ Simple fix failed:', error.message);
+    console.error('   Stack:', error.stack);
   } finally {
-    await client.end()
+    await client.end();
   }
 }
 
-simpleProfileFix()
+simpleProfileFix();

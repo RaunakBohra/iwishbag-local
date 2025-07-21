@@ -17,7 +17,7 @@ const colorMappings = {
   'bg-blue-600': 'bg-teal-600',
   'from-blue-500 to-indigo-600': 'from-teal-500 to-cyan-600',
   'hover:from-blue-600 hover:to-indigo-700': 'hover:from-teal-600 hover:to-cyan-700',
-  
+
   // Purple variants
   'bg-purple-50': 'bg-orange-50',
   'text-purple-600': 'text-orange-600',
@@ -27,8 +27,8 @@ const colorMappings = {
   'border-purple-300': 'border-orange-300',
   'bg-purple-100': 'bg-orange-100',
   'bg-purple-600': 'bg-orange-600',
-  
-  // Indigo variants  
+
+  // Indigo variants
   'bg-indigo-50': 'bg-cyan-50',
   'text-indigo-600': 'text-cyan-600',
   'text-indigo-700': 'text-cyan-700',
@@ -37,10 +37,10 @@ const colorMappings = {
   'border-indigo-300': 'border-cyan-300',
   'bg-indigo-100': 'bg-cyan-100',
   'bg-indigo-600': 'bg-cyan-600',
-  
+
   // Specific numeric variants
   'blue-500': 'teal-500',
-  'blue-600': 'teal-600', 
+  'blue-600': 'teal-600',
   'blue-700': 'teal-700',
   'purple-500': 'orange-500',
   'purple-600': 'orange-600',
@@ -53,7 +53,7 @@ const colorMappings = {
 // Files that still need cleanup (from grep results)
 const filesToCleanup = [
   'src/pages/About.tsx',
-  'src/components/landing/CostEstimator.tsx', 
+  'src/components/landing/CostEstimator.tsx',
   'src/pages/PaymentFailure.tsx',
   'src/pages/PaymentSuccess.tsx',
   'src/pages/EsewaTest.tsx',
@@ -76,7 +76,7 @@ const filesToCleanup = [
   'src/components/forms/CustomerDeliveryInfo.tsx',
   'src/components/profile/PaymentMethodDebug.tsx',
   'src/components/admin/StatusTransitionHistory.tsx',
-  'src/components/admin/EmailTemplateManager.tsx'
+  'src/components/admin/EmailTemplateManager.tsx',
 ];
 
 let totalUpdatedFiles = 0;

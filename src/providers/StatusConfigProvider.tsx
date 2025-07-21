@@ -23,7 +23,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'Clock',
     isActive: true,
     order: 1,
-    allowedTransitions: ['pending', 'sent', 'rejected'],
+    allowedTransitions: ['sent', 'rejected'],
     isTerminal: false,
     category: 'quote',
     // Flow properties
@@ -65,7 +65,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'FileText',
     isActive: true,
     order: 2,
-    allowedTransitions: ['sent', 'approved', 'rejected', 'expired'],
+    allowedTransitions: ['approved', 'rejected', 'expired'],
     autoExpireHours: 168, // 7 days
     isTerminal: false,
     category: 'quote',
@@ -108,7 +108,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'CheckCircle',
     isActive: true,
     order: 3,
-    allowedTransitions: ['approved', 'pending', 'rejected', 'payment_pending', 'paid'],
+    allowedTransitions: ['payment_pending', 'paid'],
     isTerminal: false,
     category: 'quote',
     // Flow properties
@@ -150,7 +150,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'XCircle',
     isActive: true,
     order: 4,
-    allowedTransitions: ['rejected', 'pending', 'approved'],
+    allowedTransitions: ['pending'],
     isTerminal: true,
     category: 'quote',
     // Flow properties
@@ -192,7 +192,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'AlertTriangle',
     isActive: true,
     order: 5,
-    allowedTransitions: ['expired', 'pending', 'approved'],
+    allowedTransitions: ['pending'],
     isTerminal: true,
     category: 'quote',
     // Flow properties
@@ -234,7 +234,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'Clock',
     isActive: true,
     order: 1,
-    allowedTransitions: ['payment_pending', 'paid', 'ordered', 'cancelled'],
+    allowedTransitions: ['paid', 'ordered', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -276,7 +276,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'RefreshCw',
     isActive: true,
     order: 2,
-    allowedTransitions: ['processing', 'ordered', 'shipped', 'cancelled'],
+    allowedTransitions: ['ordered', 'shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -296,7 +296,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'DollarSign',
     isActive: true,
     order: 3,
-    allowedTransitions: ['paid', 'ordered', 'cancelled'],
+    allowedTransitions: ['ordered', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -338,7 +338,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'ShoppingCart',
     isActive: true,
     order: 4,
-    allowedTransitions: ['ordered', 'shipped', 'cancelled'],
+    allowedTransitions: ['shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -358,7 +358,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'Truck',
     isActive: true,
     order: 5,
-    allowedTransitions: ['shipped', 'completed', 'cancelled'],
+    allowedTransitions: ['completed', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -518,7 +518,7 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
           throw new Error(`Invalid JSON in order_statuses: ${errorMessage}`);
         }
       }
-      
+
       // Update timestamp to trigger re-renders
       setLastUpdated(Date.now());
     } catch (err) {
@@ -599,7 +599,7 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
           console.log('🔄 Status config changed in database, refreshing...', payload);
           // Refresh data when status settings change
           loadStatusSettings();
-        }
+        },
       )
       .subscribe();
 

@@ -285,30 +285,30 @@
   }
 
   /* Disable scroll wheel changes on number inputs globally */
-  input[type="number"] {
+  input[type='number'] {
     -moz-appearance: textfield; /* Firefox */
   }
 
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button {
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none; /* Chrome, Safari, Edge */
     margin: 0;
   }
 
   /* Completely prevent scroll wheel from changing number input values */
-  input[type="number"] {
+  input[type='number'] {
     scroll-behavior: auto !important;
     -moz-appearance: textfield;
   }
 
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button {
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
 
   /* Block wheel events completely on number inputs */
-  input[type="number"] {
+  input[type='number'] {
     -webkit-user-select: text;
     -moz-user-select: text;
     user-select: text;

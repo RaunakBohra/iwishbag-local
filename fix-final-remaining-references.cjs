@@ -34,12 +34,12 @@ const files = [
   'src/pages/TestPayment.tsx',
   'src/pages/admin/PaymentManagementPage.tsx',
   'supabase/functions/create-payment/airwallex-api.ts',
-  'supabase/functions/create-payment/stripe-enhanced-secure.ts'
+  'supabase/functions/create-payment/stripe-enhanced-secure.ts',
 ];
 
 function fixFile(filePath) {
   const fullPath = path.join(process.cwd(), filePath);
-  
+
   if (!fs.existsSync(fullPath)) {
     console.log(`⚠️  File not found: ${filePath}`);
     return false;
@@ -47,30 +47,30 @@ function fixFile(filePath) {
 
   let content = fs.readFileSync(fullPath, 'utf8');
   let modified = false;
-  
+
   // List of all replacements to make
   const replacements = [
     // Property definitions and type definitions
     { from: /final_total\??\s*:/g, to: 'final_total_usd?:' },
     { from: /final_currency\??\s*:/g, to: 'destination_currency?:' },
-    
+
     // Object access patterns
     { from: /\.final_total(?![_\w])/g, to: '.final_total_usd' },
     { from: /\.final_currency(?![_\w])/g, to: '.destination_currency' },
-    
+
     // Variable assignments
     { from: /\bfinal_total(?![_\w])/g, to: 'final_total_usd' },
     { from: /\bfinal_currency(?![_\w])/g, to: 'destination_currency' },
-    
+
     // Special case: keep breakdown.final_total unchanged (calculator results)
     { from: /breakdown\.final_total_usd/g, to: 'breakdown.final_total' },
-    
+
     // Keep HTML id/name attributes unchanged
     { from: /"final_total_usd"/g, to: '"final_total"' },
     { from: /"destination_currency"/g, to: '"final_currency"' },
-    { from: /htmlFor="destination_currency"/g, to: 'htmlFor="final_currency"' }
+    { from: /htmlFor="destination_currency"/g, to: 'htmlFor="final_currency"' },
   ];
-  
+
   replacements.forEach(({ from, to }) => {
     if (from.test && from.test(content)) {
       content = content.replace(from, to);
@@ -90,7 +90,7 @@ function fixFile(filePath) {
 
 function main() {
   console.log('🔧 Starting final comprehensive fix...\n');
-  
+
   let totalFixed = 0;
   let totalFiles = 0;
 
@@ -108,7 +108,7 @@ function main() {
   console.log(`✅ Files modified: ${totalFixed}`);
   console.log(`⏭️  Files unchanged: ${totalFiles - totalFixed}`);
   console.log('='.repeat(70));
-  
+
   console.log('\n🚀 MIGRATION COMPLETE! All currency schema references updated:');
   console.log('   • final_currency → destination_currency');
   console.log('   • final_total → final_total_usd');
