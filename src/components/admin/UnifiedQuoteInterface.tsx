@@ -1763,6 +1763,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 quote={liveQuote || quote}
                 onUpdateQuote={loadQuoteData}
                 compact={true}
+                editMode={isEditMode}
               />
 
               {/* Status Management - Outside form to prevent submission conflicts */}

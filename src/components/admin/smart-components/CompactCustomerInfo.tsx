@@ -52,7 +52,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   quote,
   onUpdateQuote,
   compact = true,
-  editMode = false,
+  editMode = true,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('addresses');
