@@ -124,7 +124,6 @@ const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
-import { usePreventNumberInputScroll } from '@/hooks/usePreventNumberInputScroll';
 
 // Import test utilities in development
 if (import.meta.env.DEV) {
@@ -410,9 +409,6 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  // Prevent scroll wheel from changing number inputs globally
-  usePreventNumberInputScroll();
-
   return (
     <ErrorBoundary>
       <QueryProvider>

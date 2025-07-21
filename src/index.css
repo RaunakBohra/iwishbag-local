@@ -295,9 +295,34 @@
     margin: 0;
   }
 
-  /* Prevent scroll wheel from changing number input values */
+  /* Completely prevent scroll wheel from changing number input values */
   input[type="number"] {
     scroll-behavior: auto !important;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Block wheel events completely on number inputs */
+  input[type="number"] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+  }
+
+  /* Enhanced dropdown scroll support */
+  [data-radix-select-content] {
+    pointer-events: auto !important;
+    z-index: 9999 !important;
+  }
+
+  [data-radix-select-viewport] {
+    pointer-events: auto !important;
+    scroll-behavior: smooth !important;
   }
 }
 

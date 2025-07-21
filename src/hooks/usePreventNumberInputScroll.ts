@@ -9,12 +9,17 @@ export const usePreventNumberInputScroll = () => {
     // Prevent wheel events on number inputs
     const preventNumberInputScroll = (e: WheelEvent) => {
       const target = e.target as HTMLInputElement;
-      if (target && target.type === 'number') {
-        // Only prevent if the input is focused or if user is scrolling over it
-        if (document.activeElement === target || target.matches(':hover')) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
+      
+      // Only prevent if:
+      // 1. Target is specifically a number input
+      // 2. The number input is currently focused (has user's attention)
+      // 3. NOT inside any dropdown/modal/overlay content
+      if (target && 
+          target.type === 'number' && 
+          document.activeElement === target &&
+          !target.closest('[data-radix-select-content], [data-radix-popper-content-wrapper], [role="dialog"], .select-content, [data-state="open"]')) {
+        e.preventDefault();
+        e.stopPropagation();
       }
     };
 
