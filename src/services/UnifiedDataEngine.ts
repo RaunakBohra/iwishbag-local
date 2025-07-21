@@ -45,6 +45,12 @@ export class UnifiedDataEngine {
       status: row.status,
       origin_country: row.origin_country,
       destination_country: row.destination_country,
+      // iwishBag Tracking System fields
+      iwish_tracking_id: row.iwish_tracking_id || null,
+      tracking_status: row.tracking_status || null,
+      estimated_delivery_date: row.estimated_delivery_date || null,
+      shipping_carrier: row.shipping_carrier || null,
+      tracking_number: row.tracking_number || null,
       items: Array.isArray(row.items) ? row.items : [],
       base_total_usd: row.base_total_usd,
       final_total_usd: row.final_total_usd,
@@ -429,14 +435,14 @@ export class UnifiedDataEngine {
 
       // Clear cache aggressively for status updates
       this.clearCache(`quote_${id}`);
-      
+
       // Also clear any related cache entries that might be affected
       if (updates.status) {
         console.log('🔄 [DEBUG] Status update detected, clearing all caches for quote', id);
         // Clear all cached entries to ensure fresh data
         this.cache.clear();
       }
-      
+
       return true;
     } catch (error) {
       console.error('❌ [DEBUG] Failed to update quote:', error);

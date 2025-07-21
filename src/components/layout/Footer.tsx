@@ -65,6 +65,12 @@ const Footer = () => {
               Quote Request
             </Link>
             <Link
+              to="/track"
+              className="text-gray-600 hover:text-teal-600 transition-colors mb-0.5"
+            >
+              Track Order
+            </Link>
+            <Link
               to="/cost-estimator"
               className="text-gray-600 hover:text-teal-600 transition-colors"
             >

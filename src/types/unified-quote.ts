@@ -239,6 +239,13 @@ export interface UnifiedQuote {
   origin_country: string;
   destination_country: string;
 
+  // iwishBag Tracking System (Phase 1)
+  iwish_tracking_id?: string | null;
+  tracking_status?: string | null;
+  estimated_delivery_date?: string | null;
+  shipping_carrier?: string | null;
+  tracking_number?: string | null;
+
   // Smart Product System
   items: QuoteItem[];
 

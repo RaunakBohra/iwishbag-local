@@ -267,6 +267,152 @@ interface CartItem {
 - ❌ Modify cart without user authentication
 - ❌ Bypass quantity or weight validations
 
+## iwishBag Tracking System - CORE DOCUMENTATION (Phase 1)
+**NEVER modify tracking system without understanding this section fully**
+
+### System Overview
+The iwishBag internal tracking system provides customers with professional order tracking using internally-generated tracking IDs. This Phase 1 implementation focuses on core functionality with a solid foundation for future enhancements.
+
+### Architecture
+```typescript
+// Core Components
+├── TrackingService.ts               // Central tracking operations (singleton)
+├── CompactShippingManager.tsx       // Admin shipping management component
+├── TrackingInfo.tsx                 // Customer tracking display
+├── TrackingPage.tsx                 // Public customer tracking page (/track/{id})
+└── Database: quotes table tracking fields + sequence
+```
+
+### Database Schema
+```sql
+-- Added to quotes table
+ALTER TABLE quotes ADD COLUMN iwish_tracking_id VARCHAR(20) UNIQUE;
+ALTER TABLE quotes ADD COLUMN tracking_status VARCHAR(30) DEFAULT 'pending';  
+ALTER TABLE quotes ADD COLUMN estimated_delivery_date DATE;
+
+-- Sequence for tracking IDs
+CREATE SEQUENCE iwish_tracking_sequence START 1001 INCREMENT 1;
+
+-- Function for ID generation
+CREATE FUNCTION generate_iwish_tracking_id() RETURNS TEXT
+-- Format: IWB{YEAR}{SEQUENCE} → IWB20251001
+```
+
+### Tracking Status Flow
+```typescript
+'pending'    →  'preparing'  →  'shipped'  →  'delivered'
+                    ↓               ↓           ↗
+                'exception' ←--  'exception'  
+```
+
+### Key Features Implemented
+
+#### 1. **TrackingService** (Singleton)
+- `generateTrackingId(quoteId)` - Creates unique iwishBag tracking IDs
+- `updateTrackingStatus(quoteId, updates)` - Updates status with carrier details
+- `markAsShipped(quoteId, carrier, trackingNumber, estimatedDate)` - Complete shipping workflow
+- `getTrackingInfo(iwishTrackingId)` - Customer lookup by tracking ID
+- Status display helpers for UI consistency
+
+#### 2. **CompactShippingManager** (Admin Component)
+- Generate iwishBag tracking IDs with one click
+- Mark orders as shipped with carrier selection
+- Update tracking statuses with real-time feedback
+- Integrated into admin quote interface sidebar
+- Customer tracking link display
+
+#### 3. **Customer Tracking Experience**
+- **TrackingInfo Component**: Enhanced display in customer dashboard
+- **TrackingPage**: Public tracking page at `/track/{trackingId}`
+- **Navigation**: Track Order links in header and footer
+- **Progressive Enhancement**: Works with or without carrier tracking
+
+#### 4. **Customer Tracking Page Features**
+- Search by iwishBag tracking ID (format: IWB20251001)
+- Full order details: items, pricing, delivery address
+- Progress visualization with percentage completion
+- Status badges and estimated delivery dates
+- External carrier tracking integration
+- Mobile-responsive design
+
+### Critical Implementation Details
+
+#### Tracking ID Format
+- **Pattern**: `IWB{YEAR}{SEQUENCE}` 
+- **Example**: `IWB20251001` (first order of 2025)
+- **Sequence**: Starts at 1001, increments by 1
+- **Uniqueness**: Database constraint ensures no duplicates
+
+#### Status Workflow Validation
+```typescript
+const allowedTransitions = {
+  'pending': ['preparing'],
+  'preparing': ['shipped', 'exception'],
+  'shipped': ['delivered', 'exception'],
+  'delivered': [], // Terminal state
+  'exception': ['preparing', 'shipped', 'delivered'] // Can recover
+};
+```
+
+#### Database Integration
+- All tracking data stored in existing `quotes` table
+- Leverages UnifiedDataEngine for data operations
+- Compatible with existing RLS policies
+- Service-level operations bypass authentication for admin functions
+
+### Usage Examples
+
+#### Admin: Generate Tracking ID
+```typescript
+const trackingId = await trackingService.generateTrackingId(quoteId);
+// Returns: "IWB20251001"
+```
+
+#### Admin: Mark as Shipped  
+```typescript
+const success = await trackingService.markAsShipped(
+  quoteId, 
+  'DHL', 
+  'DHL123456789', 
+  '2025-07-28'
+);
+```
+
+#### Customer: Track Order
+```typescript
+const quote = await trackingService.getTrackingInfo('IWB20251001');
+// Returns full UnifiedQuote object with tracking data
+```
+
+### Navigation & UX Enhancements
+- **Header Navigation**: "Track Order" button visible to all users
+- **Footer Link**: Track Order in Services section  
+- **Customer Dashboard**: Enhanced TrackingInfo component
+- **Admin Interface**: CompactShippingManager in quote sidebar
+
+### Future Phase Considerations
+Phase 1 provides foundation for:
+- SMS/Email notifications
+- GPS tracking integration
+- Delivery photos and signatures
+- OTP verification
+- Carrier API integrations
+- Advanced analytics
+
+### DO NOT:
+- ❌ Skip tracking ID generation for orders
+- ❌ Modify tracking status without proper validation
+- ❌ Bypass TrackingService for tracking operations
+- ❌ Break the sequential tracking ID format
+- ❌ Skip status transition validation
+
+### ALWAYS:
+- ✅ Use TrackingService for all tracking operations
+- ✅ Generate tracking IDs when orders are approved
+- ✅ Update tracking status at shipping milestones
+- ✅ Provide customers with iwishBag tracking IDs
+- ✅ Test tracking page functionality after changes
+
 ## Authentication & Roles - CORE DOCUMENTATION
 **NEVER modify auth system without understanding this section fully**
 

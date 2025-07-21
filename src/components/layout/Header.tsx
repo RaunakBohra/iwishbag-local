@@ -183,23 +183,42 @@ const Header = () => {
             )}
           </Link>
 
-          {/* Desktop Navigation - Only show for authenticated users */}
-          {user && !isAdminArea && (
+          {/* Desktop Navigation */}
+          {!isAdminArea && (
             <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
+              {/* Always show Track Order link */}
               <Button
-                variant={location.pathname === '/quote' ? 'default' : 'ghost'}
+                variant={location.pathname.startsWith('/track') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
                   'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
-                  location.pathname === '/quote'
-                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
+                  location.pathname.startsWith('/track')
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
                     : 'text-gray-700 hover:bg-gray-50',
                 )}
-                onClick={() => navigate('/quote')}
+                onClick={() => navigate('/track')}
               >
                 <Package className="h-4 w-4 mr-2" />
-                Get Quote
+                Track Order
               </Button>
+              
+              {/* Show Get Quote for authenticated users */}
+              {user && (
+                <Button
+                  variant={location.pathname === '/quote' ? 'default' : 'ghost'}
+                  size="sm"
+                  className={cn(
+                    'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                    location.pathname === '/quote'
+                      ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
+                      : 'text-gray-700 hover:bg-gray-50',
+                  )}
+                  onClick={() => navigate('/quote')}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Get Quote
+                </Button>
+              )}
             </nav>
           )}
 

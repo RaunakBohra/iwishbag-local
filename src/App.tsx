@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AccessibilityProvider } from '@/components/ui/AccessibilityProvider';
+import { PhoneCollectionProvider } from '@/components/onboarding/PhoneCollectionProvider';
 import {
   ErrorBoundary,
   PaymentErrorFallback,
@@ -56,6 +57,9 @@ const OAuthCallback = React.lazy(() => import('@/pages/auth/OAuthCallback'));
 const FonepayCallback = React.lazy(() => import('@/pages/api/fonepay-callback'));
 const EsewaSuccess = React.lazy(() => import('@/pages/payment-callback/esewa-success'));
 const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-failure'));
+const TrackingPage = React.lazy(() =>
+  import('@/pages/TrackingPage').then((m) => ({ default: m.TrackingPage })),
+);
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
@@ -260,6 +264,10 @@ const router = createBrowserRouter([
         element: <CostEstimatorPage />,
       },
       {
+        path: 'track/:trackingId?',
+        element: <TrackingPage />,
+      },
+      {
         path: 's/:shareToken',
         element: <QuoteDetailUnified isShareToken={true} />,
       },
@@ -428,6 +436,7 @@ function App() {
                 >
                   <RouterProvider router={router} />
                 </Suspense>
+                <PhoneCollectionProvider />
                 <Toaster />
               </HelmetProvider>
             </StatusConfigProvider>
