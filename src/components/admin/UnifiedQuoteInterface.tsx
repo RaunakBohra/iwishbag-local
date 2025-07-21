@@ -183,19 +183,42 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
   };
 
   const handleShippingOptionSelect = async (optionId: string) => {
-    if (!quote) return;
+    console.log('🚢 [DEBUG] handleShippingOptionSelect called with:', {
+      optionId,
+      quoteId: quote?.id,
+      currentSelectedOption: quote?.operational_data?.shipping?.selected_option,
+      availableOptions: shippingOptions.map(opt => ({ id: opt.id, carrier: opt.carrier, cost: opt.cost_usd }))
+    });
+
+    if (!quote) {
+      console.error('❌ [DEBUG] No quote available');
+      return;
+    }
 
     // Find the selected shipping option
     const selectedOption = shippingOptions.find(opt => opt.id === optionId);
     
     if (!selectedOption) {
-      console.warn('Selected shipping option not found:', optionId);
+      console.warn('⚠️ [DEBUG] Selected shipping option not found:', optionId);
       return;
     }
 
+    console.log('✅ [DEBUG] Found selected option:', {
+      id: selectedOption.id,
+      carrier: selectedOption.carrier,
+      name: selectedOption.name,
+      cost: selectedOption.cost_usd
+    });
+
     // Optimistic update: Update form values immediately for instant UI feedback
+    console.log('📝 [DEBUG] Updating form values...');
     form.setValue('selected_shipping_option', optionId);
     form.setValue('international_shipping', selectedOption.cost_usd);
+    
+    console.log('📝 [DEBUG] Form values after update:', {
+      selected_shipping_option: form.getValues('selected_shipping_option'),
+      international_shipping: form.getValues('international_shipping')
+    });
 
     // Optimistic update: Update local quote state immediately
     const optimisticQuote = {
@@ -209,6 +232,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
       },
     };
 
+    console.log('🔄 [DEBUG] Setting optimistic quote state:', {
+      originalShippingOption: quote.operational_data?.shipping?.selected_option,
+      newShippingOption: optimisticQuote.operational_data.shipping.selected_option,
+      fullOperationalData: optimisticQuote.operational_data
+    });
+
     // Set optimistic state immediately (no page refresh)
     setQuote(optimisticQuote);
 
@@ -219,13 +248,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
       duration: 2000,
     });
 
+    console.log('💾 [DEBUG] Starting database update...');
     try {
       // Update database in background
-      const success = await unifiedDataEngine.updateQuote(quote.id, {
+      const updatePayload = {
         operational_data: optimisticQuote.operational_data,
-      });
+      };
+      
+      console.log('💾 [DEBUG] Update payload:', updatePayload);
+      
+      const success = await unifiedDataEngine.updateQuote(quote.id, updatePayload);
+      
+      console.log('💾 [DEBUG] Database update result:', success);
 
       if (!success) {
+        console.error('❌ [DEBUG] Database update failed, rolling back...');
         // Rollback on failure
         setQuote(quote);
         form.setValue('selected_shipping_option', quote.operational_data?.shipping?.selected_option || '');
@@ -236,9 +273,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
           description: 'Failed to save shipping option. Please try again.',
           variant: 'destructive',
         });
+      } else {
+        console.log('✅ [DEBUG] Database update successful!');
       }
     } catch (error) {
-      console.error('Error updating shipping option:', error);
+      console.error('❌ [DEBUG] Error updating shipping option:', error);
       
       // Rollback on error
       setQuote(quote);
@@ -595,10 +634,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
 
   // Always use SmartCalculationEngine for consistent calculations in both modes
   useEffect(() => {
+    console.log('🔄 [DEBUG] liveQuote useEffect triggered:', {
+      isEditMode,
+      hasCreateLiveQuote: !!createLiveQuote,
+      hasQuote: !!quote,
+      quoteId: quote?.id,
+      selectedShippingOption: quote?.operational_data?.shipping?.selected_option
+    });
+
     if (isEditMode && createLiveQuote) {
+      console.log('📊 [DEBUG] Setting liveQuote from createLiveQuote (edit mode)');
       // Edit mode: Use real-time calculated quote
       setLiveQuote(createLiveQuote);
     } else if (quote) {
+      console.log('📊 [DEBUG] Recalculating liveQuote (view mode)');
       // View mode: Recalculate using SmartCalculationEngine for consistency
       try {
         const calculationResult = smartCalculationEngine.calculateLiveSync({
@@ -611,15 +660,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({
         });
         
         if (calculationResult.success) {
+          console.log('✅ [DEBUG] LiveQuote calculation successful');
           setLiveQuote(calculationResult.updated_quote);
         } else {
+          console.log('⚠️ [DEBUG] LiveQuote calculation failed, using original quote');
           setLiveQuote(quote); // Fallback to original
         }
       } catch (error) {
-        console.warn('View mode recalculation failed:', error);
+        console.warn('❌ [DEBUG] View mode recalculation failed:', error);
         setLiveQuote(quote); // Fallback to original
       }
     } else {
+      console.log('📊 [DEBUG] Setting liveQuote to quote (no calculations)');
       setLiveQuote(quote);
     }
   }, [isEditMode, createLiveQuote, quote]);

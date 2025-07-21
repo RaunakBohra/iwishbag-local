@@ -50,6 +50,15 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
 
   const selectedOptionId = quote.operational_data?.shipping?.selected_option;
   const selectedOption = shippingOptions.find(opt => opt.id === selectedOptionId);
+
+  // Debug logging for component state
+  console.log('🔄 [DEBUG] CompactShippingOptions render:', {
+    selectedOptionId,
+    selectedOption: selectedOption ? { id: selectedOption.id, carrier: selectedOption.carrier, cost: selectedOption.cost_usd } : null,
+    shippingOptionsCount: shippingOptions.length,
+    quoteId: quote.id,
+    operationalData: quote.operational_data
+  });
   
   // Get top recommendation
   const topRecommendation = recommendations[0];
@@ -197,7 +206,17 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                   ? 'border-blue-300 bg-blue-50' 
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
-              onClick={() => onSelectOption(option.id)}
+              onClick={() => {
+                console.log('🖱️ [DEBUG] CompactShippingOptions - Option clicked:', {
+                  optionId: option.id,
+                  carrier: option.carrier,
+                  name: option.name,
+                  cost: option.cost_usd,
+                  wasSelected: isSelected,
+                  selectedOptionId: quote.operational_data?.shipping?.selected_option
+                });
+                onSelectOption(option.id);
+              }}
             >
               <div className="flex items-center justify-between">
                 {/* Option Details */}

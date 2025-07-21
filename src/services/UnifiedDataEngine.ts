@@ -326,6 +326,12 @@ export class UnifiedDataEngine {
    * Update quote with smart validation
    */
   async updateQuote(id: string, updates: Partial<UnifiedQuote>): Promise<boolean> {
+    console.log('💾 [DEBUG] UnifiedDataEngine.updateQuote called:', {
+      quoteId: id,
+      updates,
+      operationalDataUpdate: updates.operational_data
+    });
+
     try {
       // Transform updates for database
       const dbUpdates: any = { updated_at: new Date().toISOString() };
@@ -339,18 +345,25 @@ export class UnifiedDataEngine {
       if (updates.weight_confidence !== undefined) dbUpdates.weight_confidence = updates.weight_confidence;
       if (updates.optimization_score !== undefined) dbUpdates.optimization_score = updates.optimization_score;
 
+      console.log('💾 [DEBUG] Final database update payload:', dbUpdates);
+
       const { error } = await supabase
         .from('quotes')
         .update(dbUpdates)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [DEBUG] Database update failed:', error);
+        throw error;
+      }
+
+      console.log('✅ [DEBUG] Database update successful');
 
       // Clear cache
       this.clearCache(`quote_${id}`);
       return true;
     } catch (error) {
-      console.error('Error updating quote:', error);
+      console.error('❌ [DEBUG] Failed to update quote:', error);
       return false;
     }
   }
