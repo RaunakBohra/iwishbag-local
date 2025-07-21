@@ -145,7 +145,7 @@ const AuthForm = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
       options: {
-        scopes: 'email,user_mobile_phone',
+        scopes: 'email',
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });

@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
+import { usePhoneCollection } from '@/hooks/usePhoneCollection';
+import { PhoneCollectionModal } from '@/components/auth/PhoneCollectionModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +48,7 @@ import {
   Settings,
   Calendar,
   Target,
+  Phone,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -72,6 +75,7 @@ const Profile = () => {
   const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([]);
   const [currencyLoading, setCurrencyLoading] = useState(true);
   const { getAvailablePaymentMethods, methodsLoading } = usePaymentGateways();
+  const phoneCollection = usePhoneCollection();
 
   // Helper functions for user avatar
   const getUserAvatarUrl = () => {
@@ -793,7 +797,48 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Phone Collection Banner for Facebook Users */}
+        {phoneCollection.needsPhone && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-orange-900">Phone Number Needed</h3>
+                    <p className="text-sm text-orange-700">
+                      Add your phone number to receive order updates and enable all features.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => phoneCollection.promptPhoneCollection(false)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Add Phone Number
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Phone Collection Modal */}
+      <PhoneCollectionModal
+        open={phoneCollection.showModal}
+        onOpenChange={phoneCollection.closeModal}
+        onPhoneAdded={() => {
+          phoneCollection.onPhoneAdded();
+          // Refresh the user data to get the new phone number
+          queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+        }}
+        title="Complete Your Profile"
+        description="Add your phone number to receive order updates and access all features."
+        skipOption={!phoneCollection.isRequired}
+      />
     </div>
   );
 };

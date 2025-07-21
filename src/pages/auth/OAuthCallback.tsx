@@ -28,24 +28,37 @@ const OAuthCallback = () => {
         if (data.session?.user) {
           // Successfully authenticated
           const user = data.session.user;
+          const provider = user.app_metadata?.provider;
           
           // Log OAuth metadata for debugging
           console.log('OAuth user metadata:', {
-            provider: user.app_metadata?.provider,
+            provider,
             phone: user.phone,
             raw_metadata: user.user_metadata,
           });
 
-          // Check if phone was extracted
-          if (user.phone) {
+          // Provide provider-specific welcome messages
+          if (provider === 'google') {
+            if (user.phone) {
+              toast({
+                title: 'Welcome back!',
+                description: 'Signed in with Google. Phone number imported successfully.',
+              });
+            } else {
+              toast({
+                title: 'Welcome back!',
+                description: 'Signed in with Google successfully.',
+              });
+            }
+          } else if (provider === 'facebook') {
             toast({
               title: 'Welcome back!',
-              description: `Signed in successfully with ${user.app_metadata?.provider}. Phone number updated.`,
+              description: 'Signed in with Facebook successfully. Complete your profile when ready.',
             });
           } else {
             toast({
               title: 'Welcome back!',
-              description: `Signed in successfully with ${user.app_metadata?.provider}.`,
+              description: 'Authentication successful.',
             });
           }
 
