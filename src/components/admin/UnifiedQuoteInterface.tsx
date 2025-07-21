@@ -551,79 +551,87 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
-  // Handle route editing done - save changes
+  // Handle route editing done - save changes with optimistic updates
   const handleRouteEditingDone = async () => {
     if (!quote?.id || !isEditingRoute) {
       setIsEditingRoute(false);
       return;
     }
 
+    const formData = form.getValues();
+    
+    // Only save if routes have actually changed
+    const routeChanged = 
+      formData.origin_country !== quote.origin_country ||
+      formData.destination_country !== quote.destination_country;
+
+    if (!routeChanged) {
+      // No changes, just exit editing mode
+      setIsEditingRoute(false);
+      return;
+    }
+
+    console.log('🗺️ [ROUTE-SAVE] Saving route changes:', {
+      from: `${quote.origin_country} → ${quote.destination_country}`,
+      to: `${formData.origin_country} → ${formData.destination_country}`
+    });
+
+    // OPTIMISTIC UPDATE: Exit editing mode immediately for instant UI feedback
+    setIsEditingRoute(false);
+
+    // OPTIMISTIC UPDATE: Immediately update the quote state with new routes
+    const updatedQuote = {
+      ...quote,
+      origin_country: formData.origin_country,
+      destination_country: formData.destination_country,
+    };
+    setQuote(updatedQuote);
+
+    // Show immediate success toast
+    toast({
+      title: 'Route Updated',
+      description: `Route changed to ${formData.origin_country} → ${formData.destination_country}`,
+    });
+
     try {
-      const formData = form.getValues();
-      
-      // Only save if routes have actually changed
-      const routeChanged = 
-        formData.origin_country !== quote.origin_country ||
-        formData.destination_country !== quote.destination_country;
+      // Save to database in background
+      const success = await unifiedDataEngine.updateQuote(quote.id, {
+        origin_country: formData.origin_country,
+        destination_country: formData.destination_country,
+      });
 
-      if (routeChanged) {
-        console.log('🗺️ [ROUTE-SAVE] Saving route changes:', {
-          from: `${quote.origin_country} → ${quote.destination_country}`,
-          to: `${formData.origin_country} → ${formData.destination_country}`
-        });
-
-        const success = await unifiedDataEngine.updateQuote(quote.id, {
-          origin_country: formData.origin_country,
-          destination_country: formData.destination_country,
-        });
-
-        if (success) {
-          // Exit editing mode FIRST to avoid UI sync issues
-          setIsEditingRoute(false);
-          
-          toast({
-            title: 'Route Updated',
-            description: `Route changed to ${formData.origin_country} → ${formData.destination_country}`,
-          });
-          
-          // Reload the quote data to reflect changes
-          await loadQuoteData();
-          
-          // Explicitly set form values to ensure sync with fresh database data
-          form.setValue('origin_country', formData.origin_country);
-          form.setValue('destination_country', formData.destination_country);
-          
-          // Force all form watchers to re-evaluate with new values
-          form.trigger();
-          
-          console.log('🗺️ [ROUTE-SAVE] Form values after update:', {
-            origin: form.getValues('origin_country'),
-            destination: form.getValues('destination_country'),
-            formValues: formValues
-          });
-          
+      if (success) {
+        console.log('✅ [ROUTE-SAVE] Database update successful');
+        
+        // Delayed refresh to sync with database (like CompactStatusManager pattern)
+        setTimeout(() => {
+          loadQuoteData(true);
           // Trigger shipping recalculation after route change
-          await recalculateShipping();
-        } else {
-          toast({
-            title: 'Error Saving Route',
-            description: 'Failed to save route changes',
-            variant: 'destructive',
-          });
-          setIsEditingRoute(false);
-        }
+          recalculateShipping();
+        }, 500);
       } else {
-        // No changes, just exit editing mode
+        // Revert optimistic update on failure
+        setQuote(quote);
         setIsEditingRoute(false);
+        
+        toast({
+          title: 'Error Saving Route',
+          description: 'Failed to save route changes. Changes have been reverted.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('❌ [ROUTE-SAVE] Error saving route:', error);
+      
+      // Revert optimistic update on error
+      setQuote(quote);
+      setIsEditingRoute(false);
+      
       toast({
         title: 'Error Saving Route',
-        description: 'An error occurred while saving route changes',
+        description: 'Network error occurred. Changes have been reverted.',
         variant: 'destructive',
       });
-      setIsEditingRoute(false);
     }
   };
 
