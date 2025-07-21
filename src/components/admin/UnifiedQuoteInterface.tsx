@@ -86,6 +86,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [showAllShippingOptions, setShowAllShippingOptions] = useState(false);
   const [showShippingDetails, setShowShippingDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(true);
+  const [showSmartSuggestions, setShowSmartSuggestions] = useState(false);
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -989,22 +990,53 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         </div>
       </div>
 
-      {/* Smart Suggestions Bar */}
+      {/* Smart Suggestions Bar - Collapsible */}
       {smartSuggestions.length > 0 && (
-        <SmartSuggestionCards
-          suggestions={smartSuggestions}
-          onApplySuggestion={handleApplySuggestion}
-        />
+        <Card className="shadow-sm border-blue-200 bg-blue-50">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Lightbulb className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">
+                  AI Suggestions ({smartSuggestions.length})
+                </span>
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                  Available
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSmartSuggestions(!showSmartSuggestions)}
+                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+              >
+                {showSmartSuggestions ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+            {showSmartSuggestions && (
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <SmartSuggestionCards
+                  suggestions={smartSuggestions}
+                  onApplySuggestion={handleApplySuggestion}
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Professional E-commerce Admin Layout */}
       {isEditMode ? (
         /* Edit Mode: Professional single-page layout inspired by Shopify Admin */
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Main Content Area */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Left Column - Primary Edit Form (2/3 width) */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="md:col-span-2 space-y-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
                   {/* Products Section */}
@@ -1376,71 +1408,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </CardContent>
                   </Card>
 
-                  {/* Shipping Options Section */}
-                  {shippingOptions.length > 0 && (
-                    <Card className="shadow-sm border-gray-200">
-                      <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
-                              <Truck className="w-5 h-5 mr-2 text-gray-600" />
-                              Shipping Options
-                            </CardTitle>
-                            <CardDescription className="text-sm text-gray-600 mt-1">
-                              {shippingOptions.length} shipping methods available
-                            </CardDescription>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowShippingDetails(!showShippingDetails)}
-                            className="text-gray-500 hover:text-gray-700"
-                          >
-                            {showShippingDetails ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      {showShippingDetails && (
-                        <CardContent className="p-6">
-                          <CompactShippingOptions
-                            quote={liveQuote || quote}
-                            shippingOptions={shippingOptions}
-                            recommendations={shippingRecommendations}
-                            onSelectOption={handleShippingOptionSelect}
-                            showAllOptions={showAllShippingOptions}
-                            onToggleShowAll={setShowAllShippingOptions}
-                            compact={false}
-                            editMode={isEditMode}
-                            onSaveShippingOption={handleShippingOptionSelect}
-                            isSaving={isCalculating}
-                          />
-                        </CardContent>
-                      )}
-                      {!showShippingDetails && (
-                        <CardContent className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-                          <div className="text-sm text-gray-600">
-                            Selected:{' '}
-                            {
-                              shippingOptions.find(
-                                (opt) =>
-                                  opt.id ===
-                                  (liveQuote || quote)?.operational_data?.shipping?.selected_option,
-                              )?.carrier
-                            }{' '}
-                            {shippingOptions.find(
-                              (opt) =>
-                                opt.id ===
-                                (liveQuote || quote)?.operational_data?.shipping?.selected_option,
-                            )?.name || 'None selected'}
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
-                  )}
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
@@ -1490,132 +1457,39 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               </Form>
             </div>
 
-            {/* Right Sidebar - Live Calculations & Summary (1/3 width) */}
-            <div className="space-y-6">
-              {/* Quote Summary */}
-              <Card className="shadow-sm border-gray-200">
-                <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
-                  <CardTitle className="text-lg font-semibold text-gray-900">
-                    Quote Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Total Value</span>
-                      <span className="text-lg font-semibold text-gray-900">
-                        ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Items</span>
-                      <span className="font-medium">{metrics?.totalItems || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Total Weight</span>
-                      <span className="font-medium">{metrics?.totalWeight || 0} kg</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Status</span>
-                      <Badge variant="outline" className="text-xs">
-                        {quote.status || 'draft'}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Live Cost Breakdown */}
-              <CompactCalculationBreakdown
+            {/* Right Sidebar - Edit Mode Components (1/3 width) */}
+            <div className="space-y-3">
+              {/* Customer Information */}
+              <CompactCustomerInfo
                 quote={liveQuote || quote}
-                shippingOptions={shippingOptions}
-                isCalculating={isCalculating}
+                onUpdateQuote={loadQuoteData}
+                compact={true}
               />
 
-              {/* AI Insights Card */}
-              <Card className="shadow-sm border-gray-200">
-                <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
-                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
-                    <Lightbulb className="w-5 h-5 mr-2 text-amber-500" />
-                    AI Insights
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">
-                        Weight Confidence
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 mt-1">
-                        {metrics?.avgWeightConfidence}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">
-                        Shipping Cost
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 mt-1">
-                        {metrics?.shippingPercentage}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">
-                        Customs Rate
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 mt-1 flex items-center">
-                        {metrics?.customsPercentage}%
-                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                          <Badge
-                            variant="outline"
-                            className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200"
-                          >
-                            AI
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase tracking-wide">
-                        Ship Options
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 mt-1">
-                        {shippingOptions.length}
-                      </div>
-                    </div>
-                  </div>
+              {/* Status Management */}
+              <CompactStatusManager
+                quote={liveQuote || quote}
+                onStatusUpdate={loadQuoteData}
+                compact={true}
+              />
 
-                  {/* AI Recommendations */}
-                  {((liveQuote || quote)?.operational_data?.customs?.smart_tier ||
-                    shippingRecommendations.length > 0) && (
-                    <div className="pt-4 border-t border-gray-200">
-                      {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                        <div className="mb-3">
-                          <div className="flex items-center text-sm text-gray-600 mb-1">
-                            <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                            Smart customs tier applied
-                          </div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {(liveQuote || quote)?.operational_data?.customs?.smart_tier
-                              ?.tier_name || 'Default Tier'}
-                          </div>
-                        </div>
-                      )}
+              {/* Shipping Options */}
+              {shippingOptions.length > 0 && (
+                <CompactShippingOptions
+                  quote={liveQuote || quote}
+                  shippingOptions={shippingOptions}
+                  recommendations={shippingRecommendations}
+                  onSelectOption={handleShippingOptionSelect}
+                  showAllOptions={false}
+                  onToggleShowAll={setShowAllShippingOptions}
+                  compact={true}
+                  editMode={isEditMode}
+                  onSaveShippingOption={handleShippingOptionSelect}
+                  isSaving={isCalculating}
+                />
+              )}
 
-                      {shippingRecommendations.length > 0 && (
-                        <div className="flex items-start text-sm text-gray-600">
-                          <Lightbulb className="w-4 h-4 mr-1 mt-0.5 text-amber-500 flex-shrink-0" />
-                          <div>
-                            {shippingRecommendations[0].reason === 'cost_savings' &&
-                              `Save $${Number(shippingRecommendations[0].savings_usd).toFixed(2)} with slower shipping`}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Payment Management - Also in Edit Mode */}
+              {/* Payment Management */}
               {[
                 'sent',
                 'approved',
@@ -1631,6 +1505,54 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   compact={true}
                 />
               )}
+
+              {/* Live Cost Breakdown */}
+              <CompactCalculationBreakdown
+                quote={liveQuote || quote}
+                shippingOptions={shippingOptions}
+                isCalculating={isCalculating}
+              />
+
+              {/* AI Insights - Compact Version */}
+              <Card className="shadow-sm border-gray-200">
+                <CardContent className="p-3">
+                  <div className="flex items-center text-sm font-medium text-gray-700 mb-3">
+                    <Lightbulb className="w-4 h-4 mr-2 text-amber-500" />
+                    AI Insights
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {metrics?.avgWeightConfidence}%
+                      </div>
+                      <div className="text-gray-500">Weight AI</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-semibold text-gray-900 flex items-center justify-center">
+                        {metrics?.customsPercentage}%
+                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                          <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
+                            AI
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-gray-500">Customs</div>
+                    </div>
+                  </div>
+                  
+                  {/* Smart Recommendations Compact */}
+                  {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
+                    <div className="mt-3 pt-2 border-t border-gray-100">
+                      <div className="flex items-center text-xs text-green-600">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        <span>
+                          Smart tier: {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -1638,9 +1560,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         /* View Mode: Professional e-commerce admin layout */
         <div className="space-y-6">
           {/* Main Content Area - Professional 2-Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Left Column - Primary Information (2/3 width) */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="md:col-span-2 space-y-4">
               {/* Quote Items - Professional Table Style */}
               <Card>
                 <CardHeader className="border-b border-gray-100">
@@ -1691,10 +1613,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
               />
+
+              {/* Shipping Options - Below Breakdown */}
+              {shippingOptions.length > 0 && (
+                <CompactShippingOptions
+                  quote={liveQuote || quote}
+                  shippingOptions={shippingOptions}
+                  recommendations={shippingRecommendations}
+                  onSelectOption={handleShippingOptionSelect}
+                  showAllOptions={false}
+                  onToggleShowAll={setShowAllShippingOptions}
+                  compact={true}
+                  editMode={isEditMode}
+                  onSaveShippingOption={handleShippingOptionSelect}
+                  isSaving={isCalculating}
+                />
+              )}
             </div>
 
             {/* Right Sidebar - Professional Priority Layout (1/3 width) */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* 1. Customer Information Card - COMPACT WORLD-CLASS DESIGN */}
               <CompactCustomerInfo
                 quote={liveQuote || quote}
@@ -1780,23 +1718,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 </CardContent>
               </Card>
 
-              {/* 4. Shipping Options - SELF-CONTAINED COMPACT */}
-              {shippingOptions.length > 0 && (
-                <CompactShippingOptions
-                  quote={liveQuote || quote}
-                  shippingOptions={shippingOptions}
-                  recommendations={shippingRecommendations}
-                  onSelectOption={handleShippingOptionSelect}
-                  showAllOptions={false}
-                  onToggleShowAll={setShowAllShippingOptions}
-                  compact={true}
-                  editMode={isEditMode}
-                  onSaveShippingOption={handleShippingOptionSelect}
-                  isSaving={isCalculating}
-                />
-              )}
 
-              {/* 5. Payment Management - NEW COMPACT COMPONENT */}
+              {/* 4. Payment Management - NEW COMPACT COMPONENT */}
               {[
                 'sent',
                 'approved',
@@ -1813,7 +1736,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 />
               )}
 
-              {/* 6. Quick Actions Card - MINIMAL DESIGN */}
+              {/* 5. Quick Actions Card - MINIMAL DESIGN */}
               <Card className="shadow-sm border-gray-200">
                 <CardContent className="p-4 space-y-2">
                   <div className="text-sm font-medium text-gray-700 mb-2 flex items-center">
