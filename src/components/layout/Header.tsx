@@ -26,6 +26,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { useCart } from '@/hooks/useCart';
@@ -117,6 +118,23 @@ const Header = () => {
       return user.email.split('@')[0];
     }
     return 'Customer';
+  };
+
+  const getAvatarUrl = () => {
+    // Check for avatar_url in user metadata (from OAuth providers)
+    if (user?.user_metadata?.avatar_url) {
+      return user.user_metadata.avatar_url;
+    }
+    // Check for picture field (Google OAuth)
+    if (user?.user_metadata?.picture) {
+      return user.user_metadata.picture;
+    }
+    return null;
+  };
+
+  const getInitials = () => {
+    const displayName = getDisplayName();
+    return displayName.split(' ').map(name => name[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
@@ -470,9 +488,12 @@ const Header = () => {
                       className="px-2 md:px-3 py-2 text-left hover:bg-gray-50 min-w-0 h-9 rounded-md transition-colors"
                     >
                       <div className="flex items-center space-x-2 min-w-0">
-                        <div className="h-6 w-6 rounded-full bg-teal-50 flex items-center justify-center flex-shrink-0">
-                          <User className="h-3 w-3 text-teal-600" />
-                        </div>
+                        <Avatar className="h-6 w-6 flex-shrink-0">
+                          <AvatarImage src={getAvatarUrl() || undefined} alt={getDisplayName()} />
+                          <AvatarFallback className="bg-teal-50 text-teal-600 text-xs font-medium">
+                            {getInitials()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex flex-col items-start min-w-0">
                           <span className="text-sm font-medium truncate text-gray-900">{getDisplayName()}</span>
                           <span className="text-xs text-gray-500 truncate hidden lg:block">

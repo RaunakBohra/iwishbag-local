@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, 
   Mail, 
@@ -64,15 +65,39 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const formattedAddress = formatAddress(shippingAddress);
   const hasValidContact = customerInfo.email || customerInfo.phone;
 
+  // Helper functions for customer avatar
+  const getCustomerAvatarUrl = () => {
+    // Check if customer has profile data with avatar_url
+    if (quote.customer_data?.profile?.avatar_url) {
+      return quote.customer_data.profile.avatar_url;
+    }
+    // Check user metadata for OAuth profile pictures
+    if (quote.customer_data?.user_metadata?.avatar_url) {
+      return quote.customer_data.user_metadata.avatar_url;
+    }
+    if (quote.customer_data?.user_metadata?.picture) {
+      return quote.customer_data.user_metadata.picture;
+    }
+    return null;
+  };
+
+  const getCustomerInitials = () => {
+    const name = customerInfo.name || 'Anonymous Customer';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   // Compact Header View (Always Visible)
   const CompactHeader = () => (
     <div className="p-4">
       {/* Top Row: Customer Name & Actions */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-blue-600" />
-          </div>
+          <Avatar className="w-8 h-8">
+            <AvatarImage src={getCustomerAvatarUrl() || undefined} alt={customerInfo.name || 'Customer'} />
+            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
+              {getCustomerInitials()}
+            </AvatarFallback>
+          </Avatar>
           <div>
             <div className="font-medium text-gray-900">
               {customerInfo.name || 'Anonymous Customer'}

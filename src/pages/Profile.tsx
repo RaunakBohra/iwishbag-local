@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Globe,
   DollarSign,
@@ -77,6 +78,27 @@ const Profile = () => {
   const [availableCurrencies, setAvailableCurrencies] = useState<Currency[]>([]);
   const [currencyLoading, setCurrencyLoading] = useState(true);
   const { getAvailablePaymentMethods, methodsLoading } = usePaymentGateways();
+
+  // Helper functions for user avatar
+  const getUserAvatarUrl = () => {
+    // Check profile avatar_url first (stored in database)
+    if (profile?.avatar_url) {
+      return profile.avatar_url;
+    }
+    // Check user metadata for OAuth profile pictures
+    if (user?.user_metadata?.avatar_url) {
+      return user.user_metadata.avatar_url;
+    }
+    if (user?.user_metadata?.picture) {
+      return user.user_metadata.picture;
+    }
+    return null;
+  };
+
+  const getUserInitials = () => {
+    const name = profile?.full_name || user?.email || 'User';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   const {
     data: profile,
@@ -318,11 +340,12 @@ const Profile = () => {
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xl font-semibold">
-                {profile?.full_name
-                  ? profile.full_name.charAt(0).toUpperCase()
-                  : user?.email?.charAt(0).toUpperCase()}
-              </div>
+              <Avatar className="w-16 h-16">
+                <AvatarImage src={getUserAvatarUrl() || undefined} alt={profile?.full_name || 'User'} />
+                <AvatarFallback className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xl font-semibold">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
               <div>
                 <H1 className="text-2xl mb-1">
                   {profile?.full_name || user?.email?.split('@')[0] || 'User'}
