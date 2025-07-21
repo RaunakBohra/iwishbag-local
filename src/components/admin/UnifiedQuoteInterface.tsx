@@ -1310,9 +1310,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             <Package className="w-4 h-4 text-white" />
                           </div>
                           <div>
-                            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
-                              <Package className="w-4 h-4 mr-2" /> Products (
-                              {form.watch('items')?.length || 0})
+                            <CardTitle className="text-lg font-semibold text-gray-900">
+                              Products ({form.watch('items')?.length || 0})
                             </CardTitle>
                             <CardDescription className="text-sm text-gray-600">
                               Manage product details, pricing, and quantities
