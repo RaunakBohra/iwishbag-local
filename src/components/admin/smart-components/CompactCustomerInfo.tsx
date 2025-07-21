@@ -50,6 +50,8 @@ import {
   X,
 } from 'lucide-react';
 import type { UnifiedQuote } from '@/types/unified-quote';
+import { QuoteMessageThread } from '@/components/messaging/QuoteMessageThread';
+import { quoteMessageService } from '@/services/QuoteMessageService';
 
 interface CompactCustomerInfoProps {
   quote: UnifiedQuote;
@@ -104,6 +106,14 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       return data || [];
     },
     enabled: !!quote.user_id && !isAnonymous,
+  });
+
+  // Fetch unread message count for this quote
+  const { data: unreadCount } = useQuery({
+    queryKey: ['unread-messages', quote.id],
+    queryFn: () => quoteMessageService.getUnreadMessageCount(quote.id),
+    refetchInterval: 30000, // Refresh every 30 seconds
+    initialData: 0
   });
   
   // Only log when addresses are found/loaded (reduce console spam)
@@ -409,8 +419,22 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           </div>
         </div>
         <div className="flex items-center space-x-1">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 relative"
+            onClick={() => {
+              setIsExpanded(true);
+              setActiveTab('messages');
+            }}
+            title="Open messages"
+          >
             <MessageSquare className="w-4 h-4" />
+            {unreadCount && unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-4 w-4 p-0 flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
             <ExternalLink className="w-4 h-4" />
@@ -492,12 +516,19 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const DetailTabs = () => (
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-8 text-xs">
+        <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
           <TabsTrigger value="addresses" className="text-xs">
             Addresses {savedAddresses && savedAddresses.length > 0 && `(${savedAddresses.length})`}
           </TabsTrigger>
           <TabsTrigger value="actions" className="text-xs">
             Actions
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="text-xs">
+            Messages {unreadCount && unreadCount > 0 && (
+              <Badge className="ml-1 bg-red-500 text-white text-xs h-3 px-1">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -665,6 +696,16 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="messages" className="p-4 pt-3">
+          <QuoteMessageThread
+            quoteId={quote.id}
+            compact={true}
+            maxHeight="200px"
+            showComposer={true}
+            className="space-y-2"
+          />
         </TabsContent>
       </Tabs>
     </div>
