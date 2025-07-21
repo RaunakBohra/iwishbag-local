@@ -1414,6 +1414,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             showAllOptions={showAllShippingOptions}
                             onToggleShowAll={setShowAllShippingOptions}
                             compact={false}
+                            editMode={isEditMode}
+                            onSaveShippingOption={handleShippingOptionSelect}
+                            isSaving={isCalculating}
                           />
                         </CardContent>
                       )}
@@ -1787,6 +1790,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   showAllOptions={false}
                   onToggleShowAll={setShowAllShippingOptions}
                   compact={true}
+                  editMode={isEditMode}
+                  onSaveShippingOption={handleShippingOptionSelect}
+                  isSaving={isCalculating}
                 />
               )}
 
