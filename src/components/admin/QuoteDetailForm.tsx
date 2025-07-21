@@ -134,6 +134,70 @@ export const QuoteDetailForm = ({
         )}
       />
 
+      {/* Country Selection Fields */}
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="origin_country"
+          render={({ field }) => (
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">
+                Origin Country *
+              </FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl>
+                  <SelectTrigger className="h-9 mt-1">
+                    <SelectValue placeholder="Select origin country" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(allCountries || []).map((country) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{country.flag}</span>
+                        <span>{country.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="destination_country"
+          render={({ field }) => (
+            <FormItem className="m-0">
+              <FormLabel className="text-xs font-medium text-muted-foreground">
+                Destination Country *
+              </FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl>
+                  <SelectTrigger className="h-9 mt-1">
+                    <SelectValue placeholder="Select destination country" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(allCountries || []).map((country) => (
+                    <SelectItem key={country.code} value={country.code}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{country.flag}</span>
+                        <span>{country.name}</span>
+                        <span className="text-xs text-gray-500">({country.currency})</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
       {/* Customs Percentage */}
       <FormField
         control={form.control}

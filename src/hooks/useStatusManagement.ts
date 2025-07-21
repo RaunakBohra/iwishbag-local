@@ -65,7 +65,7 @@ export interface StatusWorkflow {
 }
 
 export const useStatusManagement = () => {
-  const { quoteStatuses, orderStatuses, isLoading, error, refreshData } = useStatusConfig();
+  const { quoteStatuses, orderStatuses, isLoading, error, refreshData, lastUpdated } = useStatusConfig();
   const { toast } = useToast();
 
   // Hook now uses dynamic statuses from StatusConfigProvider - no more hardcoded defaults here!
@@ -285,6 +285,7 @@ export const useStatusManagement = () => {
     orderStatuses,
     isLoading,
     error,
+    lastUpdated, // Include timestamp for triggering re-renders
     getStatusConfig,
     isValidTransition,
     getAllowedTransitions,

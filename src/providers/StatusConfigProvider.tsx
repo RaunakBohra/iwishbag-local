@@ -8,6 +8,7 @@ interface StatusConfigContextType {
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
+  lastUpdated: number; // Timestamp to trigger re-renders
 }
 
 const StatusConfigContext = createContext<StatusConfigContextType | undefined>(undefined);
@@ -22,7 +23,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'Clock',
     isActive: true,
     order: 1,
-    allowedTransitions: ['sent', 'rejected'],
+    allowedTransitions: ['pending', 'sent', 'rejected'],
     isTerminal: false,
     category: 'quote',
     // Flow properties
@@ -64,7 +65,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'FileText',
     isActive: true,
     order: 2,
-    allowedTransitions: ['approved', 'rejected', 'expired'],
+    allowedTransitions: ['sent', 'approved', 'rejected', 'expired'],
     autoExpireHours: 168, // 7 days
     isTerminal: false,
     category: 'quote',
@@ -107,7 +108,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'CheckCircle',
     isActive: true,
     order: 3,
-    allowedTransitions: ['rejected', 'payment_pending', 'paid'],
+    allowedTransitions: ['approved', 'pending', 'rejected', 'payment_pending', 'paid'],
     isTerminal: false,
     category: 'quote',
     // Flow properties
@@ -149,7 +150,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'XCircle',
     isActive: true,
     order: 4,
-    allowedTransitions: ['approved'],
+    allowedTransitions: ['rejected', 'pending', 'approved'],
     isTerminal: true,
     category: 'quote',
     // Flow properties
@@ -191,7 +192,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     icon: 'AlertTriangle',
     isActive: true,
     order: 5,
-    allowedTransitions: ['approved'],
+    allowedTransitions: ['expired', 'pending', 'approved'],
     isTerminal: true,
     category: 'quote',
     // Flow properties
@@ -233,7 +234,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'Clock',
     isActive: true,
     order: 1,
-    allowedTransitions: ['paid', 'ordered', 'cancelled'],
+    allowedTransitions: ['payment_pending', 'paid', 'ordered', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -275,7 +276,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'RefreshCw',
     isActive: true,
     order: 2,
-    allowedTransitions: ['ordered', 'shipped', 'cancelled'],
+    allowedTransitions: ['processing', 'ordered', 'shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -295,7 +296,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'DollarSign',
     isActive: true,
     order: 3,
-    allowedTransitions: ['ordered', 'cancelled'],
+    allowedTransitions: ['paid', 'ordered', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -337,7 +338,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'ShoppingCart',
     isActive: true,
     order: 4,
-    allowedTransitions: ['shipped', 'cancelled'],
+    allowedTransitions: ['ordered', 'shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -357,7 +358,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'Truck',
     isActive: true,
     order: 5,
-    allowedTransitions: ['completed', 'cancelled'],
+    allowedTransitions: ['shipped', 'completed', 'cancelled'],
     isTerminal: false,
     category: 'order',
     // Flow properties
@@ -399,7 +400,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'CheckCircle',
     isActive: true,
     order: 6,
-    allowedTransitions: [],
+    allowedTransitions: ['completed'],
     isTerminal: true,
     category: 'order',
     // Flow properties
@@ -441,7 +442,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'XCircle',
     isActive: true,
     order: 7,
-    allowedTransitions: [],
+    allowedTransitions: ['cancelled'],
     isTerminal: true,
     category: 'order',
     // Flow properties
@@ -459,6 +460,7 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
   const [orderStatuses, setOrderStatuses] = useState<StatusConfig[]>(defaultOrderStatuses);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
 
   const loadStatusSettings = async () => {
     setIsLoading(true);
@@ -516,6 +518,9 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
           throw new Error(`Invalid JSON in order_statuses: ${errorMessage}`);
         }
       }
+      
+      // Update timestamp to trigger re-renders
+      setLastUpdated(Date.now());
     } catch (err) {
       console.error('❌ Failed to load status config:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load status config';
@@ -562,11 +567,13 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
       // Set local state to defaults
       setQuoteStatuses(defaultQuoteStatuses);
       setOrderStatuses(defaultOrderStatuses);
+      setLastUpdated(Date.now());
     } catch (error) {
       console.error('❌ Failed to initialize default statuses:', error);
       // Fallback to defaults in memory if database initialization fails
       setQuoteStatuses(defaultQuoteStatuses);
       setOrderStatuses(defaultOrderStatuses);
+      setLastUpdated(Date.now());
     }
   };
 
@@ -576,11 +583,34 @@ export const StatusConfigProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     loadStatusSettings();
+
+    // Set up real-time subscription for status changes
+    const subscription = supabase
+      .channel('status-config-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'system_settings',
+          filter: 'setting_key=in.(quote_statuses,order_statuses)',
+        },
+        (payload) => {
+          console.log('🔄 Status config changed in database, refreshing...', payload);
+          // Refresh data when status settings change
+          loadStatusSettings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
     <StatusConfigContext.Provider
-      value={{ quoteStatuses, orderStatuses, isLoading, error, refreshData }}
+      value={{ quoteStatuses, orderStatuses, isLoading, error, refreshData, lastUpdated }}
     >
       {children}
     </StatusConfigContext.Provider>

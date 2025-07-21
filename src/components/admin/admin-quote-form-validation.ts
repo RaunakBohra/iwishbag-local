@@ -5,11 +5,19 @@ const emptyStringToNull = z.preprocess(
   z.coerce.number().nullable(),
 );
 
+const emptyStringToZero = z.preprocess(
+  (val) => (val === '' || val === undefined ? 0 : val),
+  z.coerce.number().min(0).default(0),
+);
+
 export const adminQuoteItemSchema = z.object({
   id: z.string(),
-  item_price: z.coerce.number().min(0).default(0),
-  item_weight: z.coerce.number().min(0).default(0),
-  quantity: z.coerce.number().min(1),
+  item_price: emptyStringToZero,
+  item_weight: emptyStringToZero,
+  quantity: z.preprocess(
+    (val) => (val === '' || val === undefined || val === 0 ? 1 : val),
+    z.coerce.number().min(1).default(1),
+  ),
   product_name: z.string().optional().nullable(),
   options: z.string().optional().nullable(),
   product_url: z.string().optional().nullable(),

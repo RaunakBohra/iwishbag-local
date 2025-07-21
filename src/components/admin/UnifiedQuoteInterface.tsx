@@ -57,6 +57,7 @@ import { Form } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AdminQuoteFormValues, adminQuoteFormSchema } from './admin-quote-form-validation';
+import { ModeToggle } from '@/components/ui/mode-toggle';
 
 interface UnifiedQuoteInterfaceProps {
   initialQuoteId?: string;
@@ -87,6 +88,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [showShippingDetails, setShowShippingDetails] = useState(false);
   const [isEditMode, setIsEditMode] = useState(true);
   const [showSmartSuggestions, setShowSmartSuggestions] = useState(false);
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -121,10 +123,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     loadQuoteData();
   }, [quoteId]);
 
-  const loadQuoteData = async () => {
+  const loadQuoteData = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
-      const quoteData = await unifiedDataEngine.getQuote(quoteId!);
+      
+      // Add small delay if forcing refresh to allow database update to propagate
+      if (forceRefresh) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      const quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
 
       if (!quoteData) {
         toast({
@@ -136,6 +144,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         return;
       }
 
+      console.log('🔄 [DEBUG] loadQuoteData: Updating quote state with new data', {
+        oldStatus: quote?.status,
+        newStatus: quoteData.status,
+        quoteId: quoteData.id
+      });
       setQuote(quoteData);
 
       // Populate form with quote data
@@ -319,6 +332,25 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // Remove applied suggestion
     const updatedSuggestions = smartSuggestions.filter((s) => s.id !== suggestion.id);
     setSmartSuggestions(updatedSuggestions);
+  };
+
+  // Enhanced mode toggle handler with notifications
+  const handleModeToggle = (newEditMode: boolean) => {
+    setIsEditMode(newEditMode);
+    
+    // Toast notification for mode changes
+    toast({
+      title: `${newEditMode ? 'Edit' : 'View'} Mode Activated`,
+      description: newEditMode 
+        ? 'You can now modify quote details and calculations.'
+        : 'Switched to view mode for review and analysis.',
+      duration: 2000,
+    });
+
+    // Reset form when switching to view mode
+    if (!newEditMode && quote) {
+      populateFormFromQuote(liveQuote || quote);
+    }
   };
 
   // Watch form values for live updates
@@ -715,6 +747,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setLiveQuote(quote);
     }
   }, [isEditMode, createLiveQuote, quote]);
+  
+  // Debug logging for status changes
+  useEffect(() => {
+    console.log('📊 [DEBUG] Quote or liveQuote status changed:', {
+      quoteStatus: quote?.status,
+      liveQuoteStatus: liveQuote?.status,
+      usingLiveQuote: !!liveQuote
+    });
+  }, [quote?.status, liveQuote?.status]);
 
   // Sync calculated values back to form fields (fixes handling charge & insurance display)
   useEffect(() => {
@@ -836,16 +877,34 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const onFormSubmit = async (data: AdminQuoteFormValues) => {
     try {
       setIsCalculating(true);
-      console.log('Form data being submitted:', data);
+      console.log('💾 [SAVE] Form data being submitted:', data);
 
       // Validate form data before submission
       const formErrors = form.formState.errors;
       if (Object.keys(formErrors).length > 0) {
-        console.error('Form validation errors:', formErrors);
+        console.error('❌ [SAVE] Form validation errors:', formErrors);
+        
+        // Generate detailed error message
+        const errorMessages = [];
+        if (formErrors.items) {
+          errorMessages.push('Product information has errors');
+        }
+        if (formErrors.customs_percentage) {
+          errorMessages.push('Customs percentage is invalid');
+        }
+        if (formErrors.origin_country || formErrors.destination_country) {
+          errorMessages.push('Origin or destination country is required');
+        }
+        
+        const errorDescription = errorMessages.length > 0 
+          ? errorMessages.join(', ') 
+          : 'Please check your inputs and try again.';
+        
         toast({
-          title: 'Validation Error',
-          description: 'Please fix the form errors before saving.',
+          title: 'Form Validation Failed',
+          description: errorDescription,
           variant: 'destructive',
+          duration: 5000,
         });
         return;
       }
@@ -890,14 +949,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           })) || [],
       });
 
-      console.log('Update success:', success);
+      console.log('✅ [SAVE] Update success:', success);
 
       if (success) {
+        setLastSaveTime(new Date());
         toast({
           title: 'Quote updated',
-          description: 'Quote has been successfully updated.',
+          description: 'Quote has been successfully updated. You can continue editing.',
         });
-        setIsEditMode(false);
+        // Removed setIsEditMode(false) - keep user in edit mode for continued editing
         await loadQuoteData(); // Reload to get fresh data
       } else {
         toast({
@@ -907,10 +967,67 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       }
     } catch (error) {
-      console.error('Error saving quote:', error);
+      console.error('❌ [SAVE] Error saving quote:', error);
       toast({
         title: 'Error',
         description: `Failed to save quote changes: ${error.message}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  // Save handler for view mode - saves current live quote state
+  const handleViewModeSave = async () => {
+    if (!liveQuote) {
+      console.error('❌ [VIEW-SAVE] No live quote available');
+      toast({
+        title: 'Error',
+        description: 'No quote data available to save.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsCalculating(true);
+      console.log('💾 [VIEW-SAVE] Saving view mode changes...', {
+        quoteId: liveQuote.id,
+        finalTotal: liveQuote.final_total_usd,
+        status: liveQuote.status,
+      });
+
+      // Save the current live quote state to database
+      const success = await unifiedDataEngine.updateQuote(quoteId!, {
+        calculation_data: liveQuote.calculation_data,
+        operational_data: liveQuote.operational_data,
+        final_total_usd: liveQuote.final_total_usd,
+        items: liveQuote.items,
+      });
+
+      console.log('✅ [VIEW-SAVE] Update success:', success);
+
+      if (success) {
+        setLastSaveTime(new Date());
+        toast({
+          title: 'Quote saved',
+          description: 'All changes have been saved successfully.',
+          duration: 3000,
+        });
+        await loadQuoteData(); // Reload to get fresh data
+      } else {
+        toast({
+          title: 'Save failed',
+          description: 'Failed to save quote changes. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('❌ [VIEW-SAVE] Error saving quote:', error);
+      toast({
+        title: 'Save Error',
+        description: `Failed to save quote: ${error.message}`,
         variant: 'destructive',
       });
     } finally {
@@ -944,7 +1061,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div 
+      className={`max-w-7xl mx-auto p-6 space-y-6 transition-all duration-300 rounded-lg ${
+        isEditMode 
+          ? 'border-2 border-orange-400 bg-orange-50/30 shadow-lg shadow-orange-100/50' 
+          : 'border border-gray-200 bg-white'
+      }`}
+    >
       {/* Smart Header with Key Metrics */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -975,32 +1098,47 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           </div>
           <div className="text-sm text-gray-600">
             {metrics?.totalItems} items • {metrics?.totalWeight} kg
+            {lastSaveTime && (
+              <span className="text-green-600 ml-2">
+                • Saved {lastSaveTime.toLocaleTimeString()}
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditMode(!isEditMode)}
+            <ModeToggle
+              isEditMode={isEditMode}
+              onToggle={handleModeToggle}
               disabled={isCalculating}
-            >
-              <Edit className="w-4 h-4 mr-1" />
-              {isEditMode ? 'View Mode' : 'Edit Quote'}
-            </Button>
+              showBadge={true}
+              size="default"
+            />
           </div>
         </div>
       </div>
 
       {/* Smart Suggestions Bar - Collapsible */}
       {smartSuggestions.length > 0 && (
-        <Card className="shadow-sm border-blue-200 bg-blue-50">
+        <Card className={`shadow-sm transition-all duration-300 ${
+          isEditMode 
+            ? 'border-orange-200 bg-orange-50' 
+            : 'border-blue-200 bg-blue-50'
+        }`}>
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Lightbulb className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">
+                <Lightbulb className={`w-4 h-4 transition-colors duration-300 ${
+                  isEditMode ? 'text-orange-600' : 'text-blue-600'
+                }`} />
+                <span className={`text-sm font-medium transition-colors duration-300 ${
+                  isEditMode ? 'text-orange-800' : 'text-blue-800'
+                }`}>
                   AI Suggestions ({smartSuggestions.length})
                 </span>
-                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                <Badge variant="secondary" className={`text-xs transition-all duration-300 ${
+                  isEditMode 
+                    ? 'bg-orange-100 text-orange-700' 
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
                   Available
                 </Badge>
               </div>
@@ -1008,7 +1146,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowSmartSuggestions(!showSmartSuggestions)}
-                className="h-6 w-6 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                className={`h-6 w-6 p-0 transition-all duration-300 ${
+                  isEditMode 
+                    ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-100' 
+                    : 'text-blue-600 hover:text-blue-800 hover:bg-blue-100'
+                }`}
               >
                 {showSmartSuggestions ? (
                   <ChevronUp className="w-4 h-4" />
@@ -1018,7 +1160,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               </Button>
             </div>
             {showSmartSuggestions && (
-              <div className="mt-3 pt-3 border-t border-blue-200">
+              <div className={`mt-3 pt-3 border-t transition-colors duration-300 ${
+                isEditMode ? 'border-orange-200' : 'border-blue-200'
+              }`}>
                 <SmartSuggestionCards
                   suggestions={smartSuggestions}
                   onApplySuggestion={handleApplySuggestion}
@@ -1413,10 +1557,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   <div className="flex items-center justify-end space-x-3 pt-4">
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        setIsEditMode(false);
-                        populateFormFromQuote(liveQuote || quote); // Reset form
-                      }}
+                      onClick={() => handleModeToggle(false)}
                       disabled={isCalculating}
                     >
                       <X className="w-4 h-4 mr-1" />
@@ -1432,14 +1573,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </Button>
                     <Button
                       onClick={async () => {
-                        console.log('Save button clicked');
-                        console.log('Current form values:', form.getValues());
+                        console.log('💾 [EDIT-SAVE] Save button clicked');
+                        console.log('💾 [EDIT-SAVE] Current form values:', form.getValues());
+                        
+                        // Trigger validation
                         const isValid = await form.trigger();
-                        console.log('Form is valid:', isValid);
+                        console.log('💾 [EDIT-SAVE] Form is valid:', isValid);
+                        
                         if (isValid) {
-                          form.handleSubmit(onFormSubmit)();
+                          // Direct function call instead of form.handleSubmit()
+                          await onFormSubmit(form.getValues());
                         } else {
-                          console.log('Form errors:', form.formState.errors);
+                          console.log('❌ [EDIT-SAVE] Form errors:', form.formState.errors);
                           toast({
                             title: 'Form Validation Failed',
                             description: 'Please check your inputs and try again.',
@@ -1448,9 +1593,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         }
                       }}
                       disabled={isCalculating}
+                      title="Save changes and continue editing"
                     >
                       <Save className="w-4 h-4 mr-1" />
-                      Save Changes
+                      {isCalculating ? 'Saving...' : 'Save Progress'}
                     </Button>
                   </div>
                 </form>
@@ -1558,9 +1704,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         </div>
       ) : (
         /* View Mode: Professional e-commerce admin layout */
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Main Content Area - Professional 2-Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Left Column - Primary Information (2/3 width) */}
             <div className="md:col-span-2 space-y-4">
               {/* Quote Items - Professional Table Style */}
@@ -1613,8 +1759,25 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
               />
+            </div>
 
-              {/* Shipping Options - Below Breakdown */}
+            {/* Right Sidebar - View Mode Components (1/3 width) */}
+            <div className="space-y-3">
+              {/* Customer Information */}
+              <CompactCustomerInfo
+                quote={liveQuote || quote}
+                onUpdateQuote={loadQuoteData}
+                compact={true}
+              />
+
+              {/* Status Management */}
+              <CompactStatusManager
+                quote={liveQuote || quote}
+                onStatusUpdate={loadQuoteData}
+                compact={true}
+              />
+
+              {/* Shipping Options */}
               {shippingOptions.length > 0 && (
                 <CompactShippingOptions
                   quote={liveQuote || quote}
@@ -1629,97 +1792,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   isSaving={isCalculating}
                 />
               )}
-            </div>
 
-            {/* Right Sidebar - Professional Priority Layout (1/3 width) */}
-            <div className="space-y-4">
-              {/* 1. Customer Information Card - COMPACT WORLD-CLASS DESIGN */}
-              <CompactCustomerInfo
-                quote={liveQuote || quote}
-                onUpdateQuote={loadQuoteData}
-                compact={true}
-              />
-
-              {/* 2. Quote Status & Metrics Card - COMPACT DESIGN */}
-              <Card className="shadow-sm border-gray-200">
-                <CardContent className="p-4 space-y-3">
-                  {/* Status Row */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Status</span>
-                    <CompactStatusManager
-                      quote={liveQuote || quote}
-                      onStatusUpdate={loadQuoteData}
-                    />
-                  </div>
-
-                  {/* Total & Metrics Grid */}
-                  <div className="grid grid-cols-3 gap-3 text-center py-3 bg-blue-50 rounded-lg">
-                    <div>
-                      <div className="text-lg font-bold text-blue-600">
-                        ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
-                      </div>
-                      <div className="text-xs text-blue-700">Total</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {optimizationScore.toFixed(0)}%
-                      </div>
-                      <div className="text-xs text-gray-500">Optimized</div>
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold text-gray-900">
-                        {metrics?.avgWeightConfidence}%
-                      </div>
-                      <div className="text-xs text-gray-500">AI Confidence</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 3. Cost Breakdown Card - ULTRA COMPACT */}
-              <Card className="shadow-sm border-gray-200">
-                <CardContent className="p-4 space-y-2">
-                  <div className="text-sm font-medium text-gray-700 mb-2">Cost Breakdown</div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping</span>
-                      <span className="font-medium">{metrics?.shippingPercentage}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Customs</span>
-                      <div className="flex items-center">
-                        <span className="font-medium">{metrics?.customsPercentage}%</span>
-                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                          <Badge variant="outline" className="ml-1 text-xs h-4 px-1">
-                            AI
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs pt-2 border-t border-gray-100">
-                    <span className="text-gray-600">Ship Options</span>
-                    <span className="font-medium">{shippingOptions.length} available</span>
-                  </div>
-
-                  {/* Smart Customs Compact Info */}
-                  {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
-                    <div className="flex items-center text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      <span>
-                        Smart tier:{' '}
-                        {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name ||
-                          'Default'}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-
-              {/* 4. Payment Management - NEW COMPACT COMPONENT */}
+              {/* Payment Management */}
               {[
                 'sent',
                 'approved',
@@ -1736,26 +1810,36 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 />
               )}
 
-              {/* 5. Quick Actions Card - MINIMAL DESIGN */}
+              {/* Quote Summary - Compact */}
               <Card className="shadow-sm border-gray-200">
-                <CardContent className="p-4 space-y-2">
-                  <div className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-                    <Zap className="w-4 h-4 mr-2 text-gray-600" />
-                    Quick Actions
+                <CardContent className="p-3">
+                  <div className="text-sm font-medium text-gray-700 mb-3">Quote Summary</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Total Value</span>
+                      <span className="text-lg font-semibold text-blue-600">
+                        ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Items</span>
+                        <span className="font-medium">{metrics?.totalItems || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Weight</span>
+                        <span className="font-medium">{metrics?.totalWeight || 0} kg</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Optimized</span>
+                        <span className="font-medium">{optimizationScore.toFixed(0)}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">AI Confidence</span>
+                        <span className="font-medium">{metrics?.avgWeightConfidence}%</span>
+                      </div>
+                    </div>
                   </div>
-                  <Button
-                    onClick={() => calculateSmartFeatures(liveQuote || quote)}
-                    disabled={isCalculating}
-                    className="w-full h-8"
-                    size="sm"
-                  >
-                    <Calculator className="w-3 h-3 mr-2" />
-                    {isCalculating ? 'Calculating...' : 'Recalculate'}
-                  </Button>
-                  <Button variant="outline" className="w-full h-8" size="sm">
-                    <Clock className="w-3 h-3 mr-2" />
-                    Timeline
-                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -1784,7 +1868,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button variant="outline">Save</Button>
+              <Button 
+                variant="outline" 
+                onClick={handleViewModeSave}
+                disabled={isCalculating}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {isCalculating ? 'Saving...' : 'Save'}
+              </Button>
               <Button>Send to Customer</Button>
             </div>
           </div>

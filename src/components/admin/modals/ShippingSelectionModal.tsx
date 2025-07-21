@@ -194,7 +194,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
               <option value="all">All Options</option>
               <option value="recommended">Recommended</option>
               <option value="express">Express (≤5 days)</option>
-              <option value="economy">Economy (>7 days)</option>
+              <option value="economy">Economy (&gt;7 days)</option>
             </select>
           </div>
 

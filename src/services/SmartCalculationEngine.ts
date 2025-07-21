@@ -693,7 +693,10 @@ export class SmartCalculationEngine {
       handlingFee +
       insuranceAmount +
       vatAmount;
-    const finalTotal = subtotal + paymentGatewayFee;
+    
+    // Get discount amount and subtract it from final total
+    const discount = quote.calculation_data?.discount || 0;
+    const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // Update quote data structures
     const updatedQuote: UnifiedQuote = {
@@ -707,7 +710,7 @@ export class SmartCalculationEngine {
           customs: customsAmount,
           taxes: salesTax + vatAmount,
           fees: handlingFee + insuranceAmount + paymentGatewayFee,
-          discount: quote.calculation_data?.breakdown?.discount || 0,
+          discount: discount,
         },
         exchange_rate: {
           rate: exchangeRate,
@@ -813,7 +816,10 @@ export class SmartCalculationEngine {
       handlingFee +
       insuranceAmount +
       vatAmount;
-    const finalTotal = subtotal + paymentGatewayFee;
+    
+    // Get discount amount and subtract it from final total
+    const discount = quote.calculation_data?.discount || 0;
+    const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // Update quote data structures
     const updatedCalculationData: CalculationData = {
@@ -824,7 +830,7 @@ export class SmartCalculationEngine {
         customs: customsAmount,
         taxes: salesTax + vatAmount, // Include VAT in taxes like live calculator
         fees: handlingFee + insuranceAmount + paymentGatewayFee,
-        discount: 0,
+        discount: discount,
       },
       exchange_rate: {
         rate: exchangeRate,

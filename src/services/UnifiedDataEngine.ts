@@ -183,10 +183,20 @@ export class UnifiedDataEngine {
   /**
    * Get quote by ID with smart caching
    */
-  async getQuote(id: string): Promise<UnifiedQuote | null> {
+  async getQuote(id: string, forceRefresh = false): Promise<UnifiedQuote | null> {
     const cacheKey = `quote_${id}`;
-    const cached = this.getCached(cacheKey);
-    if (cached) return cached;
+    
+    // Skip cache if force refresh is requested
+    if (!forceRefresh) {
+      const cached = this.getCached(cacheKey);
+      if (cached) {
+        console.log(`📋 [DEBUG] Returning cached quote ${id}`);
+        return cached;
+      }
+    } else {
+      console.log(`🔄 [DEBUG] Force refreshing quote ${id}, clearing cache`);
+      this.clearCache(cacheKey);
+    }
 
     // Query the unified structure (quotes table with JSONB fields) and join with profiles for customer name and avatar
     const { data: quoteData, error: quoteError } = await supabase

@@ -38,6 +38,13 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState('breakdown');
 
+  // Reset active tab to breakdown if Exchange tab is not available
+  React.useEffect(() => {
+    if (activeTab === 'exchange' && quote.currency === 'USD') {
+      setActiveTab('breakdown');
+    }
+  }, [activeTab, quote.currency]);
+
   const breakdown = quote.calculation_data?.breakdown || {};
   const exchangeRate = quote.calculation_data?.exchange_rate || { rate: 1, source: 'standard' };
   const totalCost = quote.final_total_usd || 0;
@@ -189,16 +196,18 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const ExpandedDetails = () => (
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
+        <TabsList className={`grid w-full h-8 text-xs ${quote.currency === 'USD' ? 'grid-cols-2' : 'grid-cols-3'}`}>
           <TabsTrigger value="breakdown" className="text-xs">
             Breakdown
           </TabsTrigger>
           <TabsTrigger value="insights" className="text-xs">
             Insights
           </TabsTrigger>
-          <TabsTrigger value="exchange" className="text-xs">
-            Exchange
-          </TabsTrigger>
+          {quote.currency !== 'USD' && (
+            <TabsTrigger value="exchange" className="text-xs">
+              Exchange
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
@@ -416,52 +425,98 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           )}
         </TabsContent>
 
-        <TabsContent value="exchange" className="p-4 pt-3 space-y-3">
-          {/* Exchange Rate Details */}
-          <div className="space-y-3">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Current Rate</span>
-                <Badge variant="outline" className="text-xs">
-                  {exchangeRate.source === 'shipping_route' ? 'Route-specific' : 'Standard'}
-                </Badge>
-              </div>
-              <div className="text-lg font-bold text-gray-900">
-                1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}
-              </div>
-            </div>
-
-            {/* Currency Conversion */}
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-700">Amount Conversion</div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">USD Amount:</span>
-                  <span className="font-medium">${totalCost.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">{quote.currency} Amount:</span>
-                  <span className="font-medium">
-                    {(totalCost * exchangeRate.rate).toFixed(2)} {quote.currency}
-                  </span>
+        {quote.currency !== 'USD' && (
+          <TabsContent value="exchange" className="p-4 pt-3 space-y-3">
+            {/* Currency Conversion Calculator */}
+            <div className="space-y-3">
+              {/* Main Conversion Display */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-700">Total Amount Conversion</div>
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-gray-900">${totalCost.toFixed(2)}</div>
+                      <div className="text-xs text-gray-600">USD (Base)</div>
+                    </div>
+                    <div className="text-gray-400">→</div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-blue-600">
+                        {(totalCost * exchangeRate.rate).toFixed(2)} {quote.currency}
+                      </div>
+                      <div className="text-xs text-gray-600">Customer Currency</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Rate Source Info */}
-            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-              <div className="flex items-center space-x-1 mb-1">
-                <Info className="w-3 h-3" />
-                <span className="font-medium">Rate Source</span>
+              {/* Component-wise Conversions */}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-gray-700">Detailed Conversions</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Items Total:</span>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {((breakdown.items_total || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                      </div>
+                      <div className="text-xs text-gray-500">${Number(breakdown.items_total || 0).toFixed(2)} USD</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Shipping Total:</span>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {((breakdown.shipping || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                      </div>
+                      <div className="text-xs text-gray-500">${Number(breakdown.shipping || 0).toFixed(2)} USD</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Customs & Duties:</span>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {((breakdown.customs || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                      </div>
+                      <div className="text-xs text-gray-500">${Number(breakdown.customs || 0).toFixed(2)} USD</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Processing Fees:</span>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {((breakdown.fees || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                      </div>
+                      <div className="text-xs text-gray-500">${Number(breakdown.fees || 0).toFixed(2)} USD</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                {exchangeRate.source === 'shipping_route'
-                  ? 'Using shipping route specific exchange rate for better accuracy'
-                  : 'Using standard market exchange rate'}
+
+              {/* Rate Source Details */}
+              <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                <div className="flex items-center space-x-1 mb-1">
+                  <Info className="w-3 h-3" />
+                  <span className="font-medium">Exchange Rate Details</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span>Rate:</span>
+                    <span>1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Source:</span>
+                    <span>{exchangeRate.source === 'shipping_route' ? 'Route-specific' : 'Standard market'}</span>
+                  </div>
+                  <div className="text-gray-500 text-xs mt-1">
+                    {exchangeRate.source === 'shipping_route'
+                      ? 'Using shipping route specific rate for enhanced accuracy on this route'
+                      : 'Using standard market exchange rate from our currency service'}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
