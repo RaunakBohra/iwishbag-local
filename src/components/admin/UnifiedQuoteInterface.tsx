@@ -1186,7 +1186,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   return (
     <div
-      className={`max-w-7xl mx-auto p-6 space-y-6 transition-all duration-300 rounded-lg ${
+      className={`max-w-7xl mx-auto p-6 space-y-6 rounded-lg ${
         isEditMode
           ? 'border border-teal-200 bg-teal-50/20 shadow-sm'
           : 'border border-blue-200 bg-blue-50/20 shadow-sm'
