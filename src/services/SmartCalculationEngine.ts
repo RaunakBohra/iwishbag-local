@@ -542,10 +542,21 @@ export class SmartCalculationEngine {
     preferences?: EnhancedCalculationInput['preferences'],
     currentSelection?: string
   ): ShippingOption {
+    console.log('🎯 [DEBUG] selectOptimalShippingOption called:', {
+      currentSelection,
+      availableOptions: options.map(opt => ({ id: opt.id, carrier: opt.carrier, cost: opt.cost_usd })),
+      preferences
+    });
+
     // Use current selection if valid
     if (currentSelection) {
       const existing = options.find(opt => opt.id === currentSelection);
-      if (existing) return existing;
+      if (existing) {
+        console.log('✅ [DEBUG] Using current selection:', { id: existing.id, carrier: existing.carrier, cost: existing.cost_usd });
+        return existing;
+      } else {
+        console.log('⚠️ [DEBUG] Current selection not found in options:', currentSelection);
+      }
     }
 
     // Apply preferences
@@ -561,11 +572,14 @@ export class SmartCalculationEngine {
     }
 
     // Default: best balance of cost and reliability
-    return options.sort((a, b) => {
+    const selected = options.sort((a, b) => {
       const aScore = (1 / a.cost_usd) * a.confidence;
       const bScore = (1 / b.cost_usd) * b.confidence;
       return bScore - aScore;
     })[0];
+
+    console.log('🎯 [DEBUG] Final selected option:', { id: selected.id, carrier: selected.carrier, cost: selected.cost_usd });
+    return selected;
   }
 
   /**
@@ -621,6 +635,18 @@ export class SmartCalculationEngine {
     totalWeight: number;
   }): { updated_quote: UnifiedQuote } {
     const { quote, selectedShipping, itemsTotal } = params;
+
+    console.log('🧮 [DEBUG] calculateCompleteCostsSync called:', {
+      quoteId: quote.id,
+      selectedShipping: {
+        id: selectedShipping.id,
+        carrier: selectedShipping.carrier,
+        cost: selectedShipping.cost_usd
+      },
+      storedSelectedOption: quote.operational_data?.shipping?.selected_option,
+      itemsTotal,
+      currentBreakdownShipping: quote.calculation_data?.breakdown?.shipping
+    });
 
     // Use existing exchange rate or default
     const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;

@@ -50,6 +50,21 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     opt => opt.id === quote.operational_data?.shipping?.selected_option
   );
 
+  // Debug logging for breakdown component
+  console.log('📊 [DEBUG] CompactCalculationBreakdown render:', {
+    quoteId: quote.id,
+    breakdownShipping: breakdown.shipping,
+    selectedShippingOptionId: quote.operational_data?.shipping?.selected_option,
+    selectedShippingOption: selectedShippingOption ? {
+      id: selectedShippingOption.id,
+      carrier: selectedShippingOption.carrier,
+      cost: selectedShippingOption.cost_usd
+    } : null,
+    shippingOptionsAvailable: shippingOptions.map(opt => ({ id: opt.id, carrier: opt.carrier, cost: opt.cost_usd })),
+    totalCost: quote.final_total_usd,
+    calculationData: quote.calculation_data
+  });
+
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
     return quote.items?.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0) || 0;
