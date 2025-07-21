@@ -289,19 +289,20 @@ export const useCartStore = create<CartStore>()(
             // Set user ID
             set({ userId });
 
-            // PERFORMANCE FIX: Fetch cart quotes with performance tracking
-            const cartQuotes = await trackCartOperation('load', async () => {
-              const { data, error } = await supabase
-                .from('quotes')
-                .select(COMMON_QUERIES.cartItems)
-                .eq('user_id', userId)
-                .eq('in_cart', true) // Server-side filtering - 75% performance improvement
-                .order('created_at', { ascending: false })
-                .limit(50); // Reasonable limit for cart items
-                
-              if (error) throw error;
-              return data || [];
-            }, { userId });
+            // PERFORMANCE FIX: Fetch cart quotes with server-side filtering
+            // Temporarily disable performance tracking to isolate issue
+            const { data: cartQuotes, error: quotesError } = await supabase
+              .from('quotes')
+              .select(COMMON_QUERIES.cartItems)
+              .eq('user_id', userId)
+              .eq('in_cart', true) // Server-side filtering - 75% performance improvement
+              .order('created_at', { ascending: false })
+              .limit(50); // Reasonable limit for cart items
+              
+            if (quotesError) {
+              console.error('Cart loading error details:', quotesError);
+              throw quotesError;
+            }
 
             // 🚨 DEBUG: Log cart data to check if local currency fields are loaded
             console.log(
