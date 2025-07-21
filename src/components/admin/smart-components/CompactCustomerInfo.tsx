@@ -76,8 +76,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const queryClient = useQueryClient();
 
   const customerInfo = quote.customer_data?.info || {};
-  // Check both customer_data.shipping_address and direct quote.shipping_address
-  const shippingAddress = quote.customer_data?.shipping_address || quote.shipping_address || {};
+  const shippingAddress = quote.customer_data?.shipping_address || {};
   const isAnonymous = quote.is_anonymous;
 
   // Fetch user's saved addresses from user_addresses table
@@ -263,7 +262,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   };
 
   const formatAddress = (address: typeof shippingAddress) => {
-    if (!address.line1) return null;
+    if (!address?.line1) return null;
 
     const parts = [
       address.line1,
@@ -303,8 +302,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   // Helper to get customer name from multiple possible sources
   const getCustomerName = () => {
     // First check stored quote data
-    const storedName =
-      customerInfo?.name || quote.customer_name || quote.customer_data?.customer_name;
+    const storedName = customerInfo?.name;
 
     if (storedName) return storedName;
 
@@ -334,7 +332,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   // Helper to get customer email from multiple possible sources
   const getCustomerEmail = () => {
     // First check stored quote data
-    const storedEmail = customerInfo?.email || quote.email || quote.customer_data?.email;
+    const storedEmail = customerInfo?.email;
 
     if (storedEmail) return storedEmail;
 
@@ -349,8 +347,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   // Helper to get customer phone from multiple possible sources
   const getCustomerPhone = () => {
     // First check stored quote data
-    const storedPhone =
-      customerInfo?.phone || quote.customer_phone || quote.customer_data?.customer_phone;
+    const storedPhone = customerInfo?.phone;
 
     if (storedPhone) return storedPhone;
 
@@ -423,9 +420,20 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             variant="ghost" 
             size="sm" 
             className="h-8 w-8 p-0 relative"
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Store current scroll position
+              const currentScroll = window.scrollY;
+              
               setIsExpanded(true);
               setActiveTab('messages');
+              
+              // Prevent auto-scroll by restoring position
+              requestAnimationFrame(() => {
+                window.scrollTo(0, currentScroll);
+              });
             }}
             title="Open messages"
           >
@@ -502,7 +510,20 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Store current scroll position
+              const currentScroll = window.scrollY;
+              
+              setIsExpanded(!isExpanded);
+              
+              // Prevent auto-scroll by restoring position
+              requestAnimationFrame(() => {
+                window.scrollTo(0, currentScroll);
+              });
+            }}
             className="h-6 px-2 text-xs"
           >
             {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -514,7 +535,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
 
   // Expandable Detail Tabs (Shown when expanded)
   const DetailTabs = () => (
-    <div className="border-t border-gray-100">
+    <div className="border-t border-gray-100 animate-in fade-in-50 slide-in-from-top-2 duration-200">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
           <TabsTrigger value="addresses" className="text-xs">
@@ -712,7 +733,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   );
 
   return (
-    <Card className="shadow-sm border-gray-200 overflow-hidden">
+    <Card className="shadow-sm border-gray-200 overflow-hidden transition-all duration-200">
       <CompactHeader />
       {isExpanded && <DetailTabs />}
       

@@ -87,8 +87,13 @@ export class QuoteMessageService {
           recipientId = quote.user_id;
         } else {
           // Customer sending to admin (no specific recipient)
-          recipientId = undefined;
+          recipientId = null; // This allows the message to be visible to all admins
         }
+      }
+
+      // Ensure sender_id ≠ recipient_id (database constraint)
+      if (recipientId === user.id) {
+        recipientId = null; // Allow message to be general admin message
       }
 
       // Insert message into database
@@ -272,11 +277,7 @@ export class QuoteMessageService {
     try {
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
-          *,
-          customer_data,
-          shipping_address
-        `)
+        .select('*')
         .eq('id', quoteId)
         .single();
 

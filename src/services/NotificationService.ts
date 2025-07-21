@@ -252,28 +252,38 @@ export class NotificationService {
    */
   private async getAdminEmails(): Promise<string[]> {
     try {
-      const { data, error } = await supabase
+      // Get admin user IDs
+      const { data: adminRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id,
-          role,
-          profiles!inner(email)
-        `)
+        .select('user_id')
         .eq('role', 'admin');
 
-      if (error) {
-        console.error('❌ Failed to fetch admin emails:', error);
+      if (rolesError || !adminRoles) {
+        console.error('❌ Failed to fetch admin roles:', rolesError);
         return [];
       }
 
-      const emails = data
-        ?.map(item => (item.profiles as any)?.email)
-        .filter(email => email && email.includes('@'));
+      if (adminRoles.length === 0) {
+        console.warn('⚠️ No admin roles found');
+        return [];
+      }
 
-      return emails || [];
+      const adminUserIds = adminRoles.map(role => role.user_id);
+
+      // Get emails from auth.users table using RPC function
+      const { data: adminEmails, error: emailsError } = await supabase
+        .rpc('get_admin_emails', { admin_user_ids: adminUserIds });
+
+      if (emailsError) {
+        console.error('❌ Failed to fetch admin emails via RPC:', emailsError);
+        // Fallback: return a default admin email
+        return ['admin@iwishbag.com'];
+      }
+
+      return adminEmails || ['admin@iwishbag.com'];
     } catch (error) {
       console.error('❌ Error fetching admin emails:', error);
-      return [];
+      return ['admin@iwishbag.com'];
     }
   }
 
@@ -281,20 +291,14 @@ export class NotificationService {
    * Get customer name from quote data
    */
   private getCustomerName(quote: UnifiedQuote): string {
-    return quote.customer_data?.info?.name ||
-           quote.customer_name ||
-           quote.customer_data?.customer_name ||
-           'Customer';
+    return quote.customer_data?.info?.name || 'Customer';
   }
 
   /**
    * Get customer email from quote data
    */
   private getCustomerEmail(quote: UnifiedQuote): string {
-    return quote.customer_data?.info?.email ||
-           quote.email ||
-           quote.customer_data?.email ||
-           'No email provided';
+    return quote.customer_data?.info?.email || 'No email provided';
   }
 
   /**
