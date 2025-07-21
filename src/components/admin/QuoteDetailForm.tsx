@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
 import type { ShippingOption } from '@/types/unified-quote';
-import { Ship, BarChart3, Truck, CreditCard, Brain } from 'lucide-react';
+import { BarChart3, Truck, CreditCard, Brain, MapPin } from 'lucide-react';
 import { ShippingSelectionModal } from '@/components/admin/modals/ShippingSelectionModal';
 
 interface CustomsTier {
@@ -47,6 +47,7 @@ interface QuoteDetailFormProps {
   recommendations?: any[];
   onSelectShippingOption?: (optionId: string) => Promise<void>;
   onShowShippingDetails?: () => void;
+  isEditingRoute?: boolean;
 }
 
 export const QuoteDetailForm = ({
@@ -61,6 +62,7 @@ export const QuoteDetailForm = ({
   recommendations = [],
   onSelectShippingOption,
   onShowShippingDetails,
+  isEditingRoute = false,
 }: QuoteDetailFormProps) => {
   const { toast: _toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -84,10 +86,10 @@ export const QuoteDetailForm = ({
   // Watch form values
   const watchedValues = useWatch({
     control: form.control,
-    name: ['destination_country', 'items'],
+    name: ['origin_country', 'destination_country', 'items'],
   });
 
-  const [countryCode, _items] = watchedValues;
+  const [_originCountry, countryCode, _items] = watchedValues;
 
   // Get country currency and name from country settings
   const countryCurrency = useMemo(() => {
@@ -155,18 +157,17 @@ export const QuoteDetailForm = ({
         )}
       />
 
-      {/* Shipping & Costs Configuration - World Class Design */}
-      <div className="space-y-4">
-        {/* Section 1: Customs & Taxes */}
-        <div className="border border-gray-200 rounded-lg">
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
-            <h4 className="text-sm font-semibold text-gray-800 flex items-center">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Customs & Taxes
-            </h4>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-2 gap-4">
+
+      {/* Customs & Taxes */}
+      <div className="border border-gray-200 rounded-lg">
+        <div className="bg-gradient-to-r from-orange-50 to-yellow-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
+          <h4 className="text-sm font-semibold text-gray-800 flex items-center">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Customs & Taxes
+          </h4>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="customs_percentage"
@@ -262,20 +263,20 @@ export const QuoteDetailForm = ({
                   </FormItem>
                 )}
               />
-            </div>
           </div>
         </div>
+      </div>
 
-        {/* Section 2: Shipping Costs */}
-        <div className="border border-gray-200 rounded-lg">
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-2 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-800 flex items-center">
-              <Truck className="w-4 h-4 mr-2" />
-              Shipping Costs
-            </h4>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-2 gap-4">
+      {/* Shipping Costs */}
+      <div className="border border-gray-200 rounded-lg">
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
+          <h4 className="text-sm font-semibold text-gray-800 flex items-center">
+            <Truck className="w-4 h-4 mr-2" />
+            Shipping Costs
+          </h4>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="merchant_shipping_price"
@@ -403,20 +404,20 @@ export const QuoteDetailForm = ({
                   </FormItem>
                 )}
               />
-            </div>
           </div>
         </div>
+      </div>
 
-        {/* Section 3: Fees & Adjustments */}
-        <div className="border border-gray-200 rounded-lg">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 border-b border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-800 flex items-center">
-              <CreditCard className="w-4 h-4 mr-2" />
-              Fees & Adjustments
-            </h4>
-          </div>
-          <div className="p-4">
-            <div className="grid grid-cols-2 gap-4">
+      {/* Fees & Adjustments */}
+      <div className="border border-gray-200 rounded-lg">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 border-b border-gray-200 rounded-t-lg">
+          <h4 className="text-sm font-semibold text-gray-800 flex items-center">
+            <CreditCard className="w-4 h-4 mr-2" />
+            Fees & Adjustments
+          </h4>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="handling_charge"
@@ -471,7 +472,6 @@ export const QuoteDetailForm = ({
                   </FormItem>
                 )}
               />
-            </div>
           </div>
         </div>
       </div>

@@ -22,7 +22,6 @@ import {
   CheckCircle,
   Lightbulb,
   Package,
-  Clock,
   DollarSign,
   Edit,
   Save,
@@ -36,6 +35,13 @@ import {
   Smartphone,
   MessageCircle,
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
@@ -55,6 +61,7 @@ import { CompactCustomerInfo } from './smart-components/CompactCustomerInfo';
 import { CompactStatusManager } from './smart-components/CompactStatusManager';
 import { CompactShippingOptions } from './smart-components/CompactShippingOptions';
 import { CompactPaymentManager } from './smart-components/CompactPaymentManager';
+import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { QuoteDetailForm } from './QuoteDetailForm';
@@ -95,6 +102,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [isEditMode, setIsEditMode] = useState(true);
   const [showSmartSuggestions, setShowSmartSuggestions] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+  const [isEditingRoute, setIsEditingRoute] = useState(false);
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -1093,9 +1101,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Quote {quote.display_id}</h1>
               <div className="flex items-center space-x-4 mt-1">
-                <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                  <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
-                </div>
+                <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
                 <Badge variant="outline" className="flex items-center">
                   <TrendingUp className="w-3 h-3 mr-1" />
                   {optimizationScore.toFixed(0)}% Optimized
@@ -1124,28 +1130,98 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         {/* Key Metrics Banner - Enterprise Standard */}
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
-            {/* Shipping Route - Professional Display */}
+            {/* Shipping Route - Professional Display with Inline Editing */}
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="text-sm font-medium text-slate-700">
-                  {(() => {
-                    const originCountry = allCountries?.find(
-                      (c) => c.code === quote.origin_country,
-                    );
-                    return originCountry?.name || quote.origin_country || 'Origin';
-                  })()}
-                </div>
+                {/* Origin Country - Inline Editable */}
+                {isEditingRoute ? (
+                  <Select
+                    onValueChange={(value) => {
+                      form.setValue('origin_country', value);
+                      // Trigger recalculation if needed
+                      if (isEditMode) {
+                        // The form watching will trigger recalculation automatically
+                      }
+                    }}
+                    value={form.watch('origin_country') || quote.origin_country || ''}
+                  >
+                    <SelectTrigger className="h-8 min-w-[140px] text-sm font-medium">
+                      <SelectValue placeholder="Select origin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCountries?.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">{country.flag}</span>
+                            <span>{country.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-sm font-medium text-slate-700">
+                    {(() => {
+                      const originCountry = allCountries?.find(
+                        (c) => c.code === quote.origin_country,
+                      );
+                      return originCountry?.name || quote.origin_country || 'Origin';
+                    })()}
+                  </div>
+                )}
+                
                 <ArrowRight className="w-4 h-4 text-slate-400" />
-                <div className="text-sm font-medium text-slate-700">
-                  {(() => {
-                    const destinationCountry = allCountries?.find(
-                      (c) => c.code === quote.destination_country,
-                    );
-                    return (
-                      destinationCountry?.name || quote.destination_country || 'Destination'
-                    );
-                  })()}
-                </div>
+                
+                {/* Destination Country - Inline Editable */}
+                {isEditingRoute ? (
+                  <Select
+                    onValueChange={(value) => {
+                      form.setValue('destination_country', value);
+                      // Trigger recalculation if needed
+                      if (isEditMode) {
+                        // The form watching will trigger recalculation automatically
+                      }
+                    }}
+                    value={form.watch('destination_country') || quote.destination_country || ''}
+                  >
+                    <SelectTrigger className="h-8 min-w-[140px] text-sm font-medium">
+                      <SelectValue placeholder="Select destination" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCountries?.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs">{country.flag}</span>
+                            <span>{country.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="text-sm font-medium text-slate-700">
+                    {(() => {
+                      const destinationCountry = allCountries?.find(
+                        (c) => c.code === quote.destination_country,
+                      );
+                      return destinationCountry?.name || quote.destination_country || 'Destination';
+                    })()}
+                  </div>
+                )}
+                
+                {/* Edit Route Button - Only show in edit mode */}
+                {isEditMode && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingRoute(!isEditingRoute)}
+                    className="h-6 px-2 ml-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  >
+                    <Edit className="w-3 h-3 mr-1" />
+                    {isEditingRoute ? 'Done' : 'Edit'}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -1169,9 +1245,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 <div className="text-xs text-gray-600 font-medium">Total Weight</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-700">
-                  {metrics?.totalItems || 0}
-                </div>
+                <div className="text-xl font-bold text-gray-700">{metrics?.totalItems || 0}</div>
                 <div className="text-xs text-gray-600 font-medium">Items</div>
               </div>
             </div>
@@ -1550,7 +1624,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   <div className="flex items-start space-x-2">
                                     <MessageCircle className="w-3 h-3 text-gray-500 mt-0.5 flex-shrink-0" />
                                     <div className="text-xs text-gray-600">
-                                      <span className="font-medium text-gray-700">Customer Note:</span>
+                                      <span className="font-medium text-gray-700">
+                                        Customer Note:
+                                      </span>
                                       <span className="ml-1">{item.options}</span>
                                     </div>
                                   </div>
@@ -1607,40 +1683,29 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </CardContent>
                   </Card>
 
-                  {/* Shipping & Costs Section */}
-                  <Card className="shadow-sm border-gray-200">
-                    <CardHeader className="bg-teal-50 border-b border-teal-200 py-4">
-                      <CardTitle className="text-lg font-semibold text-gray-900">
-                        Shipping & Costs
-                      </CardTitle>
-                      <CardDescription className="text-sm text-gray-600 mt-1">
-                        Configure shipping routes, customs, taxes, and additional fees
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <QuoteDetailForm
-                        form={form}
-                        detectedCustomsPercentage={customsTierInfo?.customs_percentage}
-                        detectedCustomsTier={
-                          customsTierInfo?.applied_tier
-                            ? {
-                                name: customsTierInfo.applied_tier.rule_name,
-                                customs_percentage: customsTierInfo.customs_percentage,
-                                description: customsTierInfo.fallback_used
-                                  ? 'Fallback tier applied'
-                                  : 'Smart tier applied',
-                              }
-                            : undefined
-                        }
-                        onCalculateSmartCustoms={calculateSmartCustoms}
-                        isCalculatingCustoms={isCalculatingCustoms}
-                        shippingOptions={shippingOptions}
-                        recommendations={shippingRecommendations}
-                        onSelectShippingOption={handleShippingOptionSelect}
-                        onShowShippingDetails={() => setShowShippingDetails(true)}
-                      />
-                    </CardContent>
-                  </Card>
+                  {/* Quote Detail Form - Direct Integration */}
+                  <QuoteDetailForm
+                    form={form}
+                    detectedCustomsPercentage={customsTierInfo?.customs_percentage}
+                    detectedCustomsTier={
+                      customsTierInfo?.applied_tier
+                        ? {
+                            name: customsTierInfo.applied_tier.rule_name,
+                            customs_percentage: customsTierInfo.customs_percentage,
+                            description: customsTierInfo.fallback_used
+                              ? 'Fallback tier applied'
+                              : 'Smart tier applied',
+                          }
+                        : undefined
+                    }
+                    onCalculateSmartCustoms={calculateSmartCustoms}
+                    isCalculatingCustoms={isCalculatingCustoms}
+                    shippingOptions={shippingOptions}
+                    recommendations={shippingRecommendations}
+                    onSelectShippingOption={handleShippingOptionSelect}
+                    onShowShippingDetails={() => setShowShippingDetails(true)}
+                    isEditingRoute={isEditingRoute}
+                  />
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
@@ -1702,13 +1767,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               />
 
               {/* Status Management - Outside form to prevent submission conflicts */}
-              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                <CompactStatusManager
-                  quote={liveQuote || quote}
-                  onStatusUpdate={loadQuoteData}
-                  compact={true}
-                />
-              </div>
+              <CompactStatusManager
+                quote={liveQuote || quote}
+                onStatusUpdate={loadQuoteData}
+                compact={true}
+              />
 
               {/* Shipping Options */}
               {shippingOptions.length > 0 && (
@@ -1859,7 +1922,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             {item.options && item.options.trim() && (
                               <div className="mt-1">
                                 <span className="text-xs text-gray-600">
-                                  <span className="font-medium text-gray-700">Customer Note:</span> {item.options}
+                                  <span className="font-medium text-gray-700">Customer Note:</span>{' '}
+                                  {item.options}
                                 </span>
                               </div>
                             )}
@@ -1949,13 +2013,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               </Card>
 
               {/* 2. Status Management - Second Priority (actionable) */}
-              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                <CompactStatusManager
-                  quote={liveQuote || quote}
-                  onStatusUpdate={loadQuoteData}
-                  compact={true}
-                />
-              </div>
+              <CompactStatusManager
+                quote={liveQuote || quote}
+                onStatusUpdate={loadQuoteData}
+                compact={true}
+              />
+
+              {/* 2.5. iwishBag Tracking Management - New Phase 1 Feature */}
+              <CompactShippingManager
+                quote={liveQuote || quote}
+                onUpdateQuote={loadQuoteData}
+                compact={true}
+              />
 
               {/* 3. Shipping Options - Third Priority (operational) */}
               {shippingOptions.length > 0 && (
@@ -2001,36 +2070,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         </div>
       )}
 
-      {/* Quick Actions Footer */}
-      <Card className="border-gray-200 bg-gray-50/50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => calculateSmartFeatures(liveQuote || quote)}
-                disabled={isCalculating}
-                className="flex items-center"
-              >
-                <Calculator className="w-4 h-4 mr-2" />
-                {isCalculating ? 'Calculating...' : 'Recalculate'}
-              </Button>
-
-              <Button variant="outline" className="flex items-center">
-                <Clock className="w-4 h-4 mr-2" />
-                Timeline
-              </Button>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" onClick={handleViewModeSave} disabled={isCalculating}>
-                <Save className="w-4 h-4 mr-2" />
-                {isCalculating ? 'Saving...' : 'Save'}
-              </Button>
-              <Button>Send to Customer</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
