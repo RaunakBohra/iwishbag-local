@@ -22,7 +22,6 @@ const Auth = React.lazy(() => import('@/pages/Auth'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes'));
 const Orders = React.lazy(() => import('@/pages/dashboard/Orders'));
-// const QuoteDetail = React.lazy(() => import("@/pages/dashboard/QuoteDetail")); // Unused import
 const OrderDetail = React.lazy(() => import('@/pages/dashboard/OrderDetail'));
 const Profile = React.lazy(() => import('@/pages/Profile'));
 const About = React.lazy(() => import('@/pages/About'));
