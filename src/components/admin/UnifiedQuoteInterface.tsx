@@ -12,6 +12,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   ArrowLeft,
   ArrowRight,
   Calculator,
@@ -103,6 +113,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [showSmartSuggestions, setShowSmartSuggestions] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [isEditingRoute, setIsEditingRoute] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<{ index: number; name: string } | null>(null);
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -525,7 +536,22 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     });
   };
 
-  // Function to remove item
+  // Function to remove item with confirmation
+  const handleRemoveItemConfirm = (itemIndex: number) => {
+    const currentItems = form.getValues('items') || [];
+    const itemName = currentItems[itemIndex]?.product_name || `Product ${itemIndex + 1}`;
+    setProductToDelete({ index: itemIndex, name: itemName });
+  };
+
+  // Handle confirmed product deletion
+  const handleConfirmRemoveItem = () => {
+    if (productToDelete) {
+      removeItem(productToDelete.index);
+      setProductToDelete(null);
+    }
+  };
+
+  // Function to actually remove item after confirmation
   const removeItem = (itemIndex: number) => {
     const currentItems = form.getValues('items') || [];
 
@@ -1405,7 +1431,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => removeItem(index)}
+                                        onClick={() => handleRemoveItemConfirm(index)}
                                         className="text-gray-400 hover:text-red-600 p-1 h-7 w-7"
                                         title="Remove product"
                                       >
@@ -2048,6 +2074,29 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           </div>
         </div>
       )}
+
+      {/* Product Delete Confirmation Dialog */}
+      <AlertDialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove{' '}
+              <span className="font-medium">{productToDelete?.name}</span> from this quote?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemoveItem}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remove Product
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

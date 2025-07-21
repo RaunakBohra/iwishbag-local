@@ -19,6 +19,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   User,
   Mail,
   Phone,
@@ -58,6 +68,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const [activeTab, setActiveTab] = useState('addresses');
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<any>(null);
+  const [addressToDelete, setAddressToDelete] = useState<any>(null);
   const { user } = useAuth(); // Get current auth context for fallback
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -231,6 +242,14 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const handleAddAddress = () => {
     setEditingAddress(null);
     setShowAddressModal(true);
+  };
+
+  // Handle confirmed address deletion
+  const handleConfirmDeleteAddress = () => {
+    if (addressToDelete) {
+      deleteAddressMutation.mutate(addressToDelete.id);
+      setAddressToDelete(null);
+    }
   };
 
   const formatAddress = (address: typeof shippingAddress) => {
@@ -523,7 +542,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => deleteAddressMutation.mutate(address.id)}
+                              onClick={() => setAddressToDelete(address)}
                               className="h-5 w-5 p-0 hover:bg-red-100"
                               title="Delete address"
                             >
@@ -787,6 +806,29 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
         </DialogContent>
       </Dialog>
       )}
+
+      {/* Address Delete Confirmation Dialog */}
+      <AlertDialog open={!!addressToDelete} onOpenChange={() => setAddressToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Address</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the address for{' '}
+              <span className="font-medium">{addressToDelete?.recipient_name}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteAddress}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Address
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
