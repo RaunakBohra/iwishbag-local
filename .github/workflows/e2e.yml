@@ -1,0 +1,173 @@
+name: E2E Tests
+
+on:
+  # Run on pull requests to main - E2E tests are expensive, so we're selective
+  pull_request:
+    branches: [ main ]
+  
+  # Run on pushes to main - validate the golden path always works
+  push:
+    branches: [ main ]
+  
+  # Allow manual triggering for debugging
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    name: End-to-End Testing
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install Dependencies
+        run: npm ci
+        
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        
+      - name: Build Application
+        run: npm run build
+        
+      - name: Start Application Server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+        env:
+          # Use preview server for production-like environment
+          PORT: 4173
+          
+      - name: Run E2E Tests
+        run: npm run e2e
+        env:
+          # Set base URL to preview server
+          BASE_URL: http://localhost:4173
+          # Mark as CI environment
+          CI: true
+          PLAYWRIGHT_TEST: true
+          
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+          
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 30
+          
+      - name: Comment PR with Test Results
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            try {
+              const resultsPath = 'playwright-report/results.json';
+              if (fs.existsSync(resultsPath)) {
+                const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                const { stats } = results;
+                
+                const passed = stats.expected || 0;
+                const failed = stats.unexpected || 0;
+                const total = passed + failed;
+                const successRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+                
+                const statusEmoji = failed === 0 ? '✅' : '❌';
+                const comment = `${statusEmoji} **E2E Test Results**
+                
+            📊 **Test Summary:**
+            - **Total Tests:** ${total}
+            - **Passed:** ${passed}
+            - **Failed:** ${failed}
+            - **Success Rate:** ${successRate}%
+            
+            ${failed === 0 ? 
+              '🎉 All E2E tests passed! The Golden Path is working correctly.' : 
+              '⚠️ Some E2E tests failed. Please check the test report for details.'
+            }
+            
+            📋 **Test Report:** [View detailed results](${context.payload.pull_request.html_url}/checks)
+            `;
+                
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: comment
+                });
+              }
+            } catch (error) {
+              console.log('Could not post test results comment:', error);
+            }
+          
+      - name: Success Notification
+        if: success()
+        run: |
+          echo "✅ All E2E tests passed!"
+          echo "🎯 Golden Path validation successful"
+          echo "🚀 Application ready for deployment"
+          
+      - name: Failure Notification
+        if: failure()
+        run: |
+          echo "❌ E2E tests failed!"
+          echo "🔍 Check the Playwright report for details"
+          echo "🛠️ Fix failing tests before merging"
+          exit 1
+
+  # Optional: Run E2E tests on multiple environments
+  cross-browser-e2e:
+    runs-on: ubuntu-latest
+    name: Cross-Browser E2E Testing
+    # Only run on main branch to save resources
+    if: github.ref == 'refs/heads/main'
+    
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install Dependencies
+        run: npm ci
+        
+      - name: Install Playwright Browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+        
+      - name: Build Application
+        run: npm run build
+        
+      - name: Start Application Server
+        run: |
+          npm run preview &
+          npx wait-on http://localhost:4173 --timeout 60000
+          
+      - name: Run E2E Tests on ${{ matrix.browser }}
+        run: npx playwright test --project=${{ matrix.browser }}
+        env:
+          BASE_URL: http://localhost:4173
+          CI: true

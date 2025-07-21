@@ -42,6 +42,48 @@ A comprehensive e-commerce platform with advanced features for managing global w
 | `npm run lint` | Run ESLint |
 | `npm run type-check` | Run TypeScript checking |
 
+## 🧪 Testing
+
+iwishBag implements a comprehensive three-layer testing strategy following the testing pyramid approach, ensuring reliable code quality and user experience validation.
+
+### **Testing Architecture**
+```
+        🌟 E2E Tests (Playwright)
+           Golden Path Validation
+                     ↑
+          🔗 Integration Tests (Vitest)  
+           Component + Service Tests
+                     ↑
+            ⚡ Unit Tests (Vitest)
+           Core Business Logic Tests
+```
+
+### **Available Test Commands**
+
+| Command | Description |
+|---------|-------------|
+| `npm run test` | Run all unit and integration tests (watch mode) |
+| `npm run test:run` | Run all unit and integration tests (single run) |
+| `npm run test:ui` | Launch Vitest UI for interactive testing |
+| `npm run test:coverage` | Run tests with code coverage analysis |
+| `npm run e2e` | Run E2E tests (starts dev server automatically) |
+| `npm run e2e:ui` | Launch Playwright UI for E2E test development |
+| `npm run e2e:headed` | Run E2E tests with visible browser |
+| `npm run e2e:debug` | Debug E2E tests step-by-step |
+
+### **Test Coverage & Quality**
+- **Core Business Logic**: 80%+ coverage on critical services
+- **Golden Path**: Complete E2E validation of quote-to-purchase journey  
+- **Cross-Browser**: Automated testing on Chromium, Firefox, WebKit, and mobile
+- **CI/CD Integration**: Automated testing on all pull requests and deployments
+
+### **Key Test Areas**
+- **🧮 Quote Calculator**: Comprehensive cost calculation validation
+- **💰 Currency System**: Multi-currency conversion and formatting
+- **🛒 Cart Operations**: Add/remove items, persistence, state synchronization
+- **📦 Order Workflow**: Quote approval, payment, status transitions
+- **🔐 Authentication**: User login, role-based access, session management
+
 ## 🏗️ Project Structure
 
 ```
@@ -243,6 +285,7 @@ For comprehensive documentation, see the [docs/](docs/) directory:
 - **[📖 Documentation Index](docs/README.md)** - Complete documentation overview
 - **[🏗️ Architecture Overview](docs/technical/ARCHITECTURE_OVERVIEW.md)** - System design and architecture
 - **[🚀 Development Guide](docs/guides/DEVELOPMENT_GUIDE.md)** - Getting started for developers
+- **[🧪 Testing Strategy](docs/testing/TESTING_STRATEGY_SUMMARY.md)** - Complete testing implementation guide
 - **[💳 Payment Setup](docs/guides/PAYMENT_SETUP.md)** - Stripe and payment configuration
 - **[🚀 Payment Enhancement Plan](docs/technical/PAYMENT_ENHANCEMENT_PLAN.md)** - Advanced payment features roadmap
 - **[⚡ Payment Quick Start](docs/guides/PAYMENT_QUICK_START.md)** - High-impact payment improvements
