@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useNavigate } from 'react-router-dom';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { COMMON_QUERIES } from '@/lib/queryColumns';
+import { trackAdminQuery } from '@/lib/performanceTracker';
 
 type QuoteWithItems = Tables<'quotes'> & {
   profiles?: {
@@ -25,6 +27,8 @@ export const useQuoteManagement = (filters = {}) => {
     dateRange = 'all',
     amountRange = 'all',
     priorityFilter = 'all',
+    page = 0,
+    pageSize = 25, // Default page size for better performance
   } = filters;
 
   // Internal state management
@@ -48,12 +52,17 @@ export const useQuoteManagement = (filters = {}) => {
       dateRange,
       amountRange,
       priorityFilter,
+      page,
+      pageSize,
     ],
     queryFn: async () => {
-      let query = supabase
-        .from('quotes')
-        .select('*, profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)')
-        .order('created_at', { ascending: false });
+      return trackAdminQuery('quotes_list', async () => {
+        // PERFORMANCE FIX: Use standardized column selection with pagination
+        let query = supabase
+          .from('quotes')
+          .select(COMMON_QUERIES.adminQuotesWithProfiles)
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1); // PERFORMANCE FIX: Pagination
 
       // TEMPORARY: Disable status filtering to debug "quotes not found" issue
       // Filter based on status management configuration
@@ -147,13 +156,26 @@ export const useQuoteManagement = (filters = {}) => {
         );
       }
 
-      // Debug: print the query object
-      console.log('DEBUG: Final Supabase query for quotes:', query);
-      // Log the final query string (for REST API)
-      console.log('DEBUG: Query URL:', query.url.toString());
-      const { data, error } = await query;
-      if (error) throw new Error(error.message);
-      return data || [];
+        // Debug: print the query object
+        console.log('DEBUG: Final Supabase query for quotes:', query);
+        // Log the final query string (for REST API)
+        console.log('DEBUG: Query URL:', query.url.toString());
+        const { data, error } = await query;
+        if (error) throw new Error(error.message);
+        return data || [];
+      }, {
+        page,
+        pageSize,
+        filters: {
+          status: statusFilter,
+          search: searchTerm,
+          purchaseCountry: purchaseCountryFilter,
+          shippingCountry: shippingCountryFilter,
+          dateRange,
+          amountRange,
+          priority: priorityFilter,
+        }
+      });
     },
     enabled: true, // Always run query - filtering is handled by getStatusesForQuotesList
   });
