@@ -32,8 +32,11 @@ import {
   ChevronUp,
   ChevronDown,
   User,
+  Smartphone,
+  MessageCircle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
@@ -68,6 +71,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const { id: paramId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: allCountries } = useAllCountries();
 
   // Core state
   const quoteId = initialQuoteId || paramId;
@@ -127,12 +131,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const loadQuoteData = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
-      
+
       // Add small delay if forcing refresh to allow database update to propagate
       if (forceRefresh) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      
+
       const quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
 
       if (!quoteData) {
@@ -145,10 +149,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         return;
       }
 
-      console.log('🔄 [DEBUG] loadQuoteData: Updating quote state with new data', {
+      console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
         oldStatus: quote?.status,
         newStatus: quoteData.status,
-        quoteId: quoteData.id
+        quoteId: quoteData.id,
       });
       setQuote(quoteData);
 
@@ -197,7 +201,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   };
 
   const handleShippingOptionSelect = async (optionId: string) => {
-    console.log('🚢 [DEBUG] handleShippingOptionSelect called with:', {
+    console.log('[DEBUG] handleShippingOptionSelect called with:', {
       optionId,
       quoteId: quote?.id,
       currentSelectedOption: quote?.operational_data?.shipping?.selected_option,
@@ -229,11 +233,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     });
 
     // Optimistic update: Update form values immediately for instant UI feedback
-    console.log('📝 [DEBUG] Updating form values...');
+    console.log('[DEBUG] Updating form values...');
     form.setValue('selected_shipping_option', optionId);
     form.setValue('international_shipping', selectedOption.cost_usd);
 
-    console.log('📝 [DEBUG] Form values after update:', {
+    console.log('[DEBUG] Form values after update:', {
       selected_shipping_option: form.getValues('selected_shipping_option'),
       international_shipping: form.getValues('international_shipping'),
     });
@@ -250,7 +254,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       },
     };
 
-    console.log('🔄 [DEBUG] Setting optimistic quote state:', {
+    console.log('[DEBUG] Setting optimistic quote state:', {
       originalShippingOption: quote.operational_data?.shipping?.selected_option,
       newShippingOption: optimisticQuote.operational_data.shipping.selected_option,
       fullOperationalData: optimisticQuote.operational_data,
@@ -338,11 +342,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Enhanced mode toggle handler with notifications
   const handleModeToggle = (newEditMode: boolean) => {
     setIsEditMode(newEditMode);
-    
+
     // Toast notification for mode changes
     toast({
       title: `${newEditMode ? 'Edit' : 'View'} Mode Activated`,
-      description: newEditMode 
+      description: newEditMode
         ? 'You can now modify quote details and calculations.'
         : 'Switched to view mode for review and analysis.',
       duration: 2000,
@@ -383,7 +387,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         formValues.origin_country &&
         formValues.destination_country
       ) {
-        console.log('🚢 Recalculating shipping options...', {
+        console.log('Recalculating shipping options...', {
           itemsTotal,
           totalWeight,
           origin: formValues.origin_country,
@@ -477,7 +481,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     setIsEstimating((prev) => ({ ...prev, [estimationKey]: true }));
 
     try {
-      console.log('🧠 Calling smartWeightEstimator.estimateWeight...');
+      console.log('Calling smartWeightEstimator.estimateWeight...');
       const estimation = await smartWeightEstimator.estimateWeight(productName, productUrl);
       console.log('✅ Weight estimation result:', estimation);
       setWeightEstimations((prev) => ({ ...prev, [estimationKey]: estimation }));
@@ -612,7 +616,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Function to apply weight suggestion
   const applyWeightSuggestion = (itemIndex: number, suggestedWeight: number) => {
-    console.log('🎯 Applying weight suggestion:', { itemIndex, suggestedWeight });
+    console.log('Applying weight suggestion:', { itemIndex, suggestedWeight });
 
     try {
       const items = form.getValues('items') || [];
@@ -689,7 +693,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
       if (calculationResult.success) {
         if (process.env.NODE_ENV === 'development') {
-          console.log('⚡ Live calculation (SmartCalculationEngine sync):', {
+          console.log('Live calculation (SmartCalculationEngine sync):', {
             finalTotal: calculationResult.updated_quote.final_total_usd,
             breakdown: calculationResult.updated_quote.calculation_data.breakdown,
           });
@@ -707,7 +711,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Always use SmartCalculationEngine for consistent calculations in both modes
   useEffect(() => {
-    console.log('🔄 [DEBUG] liveQuote useEffect triggered:', {
+    console.log('[DEBUG] liveQuote useEffect triggered:', {
       isEditMode,
       hasCreateLiveQuote: !!createLiveQuote,
       hasQuote: !!quote,
@@ -716,11 +720,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     });
 
     if (isEditMode && createLiveQuote) {
-      console.log('📊 [DEBUG] Setting liveQuote from createLiveQuote (edit mode)');
+      console.log('[DEBUG] Setting liveQuote from createLiveQuote (edit mode)');
       // Edit mode: Use real-time calculated quote
       setLiveQuote(createLiveQuote);
     } else if (quote) {
-      console.log('📊 [DEBUG] Recalculating liveQuote (view mode)');
+      console.log('[DEBUG] Recalculating liveQuote (view mode)');
       // View mode: Recalculate using SmartCalculationEngine for consistency
       try {
         const calculationResult = smartCalculationEngine.calculateLiveSync({
@@ -744,17 +748,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         setLiveQuote(quote); // Fallback to original
       }
     } else {
-      console.log('📊 [DEBUG] Setting liveQuote to quote (no calculations)');
+      console.log('[DEBUG] Setting liveQuote to quote (no calculations)');
       setLiveQuote(quote);
     }
   }, [isEditMode, createLiveQuote, quote]);
-  
+
   // Debug logging for status changes
   useEffect(() => {
-    console.log('📊 [DEBUG] Quote or liveQuote status changed:', {
+    console.log('[DEBUG] Quote or liveQuote status changed:', {
       quoteStatus: quote?.status,
       liveQuoteStatus: liveQuote?.status,
-      usingLiveQuote: !!liveQuote
+      usingLiveQuote: !!liveQuote,
     });
   }, [quote?.status, liveQuote?.status]);
 
@@ -766,13 +770,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // DISABLED: Automatic form syncing to prevent infinite loop
       // The form should be the source of truth for user input
       // Calculated values are used for display purposes only in breakdown components
-      
-      console.log('🔄 [DEBUG] Form sync disabled - form values take precedence over calculated values:', {
-        formHandling: form.getValues('handling_charge'),
-        calculatedHandling: operationalData.handling_charge,
-        formInsurance: form.getValues('insurance_amount'),
-        calculatedInsurance: operationalData.insurance_amount,
-      });
+
+      console.log(
+        '[DEBUG] Form sync disabled - form values take precedence over calculated values:',
+        {
+          formHandling: form.getValues('handling_charge'),
+          calculatedHandling: operationalData.handling_charge,
+          formInsurance: form.getValues('insurance_amount'),
+          calculatedInsurance: operationalData.insurance_amount,
+        },
+      );
     }
   }, [liveQuote, isEditMode, form]);
 
@@ -788,10 +795,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Trigger weight estimation for existing items when edit mode is activated
   useEffect(() => {
     if (isEditMode && quote?.items) {
-      console.log('🚀 Edit mode activated, triggering weight estimation for existing items');
+      console.log('Edit mode activated, triggering weight estimation for existing items');
       quote.items.forEach((item, index) => {
         if (item.name && item.name.trim()) {
-          console.log(`🎯 Triggering estimation for item ${index}: ${item.name}`);
+          console.log(`Triggering estimation for item ${index}: ${item.name}`);
           // Delay each estimation slightly to avoid overwhelming the service
           setTimeout(() => {
             estimateItemWeight(index, item.name, item.url);
@@ -884,7 +891,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       const formErrors = form.formState.errors;
       if (Object.keys(formErrors).length > 0) {
         console.error('❌ [SAVE] Form validation errors:', formErrors);
-        
+
         // Generate detailed error message
         const errorMessages = [];
         if (formErrors.items) {
@@ -896,11 +903,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         if (formErrors.origin_country || formErrors.destination_country) {
           errorMessages.push('Origin or destination country is required');
         }
-        
-        const errorDescription = errorMessages.length > 0 
-          ? errorMessages.join(', ') 
-          : 'Please check your inputs and try again.';
-        
+
+        const errorDescription =
+          errorMessages.length > 0
+            ? errorMessages.join(', ')
+            : 'Please check your inputs and try again.';
+
         toast({
           title: 'Form Validation Failed',
           description: errorDescription,
@@ -1062,10 +1070,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   }
 
   return (
-    <div 
+    <div
       className={`max-w-7xl mx-auto p-6 space-y-6 transition-all duration-300 rounded-lg ${
-        isEditMode 
-          ? 'border border-teal-200 bg-teal-50/20 shadow-sm' 
+        isEditMode
+          ? 'border border-teal-200 bg-teal-50/20 shadow-sm'
           : 'border border-blue-200 bg-blue-50/20 shadow-sm'
       }`}
     >
@@ -1167,30 +1175,35 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
                   {/* Shipping Route Header - Inside Form Context */}
-                  <ShippingRouteHeader 
+                  <ShippingRouteHeader
                     form={form}
                     isEditMode={isEditMode}
                     displayOriginCountry={quote.origin_country}
                     displayDestinationCountry={quote.destination_country}
                   />
-                  {/* Products Section */}
+                  {/* Products Section - World Class Design */}
                   <Card className="shadow-sm border-gray-200">
-                    <CardHeader className="bg-teal-50 border-b border-teal-200 py-4">
+                    <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 py-3">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg font-semibold text-gray-900">
-                            Products
-                          </CardTitle>
-                          <CardDescription className="text-sm text-gray-600 mt-1">
-                            Manage product details, pricing, and quantities
-                          </CardDescription>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <Package className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
+                              <Package className="w-4 h-4 mr-2" /> Products ({form.watch('items')?.length || 0})
+                            </CardTitle>
+                            <CardDescription className="text-sm text-gray-600">
+                              Manage product details, pricing, and quantities
+                            </CardDescription>
+                          </div>
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={addNewItem}
-                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                          className="border-blue-300 text-blue-700 hover:bg-blue-50 font-medium"
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Add Product
@@ -1228,34 +1241,32 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         return (
                           <div
                             key={item.id || index}
-                            className={`border-b border-gray-200 ${index === 0 ? 'border-t' : ''}`}
+                            className={`border-b border-gray-200 ${index === 0 ? 'border-t' : ''} hover:bg-gray-50/50 transition-colors`}
                           >
-                            <div className="p-6 space-y-4">
-                              {/* Product Header */}
+                            <div className="p-4 space-y-3">
+                              {/* Compact Product Header */}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                  <div className="flex-shrink-0">
-                                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                                      <Package className="w-4 h-4 text-gray-600" />
-                                    </div>
+                                  <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center border border-blue-200">
+                                    <Smartphone className="w-5 h-5 text-blue-600" />
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-medium text-gray-900">
+                                    <h4 className="text-sm font-semibold text-gray-900 flex items-center">
                                       Product {index + 1}
-                                    </h4>
-                                    <div className="flex items-center space-x-2 mt-1">
                                       {category && (
                                         <Badge
                                           variant="outline"
-                                          className="text-xs text-gray-600 border-gray-300"
+                                          className="ml-2 text-xs text-blue-600 border-blue-300 bg-blue-50"
                                         >
                                           {category}
                                         </Badge>
                                       )}
+                                    </h4>
+                                    <div className="flex items-center space-x-2 mt-1">
                                       {weightConfidence > 0 && (
                                         <Badge
                                           {...getWeightConfidenceBadge(weightConfidence)}
-                                          className="text-xs"
+                                          className="text-xs h-4"
                                         >
                                           AI: {getWeightConfidenceBadge(weightConfidence).text}
                                         </Badge>
@@ -1263,201 +1274,239 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm text-gray-500">
-                                    ${(Number(item.item_price) * Number(item.quantity)).toFixed(2)}{' '}
-                                    total
-                                  </span>
-                                  {form.watch('items')?.length > 1 && (
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-right">
+                                    <div className="text-lg font-bold text-green-600">
+                                      $
+                                      {(Number(item.item_price) * Number(item.quantity)).toFixed(2)}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      ${Number(item.item_price || 0).toFixed(2)} ×{' '}
+                                      {item.quantity || 1}
+                                    </div>
+                                  </div>
+                                  <div className="flex space-x-1">
                                     <Button
                                       type="button"
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => removeItem(index)}
-                                      className="text-gray-400 hover:text-red-600 p-1 h-8 w-8"
-                                      title="Remove product"
+                                      className="text-gray-400 hover:text-blue-600 p-1 h-7 w-7"
+                                      title="Edit product"
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <Edit className="w-3 h-3" />
                                     </Button>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Product Details Form */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Product Name *
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                    value={item.product_name || ''}
-                                    onChange={(e) => {
-                                      console.log('📝 Product name changed:', {
-                                        index,
-                                        value: e.target.value,
-                                      });
-                                      const items = form.getValues('items') || [];
-                                      items[index] = {
-                                        ...items[index],
-                                        product_name: e.target.value,
-                                      };
-                                      form.setValue('items', items);
-
-                                      // Clear existing timeout for this item
-                                      const timeoutKey = index.toString();
-                                      if (estimationTimeouts[timeoutKey]) {
-                                        console.log(
-                                          '🕐 Clearing existing timeout for:',
-                                          timeoutKey,
-                                        );
-                                        clearTimeout(estimationTimeouts[timeoutKey]);
-                                      }
-
-                                      // Trigger weight estimation after a delay
-                                      console.log('⏲️ Setting timeout for weight estimation...');
-                                      const timeoutId = setTimeout(() => {
-                                        console.log(
-                                          '🎯 Timeout triggered, calling estimateItemWeight',
-                                        );
-                                        estimateItemWeight(
-                                          index,
-                                          e.target.value,
-                                          items[index].product_url,
-                                        );
-                                      }, 800);
-
-                                      setEstimationTimeouts((prev) => ({
-                                        ...prev,
-                                        [timeoutKey]: timeoutId,
-                                      }));
-                                    }}
-                                    placeholder="Enter product name"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Product URL
-                                  </label>
-                                  <input
-                                    type="url"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                    value={item.product_url || ''}
-                                    onChange={(e) => {
-                                      const items = form.getValues('items') || [];
-                                      items[index] = {
-                                        ...items[index],
-                                        product_url: e.target.value,
-                                      };
-                                      form.setValue('items', items);
-                                    }}
-                                    placeholder="https://amazon.com/product..."
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Pricing and Specifications */}
-                              <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Unit Price *
-                                  </label>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-                                      $
-                                    </span>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                      value={item.item_price || ''}
-                                      onChange={(e) => {
-                                        const items = form.getValues('items') || [];
-                                        items[index] = {
-                                          ...items[index],
-                                          item_price: parseFloat(e.target.value) || 0,
-                                        };
-                                        form.setValue('items', items);
-                                      }}
-                                      placeholder="0.00"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Smart Weight Field */}
-                                <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                                    Weight (kg)
-                                    {isEstimating[index.toString()] && (
-                                      <div className="ml-2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                    )}
-                                  </label>
-                                  <div className="relative">
-                                    <input
-                                      type="number"
-                                      step="0.001"
-                                      min="0"
-                                      className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-1 ${
-                                        weightEstimations[index.toString()]
-                                          ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500 pr-16'
-                                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                      }`}
-                                      value={item.item_weight || ''}
-                                      onChange={(e) => {
-                                        const items = form.getValues('items') || [];
-                                        items[index] = {
-                                          ...items[index],
-                                          item_weight: parseFloat(e.target.value) || 0,
-                                        };
-                                        form.setValue('items', items);
-                                      }}
-                                      placeholder="0.000"
-                                    />
-
-                                    {/* AI Suggestion Overlay */}
-                                    {weightEstimations[index.toString()] && (
-                                      <button
+                                    {form.watch('items')?.length > 1 && (
+                                      <Button
                                         type="button"
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        onClick={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          applyWeightSuggestion(
-                                            index,
-                                            weightEstimations[index.toString()].estimated_weight,
-                                          );
-                                        }}
-                                        title={`AI suggests: ${weightEstimations[index.toString()].estimated_weight} kg (${(weightEstimations[index.toString()].confidence * 100).toFixed(0)}% confident)`}
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeItem(index)}
+                                        className="text-gray-400 hover:text-red-600 p-1 h-7 w-7"
+                                        title="Remove product"
                                       >
-                                        AI: {weightEstimations[index.toString()].estimated_weight}
-                                      </button>
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
                                     )}
                                   </div>
                                 </div>
+                              </div>
 
-                                <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Quantity *
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                    value={item.quantity || 1}
-                                    onChange={(e) => {
-                                      const items = form.getValues('items') || [];
-                                      items[index] = {
-                                        ...items[index],
-                                        quantity: parseInt(e.target.value) || 1,
-                                      };
-                                      form.setValue('items', items);
-                                    }}
-                                    placeholder="1"
-                                  />
+                              {/* Compact Product Form - World Class 2-Row Layout */}
+                              <div className="space-y-3">
+                                {/* Row 1: Name & URL */}
+                                <div className="grid grid-cols-12 gap-3">
+                                  <div className="col-span-7">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
+                                      Name *
+                                      <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                      value={item.product_name || ''}
+                                      onChange={(e) => {
+                                        console.log('Product name changed:', {
+                                          index,
+                                          value: e.target.value,
+                                        });
+                                        const items = form.getValues('items') || [];
+                                        items[index] = {
+                                          ...items[index],
+                                          product_name: e.target.value,
+                                        };
+                                        form.setValue('items', items);
+
+                                        // Clear existing timeout for this item
+                                        const timeoutKey = index.toString();
+                                        if (estimationTimeouts[timeoutKey]) {
+                                          console.log(
+                                            '🕐 Clearing existing timeout for:',
+                                            timeoutKey,
+                                          );
+                                          clearTimeout(estimationTimeouts[timeoutKey]);
+                                        }
+
+                                        // Trigger weight estimation after a delay
+                                        console.log('⏲️ Setting timeout for weight estimation...');
+                                        const timeoutId = setTimeout(() => {
+                                          console.log(
+                                            'Timeout triggered, calling estimateItemWeight',
+                                          );
+                                          estimateItemWeight(
+                                            index,
+                                            e.target.value,
+                                            items[index].product_url,
+                                          );
+                                        }, 800);
+
+                                        setEstimationTimeouts((prev) => ({
+                                          ...prev,
+                                          [timeoutKey]: timeoutId,
+                                        }));
+                                      }}
+                                      placeholder="iPhone 16 Pro Max"
+                                    />
+                                  </div>
+                                  <div className="col-span-5">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                      URL
+                                    </label>
+                                    <input
+                                      type="url"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                      value={item.product_url || ''}
+                                      onChange={(e) => {
+                                        const items = form.getValues('items') || [];
+                                        items[index] = {
+                                          ...items[index],
+                                          product_url: e.target.value,
+                                        };
+                                        form.setValue('items', items);
+                                      }}
+                                      placeholder="amazon.com/..."
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Row 2: Pricing & Specifications - Compact Grid */}
+                                <div className="grid grid-cols-10 gap-3">
+                                  <div className="col-span-4">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
+                                      Price *
+                                      <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
+                                    </label>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
+                                        $
+                                      </span>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                                        value={item.item_price || ''}
+                                        onChange={(e) => {
+                                          const items = form.getValues('items') || [];
+                                          items[index] = {
+                                            ...items[index],
+                                            item_price: parseFloat(e.target.value) || 0,
+                                          };
+                                          form.setValue('items', items);
+                                        }}
+                                        placeholder="1,000.00"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="col-span-4">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
+                                      Weight
+                                      {isEstimating[index.toString()] && (
+                                        <div className="ml-2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                      )}
+                                    </label>
+                                    <div className="relative">
+                                      <input
+                                        type="number"
+                                        step="0.001"
+                                        min="0"
+                                        className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
+                                          weightEstimations[index.toString()]
+                                            ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500 pr-14'
+                                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                        }`}
+                                        value={item.item_weight || ''}
+                                        onChange={(e) => {
+                                          const items = form.getValues('items') || [];
+                                          items[index] = {
+                                            ...items[index],
+                                            item_weight: parseFloat(e.target.value) || 0,
+                                          };
+                                          form.setValue('items', items);
+                                        }}
+                                        placeholder="0.2"
+                                      />
+                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                        kg
+                                      </span>
+
+                                      {/* AI Suggestion Button */}
+                                      {weightEstimations[index.toString()] && (
+                                        <button
+                                          type="button"
+                                          className="absolute right-8 top-1/2 -translate-y-1/2 px-1 py-0.5 text-xs bg-blue-100 text-blue-700 border border-blue-300 rounded hover:bg-blue-200 focus:outline-none"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            applyWeightSuggestion(
+                                              index,
+                                              weightEstimations[index.toString()].estimated_weight,
+                                            );
+                                          }}
+                                          title={`Apply AI suggestion: ${weightEstimations[index.toString()].estimated_weight} kg`}
+                                        >
+                                          Apply [{weightEstimations[index.toString()].estimated_weight}]
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="col-span-2">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
+                                      Qty *
+                                      <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      value={item.quantity || 1}
+                                      onChange={(e) => {
+                                        const items = form.getValues('items') || [];
+                                        items[index] = {
+                                          ...items[index],
+                                          quantity: parseInt(e.target.value) || 1,
+                                        };
+                                        form.setValue('items', items);
+                                      }}
+                                      placeholder="1"
+                                    />
+                                  </div>
                                 </div>
                               </div>
+
+                              {/* Customer Notes */}
+                              {item.options && item.options.trim() && (
+                                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                  <div className="flex items-start space-x-2">
+                                    <MessageCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <span className="text-sm font-medium text-blue-800">Customer Note:</span>
+                                      <p className="text-sm text-blue-700 mt-1 leading-relaxed">{item.options}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               {/* AI Insights */}
                               {(optimizationHints.length > 0 || customsSuggestions.length > 0) && (
@@ -1537,11 +1586,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         onCalculateSmartCustoms={calculateSmartCustoms}
                         isCalculatingCustoms={isCalculatingCustoms}
                         shippingOptions={shippingOptions}
+                        recommendations={shippingRecommendations}
+                        onSelectShippingOption={handleShippingOptionSelect}
                         onShowShippingDetails={() => setShowShippingDetails(true)}
                       />
                     </CardContent>
                   </Card>
-
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
@@ -1565,11 +1615,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       onClick={async () => {
                         console.log('💾 [EDIT-SAVE] Save button clicked');
                         console.log('💾 [EDIT-SAVE] Current form values:', form.getValues());
-                        
+
                         // Trigger validation
                         const isValid = await form.trigger();
                         console.log('💾 [EDIT-SAVE] Form is valid:', isValid);
-                        
+
                         if (isValid) {
                           // Direct function call instead of form.handleSubmit()
                           await onFormSubmit(form.getValues());
@@ -1675,14 +1725,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       <div className="text-gray-500">Customs</div>
                     </div>
                   </div>
-                  
+
                   {/* Smart Recommendations Compact */}
                   {(liveQuote || quote)?.operational_data?.customs?.smart_tier && (
                     <div className="mt-3 pt-2 border-t border-gray-100">
                       <div className="flex items-center text-xs text-green-600">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         <span>
-                          Smart tier: {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name || 'Default'}
+                          Smart tier:{' '}
+                          {(liveQuote || quote)?.operational_data?.customs?.smart_tier?.tier_name ||
+                            'Default'}
                         </span>
                       </div>
                     </div>
@@ -1695,14 +1747,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       ) : (
         /* View Mode: Professional e-commerce admin layout */
         <div className="space-y-4">
-          {/* Shipping Route Header - View Mode (No Form Context Needed) */}
-          <ShippingRouteHeader 
-            form={form}
-            isEditMode={false}
-            displayOriginCountry={quote.origin_country}
-            displayDestinationCountry={quote.destination_country}
-          />
-
           {/* Main Content Area - Professional 2-Column Layout */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Left Column - Primary Information (2/3 width) */}
@@ -1710,10 +1754,81 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* Quote Items - Professional Table Style */}
               <Card>
                 <CardHeader className="bg-blue-50 border-b border-blue-200">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Order Items</CardTitle>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {metrics?.totalItems} items • {metrics?.totalWeight} kg total weight
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        Order Items
+                      </CardTitle>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {metrics?.totalItems} items • {metrics?.totalWeight} kg total weight
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 bg-white rounded px-2 py-1 border border-gray-200">
+                        <span className="text-sm">
+                          {(() => {
+                            // Simple flag mapping for common countries
+                            const flagMap: { [key: string]: string } = {
+                              US: '🇺🇸',
+                              CN: '🇨🇳',
+                              IN: '🇮🇳',
+                              GB: '🇬🇧',
+                              DE: '🇩🇪',
+                              JP: '🇯🇵',
+                              FR: '🇫🇷',
+                              CA: '🇨🇦',
+                              AU: '🇦🇺',
+                              NP: '🇳🇵',
+                              BD: '🇧🇩',
+                              PK: '🇵🇰',
+                            };
+                            return flagMap[quote.origin_country || ''] || '🌍';
+                          })()}
+                        </span>
+                        <span className="text-xs font-medium text-gray-700">
+                          {(() => {
+                            const originCountry = allCountries?.find(
+                              (c) => c.code === quote.origin_country,
+                            );
+                            return originCountry?.name || quote.origin_country || 'Origin';
+                          })()}
+                        </span>
+                      </div>
+                      <div className="text-gray-400 text-xs">→</div>
+                      <div className="flex items-center space-x-1 bg-white rounded px-2 py-1 border border-gray-200">
+                        <span className="text-sm">
+                          {(() => {
+                            // Simple flag mapping for common countries
+                            const flagMap: { [key: string]: string } = {
+                              US: '🇺🇸',
+                              CN: '🇨🇳',
+                              IN: '🇮🇳',
+                              GB: '🇬🇧',
+                              DE: '🇩🇪',
+                              JP: '🇯🇵',
+                              FR: '🇫🇷',
+                              CA: '🇨🇦',
+                              AU: '🇦🇺',
+                              NP: '🇳🇵',
+                              BD: '🇧🇩',
+                              PK: '🇵🇰',
+                            };
+                            return flagMap[quote.destination_country || ''] || '🌍';
+                          })()}
+                        </span>
+                        <span className="text-xs font-medium text-gray-700">
+                          {(() => {
+                            const destinationCountry = allCountries?.find(
+                              (c) => c.code === quote.destination_country,
+                            );
+                            return (
+                              destinationCountry?.name || quote.destination_country || 'Destination'
+                            );
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-hidden">
@@ -1737,6 +1852,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Unit Price: ${Number(item.price_usd || 0).toFixed(2)}</span>
                             </div>
+                            {/* Customer Notes */}
+                            {item.options && item.options.trim() && (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <div className="flex items-start space-x-2">
+                                  <MessageCircle className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <div>
+                                    <span className="font-medium text-blue-800">Customer Note:</span>
+                                    <p className="text-blue-700 mt-0.5 leading-relaxed">{item.options}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
@@ -1866,11 +1993,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             </div>
 
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={handleViewModeSave}
-                disabled={isCalculating}
-              >
+              <Button variant="outline" onClick={handleViewModeSave} disabled={isCalculating}>
                 <Save className="w-4 h-4 mr-2" />
                 {isCalculating ? 'Saving...' : 'Save'}
               </Button>
