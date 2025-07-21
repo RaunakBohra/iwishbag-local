@@ -476,35 +476,6 @@ export const QuoteDetailForm = ({
         </div>
       </div>
 
-      {/* Status Field */}
-      <FormField
-        control={form.control}
-        name="status"
-        render={({ field }) => (
-          <FormItem className="m-0">
-            <FormLabel className="text-xs font-medium text-muted-foreground">Status</FormLabel>
-            <Select onValueChange={field.onChange} value={field.value || ''}>
-              <FormControl>
-                <SelectTrigger className="h-9 mt-1">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {availableStatuses.map((status) => (
-                  <SelectItem key={status.name} value={status.name}>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={status.color} className="text-xs">
-                        {status.label}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
 
       {/* Notes Field */}
       <FormField

@@ -1101,7 +1101,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Quote {quote.display_id}</h1>
               <div className="flex items-center space-x-4 mt-1">
-                <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
                 <Badge variant="outline" className="flex items-center">
                   <TrendingUp className="w-3 h-3 mr-1" />
                   {optimizationScore.toFixed(0)}% Optimized
@@ -1951,7 +1950,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
             {/* Right Sidebar - Optimized Priority Order (1/3 width) */}
             <div className="space-y-3">
-              {/* 1. Quote Summary - Most Critical (moved to top) */}
+              {/* 1. Customer Information - First Priority (customer context) */}
+              <CompactCustomerInfo
+                quote={liveQuote || quote}
+                onUpdateQuote={loadQuoteData}
+                compact={true}
+              />
+
+              {/* 2. Quote Summary - Second Priority (order overview) */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/30">
                 <CardContent className="p-4">
                   <div className="text-sm font-medium text-blue-800 mb-4">Quote Summary</div>
@@ -2012,21 +2018,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 </CardContent>
               </Card>
 
-              {/* 2. Status Management - Second Priority (actionable) */}
+              {/* 3. Status Management - Third Priority (actionable) */}
               <CompactStatusManager
                 quote={liveQuote || quote}
                 onStatusUpdate={loadQuoteData}
                 compact={true}
               />
 
-              {/* 2.5. iwishBag Tracking Management - New Phase 1 Feature */}
+              {/* 4. iwishBag Tracking Management - Fourth Priority (tracking) */}
               <CompactShippingManager
                 quote={liveQuote || quote}
                 onUpdateQuote={loadQuoteData}
                 compact={true}
               />
 
-              {/* 3. Shipping Options - Third Priority (operational) */}
+              {/* 5. Shipping Options - Fifth Priority (operational) */}
               {shippingOptions.length > 0 && (
                 <CompactShippingOptions
                   quote={liveQuote || quote}
@@ -2042,14 +2048,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 />
               )}
 
-              {/* 4. Customer Information - Fourth Priority (reference) */}
-              <CompactCustomerInfo
-                quote={liveQuote || quote}
-                onUpdateQuote={loadQuoteData}
-                compact={true}
-              />
-
-              {/* 5. Payment Management - Fifth Priority (conditional) */}
+              {/* 6. Payment Management - Sixth Priority (conditional) */}
               {[
                 'sent',
                 'approved',
