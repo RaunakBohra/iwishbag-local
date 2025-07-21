@@ -603,11 +603,58 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       if (success) {
         console.log('✅ [ROUTE-SAVE] Database update successful');
         
-        // Delayed refresh to sync with database (like CompactStatusManager pattern)
-        setTimeout(() => {
-          loadQuoteData(true);
-          // Trigger shipping recalculation after route change
-          recalculateShipping();
+        // Intelligent delayed refresh to sync with database without overwriting optimistic updates
+        setTimeout(async () => {
+          try {
+            // Fetch fresh data from database with force refresh
+            const freshQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
+            
+            if (freshQuoteData) {
+              // Check if database has the updated route values that match our optimistic update
+              const databaseMatchesOptimistic = 
+                freshQuoteData.origin_country === formData.origin_country &&
+                freshQuoteData.destination_country === formData.destination_country;
+              
+              if (databaseMatchesOptimistic) {
+                console.log('✅ [ROUTE-SYNC] Database has updated route values, syncing UI');
+                // Database is in sync, safe to update UI with fresh data
+                setQuote(freshQuoteData);
+                populateFormFromQuote(freshQuoteData);
+                // Trigger shipping recalculation after route change
+                recalculateShipping();
+              } else {
+                console.log('⏳ [ROUTE-SYNC] Database not yet updated, keeping optimistic state');
+                // Database hasn't updated yet, keep optimistic state and try again
+                setTimeout(async () => {
+                  try {
+                    const retryQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
+                    if (retryQuoteData) {
+                      console.log('🔄 [ROUTE-SYNC] Retry - checking database again...');
+                      const retryMatches = 
+                        retryQuoteData.origin_country === formData.origin_country &&
+                        retryQuoteData.destination_country === formData.destination_country;
+                      
+                      if (retryMatches) {
+                        console.log('✅ [ROUTE-SYNC] Retry successful, syncing UI');
+                        setQuote(retryQuoteData);
+                        populateFormFromQuote(retryQuoteData);
+                        recalculateShipping();
+                      } else {
+                        console.log('⚠️ [ROUTE-SYNC] Database still not updated after retry, keeping optimistic state');
+                        // Keep the optimistic state - it will be corrected on next user action or refresh
+                      }
+                    }
+                  } catch (retryError) {
+                    console.error('❌ [ROUTE-SYNC] Retry fetch failed:', retryError);
+                    // Keep optimistic state on error
+                  }
+                }, 1000); // Retry after 1 second
+              }
+            }
+          } catch (error) {
+            console.error('❌ [ROUTE-SYNC] Error fetching fresh data:', error);
+            // Keep optimistic state on error - don't break user experience
+          }
         }, 500);
       } else {
         // Revert optimistic update on failure
