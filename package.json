@@ -40,7 +40,12 @@
     "lighthouse:mobile": "lhci autorun --config=lighthouserc.mobile.json",
     "performance:test": "npm run build && npm run lighthouse:ci",
     "performance:mobile": "npm run build && npm run lighthouse:mobile",
-    "performance:full": "npm run build && npm run lighthouse:ci && npm run lighthouse:mobile"
+    "performance:full": "npm run build && npm run lighthouse:ci && npm run lighthouse:mobile",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
+    "e2e:debug": "playwright test --debug",
+    "e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -63,6 +68,8 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.1.4",
+    "@sentry/react": "^9.40.0",
+    "@sentry/vite-plugin": "^4.0.0",
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.4.0",
     "@supabase/supabase-js": "^2.51.0",
@@ -108,6 +115,7 @@
     "@eslint/js": "^9.9.0",
     "@lhci/cli": "^0.15.1",
     "@lhci/utils": "^0.15.1",
+    "@playwright/test": "^1.54.1",
     "@tailwindcss/typography": "^0.5.15",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -132,6 +140,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^6.3.5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wait-on": "^8.0.3"
   }
 }

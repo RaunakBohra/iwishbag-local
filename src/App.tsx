@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
+import { SentryTestTrigger } from '@/components/debug/SentryTestTrigger';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
@@ -60,6 +61,7 @@ const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-fai
 const TrackingPage = React.lazy(() =>
   import('@/pages/TrackingPage').then((m) => ({ default: m.TrackingPage })),
 );
+const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTickets'));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
@@ -67,6 +69,7 @@ const EmailTemplatesPage = React.lazy(() => import('@/pages/admin/EmailTemplates
 const PaymentManagement = React.lazy(() => import('@/pages/admin/PaymentManagement'));
 const ShippingRoutesPage = React.lazy(() => import('@/pages/admin/ShippingRoutes'));
 const StatusManagementPage = React.lazy(() => import('@/pages/admin/StatusManagement'));
+const SupportTicketsPage = React.lazy(() => import('@/pages/admin/SupportTickets'));
 const PayUDebugPage = React.lazy(() =>
   import('@/pages/admin/PayUDebugPage').then((m) => ({
     default: m.PayUDebugPage,
@@ -164,6 +167,7 @@ const router = createBrowserRouter([
             ),
           },
           { path: 'customers', element: <EnhancedCustomerManagementPage /> },
+          { path: 'support-tickets', element: <SupportTicketsPage /> },
           { path: 'templates', element: <QuoteTemplatesPage /> },
           {
             path: 'quotes/:id',
@@ -371,6 +375,14 @@ const router = createBrowserRouter([
             element: <OrderDetail />,
           },
           {
+            path: 'support',
+            element: <Navigate to="/support/my-tickets" replace />,
+          },
+          {
+            path: 'support/my-tickets',
+            element: <MyTicketsPage />,
+          },
+          {
             path: 'quote/:id',
             element: <QuoteDetailUnified />,
           },
@@ -434,6 +446,7 @@ function App() {
                 </Suspense>
                 <PhoneCollectionProvider />
                 <Toaster />
+                <SentryTestTrigger />
               </HelmetProvider>
             </StatusConfigProvider>
           </AccessibilityProvider>

@@ -1,7 +1,26 @@
 import { createRoot } from 'react-dom/client';
+import * as Sentry from "@sentry/react";
 import App from './App.tsx';
 import './index.css';
 import { validateEnv } from './config/env';
+
+// Initialize Sentry for error and performance monitoring
+Sentry.init({
+  dsn: "YOUR_SENTRY_DSN_HERE", // Replace with your iwishbagcom project DSN from Sentry dashboard
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
+      // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
+      maskAllText: false,
+      blockAllMedia: false,
+    }),
+  ],
+  // Performance Monitoring
+  tracesSampleRate: 1.0, //  Capture 100% of the transactions
+  // Session Replay
+  replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
+  replaysOnErrorSampleRate: 1.0, // If an error happens while a session is being recorded, send the replay
+});
 
 // Validate environment variables on startup
 if (!validateEnv()) {
