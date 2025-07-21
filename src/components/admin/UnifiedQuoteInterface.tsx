@@ -551,6 +551,67 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
+  // Handle route editing done - save changes
+  const handleRouteEditingDone = async () => {
+    if (!quote?.id || !isEditingRoute) {
+      setIsEditingRoute(false);
+      return;
+    }
+
+    try {
+      const formData = form.getValues();
+      
+      // Only save if routes have actually changed
+      const routeChanged = 
+        formData.origin_country !== quote.origin_country ||
+        formData.destination_country !== quote.destination_country;
+
+      if (routeChanged) {
+        console.log('🗺️ [ROUTE-SAVE] Saving route changes:', {
+          from: `${quote.origin_country} → ${quote.destination_country}`,
+          to: `${formData.origin_country} → ${formData.destination_country}`
+        });
+
+        const success = await unifiedDataEngine.updateQuote(quote.id, {
+          origin_country: formData.origin_country,
+          destination_country: formData.destination_country,
+        });
+
+        if (success) {
+          toast({
+            title: 'Route Updated',
+            description: `Route changed to ${formData.origin_country} → ${formData.destination_country}`,
+          });
+          
+          // Reload the quote data to reflect changes
+          await loadQuoteData();
+          
+          // Force form to re-trigger watchers and calculations
+          // This ensures createLiveQuote recalculates with new route data
+          form.trigger(['origin_country', 'destination_country']);
+          
+          // Trigger shipping recalculation after route change
+          await recalculateShipping();
+        } else {
+          toast({
+            title: 'Error Saving Route',
+            description: 'Failed to save route changes',
+            variant: 'destructive',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('❌ [ROUTE-SAVE] Error saving route:', error);
+      toast({
+        title: 'Error Saving Route',
+        description: 'An error occurred while saving route changes',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsEditingRoute(false);
+    }
+  };
+
   // Function to actually remove item after confirmation
   const removeItem = (itemIndex: number) => {
     const currentItems = form.getValues('items') || [];
@@ -1240,7 +1301,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsEditingRoute(!isEditingRoute)}
+                    onClick={isEditingRoute ? handleRouteEditingDone : () => setIsEditingRoute(true)}
                     className="h-6 px-2 ml-2 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   >
                     <Edit className="w-3 h-3 mr-1" />
