@@ -45,12 +45,14 @@ interface CompactCustomerInfoProps {
   quote: UnifiedQuote;
   onUpdateQuote: () => void;
   compact?: boolean;
+  editMode?: boolean;
 }
 
 export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   quote,
   onUpdateQuote,
   compact = true,
+  editMode = false,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('addresses');
@@ -505,27 +507,29 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
                             </Badge>
                           )}
                         </div>
-                        {/* Admin Action Buttons */}
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditAddress(address)}
-                            className="h-5 w-5 p-0 hover:bg-blue-100"
-                            title="Edit address"
-                          >
-                            <Edit3 className="w-3 h-3 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteAddressMutation.mutate(address.id)}
-                            className="h-5 w-5 p-0 hover:bg-red-100"
-                            title="Delete address"
-                          >
-                            <X className="w-3 h-3 text-red-600" />
-                          </Button>
-                        </div>
+                        {/* Admin Action Buttons - Only in Edit Mode */}
+                        {editMode && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditAddress(address)}
+                              className="h-5 w-5 p-0 hover:bg-blue-100"
+                              title="Edit address"
+                            >
+                              <Edit3 className="w-3 h-3 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteAddressMutation.mutate(address.id)}
+                              className="h-5 w-5 p-0 hover:bg-red-100"
+                              title="Delete address"
+                            >
+                              <X className="w-3 h-3 text-red-600" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       <div className="text-xs text-gray-700 leading-relaxed ml-5">
                         <div>{address.address_line1}</div>
@@ -546,20 +550,22 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
                 </div>
               ))}
 
-              {/* Admin Actions Row */}
-              <div className="text-center pt-2 border-t border-gray-200">
-                <div className="flex justify-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600" onClick={handleAddAddress}>
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add New
-                  </Button>
-                  {savedAddresses.length > 2 && (
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">
-                      View all {savedAddresses.length}
+              {/* Admin Actions Row - Only in Edit Mode */}
+              {editMode && (
+                <div className="text-center pt-2 border-t border-gray-200">
+                  <div className="flex justify-center gap-2">
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600" onClick={handleAddAddress}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add New
                     </Button>
-                  )}
+                    {savedAddresses.length > 2 && (
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-blue-600">
+                        View all {savedAddresses.length}
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Quote-specific address if different from saved */}
               {formattedAddress && (
@@ -585,10 +591,12 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               <Home className="w-6 h-6 mx-auto mb-2 text-gray-300" />
               <p className="text-xs mb-2">No saved addresses</p>
               <div className="space-y-2">
-                <Button size="sm" className="h-7 px-3 text-xs" onClick={handleAddAddress}>
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Address
-                </Button>
+                {editMode && (
+                  <Button size="sm" className="h-7 px-3 text-xs" onClick={handleAddAddress}>
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add Address
+                  </Button>
+                )}
                 {formattedAddress && (
                   <div className="text-xs text-gray-600">
                     Quote has shipping address
@@ -647,8 +655,9 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       <CompactHeader />
       {isExpanded && <DetailTabs />}
       
-      {/* Address Management Modal */}
-      <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
+      {/* Address Management Modal - Only in Edit Mode */}
+      {editMode && (
+        <Dialog open={showAddressModal} onOpenChange={setShowAddressModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -776,6 +785,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           </form>
         </DialogContent>
       </Dialog>
+      )}
     </Card>
   );
 };

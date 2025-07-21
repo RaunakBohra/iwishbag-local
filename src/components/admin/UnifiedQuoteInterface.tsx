@@ -1955,6 +1955,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 quote={liveQuote || quote}
                 onUpdateQuote={loadQuoteData}
                 compact={true}
+                editMode={isEditMode}
               />
 
               {/* 2. Quote Summary - Second Priority (order overview) */}
