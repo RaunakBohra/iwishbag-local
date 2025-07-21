@@ -359,8 +359,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     setSmartSuggestions(updatedSuggestions);
   };
 
-  // Enhanced mode toggle handler with notifications
+  // Enhanced mode toggle handler with notifications and scroll prevention
   const handleModeToggle = (newEditMode: boolean) => {
+    // Store current scroll position
+    const currentScroll = window.scrollY;
+    
     setIsEditMode(newEditMode);
 
     // Toast notification for mode changes
@@ -376,6 +379,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     if (!newEditMode && quote) {
       populateFormFromQuote(liveQuote || quote);
     }
+
+    // Prevent auto-scroll by restoring scroll position
+    requestAnimationFrame(() => {
+      window.scrollTo(0, currentScroll);
+    });
   };
 
   // Watch form values for live updates
