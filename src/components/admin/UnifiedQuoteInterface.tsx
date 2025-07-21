@@ -47,7 +47,6 @@ import type {
 
 // Smart sub-components
 import { SmartSuggestionCards } from './smart-components/SmartSuggestionCards';
-import { SmartCustomerInfo } from './smart-components/SmartCustomerInfo';
 import { CompactCustomerInfo } from './smart-components/CompactCustomerInfo';
 import { CompactStatusManager } from './smart-components/CompactStatusManager';
 import { CompactShippingOptions } from './smart-components/CompactShippingOptions';
