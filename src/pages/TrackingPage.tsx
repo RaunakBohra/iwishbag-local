@@ -209,10 +209,10 @@ export const TrackingPage: React.FC = () => {
                       <span>Order Status</span>
                     </div>
                     <Badge
-                      variant={trackingService.getStatusBadgeVariant(quote.tracking_status)}
+                      variant={trackingService.getStatusBadgeVariant(quote?.tracking_status)}
                       className="text-sm"
                     >
-                      {trackingService.getStatusDisplayText(quote.tracking_status)}
+                      {trackingService.getStatusDisplayText(quote?.tracking_status)}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -223,34 +223,34 @@ export const TrackingPage: React.FC = () => {
                       <div>
                         <p className="text-sm text-blue-600 font-medium">iwishBag Tracking ID</p>
                         <p className="text-xl font-bold text-blue-800 font-mono">
-                          {quote.iwish_tracking_id}
+                          {quote?.iwish_tracking_id}
                         </p>
                       </div>
-                      {getStatusIcon(quote.tracking_status)}
+                      {getStatusIcon(quote?.tracking_status)}
                     </div>
 
                     {/* Progress Bar */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Order Progress</span>
-                        <span>{getProgressPercentage(quote.tracking_status)}%</span>
+                        <span>{getProgressPercentage(quote?.tracking_status)}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${getProgressPercentage(quote.tracking_status)}%` }}
+                          style={{ width: `${getProgressPercentage(quote?.tracking_status)}%` }}
                         ></div>
                       </div>
                     </div>
 
                     {/* Estimated Delivery */}
-                    {quote.estimated_delivery_date && (
+                    {quote?.estimated_delivery_date && (
                       <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <Calendar className="w-5 h-5 text-gray-500" />
                         <div>
                           <p className="text-sm text-gray-600">Estimated Delivery</p>
                           <p className="font-semibold text-gray-900">
-                            {new Date(quote.estimated_delivery_date).toLocaleDateString('en-US', {
+                            {new Date(quote?.estimated_delivery_date || '').toLocaleDateString('en-US', {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',
@@ -265,7 +265,7 @@ export const TrackingPage: React.FC = () => {
               </Card>
 
               {/* Carrier Tracking */}
-              {quote.shipping_carrier && quote.tracking_number && (
+              {quote?.shipping_carrier && quote?.tracking_number && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -278,25 +278,25 @@ export const TrackingPage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Shipping Carrier</p>
-                          <p className="font-semibold text-gray-900">{quote.shipping_carrier}</p>
+                          <p className="font-semibold text-gray-900">{quote?.shipping_carrier}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Carrier Tracking Number</p>
-                          <p className="font-mono text-gray-900">{quote.tracking_number}</p>
+                          <p className="font-mono text-gray-900">{quote?.tracking_number}</p>
                         </div>
                       </div>
 
-                      {getCarrierTrackingLink(quote.shipping_carrier, quote.tracking_number) && (
+                      {getCarrierTrackingLink(quote?.shipping_carrier, quote?.tracking_number) && (
                         <Button asChild variant="outline" className="w-full">
                           <a
                             href={
-                              getCarrierTrackingLink(quote.shipping_carrier, quote.tracking_number)!
+                              getCarrierTrackingLink(quote?.shipping_carrier, quote?.tracking_number)!
                             }
                             target="_blank"
                             rel="noopener noreferrer"
                           >
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            Track on {quote.shipping_carrier} Website
+                            Track on {quote?.shipping_carrier} Website
                           </a>
                         </Button>
                       )}
@@ -312,7 +312,7 @@ export const TrackingPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {quote.items.map((item, index) => (
+                    {quote?.items?.map((item, index) => (
                       <div
                         key={item.id || index}
                         className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
@@ -347,7 +347,7 @@ export const TrackingPage: React.FC = () => {
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Customer Information */}
-              {quote.customer_data.info.name && (
+              {quote?.customer_data?.info?.name && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -358,23 +358,23 @@ export const TrackingPage: React.FC = () => {
                   <CardContent className="space-y-3">
                     <div>
                       <p className="text-sm text-gray-600">Name</p>
-                      <p className="font-medium">{quote.customer_data.info.name}</p>
+                      <p className="font-medium">{quote?.customer_data?.info?.name}</p>
                     </div>
-                    {quote.customer_data.info.email && (
+                    {quote?.customer_data?.info?.email && (
                       <div>
                         <p className="text-sm text-gray-600">Email</p>
                         <p className="font-medium flex items-center">
                           <Mail className="w-4 h-4 mr-1 text-gray-500" />
-                          {quote.customer_data.info.email}
+                          {quote?.customer_data?.info?.email}
                         </p>
                       </div>
                     )}
-                    {quote.customer_data.info.phone && (
+                    {quote?.customer_data?.info?.phone && (
                       <div>
                         <p className="text-sm text-gray-600">Phone</p>
                         <p className="font-medium flex items-center">
                           <Phone className="w-4 h-4 mr-1 text-gray-500" />
-                          {quote.customer_data.info.phone}
+                          {quote?.customer_data?.info?.phone}
                         </p>
                       </div>
                     )}
@@ -392,20 +392,20 @@ export const TrackingPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm leading-relaxed text-gray-700">
-                    {quote.customer_data.shipping_address.line1 && (
+                    {quote?.customer_data?.shipping_address?.line1 && (
                       <>
-                        <p>{quote.customer_data.shipping_address.line1}</p>
-                        {quote.customer_data.shipping_address.line2 && (
-                          <p>{quote.customer_data.shipping_address.line2}</p>
+                        <p>{quote?.customer_data?.shipping_address?.line1}</p>
+                        {quote?.customer_data?.shipping_address?.line2 && (
+                          <p>{quote?.customer_data?.shipping_address?.line2}</p>
                         )}
                         <p>
-                          {quote.customer_data.shipping_address.city}
-                          {quote.customer_data.shipping_address.state &&
-                            `, ${quote.customer_data.shipping_address.state}`}
+                          {quote?.customer_data?.shipping_address?.city}
+                          {quote?.customer_data?.shipping_address?.state &&
+                            `, ${quote?.customer_data?.shipping_address?.state}`}
                         </p>
                         <p>
-                          {quote.customer_data.shipping_address.postal}{' '}
-                          {quote.customer_data.shipping_address.country}
+                          {quote?.customer_data?.shipping_address?.postal}{' '}
+                          {quote?.customer_data?.shipping_address?.country}
                         </p>
                       </>
                     )}
@@ -421,22 +421,22 @@ export const TrackingPage: React.FC = () => {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span>Quote ID</span>
-                    <span className="font-mono">#{quote.display_id}</span>
+                    <span className="font-mono">#{quote?.display_id}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Total Value</span>
-                    <span className="font-semibold">${quote.final_total_usd.toFixed(2)}</span>
+                    <span className="font-semibold">${quote?.final_total_usd?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Status</span>
-                    <Badge variant={trackingService.getStatusBadgeVariant(quote.tracking_status)}>
-                      {trackingService.getStatusDisplayText(quote.tracking_status)}
+                    <Badge variant={trackingService.getStatusBadgeVariant(quote?.tracking_status)}>
+                      {trackingService.getStatusDisplayText(quote?.tracking_status)}
                     </Badge>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <span>Created</span>
-                    <span>{new Date(quote.created_at).toLocaleDateString()}</span>
+                    <span>{quote?.created_at ? new Date(quote.created_at).toLocaleDateString() : 'Unknown'}</span>
                   </div>
                 </CardContent>
               </Card>
