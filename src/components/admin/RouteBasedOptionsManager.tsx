@@ -40,7 +40,7 @@ export const RouteBasedOptionsManager: React.FC<RouteBasedOptionsManagerProps> =
     return (
       <Card className="mt-6 border-2 border-blue-200">
         <CardHeader>
-          <CardTitle className="text-blue-600">🚀 Route-Based Options Manager (DEBUG)</CardTitle>
+          <CardTitle className="text-blue-600">Route-Based Options Manager (DEBUG)</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600">

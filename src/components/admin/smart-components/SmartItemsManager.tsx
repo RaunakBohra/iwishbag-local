@@ -29,6 +29,7 @@ import {
   CheckCircle,
   Lightbulb,
   Loader2,
+  Brain,
 } from 'lucide-react';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 
@@ -751,7 +752,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-blue-800">
-                    🧠 AI suggests: {weightEstimation.estimated_weight} kg
+                    <Brain className="w-4 h-4 inline mr-1" /> AI suggests:{' '}
+                    {weightEstimation.estimated_weight} kg
                   </span>
                   <div className="flex items-center space-x-2">
                     <Badge variant={weightEstimation.confidence >= 0.8 ? 'default' : 'secondary'}>

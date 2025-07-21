@@ -246,7 +246,7 @@ export const FixStatusJSON = () => {
 
           try {
             JSON.parse(fixedJSON);
-            messages.push(`🔧 Fixed JSON for ${setting.setting_key}`);
+            messages.push(`Fixed JSON for ${setting.setting_key}`);
 
             // Update the database with fixed JSON
             const { error: updateError } = await supabase
@@ -265,7 +265,7 @@ export const FixStatusJSON = () => {
           } catch (fixError: unknown) {
             const errorMessage = fixError instanceof Error ? fixError.message : String(fixError);
             messages.push(`❌ Could not fix JSON for ${setting.setting_key}: ${errorMessage}`);
-            messages.push(`🔄 Resetting ${setting.setting_key} to defaults...`);
+            messages.push(`Resetting ${setting.setting_key} to defaults...`);
 
             // Reset to defaults
             const defaultStatuses =
@@ -295,7 +295,7 @@ export const FixStatusJSON = () => {
 
       // If no settings exist, create them
       if (!data || data.length === 0) {
-        messages.push('📝 No existing settings found, creating defaults...');
+        messages.push('No existing settings found, creating defaults...');
 
         const { error: quoteError } = await supabase.from('system_settings').upsert(
           {
@@ -330,7 +330,7 @@ export const FixStatusJSON = () => {
 
       messages.push('');
       messages.push(
-        '🎉 Fix complete! You can now refresh the Status Management page to see if the error is resolved.',
+        'Fix complete! You can now refresh the Status Management page to see if the error is resolved.',
       );
 
       setResult(messages.join('\n'));

@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { FormField, FormItem, FormLabel, FormMessage, FormControl } from '@/components/ui/form';
 import { UseFormReturn } from 'react-hook-form';
@@ -32,82 +32,105 @@ export const ShippingRouteHeader: React.FC<ShippingRouteHeaderProps> = ({
   // Get country details for display
   const getCountryDisplay = (countryCode: string) => {
     if (!countryCode || !allCountries) return null;
-    return allCountries.find(c => c.code === countryCode);
+    return allCountries.find((c) => c.code === countryCode);
   };
 
   const originCountry = getCountryDisplay(displayOriginCountry || form.watch('origin_country'));
-  const destinationCountry = getCountryDisplay(displayDestinationCountry || form.watch('destination_country'));
+  const destinationCountry = getCountryDisplay(
+    displayDestinationCountry || form.watch('destination_country'),
+  );
 
   if (!isEditMode) {
-    // View Mode: Compact horizontal display
+    // View Mode: Professional compact display
     return (
-      <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-green-50 border border-gray-200 rounded-lg px-3 py-2">
-        <div className="flex items-center space-x-2">
-          <Globe className="w-3 h-3 text-gray-500" />
-          <span className="text-xs font-medium text-gray-600">Route:</span>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          {/* Origin */}
-          <div className="flex items-center space-x-1 bg-white rounded px-2 py-1 border border-gray-200">
-            <span className="text-sm">{originCountry?.flag || '🌍'}</span>
-            <span className="text-xs font-medium text-gray-700">
-              {originCountry?.name || 'Not set'}
-            </span>
+      <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            Shipping Route
+          </span>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-xs text-slate-500">International</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Globe className="w-3 h-3 text-slate-400" />
+              <span className="text-xs text-slate-500">Express Service</span>
+            </div>
           </div>
-
-          <ArrowRight className="w-3 h-3 text-gray-400" />
-
-          {/* Destination */}
-          <div className="flex items-center space-x-1 bg-white rounded px-2 py-1 border border-gray-200">
-            <span className="text-sm">{destinationCountry?.flag || '🌍'}</span>
-            <span className="text-xs font-medium text-gray-700">
-              {destinationCountry?.name || 'Not set'}
-            </span>
+        </div>
+        <div className="mt-3 flex items-center space-x-4">
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-slate-800">
+              {originCountry?.name || 'Not Set'}
+            </div>
+            <div className="text-xs text-slate-500 font-mono">
+              {displayOriginCountry || form.watch('origin_country') || 'N/A'}
+            </div>
+          </div>
+          <div className="flex items-center space-x-1 text-slate-400">
+            <div className="w-8 h-0.5 bg-slate-300"></div>
+            <ArrowRight className="w-4 h-4" />
+            <div className="w-8 h-0.5 bg-slate-300"></div>
+          </div>
+          <div className="flex-1 text-right">
+            <div className="text-sm font-semibold text-slate-800">
+              {destinationCountry?.name || 'Not Set'}
+            </div>
+            <div className="text-xs text-slate-500 font-mono">
+              {displayDestinationCountry || form.watch('destination_country') || 'N/A'}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // Edit Mode: Compact horizontal form fields
+  // Edit Mode: Professional form fields
   return (
-    <Card className="shadow-sm border-cyan-200 bg-gradient-to-r from-cyan-50 to-teal-50">
-      <CardContent className="p-2">
-        <div className="flex items-center justify-between">
+    <Card className="shadow-sm border-slate-200 bg-slate-50">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
-            <MapPin className="w-3 h-3 text-cyan-600" />
-            <span className="text-xs font-medium text-cyan-700">Shipping Route</span>
+            <MapPin className="w-4 h-4 text-slate-600" />
+            <span className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+              Shipping Route Configuration
+            </span>
           </div>
-          <Badge variant="outline" className="text-xs bg-cyan-100 text-cyan-600 border-cyan-300 h-5">
+          <Badge
+            variant="outline"
+            className="text-xs bg-blue-50 text-blue-600 border-blue-200 h-6 px-2"
+          >
             Required
           </Badge>
         </div>
 
-        <div className="flex items-center space-x-4 mt-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Origin Country */}
-          <div className="flex-1">
+          <div className="space-y-2">
             <FormField
               control={form.control}
               name="origin_country"
               render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-xs text-gray-600 flex items-center">
-                    <span className="inline-block w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></span>
-                    From
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-sm font-medium text-slate-700 flex items-center">
+                    <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    Origin Country
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
-                      <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-cyan-400 focus:ring-cyan-400">
-                        <SelectValue placeholder="Origin country" />
+                      <SelectTrigger className="h-10 text-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500 bg-white">
+                        <SelectValue placeholder="Select origin country" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-60">
                       {(allCountries || []).map((country) => (
                         <SelectItem key={country.code} value={country.code}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{country.flag}</span>
-                            <span className="text-sm">{country.name}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium">{country.name}</span>
+                            <span className="text-xs text-slate-500 font-mono">
+                              ({country.code})
+                            </span>
                           </div>
                         </SelectItem>
                       ))}
@@ -119,31 +142,31 @@ export const ShippingRouteHeader: React.FC<ShippingRouteHeaderProps> = ({
             />
           </div>
 
-          <ArrowRight className="w-4 h-4 text-cyan-400 mt-4" />
-
           {/* Destination Country */}
-          <div className="flex-1">
+          <div className="space-y-2">
             <FormField
               control={form.control}
               name="destination_country"
               render={({ field }) => (
-                <FormItem className="space-y-1">
-                  <FormLabel className="text-xs text-gray-600 flex items-center">
-                    <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></span>
-                    To
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-sm font-medium text-slate-700 flex items-center">
+                    <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    Destination Country
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
-                      <SelectTrigger className="h-8 text-xs border-gray-300 focus:border-cyan-400 focus:ring-cyan-400">
-                        <SelectValue placeholder="Destination country" />
+                      <SelectTrigger className="h-10 text-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500 bg-white">
+                        <SelectValue placeholder="Select destination country" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-60">
                       {(allCountries || []).map((country) => (
                         <SelectItem key={country.code} value={country.code}>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{country.flag}</span>
-                            <span className="text-sm">{country.name}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium">{country.name}</span>
+                            <span className="text-xs text-slate-500 font-mono">
+                              ({country.code})
+                            </span>
                           </div>
                         </SelectItem>
                       ))}

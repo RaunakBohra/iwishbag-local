@@ -58,7 +58,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   );
 
   // Debug logging for breakdown component
-  console.log('📊 [DEBUG] CompactCalculationBreakdown render:', {
+  console.log('[DEBUG] CompactCalculationBreakdown render:', {
     quoteId: quote.id,
     breakdownShipping: breakdown.shipping,
     selectedShippingOptionId: quote.operational_data?.shipping?.selected_option,
@@ -196,7 +196,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const ExpandedDetails = () => (
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full h-8 text-xs ${quote.currency === 'USD' ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        <TabsList
+          className={`grid w-full h-8 text-xs ${quote.currency === 'USD' ? 'grid-cols-2' : 'grid-cols-3'}`}
+        >
           <TabsTrigger value="breakdown" className="text-xs">
             Breakdown
           </TabsTrigger>
@@ -308,7 +310,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
               <div className="text-right">
                 <div className="font-medium">${Number(breakdown.taxes || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(Number(breakdown.taxes || 0))}%</div>
+                <div className="text-xs text-gray-500">
+                  {getPercentage(Number(breakdown.taxes || 0))}%
+                </div>
               </div>
             </div>
 
@@ -323,7 +327,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
               <div className="text-right">
                 <div className="font-medium">${Number(breakdown.fees || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(Number(breakdown.fees || 0))}%</div>
+                <div className="text-xs text-gray-500">
+                  {getPercentage(Number(breakdown.fees || 0))}%
+                </div>
               </div>
             </div>
 
@@ -457,18 +463,24 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <span className="text-gray-600">Items Total:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {((breakdown.items_total || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                        {((breakdown.items_total || 0) * exchangeRate.rate).toFixed(2)}{' '}
+                        {quote.currency}
                       </div>
-                      <div className="text-xs text-gray-500">${Number(breakdown.items_total || 0).toFixed(2)} USD</div>
+                      <div className="text-xs text-gray-500">
+                        ${Number(breakdown.items_total || 0).toFixed(2)} USD
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Shipping Total:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {((breakdown.shipping || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                        {((breakdown.shipping || 0) * exchangeRate.rate).toFixed(2)}{' '}
+                        {quote.currency}
                       </div>
-                      <div className="text-xs text-gray-500">${Number(breakdown.shipping || 0).toFixed(2)} USD</div>
+                      <div className="text-xs text-gray-500">
+                        ${Number(breakdown.shipping || 0).toFixed(2)} USD
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-between">
@@ -477,7 +489,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                       <div className="font-medium">
                         {((breakdown.customs || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
                       </div>
-                      <div className="text-xs text-gray-500">${Number(breakdown.customs || 0).toFixed(2)} USD</div>
+                      <div className="text-xs text-gray-500">
+                        ${Number(breakdown.customs || 0).toFixed(2)} USD
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-between">
@@ -486,7 +500,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                       <div className="font-medium">
                         {((breakdown.fees || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
                       </div>
-                      <div className="text-xs text-gray-500">${Number(breakdown.fees || 0).toFixed(2)} USD</div>
+                      <div className="text-xs text-gray-500">
+                        ${Number(breakdown.fees || 0).toFixed(2)} USD
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -501,11 +517,17 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="space-y-1">
                   <div className="flex justify-between">
                     <span>Rate:</span>
-                    <span>1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}</span>
+                    <span>
+                      1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Source:</span>
-                    <span>{exchangeRate.source === 'shipping_route' ? 'Route-specific' : 'Standard market'}</span>
+                    <span>
+                      {exchangeRate.source === 'shipping_route'
+                        ? 'Route-specific'
+                        : 'Standard market'}
+                    </span>
                   </div>
                   <div className="text-gray-500 text-xs mt-1">
                     {exchangeRate.source === 'shipping_route'

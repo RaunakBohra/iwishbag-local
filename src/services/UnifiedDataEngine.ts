@@ -185,7 +185,7 @@ export class UnifiedDataEngine {
    */
   async getQuote(id: string, forceRefresh = false): Promise<UnifiedQuote | null> {
     const cacheKey = `quote_${id}`;
-    
+
     // Skip cache if force refresh is requested
     if (!forceRefresh) {
       const cached = this.getCached(cacheKey);
@@ -249,7 +249,10 @@ export class UnifiedDataEngine {
       // Try to get OAuth profile picture from auth.users.user_metadata if no avatar in profiles
       if (!profileData.avatar_url && quote.user_id) {
         try {
-          const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(quote.user_id);
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.admin.getUserById(quote.user_id);
           if (!userError && user?.user_metadata) {
             const oauthAvatar = user.user_metadata.avatar_url || user.user_metadata.picture;
             if (oauthAvatar) {
@@ -320,7 +323,7 @@ export class UnifiedDataEngine {
 
     // Transform quotes from DB format
     const quotes = (data || []).map((row) => this.transformFromDB(row));
-    
+
     // Note: For performance, getQuotes() doesn't enhance with profile data
     // Use getQuote(id) for individual quotes that need complete customer info including avatars
     return { quotes, total: count || 0 };
@@ -401,6 +404,8 @@ export class UnifiedDataEngine {
 
       if (updates.items) dbUpdates.items = updates.items;
       if (updates.status) dbUpdates.status = updates.status;
+      if (updates.origin_country) dbUpdates.origin_country = updates.origin_country;
+      if (updates.destination_country) dbUpdates.destination_country = updates.destination_country;
       if (updates.calculation_data) dbUpdates.calculation_data = updates.calculation_data;
       if (updates.customer_data) dbUpdates.customer_data = updates.customer_data;
       if (updates.operational_data) dbUpdates.operational_data = updates.operational_data;
@@ -421,8 +426,16 @@ export class UnifiedDataEngine {
 
       console.log('✅ [DEBUG] Database update successful');
 
-      // Clear cache
+      // Clear cache aggressively for status updates
       this.clearCache(`quote_${id}`);
+      
+      // Also clear any related cache entries that might be affected
+      if (updates.status) {
+        console.log('🔄 [DEBUG] Status update detected, clearing all caches for quote', id);
+        // Clear all cached entries to ensure fresh data
+        this.cache.clear();
+      }
+      
       return true;
     } catch (error) {
       console.error('❌ [DEBUG] Failed to update quote:', error);
