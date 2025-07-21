@@ -6,7 +6,7 @@ import { validateEnv } from './config/env';
 
 // Initialize Sentry for error and performance monitoring
 Sentry.init({
-  dsn: "YOUR_SENTRY_DSN_HERE", // Replace with your iwishbagcom project DSN from Sentry dashboard
+  dsn: "https://8c2b7811dbad53f28b209864b6dc66f0@o4509707940265984.ingest.us.sentry.io/4509707943215104",
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration({
