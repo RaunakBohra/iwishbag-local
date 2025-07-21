@@ -1164,7 +1164,6 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                               '',
                             phone:
                               quote.shipping_address?.phone ||
-                              quote.profiles?.phone ||
                               quote.customer_phone ||
                               '',
                           }}

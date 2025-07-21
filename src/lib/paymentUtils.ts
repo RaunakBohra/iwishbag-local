@@ -350,7 +350,6 @@ export function extractCustomerInfo(quote: Record<string, unknown>) {
       '',
     phone:
       quote.shipping_address?.phone ||
-      quote.profiles?.phone ||
       quote.user?.phone ||
       quote.customer_phone ||
       '',

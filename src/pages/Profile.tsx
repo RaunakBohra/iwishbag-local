@@ -148,6 +148,12 @@ const Profile = () => {
     mutationFn: async (values: ProfileFormValues) => {
       if (!user) throw new Error('User not authenticated');
 
+      // Update phone in auth.users table
+      const { error: authError } = await supabase.auth.updateUser({
+        phone: values.phone,
+      });
+      if (authError) throw new Error(`Error updating phone: ${authError.message}`);
+
       // Check if profile exists
       const { data: existingProfile, error: selectError } = await supabase
         .from('profiles')
@@ -160,12 +166,11 @@ const Profile = () => {
       }
 
       if (existingProfile) {
-        // Profile exists, so update it
+        // Profile exists, so update it (without phone)
         const { error } = await supabase
           .from('profiles')
           .update({
             full_name: values.full_name,
-            phone: values.phone,
             country: values.country,
             preferred_display_currency: values.preferred_display_currency,
             preferred_payment_gateway:
@@ -174,11 +179,10 @@ const Profile = () => {
           .eq('id', user.id);
         if (error) throw new Error(`Error updating profile: ${error.message}`);
       } else {
-        // Profile doesn't exist, so insert it
+        // Profile doesn't exist, so insert it (without phone)
         const { error } = await supabase.from('profiles').insert({
           id: user.id,
           full_name: values.full_name,
-          phone: values.phone,
           country: values.country,
           preferred_display_currency: values.preferred_display_currency,
           preferred_payment_gateway:
@@ -242,10 +246,13 @@ const Profile = () => {
         user?.email?.split('@')[0] ||
         '';
 
+      // Get phone from auth.users.phone instead of profiles.phone
+      const userPhone = user?.phone || user?.user_metadata?.phone || '';
+
       form.reset({
         full_name: displayName,
         email: user?.email || '',
-        phone: profile.phone || '',
+        phone: userPhone,
         country: profile.country || 'US',
         preferred_display_currency: profile.preferred_display_currency || 'USD',
         preferred_payment_gateway: (profile as any).preferred_payment_gateway || 'auto',

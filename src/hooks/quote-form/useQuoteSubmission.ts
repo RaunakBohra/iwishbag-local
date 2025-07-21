@@ -67,11 +67,10 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         .single();
 
       if (!existingProfile) {
-        // Create profile if it doesn't exist
+        // Create profile if it doesn't exist (phone stored in auth.users, not profiles)
         const { error: profileError } = await supabase.from('profiles').insert({
           id: user.id,
           full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
-          phone: user.phone || null,
           country: countryCode || null,
           preferred_display_currency: selectedCountryCurrency || null,
           referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),
@@ -261,11 +260,10 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
         .single();
 
       if (!existingProfile) {
-        // Create profile if it doesn't exist
+        // Create profile if it doesn't exist (phone stored in auth.users, not profiles)
         const { error: profileError } = await supabase.from('profiles').insert({
           id: user.id,
           full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
-          phone: user.phone || null,
           country: countryCode || null,
           preferred_display_currency: selectedCountryCurrency || null,
           referral_code: 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase(),

@@ -169,7 +169,6 @@ export function EnhancedPaymentLinkGenerator({
         customerInfo?.email ||
         '',
       phone:
-        profiles?.phone ||
         shipping?.phone ||
         user?.phone ||
         quote?.customer_phone ||

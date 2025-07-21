@@ -25,7 +25,7 @@ export const useQuoteQueries = (id: string | undefined) => {
       const { data, error } = await supabase
         .from('quotes')
         .select(
-          '*, profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)',
+          '*, profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)',
         )
         .eq('id', id)
         .single();

@@ -159,8 +159,9 @@ const AuthForm = () => {
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
+        phone: values.phone, // Save phone directly to auth.users.phone
         options: {
-          data: { name: values.name, phone: values.phone },
+          data: { name: values.name },
           emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });

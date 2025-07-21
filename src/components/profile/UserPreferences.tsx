@@ -174,11 +174,11 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
                 </span>
               </div>
             )}
-            {profile.phone && (
+            {(user?.phone || user?.user_metadata?.phone) && (
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Phone:</span>
-                <span>{profile.phone}</span>
+                <span>{user?.phone || user?.user_metadata?.phone}</span>
               </div>
             )}
           </div>

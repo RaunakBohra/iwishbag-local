@@ -171,7 +171,7 @@ export const usePaginatedQuoteManagement = (filters = {}) => {
       let query = supabase
         .from('quotes')
         .select(
-          '*, profiles!quotes_user_id_fkey(full_name, email, phone, preferred_display_currency)',
+          '*, profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)',
         )
         .order('created_at', { ascending: false })
         .range(pagination.pageRange.from, pagination.pageRange.to);
