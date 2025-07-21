@@ -1082,44 +1082,34 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           : 'border border-blue-200 bg-blue-50/20 shadow-sm'
       }`}
     >
-      {/* Smart Header with Key Metrics */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/admin/quotes')} className="p-2">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quote {quote.display_id}</h1>
-            <div className="flex items-center space-x-4 mt-1">
-              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
-              </div>
-              <Badge variant="outline" className="flex items-center">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                {optimizationScore.toFixed(0)}% Optimized
-              </Badge>
-              {isCalculating && (
-                <Badge variant="secondary" className="flex items-center">
-                  <Calculator className="w-3 h-3 mr-1 animate-spin" />
-                  Calculating...
+      {/* Smart Header with Key Metrics - Enterprise Layout */}
+      <div className="space-y-4">
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" onClick={() => navigate('/admin/quotes')} className="p-2">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Quote {quote.display_id}</h1>
+              <div className="flex items-center space-x-4 mt-1">
+                <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                  <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
+                </div>
+                <Badge variant="outline" className="flex items-center">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  {optimizationScore.toFixed(0)}% Optimized
                 </Badge>
-              )}
+                {isCalculating && (
+                  <Badge variant="secondary" className="flex items-center">
+                    <Calculator className="w-3 h-3 mr-1 animate-spin" />
+                    Calculating...
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="text-right space-y-2">
-          <div className="text-2xl font-bold text-blue-600">
-            ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
-          </div>
-          <div className="text-sm text-gray-600">
-            {metrics?.totalItems} items • {metrics?.totalWeight} kg
-            {lastSaveTime && (
-              <span className="text-green-600 ml-2">
-                • Saved {lastSaveTime.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
           <div className="flex items-center justify-end">
             <ModeToggle
               isEditMode={isEditMode}
@@ -1128,6 +1118,63 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               showBadge={true}
               size="default"
             />
+          </div>
+        </div>
+
+        {/* Key Metrics Banner - Enterprise Standard */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            {/* Shipping Route - Professional Display */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="text-sm font-medium text-slate-700">
+                  {(() => {
+                    const originCountry = allCountries?.find(
+                      (c) => c.code === quote.origin_country,
+                    );
+                    return originCountry?.name || quote.origin_country || 'Origin';
+                  })()}
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-400" />
+                <div className="text-sm font-medium text-slate-700">
+                  {(() => {
+                    const destinationCountry = allCountries?.find(
+                      (c) => c.code === quote.destination_country,
+                    );
+                    return (
+                      destinationCountry?.name || quote.destination_country || 'Destination'
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Key Metrics - At-a-Glance Data */}
+            <div className="flex items-center space-x-8">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-600 font-medium">Total Quote Value</div>
+                {lastSaveTime && (
+                  <div className="text-xs text-green-600 mt-1">
+                    Saved {lastSaveTime.toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-gray-900">
+                  {metrics?.totalWeight || 0} kg
+                </div>
+                <div className="text-xs text-gray-600 font-medium">Total Weight</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-bold text-gray-700">
+                  {metrics?.totalItems || 0}
+                </div>
+                <div className="text-xs text-gray-600 font-medium">Items</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1181,13 +1228,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="md:col-span-2 space-y-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
-                  {/* Shipping Route Header - Inside Form Context */}
-                  <ShippingRouteHeader
-                    form={form}
-                    isEditMode={isEditMode}
-                    displayOriginCountry={quote.origin_country}
-                    displayDestinationCountry={quote.destination_country}
-                  />
                   {/* Products Section - World Class Design */}
                   <Card className="shadow-sm border-gray-200">
                     <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 py-3">
@@ -1504,18 +1544,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 </div>
                               </div>
 
-                              {/* Customer Notes */}
+                              {/* Customer Notes - Professional Inline Style */}
                               {item.options && item.options.trim() && (
-                                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                <div className="mt-2 px-3 py-2 bg-gray-50 border-l-4 border-gray-300 rounded-r-md">
                                   <div className="flex items-start space-x-2">
-                                    <MessageCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                    <div>
-                                      <span className="text-sm font-medium text-blue-800">
-                                        Customer Note:
-                                      </span>
-                                      <p className="text-sm text-blue-700 mt-1 leading-relaxed">
-                                        {item.options}
-                                      </p>
+                                    <MessageCircle className="w-3 h-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                                    <div className="text-xs text-gray-600">
+                                      <span className="font-medium text-gray-700">Customer Note:</span>
+                                      <span className="ml-1">{item.options}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1768,35 +1804,19 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="md:col-span-2 space-y-4">
               {/* Quote Items - Professional Table Style */}
               <Card>
-                <CardHeader className="bg-blue-50 border-b border-blue-200">
+                <CardHeader className="bg-slate-50 border-b border-slate-200 py-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-semibold text-gray-900">
-                        Order Items
-                      </CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {metrics?.totalItems} items • {metrics?.totalWeight} kg total weight
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="text-sm font-medium text-slate-700">
-                        {(() => {
-                          const originCountry = allCountries?.find(
-                            (c) => c.code === quote.origin_country,
-                          );
-                          return originCountry?.name || quote.origin_country || 'Origin';
-                        })()}
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <Package className="w-4 h-4 text-white" />
                       </div>
-                      <ArrowRight className="w-4 h-4 text-slate-400" />
-                      <div className="text-sm font-medium text-slate-700">
-                        {(() => {
-                          const destinationCountry = allCountries?.find(
-                            (c) => c.code === quote.destination_country,
-                          );
-                          return (
-                            destinationCountry?.name || quote.destination_country || 'Destination'
-                          );
-                        })()}
+                      <div>
+                        <CardTitle className="text-lg font-semibold text-gray-900">
+                          Order Items
+                        </CardTitle>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {metrics?.totalItems} items • {metrics?.totalWeight} kg total weight
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1835,11 +1855,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Unit Price: ${Number(item.price_usd || 0).toFixed(2)}</span>
                             </div>
-                            {/* Customer Notes - Inline Style */}
+                            {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (
                               <div className="mt-1">
                                 <span className="text-xs text-gray-600">
-                                  <span className="font-medium">Note:</span> {item.options}
+                                  <span className="font-medium text-gray-700">Customer Note:</span> {item.options}
                                 </span>
                               </div>
                             )}
@@ -1865,58 +1885,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               />
             </div>
 
-            {/* Right Sidebar - View Mode Components (1/3 width) */}
+            {/* Right Sidebar - Optimized Priority Order (1/3 width) */}
             <div className="space-y-3">
-              {/* Customer Information */}
-              <CompactCustomerInfo
-                quote={liveQuote || quote}
-                onUpdateQuote={loadQuoteData}
-                compact={true}
-              />
-
-              {/* Status Management - Isolated to prevent event conflicts */}
-              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
-                <CompactStatusManager
-                  quote={liveQuote || quote}
-                  onStatusUpdate={loadQuoteData}
-                  compact={true}
-                />
-              </div>
-
-              {/* Shipping Options */}
-              {shippingOptions.length > 0 && (
-                <CompactShippingOptions
-                  quote={liveQuote || quote}
-                  shippingOptions={shippingOptions}
-                  recommendations={shippingRecommendations}
-                  onSelectOption={handleShippingOptionSelect}
-                  showAllOptions={false}
-                  onToggleShowAll={setShowAllShippingOptions}
-                  compact={true}
-                  editMode={isEditMode}
-                  onSaveShippingOption={handleShippingOptionSelect}
-                  isSaving={isCalculating}
-                />
-              )}
-
-              {/* Payment Management */}
-              {[
-                'sent',
-                'approved',
-                'paid',
-                'payment_pending',
-                'ordered',
-                'shipped',
-                'completed',
-              ].includes(quote.status) && (
-                <CompactPaymentManager
-                  quote={liveQuote || quote}
-                  onPaymentUpdate={loadQuoteData}
-                  compact={true}
-                />
-              )}
-
-              {/* Quote Summary - Enhanced At-a-Glance */}
+              {/* 1. Quote Summary - Most Critical (moved to top) */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/30">
                 <CardContent className="p-4">
                   <div className="text-sm font-medium text-blue-800 mb-4">Quote Summary</div>
@@ -1976,6 +1947,55 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 2. Status Management - Second Priority (actionable) */}
+              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                <CompactStatusManager
+                  quote={liveQuote || quote}
+                  onStatusUpdate={loadQuoteData}
+                  compact={true}
+                />
+              </div>
+
+              {/* 3. Shipping Options - Third Priority (operational) */}
+              {shippingOptions.length > 0 && (
+                <CompactShippingOptions
+                  quote={liveQuote || quote}
+                  shippingOptions={shippingOptions}
+                  recommendations={shippingRecommendations}
+                  onSelectOption={handleShippingOptionSelect}
+                  showAllOptions={false}
+                  onToggleShowAll={setShowAllShippingOptions}
+                  compact={true}
+                  editMode={isEditMode}
+                  onSaveShippingOption={handleShippingOptionSelect}
+                  isSaving={isCalculating}
+                />
+              )}
+
+              {/* 4. Customer Information - Fourth Priority (reference) */}
+              <CompactCustomerInfo
+                quote={liveQuote || quote}
+                onUpdateQuote={loadQuoteData}
+                compact={true}
+              />
+
+              {/* 5. Payment Management - Fifth Priority (conditional) */}
+              {[
+                'sent',
+                'approved',
+                'paid',
+                'payment_pending',
+                'ordered',
+                'shipped',
+                'completed',
+              ].includes(quote.status) && (
+                <CompactPaymentManager
+                  quote={liveQuote || quote}
+                  onPaymentUpdate={loadQuoteData}
+                  compact={true}
+                />
+              )}
             </div>
           </div>
         </div>
