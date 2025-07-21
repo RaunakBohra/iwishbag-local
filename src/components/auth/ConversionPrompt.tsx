@@ -13,33 +13,37 @@ interface ConversionPromptProps {
 
 const PROMPT_MESSAGES = {
   quote_submitted: {
-    title: "Track Your Quote",
-    description: "Create an account to receive updates and track your quote progress.",
-    benefits: ["Get notified when your quote is ready", "Track order status", "Save shipping addresses"]
+    title: 'Track Your Quote',
+    description: 'Create an account to receive updates and track your quote progress.',
+    benefits: [
+      'Get notified when your quote is ready',
+      'Track order status',
+      'Save shipping addresses',
+    ],
   },
   cart_action: {
-    title: "Save Your Cart", 
-    description: "Create an account to save your cart and access it from any device.",
-    benefits: ["Never lose your cart items", "Faster checkout", "Order history"]
+    title: 'Save Your Cart',
+    description: 'Create an account to save your cart and access it from any device.',
+    benefits: ['Never lose your cart items', 'Faster checkout', 'Order history'],
   },
   checkout_start: {
-    title: "Secure Checkout",
-    description: "Create an account for a secure and faster checkout experience.",
-    benefits: ["Secure payment processing", "Order tracking", "Saved payment methods"]
+    title: 'Secure Checkout',
+    description: 'Create an account for a secure and faster checkout experience.',
+    benefits: ['Secure payment processing', 'Order tracking', 'Saved payment methods'],
   },
   manual: {
-    title: "Create Your Account",
-    description: "Get the full iwishBag experience with a permanent account.",
-    benefits: ["Track all your orders", "Save preferences", "Priority support"]
-  }
+    title: 'Create Your Account',
+    description: 'Get the full iwishBag experience with a permanent account.',
+    benefits: ['Track all your orders', 'Save preferences', 'Priority support'],
+  },
 };
 
 export default function ConversionPrompt({
   trigger,
   onDismiss,
   onConversionSuccess,
-  className = "",
-  submittedEmail
+  className = '',
+  submittedEmail,
 }: ConversionPromptProps) {
   const { user } = useAuth();
   const [isDismissed, setIsDismissed] = useState(false);
@@ -62,7 +66,9 @@ export default function ConversionPrompt({
 
   return (
     // Modal Overlay - Progressive Authentication
-    <div className={`${className} fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50`}>
+    <div
+      className={`${className} fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50`}
+    >
       <div className="relative max-w-md w-full bg-white rounded-lg shadow-xl p-6">
         {/* Close button */}
         <button

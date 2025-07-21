@@ -138,7 +138,6 @@ export const useCartStore = create<CartStore>()(
           }));
         },
 
-
         toggleSelection: (id: string) => {
           set((state) => ({
             selectedItems: state.selectedItems.includes(id)
@@ -195,7 +194,6 @@ export const useCartStore = create<CartStore>()(
             }));
           }
         },
-
 
         setLoading: (loading: boolean) => {
           set({ isLoading: loading });
@@ -282,14 +280,17 @@ export const useCartStore = create<CartStore>()(
               .order('created_at', { ascending: false });
 
             // 🚨 DEBUG: Log quote data to check if local currency fields are loaded
-            console.log('🔍 [CartStore] Raw quote data sample:', allQuotes?.slice(0, 1).map(q => ({
-              id: q.id,
-              final_total_usd: q.final_total_usd,
-              final_total_local: q.final_total_local,
-              destination_currency: q.destination_currency,
-              origin_country: q.origin_country,
-              destination_country: q.destination_country
-            })));
+            console.log(
+              '🔍 [CartStore] Raw quote data sample:',
+              allQuotes?.slice(0, 1).map((q) => ({
+                id: q.id,
+                final_total_usd: q.final_total_usd,
+                final_total_local: q.final_total_local,
+                destination_currency: q.destination_currency,
+                origin_country: q.origin_country,
+                destination_country: q.destination_country,
+              })),
+            );
 
             if (quotesError) {
               logger.error('Error fetching quotes', quotesError, 'Cart');
@@ -335,7 +336,10 @@ export const useCartStore = create<CartStore>()(
 
               // Calculate total quantity and weight from all items
               const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-              const totalWeight = items.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1), 0);
+              const totalWeight = items.reduce(
+                (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1),
+                0,
+              );
 
               // Use final_total_usd directly (this is the authoritative total)
               const totalPrice = quote.final_total_usd || 0;
@@ -412,22 +416,25 @@ export const useCartStore = create<CartStore>()(
                   final_total_local: quote.final_total_local,
                   destination_currency: quote.destination_currency,
                   origin_country: quote.origin_country,
-                  destination_country: quote.destination_country
+                  destination_country: quote.destination_country,
                 },
                 cartItem: {
                   finalTotal: cartItem.finalTotal,
                   finalTotalLocal: cartItem.finalTotalLocal,
                   finalCurrency: cartItem.finalCurrency,
                   purchaseCountryCode: cartItem.purchaseCountryCode,
-                  destinationCountryCode: cartItem.destinationCountryCode
-                }
+                  destinationCountryCode: cartItem.destinationCountryCode,
+                },
               });
 
               // FIXED: Final safety check to ensure all numeric values are valid
               const validatedCartItem = {
                 ...cartItem,
                 finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
-                finalTotalLocal: cartItem.finalTotalLocal && !isNaN(cartItem.finalTotalLocal) ? cartItem.finalTotalLocal : undefined,
+                finalTotalLocal:
+                  cartItem.finalTotalLocal && !isNaN(cartItem.finalTotalLocal)
+                    ? cartItem.finalTotalLocal
+                    : undefined,
                 quantity: isNaN(cartItem.quantity) ? 1 : cartItem.quantity,
                 itemWeight: isNaN(cartItem.itemWeight) ? 0 : cartItem.itemWeight,
               };
@@ -452,7 +459,11 @@ export const useCartStore = create<CartStore>()(
               cartItemsCount: cartItems.length,
               isLoading: false,
               hasLoadedFromServer: true,
-              cartItems: cartItems.slice(0, 2).map(item => ({ id: item.id, quoteId: item.quoteId, finalTotal: item.finalTotal }))
+              cartItems: cartItems.slice(0, 2).map((item) => ({
+                id: item.id,
+                quoteId: item.quoteId,
+                finalTotal: item.finalTotal,
+              })),
             });
 
             logger.cart('Cart loaded successfully from server');

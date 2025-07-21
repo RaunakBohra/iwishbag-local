@@ -272,13 +272,15 @@ export const FlexibleBankAccountForm = ({
               {editingAccount ? 'Edit account' : 'Add new account'}
             </H2>
             <BodySmall className="text-gray-600 mt-1">
-              {editingAccount ? 'Update account details and payment information.' : 'Create a new bank account for processing payments.'}
+              {editingAccount
+                ? 'Update account details and payment information.'
+                : 'Create a new bank account for processing payments.'}
             </BodySmall>
           </div>
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={onCancel}
             className="text-gray-500 hover:text-gray-700 h-8 w-8 p-0"
           >
@@ -294,7 +296,9 @@ export const FlexibleBankAccountForm = ({
             <H3 className="text-sm font-semibold text-gray-900 mb-4">Basic configuration</H3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label htmlFor="country" className="text-sm font-medium text-gray-700 mb-2 block">Country</Label>
+                <Label htmlFor="country" className="text-sm font-medium text-gray-700 mb-2 block">
+                  Country
+                </Label>
                 <Select
                   value={selectedCountry}
                   onValueChange={setSelectedCountry}
@@ -320,7 +324,12 @@ export const FlexibleBankAccountForm = ({
               </div>
 
               <div>
-                <Label htmlFor="display_order" className="text-sm font-medium text-gray-700 mb-2 block">Display order</Label>
+                <Label
+                  htmlFor="display_order"
+                  className="text-sm font-medium text-gray-700 mb-2 block"
+                >
+                  Display order
+                </Label>
                 <Input
                   id="display_order"
                   type="number"
@@ -346,7 +355,10 @@ export const FlexibleBankAccountForm = ({
                   className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                 />
                 <div className="flex-1">
-                  <Label htmlFor="is_fallback" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  <Label
+                    htmlFor="is_fallback"
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                  >
                     Fallback account
                   </Label>
                   <BodySmall className="text-gray-500 mt-1">
@@ -369,7 +381,10 @@ export const FlexibleBankAccountForm = ({
                   className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                 />
                 <div className="flex-1">
-                  <Label htmlFor="is_active" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  <Label
+                    htmlFor="is_active"
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                  >
                     Active account
                   </Label>
                   <BodySmall className="text-gray-500 mt-1">
@@ -395,7 +410,10 @@ export const FlexibleBankAccountForm = ({
               {customFields.map((field) => (
                 <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                   <div>
-                    <Label htmlFor={`label_${field.id}`} className="text-sm font-medium text-gray-700 mb-2 block">
+                    <Label
+                      htmlFor={`label_${field.id}`}
+                      className="text-sm font-medium text-gray-700 mb-2 block"
+                    >
                       Field label
                     </Label>
                     <Input
@@ -411,7 +429,10 @@ export const FlexibleBankAccountForm = ({
 
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <Label htmlFor={`value_${field.id}`} className="text-sm font-medium text-gray-700 mb-2 block">
+                      <Label
+                        htmlFor={`value_${field.id}`}
+                        className="text-sm font-medium text-gray-700 mb-2 block"
+                      >
                         Value
                       </Label>
                       {field.id === 'instructions' ? (
@@ -483,9 +504,9 @@ export const FlexibleBankAccountForm = ({
                 </SelectContent>
               </Select>
 
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={handleAddField}
                 className="border-gray-300 text-gray-700 hover:bg-gray-50 h-10"
               >
@@ -498,17 +519,17 @@ export const FlexibleBankAccountForm = ({
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={onCancel} 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
             disabled={isProcessing}
             className="border-gray-300 text-gray-700 hover:bg-gray-50 h-10 px-4"
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isProcessing}
             className="bg-teal-600 hover:bg-teal-700 text-white px-6 h-10 font-medium"
           >

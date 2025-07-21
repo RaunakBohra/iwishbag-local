@@ -9,7 +9,7 @@ const ProtectedRoute = () => {
     session: !!session,
     isAnonymous,
     shouldRedirect: !user || !session || isAnonymous,
-    currentPath: window.location.pathname
+    currentPath: window.location.pathname,
   });
 
   // Redirect if no user/session OR if user is anonymous
@@ -17,7 +17,7 @@ const ProtectedRoute = () => {
     console.log('🚫 PROTECTED ROUTE: Redirecting to /auth because:', {
       noUser: !user,
       noSession: !session,
-      isAnonymous
+      isAnonymous,
     });
     return <Navigate to="/auth" replace />;
   }

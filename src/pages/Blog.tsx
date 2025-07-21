@@ -89,10 +89,18 @@ const Blog = () => {
               <h1 className="text-2xl font-semibold text-gray-900">iwishBag</h1>
             </div>
             <nav className="flex space-x-8">
-              <a href="/" className="text-gray-600 hover:text-gray-900">Home</a>
-              <a href="/blog" className="text-gray-900 font-medium">Blog</a>
-              <a href="/about" className="text-gray-600 hover:text-gray-900">About</a>
-              <a href="/contact" className="text-gray-600 hover:text-gray-900">Contact</a>
+              <a href="/" className="text-gray-600 hover:text-gray-900">
+                Home
+              </a>
+              <a href="/blog" className="text-gray-900 font-medium">
+                Blog
+              </a>
+              <a href="/about" className="text-gray-600 hover:text-gray-900">
+                About
+              </a>
+              <a href="/contact" className="text-gray-600 hover:text-gray-900">
+                Contact
+              </a>
             </nav>
           </div>
         </div>
@@ -125,7 +133,7 @@ const Blog = () => {
                 selectedCategoryId={filters.category_id}
                 onCategorySelect={(categoryId) => handleFilterChange({ category_id: categoryId })}
               />
-              
+
               {selectedCategory && (
                 <Badge
                   variant="secondary"
@@ -222,9 +230,7 @@ const Blog = () => {
                   <h2 className="text-2xl font-bold text-gray-900">
                     {filters.page === 1 ? 'Recent Posts' : `Page ${filters.page}`}
                   </h2>
-                  <span className="text-sm text-gray-500">
-                    {postsResponse.count} posts
-                  </span>
+                  <span className="text-sm text-gray-500">{postsResponse.count} posts</span>
                 </div>
 
                 <div className="space-y-8">

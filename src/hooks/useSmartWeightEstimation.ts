@@ -54,9 +54,9 @@ export const useSmartWeightEstimation = ({
       try {
         const result = await smartWeightEstimator.estimateWeight(
           targetName,
-          targetUrl || undefined
+          targetUrl || undefined,
         );
-        
+
         setEstimation(result);
         setLastEstimated(cacheKey);
         return result;
@@ -69,7 +69,7 @@ export const useSmartWeightEstimation = ({
         setIsEstimating(false);
       }
     },
-    [productName, productUrl, lastEstimated, estimation]
+    [productName, productUrl, lastEstimated, estimation],
   );
 
   // Auto-estimation with debouncing
@@ -85,11 +85,14 @@ export const useSmartWeightEstimation = ({
 
   // Learn from user correction
   const learnFromCorrection = useCallback(
-    async (actualWeight: number, context?: {
-      userConfirmed?: boolean;
-      brand?: string;
-      size?: string;
-    }): Promise<void> => {
+    async (
+      actualWeight: number,
+      context?: {
+        userConfirmed?: boolean;
+        brand?: string;
+        size?: string;
+      },
+    ): Promise<void> => {
       if (!estimation || !productName) {
         throw new Error('Cannot learn without estimation and product name');
       }
@@ -103,14 +106,14 @@ export const useSmartWeightEstimation = ({
             originalEstimate: estimation.estimated_weight,
             userConfirmed: true,
             ...context,
-          }
+          },
         );
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Learning failed';
         throw new Error(errorMessage);
       }
     },
-    [estimation, productName, productUrl]
+    [estimation, productName, productUrl],
   );
 
   // Get confidence level description
@@ -123,15 +126,18 @@ export const useSmartWeightEstimation = ({
   }, []);
 
   // Check if estimate is reasonable
-  const isEstimateReasonable = useCallback((userWeight: number): boolean => {
-    if (!estimation) return true;
-    
-    const difference = Math.abs(userWeight - estimation.estimated_weight);
-    const relativeDifference = difference / estimation.estimated_weight;
-    
-    // Flag as unreasonable if difference is more than 200%
-    return relativeDifference <= 2.0;
-  }, [estimation]);
+  const isEstimateReasonable = useCallback(
+    (userWeight: number): boolean => {
+      if (!estimation) return true;
+
+      const difference = Math.abs(userWeight - estimation.estimated_weight);
+      const relativeDifference = difference / estimation.estimated_weight;
+
+      // Flag as unreasonable if difference is more than 200%
+      return relativeDifference <= 2.0;
+    },
+    [estimation],
+  );
 
   return {
     estimation,

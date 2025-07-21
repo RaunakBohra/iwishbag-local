@@ -40,7 +40,6 @@ import {
 import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
 import { supabase } from '@/integrations/supabase/client';
 import { FixStatusJSON } from '@/components/admin/FixStatusJSON';
-import { TestStatusFiltering } from '@/components/admin/TestStatusFiltering';
 import { StatusConfigFixer } from '@/components/debug/StatusConfigFixer';
 
 const colorOptions = [
@@ -315,7 +314,10 @@ export default function StatusManagement() {
     const availableTransitions = category === 'quote' ? localQuoteStatuses : localOrderStatuses;
 
     return (
-      <div key={status.id} className="bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+      <div
+        key={status.id}
+        className="bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+      >
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
@@ -332,11 +334,11 @@ export default function StatusManagement() {
               <Badge variant={status.color} className="text-xs">
                 {status.name}
               </Badge>
-              <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                status.isActive 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
+              <div
+                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  status.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                }`}
+              >
                 {status.isActive ? 'Active' : 'Inactive'}
               </div>
             </div>
@@ -350,12 +352,16 @@ export default function StatusManagement() {
             </div>
             <div className="text-sm">
               <span className="text-gray-500">Terminal:</span>
-              <span className="ml-2 font-medium text-gray-900">{status.isTerminal ? 'Yes' : 'No'}</span>
+              <span className="ml-2 font-medium text-gray-900">
+                {status.isTerminal ? 'Yes' : 'No'}
+              </span>
             </div>
             {status.autoExpireHours && (
               <div className="col-span-2 text-sm">
                 <span className="text-gray-500">Auto Expire:</span>
-                <span className="ml-2 font-medium text-gray-900">{status.autoExpireHours} hours</span>
+                <span className="ml-2 font-medium text-gray-900">
+                  {status.autoExpireHours} hours
+                </span>
               </div>
             )}
           </div>
@@ -365,27 +371,35 @@ export default function StatusManagement() {
             <h4 className="text-xs font-medium text-gray-700 mb-3">Flow Behavior</h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'
-                }`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    status.showsInQuotesList ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                />
                 <span className="text-xs text-gray-600">Quotes List</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'
-                }`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    status.showsInOrdersList ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                />
                 <span className="text-xs text-gray-600">Orders List</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  status.canBePaid ? 'bg-green-500' : 'bg-gray-300'
-                }`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    status.canBePaid ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                />
                 <span className="text-xs text-gray-600">Can Be Paid</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'
-                }`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    status.triggersEmail ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                />
                 <span className="text-xs text-gray-600">Sends Email</span>
               </div>
               {status.isDefaultQuoteStatus && (
@@ -405,7 +419,10 @@ export default function StatusManagement() {
                 status.allowedTransitions.map((transitionId) => {
                   const transition = availableTransitions.find((s) => s.id === transitionId);
                   return transition ? (
-                    <span key={transitionId} className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-700">
+                    <span
+                      key={transitionId}
+                      className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-100 text-gray-700"
+                    >
                       {transition.label}
                     </span>
                   ) : null;
@@ -419,9 +436,9 @@ export default function StatusManagement() {
           {/* Actions */}
           <div className="flex items-center justify-between pt-4 border-t border-gray-100">
             <div className="flex items-center space-x-2">
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => setEditingStatus(status)}
                 className="text-gray-700 border-gray-300 hover:bg-gray-50"
               >
@@ -479,9 +496,9 @@ export default function StatusManagement() {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Edit Status</h3>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => setEditingStatus(null)}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -495,7 +512,9 @@ export default function StatusManagement() {
             {/* Basic Information */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">Name (Internal)</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Name (Internal)
+                </Label>
                 <Input
                   value={editingStatus.name}
                   onChange={(e) =>
@@ -506,7 +525,9 @@ export default function StatusManagement() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">Display Label</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Display Label
+                </Label>
                 <Input
                   value={editingStatus.label}
                   onChange={(e) =>
@@ -602,11 +623,13 @@ export default function StatusManagement() {
                 <Badge variant={editingStatus.color}>
                   {editingStatus.label || editingStatus.name}
                 </Badge>
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  editingStatus.isActive 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
+                <div
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    editingStatus.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
                   {editingStatus.isActive ? 'Active' : 'Inactive'}
                 </div>
               </div>
@@ -634,7 +657,9 @@ export default function StatusManagement() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">Auto Expire (hours)</Label>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Auto Expire (hours)
+                </Label>
                 <Input
                   type="number"
                   value={editingStatus.autoExpireHours || ''}
@@ -762,10 +787,10 @@ export default function StatusManagement() {
                 {editingStatus.category === 'quote' && (
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-sm font-medium text-gray-700">Default Quote Status</Label>
-                      <p className="text-xs text-gray-500">
-                        Use this status for new quotes
-                      </p>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Default Quote Status
+                      </Label>
+                      <p className="text-xs text-gray-500">Use this status for new quotes</p>
                     </div>
                     <Switch
                       checked={editingStatus.isDefaultQuoteStatus || false}
@@ -782,7 +807,9 @@ export default function StatusManagement() {
 
                 {editingStatus.triggersEmail && (
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Email Template</Label>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Email Template
+                    </Label>
                     <Input
                       value={editingStatus.emailTemplate || ''}
                       onChange={(e) =>
@@ -802,7 +829,9 @@ export default function StatusManagement() {
 
             {/* Allowed Transitions */}
             <div className="border-t border-gray-200 pt-4">
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">Allowed Transitions</Label>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                Allowed Transitions
+              </Label>
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {availableTransitions
                   .filter((s) => s.id !== editingStatus.id)
@@ -836,8 +865,8 @@ export default function StatusManagement() {
           {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-end gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setEditingStatus(null)}
                 className="text-gray-700 border-gray-300 hover:bg-gray-50"
               >
@@ -930,13 +959,14 @@ export default function StatusManagement() {
                   <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-red-800">Error Loading Status Settings</h3>
+                  <h3 className="text-lg font-medium text-red-800">
+                    Error Loading Status Settings
+                  </h3>
                   <p className="text-sm text-red-600 mt-1">{error}</p>
                 </div>
               </div>
             </div>
             <FixStatusJSON />
-            <TestStatusFiltering />
           </div>
         </div>
       </div>
@@ -973,8 +1003,8 @@ export default function StatusManagement() {
                 >
                   Reset to Saved
                 </Button>
-                <Button 
-                  onClick={handleSaveSettings} 
+                <Button
+                  onClick={handleSaveSettings}
                   disabled={isSaving}
                   className="bg-teal-600 hover:bg-teal-700 text-white"
                 >
@@ -1001,22 +1031,22 @@ export default function StatusManagement() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="border-b border-gray-200 mb-8">
             <TabsList className="bg-transparent border-0 p-0 h-auto">
-              <TabsTrigger 
-                value="quotes" 
+              <TabsTrigger
+                value="quotes"
                 className="data-[state=active]:bg-transparent data-[state=active]:text-teal-600 data-[state=active]:border-teal-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Quote Statuses
               </TabsTrigger>
-              <TabsTrigger 
-                value="orders" 
+              <TabsTrigger
+                value="orders"
                 className="data-[state=active]:bg-transparent data-[state=active]:text-teal-600 data-[state=active]:border-teal-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Order Statuses
               </TabsTrigger>
-              <TabsTrigger 
-                value="debug" 
+              <TabsTrigger
+                value="debug"
                 className="data-[state=active]:bg-transparent data-[state=active]:text-teal-600 data-[state=active]:border-teal-600 data-[state=active]:shadow-none border-b-2 border-transparent rounded-none px-4 py-3 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300"
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -1031,7 +1061,7 @@ export default function StatusManagement() {
                 <h2 className="text-lg font-medium text-gray-900">Quote Statuses</h2>
                 <p className="text-sm text-gray-600">Configure the workflow for quote processing</p>
               </div>
-              <Button 
+              <Button
                 onClick={() => addStatus('quote')}
                 className="bg-teal-600 hover:bg-teal-700 text-white"
               >
@@ -1053,7 +1083,7 @@ export default function StatusManagement() {
                 <h2 className="text-lg font-medium text-gray-900">Order Statuses</h2>
                 <p className="text-sm text-gray-600">Configure the workflow for order processing</p>
               </div>
-              <Button 
+              <Button
                 onClick={() => addStatus('order')}
                 className="bg-teal-600 hover:bg-teal-700 text-white"
               >
@@ -1081,8 +1111,7 @@ export default function StatusManagement() {
               {/* Status Configuration Fixer */}
               <StatusConfigFixer />
 
-              {/* Test Status Filtering Component */}
-              <TestStatusFiltering />
+              {/* Test Status Filtering Component - Removed */}
             </div>
           </TabsContent>
         </Tabs>

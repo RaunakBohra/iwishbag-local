@@ -1,12 +1,12 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  User, 
-  MapPin, 
-  Calendar, 
-  Star, 
-  DollarSign, 
+import {
+  User,
+  MapPin,
+  Calendar,
+  Star,
+  DollarSign,
   ShoppingCart,
   MoreHorizontal,
   Eye,
@@ -16,7 +16,7 @@ import {
   Activity,
   ExternalLink,
   Settings,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -60,13 +60,13 @@ export const CompactCustomerListItem = ({
   onUpdateCod,
   onUpdateNotes,
   onUpdateName,
-  isUpdating
+  isUpdating,
 }: CompactCustomerListItemProps) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
+
   const customerName = customer.full_name || 'Unnamed Customer';
   const primaryAddress = customer.user_addresses?.[0];
-  const addressText = primaryAddress 
+  const addressText = primaryAddress
     ? `${primaryAddress.city}, ${primaryAddress.country}`
     : 'No address';
 
@@ -75,7 +75,7 @@ export const CompactCustomerListItem = ({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
       return diffHours <= 1 ? 'Just now' : `${diffHours}h ago`;
@@ -89,23 +89,23 @@ export const CompactCustomerListItem = ({
 
   const getCustomerStatus = () => {
     if (customer.internal_notes?.includes('VIP')) {
-      return { 
-        label: 'VIP', 
+      return {
+        label: 'VIP',
         className: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-        icon: Star
+        icon: Star,
       };
     }
     if (customer.cod_enabled) {
-      return { 
-        label: 'Active', 
+      return {
+        label: 'Active',
         className: 'bg-green-100 text-green-700 border-green-300',
-        icon: User
+        icon: User,
       };
     }
-    return { 
-      label: 'Inactive', 
+    return {
+      label: 'Inactive',
       className: 'bg-gray-100 text-gray-700 border-gray-300',
-      icon: User
+      icon: User,
     };
   };
 
@@ -114,10 +114,12 @@ export const CompactCustomerListItem = ({
 
   return (
     <>
-      <div className={cn(
-        'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
-        isSelected && 'ring-2 ring-teal-500 border-teal-500'
-      )}>
+      <div
+        className={cn(
+          'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
+          isSelected && 'ring-2 ring-teal-500 border-teal-500',
+        )}
+      >
         <div className="flex items-center gap-4">
           {/* Selection Checkbox */}
           <div className="flex-shrink-0">
@@ -129,12 +131,14 @@ export const CompactCustomerListItem = ({
           </div>
 
           {/* Status Indicator */}
-          <div className={cn(
-            'flex-shrink-0 w-2 h-12 rounded-full',
-            customer.internal_notes?.includes('VIP') && 'bg-yellow-500',
-            customer.cod_enabled && !customer.internal_notes?.includes('VIP') && 'bg-green-500',
-            !customer.cod_enabled && !customer.internal_notes?.includes('VIP') && 'bg-gray-300'
-          )} />
+          <div
+            className={cn(
+              'flex-shrink-0 w-2 h-12 rounded-full',
+              customer.internal_notes?.includes('VIP') && 'bg-yellow-500',
+              customer.cod_enabled && !customer.internal_notes?.includes('VIP') && 'bg-green-500',
+              !customer.cod_enabled && !customer.internal_notes?.includes('VIP') && 'bg-gray-300',
+            )}
+          />
 
           {/* Customer Avatar */}
           <div className="flex-shrink-0">
@@ -154,24 +158,22 @@ export const CompactCustomerListItem = ({
                     <Star className="h-4 w-4 text-yellow-500 fill-current" />
                   )}
                 </Body>
-                <Badge className={cn('text-xs font-medium flex items-center gap-1', status.className)}>
+                <Badge
+                  className={cn('text-xs font-medium flex items-center gap-1', status.className)}
+                >
                   <StatusIcon className="h-3 w-3" />
                   {status.label}
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <BodySmall className="text-gray-500">
-                  {formatDate(customer.created_at)}
-                </BodySmall>
+                <BodySmall className="text-gray-500">{formatDate(customer.created_at)}</BodySmall>
               </div>
             </div>
 
             {/* Email Row */}
             <div className="flex items-center gap-2 mb-2">
               <Mail className="h-4 w-4 text-gray-500" />
-              <BodySmall className="text-gray-700 truncate">
-                {customer.email}
-              </BodySmall>
+              <BodySmall className="text-gray-700 truncate">{customer.email}</BodySmall>
             </div>
 
             {/* Analytics Row */}
@@ -201,17 +203,14 @@ export const CompactCustomerListItem = ({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-2">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700 truncate">
-                  {addressText}
-                </BodySmall>
+                <BodySmall className="text-gray-700 truncate">{addressText}</BodySmall>
               </div>
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-gray-500" />
                 <BodySmall className="text-gray-700 truncate">
-                  {analytics?.lastActivity 
+                  {analytics?.lastActivity
                     ? format(new Date(analytics.lastActivity), 'MMM dd, yyyy')
-                    : 'No activity'
-                  }
+                    : 'No activity'}
                 </BodySmall>
               </div>
               <div className="flex items-center gap-2">
@@ -243,7 +242,7 @@ export const CompactCustomerListItem = ({
               <Eye className="h-4 w-4 mr-1" />
               View
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
@@ -314,12 +313,17 @@ export const CompactCustomerListItem = ({
                 <StatusIcon className="h-4 w-4 text-gray-500" />
                 <BodySmall className="text-gray-500 font-medium">Status</BodySmall>
               </div>
-              <Badge className={cn('text-xs font-medium flex items-center gap-1 w-fit', status.className)}>
+              <Badge
+                className={cn(
+                  'text-xs font-medium flex items-center gap-1 w-fit',
+                  status.className,
+                )}
+              >
                 <StatusIcon className="h-3 w-3" />
                 {status.label}
               </Badge>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Total Spent</BodySmall>
@@ -335,15 +339,16 @@ export const CompactCustomerListItem = ({
               </div>
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Avg Order Value</BodySmall>
-                <Body className="font-semibold">{formatCurrency(analytics?.avgOrderValue || 0)}</Body>
+                <Body className="font-semibold">
+                  {formatCurrency(analytics?.avgOrderValue || 0)}
+                </Body>
               </div>
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Last Activity</BodySmall>
                 <Body className="font-semibold">
-                  {analytics?.lastActivity 
+                  {analytics?.lastActivity
                     ? format(new Date(analytics.lastActivity), 'MMM dd, yyyy')
-                    : 'No activity'
-                  }
+                    : 'No activity'}
                 </Body>
               </div>
               <div>
@@ -351,7 +356,7 @@ export const CompactCustomerListItem = ({
                 <Body className="font-semibold">{customer.cod_enabled ? 'Yes' : 'No'}</Body>
               </div>
             </div>
-            
+
             {/* Addresses */}
             <div>
               <BodySmall className="text-gray-500 font-medium mb-2">Addresses</BodySmall>
@@ -363,11 +368,13 @@ export const CompactCustomerListItem = ({
                         <MapPin className="h-4 w-4 text-gray-500" />
                         <span>
                           {address.address_line1}
-                          {address.address_line2 && `, ${address.address_line2}`}
-                          , {address.city}, {address.country}
+                          {address.address_line2 && `, ${address.address_line2}`}, {address.city},{' '}
+                          {address.country}
                         </span>
                         {address.is_default && (
-                          <Badge variant="outline" className="text-xs">Default</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Default
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -377,7 +384,7 @@ export const CompactCustomerListItem = ({
                 <Body className="text-gray-500">No addresses saved</Body>
               )}
             </div>
-            
+
             {/* Notes */}
             {customer.internal_notes && (
               <div>

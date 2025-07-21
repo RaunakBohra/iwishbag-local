@@ -153,13 +153,11 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             name="recipient_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">
-                  Recipient Name
-                </FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Recipient Name</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="John Doe" 
-                    {...field} 
+                  <Input
+                    placeholder="John Doe"
+                    {...field}
                     className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
@@ -167,19 +165,17 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="address_line1"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">
-                  Street Address
-                </FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Street Address</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="123 Main St" 
-                    {...field} 
+                  <Input
+                    placeholder="123 Main St"
+                    {...field}
                     className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
@@ -187,7 +183,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="address_line2"
@@ -197,10 +193,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   Apartment, suite, etc. (Optional)
                 </FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Apt 4B, Suite 100, etc." 
-                    {...field} 
-                    value={field.value ?? ''} 
+                  <Input
+                    placeholder="Apt 4B, Suite 100, etc."
+                    {...field}
+                    value={field.value ?? ''}
                     className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
@@ -208,20 +204,18 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               </FormItem>
             )}
           />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">
-                    City
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">City</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Anytown" 
-                      {...field} 
+                    <Input
+                      placeholder="Anytown"
+                      {...field}
                       className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                     />
                   </FormControl>
@@ -238,9 +232,9 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     State / Province
                   </FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="CA" 
-                      {...field} 
+                    <Input
+                      placeholder="CA"
+                      {...field}
                       className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                     />
                   </FormControl>
@@ -249,20 +243,18 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               )}
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="postal_code"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">
-                    Postal Code
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">Postal Code</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="12345" 
-                      {...field} 
+                    <Input
+                      placeholder="12345"
+                      {...field}
                       className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                     />
                   </FormControl>
@@ -275,9 +267,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               name="destination_country"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-medium text-gray-700">
-                    Country
-                  </FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700">Country</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value || ''}
@@ -301,19 +291,17 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               )}
             />
           </div>
-          
+
           <FormField
             control={form.control}
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">
-                  Phone Number
-                </FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Phone Number</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="+1 (555) 123-4567" 
-                    {...field} 
+                  <Input
+                    placeholder="+1 (555) 123-4567"
+                    {...field}
                     className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   />
                 </FormControl>
@@ -321,7 +309,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               </FormItem>
             )}
           />
-          
+
           <FormField
             control={form.control}
             name="is_default"
@@ -329,9 +317,9 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               <FormItem>
                 <div className="flex items-center space-x-3 rounded-lg border border-gray-200 p-4">
                   <FormControl>
-                    <Checkbox 
-                      checked={field.value} 
-                      onCheckedChange={field.onChange} 
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                       className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                     />
                   </FormControl>
@@ -343,27 +331,25 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       This address will be selected by default for future orders
                     </BodySmall>
                   </div>
-                  {field.value && (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  )}
+                  {field.value && <CheckCircle className="h-4 w-4 text-green-600" />}
                 </div>
               </FormItem>
             )}
           />
         </div>
-        
+
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => form.reset()}
             disabled={addressMutation.isPending}
             className="border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             Reset
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={addressMutation.isPending}
             className="bg-teal-600 hover:bg-teal-700 text-white px-6"
           >

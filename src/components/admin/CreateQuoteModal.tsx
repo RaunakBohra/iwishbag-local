@@ -121,36 +121,6 @@ export const CreateQuoteModal = ({
     // Determine if this is for a registered user or guest
     const isRegisteredUser = !!userId;
 
-    const { data: quote, error: quoteError } = await supabase
-      .from('quotes')
-      .insert({
-        email: cleanEmail,
-        destination_country: purchaseCountry, // Purchase country (for calculation system)
-        origin_country: purchaseCountry, // Also set origin_country for consistency
-        currency: originCurrency, // Currency for calculations
-        destination_currency: customerCurrency, // Customer's preferred display currency
-        status: defaultStatus,
-        // For registered users, link to their profile
-        user_id: isRegisteredUser ? userId : null,
-        is_anonymous: !isRegisteredUser, // Anonymous only for non-registered users
-        shipping_address: {
-          destination_country: shippingCountry, // Minimal address with just shipping country for calculator
-        },
-      })
-      .select('id')
-      .single();
-
-    if (quoteError || !quote) {
-      console.error('Error inserting quote:', quoteError);
-      toast({
-        title: 'Error',
-        description: 'There was an error creating the quote. Please try again.',
-        variant: 'destructive',
-      });
-      setLoading(false);
-      return;
-    }
-
     // Create items array for unified structure
     const itemsArray = items.map((item) => ({
       id: crypto.randomUUID(),
@@ -161,23 +131,41 @@ export const CreateQuoteModal = ({
       weight_kg: item.weight,
     }));
 
-    // Update the quote with items in the unified structure
-    const { error: itemsError } = await supabase
+    // Calculate totals
+    const baseTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    // Insert quote with all data at once to satisfy constraints
+    const { data: quote, error: quoteError } = await supabase
       .from('quotes')
-      .update({ 
+      .insert({
+        destination_country: purchaseCountry, // Purchase country (for calculation system)
+        origin_country: purchaseCountry, // Also set origin_country for consistency
+        currency: originCurrency, // Currency for calculations
+        status: defaultStatus,
+        // For registered users, link to their profile
+        user_id: isRegisteredUser ? userId : null,
+        is_anonymous: !isRegisteredUser, // Anonymous only for non-registered users
+        // Insert items and totals directly to satisfy constraints
         items: itemsArray,
-        base_total_usd: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        final_total_usd: items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        base_total_usd: baseTotal,
+        final_total_usd: baseTotal,
+        // Store customer data in JSONB field
+        customer_data: {
+          email: cleanEmail,
+          destination_currency: customerCurrency, // Customer's preferred display currency
+          shipping_address: {
+            destination_country: shippingCountry, // Minimal address with just shipping country for calculator
+          },
+        },
       })
-      .eq('id', quote.id);
+      .select('id')
+      .single();
 
-    if (itemsError) {
-      console.error('Error updating quote with items:', itemsError);
-      await supabase.from('quotes').delete().eq('id', quote.id);
-
+    if (quoteError || !quote) {
+      console.error('Error inserting quote:', quoteError);
       toast({
         title: 'Error',
-        description: 'There was an error saving the items for your quote. Please try again.',
+        description: 'There was an error creating the quote. Please try again.',
         variant: 'destructive',
       });
     } else {
@@ -231,11 +219,7 @@ export const CreateQuoteModal = ({
                   <FormItem>
                     <FormLabel>Customer Email</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="customer@example.com"
-                        type="email"
-                        {...field}
-                      />
+                      <Input placeholder="customer@example.com" type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

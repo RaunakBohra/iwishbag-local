@@ -2,7 +2,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tables } from '@/integrations/supabase/types';
-import { Trash2, Edit, ShoppingCart, Truck, CreditCard, Globe, TrendingUp, Package } from 'lucide-react';
+import {
+  Trash2,
+  Edit,
+  ShoppingCart,
+  Truck,
+  CreditCard,
+  Globe,
+  TrendingUp,
+  Package,
+} from 'lucide-react';
 
 type CountrySetting = Tables<'country_settings'>;
 
@@ -25,15 +34,13 @@ export const CountryListItem = ({ country, onEdit, onDelete }: CountryListItemPr
                   <Globe className="h-5 w-5 text-teal-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 text-lg">
-                    {country.name}
-                  </h3>
+                  <h3 className="font-semibold text-gray-900 text-lg">{country.name}</h3>
                   <p className="text-sm text-gray-500">
                     {country.code} • {country.currency.toUpperCase()}
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
                   <Badge
@@ -59,19 +66,19 @@ export const CountryListItem = ({ country, onEdit, onDelete }: CountryListItemPr
                     {country.shipping_allowed ? 'Shipping' : 'No Shipping'}
                   </Badge>
                 </div>
-                
+
                 <div className="flex gap-1 ml-3">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => onEdit(country)}
                     className="border-gray-300 hover:bg-gray-50 hover:border-gray-400"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => onDelete(country.code)}
                     className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
                   >
@@ -92,7 +99,7 @@ export const CountryListItem = ({ country, onEdit, onDelete }: CountryListItemPr
                   {country.rate_from_usd} {country.currency.toUpperCase()}/USD
                 </p>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-gray-400" />
@@ -101,36 +108,29 @@ export const CountryListItem = ({ country, onEdit, onDelete }: CountryListItemPr
                 <p className="text-sm text-gray-600">
                   Min: {country.min_shipping} {country.currency.toUpperCase()}
                 </p>
-                <p className="text-xs text-gray-500">
-                  Unit: {country.weight_unit}
-                </p>
+                <p className="text-xs text-gray-500">Unit: {country.weight_unit}</p>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-gray-400" />
                   <span className="text-sm font-medium text-gray-900">Payment Gateway</span>
                 </div>
-                <p className="text-sm text-gray-600 capitalize">
-                  {country.payment_gateway}
-                </p>
+                <p className="text-sm text-gray-600 capitalize">{country.payment_gateway}</p>
                 <p className="text-xs text-gray-500">
-                  {country.payment_gateway_fixed_fee} {country.currency.toUpperCase()} + {country.payment_gateway_percent_fee}%
+                  {country.payment_gateway_fixed_fee} {country.currency.toUpperCase()} +{' '}
+                  {country.payment_gateway_percent_fee}%
                 </p>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-gray-400" />
                   <span className="text-sm font-medium text-gray-900">Tax & VAT</span>
                 </div>
-                <p className="text-sm text-gray-600">
-                  VAT: {country.vat}%
-                </p>
+                <p className="text-sm text-gray-600">VAT: {country.vat}%</p>
                 {country.sales_tax > 0 && (
-                  <p className="text-xs text-gray-500">
-                    Sales Tax: {country.sales_tax}%
-                  </p>
+                  <p className="text-xs text-gray-500">Sales Tax: {country.sales_tax}%</p>
                 )}
               </div>
             </div>

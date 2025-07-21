@@ -1,6 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { BankAccount } from '@/hooks/useBankAccountSettings';
-import { Trash2, Edit, Globe, Building, CreditCard, MoreVertical, CheckCircle, XCircle } from 'lucide-react';
+import {
+  Trash2,
+  Edit,
+  Globe,
+  Building,
+  CreditCard,
+  MoreVertical,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,9 +63,11 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
                   ) : (
                     <XCircle className="h-4 w-4 text-red-500" />
                   )}
-                  <BodySmall className={`font-medium ${
-                    account.is_active ? 'text-green-700' : 'text-red-700'
-                  }`}>
+                  <BodySmall
+                    className={`font-medium ${
+                      account.is_active ? 'text-green-700' : 'text-red-700'
+                    }`}
+                  >
                     {account.is_active ? 'Active' : 'Inactive'}
                   </BodySmall>
                 </div>
@@ -80,7 +91,9 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-3">
-              <BodySmall className="text-gray-500 font-medium uppercase tracking-wide text-xs">Bank Details</BodySmall>
+              <BodySmall className="text-gray-500 font-medium uppercase tracking-wide text-xs">
+                Bank Details
+              </BodySmall>
               <div className="space-y-2">
                 <div className="flex flex-col">
                   <BodySmall className="text-gray-500 text-xs">Bank name</BodySmall>
@@ -88,12 +101,16 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
                 </div>
                 <div className="flex flex-col">
                   <BodySmall className="text-gray-500 text-xs">Account number</BodySmall>
-                  <BodySmall className="text-gray-900 font-medium">{account.account_number}</BodySmall>
+                  <BodySmall className="text-gray-900 font-medium">
+                    {account.account_number}
+                  </BodySmall>
                 </div>
                 {account.branch_name && (
                   <div className="flex flex-col">
                     <BodySmall className="text-gray-500 text-xs">Branch</BodySmall>
-                    <BodySmall className="text-gray-900 font-medium">{account.branch_name}</BodySmall>
+                    <BodySmall className="text-gray-900 font-medium">
+                      {account.branch_name}
+                    </BodySmall>
                   </div>
                 )}
               </div>
@@ -101,12 +118,16 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
 
             {(account.swift_code || account.iban) && (
               <div className="space-y-3">
-                <BodySmall className="text-gray-500 font-medium uppercase tracking-wide text-xs">International</BodySmall>
+                <BodySmall className="text-gray-500 font-medium uppercase tracking-wide text-xs">
+                  International
+                </BodySmall>
                 <div className="space-y-2">
                   {account.swift_code && (
                     <div className="flex flex-col">
                       <BodySmall className="text-gray-500 text-xs">SWIFT/BIC</BodySmall>
-                      <BodySmall className="text-gray-900 font-medium">{account.swift_code}</BodySmall>
+                      <BodySmall className="text-gray-900 font-medium">
+                        {account.swift_code}
+                      </BodySmall>
                     </div>
                   )}
                   {account.iban && (
@@ -121,11 +142,15 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
 
             {Object.keys(customFields).length > 0 && (
               <div className="space-y-3">
-                <BodySmall className="text-gray-500 font-medium uppercase tracking-wide text-xs">Additional Info</BodySmall>
+                <BodySmall className="text-gray-500 font-medium uppercase tracking-wide text-xs">
+                  Additional Info
+                </BodySmall>
                 <div className="space-y-2">
                   {Object.entries(customFields).map(([key, value]) => (
                     <div key={key} className="flex flex-col">
-                      <BodySmall className="text-gray-500 text-xs">{fieldLabels[key] || key}</BodySmall>
+                      <BodySmall className="text-gray-500 text-xs">
+                        {fieldLabels[key] || key}
+                      </BodySmall>
                       <BodySmall className="text-gray-900 font-medium">{value}</BodySmall>
                     </div>
                   ))}
@@ -134,11 +159,11 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 ml-6">
-          <Button 
-            size="sm" 
-            variant="outline" 
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => onEdit(account)}
             className="border-gray-300 text-gray-700 hover:bg-gray-50 h-8 px-3 text-sm"
           >
@@ -147,7 +172,11 @@ export const BankAccountListItem = ({ account, onEdit, onDelete }: BankAccountLi
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="p-2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

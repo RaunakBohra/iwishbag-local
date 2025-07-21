@@ -8,11 +8,11 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  CreditCard, 
-  DollarSign, 
-  CheckCircle, 
-  Clock, 
+import {
+  CreditCard,
+  DollarSign,
+  CheckCircle,
+  Clock,
   AlertTriangle,
   ExternalLink,
   RefreshCw,
@@ -21,7 +21,7 @@ import {
   ChevronUp,
   Copy,
   Building,
-  Smartphone
+  Smartphone,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { UnifiedQuote } from '@/types/unified-quote';
@@ -103,10 +103,22 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
     const configs = {
       payu: { name: 'PayU', icon: <CreditCard className="w-3 h-3" />, color: 'text-green-600' },
       stripe: { name: 'Stripe', icon: <CreditCard className="w-3 h-3" />, color: 'text-blue-600' },
-      bank_transfer: { name: 'Bank Transfer', icon: <Building className="w-3 h-3" />, color: 'text-gray-600' },
+      bank_transfer: {
+        name: 'Bank Transfer',
+        icon: <Building className="w-3 h-3" />,
+        color: 'text-gray-600',
+      },
       esewa: { name: 'eSewa', icon: <Smartphone className="w-3 h-3" />, color: 'text-green-600' },
-      khalti: { name: 'Khalti', icon: <Smartphone className="w-3 h-3" />, color: 'text-purple-600' },
-      fonepay: { name: 'FonePay', icon: <Smartphone className="w-3 h-3" />, color: 'text-blue-600' },
+      khalti: {
+        name: 'Khalti',
+        icon: <Smartphone className="w-3 h-3" />,
+        color: 'text-purple-600',
+      },
+      fonepay: {
+        name: 'FonePay',
+        icon: <Smartphone className="w-3 h-3" />,
+        color: 'text-blue-600',
+      },
     };
 
     return configs[gateway];
@@ -137,9 +149,7 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
           </Badge>
         </div>
         <div className="flex items-center space-x-1">
-          <span className="text-sm font-medium text-gray-900">
-            ${payment.amount.toFixed(2)}
-          </span>
+          <span className="text-sm font-medium text-gray-900">${payment.amount.toFixed(2)}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -160,7 +170,7 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
           </div>
           <span className="font-medium">{payment.currency}</span>
         </div>
-        
+
         {payment.transaction_id && (
           <div className="flex items-center justify-between">
             <span>Transaction ID:</span>
@@ -198,9 +208,15 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
-          <TabsTrigger value="status" className="text-xs">Status</TabsTrigger>
-          <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
-          <TabsTrigger value="actions" className="text-xs">Actions</TabsTrigger>
+          <TabsTrigger value="status" className="text-xs">
+            Status
+          </TabsTrigger>
+          <TabsTrigger value="details" className="text-xs">
+            Details
+          </TabsTrigger>
+          <TabsTrigger value="actions" className="text-xs">
+            Actions
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="status" className="p-4 pt-3 space-y-3">
@@ -229,7 +245,9 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
               {payment.due_date && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Payment due:</span>
-                  <span className={payment.status === 'pending' ? 'text-orange-600' : 'text-gray-900'}>
+                  <span
+                    className={payment.status === 'pending' ? 'text-orange-600' : 'text-gray-900'}
+                  >
                     {new Date(payment.due_date).toLocaleDateString()}
                   </span>
                 </div>
@@ -237,7 +255,9 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
               {payment.paid_at && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Paid on:</span>
-                  <span className="text-green-600">{new Date(payment.paid_at).toLocaleDateString()}</span>
+                  <span className="text-green-600">
+                    {new Date(payment.paid_at).toLocaleDateString()}
+                  </span>
                 </div>
               )}
             </div>

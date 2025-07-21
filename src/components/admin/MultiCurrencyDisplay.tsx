@@ -21,9 +21,5 @@ export const MultiCurrencyDisplay = ({
 }: MultiCurrencyDisplayProps) => {
   const { formatDualAmount } = useDualCurrency(currency, originCountry, destinationCountry);
 
-  return (
-    <span className={className}>
-      {formatDualAmount(amount)}
-    </span>
-  );
+  return <span className={className}>{formatDualAmount(amount)}</span>;
 };

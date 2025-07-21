@@ -26,7 +26,7 @@ export const PaymentSyncDebugger = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, display_id, status, payment_status, amount_paid, final_total_usd, destination_currency');
+        .select('id, display_id, status, payment_status, amount_paid, final_total_usd, currency');
 
       if (error) {
         console.error('Debug: Error fetching quotes:', error);

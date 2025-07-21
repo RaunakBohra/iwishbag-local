@@ -117,7 +117,9 @@ const QuoteCard = ({
 
         {/* Price */}
         <div className="mb-4">
-          <div className="text-lg font-bold text-green-600">{formatAmount(quote.final_total_usd)}</div>
+          <div className="text-lg font-bold text-green-600">
+            {formatAmount(quote.final_total_usd)}
+          </div>
         </div>
 
         {/* Info Grid */}

@@ -24,19 +24,25 @@ export const useTurnstile = (options: UseTurnstileOptions): UseTurnstileReturn =
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleSuccess = useCallback((newToken: string) => {
-    setToken(newToken);
-    setError(null);
-    setIsLoading(false);
-    options.onSuccess?.(newToken);
-  }, [options.onSuccess]);
+  const handleSuccess = useCallback(
+    (newToken: string) => {
+      setToken(newToken);
+      setError(null);
+      setIsLoading(false);
+      options.onSuccess?.(newToken);
+    },
+    [options.onSuccess],
+  );
 
-  const handleError = useCallback((errorMessage: string) => {
-    setToken(null);
-    setError(errorMessage);
-    setIsLoading(false);
-    options.onError?.(errorMessage);
-  }, [options.onError]);
+  const handleError = useCallback(
+    (errorMessage: string) => {
+      setToken(null);
+      setError(errorMessage);
+      setIsLoading(false);
+      options.onError?.(errorMessage);
+    },
+    [options.onError],
+  );
 
   const handleExpired = useCallback(() => {
     setToken(null);

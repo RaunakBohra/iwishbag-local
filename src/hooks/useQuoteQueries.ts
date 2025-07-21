@@ -38,7 +38,7 @@ export const useQuoteQueries = (id: string | undefined) => {
         // 🔧 FIX: Restore proper currency conversion for display components
         // Database values are stored in USD, but some components expect proper conversion
         const exchangeRate = data.exchange_rate || 1;
-        
+
         logger.debug('Currency conversion data', {
           exchange_rate: data.exchange_rate,
           origin_country: data.origin_country,
@@ -49,7 +49,7 @@ export const useQuoteQueries = (id: string | undefined) => {
             handling_charge: data.handling_charge,
             insurance_amount: data.insurance_amount,
             discount: data.discount,
-          }
+          },
         });
 
         // Database values are already stored in USD, no conversion needed
@@ -71,7 +71,7 @@ export const useQuoteQueries = (id: string | undefined) => {
           handlingCharge: data.handlingCharge,
           insuranceAmount: data.insuranceAmount,
           discount: data.discount,
-          exchangeRate: exchangeRate
+          exchangeRate: exchangeRate,
         });
       }
       return data;

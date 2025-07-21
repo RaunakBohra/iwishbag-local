@@ -190,7 +190,7 @@ export default function Checkout() {
   console.log('💳 CHECKOUT PAGE LOADED:', {
     user: user ? { id: user.id, email: user.email, is_anonymous: user.is_anonymous } : null,
     searchParams: Object.fromEntries(searchParams.entries()),
-    url: window.location.href
+    url: window.location.href,
   });
 
   // Cart store with enforced loading
@@ -214,16 +214,18 @@ export default function Checkout() {
 
   // DEBUG: Log authentication and checkout state
   console.log('🔍 CHECKOUT DEBUG:', {
-    user: user ? {
-      id: user.id,
-      email: user.email,
-      is_anonymous: user.is_anonymous,
-      isAuthenticated: !!user
-    } : 'No user',
+    user: user
+      ? {
+          id: user.id,
+          email: user.email,
+          is_anonymous: user.is_anonymous,
+          isAuthenticated: !!user,
+        }
+      : 'No user',
     guestQuoteId,
     isGuestCheckout,
     currentUrl: window.location.href,
-    searchParams: Object.fromEntries(searchParams.entries())
+    searchParams: Object.fromEntries(searchParams.entries()),
   });
 
   // State
@@ -240,7 +242,7 @@ export default function Checkout() {
   const [showPaymentStatus, setShowPaymentStatus] = useState(false);
   const [currentTransactionId, setCurrentTransactionId] = useState<string>('');
   const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
-  
+
   // Inline editing state
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [editEmail, setEditEmail] = useState('');
@@ -266,13 +268,13 @@ export default function Checkout() {
   // Guest checkout flow state
   const [guestFlowChoice, setGuestFlowChoice] = useState<'guest' | 'member' | null>(null);
   const [contactStepCompleted, setContactStepCompleted] = useState(false);
-  
+
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Guest currency selection (defaults to destination country currency)
   const [guestSelectedCurrency, setGuestSelectedCurrency] = useState<string>('');
-  
+
   // Logged-in user currency override (allows changing from profile default)
   const [userSelectedCurrency, setUserSelectedCurrency] = useState<string>('');
 
@@ -286,7 +288,11 @@ export default function Checkout() {
   const { findStatusForPaymentMethod } = useStatusManagement();
 
   // Fetch guest quote if this is a guest checkout
-  const { data: guestQuote, isLoading: guestQuoteLoading, refetch: refetchGuestQuote } = useQuery({
+  const {
+    data: guestQuote,
+    isLoading: guestQuoteLoading,
+    refetch: refetchGuestQuote,
+  } = useQuery({
     queryKey: ['guest-quote', guestQuoteId],
     queryFn: async () => {
       if (!guestQuoteId) return null;
@@ -309,9 +315,8 @@ export default function Checkout() {
   });
 
   // Get guest quote destination country for location detection
-  const guestQuoteDestinationCountry = isGuestCheckout && guestQuote 
-    ? guestQuote.destination_country 
-    : undefined;
+  const guestQuoteDestinationCountry =
+    isGuestCheckout && guestQuote ? guestQuote.destination_country : undefined;
 
   // IP-based location detection with smart currency/country selection
   const {
@@ -357,14 +362,20 @@ export default function Checkout() {
 
   // Add quotes from URL to cart if they're not already there
   useEffect(() => {
-    if (user && !isGuestCheckout && selectedQuoteIds.length > 0 && cartItems.length > 0 && hasLoadedFromServer) {
+    if (
+      user &&
+      !isGuestCheckout &&
+      selectedQuoteIds.length > 0 &&
+      cartItems.length > 0 &&
+      hasLoadedFromServer
+    ) {
       const missingQuoteIds = selectedQuoteIds.filter(
-        quoteId => !cartItems.some(item => item.quoteId === quoteId)
+        (quoteId) => !cartItems.some((item) => item.quoteId === quoteId),
       );
-      
+
       if (missingQuoteIds.length > 0) {
         console.log('🔗 Found quotes in URL not in cart, adding them:', missingQuoteIds);
-        
+
         // Add missing quotes to cart - this handles quotes that were in saved items
         // or were transferred from guest checkout but not added to cart
         missingQuoteIds.forEach(async (quoteId) => {
@@ -374,7 +385,7 @@ export default function Checkout() {
               .update({ in_cart: true })
               .eq('id', quoteId)
               .eq('user_id', user.id); // Ensure we only update user's own quotes
-              
+
             if (error) {
               console.error('❌ Failed to add quote to cart:', error);
             } else {
@@ -384,7 +395,7 @@ export default function Checkout() {
             console.error('❌ Error adding quote to cart:', error);
           }
         });
-        
+
         // Reload cart after adding quotes
         setTimeout(() => {
           console.log('🔄 Reloading cart after adding missing quotes');
@@ -396,21 +407,24 @@ export default function Checkout() {
     }
   }, [user, isGuestCheckout, selectedQuoteIds, cartItems, hasLoadedFromServer]);
 
-  // DEBUG: Log cart and quote selection logic  
+  // DEBUG: Log cart and quote selection logic
   console.log('🛒 CART SELECTION DEBUG:', {
     isGuestCheckout,
     selectedQuoteIds,
     selectedQuoteIdsValues: selectedQuoteIds,
     cartItemsCount: cartItems.length,
-    cartItems: cartItems.map(item => ({
+    cartItems: cartItems.map((item) => ({
       quoteId: item.quoteId,
       productName: item.productName,
-      isSelected: item.isSelected
+      isSelected: item.isSelected,
     })),
     cartLoading,
     hasLoadedFromServer,
-    shouldShowLoading: cartLoading || (isGuestCheckout && guestQuoteLoading) || (!isGuestCheckout && user && !hasLoadedFromServer),
-    guestQuote: guestQuote ? { id: guestQuote.id, status: guestQuote.status } : null
+    shouldShowLoading:
+      cartLoading ||
+      (isGuestCheckout && guestQuoteLoading) ||
+      (!isGuestCheckout && user && !hasLoadedFromServer),
+    guestQuote: guestQuote ? { id: guestQuote.id, status: guestQuote.status } : null,
   });
 
   // Get selected cart items based on quote IDs
@@ -456,11 +470,11 @@ export default function Checkout() {
   // DEBUG: Log the final selected cart items
   console.log('📦 SELECTED CART ITEMS:', {
     selectedCartItemsCount: selectedCartItems.length,
-    selectedCartItems: selectedCartItems.map(item => ({
+    selectedCartItems: selectedCartItems.map((item) => ({
       quoteId: item.quoteId,
       productName: item.productName || 'N/A',
-      finalTotal: item.finalTotal
-    }))
+      finalTotal: item.finalTotal,
+    })),
   });
 
   // Get the shipping country from selected items
@@ -524,7 +538,10 @@ export default function Checkout() {
   // Priority: Manual Selection > Profile Preference > IP Auto-detection > Quote Destination > USD
   const paymentCurrency = isGuestCheckout
     ? guestSelectedCurrency || defaultGuestCurrency || autoDetectedCurrency || 'USD'
-    : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD';
+    : userSelectedCurrency ||
+      userProfile?.preferred_display_currency ||
+      autoDetectedCurrency ||
+      'USD';
 
   // Calculate exchange rate for the selected payment currency
   const exchangeRate = useMemo(() => {
@@ -536,29 +553,34 @@ export default function Checkout() {
   // Debug logging for payment state (development only)
   useEffect(() => {
     if (import.meta.env.DEV) {
-      console.log(isGuestCheckout ? '💳 Guest checkout payment state:' : '💳 Logged-in user payment state:', {
-        isGuestCheckout,
-        // Guest specific
-        guestCurrency: isGuestCheckout ? guestCurrency : undefined,
-        guestSelectedCurrency: isGuestCheckout ? guestSelectedCurrency : undefined,
-        defaultGuestCurrency: isGuestCheckout ? defaultGuestCurrency : undefined,
-        // User specific
-        userSelectedCurrency: !isGuestCheckout ? userSelectedCurrency : undefined,
-        userProfileCurrency: !isGuestCheckout ? userProfile?.preferred_display_currency : undefined,
-        // IP Auto-detection
-        autoDetectedCurrency,
-        autoDetectedCountry,
-        locationData,
-        isDetecting,
-        // Common
-        paymentCurrency,
-        paymentGatewayCurrency,
-        availableMethods,
-        methodsLoading,
-        shippingCountry,
-        selectedCartItems: selectedCartItems.length,
-        '🔍 Hook Result': { availableMethods, methodsLoading },
-      });
+      console.log(
+        isGuestCheckout ? '💳 Guest checkout payment state:' : '💳 Logged-in user payment state:',
+        {
+          isGuestCheckout,
+          // Guest specific
+          guestCurrency: isGuestCheckout ? guestCurrency : undefined,
+          guestSelectedCurrency: isGuestCheckout ? guestSelectedCurrency : undefined,
+          defaultGuestCurrency: isGuestCheckout ? defaultGuestCurrency : undefined,
+          // User specific
+          userSelectedCurrency: !isGuestCheckout ? userSelectedCurrency : undefined,
+          userProfileCurrency: !isGuestCheckout
+            ? userProfile?.preferred_display_currency
+            : undefined,
+          // IP Auto-detection
+          autoDetectedCurrency,
+          autoDetectedCountry,
+          locationData,
+          isDetecting,
+          // Common
+          paymentCurrency,
+          paymentGatewayCurrency,
+          availableMethods,
+          methodsLoading,
+          shippingCountry,
+          selectedCartItems: selectedCartItems.length,
+          '🔍 Hook Result': { availableMethods, methodsLoading },
+        },
+      );
     }
   }, [
     isGuestCheckout,
@@ -1807,11 +1829,12 @@ export default function Checkout() {
   };
 
   // Enhanced loading check with additional debugging
-  const shouldShowLoading = cartLoading || 
-    (isGuestCheckout && guestQuoteLoading) || 
+  const shouldShowLoading =
+    cartLoading ||
+    (isGuestCheckout && guestQuoteLoading) ||
     (!isGuestCheckout && user && !hasLoadedFromServer);
-    // Removed problematic condition: (!isGuestCheckout && selectedQuoteIds.length > 0 && cartItems.length === 0 && !cartLoading)
-    
+  // Removed problematic condition: (!isGuestCheckout && selectedQuoteIds.length > 0 && cartItems.length === 0 && !cartLoading)
+
   console.log('🔄 LOADING CHECK:', {
     cartLoading,
     isGuestCheckout,
@@ -1820,7 +1843,7 @@ export default function Checkout() {
     user: !!user,
     selectedQuoteIdsLength: selectedQuoteIds.length,
     cartItemsLength: cartItems.length,
-    shouldShowLoading
+    shouldShowLoading,
   });
 
   // Show loading spinner while cart is rehydrating or guest quote is loading
@@ -1872,9 +1895,7 @@ export default function Checkout() {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-medium text-gray-900 mb-2">
-              Checkout
-            </h1>
+            <h1 className="text-2xl font-medium text-gray-900 mb-2">Checkout</h1>
             <p className="text-gray-600 text-sm">Complete your order securely</p>
           </div>
 
@@ -1926,7 +1947,14 @@ export default function Checkout() {
                         <select
                           id="display-currency-selector"
                           className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:border-teal-500 cursor-pointer hover:border-gray-400 transition-colors w-full"
-                          value={isGuestCheckout ? guestSelectedCurrency || autoDetectedCurrency || 'USD' : userSelectedCurrency || userProfile?.preferred_display_currency || autoDetectedCurrency || 'USD'}
+                          value={
+                            isGuestCheckout
+                              ? guestSelectedCurrency || autoDetectedCurrency || 'USD'
+                              : userSelectedCurrency ||
+                                userProfile?.preferred_display_currency ||
+                                autoDetectedCurrency ||
+                                'USD'
+                          }
                           onChange={(e) => {
                             if (isGuestCheckout) {
                               setGuestSelectedCurrency(e.target.value);
@@ -1939,16 +1967,22 @@ export default function Checkout() {
                           {availableCurrencies?.map((currency) => {
                             // Determine if this currency was auto-detected
                             const isAutoDetected = currency.code === autoDetectedCurrency;
-                            const isUserDefault = !isGuestCheckout && currency.code === userProfile?.preferred_display_currency;
-                            
+                            const isUserDefault =
+                              !isGuestCheckout &&
+                              currency.code === userProfile?.preferred_display_currency;
+
                             let label = `${currency.symbol} ${currency.code}`;
-                            
+
                             if (isUserDefault && !isGuestCheckout && !userSelectedCurrency) {
                               label += ' (Your default)';
-                            } else if (isAutoDetected && !isUserDefault && !(isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency)) {
+                            } else if (
+                              isAutoDetected &&
+                              !isUserDefault &&
+                              !(isGuestCheckout ? guestSelectedCurrency : userSelectedCurrency)
+                            ) {
                               label += ` (Detected from ${locationData?.country || 'your location'})`;
                             }
-                            
+
                             return (
                               <option key={currency.code} value={currency.code}>
                                 {label}
@@ -1970,7 +2004,10 @@ export default function Checkout() {
                           </div>
                         )}
                         {locationData && !isDetecting && (
-                          <div className="text-xs text-gray-500" title={`Detected: ${locationData.country}`}>
+                          <div
+                            className="text-xs text-gray-500"
+                            title={`Detected: ${locationData.country}`}
+                          >
                             📍
                           </div>
                         )}
@@ -1985,18 +2022,20 @@ export default function Checkout() {
                 console.log('🎯 CHECKOUT FLOW DEBUG:', {
                   isGuestCheckout,
                   hasGuestQuoteEmail: !!guestQuote?.email,
-                  guestQuote: guestQuote ? {
-                    id: guestQuote.id,
-                    email: guestQuote.email,
-                    status: guestQuote.status
-                  } : 'No guestQuote',
+                  guestQuote: guestQuote
+                    ? {
+                        id: guestQuote.id,
+                        email: guestQuote.email,
+                        status: guestQuote.status,
+                      }
+                    : 'No guestQuote',
                   willShowApprovedQuoteFlow: isGuestCheckout && guestQuote?.email,
                   willShowGuestChoiceFlow: isGuestCheckout && !guestQuote?.email,
-                  willShowRegularCheckout: !isGuestCheckout
+                  willShowRegularCheckout: !isGuestCheckout,
                 });
                 return null;
               })()}
-              
+
               {/* Guest Checkout - Streamlined for approved quotes */}
               {isGuestCheckout && guestQuote?.email ? (
                 <Card className="bg-white border border-gray-200 shadow-sm">
@@ -2007,7 +2046,9 @@ export default function Checkout() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className={`rounded-lg p-4 ${isEditingContact ? 'bg-teal-50 border border-teal-200' : 'bg-green-50 border border-green-200'}`}>
+                    <div
+                      className={`rounded-lg p-4 ${isEditingContact ? 'bg-teal-50 border border-teal-200' : 'bg-green-50 border border-green-200'}`}
+                    >
                       {isEditingContact ? (
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 flex-1">
@@ -2051,7 +2092,9 @@ export default function Checkout() {
                           <div className="flex items-center gap-3">
                             <CheckCircle className="h-5 w-5 text-green-600" />
                             <div>
-                              <p className="font-medium text-green-900">{guestQuote.customer_name || 'Guest Customer'}</p>
+                              <p className="font-medium text-green-900">
+                                {guestQuote.customer_name || 'Guest Customer'}
+                              </p>
                               <p className="text-sm text-green-700">{guestQuote.email}</p>
                             </div>
                           </div>
@@ -2068,558 +2111,613 @@ export default function Checkout() {
                         </div>
                       )}
                     </div>
-                    
                   </CardContent>
                 </Card>
-              ) : isGuestCheckout && (
-                <Card className="bg-white border border-gray-200 shadow-sm">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
-                      <User className="h-4 w-4 text-gray-600" />
-                      Contact Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Contact Step Completed - Show Summary */}
-                    {contactStepCompleted ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                            <div>
-                              <p className="font-medium text-green-900">
-                                {guestFlowChoice === 'guest' ? 'Guest Checkout' : 'Member Account'}
-                              </p>
-                              <p className="text-sm text-green-700">{guestContact.email}</p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setContactStepCompleted(false);
-                              setGuestFlowChoice(null);
-                            }}
-                            className="text-xs border-green-300 text-green-700 hover:bg-green-100"
-                          >
-                            <Edit3 className="h-3 w-3 mr-1" />
-                            Change
-                          </Button>
-                        </div>
-                      </div>
-                    ) : guestFlowChoice === null ? (
-                      /* Choice Screen - Guest vs Member */
-                      <div className="space-y-6">
-                        <div className="text-center">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">How would you like to continue?</h3>
-                          <p className="text-gray-600">Choose the option that works best for you</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Guest Option */}
-                          <div 
-                            className="bg-white rounded-lg border-2 border-gray-200 p-6 hover:border-teal-300 hover:shadow-md transition-all cursor-pointer group"
-                            onClick={() => setGuestFlowChoice('guest')}
-                          >
-                            <div className="text-center">
-                              <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-teal-200 transition-colors">
-                                <Mail className="h-6 w-6 text-teal-600" />
+              ) : (
+                isGuestCheckout && (
+                  <Card className="bg-white border border-gray-200 shadow-sm">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
+                        <User className="h-4 w-4 text-gray-600" />
+                        Contact Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {/* Contact Step Completed - Show Summary */}
+                      {contactStepCompleted ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                              <div>
+                                <p className="font-medium text-green-900">
+                                  {guestFlowChoice === 'guest'
+                                    ? 'Guest Checkout'
+                                    : 'Member Account'}
+                                </p>
+                                <p className="text-sm text-green-700">{guestContact.email}</p>
                               </div>
-                              <h4 className="font-semibold text-gray-900 mb-2">Guest</h4>
-                              <p className="text-sm text-gray-600 mb-4">Quick checkout with just your email</p>
-                              <ul className="text-xs text-gray-500 space-y-1 mb-4">
-                                <li>✓ Fast checkout</li>
-                                <li>✓ Email-only required</li>
-                                <li>✓ No account needed</li>
-                              </ul>
-                              <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
-                                Continue as Guest
-                              </Button>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setContactStepCompleted(false);
+                                setGuestFlowChoice(null);
+                              }}
+                              className="text-xs border-green-300 text-green-700 hover:bg-green-100"
+                            >
+                              <Edit3 className="h-3 w-3 mr-1" />
+                              Change
+                            </Button>
+                          </div>
+                        </div>
+                      ) : guestFlowChoice === null ? (
+                        /* Choice Screen - Guest vs Member */
+                        <div className="space-y-6">
+                          <div className="text-center">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              How would you like to continue?
+                            </h3>
+                            <p className="text-gray-600">
+                              Choose the option that works best for you
+                            </p>
                           </div>
 
-                          {/* Member Option */}
-                          <div 
-                            className="bg-white rounded-lg border-2 border-gray-200 p-6 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
-                            onClick={() => {
-                              console.log('🔵 MEMBER OPTION CLICKED - Opening auth modal');
-                              setShowAuthModal(true);
-                            }}
-                          >
-                            <div className="text-center">
-                              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 transition-colors">
-                                <UserPlus className="h-6 w-6 text-blue-600" />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Guest Option */}
+                            <div
+                              className="bg-white rounded-lg border-2 border-gray-200 p-6 hover:border-teal-300 hover:shadow-md transition-all cursor-pointer group"
+                              onClick={() => setGuestFlowChoice('guest')}
+                            >
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-teal-200 transition-colors">
+                                  <Mail className="h-6 w-6 text-teal-600" />
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Guest</h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                  Quick checkout with just your email
+                                </p>
+                                <ul className="text-xs text-gray-500 space-y-1 mb-4">
+                                  <li>✓ Fast checkout</li>
+                                  <li>✓ Email-only required</li>
+                                  <li>✓ No account needed</li>
+                                </ul>
+                                <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white">
+                                  Continue as Guest
+                                </Button>
                               </div>
-                              <h4 className="font-semibold text-gray-900 mb-2">Member</h4>
-                              <p className="text-sm text-gray-600 mb-4">Sign in to track your orders</p>
-                              <ul className="text-xs text-gray-500 space-y-1 mb-4">
-                                <li>✓ Order tracking</li>
-                                <li>✓ Order history</li>
-                                <li>✓ Saved addresses</li>
-                              </ul>
-                              <Button variant="outline" className="w-full border-blue-200 text-blue-600 hover:bg-blue-50">
-                                Sign In / Sign Up
-                              </Button>
+                            </div>
+
+                            {/* Member Option */}
+                            <div
+                              className="bg-white rounded-lg border-2 border-gray-200 p-6 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                              onClick={() => {
+                                console.log('🔵 MEMBER OPTION CLICKED - Opening auth modal');
+                                setShowAuthModal(true);
+                              }}
+                            >
+                              <div className="text-center">
+                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 transition-colors">
+                                  <UserPlus className="h-6 w-6 text-blue-600" />
+                                </div>
+                                <h4 className="font-semibold text-gray-900 mb-2">Member</h4>
+                                <p className="text-sm text-gray-600 mb-4">
+                                  Sign in to track your orders
+                                </p>
+                                <ul className="text-xs text-gray-500 space-y-1 mb-4">
+                                  <li>✓ Order tracking</li>
+                                  <li>✓ Order history</li>
+                                  <li>✓ Saved addresses</li>
+                                </ul>
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+                                >
+                                  Sign In / Sign Up
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ) : guestFlowChoice === 'guest' ? (
-                      /* Guest Email Form */
-                      <div className="space-y-4">
-                        <div className="text-center">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Almost Done!</h3>
-                          <p className="text-gray-600">Just need your email to send order updates</p>
-                        </div>
+                      ) : guestFlowChoice === 'guest' ? (
+                        /* Guest Email Form */
+                        <div className="space-y-4">
+                          <div className="text-center">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              Almost Done!
+                            </h3>
+                            <p className="text-gray-600">
+                              Just need your email to send order updates
+                            </p>
+                          </div>
 
-                        <div>
-                          <Label htmlFor="guest-email" className="text-base font-medium text-gray-900">
-                            Email Address *
-                          </Label>
-                          <Input
-                            id="guest-email"
-                            type="email"
-                            value={guestContact.email}
-                            onChange={(e) =>
-                              setGuestContact({
-                                ...guestContact,
-                                email: e.target.value,
-                              })
-                            }
-                            placeholder="Enter your email address"
-                            className="mt-2 h-12"
-                            required
-                          />
-                          <p className="text-sm text-gray-500 mt-2">
-                            We'll send order confirmation and updates to this email
-                          </p>
-                        </div>
-
-                        <div className="flex gap-3">
-                          <Button
-                            variant="outline"
-                            onClick={() => setGuestFlowChoice(null)}
-                            className="flex-1"
-                          >
-                            ← Back
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              if (guestContact.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestContact.email)) {
-                                setContactStepCompleted(true);
+                          <div>
+                            <Label
+                              htmlFor="guest-email"
+                              className="text-base font-medium text-gray-900"
+                            >
+                              Email Address *
+                            </Label>
+                            <Input
+                              id="guest-email"
+                              type="email"
+                              value={guestContact.email}
+                              onChange={(e) =>
+                                setGuestContact({
+                                  ...guestContact,
+                                  email: e.target.value,
+                                })
                               }
-                            }}
-                            disabled={!guestContact.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestContact.email)}
-                            className="flex-1 bg-teal-600 hover:bg-teal-700"
-                          >
-                            Continue
-                          </Button>
+                              placeholder="Enter your email address"
+                              className="mt-2 h-12"
+                              required
+                            />
+                            <p className="text-sm text-gray-500 mt-2">
+                              We'll send order confirmation and updates to this email
+                            </p>
+                          </div>
+
+                          <div className="flex gap-3">
+                            <Button
+                              variant="outline"
+                              onClick={() => setGuestFlowChoice(null)}
+                              className="flex-1"
+                            >
+                              ← Back
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                if (
+                                  guestContact.email &&
+                                  /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestContact.email)
+                                ) {
+                                  setContactStepCompleted(true);
+                                }
+                              }}
+                              disabled={
+                                !guestContact.email ||
+                                !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestContact.email)
+                              }
+                              className="flex-1 bg-teal-600 hover:bg-teal-700"
+                            >
+                              Continue
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                )
               )}
 
               {/* Shipping Address - Only show when contact step is completed */}
               {(!isGuestCheckout || contactStepCompleted) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Shipping Address
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Guest checkout with loaded address */}
-                  {isGuestCheckout &&
-                  (selectedAddress === 'guest-address-loaded' ||
-                    selectedAddress === 'guest-address') &&
-                  isAddressComplete(addressFormData) ? (
-                    <div className="space-y-4">
-                      <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-900">
-                                  {addressFormData.recipient_name || 'Guest Customer'}
-                                </span>
-                                <Badge variant="outline" className="text-xs text-teal-600 border-teal-200 bg-teal-50">Guest Address</Badge>
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                {addressFormData.address_line1}
-                              </p>
-                              {addressFormData.address_line2 && (
-                                <p className="text-sm text-gray-600">
-                                  {addressFormData.address_line2}
-                                </p>
-                              )}
-                              <p className="text-sm text-gray-600">
-                                {addressFormData.city}, {addressFormData.state_province_region}{' '}
-                                {addressFormData.postal_code}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {countries?.find((c) => c.code === addressFormData.country)?.name ||
-                                  addressFormData.country}
-                              </p>
-                              {addressFormData.phone && (
-                                <p className="text-sm text-gray-600">
-                                  <Phone className="h-3 w-3 inline mr-1 text-gray-500" />
-                                  {addressFormData.phone}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowAddressModal(true)}
-                            className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : !isGuestCheckout &&
-                    selectedAddress === 'temp-address' &&
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5" />
+                      Shipping Address
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Guest checkout with loaded address */}
+                    {isGuestCheckout &&
+                    (selectedAddress === 'guest-address-loaded' ||
+                      selectedAddress === 'guest-address') &&
                     isAddressComplete(addressFormData) ? (
-                    // Temporary address for authenticated users
-                    <div className="space-y-4">
-                      <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-900">
-                                  {addressFormData.recipient_name ||
-                                    userProfile?.full_name ||
-                                    'User'}
-                                </span>
-                                <Badge variant="outline" className="text-xs text-teal-600 border-teal-200 bg-teal-50">One-time Address</Badge>
+                      <div className="space-y-4">
+                        <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900">
+                                    {addressFormData.recipient_name || 'Guest Customer'}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-teal-600 border-teal-200 bg-teal-50"
+                                  >
+                                    Guest Address
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-gray-600">
+                                  {addressFormData.address_line1}
+                                </p>
+                                {addressFormData.address_line2 && (
+                                  <p className="text-sm text-gray-600">
+                                    {addressFormData.address_line2}
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-600">
+                                  {addressFormData.city}, {addressFormData.state_province_region}{' '}
+                                  {addressFormData.postal_code}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {countries?.find((c) => c.code === addressFormData.country)
+                                    ?.name || addressFormData.country}
+                                </p>
+                                {addressFormData.phone && (
+                                  <p className="text-sm text-gray-600">
+                                    <Phone className="h-3 w-3 inline mr-1 text-gray-500" />
+                                    {addressFormData.phone}
+                                  </p>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-600">
-                                {addressFormData.address_line1}
-                              </p>
-                              {addressFormData.address_line2 && (
-                                <p className="text-sm text-gray-600">
-                                  {addressFormData.address_line2}
-                                </p>
-                              )}
-                              <p className="text-sm text-gray-600">
-                                {addressFormData.city}, {addressFormData.state_province_region}{' '}
-                                {addressFormData.postal_code}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {countries?.find((c) => c.code === addressFormData.country)?.name ||
-                                  addressFormData.country}
-                              </p>
-                              {addressFormData.phone && (
-                                <p className="text-sm text-gray-600">
-                                  <Phone className="h-3 w-3 inline mr-1 text-gray-500" />
-                                  {addressFormData.phone}
-                                </p>
-                              )}
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowAddressModal(true)}
+                              className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowAddressModal(true)}
-                            className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
-                    </div>
-                  ) : !addresses || addresses.length === 0 || isGuestCheckout ? (
-                    <div className="text-center py-6">
-                      <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {isGuestCheckout
-                          ? 'Add Shipping Address'
-                          : `No addresses found for ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}`}
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        {isGuestCheckout
-                          ? 'Please provide a shipping address for your order.'
-                          : `Please add a shipping address for delivery to ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}.`}
-                      </p>
-                      <Button onClick={() => setShowAddressModal(true)} className="bg-teal-600 hover:bg-teal-700 text-white">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Address
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <RadioGroup value={selectedAddress} onValueChange={setSelectedAddress}>
-                        <div className="space-y-3">
-                          {addresses.map((address) => (
-                            <div
-                              key={address.id}
-                              className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:border-teal-300 transition-colors"
-                            >
-                              <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
-                              <Label htmlFor={address.id} className="flex-1 cursor-pointer">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900">{address.address_line1}</span>
-                                    {address.is_default && (
-                                      <Badge variant="outline" className="text-xs text-green-600 border-green-200 bg-green-50">Default</Badge>
-                                    )}
-                                  </div>
-                                  {address.address_line2 && (
-                                    <p className="text-sm text-gray-600">
-                                      {address.address_line2}
-                                    </p>
-                                  )}
-                                  <p className="text-sm text-gray-600">
-                                    {address.city}, {address.state_province_region}{' '}
-                                    {address.postal_code}
-                                  </p>
-                                  <p className="text-sm text-gray-600">
-                                    {address.destination_country}
-                                  </p>
+                    ) : !isGuestCheckout &&
+                      selectedAddress === 'temp-address' &&
+                      isAddressComplete(addressFormData) ? (
+                      // Temporary address for authenticated users
+                      <div className="space-y-4">
+                        <div className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900">
+                                    {addressFormData.recipient_name ||
+                                      userProfile?.full_name ||
+                                      'User'}
+                                  </span>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs text-teal-600 border-teal-200 bg-teal-50"
+                                  >
+                                    One-time Address
+                                  </Badge>
                                 </div>
-                              </Label>
+                                <p className="text-sm text-gray-600">
+                                  {addressFormData.address_line1}
+                                </p>
+                                {addressFormData.address_line2 && (
+                                  <p className="text-sm text-gray-600">
+                                    {addressFormData.address_line2}
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-600">
+                                  {addressFormData.city}, {addressFormData.state_province_region}{' '}
+                                  {addressFormData.postal_code}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {countries?.find((c) => c.code === addressFormData.country)
+                                    ?.name || addressFormData.country}
+                                </p>
+                                {addressFormData.phone && (
+                                  <p className="text-sm text-gray-600">
+                                    <Phone className="h-3 w-3 inline mr-1 text-gray-500" />
+                                    {addressFormData.phone}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowAddressModal(true)}
+                              className="border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </RadioGroup>
-
-                      <div className="pt-4 border-t">
+                      </div>
+                    ) : !addresses || addresses.length === 0 || isGuestCheckout ? (
+                      <div className="text-center py-6">
+                        <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                          {isGuestCheckout
+                            ? 'Add Shipping Address'
+                            : `No addresses found for ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}`}
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          {isGuestCheckout
+                            ? 'Please provide a shipping address for your order.'
+                            : `Please add a shipping address for delivery to ${countries?.find((c) => c.code === shippingCountry)?.name || shippingCountry}.`}
+                        </p>
                         <Button
-                          variant="outline"
                           onClick={() => setShowAddressModal(true)}
-                          className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          className="bg-teal-600 hover:bg-teal-700 text-white"
                         >
                           <Plus className="h-4 w-4 mr-2" />
-                          Add New Address
+                          Add Address
                         </Button>
                       </div>
-                    </>
-                  )}
+                    ) : (
+                      <>
+                        <RadioGroup value={selectedAddress} onValueChange={setSelectedAddress}>
+                          <div className="space-y-3">
+                            {addresses.map((address) => (
+                              <div
+                                key={address.id}
+                                className="flex items-start space-x-3 p-4 border border-gray-200 rounded-lg bg-white shadow-sm hover:border-teal-300 transition-colors"
+                              >
+                                <RadioGroupItem
+                                  value={address.id}
+                                  id={address.id}
+                                  className="mt-1"
+                                />
+                                <Label htmlFor={address.id} className="flex-1 cursor-pointer">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-900">
+                                        {address.address_line1}
+                                      </span>
+                                      {address.is_default && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs text-green-600 border-green-200 bg-green-50"
+                                        >
+                                          Default
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {address.address_line2 && (
+                                      <p className="text-sm text-gray-600">
+                                        {address.address_line2}
+                                      </p>
+                                    )}
+                                    <p className="text-sm text-gray-600">
+                                      {address.city}, {address.state_province_region}{' '}
+                                      {address.postal_code}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {address.destination_country}
+                                    </p>
+                                  </div>
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        </RadioGroup>
 
-                  {/* Inline Address Form */}
-                  {showAddressModal && (
-                    <div className="border rounded-lg p-6 bg-gray-50 space-y-4 mt-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Add New Address</h4>
-                        <Button variant="ghost" size="sm" onClick={() => setShowAddressModal(false)}>
-                          Cancel
-                        </Button>
-                      </div>
+                        <div className="pt-4 border-t">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowAddressModal(true)}
+                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Address
+                          </Button>
+                        </div>
+                      </>
+                    )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="recipient_name">Recipient Name *</Label>
-                          <Input
-                            id="recipient_name"
-                            value={addressFormData.recipient_name || ''}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                recipient_name: e.target.value,
-                              })
-                            }
-                            placeholder="John Doe"
-                          />
+                    {/* Inline Address Form */}
+                    {showAddressModal && (
+                      <div className="border rounded-lg p-6 bg-gray-50 space-y-4 mt-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">Add New Address</h4>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowAddressModal(false)}
+                          >
+                            Cancel
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="phone">Phone Number</Label>
-                          <Input
-                            id="phone"
-                            value={addressFormData.phone || ''}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                phone: e.target.value,
-                              })
-                            }
-                            placeholder="+1 234 567 8900"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label htmlFor="address_line1">Street Address *</Label>
-                          <Input
-                            id="address_line1"
-                            value={addressFormData.address_line1}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                address_line1: e.target.value,
-                              })
-                            }
-                            placeholder="123 Main St"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label htmlFor="address_line2">Apartment, suite, etc. (optional)</Label>
-                          <Input
-                            id="address_line2"
-                            value={addressFormData.address_line2}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                address_line2: e.target.value,
-                              })
-                            }
-                            placeholder="Apt 4B"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="city">City *</Label>
-                          <Input
-                            id="city"
-                            value={addressFormData.city}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                city: e.target.value,
-                              })
-                            }
-                            placeholder="New York"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="state">State/Province *</Label>
-                          <Input
-                            id="state"
-                            value={addressFormData.state_province_region}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                state_province_region: e.target.value,
-                              })
-                            }
-                            placeholder="NY"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="postal_code">Postal Code *</Label>
-                          <Input
-                            id="postal_code"
-                            value={addressFormData.postal_code}
-                            onChange={(e) =>
-                              setAddressFormData({
-                                ...addressFormData,
-                                postal_code: e.target.value,
-                              })
-                            }
-                            placeholder="10001"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="country">Country *</Label>
-                          <Input
-                            id="country"
-                            value={
-                              countries?.find((c) => c.code === shippingCountry)?.name ||
-                              shippingCountry ||
-                              ''
-                            }
-                            disabled
-                            className="bg-gray-100"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Country is determined by your quote's destination
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="is_default"
-                          checked={addressFormData.is_default}
-                          onCheckedChange={(checked) =>
-                            setAddressFormData({
-                              ...addressFormData,
-                              is_default: checked as boolean,
-                            })
-                          }
-                        />
-                        <Label htmlFor="is_default">Set as default address</Label>
-                      </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="recipient_name">Recipient Name *</Label>
+                            <Input
+                              id="recipient_name"
+                              value={addressFormData.recipient_name || ''}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  recipient_name: e.target.value,
+                                })
+                              }
+                              placeholder="John Doe"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <Input
+                              id="phone"
+                              value={addressFormData.phone || ''}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  phone: e.target.value,
+                                })
+                              }
+                              placeholder="+1 234 567 8900"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label htmlFor="address_line1">Street Address *</Label>
+                            <Input
+                              id="address_line1"
+                              value={addressFormData.address_line1}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  address_line1: e.target.value,
+                                })
+                              }
+                              placeholder="123 Main St"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label htmlFor="address_line2">Apartment, suite, etc. (optional)</Label>
+                            <Input
+                              id="address_line2"
+                              value={addressFormData.address_line2}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  address_line2: e.target.value,
+                                })
+                              }
+                              placeholder="Apt 4B"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="city">City *</Label>
+                            <Input
+                              id="city"
+                              value={addressFormData.city}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  city: e.target.value,
+                                })
+                              }
+                              placeholder="New York"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="state">State/Province *</Label>
+                            <Input
+                              id="state"
+                              value={addressFormData.state_province_region}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  state_province_region: e.target.value,
+                                })
+                              }
+                              placeholder="NY"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="postal_code">Postal Code *</Label>
+                            <Input
+                              id="postal_code"
+                              value={addressFormData.postal_code}
+                              onChange={(e) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  postal_code: e.target.value,
+                                })
+                              }
+                              placeholder="10001"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="country">Country *</Label>
+                            <Input
+                              id="country"
+                              value={
+                                countries?.find((c) => c.code === shippingCountry)?.name ||
+                                shippingCountry ||
+                                ''
+                              }
+                              disabled
+                              className="bg-gray-100"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Country is determined by your quote's destination
+                            </p>
+                          </div>
+                        </div>
 
-                      {/* Show save to profile option only for authenticated users */}
-                      {!isGuestCheckout && (
                         <div className="flex items-center space-x-2">
                           <Checkbox
-                            id="save_to_profile"
-                            checked={addressFormData.save_to_profile}
+                            id="is_default"
+                            checked={addressFormData.is_default}
                             onCheckedChange={(checked) =>
                               setAddressFormData({
                                 ...addressFormData,
-                                save_to_profile: checked as boolean,
+                                is_default: checked as boolean,
                               })
                             }
                           />
-                          <Label htmlFor="save_to_profile">Save this address to my profile</Label>
+                          <Label htmlFor="is_default">Set as default address</Label>
                         </div>
-                      )}
 
-                      <Button
-                        onClick={handleAddAddress}
-                        disabled={addAddressMutation.isPending}
-                        className="w-full"
-                      >
-                        {addAddressMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Adding Address...
-                          </>
-                        ) : (
-                          'Add Address'
+                        {/* Show save to profile option only for authenticated users */}
+                        {!isGuestCheckout && (
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="save_to_profile"
+                              checked={addressFormData.save_to_profile}
+                              onCheckedChange={(checked) =>
+                                setAddressFormData({
+                                  ...addressFormData,
+                                  save_to_profile: checked as boolean,
+                                })
+                              }
+                            />
+                            <Label htmlFor="save_to_profile">Save this address to my profile</Label>
+                          </div>
                         )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+
+                        <Button
+                          onClick={handleAddAddress}
+                          disabled={addAddressMutation.isPending}
+                          className="w-full"
+                        >
+                          {addAddressMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Adding Address...
+                            </>
+                          ) : (
+                            'Add Address'
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               )}
 
               {/* Payment Method - Only show when contact step is completed */}
               {(!isGuestCheckout || contactStepCompleted) && (
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
-                    <CreditCard className="h-4 w-4 text-gray-600" />
-                    Payment Method
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <PaymentMethodSelector
-                    selectedMethod={paymentMethod}
-                    onMethodChange={handlePaymentMethodChange}
-                    amount={totalAmount}
-                    currency={paymentCurrency}
-                    showRecommended={true}
-                    disabled={isProcessing}
-                    availableMethods={availableMethods}
-                    methodsLoading={methodsLoading}
-                  />
-                </CardContent>
-              </Card>
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-2 text-base font-medium text-gray-900">
+                      <CreditCard className="h-4 w-4 text-gray-600" />
+                      Payment Method
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <PaymentMethodSelector
+                      selectedMethod={paymentMethod}
+                      onMethodChange={handlePaymentMethodChange}
+                      amount={totalAmount}
+                      currency={paymentCurrency}
+                      showRecommended={true}
+                      disabled={isProcessing}
+                      availableMethods={availableMethods}
+                      methodsLoading={methodsLoading}
+                    />
+                  </CardContent>
+                </Card>
               )}
 
               {/* Security Notice - Only show when contact step is completed */}
               {(!isGuestCheckout || contactStepCompleted) && (
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start gap-2">
-                    <Shield className="h-4 w-4 text-gray-500 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-gray-900 text-sm">Secure Checkout</h4>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Your payment information is encrypted and secure. We never store your card
-                        details.
-                      </p>
+                <Card className="bg-white border border-gray-200 shadow-sm">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-start gap-2">
+                      <Shield className="h-4 w-4 text-gray-500 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-gray-900 text-sm">Secure Checkout</h4>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Your payment information is encrypted and secure. We never store your card
+                          details.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               )}
             </div>
 
@@ -2681,7 +2779,7 @@ export default function Checkout() {
                         />
                       </span>
                     </div>
-                    
+
                     {/* Currency conversion info removed - simplified system */}
                   </div>
 
@@ -2870,17 +2968,20 @@ export default function Checkout() {
         onSave={handleAddAddress}
         initialData={{
           ...addressFormData,
-          country: addressFormData.country || shippingCountry || ''
+          country: addressFormData.country || shippingCountry || '',
         }}
         isGuest={isGuestCheckout}
         isLoading={addAddressMutation.isPending}
       />
 
       {/* Auth Modal */}
-      <Dialog open={showAuthModal} onOpenChange={(open) => {
-        console.log('🔵 AUTH MODAL STATE CHANGE:', { open, showAuthModal });
-        setShowAuthModal(open);
-      }}>
+      <Dialog
+        open={showAuthModal}
+        onOpenChange={(open) => {
+          console.log('🔵 AUTH MODAL STATE CHANGE:', { open, showAuthModal });
+          setShowAuthModal(open);
+        }}
+      >
         <DialogContent className="max-w-md">
           <ProgressiveAuthModal
             prefilledEmail={guestContact.email}
@@ -2888,27 +2989,31 @@ export default function Checkout() {
               console.log('🎉 PROGRESSIVE AUTH MODAL - onSuccess called');
               console.log('🎉 AUTH SUCCESS DEBUG:', {
                 beforeRedirect: {
-                  user: user ? {
-                    id: user.id,
-                    email: user.email,
-                    is_anonymous: user.is_anonymous
-                  } : 'No user',
+                  user: user
+                    ? {
+                        id: user.id,
+                        email: user.email,
+                        is_anonymous: user.is_anonymous,
+                      }
+                    : 'No user',
                   guestQuoteId,
                   isGuestCheckout,
-                  currentUrl: window.location.href
-                }
+                  currentUrl: window.location.href,
+                },
               });
-              
+
               setShowAuthModal(false);
-              
+
               // Link guest quote to authenticated user before redirecting
               if (guestQuoteId) {
                 try {
                   console.log('🔗 Linking guest quote to authenticated user:', guestQuoteId);
-                  
+
                   // Get the current authenticated user
-                  const { data: { user: currentUser } } = await supabase.auth.getUser();
-                  
+                  const {
+                    data: { user: currentUser },
+                  } = await supabase.auth.getUser();
+
                   if (currentUser) {
                     // Update the quote to belong to the authenticated user and add to cart
                     const { error: linkError } = await supabase
@@ -2916,15 +3021,17 @@ export default function Checkout() {
                       .update({
                         user_id: currentUser.id,
                         is_anonymous: false,
-                        in_cart: true  // 🔧 FIX: Add quote to cart when linking to authenticated user
+                        in_cart: true, // 🔧 FIX: Add quote to cart when linking to authenticated user
                       })
                       .eq('id', guestQuoteId);
-                    
+
                     if (linkError) {
                       console.error('❌ Failed to link quote to user:', linkError);
                     } else {
-                      console.log('✅ Successfully linked quote to authenticated user and added to cart');
-                      
+                      console.log(
+                        '✅ Successfully linked quote to authenticated user and added to cart',
+                      );
+
                       // 🔧 FIX: Reload cart from server to include the newly linked quote
                       if (currentUser?.id) {
                         console.log('🔄 Reloading cart after quote ownership transfer');
@@ -2935,7 +3042,7 @@ export default function Checkout() {
                 } catch (error) {
                   console.error('❌ Error linking quote to user:', error);
                 }
-                
+
                 console.log('🎉 AUTH SUCCESS - Redirecting with quote:', guestQuoteId);
                 navigate(`/checkout?quotes=${guestQuoteId}`);
               } else {

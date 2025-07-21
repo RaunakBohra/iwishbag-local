@@ -128,9 +128,9 @@ export default function OrderDetail() {
         .from('quotes')
         .update({ status: 'completed' })
         .eq('id', order.id);
-      
+
       if (error) throw error;
-      
+
       // Refresh the order data
       window.location.reload();
     } catch (error) {
@@ -198,7 +198,7 @@ export default function OrderDetail() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">
-                Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
+                Order {order.display_id || `#${order.id.slice(0, 8)}`}
               </h1>
               <StatusBadge status={order.status} category="order" showIcon />
             </div>
@@ -347,7 +347,7 @@ export default function OrderDetail() {
           <div className="animate-in slide-in-from-left duration-700 delay-600">
             <DocumentManager
               quoteId={order.id}
-              orderId={order.order_display_id || order.display_id || order.id}
+              orderId={order.display_id || order.id}
               isAdmin={false}
               canUpload={false}
             />
@@ -368,7 +368,7 @@ export default function OrderDetail() {
               <CardContent>
                 <EnhancedBankTransferDetails
                   orderId={order.id}
-                  orderDisplayId={order.order_display_id || order.display_id || order.id}
+                  orderDisplayId={order.display_id || order.id}
                   amount={order.final_total_usd || 0}
                   currency={order.destination_currency || order.currency || 'USD'}
                 />
@@ -452,7 +452,9 @@ export default function OrderDetail() {
                             : 'outline'
                     }
                   >
-                    {order.payment_status === 'partial' && order.amount_paid && order.final_total_usd
+                    {order.payment_status === 'partial' &&
+                    order.amount_paid &&
+                    order.final_total_usd
                       ? `Partial: $${order.amount_paid} of $${order.final_total_usd}`
                       : order.payment_status === 'overpaid' && order.overpayment_amount
                         ? `Overpaid: +$${order.overpayment_amount}`
@@ -500,7 +502,7 @@ export default function OrderDetail() {
                   <div className="pt-2">
                     <PaymentProofButton
                       quoteId={order.id}
-                      orderId={order.order_display_id || order.display_id || order.id}
+                      orderId={order.display_id || order.id}
                       recipientId={null}
                     />
                   </div>

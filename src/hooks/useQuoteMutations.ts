@@ -102,21 +102,21 @@ export const useQuoteMutations = (id: string | undefined) => {
         .select('items')
         .eq('id', itemData.quoteId)
         .single();
-      
+
       if (fetchError) throw new Error(fetchError.message);
-      
+
       // Update the specific item in the items array
       const items = Array.isArray(quote.items) ? quote.items : [];
-      const updatedItems = items.map(item => 
-        item.id === itemData.id ? { ...item, ...itemData } : item
+      const updatedItems = items.map((item) =>
+        item.id === itemData.id ? { ...item, ...itemData } : item,
       );
-      
+
       // Update the quote with the new items array
       const { error } = await supabase
         .from('quotes')
         .update({ items: updatedItems })
         .eq('id', itemData.quoteId);
-        
+
       if (error) throw new Error(error.message);
     },
   });
@@ -126,7 +126,8 @@ export const useQuoteMutations = (id: string | undefined) => {
       if (!quote) throw new Error('Quote data is required');
 
       // Generate email content
-      const firstItem = Array.isArray(quote.items) && quote.items.length > 0 ? quote.items[0] : null;
+      const firstItem =
+        Array.isArray(quote.items) && quote.items.length > 0 ? quote.items[0] : null;
       const productName = firstItem?.name || 'Your Items';
       const emailSubject = `Quote ${quote.display_id || quote.id} - ${productName}`;
       const emailHtml = `
@@ -172,11 +173,11 @@ export const useQuoteMutations = (id: string | undefined) => {
         // Get customer email from customer_data
         const customerData = quote.customer_data || {};
         const customerEmail = customerData.info?.email || null;
-        
+
         if (!customerEmail) {
           throw new Error('Customer email not found in quote data');
         }
-        
+
         // Send email using the edge function
         const { error: emailError } = await supabase.functions.invoke('send-email', {
           body: {

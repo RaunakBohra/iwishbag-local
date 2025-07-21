@@ -1,10 +1,6 @@
 // Simple shipping routes management service
 import { supabase } from '../integrations/supabase/client';
-import type {
-  ShippingRoute,
-  ShippingRouteDB,
-  ShippingRouteFormData,
-} from '../types/shipping';
+import type { ShippingRoute, ShippingRouteDB, ShippingRouteFormData } from '../types/shipping';
 
 /**
  * Get all shipping routes from database
@@ -26,12 +22,51 @@ export async function getShippingRoutes(): Promise<ShippingRouteDB[]> {
 /**
  * Create or update shipping route
  */
-export async function upsertShippingRoute(routeData: ShippingRouteFormData): Promise<ShippingRouteDB> {
-  const { data, error } = await supabase
-    .from('shipping_routes')
-    .upsert(routeData)
-    .select()
-    .single();
+export async function upsertShippingRoute(
+  routeData: ShippingRouteFormData,
+): Promise<ShippingRouteDB> {
+  // Transform camelCase form data to snake_case database format
+  const dbData = {
+    origin_country: routeData.originCountry,
+    destination_country: routeData.destinationCountry,
+    base_shipping_cost: routeData.baseShippingCost,
+    shipping_per_kg: routeData.shippingPerKg,
+    cost_percentage: routeData.costPercentage,
+    processing_days: routeData.processingDays,
+    customs_clearance_days: routeData.customsClearanceDays,
+    weight_unit: routeData.weightUnit,
+    delivery_options: routeData.deliveryOptions,
+    weight_tiers: routeData.weightTiers,
+    max_weight: routeData.maxWeight,
+    restricted_items: routeData.restrictedItems,
+    requires_documentation: routeData.requiresDocumentation,
+    is_active: routeData.isActive,
+    exchange_rate: routeData.exchangeRate,
+  };
+
+  let result;
+
+  if (routeData.id) {
+    // Update existing route using provided ID
+    result = await supabase
+      .from('shipping_routes')
+      .update(dbData)
+      .eq('id', routeData.id)
+      .select()
+      .single();
+  } else {
+    // Use PostgreSQL's ON CONFLICT to handle duplicates properly
+    result = await supabase
+      .from('shipping_routes')
+      .upsert(dbData, {
+        onConflict: 'origin_country,destination_country',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single();
+  }
+
+  const { data, error } = result;
 
   if (error) {
     console.error('Error upserting shipping route:', error);
@@ -45,10 +80,7 @@ export async function upsertShippingRoute(routeData: ShippingRouteFormData): Pro
  * Delete shipping route
  */
 export async function deleteShippingRoute(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('shipping_routes')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('shipping_routes').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting shipping route:', error);
@@ -60,11 +92,7 @@ export async function deleteShippingRoute(id: string): Promise<void> {
  * Get shipping route by ID
  */
 export async function getShippingRouteById(id: string): Promise<ShippingRouteDB | null> {
-  const { data, error } = await supabase
-    .from('shipping_routes')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const { data, error } = await supabase.from('shipping_routes').select('*').eq('id', id).single();
 
   if (error) {
     if (error.code === 'PGRST116') {

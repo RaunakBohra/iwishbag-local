@@ -184,7 +184,7 @@ export const Cart = () => {
             </div>
           )}
         </div>
-        
+
         {/* Items List */}
         <div className="space-y-4">
           {cartItems.map((item) => (
@@ -273,7 +273,7 @@ export const Cart = () => {
             {renderCartContent()}
           </div>
         </div>
-        
+
         {/* Sidebar */}
         <div className="lg:col-span-1">
           <Card className="sticky top-4">
@@ -311,13 +311,13 @@ export const Cart = () => {
                   <CartTotal items={hasSelectedItems ? getSelectedItems() : cartItems} />
                 </span>
               </div>
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 disabled={!hasCartItems}
                 onClick={() => {
                   // Navigate to checkout with selected items or all items
                   const itemsToCheckout = hasSelectedItems ? getSelectedItems() : cartItems;
-                  const quoteIds = itemsToCheckout.map(item => item.quoteId).join(',');
+                  const quoteIds = itemsToCheckout.map((item) => item.quoteId).join(',');
                   window.location.href = `/checkout?quotes=${quoteIds}`;
                 }}
               >
@@ -328,7 +328,7 @@ export const Cart = () => {
           </Card>
         </div>
       </div>
-      
+
       {/* Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showBulkDeleteConfirm}

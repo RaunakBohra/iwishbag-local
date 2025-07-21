@@ -37,7 +37,18 @@ import React, { useState, useEffect } from 'react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { Upload, X, Plus, Globe, Info, AlertCircle, CheckCircle, FileText, MapPin, ArrowRight } from 'lucide-react';
+import {
+  Upload,
+  X,
+  Plus,
+  Globe,
+  Info,
+  AlertCircle,
+  CheckCircle,
+  FileText,
+  MapPin,
+  ArrowRight,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
@@ -50,7 +61,15 @@ function isValidUrl(url) {
   }
 }
 
-export default function ProductInfoStep({ products, setProducts, quoteType, setQuoteType, destinationCountry, setDestinationCountry, next }) {
+export default function ProductInfoStep({
+  products,
+  setProducts,
+  quoteType,
+  setQuoteType,
+  destinationCountry,
+  setDestinationCountry,
+  next,
+}) {
   const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
   const { data: allCountries, isLoading: allCountriesLoading } = useAllCountries();
   const [errors, setErrors] = useState({});
@@ -62,7 +81,7 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
     if (!destinationCountry && allCountries) {
       // Set a reasonable default based on your primary markets
       // India and Nepal are mentioned as primary markets in CLAUDE.md
-      const defaultCountry = allCountries.find(c => c.code === 'IN'); // India as default
+      const defaultCountry = allCountries.find((c) => c.code === 'IN'); // India as default
       if (defaultCountry) {
         setDestinationCountry('IN');
         console.log('Set default destination country to India (IN)');
@@ -183,7 +202,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0 && !countryValidationError && !destinationCountryError;
+    return (
+      Object.keys(newErrors).length === 0 && !countryValidationError && !destinationCountryError
+    );
   };
 
   const handleNext = () => {
@@ -212,7 +233,8 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       };
     }
     return {
-      className: 'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500',
+      className:
+        'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500',
     };
   };
 
@@ -223,15 +245,23 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
       {/* Clear Quote Type Selection */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="mb-6">
-          <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 mb-2">How would you like your quote?</h3>
-          <p className="text-gray-600 text-xs sm:text-sm lg:text-base">Choose the option that works best for your shopping needs</p>
+          <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 mb-2">
+            How would you like your quote?
+          </h3>
+          <p className="text-gray-600 text-xs sm:text-sm lg:text-base">
+            Choose the option that works best for your shopping needs
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Separate Quotes Option */}
-          <label className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-teal-300 ${
-            quoteType === 'separate' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:bg-gray-50'
-          }`}>
+          <label
+            className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-teal-300 ${
+              quoteType === 'separate'
+                ? 'border-teal-500 bg-teal-50'
+                : 'border-gray-200 hover:bg-gray-50'
+            }`}
+          >
             <input
               type="radio"
               name="quoteType"
@@ -241,29 +271,40 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
               className="sr-only"
             />
             <div className="flex items-start gap-3">
-              <div className={`w-5 h-5 rounded-full border-2 mt-0.5 transition-all ${
-                quoteType === 'separate' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-5 h-5 rounded-full border-2 mt-0.5 transition-all ${
+                  quoteType === 'separate' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
+                }`}
+              >
                 {quoteType === 'separate' && (
                   <div className="w-2.5 h-2.5 bg-white rounded-full m-0.5"></div>
                 )}
               </div>
               <div>
-                <div className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">Separate Quotes</div>
-                <div className="text-xs sm:text-sm text-gray-600 mb-2">Get individual quotes for each product</div>
+                <div className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">
+                  Separate Quotes
+                </div>
+                <div className="text-xs sm:text-sm text-gray-600 mb-2">
+                  Get individual quotes for each product
+                </div>
                 <div className="text-xs sm:text-sm text-gray-500">
-                  ✓ Products can be from different countries<br/>
-                  ✓ More flexibility in ordering<br/>
-                  ✓ Easier to compare individual costs
+                  ✓ Products can be from different countries
+                  <br />
+                  ✓ More flexibility in ordering
+                  <br />✓ Easier to compare individual costs
                 </div>
               </div>
             </div>
           </label>
 
           {/* Combined Quote Option */}
-          <label className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-teal-300 ${
-            quoteType === 'combined' ? 'border-teal-500 bg-teal-50' : 'border-gray-200 hover:bg-gray-50'
-          }`}>
+          <label
+            className={`relative cursor-pointer rounded-lg border-2 p-4 transition-all hover:border-teal-300 ${
+              quoteType === 'combined'
+                ? 'border-teal-500 bg-teal-50'
+                : 'border-gray-200 hover:bg-gray-50'
+            }`}
+          >
             <input
               type="radio"
               name="quoteType"
@@ -273,27 +314,33 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
               className="sr-only"
             />
             <div className="flex items-start gap-3">
-              <div className={`w-5 h-5 rounded-full border-2 mt-0.5 transition-all ${
-                quoteType === 'combined' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
-              }`}>
+              <div
+                className={`w-5 h-5 rounded-full border-2 mt-0.5 transition-all ${
+                  quoteType === 'combined' ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
+                }`}
+              >
                 {quoteType === 'combined' && (
                   <div className="w-2.5 h-2.5 bg-white rounded-full m-0.5"></div>
                 )}
               </div>
               <div>
-                <div className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">Single Combined Quote</div>
-                <div className="text-xs sm:text-sm text-gray-600 mb-2">Get one quote for all products together</div>
+                <div className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">
+                  Single Combined Quote
+                </div>
+                <div className="text-xs sm:text-sm text-gray-600 mb-2">
+                  Get one quote for all products together
+                </div>
                 <div className="text-xs sm:text-sm text-gray-500">
-                  ✓ Potentially lower shipping costs<br/>
-                  ✓ One simple quote to review<br/>
+                  ✓ Potentially lower shipping costs
+                  <br />
+                  ✓ One simple quote to review
+                  <br />
                   ⚠️ All products must be from same country
                 </div>
               </div>
             </div>
           </label>
         </div>
-
-
       </div>
 
       {/* Compact Destination Selection */}
@@ -301,9 +348,11 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-teal-600" />
-            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900">Deliver to</h3>
+            <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900">
+              Deliver to
+            </h3>
           </div>
-          
+
           <div className="flex-1 max-w-xs">
             <select
               value={destinationCountry}
@@ -368,7 +417,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                   <div className="w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
                     {index + 1}
                   </div>
-                  <span className="font-medium text-gray-900 text-sm sm:text-base">Product {index + 1}</span>
+                  <span className="font-medium text-gray-900 text-sm sm:text-base">
+                    Product {index + 1}
+                  </span>
                 </div>
                 {products.length > 1 && (
                   <button
@@ -386,15 +437,17 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Purchase Country *
                     {quoteType === 'combined' && index > 0 && (
-                      <span className="text-teal-600 ml-2 text-xs sm:text-sm font-normal">(Auto-synced)</span>
+                      <span className="text-teal-600 ml-2 text-xs sm:text-sm font-normal">
+                        (Auto-synced)
+                      </span>
                     )}
                   </label>
                   <select
                     value={product.country}
                     onChange={(e) => updateProduct(index, 'country', e.target.value)}
                     className={`w-full border rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
-                      quoteType === 'combined' && index > 0 
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed' 
+                      quoteType === 'combined' && index > 0
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                         : 'border-gray-200 bg-white'
                     }`}
                     disabled={quoteType === 'combined' && index > 0}
@@ -413,18 +466,24 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     )}
                   </select>
                   {errors[`country-${index}`] && (
-                    <p className="text-red-500 text-xs sm:text-sm mt-1">{errors[`country-${index}`]}</p>
+                    <p className="text-red-500 text-xs sm:text-sm mt-1">
+                      {errors[`country-${index}`]}
+                    </p>
                   )}
                   {quoteType === 'combined' && index > 0 && product.country && (
                     <div className="flex items-center gap-1 mt-2">
                       <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-xs sm:text-sm text-green-600">Synced with Product 1</span>
+                      <span className="text-xs sm:text-sm text-green-600">
+                        Synced with Product 1
+                      </span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Product Name</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    Product Name
+                  </label>
                   <input
                     type="text"
                     value={product.name}
@@ -473,7 +532,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
 
               <div className="grid grid-cols-3 gap-4 mt-4">
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    Quantity *
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -485,12 +546,16 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                     placeholder="1"
                   />
                   {errors[`quantity-${index}`] && (
-                    <p className="text-red-500 text-xs sm:text-sm mt-1">{errors[`quantity-${index}`]}</p>
+                    <p className="text-red-500 text-xs sm:text-sm mt-1">
+                      {errors[`quantity-${index}`]}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Price</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    Price
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -502,7 +567,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
                 </div>
 
                 <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                    Weight (kg)
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -516,7 +583,9 @@ export default function ProductInfoStep({ products, setProducts, quoteType, setQ
 
               {/* Product Notes */}
               <div className="mt-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Product Notes (optional)</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Product Notes (optional)
+                </label>
                 <textarea
                   value={product.notes}
                   onChange={(e) => updateProduct(index, 'notes', e.target.value)}

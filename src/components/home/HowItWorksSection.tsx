@@ -1,12 +1,22 @@
 import { motion } from 'framer-motion';
 import { SectionHeading, SectionDescription, H4, BodySmall } from '@/components/ui/typography';
-import { Search, Calculator, ShoppingBag, Truck, CheckCircle, Shield, Clock, Globe } from 'lucide-react';
+import {
+  Search,
+  Calculator,
+  ShoppingBag,
+  Truck,
+  CheckCircle,
+  Shield,
+  Clock,
+  Globe,
+} from 'lucide-react';
 
 const steps = [
   {
     id: 1,
     title: 'Find Your Product',
-    description: 'Share the product link from Amazon, Flipkart, eBay, Alibaba or any international store',
+    description:
+      'Share the product link from Amazon, Flipkart, eBay, Alibaba or any international store',
     subPoints: ['Support for 500+ stores', 'Instant link verification', 'Real-time price tracking'],
     icon: Search,
     trustBadge: { icon: Globe, text: 'Global Stores' },
@@ -15,7 +25,8 @@ const steps = [
   {
     id: 2,
     title: 'Get Instant Quote',
-    description: 'Transparent pricing with shipping, customs, taxes, and all fees calculated upfront',
+    description:
+      'Transparent pricing with shipping, customs, taxes, and all fees calculated upfront',
     subPoints: ['No hidden charges', 'Live exchange rates', 'Customs duty included'],
     icon: Calculator,
     trustBadge: { icon: Shield, text: 'Transparent Pricing' },
@@ -66,7 +77,7 @@ export const HowItWorksSection = () => {
             <Shield className="w-4 h-4" />
             Trusted by 10,000+ customers
           </motion.div>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -77,7 +88,7 @@ export const HowItWorksSection = () => {
               How iwishBag Works
             </SectionHeading>
             <SectionDescription className="mx-auto max-w-2xl text-base lg:text-lg px-4 lg:px-0">
-              From product discovery to doorstep delivery, we've streamlined international shopping 
+              From product discovery to doorstep delivery, we've streamlined international shopping
               into a simple, transparent, and secure 5-step process.
             </SectionDescription>
           </motion.div>
@@ -125,9 +136,7 @@ export const HowItWorksSection = () => {
 
                       {/* Title and Description */}
                       <div className="flex-1 min-w-0">
-                        <H4 className="mb-2 text-gray-900 text-left">
-                          {step.title}
-                        </H4>
+                        <H4 className="mb-2 text-gray-900 text-left">{step.title}</H4>
                         <BodySmall className="text-gray-600 leading-relaxed text-left">
                           {step.description}
                         </BodySmall>
@@ -144,9 +153,7 @@ export const HowItWorksSection = () => {
 
                     {/* Content - flex-grow to push trust badge to bottom */}
                     <div className="text-center mb-6 flex-grow">
-                      <H4 className="mb-3 text-gray-900">
-                        {step.title}
-                      </H4>
+                      <H4 className="mb-3 text-gray-900">{step.title}</H4>
                       <BodySmall className="text-gray-600 leading-relaxed">
                         {step.description}
                       </BodySmall>
@@ -155,7 +162,10 @@ export const HowItWorksSection = () => {
                     {/* Sub Points */}
                     <div className="space-y-2 mb-6">
                       {step.subPoints.map((point, pointIndex) => (
-                        <div key={pointIndex} className="flex items-center gap-2 text-sm text-gray-500">
+                        <div
+                          key={pointIndex}
+                          className="flex items-center gap-2 text-sm text-gray-500"
+                        >
                           <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
                           {point}
                         </div>
@@ -211,7 +221,10 @@ export const HowItWorksSection = () => {
             { label: 'Customer Rating', value: '4.9/5', icon: CheckCircle },
             { label: 'Delivery Success', value: '99.8%', icon: Truck },
           ].map((stat, index) => (
-            <div key={index} className="text-center p-3 lg:p-4 rounded-xl bg-white border border-gray-100 hover:border-teal-200 transition-colors duration-200">
+            <div
+              key={index}
+              className="text-center p-3 lg:p-4 rounded-xl bg-white border border-gray-100 hover:border-teal-200 transition-colors duration-200"
+            >
               <stat.icon className="w-5 h-5 lg:w-6 lg:h-6 text-teal-600 mx-auto mb-2" />
               <div className="font-bold text-lg lg:text-xl text-gray-900">{stat.value}</div>
               <div className="text-xs lg:text-sm text-gray-500">{stat.label}</div>
@@ -232,10 +245,10 @@ export const HowItWorksSection = () => {
             className="group inline-flex items-center gap-3 px-6 lg:px-8 py-3 lg:py-4 bg-gradient-to-r from-teal-600 to-teal-700 text-white font-semibold rounded-xl hover:from-teal-700 hover:to-teal-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-teal-200 transform hover:-translate-y-1 w-full sm:w-auto text-center justify-center"
           >
             Get Your Quote Now
-            <svg 
-              width="20" 
-              height="20" 
-              viewBox="0 0 24 24" 
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
               className="group-hover:translate-x-1 transition-transform duration-300"
             >
               <path

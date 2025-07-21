@@ -588,7 +588,7 @@ class CurrencyService {
   /**
    * Get exchange rate using 2-tier system: Shipping Routes → Country Settings → Error
    * This replaces the old complex fallback system with a simple, business-focused approach
-   * 
+   *
    * @param originCountry - Origin country code (e.g. 'US', 'IN')
    * @param destinationCountry - Destination country code (e.g. 'IN', 'NP')
    * @returns Promise<number> - Exchange rate or throws error
@@ -610,7 +610,9 @@ class CurrencyService {
         .single();
 
       if (!routeError && shippingRoute?.exchange_rate) {
-        console.log(`[CurrencyService] Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`);
+        console.log(
+          `[CurrencyService] Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
+        );
         return shippingRoute.exchange_rate;
       }
 
@@ -625,7 +627,7 @@ class CurrencyService {
           .from('country_settings')
           .select('currency, rate_from_usd')
           .eq('code', destinationCountry)
-          .single()
+          .single(),
       ]);
 
       if (originResult.error || destResult.error) {
@@ -636,17 +638,23 @@ class CurrencyService {
       const destRate = destResult.data.rate_from_usd;
 
       if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
-        throw new Error(`Invalid exchange rates: ${originCountry}=${originRate}, ${destinationCountry}=${destRate}`);
+        throw new Error(
+          `Invalid exchange rates: ${originCountry}=${originRate}, ${destinationCountry}=${destRate}`,
+        );
       }
 
       // Calculate cross rate via USD: destination_rate / origin_rate
       const crossRate = destRate / originRate;
-      console.log(`[CurrencyService] Using USD cross-rate: ${originCountry}→${destinationCountry} = ${crossRate} (${destRate}/${originRate})`);
-      
-      return crossRate;
+      console.log(
+        `[CurrencyService] Using USD cross-rate: ${originCountry}→${destinationCountry} = ${crossRate} (${destRate}/${originRate})`,
+      );
 
+      return crossRate;
     } catch (error) {
-      console.error(`[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`, error);
+      console.error(
+        `[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`,
+        error,
+      );
       throw new Error(`Exchange rate unavailable for ${originCountry} to ${destinationCountry}`);
     }
   }
@@ -673,7 +681,10 @@ class CurrencyService {
 
       return await this.getExchangeRate(fromCountry, toCountry);
     } catch (error) {
-      console.error(`[CurrencyService] Currency exchange rate failed ${fromCurrency}→${toCurrency}:`, error);
+      console.error(
+        `[CurrencyService] Currency exchange rate failed ${fromCurrency}→${toCurrency}:`,
+        error,
+      );
       throw new Error(`Exchange rate unavailable for ${fromCurrency} to ${toCurrency}`);
     }
   }

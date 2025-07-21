@@ -8,16 +8,16 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Calculator,
+  DollarSign,
+  TrendingUp,
   Info,
   ExternalLink,
   Zap,
   ChevronDown,
   ChevronUp,
-  PieChart
+  PieChart,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
@@ -35,19 +35,19 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   isCalculating,
   compact = true,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState('breakdown');
 
   const breakdown = quote.calculation_data?.breakdown || {};
   const exchangeRate = quote.calculation_data?.exchange_rate || { rate: 1, source: 'standard' };
   const totalCost = quote.final_total_usd || 0;
-  
+
   // Calculate percentages for insights
   const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
-  
+
   // Get selected shipping option details
   const selectedShippingOption = shippingOptions.find(
-    opt => opt.id === quote.operational_data?.shipping?.selected_option
+    (opt) => opt.id === quote.operational_data?.shipping?.selected_option,
   );
 
   // Debug logging for breakdown component
@@ -55,23 +55,29 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     quoteId: quote.id,
     breakdownShipping: breakdown.shipping,
     selectedShippingOptionId: quote.operational_data?.shipping?.selected_option,
-    selectedShippingOption: selectedShippingOption ? {
-      id: selectedShippingOption.id,
-      carrier: selectedShippingOption.carrier,
-      cost: selectedShippingOption.cost_usd
-    } : null,
-    shippingOptionsAvailable: shippingOptions.map(opt => ({ id: opt.id, carrier: opt.carrier, cost: opt.cost_usd })),
+    selectedShippingOption: selectedShippingOption
+      ? {
+          id: selectedShippingOption.id,
+          carrier: selectedShippingOption.carrier,
+          cost: selectedShippingOption.cost_usd,
+        }
+      : null,
+    shippingOptionsAvailable: shippingOptions.map((opt) => ({
+      id: opt.id,
+      carrier: opt.carrier,
+      cost: opt.cost_usd,
+    })),
     totalCost: quote.final_total_usd,
-    calculationData: quote.calculation_data
+    calculationData: quote.calculation_data,
   });
 
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
-    return quote.items?.reduce((sum, item) => sum + (item.weight_kg * item.quantity), 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.weight_kg * item.quantity, 0) || 0;
   };
 
   const getTotalValue = () => {
-    return quote.items?.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
   };
 
   // Estimate shipping breakdown based on common patterns
@@ -88,14 +94,14 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const getShippingPerKgRate = (option: ShippingOption) => {
     // Standard rate estimation based on carrier type
     const rateMap: Record<string, number> = {
-      'DHL': 8.5,
-      'FedEx': 9.0,
-      'UPS': 7.5,
-      'Standard': 5.0,
-      'Express': 7.0,
-      'Economy': 4.0,
+      DHL: 8.5,
+      FedEx: 9.0,
+      UPS: 7.5,
+      Standard: 5.0,
+      Express: 7.0,
+      Economy: 4.0,
     };
-    return rateMap[option.carrier] || 6.0;
+    return rateMap[option?.carrier] || 6.0;
   };
 
   const getShippingWeightCost = (option: ShippingOption) => {
@@ -110,7 +116,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   const getShippingValuePercentage = (option: ShippingOption) => {
     // Express carriers sometimes charge value-based fees
-    if (option.carrier === 'DHL' || option.carrier === 'FedEx') {
+    if (option?.carrier === 'DHL' || option?.carrier === 'FedEx') {
       return 0.5; // 0.5% of value
     }
     return 0;
@@ -139,9 +145,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           )}
         </div>
         <div className="flex items-center space-x-1">
-          <span className="text-lg font-bold text-blue-600">
-            ${totalCost.toFixed(2)}
-          </span>
+          <span className="text-lg font-bold text-blue-600">${totalCost.toFixed(2)}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -157,13 +161,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       <div className="grid grid-cols-4 gap-2 text-xs">
         {keyComponents.map((component, index) => (
           <div key={index} className="text-center">
-            <div className={`font-semibold ${component.color}`}>
-              ${component.amount.toFixed(0)}
-            </div>
+            <div className={`font-semibold ${component.color}`}>${component.amount.toFixed(0)}</div>
             <div className="text-gray-500 text-xs">{component.label}</div>
-            <div className="text-gray-400 text-xs">
-              {getPercentage(component.amount)}%
-            </div>
+            <div className="text-gray-400 text-xs">{getPercentage(component.amount)}%</div>
           </div>
         ))}
       </div>
@@ -173,7 +173,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
         <div className="mt-3 flex items-center justify-between text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
           <span>Exchange Rate:</span>
           <div className="flex items-center space-x-1">
-            <span>1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}</span>
+            <span>
+              1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}
+            </span>
             <Badge variant="outline" className="text-xs h-4 px-1">
               {exchangeRate.source === 'shipping_route' ? 'Route' : 'Standard'}
             </Badge>
@@ -188,9 +190,15 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 h-8 text-xs">
-          <TabsTrigger value="breakdown" className="text-xs">Breakdown</TabsTrigger>
-          <TabsTrigger value="insights" className="text-xs">Insights</TabsTrigger>
-          <TabsTrigger value="exchange" className="text-xs">Exchange</TabsTrigger>
+          <TabsTrigger value="breakdown" className="text-xs">
+            Breakdown
+          </TabsTrigger>
+          <TabsTrigger value="insights" className="text-xs">
+            Insights
+          </TabsTrigger>
+          <TabsTrigger value="exchange" className="text-xs">
+            Exchange
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
@@ -206,8 +214,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="font-medium">${(breakdown.items_total || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(breakdown.items_total || 0)}%</div>
+                <div className="font-medium">${Number(breakdown.items_total || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">
+                  {getPercentage(Number(breakdown.items_total || 0))}%
+                </div>
               </div>
             </div>
 
@@ -217,20 +227,22 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="flex items-center space-x-2">
                   <ExternalLink className="w-4 h-4 text-green-600" />
                   <span className="text-gray-700">International Shipping</span>
-                  {selectedShippingOption && (
+                  {selectedShippingOption?.carrier && (
                     <Badge variant="outline" className="text-xs h-4 px-1">
                       {selectedShippingOption.carrier}
                     </Badge>
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">${(breakdown.shipping || 0).toFixed(2)}</div>
-                  <div className="text-xs text-gray-500">{getPercentage(breakdown.shipping || 0)}%</div>
+                  <div className="font-medium">${Number(breakdown.shipping || 0).toFixed(2)}</div>
+                  <div className="text-xs text-gray-500">
+                    {getPercentage(Number(breakdown.shipping || 0))}%
+                  </div>
                 </div>
               </div>
-              
+
               {/* Shipping Calculation Breakdown */}
-              {selectedShippingOption && (
+              {selectedShippingOption?.carrier && (
                 <div className="ml-6 space-y-1 text-xs text-gray-600 bg-gray-50 p-2 rounded">
                   <div className="font-medium text-gray-700 mb-2">Shipping Rate Calculation:</div>
                   <div className="flex justify-between">
@@ -238,18 +250,23 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <span>${getShippingBaseRate(selectedShippingOption).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>• Weight ({getTotalWeight()}kg × ${getShippingPerKgRate(selectedShippingOption).toFixed(2)}/kg):</span>
+                    <span>
+                      • Weight ({getTotalWeight()}kg × $
+                      {getShippingPerKgRate(selectedShippingOption).toFixed(2)}/kg):
+                    </span>
                     <span>${getShippingWeightCost(selectedShippingOption).toFixed(2)}</span>
                   </div>
                   {getShippingValueCost(selectedShippingOption) > 0 && (
                     <div className="flex justify-between">
-                      <span>• Value-based ({getShippingValuePercentage(selectedShippingOption)}%):</span>
+                      <span>
+                        • Value-based ({getShippingValuePercentage(selectedShippingOption)}%):
+                      </span>
                       <span>${getShippingValueCost(selectedShippingOption).toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-medium text-gray-800 border-t border-gray-200 pt-1 mt-1">
                     <span>Total Shipping:</span>
-                    <span>${(breakdown.shipping || 0).toFixed(2)}</span>
+                    <span>${Number(breakdown.shipping || 0).toFixed(2)}</span>
                   </div>
                 </div>
               )}
@@ -261,12 +278,16 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <Info className="w-4 h-4 text-purple-600" />
                 <span className="text-gray-700">Customs & Duties</span>
                 {quote.operational_data?.customs?.smart_tier && (
-                  <Badge variant="outline" className="text-xs h-4 px-1">Smart</Badge>
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    Smart
+                  </Badge>
                 )}
               </div>
               <div className="text-right">
-                <div className="font-medium">${(breakdown.customs || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(breakdown.customs || 0)}%</div>
+                <div className="font-medium">${Number(breakdown.customs || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">
+                  {getPercentage(Number(breakdown.customs || 0))}%
+                </div>
               </div>
             </div>
 
@@ -277,8 +298,8 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <span className="text-gray-700">Taxes & VAT</span>
               </div>
               <div className="text-right">
-                <div className="font-medium">${(breakdown.taxes || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(breakdown.taxes || 0)}%</div>
+                <div className="font-medium">${Number(breakdown.taxes || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(Number(breakdown.taxes || 0))}%</div>
               </div>
             </div>
 
@@ -292,8 +313,8 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="font-medium">${(breakdown.fees || 0).toFixed(2)}</div>
-                <div className="text-xs text-gray-500">{getPercentage(breakdown.fees || 0)}%</div>
+                <div className="font-medium">${Number(breakdown.fees || 0).toFixed(2)}</div>
+                <div className="text-xs text-gray-500">{getPercentage(Number(breakdown.fees || 0))}%</div>
               </div>
             </div>
 
@@ -305,8 +326,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   <span className="text-gray-700">Discount</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium text-red-600">-${(breakdown.discount || 0).toFixed(2)}</div>
-                  <div className="text-xs text-gray-500">{getPercentage(breakdown.discount || 0)}%</div>
+                  <div className="font-medium text-red-600">
+                    -${Number(breakdown.discount || 0).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {getPercentage(Number(breakdown.discount || 0))}%
+                  </div>
                 </div>
               </div>
             )}
@@ -357,9 +382,13 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping efficiency:</span>
-                <span className={`font-medium ${
-                  parseFloat(getPercentage(breakdown.shipping || 0)) < 20 ? 'text-green-600' : 'text-orange-600'
-                }`}>
+                <span
+                  className={`font-medium ${
+                    parseFloat(getPercentage(breakdown.shipping || 0)) < 20
+                      ? 'text-green-600'
+                      : 'text-orange-600'
+                  }`}
+                >
                   {parseFloat(getPercentage(breakdown.shipping || 0)) < 20 ? 'Excellent' : 'High'}
                 </span>
               </div>
@@ -380,7 +409,8 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <span className="font-medium">Smart Optimization Applied</span>
               </div>
               <div className="text-xs text-blue-700">
-                Customs rate optimized using AI: {quote.operational_data.customs.smart_tier.tier_name || 'Default tier'}
+                Customs rate optimized using AI:{' '}
+                {quote.operational_data?.customs?.smart_tier?.tier_name || 'Default tier'}
               </div>
             </div>
           )}
@@ -425,10 +455,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <span className="font-medium">Rate Source</span>
               </div>
               <div>
-                {exchangeRate.source === 'shipping_route' 
+                {exchangeRate.source === 'shipping_route'
                   ? 'Using shipping route specific exchange rate for better accuracy'
-                  : 'Using standard market exchange rate'
-                }
+                  : 'Using standard market exchange rate'}
               </div>
             </div>
           </div>

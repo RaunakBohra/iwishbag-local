@@ -9,20 +9,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Package, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Scale, 
+import {
+  Package,
+  Plus,
+  Edit,
+  Trash2,
+  Scale,
   AlertTriangle,
   CheckCircle,
   Lightbulb,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 
@@ -31,10 +37,7 @@ interface SmartItemsManagerProps {
   onUpdateQuote: () => void;
 }
 
-export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
-  quote,
-  onUpdateQuote,
-}) => {
+export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onUpdateQuote }) => {
   const { toast } = useToast();
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -157,14 +160,17 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
         <div>
           <h3 className="text-lg font-semibold">Smart Items Manager</h3>
           <p className="text-sm text-gray-600">
-            {quote.items.length} items • Total weight: {' '}
-            {quote.items.reduce((sum, item) => sum + (Number(item.weight_kg || 0) * Number(item.quantity || 0)), 0).toFixed(2)} kg
+            {quote.items.length} items • Total weight:{' '}
+            {quote.items
+              .reduce(
+                (sum, item) => sum + Number(item.weight_kg || 0) * Number(item.quantity || 0),
+                0,
+              )
+              .toFixed(2)}{' '}
+            kg
           </p>
         </div>
-        <Button 
-          className="flex items-center"
-          onClick={() => setIsAddingItem(true)}
-        >
+        <Button className="flex items-center" onClick={() => setIsAddingItem(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Item
         </Button>
@@ -201,14 +207,18 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                       <span className="text-gray-600">Weight:</span>
                       <div className="flex items-center space-x-1">
                         <span className="font-medium">{Number(item.weight_kg || 0)} kg</span>
-                        <Badge {...getWeightConfidenceBadge(item.smart_data?.weight_confidence || 0)}>
+                        <Badge
+                          {...getWeightConfidenceBadge(item.smart_data?.weight_confidence || 0)}
+                        >
                           {getWeightConfidenceBadge(item.smart_data?.weight_confidence || 0).text}
                         </Badge>
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Total:</span>
-                      <div className="font-medium">${(item.price_usd * item.quantity).toFixed(2)}</div>
+                      <div className="font-medium">
+                        ${(Number(item.price_usd || 0) * item.quantity).toFixed(2)}
+                      </div>
                     </div>
                   </div>
 
@@ -218,15 +228,18 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
                     <div className="flex items-center space-x-2">
                       <Scale className="w-3 h-3 text-gray-400" />
                       <span className="text-xs text-gray-600">Weight confidence:</span>
-                      <span className={`text-xs font-medium ${getWeightConfidenceColor(item.smart_data?.weight_confidence || 0)}`}>
+                      <span
+                        className={`text-xs font-medium ${getWeightConfidenceColor(item.smart_data?.weight_confidence || 0)}`}
+                      >
                         {(item.smart_data?.weight_confidence || 0 * 100).toFixed(0)}%
                       </span>
-                      {item.smart_data?.weight_confidence || 0 < 0.7 && (
-                        <div className="flex items-center text-xs text-orange-600">
-                          <AlertTriangle className="w-3 h-3 mr-1" />
-                          Verify weight
-                        </div>
-                      )}
+                      {item.smart_data?.weight_confidence ||
+                        (0 < 0.7 && (
+                          <div className="flex items-center text-xs text-orange-600">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Verify weight
+                          </div>
+                        ))}
                     </div>
 
                     {/* Category Detection */}
@@ -276,11 +289,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
 
                 {/* Actions */}
                 <div className="flex items-center space-x-2 ml-4">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingItem(item.id)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setEditingItem(item.id)}>
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
@@ -311,9 +320,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-blue-600">
-                {quote.items.length}
-              </div>
+              <div className="text-2xl font-bold text-blue-600">{quote.items.length}</div>
               <div className="text-sm text-gray-600">Total Items</div>
             </div>
             <div>
@@ -324,13 +331,26 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
             </div>
             <div>
               <div className="text-2xl font-bold text-purple-600">
-                {quote.items.reduce((sum, item) => sum + (Number(item.weight_kg || 0) * Number(item.quantity || 0)), 0).toFixed(1)}
+                {quote.items
+                  .reduce(
+                    (sum, item) => sum + Number(item.weight_kg || 0) * Number(item.quantity || 0),
+                    0,
+                  )
+                  .toFixed(1)}
               </div>
               <div className="text-sm text-gray-600">Total Weight (kg)</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-orange-600">
-                {(quote.items.reduce((sum, item) => sum + item.smart_data?.weight_confidence || 0, 0) / quote.items.length * 100).toFixed(0)}%
+                {(
+                  (quote.items.reduce(
+                    (sum, item) => sum + item.smart_data?.weight_confidence || 0,
+                    0,
+                  ) /
+                    quote.items.length) *
+                  100
+                ).toFixed(0)}
+                %
               </div>
               <div className="text-sm text-gray-600">Avg. Confidence</div>
             </div>
@@ -346,13 +366,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
             <span className="font-medium text-blue-800">Smart Recommendations</span>
           </div>
           <div className="space-y-2 text-sm">
-            {quote.items.some(item => item.smart_data?.weight_confidence || 0 < 0.7) && (
+            {quote.items.some((item) => item.smart_data?.weight_confidence || 0 < 0.7) && (
               <div className="flex items-center text-blue-700">
                 <AlertTriangle className="w-3 h-3 mr-2" />
                 Consider verifying weights for items with low confidence scores
               </div>
             )}
-            {quote.items.some(item => Number(item.weight_kg || 0) < 0.1) && (
+            {quote.items.some((item) => Number(item.weight_kg || 0) < 0.1) && (
               <div className="flex items-center text-blue-700">
                 <Scale className="w-3 h-3 mr-2" />
                 Some items have very low weights - this may affect shipping calculations
@@ -369,7 +389,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
       {/* Edit Item Dialog */}
       {editingItem && (
         <EditItemDialog
-          item={quote.items.find(item => item.id === editingItem)!}
+          item={quote.items.find((item) => item.id === editingItem)!}
           onSave={handleUpdateItem}
           onCancel={() => setEditingItem(null)}
         />
@@ -377,10 +397,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({
 
       {/* Add Item Dialog */}
       {isAddingItem && (
-        <AddItemDialog
-          onSave={handleAddItem}
-          onCancel={() => setIsAddingItem(false)}
-        />
+        <AddItemDialog onSave={handleAddItem} onCancel={() => setIsAddingItem(false)} />
       )}
     </div>
   );
@@ -425,7 +442,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
 
   const handleSave = async () => {
     // Learn from user input if different from estimation
-    if (weightEstimation && Math.abs(editForm.weight_kg - weightEstimation.estimated_weight) > 0.1) {
+    if (
+      weightEstimation &&
+      Math.abs(editForm.weight_kg - weightEstimation.estimated_weight) > 0.1
+    ) {
       try {
         await smartWeightEstimator.learnFromActualWeight(
           editForm.name,
@@ -434,7 +454,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
           {
             userConfirmed: true,
             originalEstimate: weightEstimation.estimated_weight,
-          }
+          },
         );
         console.log('✅ ML learning completed from item edit');
       } catch (error) {
@@ -450,7 +470,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
       weight_kg: editForm.weight_kg,
       options: editForm.options,
     };
-    
+
     onSave(updatedItem);
   };
 
@@ -460,14 +480,14 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
         <DialogHeader>
           <DialogTitle>Edit Item</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Product Name</Label>
             <Input
               id="name"
               value={editForm.name}
-              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="Product name"
             />
           </div>
@@ -480,7 +500,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
                 type="number"
                 min="1"
                 value={editForm.quantity}
-                onChange={(e) => setEditForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))
+                }
               />
             </div>
             <div>
@@ -491,7 +513,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
                 step="0.01"
                 min="0"
                 value={editForm.price_usd}
-                onChange={(e) => setEditForm(prev => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))
+                }
               />
             </div>
           </div>
@@ -512,9 +536,11 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
               step="0.001"
               min="0"
               value={editForm.weight_kg}
-              onChange={(e) => setEditForm(prev => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))}
+              onChange={(e) =>
+                setEditForm((prev) => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))
+              }
             />
-            
+
             {/* AI Weight Suggestion */}
             {weightEstimation && (
               <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
@@ -529,16 +555,19 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setEditForm(prev => ({ ...prev, weight_kg: weightEstimation.estimated_weight }))}
+                      onClick={() =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          weight_kg: weightEstimation.estimated_weight,
+                        }))
+                      }
                     >
                       Use
                     </Button>
                   </div>
                 </div>
                 {weightEstimation.reasoning.length > 0 && (
-                  <div className="text-xs text-blue-600 mt-1">
-                    {weightEstimation.reasoning[0]}
-                  </div>
+                  <div className="text-xs text-blue-600 mt-1">{weightEstimation.reasoning[0]}</div>
                 )}
               </div>
             )}
@@ -549,7 +578,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
             <Input
               id="options"
               value={editForm.options}
-              onChange={(e) => setEditForm(prev => ({ ...prev, options: e.target.value }))}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, options: e.target.value }))}
               placeholder="Size, color, specifications..."
             />
           </div>
@@ -559,9 +588,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>
-            Save Changes
-          </Button>
+          <Button onClick={handleSave}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -593,8 +620,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
         setIsEstimating(true);
         try {
           const estimation = await smartWeightEstimator.estimateWeight(
-            addForm.name, 
-            addForm.url || undefined
+            addForm.name,
+            addForm.url || undefined,
           );
           setWeightEstimation(estimation);
         } catch (error) {
@@ -619,7 +646,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
           {
             userConfirmed: true,
             originalEstimate: weightEstimation.estimated_weight,
-          }
+          },
         );
         console.log('✅ ML learning completed from new item');
       } catch (error) {
@@ -636,7 +663,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
       options: addForm.options,
       url: addForm.url,
     };
-    
+
     onSave(newItem);
   };
 
@@ -648,14 +675,14 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
         <DialogHeader>
           <DialogTitle>Add New Item</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Product Name *</Label>
             <Input
               id="name"
               value={addForm.name}
-              onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) => setAddForm((prev) => ({ ...prev, name: e.target.value }))}
               placeholder="e.g., iPhone 15 Pro, Nike Air Jordan"
             />
           </div>
@@ -665,7 +692,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
             <Input
               id="url"
               value={addForm.url}
-              onChange={(e) => setAddForm(prev => ({ ...prev, url: e.target.value }))}
+              onChange={(e) => setAddForm((prev) => ({ ...prev, url: e.target.value }))}
               placeholder="https://amazon.com/..."
             />
           </div>
@@ -678,7 +705,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
                 type="number"
                 min="1"
                 value={addForm.quantity}
-                onChange={(e) => setAddForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                onChange={(e) =>
+                  setAddForm((prev) => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))
+                }
               />
             </div>
             <div>
@@ -689,7 +718,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
                 step="0.01"
                 min="0"
                 value={addForm.price_usd}
-                onChange={(e) => setAddForm(prev => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setAddForm((prev) => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))
+                }
               />
             </div>
           </div>
@@ -710,9 +741,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
               step="0.001"
               min="0"
               value={addForm.weight_kg}
-              onChange={(e) => setAddForm(prev => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))}
+              onChange={(e) =>
+                setAddForm((prev) => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }))
+              }
             />
-            
+
             {/* AI Weight Suggestion */}
             {weightEstimation && (
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
@@ -727,7 +760,12 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setAddForm(prev => ({ ...prev, weight_kg: weightEstimation.estimated_weight }))}
+                      onClick={() =>
+                        setAddForm((prev) => ({
+                          ...prev,
+                          weight_kg: weightEstimation.estimated_weight,
+                        }))
+                      }
                     >
                       Use Suggestion
                     </Button>
@@ -752,7 +790,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
             <Input
               id="options"
               value={addForm.options}
-              onChange={(e) => setAddForm(prev => ({ ...prev, options: e.target.value }))}
+              onChange={(e) => setAddForm((prev) => ({ ...prev, options: e.target.value }))}
               placeholder="Size, color, specifications..."
             />
           </div>

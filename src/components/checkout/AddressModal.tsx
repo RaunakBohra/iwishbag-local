@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Loader2, MapPin, X } from 'lucide-react';
 import { useAllCountries } from '@/hooks/useAllCountries';
 
@@ -52,14 +58,14 @@ export const AddressModal: React.FC<AddressModalProps> = ({
       phone: '',
       is_default: false,
       save_to_profile: !isGuest,
-    }
+    },
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.recipient_name?.trim()) {
       newErrors.recipient_name = 'Recipient name is required';
     }
@@ -85,7 +91,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
 
   const handleSave = async () => {
     if (!validateForm()) return;
-    
+
     try {
       await onSave(formData);
       onOpenChange(false);
@@ -95,10 +101,10 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   };
 
   const handleInputChange = (field: keyof AddressFormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -111,7 +117,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
             Add New Address
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4 mt-6">
           {/* Contact Information */}
           <div className="space-y-4">
@@ -131,7 +137,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   <p className="text-sm text-red-600">{errors.recipient_name}</p>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
                   Phone Number
@@ -190,9 +196,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   placeholder="New York"
                   className={`${errors.city ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                 />
-                {errors.city && (
-                  <p className="text-sm text-red-600">{errors.city}</p>
-                )}
+                {errors.city && <p className="text-sm text-red-600">{errors.city}</p>}
               </div>
 
               <div className="space-y-2">
@@ -224,9 +228,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   placeholder="10001"
                   className={`${errors.postal_code ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                 />
-                {errors.postal_code && (
-                  <p className="text-sm text-red-600">{errors.postal_code}</p>
-                )}
+                {errors.postal_code && <p className="text-sm text-red-600">{errors.postal_code}</p>}
               </div>
 
               <div className="space-y-2">
@@ -237,7 +239,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                   value={formData.country}
                   onValueChange={(value) => handleInputChange('country', value)}
                 >
-                  <SelectTrigger 
+                  <SelectTrigger
                     className={`${errors.country ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                   >
                     <SelectValue placeholder="Select country" />
@@ -250,9 +252,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.country && (
-                  <p className="text-sm text-red-600">{errors.country}</p>
-                )}
+                {errors.country && <p className="text-sm text-red-600">{errors.country}</p>}
               </div>
             </div>
           </div>
@@ -264,13 +264,15 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 <Checkbox
                   id="save_to_profile"
                   checked={formData.save_to_profile}
-                  onCheckedChange={(checked) => handleInputChange('save_to_profile', checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    handleInputChange('save_to_profile', checked as boolean)
+                  }
                 />
                 <Label htmlFor="save_to_profile" className="text-sm text-gray-700">
                   Save this address to my profile
                 </Label>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_default"

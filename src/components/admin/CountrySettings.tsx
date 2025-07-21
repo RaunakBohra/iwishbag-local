@@ -51,7 +51,7 @@ export const CountrySettings = () => {
             </div>
             <Skeleton className="h-4 w-96" />
           </div>
-          
+
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -62,7 +62,7 @@ export const CountrySettings = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="border border-gray-200 rounded-lg p-4">
@@ -110,18 +110,18 @@ export const CountrySettings = () => {
               </div>
               <h1 className="text-2xl font-semibold text-gray-900">Country Settings</h1>
             </div>
-            <p className="text-gray-600">Manage payment gateways, currencies, and shipping settings for each country</p>
+            <p className="text-gray-600">
+              Manage payment gateways, currencies, and shipping settings for each country
+            </p>
           </div>
-          
+
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="p-8 text-center">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load countries</h3>
-              <p className="text-gray-600 mb-6">
-                Error loading country settings: {error.message}
-              </p>
+              <p className="text-gray-600 mb-6">Error loading country settings: {error.message}</p>
               <Button onClick={handleAddNewClick} disabled variant="outline">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Country
@@ -134,11 +134,13 @@ export const CountrySettings = () => {
   }
 
   // Filter countries based on search term
-  const filteredCountries = countries?.filter(country => 
-    country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    country.currency.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCountries =
+    countries?.filter(
+      (country) =>
+        country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        country.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        country.currency.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || [];
 
   return (
     <div className="min-h-screen bg-gray-50/40">
@@ -151,7 +153,9 @@ export const CountrySettings = () => {
             </div>
             <h1 className="text-2xl font-semibold text-gray-900">Country Settings</h1>
           </div>
-          <p className="text-gray-600">Manage payment gateways, currencies, and shipping settings for each country</p>
+          <p className="text-gray-600">
+            Manage payment gateways, currencies, and shipping settings for each country
+          </p>
         </div>
 
         {/* Main Content Card */}
@@ -193,7 +197,7 @@ export const CountrySettings = () => {
                 </Button>
               </div>
             </div>
-            
+
             {/* Search Bar */}
             <div className="mt-4 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -226,15 +230,13 @@ export const CountrySettings = () => {
                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Search className="h-6 w-6 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No matching countries</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No matching countries
+                    </h3>
                     <p className="text-gray-600 mb-6">
                       No countries match your search criteria. Try a different search term.
                     </p>
-                    <Button
-                      onClick={() => setSearchTerm('')}
-                      variant="outline"
-                      size="sm"
-                    >
+                    <Button onClick={() => setSearchTerm('')} variant="outline" size="sm">
                       Clear search
                     </Button>
                   </div>
@@ -259,7 +261,9 @@ export const CountrySettings = () => {
                     variant="outline"
                     size="sm"
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isUpdatingRates ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`h-4 w-4 mr-2 ${isUpdatingRates ? 'animate-spin' : ''}`}
+                    />
                     Update Rates
                   </Button>
                   <Button

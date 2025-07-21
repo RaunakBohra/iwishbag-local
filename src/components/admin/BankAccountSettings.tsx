@@ -119,7 +119,7 @@ export const BankAccountSettings = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button 
+                <Button
                   onClick={handleAddNew}
                   className="bg-teal-600 hover:bg-teal-700 text-white h-9 px-4 text-sm font-medium"
                 >
@@ -147,20 +147,18 @@ export const BankAccountSettings = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="text-sm text-gray-500 mb-1">Total accounts</div>
-                <div className="text-2xl font-semibold text-gray-900">
-                  {bankAccounts.length}
-                </div>
+                <div className="text-2xl font-semibold text-gray-900">{bankAccounts.length}</div>
               </div>
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="text-sm text-gray-500 mb-1">Active accounts</div>
                 <div className="text-2xl font-semibold text-gray-900">
-                  {bankAccounts.filter(acc => acc.is_active).length}
+                  {bankAccounts.filter((acc) => acc.is_active).length}
                 </div>
               </div>
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="text-sm text-gray-500 mb-1">Fallback accounts</div>
                 <div className="text-2xl font-semibold text-gray-900">
-                  {bankAccounts.filter(acc => acc.is_fallback).length}
+                  {bankAccounts.filter((acc) => acc.is_fallback).length}
                 </div>
               </div>
             </div>
@@ -170,13 +168,13 @@ export const BankAccountSettings = () => {
               <div className="flex items-center gap-2 py-2">
                 <BodySmall className="text-gray-600">Showing accounts for:</BodySmall>
                 <Badge variant="outline" className="border-gray-300 text-gray-700">
-                  {countryFilter === 'fallback' 
-                    ? 'Fallback Accounts' 
+                  {countryFilter === 'fallback'
+                    ? 'Fallback Accounts'
                     : countries?.find((c) => c.code === countryFilter)?.name || countryFilter}
                 </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setCountryFilter('all')}
                   className="text-gray-500 hover:text-gray-700 h-6 px-2 text-xs"
                 >
@@ -210,7 +208,7 @@ export const BankAccountSettings = () => {
                       ? 'Add your first bank account to get started with payment processing.'
                       : 'Add an account for this region to enable payment processing.'}
                   </BodySmall>
-                  <Button 
+                  <Button
                     onClick={handleAddNew}
                     className="bg-teal-600 hover:bg-teal-700 text-white h-9 px-4 text-sm font-medium"
                   >

@@ -91,22 +91,20 @@ export class SmartWeightEstimator {
         for (const product of productWeights) {
           this.weightDatabase.set(product.normalized_name, {
             weight: product.weight_kg,
-            confidence: product.confidence
+            confidence: product.confidence,
           });
         }
       }
 
       // Load category weights
-      const { data: categoryWeights } = await supabase
-        .from('ml_category_weights')
-        .select('*');
+      const { data: categoryWeights } = await supabase.from('ml_category_weights').select('*');
 
       if (categoryWeights) {
         for (const category of categoryWeights) {
           this.categoryWeights.set(category.category, {
             min: category.min_weight,
             max: category.max_weight,
-            avg: category.avg_weight
+            avg: category.avg_weight,
           });
         }
       }
@@ -127,14 +125,13 @@ export class SmartWeightEstimator {
     confidence: number,
     url?: string,
     category?: string,
-    brand?: string
+    brand?: string,
   ): Promise<void> {
     try {
       const normalizedName = productName.toLowerCase().trim();
-      
-      const { error } = await supabase
-        .from('ml_product_weights')
-        .upsert({
+
+      const { error } = await supabase.from('ml_product_weights').upsert(
+        {
           name: productName,
           normalized_name: normalizedName,
           weight_kg: weight,
@@ -142,10 +139,12 @@ export class SmartWeightEstimator {
           category: category,
           brand: brand,
           learned_from_url: url,
-          training_count: 1
-        }, {
-          onConflict: 'normalized_name'
-        });
+          training_count: 1,
+        },
+        {
+          onConflict: 'normalized_name',
+        },
+      );
 
       if (error) {
         console.error('Error saving to database:', error);
@@ -168,24 +167,22 @@ export class SmartWeightEstimator {
     url?: string,
     category?: string,
     brand?: string,
-    userConfirmed: boolean = false
+    userConfirmed: boolean = false,
   ): Promise<void> {
     try {
       const accuracy = (1 - Math.abs(estimatedWeight - actualWeight) / actualWeight) * 100;
-      
-      const { error } = await supabase
-        .from('ml_training_history')
-        .insert({
-          name: productName,
-          estimated_weight: estimatedWeight,
-          actual_weight: actualWeight,
-          confidence: confidence,
-          accuracy: Math.max(0, Math.min(100, accuracy)),
-          url: url,
-          category: category,
-          brand: brand,
-          user_confirmed: userConfirmed
-        });
+
+      const { error } = await supabase.from('ml_training_history').insert({
+        name: productName,
+        estimated_weight: estimatedWeight,
+        actual_weight: actualWeight,
+        confidence: confidence,
+        accuracy: Math.max(0, Math.min(100, accuracy)),
+        url: url,
+        category: category,
+        brand: brand,
+        user_confirmed: userConfirmed,
+      });
 
       if (error) {
         console.error('Error saving training history:', error);
@@ -198,7 +195,10 @@ export class SmartWeightEstimator {
   /**
    * Estimate weight from product name and optional URL
    */
-  async estimateWeight(productName: string, url?: string): Promise<{
+  async estimateWeight(
+    productName: string,
+    url?: string,
+  ): Promise<{
     estimated_weight: number;
     confidence: number;
     reasoning: string[];
@@ -269,7 +269,6 @@ export class SmartWeightEstimator {
         reasoning,
         suggestions,
       };
-
     } catch (error) {
       console.error('Error in weight estimation:', error);
       return {
@@ -371,14 +370,14 @@ export class SmartWeightEstimator {
    */
   private findDirectMatch(productName: string): { weight: number; confidence: number } | null {
     const normalizedName = productName.toLowerCase().trim();
-    
+
     // Check exact matches
     for (const [key, value] of this.weightDatabase) {
       if (normalizedName.includes(key)) {
         return value;
       }
     }
-    
+
     return null;
   }
 
@@ -389,22 +388,38 @@ export class SmartWeightEstimator {
     const text = `${productName} ${url || ''}`.toLowerCase();
 
     // Electronics keywords
-    if (/\b(iphone|samsung|laptop|computer|tablet|headphones|earbuds|charger|cable|mouse|keyboard|speaker|camera|phone|mobile|smart|electronic|tech|gadget)\b/.test(text)) {
+    if (
+      /\b(iphone|samsung|laptop|computer|tablet|headphones|earbuds|charger|cable|mouse|keyboard|speaker|camera|phone|mobile|smart|electronic|tech|gadget)\b/.test(
+        text,
+      )
+    ) {
       return 'electronics';
     }
 
     // Clothing keywords
-    if (/\b(shirt|jeans|dress|jacket|pants|shoes|sneakers|boots|clothing|apparel|fashion|wear|size|cotton|polyester)\b/.test(text)) {
+    if (
+      /\b(shirt|jeans|dress|jacket|pants|shoes|sneakers|boots|clothing|apparel|fashion|wear|size|cotton|polyester)\b/.test(
+        text,
+      )
+    ) {
       return 'clothing';
     }
 
     // Books keywords
-    if (/\b(book|novel|paperback|hardcover|textbook|guide|manual|reading|author|isbn|pages)\b/.test(text)) {
+    if (
+      /\b(book|novel|paperback|hardcover|textbook|guide|manual|reading|author|isbn|pages)\b/.test(
+        text,
+      )
+    ) {
       return 'books';
     }
 
     // Beauty keywords
-    if (/\b(perfume|cologne|makeup|lipstick|foundation|shampoo|conditioner|cream|lotion|beauty|cosmetic|skincare)\b/.test(text)) {
+    if (
+      /\b(perfume|cologne|makeup|lipstick|foundation|shampoo|conditioner|cream|lotion|beauty|cosmetic|skincare)\b/.test(
+        text,
+      )
+    ) {
       return 'beauty';
     }
 
@@ -419,12 +434,16 @@ export class SmartWeightEstimator {
     }
 
     // Sports keywords
-    if (/\b(sports|fitness|gym|exercise|ball|equipment|athletic|outdoor|bike|weights)\b/.test(text)) {
+    if (
+      /\b(sports|fitness|gym|exercise|ball|equipment|athletic|outdoor|bike|weights)\b/.test(text)
+    ) {
       return 'sports';
     }
 
     // Jewelry keywords
-    if (/\b(jewelry|ring|necklace|bracelet|earrings|watch|gold|silver|diamond|precious)\b/.test(text)) {
+    if (
+      /\b(jewelry|ring|necklace|bracelet|earrings|watch|gold|silver|diamond|precious)\b/.test(text)
+    ) {
       return 'jewelry';
     }
 
@@ -492,13 +511,15 @@ export class SmartWeightEstimator {
     const text = productName.toLowerCase();
 
     // Size multipliers
-    if (/\b(xs|extra small)\b/.test(text)) return { multiplier: 0.6, reasoning: 'Extra small size' };
+    if (/\b(xs|extra small)\b/.test(text))
+      return { multiplier: 0.6, reasoning: 'Extra small size' };
     if (/\b(s|small)\b/.test(text)) return { multiplier: 0.8, reasoning: 'Small size' };
     if (/\b(m|medium)\b/.test(text)) return { multiplier: 1.0, reasoning: 'Medium size' };
     if (/\b(l|large)\b/.test(text)) return { multiplier: 1.3, reasoning: 'Large size' };
-    if (/\b(xl|extra large)\b/.test(text)) return { multiplier: 1.6, reasoning: 'Extra large size' };
+    if (/\b(xl|extra large)\b/.test(text))
+      return { multiplier: 1.6, reasoning: 'Extra large size' };
     if (/\b(xxl|2xl)\b/.test(text)) return { multiplier: 2.0, reasoning: 'XXL size' };
-    
+
     // Quantity multipliers
     if (/\bpack of (\d+)\b/.test(text)) {
       const match = text.match(/\bpack of (\d+)\b/);
@@ -538,7 +559,7 @@ export class SmartWeightEstimator {
       if (domain.includes('amazon')) {
         reasoning.push('Amazon product detected - high accuracy expected');
         confidence = 0.8;
-        
+
         // Extract ASIN for potential API lookup
         const asinMatch = path.match(/\/dp\/([A-Z0-9]{10})/);
         if (asinMatch) {
@@ -564,16 +585,16 @@ export class SmartWeightEstimator {
 
       // Enhanced category detection from URL paths
       const categoryMappings = {
-        'electronics': { weight: 1.0, boost: 0.1 },
-        'books': { weight: 0.3, boost: 0.15 },
-        'clothing': { weight: 0.4, boost: 0.1 },
+        electronics: { weight: 1.0, boost: 0.1 },
+        books: { weight: 0.3, boost: 0.15 },
+        clothing: { weight: 0.4, boost: 0.1 },
         'home-kitchen': { weight: 1.5, boost: 0.1 },
-        'toys': { weight: 0.8, boost: 0.1 },
-        'beauty': { weight: 0.15, boost: 0.15 },
-        'sports': { weight: 2.0, boost: 0.1 },
-        'automotive': { weight: 5.0, boost: 0.1 },
-        'health': { weight: 0.2, boost: 0.1 },
-        'jewelry': { weight: 0.05, boost: 0.2 }
+        toys: { weight: 0.8, boost: 0.1 },
+        beauty: { weight: 0.15, boost: 0.15 },
+        sports: { weight: 2.0, boost: 0.1 },
+        automotive: { weight: 5.0, boost: 0.1 },
+        health: { weight: 0.2, boost: 0.1 },
+        jewelry: { weight: 0.05, boost: 0.2 },
       };
 
       for (const [category, data] of Object.entries(categoryMappings)) {
@@ -587,11 +608,11 @@ export class SmartWeightEstimator {
 
       // Brand-specific weight hints
       const brandHints = {
-        'apple': { multiplier: 0.8, reason: 'Apple products tend to be lightweight but premium' },
-        'samsung': { multiplier: 0.9, reason: 'Samsung products typical weight range' },
-        'sony': { multiplier: 1.1, reason: 'Sony products often slightly heavier' },
-        'nike': { multiplier: 0.7, reason: 'Nike focuses on lightweight designs' },
-        'lego': { multiplier: 1.5, reason: 'LEGO sets are denser than typical toys' }
+        apple: { multiplier: 0.8, reason: 'Apple products tend to be lightweight but premium' },
+        samsung: { multiplier: 0.9, reason: 'Samsung products typical weight range' },
+        sony: { multiplier: 1.1, reason: 'Sony products often slightly heavier' },
+        nike: { multiplier: 0.7, reason: 'Nike focuses on lightweight designs' },
+        lego: { multiplier: 1.5, reason: 'LEGO sets are denser than typical toys' },
       };
 
       for (const [brand, hint] of Object.entries(brandHints)) {
@@ -602,7 +623,6 @@ export class SmartWeightEstimator {
           break;
         }
       }
-
     } catch (error) {
       reasoning.push('Could not parse URL for analysis');
     }
@@ -613,7 +633,11 @@ export class SmartWeightEstimator {
   /**
    * Generate helpful suggestions
    */
-  private generateSuggestions(productName: string, category: string, estimatedWeight: number): string[] {
+  private generateSuggestions(
+    productName: string,
+    category: string,
+    estimatedWeight: number,
+  ): string[] {
     const suggestions: string[] = [];
 
     if (estimatedWeight < 0.1) {
@@ -643,36 +667,36 @@ export class SmartWeightEstimator {
    * Learn from actual weights to improve future estimates (Enhanced with database storage)
    */
   async learnFromActualWeight(
-    productName: string, 
-    actualWeight: number, 
+    productName: string,
+    actualWeight: number,
     url?: string,
     context?: {
       userConfirmed?: boolean;
       originalEstimate?: number;
       brand?: string;
       size?: string;
-    }
+    },
   ): Promise<void> {
     try {
       // Store the learning data with enhanced context
       const normalizedName = productName.toLowerCase().trim();
       const confidence = context?.userConfirmed ? 0.95 : 0.85;
       const category = this.detectCategory(productName, url);
-      
+
       // Update in-memory cache
-      this.weightDatabase.set(normalizedName, { 
-        weight: actualWeight, 
-        confidence
+      this.weightDatabase.set(normalizedName, {
+        weight: actualWeight,
+        confidence,
       });
 
       // Save to persistent database
       await this.saveToDatabase(
-        productName, 
-        actualWeight, 
-        confidence, 
-        url, 
-        category, 
-        context?.brand
+        productName,
+        actualWeight,
+        confidence,
+        url,
+        category,
+        context?.brand,
       );
 
       // Save training history for analytics
@@ -685,7 +709,7 @@ export class SmartWeightEstimator {
           url,
           category,
           context.brand,
-          context.userConfirmed || false
+          context.userConfirmed || false,
         );
       }
 
@@ -705,8 +729,9 @@ export class SmartWeightEstimator {
         this.updateEstimationAccuracy(context.originalEstimate, actualWeight);
       }
 
-      console.log(`🧠 ML Learning: "${productName}" → ${actualWeight}kg (confidence: ${confidence})`);
-
+      console.log(
+        `🧠 ML Learning: "${productName}" → ${actualWeight}kg (confidence: ${confidence})`,
+      );
     } catch (error) {
       console.error('Error learning from actual weight:', error);
     }
@@ -717,18 +742,18 @@ export class SmartWeightEstimator {
    */
   private learnFromSimilarProducts(productName: string, actualWeight: number): void {
     const similarThreshold = 0.7; // 70% similarity threshold
-    
+
     for (const [existingProduct, data] of this.weightDatabase) {
       const similarity = this.calculateSimilarity(productName, existingProduct);
-      
+
       if (similarity > similarThreshold) {
         // Update weight with weighted average based on similarity
-        const weightedAverage = (data.weight * (1 - similarity) + actualWeight * similarity);
+        const weightedAverage = data.weight * (1 - similarity) + actualWeight * similarity;
         const newConfidence = Math.min(0.9, data.confidence + 0.1); // Boost confidence
-        
+
         this.weightDatabase.set(existingProduct, {
           weight: weightedAverage,
-          confidence: newConfidence
+          confidence: newConfidence,
         });
       }
     }
@@ -740,8 +765,8 @@ export class SmartWeightEstimator {
   private calculateSimilarity(text1: string, text2: string): number {
     const words1 = text1.split(' ');
     const words2 = text2.split(' ');
-    const commonWords = words1.filter(word => words2.includes(word));
-    
+    const commonWords = words1.filter((word) => words2.includes(word));
+
     return commonWords.length / Math.max(words1.length, words2.length);
   }
 
@@ -754,8 +779,8 @@ export class SmartWeightEstimator {
       // Weighted moving average (higher confidence = more weight in average)
       const currentWeight = confidence; // Use confidence as weight factor
       const existingWeight = 1 - confidence;
-      
-      categoryWeight.avg = (categoryWeight.avg * existingWeight + actualWeight * currentWeight);
+
+      categoryWeight.avg = categoryWeight.avg * existingWeight + actualWeight * currentWeight;
       categoryWeight.min = Math.min(categoryWeight.min, actualWeight);
       categoryWeight.max = Math.max(categoryWeight.max, actualWeight);
     }
@@ -776,16 +801,18 @@ export class SmartWeightEstimator {
    */
   private updateEstimationAccuracy(estimated: number, actual: number): void {
     const accuracy = 1 - Math.abs(estimated - actual) / actual;
-    console.log(`🎯 Estimation Accuracy: ${(accuracy * 100).toFixed(1)}% (Est: ${estimated}kg, Actual: ${actual}kg)`);
+    console.log(
+      `🎯 Estimation Accuracy: ${(accuracy * 100).toFixed(1)}% (Est: ${estimated}kg, Actual: ${actual}kg)`,
+    );
   }
 
   /**
    * Get confidence assessment for a given weight
    */
   assessWeightConfidence(
-    productName: string, 
-    providedWeight: number, 
-    url?: string
+    productName: string,
+    providedWeight: number,
+    url?: string,
   ): {
     confidence: number;
     issues: string[];
@@ -797,15 +824,17 @@ export class SmartWeightEstimator {
 
     // Check against estimated weight
     const estimation = this.estimateWeight(productName, url);
-    estimation.then(result => {
+    estimation.then((result) => {
       const difference = Math.abs(providedWeight - result.estimated_weight);
       const relativeDifference = difference / result.estimated_weight;
 
-      if (relativeDifference > 2) { // More than 200% difference
+      if (relativeDifference > 2) {
+        // More than 200% difference
         confidence *= 0.3;
         issues.push('Weight significantly different from estimate');
         suggestions.push('Please double-check the weight');
-      } else if (relativeDifference > 1) { // More than 100% difference
+      } else if (relativeDifference > 1) {
+        // More than 100% difference
         confidence *= 0.6;
         issues.push('Weight notably different from estimate');
       }
@@ -853,11 +882,9 @@ export class SmartWeightEstimator {
         .select('*', { count: 'exact', head: true });
 
       // Get average accuracy
-      const { data: accuracyData } = await supabase
-        .from('ml_training_history')
-        .select('accuracy');
+      const { data: accuracyData } = await supabase.from('ml_training_history').select('accuracy');
 
-      const averageAccuracy = accuracyData?.length 
+      const averageAccuracy = accuracyData?.length
         ? accuracyData.reduce((sum, item) => sum + item.accuracy, 0) / accuracyData.length
         : 0;
 
@@ -868,11 +895,12 @@ export class SmartWeightEstimator {
         .order('sample_count', { ascending: false })
         .limit(10);
 
-      const topCategories = categories?.map(cat => ({
-        category: cat.category,
-        count: cat.sample_count,
-        avgWeight: cat.avg_weight
-      })) || [];
+      const topCategories =
+        categories?.map((cat) => ({
+          category: cat.category,
+          count: cat.sample_count,
+          avgWeight: cat.avg_weight,
+        })) || [];
 
       // Get recent training sessions
       const { data: recentTraining } = await supabase
@@ -886,7 +914,7 @@ export class SmartWeightEstimator {
         totalTrainingSessions: totalTrainingSessions || 0,
         averageAccuracy: Math.round(averageAccuracy * 100) / 100,
         topCategories,
-        recentTraining: recentTraining || []
+        recentTraining: recentTraining || [],
       };
     } catch (error) {
       console.error('Error getting ML analytics:', error);
@@ -895,7 +923,7 @@ export class SmartWeightEstimator {
         totalTrainingSessions: 0,
         averageAccuracy: 0,
         topCategories: [],
-        recentTraining: []
+        recentTraining: [],
       };
     }
   }
@@ -905,24 +933,57 @@ export class SmartWeightEstimator {
    */
   async clearMLData(): Promise<void> {
     try {
-      await supabase.from('ml_training_history').delete().gte('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('ml_product_weights').delete().gte('id', '00000000-0000-0000-0000-000000000000');
-      
+      await supabase
+        .from('ml_training_history')
+        .delete()
+        .gte('id', '00000000-0000-0000-0000-000000000000');
+      await supabase
+        .from('ml_product_weights')
+        .delete()
+        .gte('id', '00000000-0000-0000-0000-000000000000');
+
       // Reset category weights to defaults
-      await supabase.from('ml_category_weights').delete().gte('id', '00000000-0000-0000-0000-000000000000');
-      
+      await supabase
+        .from('ml_category_weights')
+        .delete()
+        .gte('id', '00000000-0000-0000-0000-000000000000');
+
       // Re-insert default categories
       await supabase.from('ml_category_weights').insert([
-        { category: 'electronics', min_weight: 0.05, max_weight: 5.0, avg_weight: 1.0, sample_count: 0 },
-        { category: 'clothing', min_weight: 0.1, max_weight: 2.0, avg_weight: 0.5, sample_count: 0 },
+        {
+          category: 'electronics',
+          min_weight: 0.05,
+          max_weight: 5.0,
+          avg_weight: 1.0,
+          sample_count: 0,
+        },
+        {
+          category: 'clothing',
+          min_weight: 0.1,
+          max_weight: 2.0,
+          avg_weight: 0.5,
+          sample_count: 0,
+        },
         { category: 'books', min_weight: 0.1, max_weight: 1.0, avg_weight: 0.3, sample_count: 0 },
         { category: 'beauty', min_weight: 0.01, max_weight: 0.5, avg_weight: 0.1, sample_count: 0 },
         { category: 'toys', min_weight: 0.05, max_weight: 3.0, avg_weight: 0.8, sample_count: 0 },
         { category: 'home', min_weight: 0.1, max_weight: 10.0, avg_weight: 2.0, sample_count: 0 },
         { category: 'sports', min_weight: 0.1, max_weight: 20.0, avg_weight: 2.5, sample_count: 0 },
-        { category: 'jewelry', min_weight: 0.005, max_weight: 0.2, avg_weight: 0.05, sample_count: 0 },
+        {
+          category: 'jewelry',
+          min_weight: 0.005,
+          max_weight: 0.2,
+          avg_weight: 0.05,
+          sample_count: 0,
+        },
         { category: 'food', min_weight: 0.1, max_weight: 5.0, avg_weight: 1.0, sample_count: 0 },
-        { category: 'general', min_weight: 0.05, max_weight: 5.0, avg_weight: 0.5, sample_count: 0 }
+        {
+          category: 'general',
+          min_weight: 0.05,
+          max_weight: 5.0,
+          avg_weight: 0.5,
+          sample_count: 0,
+        },
       ]);
 
       // Clear cache
@@ -930,7 +991,7 @@ export class SmartWeightEstimator {
       this.categoryWeights.clear();
       this.initializeCategoryWeights();
       this.dbCacheTime = 0;
-      
+
       console.log('🗑️ ML data cleared and reset to defaults');
     } catch (error) {
       console.error('Error clearing ML data:', error);

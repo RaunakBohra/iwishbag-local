@@ -13,7 +13,8 @@ export const TurnstileDebug: React.FC = () => {
           <strong>Turnstile Enabled:</strong> {isEnabled ? '✅ Yes' : '❌ No'}
         </div>
         <div>
-          <strong>Site Key:</strong> {siteKey ? `✅ ${siteKey.substring(0, 20)}...` : '❌ Not found'}
+          <strong>Site Key:</strong>{' '}
+          {siteKey ? `✅ ${siteKey.substring(0, 20)}...` : '❌ Not found'}
         </div>
         <div>
           <strong>Environment:</strong> {import.meta.env?.MODE || 'unknown'}

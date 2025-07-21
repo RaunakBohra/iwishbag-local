@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowRight, Package, MapPin, Clock, AlertCircle, Mail, User, UserPlus, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Package,
+  MapPin,
+  Clock,
+  AlertCircle,
+  Mail,
+  User,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { QuoteRequestContactForm } from './QuoteRequestContactForm';
 import ProductSummary from './ProductSummary';
@@ -25,7 +35,7 @@ export default function SimplifiedContactStep({
 }) {
   const { user } = useAuth();
   const { getCountryDisplayName } = useCountryUtils();
-  
+
   // New state for managing the flow
   const [flowChoice, setFlowChoice] = useState(null); // 'guest' | 'member' | null
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -44,13 +54,13 @@ export default function SimplifiedContactStep({
     if (!guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)) {
       return;
     }
-    
+
     // Update contactInfo with email only for guest
     const updatedContactInfo = {
       email: guestEmail,
       name: '', // No name for guest flow
     };
-    
+
     setContactInfo(updatedContactInfo);
     next({ email: guestEmail, name: '' });
   };
@@ -64,12 +74,16 @@ export default function SimplifiedContactStep({
   };
 
   // Legacy handler for backward compatibility
-  const handleContactFormSubmit = (emailData: { email: string; name?: string; useAuth?: boolean }) => {
+  const handleContactFormSubmit = (emailData: {
+    email: string;
+    name?: string;
+    useAuth?: boolean;
+  }) => {
     const updatedContactInfo = {
       email: emailData.email,
       name: emailData.name || '',
     };
-    
+
     setContactInfo(updatedContactInfo);
     next({ email: emailData.email, name: emailData.name || '' });
   };
@@ -90,7 +104,9 @@ export default function SimplifiedContactStep({
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Review & Submit</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            Review & Submit
+          </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600">
             Review your quote request and submit
           </p>
@@ -135,7 +151,6 @@ export default function SimplifiedContactStep({
 
         {/* Review Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-
           {/* Enhanced Product Details Display */}
           {products && products.length > 0 && (
             <ProductSummary
@@ -156,9 +171,14 @@ export default function SimplifiedContactStep({
                 </div>
               </div>
             )}
-            
+
             <button
-              onClick={() => next({ email: user.email, name: user.user_metadata?.full_name || user.user_metadata?.name || '' })}
+              onClick={() =>
+                next({
+                  email: user.email,
+                  name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                })
+              }
               disabled={isSubmitting}
               className="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm disabled:opacity-50"
             >
@@ -194,7 +214,9 @@ export default function SimplifiedContactStep({
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">How would you like to continue?</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            How would you like to continue?
+          </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600">
             Choose the option that works best for you
           </p>
@@ -254,7 +276,7 @@ export default function SimplifiedContactStep({
                 <li>✓ Email-only required</li>
                 <li>✓ No account needed</li>
               </ul>
-              <Button 
+              <Button
                 onClick={() => setFlowChoice('guest')}
                 className="w-full bg-teal-600 hover:bg-teal-700"
               >
@@ -278,7 +300,7 @@ export default function SimplifiedContactStep({
                 <li>✓ Order history</li>
                 <li>✓ Dashboard access</li>
               </ul>
-              <Button 
+              <Button
                 onClick={() => setShowAuthModal(true)}
                 variant="outline"
                 className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
@@ -293,7 +315,7 @@ export default function SimplifiedContactStep({
         <div className="text-center">
           <p className="text-gray-600 text-sm">
             New to iwishBag?{' '}
-            <button 
+            <button
               onClick={() => setShowAuthModal(true)}
               className="text-teal-600 hover:text-teal-800 font-medium underline"
             >
@@ -319,7 +341,7 @@ export default function SimplifiedContactStep({
             <DialogHeader>
               <DialogTitle className="text-center">Sign In or Create Account</DialogTitle>
             </DialogHeader>
-            <ProgressiveAuthModal 
+            <ProgressiveAuthModal
               onSuccess={handleAuthSuccess}
               onBack={() => setShowAuthModal(false)}
             />
@@ -335,7 +357,9 @@ export default function SimplifiedContactStep({
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Almost Done!</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+            Almost Done!
+          </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600">
             Just need your email to send your quote
           </p>
@@ -422,7 +446,9 @@ export default function SimplifiedContactStep({
 
             <Button
               onClick={handleGuestSubmit}
-              disabled={isSubmitting || !guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)}
+              disabled={
+                isSubmitting || !guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)
+              }
               className="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg"
             >
               {isSubmitting ? (

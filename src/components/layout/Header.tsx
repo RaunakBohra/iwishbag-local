@@ -47,7 +47,8 @@ const Header = () => {
 
   // Default homepage settings
   const homePageSettings = {
-    website_logo_url: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
+    website_logo_url:
+      'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
     company_name: 'iwishBag',
   };
 
@@ -105,19 +106,27 @@ const Header = () => {
   };
 
   const getDisplayName = () => {
+    let fullName = '';
+    
     // Check for name in user metadata (from sign-up)
     if (user?.user_metadata?.name) {
-      return user.user_metadata.name;
+      fullName = user.user_metadata.name;
     }
     // Check for full_name (from OAuth providers like Google)
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name;
+    else if (user?.user_metadata?.full_name) {
+      fullName = user.user_metadata.full_name;
     }
     // Fallback to email prefix
-    if (user?.email) {
-      return user.email.split('@')[0];
+    else if (user?.email) {
+      fullName = user.email.split('@')[0];
     }
-    return 'Customer';
+    else {
+      fullName = 'Customer';
+    }
+    
+    // Extract first name and add greeting
+    const firstName = fullName.split(' ')[0];
+    return `Hi, ${firstName}`;
   };
 
   const getAvatarUrl = () => {
@@ -134,7 +143,12 @@ const Header = () => {
 
   const getInitials = () => {
     const displayName = getDisplayName();
-    return displayName.split(' ').map(name => name[0]).join('').toUpperCase().slice(0, 2);
+    return displayName
+      .split(' ')
+      .map((name) => name[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
@@ -177,10 +191,10 @@ const Header = () => {
                 variant={location.pathname === '/quote' ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
-                  location.pathname === '/quote' 
-                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
-                    : "text-gray-700 hover:bg-gray-50"
+                  'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                  location.pathname === '/quote'
+                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
+                    : 'text-gray-700 hover:bg-gray-50',
                 )}
                 onClick={() => navigate('/quote')}
               >
@@ -197,10 +211,10 @@ const Header = () => {
                 variant={location.pathname.includes('/admin/quotes') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
-                  location.pathname.includes('/admin/quotes') 
-                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
-                    : "text-gray-700 hover:bg-gray-50"
+                  'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                  location.pathname.includes('/admin/quotes')
+                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
+                    : 'text-gray-700 hover:bg-gray-50',
                 )}
                 onClick={() => navigate('/admin/quotes')}
               >
@@ -211,10 +225,10 @@ const Header = () => {
                 variant={location.pathname.includes('/admin/orders') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  "h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors",
-                  location.pathname.includes('/admin/orders') 
-                    ? "bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600" 
-                    : "text-gray-700 hover:bg-gray-50"
+                  'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                  location.pathname.includes('/admin/orders')
+                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
+                    : 'text-gray-700 hover:bg-gray-50',
                 )}
                 onClick={() => navigate('/admin/orders')}
               >
@@ -494,30 +508,43 @@ const Header = () => {
                             {getInitials()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex flex-col items-start min-w-0">
-                          <span className="text-sm font-medium truncate text-gray-900">{getDisplayName()}</span>
-                          <span className="text-xs text-gray-500 truncate hidden lg:block">
-                            {user.email}
+                        <div className="flex flex-col items-start min-w-0 hidden md:block">
+                          <span className="text-sm font-medium truncate text-gray-900">
+                            {getDisplayName()}
                           </span>
                         </div>
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-60 md:w-64 p-2 bg-white border border-gray-200 shadow-lg">
-                    <DropdownMenuLabel className="font-semibold text-gray-900">My Account</DropdownMenuLabel>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-60 md:w-64 p-2 bg-white border border-gray-200 shadow-lg"
+                  >
+                    <DropdownMenuLabel className="font-semibold text-gray-900">
+                      <div className="flex flex-col">
+                        <span>My Account</span>
+                        <span className="text-xs font-normal text-gray-500 truncate">
+                          {user.email}
+                        </span>
+                      </div>
+                    </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
                       <Link to="/dashboard" className="flex items-center w-full">
                         <LayoutDashboard className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
                           <span className="font-medium text-gray-900">Dashboard</span>
-                          <span className="text-xs text-gray-500">
-                            View your quotes and orders
-                          </span>
+                          <span className="text-xs text-gray-500">View your quotes and orders</span>
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
                       <Link to="/profile" className="flex items-center w-full">
                         <Settings className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
@@ -526,7 +553,10 @@ const Header = () => {
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
                       <Link to="/profile/address" className="flex items-center w-full">
                         <Home className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
@@ -537,7 +567,10 @@ const Header = () => {
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
                       <Link to="/blog" className="flex items-center w-full">
                         <MessageSquare className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
@@ -549,14 +582,15 @@ const Header = () => {
                     {hasAdminRole && (
                       <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="cursor-pointer rounded-md hover:bg-gray-50">
+                        <DropdownMenuItem
+                          asChild
+                          className="cursor-pointer rounded-md hover:bg-gray-50"
+                        >
                           <Link to="/admin" className="flex items-center w-full">
                             <Building className="mr-3 h-4 w-4" />
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900">Admin Dashboard</span>
-                              <span className="text-xs text-gray-500">
-                                Manage the platform
-                              </span>
+                              <span className="text-xs text-gray-500">Manage the platform</span>
                             </div>
                           </Link>
                         </DropdownMenuItem>

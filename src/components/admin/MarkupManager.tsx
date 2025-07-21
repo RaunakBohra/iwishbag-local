@@ -58,12 +58,14 @@ export function MarkupManager() {
       setLoading(true);
       const { data, error } = await supabase
         .from('shipping_routes')
-        .select(`
+        .select(
+          `
           id, origin_country, destination_country,
           markup_percentage, markup_fixed_amount, exchange_rate_markup,
           priority_fee, markup_notes, cost_percentage,
           base_shipping_cost, cost_per_kg
-        `)
+        `,
+        )
         .order('origin_country')
         .order('destination_country');
 
@@ -86,10 +88,12 @@ export function MarkupManager() {
       setLoading(true);
       const { data, error } = await supabase
         .from('country_settings')
-        .select(`
+        .select(
+          `
           code, name, country_markup_percentage, country_markup_fixed,
           exchange_rate_adjustment, country_markup_notes
-        `)
+        `,
+        )
         .order('code');
 
       if (error) throw error;
@@ -116,10 +120,7 @@ export function MarkupManager() {
 
   const updateRouteMarkup = async (routeId: number, updates: Partial<RouteMarkup>) => {
     try {
-      const { error } = await supabase
-        .from('shipping_routes')
-        .update(updates)
-        .eq('id', routeId);
+      const { error } = await supabase.from('shipping_routes').update(updates).eq('id', routeId);
 
       if (error) throw error;
 
@@ -172,7 +173,7 @@ export function MarkupManager() {
       route.priority_fee > 0 ||
       route.cost_percentage > 0 ||
       route.base_shipping_cost > 0 ||
-      route.cost_per_kg > 0
+      (route.shipping_per_kg || route.cost_per_kg) > 0
     );
   };
 
@@ -184,11 +185,15 @@ export function MarkupManager() {
     );
   };
 
-  const calculateTotalMarkup = (route: RouteMarkup, itemPrice: number = 100, weight: number = 1): number => {
+  const calculateTotalMarkup = (
+    route: RouteMarkup,
+    itemPrice: number = 100,
+    weight: number = 1,
+  ): number => {
     const percentageMarkup = (itemPrice * route.markup_percentage) / 100;
     const legacyPercentageMarkup = (itemPrice * route.cost_percentage) / 100;
-    const weightMarkup = weight * route.cost_per_kg;
-    
+    const weightMarkup = weight * (route.shipping_per_kg || route.cost_per_kg || 0);
+
     return (
       route.markup_fixed_amount +
       percentageMarkup +
@@ -215,10 +220,16 @@ export function MarkupManager() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Markup Management</h2>
-          <p className="text-gray-600">Add percentage or fixed amount markups to routes and countries</p>
+          <p className="text-gray-600">
+            Add percentage or fixed amount markups to routes and countries
+          </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => activeTab === 'routes' ? fetchRouteMarkups() : fetchCountryMarkups()} variant="outline" size="sm">
+          <Button
+            onClick={() => (activeTab === 'routes' ? fetchRouteMarkups() : fetchCountryMarkups())}
+            variant="outline"
+            size="sm"
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -292,7 +303,10 @@ export function MarkupManager() {
                         {route.markup_fixed_amount > 0 && (
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3 text-green-500" />
-                            <span>Fixed: {getCurrencySymbolFromCountry(route.origin_country)}{route.markup_fixed_amount}</span>
+                            <span>
+                              Fixed: {getCurrencySymbolFromCountry(route.origin_country)}
+                              {route.markup_fixed_amount}
+                            </span>
                           </div>
                         )}
                         {route.exchange_rate_markup > 0 && (
@@ -304,7 +318,10 @@ export function MarkupManager() {
                         {route.priority_fee > 0 && (
                           <div className="flex items-center gap-2">
                             <AlertCircle className="h-3 w-3 text-orange-500" />
-                            <span>Priority: {getCurrencySymbolFromCountry(route.origin_country)}{route.priority_fee}</span>
+                            <span>
+                              Priority: {getCurrencySymbolFromCountry(route.origin_country)}
+                              {route.priority_fee}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -321,13 +338,19 @@ export function MarkupManager() {
                         {route.base_shipping_cost > 0 && (
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3 text-gray-500" />
-                            <span>Base: {getCurrencySymbolFromCountry(route.origin_country)}{route.base_shipping_cost}</span>
+                            <span>
+                              Base: {getCurrencySymbolFromCountry(route.origin_country)}
+                              {route.base_shipping_cost}
+                            </span>
                           </div>
                         )}
-                        {route.cost_per_kg > 0 && (
+                        {(route.shipping_per_kg || route.cost_per_kg) > 0 && (
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3 text-gray-500" />
-                            <span>Per kg: {getCurrencySymbolFromCountry(route.origin_country)}{route.cost_per_kg}</span>
+                            <span>
+                              Per kg: {getCurrencySymbolFromCountry(route.origin_country)}
+                              {route.shipping_per_kg || route.cost_per_kg}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -337,7 +360,8 @@ export function MarkupManager() {
                     <div className="mt-4 p-3 bg-teal-100 rounded-lg">
                       <p className="text-sm font-medium">Sample Calculation (100 USD, 1 kg):</p>
                       <p className="text-sm">
-                        Total Extra Cost: {getCurrencySymbolFromCountry(route.origin_country)}{calculateTotalMarkup(route, 100, 1).toFixed(2)}
+                        Total Extra Cost: {getCurrencySymbolFromCountry(route.origin_country)}
+                        {calculateTotalMarkup(route, 100, 1).toFixed(2)}
                       </p>
                     </div>
                   )}
@@ -353,7 +377,10 @@ export function MarkupManager() {
         <div className="space-y-4">
           <div className="grid gap-4">
             {countryMarkups.map((country) => (
-              <Card key={country.code} className={hasCountryMarkup(country) ? 'border-green-200 bg-green-50' : ''}>
+              <Card
+                key={country.code}
+                className={hasCountryMarkup(country) ? 'border-green-200 bg-green-50' : ''}
+              >
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -391,13 +418,20 @@ export function MarkupManager() {
                     {country.country_markup_fixed > 0 && (
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-3 w-3 text-green-500" />
-                        <span>Fixed Fee: {getCurrencySymbolFromCountry(country.code)}{country.country_markup_fixed}</span>
+                        <span>
+                          Fixed Fee: {getCurrencySymbolFromCountry(country.code)}
+                          {country.country_markup_fixed}
+                        </span>
                       </div>
                     )}
                     {country.exchange_rate_adjustment !== 0 && (
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-3 w-3 text-orange-500" />
-                        <span>Exchange Rate Adjustment: {country.exchange_rate_adjustment > 0 ? '+' : ''}{country.exchange_rate_adjustment}</span>
+                        <span>
+                          Exchange Rate Adjustment:{' '}
+                          {country.exchange_rate_adjustment > 0 ? '+' : ''}
+                          {country.exchange_rate_adjustment}
+                        </span>
                       </div>
                     )}
                     {country.country_markup_notes && (
@@ -417,17 +451,14 @@ export function MarkupManager() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingRoute ? 'Edit Route Markup' : 'Edit Country Markup'}
-            </DialogTitle>
+            <DialogTitle>{editingRoute ? 'Edit Route Markup' : 'Edit Country Markup'}</DialogTitle>
             <DialogDescription>
-              {editingRoute 
+              {editingRoute
                 ? `Configure markups for ${editingRoute.origin_country} → ${editingRoute.destination_country}`
-                : `Configure markups for ${editingCountry?.name || editingCountry?.code}`
-              }
+                : `Configure markups for ${editingCountry?.name || editingCountry?.code}`}
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingRoute && (
             <RouteMarkupForm
               route={editingRoute}
@@ -442,7 +473,7 @@ export function MarkupManager() {
               }}
             />
           )}
-          
+
           {editingCountry && (
             <CountryMarkupForm
               country={editingCountry}
@@ -464,7 +495,11 @@ export function MarkupManager() {
 }
 
 // Route Markup Form Component
-function RouteMarkupForm({ route, onSave, onCancel }: {
+function RouteMarkupForm({
+  route,
+  onSave,
+  onCancel,
+}: {
   route: RouteMarkup;
   onSave: (updates: Partial<RouteMarkup>) => void;
   onCancel: () => void;
@@ -487,7 +522,12 @@ function RouteMarkupForm({ route, onSave, onCancel }: {
             type="number"
             step="0.01"
             value={formData.markup_percentage}
-            onChange={(e) => setFormData(prev => ({ ...prev, markup_percentage: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                markup_percentage: parseFloat(e.target.value) || 0,
+              }))
+            }
             placeholder="0.00"
           />
           <p className="text-xs text-gray-500 mt-1">Additional percentage of item price</p>
@@ -499,13 +539,20 @@ function RouteMarkupForm({ route, onSave, onCancel }: {
             type="number"
             step="0.01"
             value={formData.markup_fixed_amount}
-            onChange={(e) => setFormData(prev => ({ ...prev, markup_fixed_amount: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                markup_fixed_amount: parseFloat(e.target.value) || 0,
+              }))
+            }
             placeholder="0.00"
           />
-          <p className="text-xs text-gray-500 mt-1">Fixed amount in {getCurrencySymbolFromCountry(route.origin_country)}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Fixed amount in {getCurrencySymbolFromCountry(route.origin_country)}
+          </p>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="exchange_rate_markup">Exchange Rate Markup</Label>
@@ -514,7 +561,12 @@ function RouteMarkupForm({ route, onSave, onCancel }: {
             type="number"
             step="0.0001"
             value={formData.exchange_rate_markup}
-            onChange={(e) => setFormData(prev => ({ ...prev, exchange_rate_markup: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                exchange_rate_markup: parseFloat(e.target.value) || 0,
+              }))
+            }
             placeholder="0.0000"
           />
           <p className="text-xs text-gray-500 mt-1">Additional exchange rate adjustment</p>
@@ -526,39 +578,43 @@ function RouteMarkupForm({ route, onSave, onCancel }: {
             type="number"
             step="0.01"
             value={formData.priority_fee}
-            onChange={(e) => setFormData(prev => ({ ...prev, priority_fee: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, priority_fee: parseFloat(e.target.value) || 0 }))
+            }
             placeholder="0.00"
           />
           <p className="text-xs text-gray-500 mt-1">Priority processing fee</p>
         </div>
       </div>
-      
+
       <div>
         <Label htmlFor="markup_notes">Notes</Label>
         <textarea
           id="markup_notes"
           value={formData.markup_notes}
-          onChange={(e) => setFormData(prev => ({ ...prev, markup_notes: e.target.value }))}
+          onChange={(e) => setFormData((prev) => ({ ...prev, markup_notes: e.target.value }))}
           placeholder="Optional notes about this markup..."
           rows={3}
           className="w-full p-2 border rounded-md"
         />
       </div>
-      
+
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(formData)}>
-          Save Markup
-        </Button>
+        <Button onClick={() => onSave(formData)}>Save Markup</Button>
       </div>
     </div>
   );
 }
 
 // Country Markup Form Component
-function CountryMarkupForm({ country, onSave, onCancel }: {
+function CountryMarkupForm({
+  country,
+  onSave,
+  onCancel,
+}: {
   country: CountryMarkup;
   onSave: (updates: Partial<CountryMarkup>) => void;
   onCancel: () => void;
@@ -580,7 +636,12 @@ function CountryMarkupForm({ country, onSave, onCancel }: {
             type="number"
             step="0.01"
             value={formData.country_markup_percentage}
-            onChange={(e) => setFormData(prev => ({ ...prev, country_markup_percentage: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                country_markup_percentage: parseFloat(e.target.value) || 0,
+              }))
+            }
             placeholder="0.00"
           />
           <p className="text-xs text-gray-500 mt-1">Applied to all routes to this country</p>
@@ -592,13 +653,20 @@ function CountryMarkupForm({ country, onSave, onCancel }: {
             type="number"
             step="0.01"
             value={formData.country_markup_fixed}
-            onChange={(e) => setFormData(prev => ({ ...prev, country_markup_fixed: parseFloat(e.target.value) || 0 }))}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                country_markup_fixed: parseFloat(e.target.value) || 0,
+              }))
+            }
             placeholder="0.00"
           />
-          <p className="text-xs text-gray-500 mt-1">Fixed fee in {getCurrencySymbolFromCountry(country.code)}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Fixed fee in {getCurrencySymbolFromCountry(country.code)}
+          </p>
         </div>
       </div>
-      
+
       <div>
         <Label htmlFor="exchange_rate_adjustment">Exchange Rate Adjustment</Label>
         <Input
@@ -606,33 +674,38 @@ function CountryMarkupForm({ country, onSave, onCancel }: {
           type="number"
           step="0.0001"
           value={formData.exchange_rate_adjustment}
-          onChange={(e) => setFormData(prev => ({ ...prev, exchange_rate_adjustment: parseFloat(e.target.value) || 0 }))}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              exchange_rate_adjustment: parseFloat(e.target.value) || 0,
+            }))
+          }
           placeholder="0.0000"
         />
         <p className="text-xs text-gray-500 mt-1">
           Adjustment to exchange rate (positive = more expensive, negative = cheaper)
         </p>
       </div>
-      
+
       <div>
         <Label htmlFor="country_markup_notes">Notes</Label>
         <textarea
           id="country_markup_notes"
           value={formData.country_markup_notes}
-          onChange={(e) => setFormData(prev => ({ ...prev, country_markup_notes: e.target.value }))}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, country_markup_notes: e.target.value }))
+          }
           placeholder="Optional notes about this country's markup..."
           rows={3}
           className="w-full p-2 border rounded-md"
         />
       </div>
-      
+
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(formData)}>
-          Save Markup
-        </Button>
+        <Button onClick={() => onSave(formData)}>Save Markup</Button>
       </div>
     </div>
   );

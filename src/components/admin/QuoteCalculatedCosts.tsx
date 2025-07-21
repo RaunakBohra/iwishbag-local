@@ -42,7 +42,7 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   const destinationCountry = routeInfo?.destination || 'US';
 
   const { data: allCountries } = useAllCountries();
-  
+
   // Get destination currency from countries data
   const destinationCurrency = useMemo(() => {
     if (!allCountries || !destinationCountry) return 'USD';
@@ -54,25 +54,25 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
   const dualCurrencyDisplay = useDualCurrency(
     destinationCurrency,
     originCountry,
-    destinationCountry
+    destinationCountry,
   );
-  
+
   // Create compatibility object for existing display logic
   // Prioritize route-specific exchange rate over country settings
   const routeExchangeRate = routeInfo?.route?.exchange_rate;
   const finalExchangeRate = routeExchangeRate || dualCurrencyDisplay.local?.exchangeRate || 1;
-  
+
   const currencyDisplay = {
     exchangeRate: finalExchangeRate,
-    exchangeRateSource: routeExchangeRate ? 'shipping_route' : 'database' as const,
-    warning: null
+    exchangeRateSource: routeExchangeRate ? 'shipping_route' : ('database' as const),
+    warning: null,
   };
-  
+
   console.log('[QuoteCalculatedCosts Debug] Exchange rate selection:', {
     routeExchangeRate,
     dualCurrencyExchangeRate: dualCurrencyDisplay.local?.exchangeRate,
     finalExchangeRate,
-    source: currencyDisplay.exchangeRateSource
+    source: currencyDisplay.exchangeRateSource,
   });
 
   if (!quote.final_total_usd) {

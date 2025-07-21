@@ -56,7 +56,9 @@ export const DashboardAnalytics = ({ quotes, orders }: DashboardAnalyticsProps) 
     .filter((q) => {
       const statusConfig = getStatusConfig(q.status, 'quote');
       return (
-        q.in_cart && q.final_total_usd && (statusConfig?.allowCartActions || q.status === 'approved')
+        q.in_cart &&
+        q.final_total_usd &&
+        (statusConfig?.allowCartActions || q.status === 'approved')
       ); // fallback
     })
     .reduce((sum, q) => sum + Number(q.final_total_usd), 0);

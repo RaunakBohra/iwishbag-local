@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,7 +13,19 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Display, H1, H2, H3, BodyLarge, Body } from '@/components/ui/typography';
 import { Section, Container } from '@/components/ui/spacing';
-import { Mail, Phone, MapPin, Clock, MessageCircle, Send, CheckCircle, ArrowRight, Globe, Zap, Shield } from 'lucide-react';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  MessageCircle,
+  Send,
+  CheckCircle,
+  ArrowRight,
+  Globe,
+  Zap,
+  Shield,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +49,7 @@ const Contact = () => {
       const heroElement = document.getElementById('hero-section');
       const formElement = document.getElementById('form-section');
       const faqElement = document.getElementById('faq-section');
-      
+
       const checkVisibility = (element: Element | null) => {
         if (!element) return false;
         const rect = element.getBoundingClientRect();
@@ -157,15 +175,18 @@ const Contact = () => {
   const faqs = [
     {
       question: 'How long does shipping take?',
-      answer: 'Typically 7-21 business days depending on the destination country and customs processing.',
+      answer:
+        'Typically 7-21 business days depending on the destination country and customs processing.',
     },
     {
       question: 'How are customs duties calculated?',
-      answer: 'Based on product category, declared value, and destination country regulations. Our calculator provides accurate estimates.',
+      answer:
+        'Based on product category, declared value, and destination country regulations. Our calculator provides accurate estimates.',
     },
     {
       question: 'Can I track my shipment?',
-      answer: 'Yes! You\'ll receive tracking information as soon as your order ships, with real-time updates.',
+      answer:
+        "Yes! You'll receive tracking information as soon as your order ships, with real-time updates.",
     },
     {
       question: 'What payment methods do you accept?',
@@ -175,14 +196,14 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-white">
-
       {/* Contact Methods Section */}
       <Section className="py-8 bg-white">
         <Container>
           <div className="text-center mb-8">
             <H2 className="mb-4 text-gray-900 text-2xl">Choose how to reach us</H2>
             <Body className="text-gray-600 max-w-2xl mx-auto text-sm">
-              Pick the method that works best for you. We're committed to providing quick, helpful responses.
+              Pick the method that works best for you. We're committed to providing quick, helpful
+              responses.
             </Body>
           </div>
 
@@ -194,13 +215,21 @@ const Contact = () => {
                     <DialogTrigger asChild>
                       <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
                         <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
-                          <div className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}>
+                          <div
+                            className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}
+                          >
                             <method.icon className={`w-6 h-6 md:w-8 md:h-8 ${method.iconColor}`} />
                           </div>
                           <div className="flex-1 md:flex-none">
-                            <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">{method.title}</H3>
-                            <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">{method.description}</Body>
-                            <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">{method.contact}</Body>
+                            <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">
+                              {method.title}
+                            </H3>
+                            <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">
+                              {method.description}
+                            </Body>
+                            <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">
+                              {method.contact}
+                            </Body>
                             <Body className="text-xs text-gray-500">{method.availability}</Body>
                           </div>
                         </div>
@@ -216,13 +245,21 @@ const Contact = () => {
                           isSubmitting={isSubmitting}
                           submitButtonText="Send Message"
                           submitButtonClassName="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-medium group"
-                          disabled={!formData.name || !formData.email || !formData.subject || !formData.message}
+                          disabled={
+                            !formData.name ||
+                            !formData.email ||
+                            !formData.subject ||
+                            !formData.message
+                          }
                           action="contact_form"
                           className="space-y-4"
                         >
                           <div className="grid md:grid-cols-2 gap-4">
                             <div>
-                              <Label htmlFor="modal-name" className="text-sm font-medium text-gray-700 mb-2 block">
+                              <Label
+                                htmlFor="modal-name"
+                                className="text-sm font-medium text-gray-700 mb-2 block"
+                              >
                                 Name *
                               </Label>
                               <Input
@@ -237,7 +274,10 @@ const Contact = () => {
                               />
                             </div>
                             <div>
-                              <Label htmlFor="modal-email" className="text-sm font-medium text-gray-700 mb-2 block">
+                              <Label
+                                htmlFor="modal-email"
+                                className="text-sm font-medium text-gray-700 mb-2 block"
+                              >
                                 Email *
                               </Label>
                               <Input
@@ -254,7 +294,10 @@ const Contact = () => {
                           </div>
 
                           <div>
-                            <Label htmlFor="modal-subject" className="text-sm font-medium text-gray-700 mb-2 block">
+                            <Label
+                              htmlFor="modal-subject"
+                              className="text-sm font-medium text-gray-700 mb-2 block"
+                            >
                               Subject *
                             </Label>
                             <Input
@@ -270,7 +313,10 @@ const Contact = () => {
                           </div>
 
                           <div>
-                            <Label htmlFor="modal-message" className="text-sm font-medium text-gray-700 mb-2 block">
+                            <Label
+                              htmlFor="modal-message"
+                              className="text-sm font-medium text-gray-700 mb-2 block"
+                            >
                               Message *
                             </Label>
                             <Textarea
@@ -291,13 +337,21 @@ const Contact = () => {
                 ) : (
                   <div className="group p-4 md:p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all duration-300 cursor-pointer">
                     <div className="flex flex-col md:flex-col items-center md:items-center text-center md:text-center">
-                      <div className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}>
+                      <div
+                        className={`w-12 h-12 md:w-16 md:h-16 ${method.bgColor} rounded-full flex items-center justify-center mb-4 md:mb-4 group-hover:scale-110 transition-transform flex-shrink-0`}
+                      >
                         <method.icon className={`w-6 h-6 md:w-8 md:h-8 ${method.iconColor}`} />
                       </div>
                       <div className="flex-1 md:flex-none">
-                        <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">{method.title}</H3>
-                        <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">{method.description}</Body>
-                        <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">{method.contact}</Body>
+                        <H3 className="mb-1 md:mb-2 text-gray-900 text-base md:text-lg">
+                          {method.title}
+                        </H3>
+                        <Body className="text-gray-600 mb-2 md:mb-3 text-xs md:text-sm">
+                          {method.description}
+                        </Body>
+                        <Body className="font-medium text-gray-900 mb-1 text-xs md:text-sm">
+                          {method.contact}
+                        </Body>
                         <Body className="text-xs text-gray-500">{method.availability}</Body>
                       </div>
                     </div>
@@ -309,17 +363,13 @@ const Contact = () => {
         </Container>
       </Section>
 
-
       {/* FAQ Section */}
-      <Section 
-        id="faq-section"
-        className="py-8 bg-white"
-      >
+      <Section id="faq-section" className="py-8 bg-white">
         <Container>
-          <div 
+          <div
             className={cn(
-              "transition-all duration-1000",
-              isVisible.faq ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+              'transition-all duration-1000',
+              isVisible.faq ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10',
             )}
           >
             <div className="text-center mb-8">
@@ -331,7 +381,10 @@ const Contact = () => {
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {faqs.map((faq, index) => (
-                <div key={index} className="p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all">
+                <div
+                  key={index}
+                  className="p-6 rounded-2xl border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                >
                   <H3 className="text-gray-900 mb-3 text-base">{faq.question}</H3>
                   <Body className="text-gray-600 text-sm">{faq.answer}</Body>
                 </div>
@@ -339,9 +392,11 @@ const Contact = () => {
             </div>
 
             <div className="text-center mt-8">
-              <Body className="text-gray-600 mb-6 text-sm">Can't find what you're looking for?</Body>
-              <Button 
-                className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3" 
+              <Body className="text-gray-600 mb-6 text-sm">
+                Can't find what you're looking for?
+              </Body>
+              <Button
+                className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3"
                 onClick={() => {
                   document.getElementById('form-section')?.scrollIntoView({ behavior: 'smooth' });
                 }}

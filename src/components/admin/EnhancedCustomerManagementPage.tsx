@@ -13,11 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Loader2,
   Users,
@@ -26,7 +22,7 @@ import {
   Filter,
   UserPlus,
   BarChart3,
-  Package
+  Package,
 } from 'lucide-react';
 import { CustomerStats } from './CustomerStats';
 import { CustomerActivityTimeline } from './CustomerActivityTimeline';
@@ -55,7 +51,7 @@ export const EnhancedCustomerManagementPage = () => {
   // Apply quick filters to customers
   const applyQuickFilter = (filter: string) => {
     setQuickFilter(filter);
-    
+
     // Reset other filters when using quick filters
     setStatusFilter('all');
     setCountryFilter('all');
@@ -73,7 +69,7 @@ export const EnhancedCustomerManagementPage = () => {
         const now = new Date();
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        
+
         switch (quickFilter) {
           case 'active':
             if (!customer.cod_enabled) return false;
@@ -237,7 +233,7 @@ export const EnhancedCustomerManagementPage = () => {
     if (selected) {
       setSelectedCustomers([...selectedCustomers, customerId]);
     } else {
-      setSelectedCustomers(selectedCustomers.filter(id => id !== customerId));
+      setSelectedCustomers(selectedCustomers.filter((id) => id !== customerId));
     }
   };
 
@@ -245,7 +241,7 @@ export const EnhancedCustomerManagementPage = () => {
     if (selectedCustomers.length === filteredCustomers.length) {
       setSelectedCustomers([]);
     } else {
-      setSelectedCustomers(filteredCustomers.map(c => c.id));
+      setSelectedCustomers(filteredCustomers.map((c) => c.id));
     }
   };
 
@@ -286,7 +282,9 @@ export const EnhancedCustomerManagementPage = () => {
               </div>
               <div>
                 <H1 className="text-gray-900">Customer Management</H1>
-                <BodySmall className="text-gray-600">Manage your customer base and relationships</BodySmall>
+                <BodySmall className="text-gray-600">
+                  Manage your customer base and relationships
+                </BodySmall>
               </div>
             </div>
             <div className="flex gap-2">
@@ -298,10 +296,10 @@ export const EnhancedCustomerManagementPage = () => {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add Customer
               </Button>
-              <Button 
-                onClick={exportCustomers} 
-                variant="outline" 
-                size="sm" 
+              <Button
+                onClick={exportCustomers}
+                variant="outline"
+                size="sm"
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -312,10 +310,10 @@ export const EnhancedCustomerManagementPage = () => {
         </div>
 
         {/* Metrics Dashboard */}
-        <CustomerMetrics 
-          customers={customers || []} 
-          customerAnalytics={customerAnalytics || []} 
-          isLoading={isLoading} 
+        <CustomerMetrics
+          customers={customers || []}
+          customerAnalytics={customerAnalytics || []}
+          isLoading={isLoading}
         />
 
         {/* Main Content Card */}
@@ -334,7 +332,7 @@ export const EnhancedCustomerManagementPage = () => {
                 Advanced Filters
               </Button>
             </div>
-            
+
             {/* Search Bar */}
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -409,7 +407,7 @@ export const EnhancedCustomerManagementPage = () => {
                   <CompactCustomerListItem
                     key={customer.id}
                     customer={customer}
-                    analytics={customerAnalytics?.find(a => a.customerId === customer.id)}
+                    analytics={customerAnalytics?.find((a) => a.customerId === customer.id)}
                     isSelected={selectedCustomers.includes(customer.id)}
                     onSelect={handleSelectCustomer}
                     onUpdateCod={handleUpdateCod}

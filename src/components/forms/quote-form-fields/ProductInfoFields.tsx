@@ -142,7 +142,6 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
           </FormItem>
         )}
       />
-
     </div>
   );
 };

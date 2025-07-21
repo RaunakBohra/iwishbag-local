@@ -9,16 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Brain, 
-  Target, 
-  TrendingUp, 
+import {
+  Brain,
+  Target,
+  TrendingUp,
   Lightbulb,
   CheckCircle,
   AlertTriangle,
   BarChart3,
   Trash2,
-  Database
+  Database,
 } from 'lucide-react';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 
@@ -45,13 +45,15 @@ export const MLWeightEstimatorTester: React.FC = () => {
   const [isLearning, setIsLearning] = useState(false);
   const [analytics, setAnalytics] = useState<MLAnalytics | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
-  const [testResults, setTestResults] = useState<Array<{
-    product: string;
-    estimated: number;
-    actual?: number;
-    accuracy?: number;
-    confidence: number;
-  }>>([]);
+  const [testResults, setTestResults] = useState<
+    Array<{
+      product: string;
+      estimated: number;
+      actual?: number;
+      accuracy?: number;
+      confidence: number;
+    }>
+  >([]);
 
   // Load analytics on component mount
   useEffect(() => {
@@ -76,16 +78,19 @@ export const MLWeightEstimatorTester: React.FC = () => {
     try {
       const estimation = await smartWeightEstimator.estimateWeight(
         productName,
-        productUrl || undefined
+        productUrl || undefined,
       );
       setResult(estimation);
-      
+
       // Add to test results
-      setTestResults(prev => [...prev, {
-        product: productName,
-        estimated: estimation.estimated_weight,
-        confidence: estimation.confidence
-      }]);
+      setTestResults((prev) => [
+        ...prev,
+        {
+          product: productName,
+          estimated: estimation.estimated_weight,
+          confidence: estimation.confidence,
+        },
+      ]);
     } catch (error) {
       console.error('Estimation error:', error);
     }
@@ -103,18 +108,22 @@ export const MLWeightEstimatorTester: React.FC = () => {
         productUrl || undefined,
         {
           userConfirmed: true,
-          originalEstimate: result.estimated_weight
-        }
+          originalEstimate: result.estimated_weight,
+        },
       );
 
       // Update test results with accuracy
-      setTestResults(prev => prev.map(item => 
-        item.product === productName && !item.actual ? {
-          ...item,
-          actual: weight,
-          accuracy: (1 - Math.abs(item.estimated - weight) / weight) * 100
-        } : item
-      ));
+      setTestResults((prev) =>
+        prev.map((item) =>
+          item.product === productName && !item.actual
+            ? {
+                ...item,
+                actual: weight,
+                accuracy: (1 - Math.abs(item.estimated - weight) / weight) * 100,
+              }
+            : item,
+        ),
+      );
 
       // Clear form
       setProductName('');
@@ -172,7 +181,7 @@ export const MLWeightEstimatorTester: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center">
@@ -184,19 +193,21 @@ export const MLWeightEstimatorTester: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center">
               <Target className="w-5 h-5 text-purple-500 mr-2" />
               <div>
-                <div className="text-2xl font-bold">{analytics?.averageAccuracy.toFixed(1) || 0}%</div>
+                <div className="text-2xl font-bold">
+                  {analytics?.averageAccuracy.toFixed(1) || 0}%
+                </div>
                 <div className="text-sm text-gray-600">Avg Accuracy</div>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -361,27 +372,30 @@ export const MLWeightEstimatorTester: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {testResults.slice(-10).reverse().map((test, index) => (
-                <div key={index} className="flex items-center justify-between p-2 border rounded">
-                  <div className="flex-1">
-                    <div className="font-medium">{test.product}</div>
-                    <div className="text-sm text-gray-600">
-                      Estimated: {test.estimated}kg
-                      {test.actual && ` | Actual: ${test.actual}kg`}
+              {testResults
+                .slice(-10)
+                .reverse()
+                .map((test, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 border rounded">
+                    <div className="flex-1">
+                      <div className="font-medium">{test.product}</div>
+                      <div className="text-sm text-gray-600">
+                        Estimated: {test.estimated}kg
+                        {test.actual && ` | Actual: ${test.actual}kg`}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge className={getConfidenceColor(test.confidence)}>
+                        {(test.confidence * 100).toFixed(0)}%
+                      </Badge>
+                      {test.accuracy && (
+                        <Badge className={getAccuracyColor(test.accuracy)}>
+                          {test.accuracy.toFixed(1)}% accurate
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getConfidenceColor(test.confidence)}>
-                      {(test.confidence * 100).toFixed(0)}%
-                    </Badge>
-                    {test.accuracy && (
-                      <Badge className={getAccuracyColor(test.accuracy)}>
-                        {test.accuracy.toFixed(1)}% accurate
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </CardContent>
         </Card>
@@ -402,7 +416,7 @@ export const MLWeightEstimatorTester: React.FC = () => {
               'LEGO Star Wars set',
               'Samsung Galaxy Watch',
               'Nintendo Switch',
-              'AirPods Pro'
+              'AirPods Pro',
             ].map((example) => (
               <Button
                 key={example}

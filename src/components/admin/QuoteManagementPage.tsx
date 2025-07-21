@@ -25,11 +25,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export const QuoteManagementPage = () => {
   const { getStatusConfig } = useStatusManagement();
@@ -126,12 +122,12 @@ export const QuoteManagementPage = () => {
       const config = getStatusConfig(q.status, 'quote');
       return (config?.isTerminal && !config?.isSuccessful) ?? q.status === 'cancelled'; // fallback
     }).length || 0;
-  const highPriorityQuotes = quotes?.filter(q => q.priority === 'high').length || 0;
-  
+  const highPriorityQuotes = quotes?.filter((q) => q.priority === 'high').length || 0;
+
   // Calculate quick filter counts
   const today = new Date().toISOString().split('T')[0];
-  const todayQuotes = quotes?.filter(q => q.created_at.startsWith(today)).length || 0;
-  
+  const todayQuotes = quotes?.filter((q) => q.created_at.startsWith(today)).length || 0;
+
   const quoteCounts = {
     all: totalQuotes,
     today: todayQuotes,
@@ -142,7 +138,7 @@ export const QuoteManagementPage = () => {
     paid: paidQuotes,
     rejected: rejectedQuotes,
   };
-  
+
   const totalValue = quotes?.reduce((sum, q) => sum + (q.final_total_usd || 0), 0) || 0;
   const _averageValue = totalQuotes > 0 ? totalValue / totalQuotes : 0;
 
@@ -194,7 +190,7 @@ export const QuoteManagementPage = () => {
   // Apply quick filters
   const applyQuickFilter = (filter: string) => {
     setQuickFilter(filter);
-    
+
     // Reset other filters when using quick filters
     setStatusFilter('all');
     setDateRange('all');
@@ -202,7 +198,7 @@ export const QuoteManagementPage = () => {
     setCountryFilter('all');
     setPriorityFilter('all');
     setSearchInput('');
-    
+
     // Apply the quick filter logic
     switch (filter) {
       case 'today':
@@ -241,11 +237,13 @@ export const QuoteManagementPage = () => {
               </div>
               <div>
                 <H1 className="text-gray-900">Quote Management</H1>
-                <BodySmall className="text-gray-600">Manage customer quotes and quote requests</BodySmall>
+                <BodySmall className="text-gray-600">
+                  Manage customer quotes and quote requests
+                </BodySmall>
               </div>
             </div>
-            <Button 
-              onClick={() => setIsCreateModalOpen(true)} 
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
               className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -273,7 +271,7 @@ export const QuoteManagementPage = () => {
                 Advanced Filters
               </Button>
             </div>
-            
+
             {/* Search Bar */}
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -410,7 +408,8 @@ export const QuoteManagementPage = () => {
               {confirmAction === 'confirm_payment' && 'Confirm Payment for Selected Quotes?'}
               {confirmAction === 'export' && 'Export Selected Quotes?'}
               {confirmAction === 'priority' && 'Set Priority for Selected Quotes?'}
-              {confirmAction === 'delete' && 'Delete Selected Quotes? This action cannot be undone.'}
+              {confirmAction === 'delete' &&
+                'Delete Selected Quotes? This action cannot be undone.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

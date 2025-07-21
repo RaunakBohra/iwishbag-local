@@ -188,10 +188,19 @@ export class UnifiedDataEngine {
     const cached = this.getCached(cacheKey);
     if (cached) return cached;
 
-    // Query the unified structure (quotes table with JSONB fields)
+    // Query the unified structure (quotes table with JSONB fields) and join with profiles for customer name and avatar
     const { data: quoteData, error: quoteError } = await supabase
       .from('quotes')
-      .select('*')
+      .select(
+        `
+        *,
+        profiles:user_id (
+          full_name,
+          email,
+          avatar_url
+        )
+      `,
+      )
       .eq('id', id)
       .single();
 
@@ -200,8 +209,50 @@ export class UnifiedDataEngine {
       return null;
     }
 
+    // Extract profile data before transformation
+    const profileData = quoteData.profiles;
+
+    // Remove the profiles field to avoid type issues during transformation
+    const { profiles, ...cleanQuoteData } = quoteData;
+
     // Transform to unified format
-    const quote = this.transformFromDB(quoteData);
+    const quote = this.transformFromDB(cleanQuoteData as any);
+
+    // Enhance customer data with profile information if available and customer data is empty
+    if (profileData && !quote.is_anonymous) {
+      // Only update if customer info is empty or missing name
+      if (!quote.customer_data.info.name && profileData.full_name) {
+        quote.customer_data.info.name = profileData.full_name;
+      }
+      if (!quote.customer_data.info.email && profileData.email) {
+        quote.customer_data.info.email = profileData.email;
+      }
+
+      // Add profile data section for avatar and other profile info
+      if (!quote.customer_data.profile) {
+        quote.customer_data.profile = {};
+      }
+      if (profileData.avatar_url) {
+        quote.customer_data.profile.avatar_url = profileData.avatar_url;
+      }
+
+      // Try to get OAuth profile picture from auth.users.user_metadata if no avatar in profiles
+      if (!profileData.avatar_url && quote.user_id) {
+        try {
+          const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(quote.user_id);
+          if (!userError && user?.user_metadata) {
+            const oauthAvatar = user.user_metadata.avatar_url || user.user_metadata.picture;
+            if (oauthAvatar) {
+              quote.customer_data.profile.avatar_url = oauthAvatar;
+            }
+          }
+        } catch (error) {
+          // Silently fail - OAuth avatar is not critical
+          console.debug('Could not fetch OAuth avatar for user:', quote.user_id);
+        }
+      }
+    }
+
     this.setCache(cacheKey, quote);
     return quote;
   }
@@ -209,13 +260,15 @@ export class UnifiedDataEngine {
   /**
    * Get quotes with smart filtering and pagination
    */
-  async getQuotes(options: {
-    user_id?: string;
-    status?: string[];
-    search?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<{ quotes: UnifiedQuote[]; total: number }> {
+  async getQuotes(
+    options: {
+      user_id?: string;
+      status?: string[];
+      search?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<{ quotes: UnifiedQuote[]; total: number }> {
     let query = supabase.from('quotes').select('*', { count: 'exact' });
 
     // Smart filtering
@@ -242,7 +295,7 @@ export class UnifiedDataEngine {
       query = query.limit(options.limit);
     }
     if (options.offset) {
-      query = query.range(options.offset, (options.offset + (options.limit || 20)) - 1);
+      query = query.range(options.offset, options.offset + (options.limit || 20) - 1);
     }
 
     // Order by latest first
@@ -255,7 +308,11 @@ export class UnifiedDataEngine {
       return { quotes: [], total: 0 };
     }
 
-    const quotes = (data || []).map(row => this.transformFromDB(row));
+    // Transform quotes from DB format
+    const quotes = (data || []).map((row) => this.transformFromDB(row));
+    
+    // Note: For performance, getQuotes() doesn't enhance with profile data
+    // Use getQuote(id) for individual quotes that need complete customer info including avatars
     return { quotes, total: count || 0 };
   }
 
@@ -272,7 +329,7 @@ export class UnifiedDataEngine {
         status: 'pending',
         origin_country: input.origin_country,
         destination_country: input.destination_country,
-        items: input.items.map(item => ({
+        items: input.items.map((item) => ({
           id: crypto.randomUUID(),
           ...item,
           smart_data: {
@@ -283,7 +340,7 @@ export class UnifiedDataEngine {
             optimization_hints: [],
           },
         })),
-        base_total_usd: input.items.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0),
+        base_total_usd: input.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0),
         final_total_usd: 0, // Will be calculated
         calculation_data: this.getDefaultCalculationData(),
         customer_data: input.customer_data || this.getDefaultCustomerData(),
@@ -294,16 +351,12 @@ export class UnifiedDataEngine {
         optimization_score: 0,
       };
 
-      const { data, error } = await supabase
-        .from('quotes')
-        .insert(quoteData)
-        .select()
-        .single();
+      const { data, error } = await supabase.from('quotes').insert(quoteData).select().single();
 
       if (error) throw error;
 
       const quote = this.transformFromDB(data);
-      
+
       return {
         success: true,
         quote,
@@ -329,7 +382,7 @@ export class UnifiedDataEngine {
     console.log('💾 [DEBUG] UnifiedDataEngine.updateQuote called:', {
       quoteId: id,
       updates,
-      operationalDataUpdate: updates.operational_data
+      operationalDataUpdate: updates.operational_data,
     });
 
     try {
@@ -342,15 +395,14 @@ export class UnifiedDataEngine {
       if (updates.customer_data) dbUpdates.customer_data = updates.customer_data;
       if (updates.operational_data) dbUpdates.operational_data = updates.operational_data;
       if (updates.smart_suggestions) dbUpdates.smart_suggestions = updates.smart_suggestions;
-      if (updates.weight_confidence !== undefined) dbUpdates.weight_confidence = updates.weight_confidence;
-      if (updates.optimization_score !== undefined) dbUpdates.optimization_score = updates.optimization_score;
+      if (updates.weight_confidence !== undefined)
+        dbUpdates.weight_confidence = updates.weight_confidence;
+      if (updates.optimization_score !== undefined)
+        dbUpdates.optimization_score = updates.optimization_score;
 
       console.log('💾 [DEBUG] Final database update payload:', dbUpdates);
 
-      const { error } = await supabase
-        .from('quotes')
-        .update(dbUpdates)
-        .eq('id', id);
+      const { error } = await supabase.from('quotes').update(dbUpdates).eq('id', id);
 
       if (error) {
         console.error('❌ [DEBUG] Database update failed:', error);
@@ -381,7 +433,10 @@ export class UnifiedDataEngine {
     };
 
     const updatedItems = [...quote.items, newItem];
-    const newBaseTotal = updatedItems.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
+    const newBaseTotal = updatedItems.reduce(
+      (sum, item) => sum + item.price_usd * item.quantity,
+      0,
+    );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
@@ -393,11 +448,14 @@ export class UnifiedDataEngine {
     const quote = await this.getQuote(quoteId);
     if (!quote) return false;
 
-    const updatedItems = quote.items.map(item =>
-      item.id === itemId ? { ...item, ...updates } : item
+    const updatedItems = quote.items.map((item) =>
+      item.id === itemId ? { ...item, ...updates } : item,
     );
 
-    const newBaseTotal = updatedItems.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
+    const newBaseTotal = updatedItems.reduce(
+      (sum, item) => sum + item.price_usd * item.quantity,
+      0,
+    );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
@@ -409,10 +467,13 @@ export class UnifiedDataEngine {
     const quote = await this.getQuote(quoteId);
     if (!quote) return false;
 
-    const updatedItems = quote.items.filter(item => item.id !== itemId);
+    const updatedItems = quote.items.filter((item) => item.id !== itemId);
     if (updatedItems.length === 0) return false; // Don't allow empty quotes
 
-    const newBaseTotal = updatedItems.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
+    const newBaseTotal = updatedItems.reduce(
+      (sum, item) => sum + item.price_usd * item.quantity,
+      0,
+    );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
@@ -442,7 +503,7 @@ export class UnifiedDataEngine {
     }
 
     // Price validation suggestions
-    const totalValue = items.reduce((sum, item) => sum + (item.price_usd * item.quantity), 0);
+    const totalValue = items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
     if (totalValue > 1000) {
       suggestions.push({
         id: crypto.randomUUID(),
@@ -551,7 +612,7 @@ export class UnifiedDataEngine {
       if (error) throw error;
 
       // Clear cache for updated quotes
-      quoteIds.forEach(id => this.clearCache(`quote_${id}`));
+      quoteIds.forEach((id) => this.clearCache(`quote_${id}`));
       return true;
     } catch (error) {
       console.error('Error bulk updating status:', error);
@@ -592,9 +653,10 @@ export class UnifiedDataEngine {
     let totalValue = 0;
     let totalOptimization = 0;
 
-    data.forEach(quote => {
+    data.forEach((quote) => {
       statusBreakdown[quote.status] = (statusBreakdown[quote.status] || 0) + 1;
-      destinationCounts[quote.destination_country] = (destinationCounts[quote.destination_country] || 0) + 1;
+      destinationCounts[quote.destination_country] =
+        (destinationCounts[quote.destination_country] || 0) + 1;
       totalValue += quote.final_total_usd || 0;
       totalOptimization += quote.optimization_score || 0;
     });

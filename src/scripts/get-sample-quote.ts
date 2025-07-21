@@ -14,7 +14,9 @@ async function getSampleQuote() {
   // Get an approved quote that hasn't been paid yet
   const { data: quote, error } = await supabase
     .from('quotes')
-    .select('id, display_id, status, final_total_usd, destination_currency, user_id, email, customer_name')
+    .select(
+      'id, display_id, status, final_total_usd, destination_currency, user_id, email, customer_name',
+    )
     .eq('status', 'approved')
     .is('payment_status', null)
     .order('created_at', { ascending: false })
@@ -28,7 +30,9 @@ async function getSampleQuote() {
 
     const { data: anyQuote, error: anyError } = await supabase
       .from('quotes')
-      .select('id, display_id, status, final_total_usd, destination_currency, user_id, email, customer_name')
+      .select(
+        'id, display_id, status, final_total_usd, destination_currency, user_id, email, customer_name',
+      )
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -53,8 +57,12 @@ async function getSampleQuote() {
   console.log(`stripe trigger payment_intent.succeeded \\`);
   console.log(`  --override "payment_intent:metadata.quote_ids=${finalQuote.id}" \\`);
   console.log(`  --override "payment_intent:metadata.user_id=${finalQuote.user_id}" \\`);
-  console.log(`  --override "payment_intent:amount=${Math.round(finalQuote.final_total_usd * 100)}" \\`);
-  console.log(`  --override "payment_intent:currency=${finalQuote.destination_currency.toLowerCase()}"`);
+  console.log(
+    `  --override "payment_intent:amount=${Math.round(finalQuote.final_total_usd * 100)}" \\`,
+  );
+  console.log(
+    `  --override "payment_intent:currency=${finalQuote.destination_currency.toLowerCase()}"`,
+  );
 }
 
 getSampleQuote().catch(console.error);

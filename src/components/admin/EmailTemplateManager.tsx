@@ -352,7 +352,7 @@ ${template.html_content}
             </div>
           </div>
         </div>
-        
+
         <div className="p-6">
           {loadingSettings ? (
             <div className="flex items-center justify-center py-8">
@@ -473,15 +473,15 @@ ${template.html_content}
           </p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            onClick={createDefaultStatusTemplates} 
+          <Button
+            onClick={createDefaultStatusTemplates}
             variant="outline"
             className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
           >
             <Bell className="h-4 w-4 mr-2" />
             Create status templates
           </Button>
-          <Button 
+          <Button
             onClick={() => setShowCreateTemplate(true)}
             className="bg-teal-600 hover:bg-teal-700 text-white transition-colors"
           >
@@ -494,7 +494,10 @@ ${template.html_content}
       {/* Templates List - Stripe Style */}
       <div className="space-y-4">
         {emailTemplates?.map((template) => (
-          <div key={template.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <div
+            key={template.id}
+            className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+          >
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -528,17 +531,17 @@ ${template.html_content}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleCopyTemplate(template)}
                     className="h-8 w-8 p-0 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
                   >
                     <Copy className="h-4 w-4 text-gray-600" />
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => handleEditTemplate(template)}
                     className="h-8 w-8 p-0 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors"
                   >
@@ -560,11 +563,15 @@ ${template.html_content}
             </div>
             <div className="px-6 py-4 space-y-4">
               <div>
-                <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">Subject</h4>
+                <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">
+                  Subject
+                </h4>
                 <p className="text-sm text-gray-900">{template.subject}</p>
               </div>
               <div>
-                <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">Preview</h4>
+                <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">
+                  Preview
+                </h4>
                 <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
                   <p className="text-sm text-gray-700 font-mono">
                     {template.html_content.length > 200
@@ -575,7 +582,9 @@ ${template.html_content}
               </div>
               <div className="pt-2 border-t border-gray-200">
                 <p className="text-xs text-gray-500">
-                  <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
+                  <span className="font-medium">Available variables:</span> {'{product_name}'},{' '}
+                  {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'},{' '}
+                  {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
                 </p>
               </div>
             </div>
@@ -587,7 +596,9 @@ ${template.html_content}
       <Dialog open={showCreateTemplate} onOpenChange={setShowCreateTemplate}>
         <DialogContent className="sm:max-w-[700px] p-0">
           <div className="px-6 py-4 border-b border-gray-200">
-            <DialogTitle className="text-lg font-semibold text-gray-900">Create email template</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Create email template
+            </DialogTitle>
             <DialogDescription className="text-sm text-gray-600 mt-1">
               Create a new email template for customer communications and automated messaging.
             </DialogDescription>
@@ -595,7 +606,9 @@ ${template.html_content}
           <div className="px-6 py-4 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="template-name" className="text-sm font-medium text-gray-700">Template name</Label>
+                <Label htmlFor="template-name" className="text-sm font-medium text-gray-700">
+                  Template name
+                </Label>
                 <Input
                   id="template-name"
                   value={templateForm.name}
@@ -605,7 +618,9 @@ ${template.html_content}
                 />
               </div>
               <div>
-                <Label htmlFor="template-type" className="text-sm font-medium text-gray-700">Template type</Label>
+                <Label htmlFor="template-type" className="text-sm font-medium text-gray-700">
+                  Template type
+                </Label>
                 <Select
                   value={templateForm.template_type}
                   onValueChange={(value) =>
@@ -625,7 +640,9 @@ ${template.html_content}
               </div>
             </div>
             <div>
-              <Label htmlFor="template-subject" className="text-sm font-medium text-gray-700">Email subject</Label>
+              <Label htmlFor="template-subject" className="text-sm font-medium text-gray-700">
+                Email subject
+              </Label>
               <Input
                 id="template-subject"
                 value={templateForm.subject}
@@ -640,7 +657,9 @@ ${template.html_content}
               />
             </div>
             <div>
-              <Label htmlFor="template-body" className="text-sm font-medium text-gray-700">Email body</Label>
+              <Label htmlFor="template-body" className="text-sm font-medium text-gray-700">
+                Email body
+              </Label>
               <Textarea
                 id="template-body"
                 value={templateForm.html_content}
@@ -655,7 +674,9 @@ ${template.html_content}
                 className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500 font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-2">
-                <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
+                <span className="font-medium">Available variables:</span> {'{product_name}'},{' '}
+                {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'},{' '}
+                {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
               </p>
             </div>
           </div>
@@ -667,8 +688,8 @@ ${template.html_content}
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSaveTemplate} 
+            <Button
+              onClick={handleSaveTemplate}
               className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <Save className="h-4 w-4 mr-2" />
@@ -682,7 +703,9 @@ ${template.html_content}
       <Dialog open={showEditTemplate} onOpenChange={setShowEditTemplate}>
         <DialogContent className="sm:max-w-[700px] p-0">
           <div className="px-6 py-4 border-b border-gray-200">
-            <DialogTitle className="text-lg font-semibold text-gray-900">Edit email template</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Edit email template
+            </DialogTitle>
             <DialogDescription className="text-sm text-gray-600 mt-1">
               Modify the email template for customer communications and automated messaging.
             </DialogDescription>
@@ -690,7 +713,9 @@ ${template.html_content}
           <div className="px-6 py-4 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-template-name" className="text-sm font-medium text-gray-700">Template name</Label>
+                <Label htmlFor="edit-template-name" className="text-sm font-medium text-gray-700">
+                  Template name
+                </Label>
                 <Input
                   id="edit-template-name"
                   value={templateForm.name}
@@ -700,7 +725,9 @@ ${template.html_content}
                 />
               </div>
               <div>
-                <Label htmlFor="edit-template-type" className="text-sm font-medium text-gray-700">Template type</Label>
+                <Label htmlFor="edit-template-type" className="text-sm font-medium text-gray-700">
+                  Template type
+                </Label>
                 <Select
                   value={templateForm.template_type}
                   onValueChange={(value) =>
@@ -720,7 +747,9 @@ ${template.html_content}
               </div>
             </div>
             <div>
-              <Label htmlFor="edit-template-subject" className="text-sm font-medium text-gray-700">Email subject</Label>
+              <Label htmlFor="edit-template-subject" className="text-sm font-medium text-gray-700">
+                Email subject
+              </Label>
               <Input
                 id="edit-template-subject"
                 value={templateForm.subject}
@@ -735,7 +764,9 @@ ${template.html_content}
               />
             </div>
             <div>
-              <Label htmlFor="edit-template-body" className="text-sm font-medium text-gray-700">Email body</Label>
+              <Label htmlFor="edit-template-body" className="text-sm font-medium text-gray-700">
+                Email body
+              </Label>
               <Textarea
                 id="edit-template-body"
                 value={templateForm.html_content}
@@ -750,7 +781,9 @@ ${template.html_content}
                 className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500 font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-2">
-                <span className="font-medium">Available variables:</span> {'{product_name}'}, {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'}, {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
+                <span className="font-medium">Available variables:</span> {'{product_name}'},{' '}
+                {'{cart_value}'}, {'{discounted_value}'}, {'{quote_id}'}, {'{order_id}'},{' '}
+                {'{customer_name}'}, {'{total_amount}'}, {'{tracking_number}'}
               </p>
             </div>
           </div>
@@ -762,8 +795,8 @@ ${template.html_content}
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleSaveTemplate} 
+            <Button
+              onClick={handleSaveTemplate}
               className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               <Save className="h-4 w-4 mr-2" />

@@ -10,15 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Brain, 
-  Scale, 
-  Zap, 
-  CheckCircle, 
+import {
+  Brain,
+  Scale,
+  Zap,
+  CheckCircle,
   AlertTriangle,
   Lightbulb,
   Target,
-  TrendingUp
+  TrendingUp,
 } from 'lucide-react';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { cn } from '@/lib/utils';
@@ -36,11 +36,7 @@ interface SmartWeightFieldProps {
   setValue: UseFormSetValue<FieldValues>;
 }
 
-export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
-  control,
-  index,
-  setValue,
-}) => {
+export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, index, setValue }) => {
   const [estimation, setEstimation] = useState<EstimationResult | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const [showSuggestion, setShowSuggestion] = useState(false);
@@ -63,32 +59,26 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
   });
 
   // Debounced estimation function
-  const estimateWeight = useCallback(
-    async (name: string, url?: string) => {
-      if (!name?.trim() && !url?.trim()) {
-        setEstimation(null);
-        setShowSuggestion(false);
-        return;
-      }
+  const estimateWeight = useCallback(async (name: string, url?: string) => {
+    if (!name?.trim() && !url?.trim()) {
+      setEstimation(null);
+      setShowSuggestion(false);
+      return;
+    }
 
-      setIsEstimating(true);
-      try {
-        const result = await smartWeightEstimator.estimateWeight(
-          name || '',
-          url || undefined
-        );
-        setEstimation(result);
-        setShowSuggestion(true);
-      } catch (error) {
-        console.error('Weight estimation error:', error);
-        setEstimation(null);
-        setShowSuggestion(false);
-      } finally {
-        setIsEstimating(false);
-      }
-    },
-    []
-  );
+    setIsEstimating(true);
+    try {
+      const result = await smartWeightEstimator.estimateWeight(name || '', url || undefined);
+      setEstimation(result);
+      setShowSuggestion(true);
+    } catch (error) {
+      console.error('Weight estimation error:', error);
+      setEstimation(null);
+      setShowSuggestion(false);
+    } finally {
+      setIsEstimating(false);
+    }
+  }, []);
 
   // Auto-estimate when product name or URL changes
   useEffect(() => {
@@ -127,8 +117,8 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
             productUrl || undefined,
             {
               userConfirmed: true,
-              originalEstimate: estimation.estimated_weight
-            }
+              originalEstimate: estimation.estimated_weight,
+            },
           );
           console.log('✅ ML learning completed from user correction');
         } catch (error) {
@@ -151,10 +141,14 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
   };
 
   // Calculate difference between estimation and user input
-  const weightDifference = estimation && currentWeight ? 
-    Math.abs(parseFloat(currentWeight) - estimation.estimated_weight) : 0;
-  
-  const showLearningPrompt = estimation && currentWeight && 
+  const weightDifference =
+    estimation && currentWeight
+      ? Math.abs(parseFloat(currentWeight) - estimation.estimated_weight)
+      : 0;
+
+  const showLearningPrompt =
+    estimation &&
+    currentWeight &&
     weightDifference > 0.1 && // Significant difference
     parseFloat(currentWeight) > 0;
 
@@ -177,7 +171,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
               </div>
             )}
           </FormLabel>
-          
+
           <FormControl>
             <div className="space-y-3">
               <Input
@@ -193,7 +187,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                 }}
                 className="text-right"
               />
-              
+
               {/* ML Suggestion Card */}
               {showSuggestion && estimation && !hasUserInput && (
                 <Card className="border-blue-200 bg-blue-50">
@@ -208,14 +202,16 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                         </div>
                         <div className="flex items-center space-x-2">
                           {React.createElement(getConfidenceIcon(estimation.confidence), {
-                            className: 'h-3 w-3'
+                            className: 'h-3 w-3',
                           })}
-                          <Badge className={cn('text-xs', getConfidenceColor(estimation.confidence))}>
+                          <Badge
+                            className={cn('text-xs', getConfidenceColor(estimation.confidence))}
+                          >
                             {(estimation.confidence * 100).toFixed(0)}% confidence
                           </Badge>
                         </div>
                       </div>
-                      
+
                       {/* Reasoning */}
                       {estimation.reasoning.length > 0 && (
                         <div className="text-xs text-blue-600">
@@ -230,7 +226,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                           </ul>
                         </div>
                       )}
-                      
+
                       {/* Suggestions */}
                       {estimation.suggestions.length > 0 && (
                         <div className="text-xs text-blue-600">
@@ -241,7 +237,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                           <div>{estimation.suggestions[0]}</div>
                         </div>
                       )}
-                      
+
                       <div className="flex space-x-2">
                         <Button
                           type="button"
@@ -265,7 +261,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* Learning Prompt */}
               {showLearningPrompt && (
                 <Card className="border-green-200 bg-green-50">
@@ -293,9 +289,10 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                   </CardContent>
                 </Card>
               )}
-              
+
               <p className="text-xs text-muted-foreground">
-                Enter the product weight in kilograms. AI will suggest weights based on product information.
+                Enter the product weight in kilograms. AI will suggest weights based on product
+                information.
               </p>
             </div>
           </FormControl>

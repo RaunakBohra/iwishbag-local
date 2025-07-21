@@ -337,7 +337,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
   // For authenticated users: enable if user exists (userProfile can be loading)
   // For guests: enable if overrideCurrency is provided
   const isQueryEnabled = user ? !!user : !!overrideCurrency;
-  
+
   // Debug logging for payment gateway query enablement
   if (import.meta.env.DEV) {
     console.log('🔍 Payment gateway query enabled state:', {
@@ -346,7 +346,7 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
       hasUserProfile: !!userProfile,
       hasOverrideCurrency: !!overrideCurrency,
       userProfileCurrency: userProfile?.preferred_display_currency,
-      overrideCurrency
+      overrideCurrency,
     });
   }
 
@@ -372,11 +372,14 @@ export const usePaymentGateways = (overrideCurrency?: string, guestShippingCount
 
       // This should never happen now due to USD fallback, but keeping as safety check
       if (!currencyCode) {
-        console.error('UNEXPECTED: Payment methods not available: missing currency data despite fallback', {
-          overrideCurrency,
-          userProfileCurrency: userProfile?.preferred_display_currency,
-          user: !!user,
-        });
+        console.error(
+          'UNEXPECTED: Payment methods not available: missing currency data despite fallback',
+          {
+            overrideCurrency,
+            userProfileCurrency: userProfile?.preferred_display_currency,
+            user: !!user,
+          },
+        );
         return [];
       }
 

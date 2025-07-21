@@ -115,14 +115,14 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
     try {
       // Navigate to checkout with selected items or all items
       const itemsToCheckout = hasSelectedItems ? getSelectedItems() : cartItems;
-      const quoteIds = itemsToCheckout.map(item => item.quoteId).join(',');
-      
+      const quoteIds = itemsToCheckout.map((item) => item.quoteId).join(',');
+
       // Clear selection after checkout
       clearSelection();
-      
+
       // Close drawer
       setIsOpen(false);
-      
+
       // Navigate to checkout
       window.location.href = `/checkout?quotes=${quoteIds}`;
     } catch (error) {
@@ -189,7 +189,10 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
         {/* Cart Items */}
         <div className="space-y-3">
           {cartItems.map((item) => (
-            <div key={item.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+            <div
+              key={item.id}
+              className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+            >
               <Checkbox
                 checked={selectedItems.includes(item.id)}
                 onCheckedChange={() => toggleSelection(item.id)}
@@ -204,7 +207,9 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate text-sm">{item.productName}</h4>
+                    <h4 className="font-medium text-gray-900 truncate text-sm">
+                      {item.productName}
+                    </h4>
                     <p className="text-xs text-gray-500">
                       From {item.purchaseCountryCode} to {item.destinationCountryCode}
                     </p>
@@ -246,14 +251,15 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
 
   // Calculate totals for display
   const itemsToDisplay = hasSelectedItems ? getSelectedItems() : cartItems;
-  const totalAmount = itemsToDisplay.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);
+  const totalAmount = itemsToDisplay.reduce(
+    (sum, item) => sum + item.finalTotal * item.quantity,
+    0,
+  );
 
   return (
     <>
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          {children}
-        </SheetTrigger>
+        <SheetTrigger asChild>{children}</SheetTrigger>
         <SheetContent className="w-[400px] sm:w-[540px] flex flex-col">
           <SheetHeader className="flex-shrink-0">
             <SheetTitle className="flex items-center gap-2">
@@ -288,9 +294,9 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                     <span>Items ({hasSelectedItems ? selectedItemCount : itemCount})</span>
                     <span className="font-medium">
                       {itemsToDisplay.length > 0 && (
-                        <CartItemPrice 
-                          item={{ ...itemsToDisplay[0], finalTotal: totalAmount }} 
-                          quantity={1} 
+                        <CartItemPrice
+                          item={{ ...itemsToDisplay[0], finalTotal: totalAmount }}
+                          quantity={1}
                         />
                       )}
                     </span>
@@ -304,11 +310,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                 </div>
 
                 {/* Checkout Button */}
-                <Button 
-                  onClick={handleCheckout} 
-                  className="w-full"
-                  disabled={!hasCartItems}
-                >
+                <Button onClick={handleCheckout} className="w-full" disabled={!hasCartItems}>
                   <ArrowRight className="h-4 w-4 mr-2" />
                   Proceed to Checkout
                 </Button>

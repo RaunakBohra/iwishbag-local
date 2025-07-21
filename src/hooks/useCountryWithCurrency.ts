@@ -9,7 +9,7 @@ export const useCountryWithCurrency = () => {
   const { data: countries, isLoading } = useAllCountries();
 
   const getCountryWithCurrency = (countryCode: string) => {
-    const country = countries?.find(c => c.code === countryCode);
+    const country = countries?.find((c) => c.code === countryCode);
     if (!country) return null;
 
     return {

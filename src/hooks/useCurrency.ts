@@ -5,7 +5,7 @@ import { currencyService } from '@/services/CurrencyService';
 /**
  * Simplified unified currency hook
  * Replaces all previous currency hooks with a single, simple interface
- * 
+ *
  * @param currencyCode - The 3-letter currency code (e.g., 'USD', 'INR', 'NPR')
  * @param originCountry - Optional origin country for exchange rate calculation
  * @param destinationCountry - Optional destination country for exchange rate calculation
@@ -13,7 +13,7 @@ import { currencyService } from '@/services/CurrencyService';
 export function useCurrency(
   currencyCode: string = 'USD',
   originCountry?: string,
-  destinationCountry?: string
+  destinationCountry?: string,
 ) {
   const { data: countries } = useAllCountries();
 
@@ -86,7 +86,7 @@ export function useCurrency(
         console.error('Failed to get exact exchange rate:', error);
         throw error;
       }
-    }, [])
+    }, []),
   };
 }
 
@@ -141,7 +141,7 @@ export function useQuoteCurrency(quote?: {
 export function useDualCurrency(
   currencyCode: string = 'USD',
   originCountry?: string,
-  destinationCountry?: string
+  destinationCountry?: string,
 ) {
   const localCurrency = useCurrency(currencyCode, originCountry, destinationCountry);
   const usdCurrency = useCurrency('USD');
@@ -153,7 +153,7 @@ export function useDualCurrency(
       }
 
       const usdFormatted = usdCurrency.formatAmount(amount);
-      
+
       if (currencyCode === 'USD') {
         return usdFormatted;
       }

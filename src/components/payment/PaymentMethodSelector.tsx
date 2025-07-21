@@ -49,7 +49,6 @@ const getIcon = (iconName: string) => {
   }
 };
 
-
 export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   selectedMethod,
   onMethodChange,
@@ -136,8 +135,8 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         key={method.code}
         className={cn(
           'border rounded-lg transition-all duration-200',
-          isSelected 
-            ? 'border-teal-500 bg-teal-50 shadow-sm' 
+          isSelected
+            ? 'border-teal-500 bg-teal-50 shadow-sm'
             : 'border-gray-200 bg-white hover:border-gray-300',
           disabled && 'opacity-50',
         )}
@@ -170,7 +169,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
           <div className="px-4 pb-3 border-t border-gray-100">
             <div className="pt-3">
               <p className="text-sm text-gray-600 mb-2">{method.description}</p>
-              
+
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 {method.is_mobile_only && (
                   <div className="flex items-center gap-1">
@@ -186,7 +185,6 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                   </div>
                 )}
               </div>
-
             </div>
           </div>
         )}
@@ -196,37 +194,36 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   return (
     <div className="space-y-3">
-        <RadioGroup
-          key={validSelectedMethod}
-          value={validSelectedMethod}
-          onValueChange={handleMethodChange}
-          className="space-y-2"
-          disabled={disabled}
-        >
-          {availablePaymentMethods.map(renderPaymentMethod)}
-        </RadioGroup>
+      <RadioGroup
+        key={validSelectedMethod}
+        value={validSelectedMethod}
+        onValueChange={handleMethodChange}
+        className="space-y-2"
+        disabled={disabled}
+      >
+        {availablePaymentMethods.map(renderPaymentMethod)}
+      </RadioGroup>
 
-        {availablePaymentMethods.length === 0 && (
-          <Alert className="border-gray-200 bg-gray-50">
-            <AlertTriangle className="h-4 w-4 text-gray-600" />
-            <AlertDescription className="text-gray-700">
-              No payment methods available for your location. Please contact support.
-            </AlertDescription>
-          </Alert>
-        )}
+      {availablePaymentMethods.length === 0 && (
+        <Alert className="border-gray-200 bg-gray-50">
+          <AlertTriangle className="h-4 w-4 text-gray-600" />
+          <AlertDescription className="text-gray-700">
+            No payment methods available for your location. Please contact support.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* QR Code payment instructions */}
-        {getPaymentMethodDisplay(validSelectedMethod).requires_qr && (
-          <Alert className="mt-4 border-teal-200 bg-teal-50">
-            <QrCode className="h-4 w-4 text-teal-600" />
-            <AlertDescription className="text-teal-800">
-              <strong>QR Code Payment:</strong> After selecting this method, you'll see a QR code to
-              scan with your mobile app. The payment will be processed once you complete the
-              transaction in the app.
-            </AlertDescription>
-          </Alert>
-        )}
-
+      {/* QR Code payment instructions */}
+      {getPaymentMethodDisplay(validSelectedMethod).requires_qr && (
+        <Alert className="mt-4 border-teal-200 bg-teal-50">
+          <QrCode className="h-4 w-4 text-teal-600" />
+          <AlertDescription className="text-teal-800">
+            <strong>QR Code Payment:</strong> After selecting this method, you'll see a QR code to
+            scan with your mobile app. The payment will be processed once you complete the
+            transaction in the app.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };

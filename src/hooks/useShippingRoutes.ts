@@ -39,14 +39,9 @@ export function useShippingRoutes() {
   const createRoute = async (routeData: ShippingRouteFormData) => {
     try {
       setError(null);
-      const result = await upsertShippingRoute(routeData);
-      if (result.success) {
-        await fetchRoutes();
-        return { success: true };
-      } else {
-        setError(result.error || 'Failed to create route');
-        return { success: false, error: result.error };
-      }
+      await upsertShippingRoute(routeData);
+      await fetchRoutes();
+      return { success: true };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to create route';
       setError(errorMsg);
@@ -57,14 +52,9 @@ export function useShippingRoutes() {
   const updateRoute = async (id: number, routeData: Partial<ShippingRouteFormData>) => {
     try {
       setError(null);
-      const result = await upsertShippingRoute({ id, ...routeData });
-      if (result.success) {
-        await fetchRoutes();
-        return { success: true };
-      } else {
-        setError(result.error || 'Failed to update route');
-        return { success: false, error: result.error };
-      }
+      await upsertShippingRoute({ id, ...routeData } as ShippingRouteFormData);
+      await fetchRoutes();
+      return { success: true };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to update route';
       setError(errorMsg);
@@ -75,14 +65,9 @@ export function useShippingRoutes() {
   const removeRoute = async (id: number) => {
     try {
       setError(null);
-      const result = await deleteShippingRoute(id);
-      if (result.success) {
-        await fetchRoutes();
-        return { success: true };
-      } else {
-        setError(result.error || 'Failed to delete route');
-        return { success: false, error: result.error };
-      }
+      await deleteShippingRoute(id.toString());
+      await fetchRoutes();
+      return { success: true };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete route';
       setError(errorMsg);
@@ -124,7 +109,7 @@ export function useShippingCalculator() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Use SmartCalculationEngine to get shipping options
       const mockQuote = {
         id: 'temp',
@@ -133,7 +118,16 @@ export function useShippingCalculator() {
         destination_country: destinationCountry,
         currency: 'USD',
         final_total_usd: 0,
-        calculation_data: { breakdown: { items_total: price, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 } },
+        calculation_data: {
+          breakdown: {
+            items_total: price,
+            shipping: 0,
+            customs: 0,
+            taxes: 0,
+            fees: 0,
+            discount: 0,
+          },
+        },
         operational_data: {},
         optimization_score: 0,
       };
@@ -164,7 +158,7 @@ export function useShippingCalculator() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Convert input to SmartCalculationEngine format
       const quote = {
         id: input.id || 'temp',
@@ -173,7 +167,9 @@ export function useShippingCalculator() {
         destination_country: input.destinationCountry,
         currency: input.currency || 'USD',
         final_total_usd: 0,
-        calculation_data: { breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 } },
+        calculation_data: {
+          breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 },
+        },
         operational_data: {},
         optimization_score: 0,
       };
@@ -279,4 +275,3 @@ export function useDestinationCountries() {
 
   return { countries, loading };
 }
-

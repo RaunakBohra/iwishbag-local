@@ -155,7 +155,7 @@ export const QuoteDetailForm = ({
                   className="h-9"
                 />
               </FormControl>
-              
+
               {/* Show Smart Apply button, or regular Apply if we have detected percentage but no smart function */}
               {onCalculateSmartCustoms ? (
                 <Button
@@ -172,9 +172,7 @@ export const QuoteDetailForm = ({
                       Calculating...
                     </>
                   ) : (
-                    <>
-                      🧠 Smart Apply
-                    </>
+                    <>🧠 Smart Apply</>
                   )}
                 </Button>
               ) : (
@@ -190,7 +188,7 @@ export const QuoteDetailForm = ({
                   </Button>
                 )
               )}
-              
+
               {/* Inline tier information */}
               {detectedCustomsTier && (
                 <div className="flex items-center">
@@ -249,7 +247,7 @@ export const QuoteDetailForm = ({
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="international_shipping"
@@ -289,12 +287,13 @@ export const QuoteDetailForm = ({
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground mt-1">
-                Shipping cost is automatically set when you select a shipping option in the Shipping Options section below.
+                Shipping cost is automatically set when you select a shipping option in the Shipping
+                Options section below.
               </p>
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="domestic_shipping"

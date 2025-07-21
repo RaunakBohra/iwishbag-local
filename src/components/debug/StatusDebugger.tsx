@@ -18,7 +18,7 @@ export const StatusDebugger = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quotes')
-.select('id, display_id, status')
+        .select('id, display_id, status')
         .eq('status', 'payment_pending');
 
       if (error) {

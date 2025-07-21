@@ -185,12 +185,16 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         <div className="space-y-4">
           <div className="border-b border-gray-200 pb-3">
             <h3 className="text-lg font-medium text-gray-900">Basic Information</h3>
-            <p className="text-sm text-gray-600">Configure the basic country and currency settings</p>
+            <p className="text-sm text-gray-600">
+              Configure the basic country and currency settings
+            </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="code" className="text-sm font-medium text-gray-900">Country Code *</Label>
+              <Label htmlFor="code" className="text-sm font-medium text-gray-900">
+                Country Code *
+              </Label>
               <Input
                 id="code"
                 name="code"
@@ -202,7 +206,9 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
             <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-900">Country Name *</Label>
+              <Label htmlFor="name" className="text-sm font-medium text-gray-900">
+                Country Name *
+              </Label>
               <Input
                 id="name"
                 name="name"
@@ -213,7 +219,9 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
             <div>
-              <Label htmlFor="currency" className="text-sm font-medium text-gray-900">Currency *</Label>
+              <Label htmlFor="currency" className="text-sm font-medium text-gray-900">
+                Currency *
+              </Label>
               <Input
                 id="currency"
                 name="currency"
@@ -225,7 +233,9 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
             <div>
-              <Label htmlFor="rate_from_usd" className="text-sm font-medium text-gray-900">Rate from USD *</Label>
+              <Label htmlFor="rate_from_usd" className="text-sm font-medium text-gray-900">
+                Rate from USD *
+              </Label>
               <Input
                 id="rate_from_usd"
                 name="rate_from_usd"
@@ -246,10 +256,12 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
             <h3 className="text-lg font-medium text-gray-900">Tax Settings</h3>
             <p className="text-sm text-gray-600">Configure tax percentages and rates</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="sales_tax" className="text-sm font-medium text-gray-900">Sales Tax (%)</Label>
+              <Label htmlFor="sales_tax" className="text-sm font-medium text-gray-900">
+                Sales Tax (%)
+              </Label>
               <Input
                 id="sales_tax"
                 name="sales_tax"
@@ -261,7 +273,9 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
             <div>
-              <Label htmlFor="vat" className="text-sm font-medium text-gray-900">VAT (%)</Label>
+              <Label htmlFor="vat" className="text-sm font-medium text-gray-900">
+                VAT (%)
+              </Label>
               <Input
                 id="vat"
                 name="vat"
@@ -281,7 +295,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
             <h3 className="text-lg font-medium text-gray-900">Shipping Settings</h3>
             <p className="text-sm text-gray-600">Configure shipping costs and weight units</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="min_shipping" className="text-sm font-medium text-gray-900">
@@ -328,8 +342,13 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
             <div>
-              <Label htmlFor="weight_unit" className="text-sm font-medium text-gray-900">Weight Unit</Label>
-              <Select value={weightUnit} onValueChange={(value: 'lbs' | 'kg') => setWeightUnit(value)}>
+              <Label htmlFor="weight_unit" className="text-sm font-medium text-gray-900">
+                Weight Unit
+              </Label>
+              <Select
+                value={weightUnit}
+                onValueChange={(value: 'lbs' | 'kg') => setWeightUnit(value)}
+              >
                 <SelectTrigger className="mt-1 border-gray-300 focus:border-teal-500 focus:ring-teal-500">
                   <SelectValue />
                 </SelectTrigger>
@@ -363,10 +382,13 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
             <h3 className="text-lg font-medium text-gray-900">Payment Gateway Settings</h3>
             <p className="text-sm text-gray-600">Configure payment gateway fees and preferences</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="payment_gateway_fixed_fee" className="text-sm font-medium text-gray-900">
+              <Label
+                htmlFor="payment_gateway_fixed_fee"
+                className="text-sm font-medium text-gray-900"
+              >
                 Payment Gateway Fixed Fee ({formCurrency || 'CUR'})
               </Label>
               <Input
@@ -380,7 +402,10 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
             <div>
-              <Label htmlFor="payment_gateway_percent_fee" className="text-sm font-medium text-gray-900">
+              <Label
+                htmlFor="payment_gateway_percent_fee"
+                className="text-sm font-medium text-gray-900"
+              >
                 Payment Gateway Percent Fee (%)
               </Label>
               <Input
@@ -394,7 +419,7 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
               />
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="available_gateways" className="text-sm font-medium text-gray-900">
@@ -448,9 +473,11 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
         <div className="space-y-4">
           <div className="border-b border-gray-200 pb-3">
             <h3 className="text-lg font-medium text-gray-900">Permissions</h3>
-            <p className="text-sm text-gray-600">Configure what operations are allowed for this country</p>
+            <p className="text-sm text-gray-600">
+              Configure what operations are allowed for this country
+            </p>
           </div>
-          
+
           <div className="space-y-3">
             <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg">
               <Checkbox
@@ -500,7 +527,8 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
           <div className="border-b border-gray-200 pb-3">
             <h3 className="text-lg font-medium text-gray-900">Priority Thresholds</h3>
             <p className="text-sm text-gray-600">
-              Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority level
+              Set the amount thresholds (in {formCurrency || 'main currency'}) for each priority
+              level
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -566,18 +594,15 @@ export const CountryForm = ({ editingCountry, onSubmit, onCancel }: CountryFormP
 
         {/* Form Actions */}
         <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={onCancel}
             className="border-gray-300 text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            className="bg-teal-600 hover:bg-teal-700 text-white"
-          >
+          <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white">
             {editingCountry ? 'Update Country' : 'Create Country'}
           </Button>
         </div>

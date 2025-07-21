@@ -7,17 +7,17 @@
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  Package, 
+import {
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  Package,
   Truck,
   DollarSign,
   ChevronDown,
   ChevronRight,
   ArrowRight,
-  Zap
+  Zap,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -133,7 +133,11 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
   const getSmartAction = () => {
     const actions = {
       pending: { text: 'Send Quote', action: 'sent', icon: <ArrowRight className="w-3 h-3" /> },
-      sent: { text: 'Mark Approved', action: 'approved', icon: <CheckCircle className="w-3 h-3" /> },
+      sent: {
+        text: 'Mark Approved',
+        action: 'approved',
+        icon: <CheckCircle className="w-3 h-3" />,
+      },
       approved: { text: 'Mark Paid', action: 'paid', icon: <DollarSign className="w-3 h-3" /> },
       paid: { text: 'Place Order', action: 'ordered', icon: <Package className="w-3 h-3" /> },
       ordered: { text: 'Mark Shipped', action: 'shipped', icon: <Truck className="w-3 h-3" /> },
@@ -159,8 +163,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         {showProgress && (
           <div className="flex-1 max-w-16">
             <div className="w-full bg-gray-200 rounded-full h-1">
-              <div 
-                className="bg-blue-600 h-1 rounded-full transition-all duration-300" 
+              <div
+                className="bg-blue-600 h-1 rounded-full transition-all duration-300"
                 style={{ width: `${currentConfig.progress}%` }}
               />
             </div>
@@ -168,8 +172,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         )}
 
         {/* Quick Action or Status Dropdown */}
-        {canTransition && (
-          smartAction && nextStatus ? (
+        {canTransition &&
+          (smartAction && nextStatus ? (
             // Smart Quick Action Button
             <Button
               size="sm"
@@ -185,9 +189,9 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
             // Dropdown for multiple options
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={isUpdating}
                   className="h-7 px-2 text-xs flex items-center space-x-1"
                 >
@@ -212,8 +216,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
-          )
-        )}
+          ))}
       </div>
     );
   }
@@ -228,7 +231,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
             {currentConfig.icon}
             <span>{currentConfig.label}</span>
           </Badge>
-          
+
           {/* Priority Indicator */}
           {currentConfig.priority === 'high' && (
             <Badge variant="destructive" className="text-xs px-2 py-0">
@@ -254,9 +257,9 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
           {canTransition && currentConfig.nextActions.length > 1 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={isUpdating}
                   className="flex items-center space-x-1"
                 >
@@ -294,8 +297,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
             <span>{currentConfig.progress}% complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
               style={{ width: `${currentConfig.progress}%` }}
             />
           </div>
@@ -308,17 +311,21 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
           const config = getStatusConfig(status);
           const isActive = status === quote.status;
           const isPast = config.progress < currentConfig.progress;
-          
+
           return (
             <div key={status} className="flex items-center">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                isActive ? config.color : isPast ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  isActive
+                    ? config.color
+                    : isPast
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-gray-100 text-gray-400'
+                }`}
+              >
                 {config.icon}
               </div>
-              {index < 4 && (
-                <ChevronRight className="w-3 h-3 text-gray-300 mx-1" />
-              )}
+              {index < 4 && <ChevronRight className="w-3 h-3 text-gray-300 mx-1" />}
             </div>
           );
         })}

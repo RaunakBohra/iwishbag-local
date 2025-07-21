@@ -10,15 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Brain, 
-  Scale, 
-  Zap, 
-  CheckCircle, 
+import {
+  Brain,
+  Scale,
+  Zap,
+  CheckCircle,
   AlertTriangle,
   Lightbulb,
   Target,
-  TrendingUp
+  TrendingUp,
 } from 'lucide-react';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { cn } from '@/lib/utils';
@@ -78,12 +78,9 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
 
       setIsEstimating(true);
       try {
-        const result = await smartWeightEstimator.estimateWeight(
-          name || '',
-          url || undefined
-        );
+        const result = await smartWeightEstimator.estimateWeight(name || '', url || undefined);
         setEstimation(result);
-        
+
         // Only show suggestion if user hasn't manually entered a weight
         if (!hasUserInput && !currentWeight) {
           setShowSuggestion(true);
@@ -96,7 +93,7 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
         setIsEstimating(false);
       }
     },
-    [hasUserInput, currentWeight]
+    [hasUserInput, currentWeight],
   );
 
   // Auto-estimate when product name or URL changes
@@ -127,7 +124,8 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
 
   const handleLearnFromCorrection = async () => {
     if (estimation && currentWeight && productName) {
-      const actualWeight = typeof currentWeight === 'number' ? currentWeight : parseFloat(currentWeight);
+      const actualWeight =
+        typeof currentWeight === 'number' ? currentWeight : parseFloat(currentWeight);
       if (!isNaN(actualWeight)) {
         try {
           await smartWeightEstimator.learnFromActualWeight(
@@ -136,8 +134,8 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
             productUrl || undefined,
             {
               userConfirmed: true,
-              originalEstimate: estimation.estimated_weight
-            }
+              originalEstimate: estimation.estimated_weight,
+            },
           );
           console.log(`✅ ML learning completed: "${productName}" → ${actualWeight}kg`);
         } catch (error) {
@@ -160,10 +158,14 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
   };
 
   // Calculate difference between estimation and user input
-  const weightDifference = estimation && currentWeight ? 
-    Math.abs(parseFloat(currentWeight.toString()) - estimation.estimated_weight) : 0;
-  
-  const showLearningPrompt = estimation && currentWeight && 
+  const weightDifference =
+    estimation && currentWeight
+      ? Math.abs(parseFloat(currentWeight.toString()) - estimation.estimated_weight)
+      : 0;
+
+  const showLearningPrompt =
+    estimation &&
+    currentWeight &&
     weightDifference > 0.1 && // Significant difference
     parseFloat(currentWeight.toString()) > 0;
 
@@ -247,21 +249,21 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
                 </div>
                 <div className="flex items-center space-x-1">
                   {React.createElement(getConfidenceIcon(estimation.confidence), {
-                    className: 'h-3 w-3'
+                    className: 'h-3 w-3',
                   })}
-                  <Badge className={cn('text-xs px-1 py-0', getConfidenceColor(estimation.confidence))}>
+                  <Badge
+                    className={cn('text-xs px-1 py-0', getConfidenceColor(estimation.confidence))}
+                  >
                     {(estimation.confidence * 100).toFixed(0)}%
                   </Badge>
                 </div>
               </div>
-              
+
               {/* Compact reasoning */}
               {estimation.reasoning.length > 0 && (
-                <div className="text-xs text-blue-600">
-                  {estimation.reasoning[0]}
-                </div>
+                <div className="text-xs text-blue-600">{estimation.reasoning[0]}</div>
               )}
-              
+
               <div className="flex space-x-1">
                 <Button
                   type="button"
@@ -286,7 +288,7 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
           </CardContent>
         </Card>
       )}
-      
+
       {/* Learning Prompt */}
       {showLearningPrompt && (
         <Card className="border-green-200 bg-green-50">
@@ -296,9 +298,7 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
                 <TrendingUp className="h-3 w-3 text-green-600" />
                 <div className="text-xs">
                   <div className="font-medium text-green-800">Train AI</div>
-                  <div className="text-green-600">
-                    Diff: {weightDifference.toFixed(2)}kg
-                  </div>
+                  <div className="text-green-600">Diff: {weightDifference.toFixed(2)}kg</div>
                 </div>
               </div>
               <Button

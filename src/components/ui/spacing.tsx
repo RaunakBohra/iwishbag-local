@@ -15,7 +15,7 @@ export const Section = React.forwardRef<HTMLElement, SpacingProps>(
     <section ref={ref} className={cn(designSystem.components.layout.section, className)} {...props}>
       {children}
     </section>
-  )
+  ),
 );
 Section.displayName = 'Section';
 
@@ -25,7 +25,7 @@ export const Container = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.components.layout.container, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 Container.displayName = 'Container';
 
@@ -35,7 +35,7 @@ export const Grid = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.components.layout.grid, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 Grid.displayName = 'Grid';
 
@@ -45,7 +45,7 @@ export const StackXs = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing.xs, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 StackXs.displayName = 'StackXs';
 
@@ -54,7 +54,7 @@ export const StackSm = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing.sm, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 StackSm.displayName = 'StackSm';
 
@@ -63,7 +63,7 @@ export const StackMd = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing.md, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 StackMd.displayName = 'StackMd';
 
@@ -72,7 +72,7 @@ export const StackLg = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing.lg, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 StackLg.displayName = 'StackLg';
 
@@ -81,7 +81,7 @@ export const StackXl = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing.xl, className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 StackXl.displayName = 'StackXl';
 
@@ -90,7 +90,7 @@ export const Stack2xl = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing['2xl'], className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 Stack2xl.displayName = 'Stack2xl';
 
@@ -99,7 +99,7 @@ export const Stack3xl = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing['3xl'], className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 Stack3xl.displayName = 'Stack3xl';
 
@@ -108,7 +108,7 @@ export const Stack4xl = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing['4xl'], className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 Stack4xl.displayName = 'Stack4xl';
 
@@ -117,7 +117,7 @@ export const Stack5xl = React.forwardRef<HTMLDivElement, SpacingProps>(
     <div ref={ref} className={cn(designSystem.spacing['5xl'], className)} {...props}>
       {children}
     </div>
-  )
+  ),
 );
 Stack5xl.displayName = 'Stack5xl';
 

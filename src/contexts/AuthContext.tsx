@@ -9,7 +9,10 @@ interface AuthContextType {
   isAnonymous: boolean;
   signOut: () => Promise<void>;
   signInAnonymously: () => Promise<void>;
-  convertAnonymousToRegistered: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  convertAnonymousToRegistered: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        
+
         if (mounted) {
           if (session) {
             // User has existing session (authenticated or anonymous)
@@ -54,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const signInAnonymously = async () => {
       try {
         const { data, error } = await supabase.auth.signInAnonymously();
-        
+
         if (error) {
           // If anonymous sign-ins are disabled, just continue without auth
           if (error.message?.includes('Anonymous sign-ins are disabled')) {
@@ -84,9 +87,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
-          
+
           // Log auth state changes for debugging
-          logger.debug('Auth state changed', { event, userId: session?.user?.id, isAnonymous: session?.user?.is_anonymous }, 'Auth');
+          logger.debug(
+            'Auth state changed',
+            { event, userId: session?.user?.id, isAnonymous: session?.user?.is_anonymous },
+            'Auth',
+          );
         }
       });
 
@@ -106,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInAnonymously = async () => {
     try {
       const { data, error } = await supabase.auth.signInAnonymously();
-      
+
       if (error) {
         // If anonymous sign-ins are disabled, just continue without auth
         if (error.message?.includes('Anonymous sign-ins are disabled')) {

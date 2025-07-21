@@ -30,7 +30,7 @@ export const useCart = () => {
   const userProfile = useUserProfile();
   const { user } = useAuth();
   const { formatAmount } = useCurrency(userProfile?.data?.preferred_display_currency || 'USD');
-  
+
   // Use auth user ID for both anonymous and authenticated users
   const userId = user?.id || userProfile?.data?.id;
 

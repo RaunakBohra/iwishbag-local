@@ -56,31 +56,38 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
     },
   });
 
-  const handleFormSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    clearError();
+  const handleFormSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setFormError(null);
+      clearError();
 
-    try {
-      // If Turnstile is enabled but not verified, show error
-      if (showTurnstile && !isVerified) {
-        setFormError('Please complete the security verification');
-        return;
+      try {
+        // If Turnstile is enabled but not verified, show error
+        if (showTurnstile && !isVerified) {
+          setFormError('Please complete the security verification');
+          return;
+        }
+
+        // Submit form with Turnstile token (if enabled)
+        await onSubmit(showTurnstile ? token || undefined : undefined);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+        setFormError(errorMessage);
       }
-
-      // Submit form with Turnstile token (if enabled)
-      await onSubmit(showTurnstile ? token || undefined : undefined);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      setFormError(errorMessage);
-    }
-  }, [onSubmit, showTurnstile, isVerified, token, clearError]);
+    },
+    [onSubmit, showTurnstile, isVerified, token, clearError],
+  );
 
   const canSubmit = !isSubmitting && !disabled && (!showTurnstile || isVerified);
   const displayError = formError || turnstileError || errorMessage;
 
   return (
-    <form onSubmit={handleFormSubmit} className={`turnstile-protected-form ${className}`} id={`turnstile-form-${id}`}>
+    <form
+      onSubmit={handleFormSubmit}
+      className={`turnstile-protected-form ${className}`}
+      id={`turnstile-form-${id}`}
+    >
       {children}
 
       {/* Turnstile Widget */}
@@ -97,7 +104,7 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
             className="mb-3"
             disabled={disableTurnstile}
           />
-          
+
           {turnstileError && (
             <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
               <AlertCircle className="h-4 w-4" />
@@ -118,11 +125,7 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
       )}
 
       {/* Submit Button */}
-      <Button
-        type="submit"
-        disabled={!canSubmit}
-        className={`w-full ${submitButtonClassName}`}
-      >
+      <Button type="submit" disabled={!canSubmit} className={`w-full ${submitButtonClassName}`}>
         {isSubmitting ? (
           <>
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
@@ -132,7 +135,6 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
           submitButtonText
         )}
       </Button>
-
     </form>
   );
 };

@@ -61,7 +61,9 @@ const HeroSection = ({ settings }: HeroSectionProps) => {
           {/* Simple Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 border border-teal-200 mb-8">
             <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-            <span className="text-xs sm:text-sm text-teal-700 font-medium">Free shipping on orders over $500</span>
+            <span className="text-xs sm:text-sm text-teal-700 font-medium">
+              Free shipping on orders over $500
+            </span>
           </div>
 
           {/* Main Heading */}

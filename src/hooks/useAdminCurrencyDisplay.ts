@@ -13,7 +13,7 @@ export const useAdminCurrencyDisplay = (quote?: {
   const { formatDualAmount } = useDualCurrency(
     destinationCurrency,
     quote?.origin_country,
-    quote?.destination_country
+    quote?.destination_country,
   );
 
   return {

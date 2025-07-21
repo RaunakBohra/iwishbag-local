@@ -65,8 +65,14 @@
     convertedWeight = weight * 2.20462262185; // Convert kg to lb
   }
   let baseCost = route.base_shipping_cost || 0;
-  // Add weight-based cost using converted weight
-  baseCost += convertedWeight * (route.cost_per_kg || 0);
+  // Add weight-based cost using converted weight (prioritize shipping_per_kg over cost_per_kg)
+  const perKgRate = route.shipping_per_kg || route.cost_per_kg || 0;
+  baseCost += convertedWeight * perKgRate;
+  
+  // Log validation warnings
+  if (!route.base_shipping_cost && !perKgRate) {
+    console.warn(`⚠️ Route ${route.origin_country}->${route.destination_country} has no shipping costs configured`);
+  }
   // Add percentage-based cost
   const percentageCost = (price * (route.cost_percentage || 0)) / 100;
   // Check weight tiers for minimum cost (using converted weight)
@@ -80,16 +86,24 @@
     }
   }
   const finalCost = baseCost + percentageCost;
-  // Get carrier info
-  const carriers = route.carriers;
-  const defaultCarrier = carriers?.[0] || {
-    name: 'DHL',
-    days: '5-10',
+  // Get delivery option info (prefer delivery_options over old carriers field)
+  const deliveryOptions = route.delivery_options;
+  const defaultOption = deliveryOptions?.[0] || {
+    name: 'Standard Delivery',
+    carrier: 'DHL',
+    min_days: 5,
+    max_days: 10,
   };
+  
+  // Format delivery days from delivery option
+  const deliveryDays = defaultOption.min_days && defaultOption.max_days 
+    ? `${defaultOption.min_days}-${defaultOption.max_days}`
+    : '5-10';
+    
   return {
     cost: Math.round(finalCost * 100) / 100,
-    carrier: defaultCarrier.name,
-    deliveryDays: defaultCarrier.days,
+    carrier: defaultOption.carrier || 'DHL',
+    deliveryDays: deliveryDays,
     method: 'route-specific',
     route: route,
   };
@@ -173,14 +187,23 @@
     .select('*')
     .eq('code', destinationCountry)
     .single();
-  // Calculate customs duty
-  const customsDuty = countrySettings
-    ? (itemPrice * (countrySettings.customs_percent || 0)) / 100
+  // Calculate customs duty with validation
+  const customsDuty = countrySettings && countrySettings.sales_tax != null
+    ? (itemPrice * (countrySettings.sales_tax || 0)) / 100
     : 0;
-  // Calculate VAT
-  const vat = countrySettings
-    ? ((itemPrice + shippingCost.cost + customsDuty) * (countrySettings.vat_percent || 0)) / 100
+  
+  // Calculate VAT with validation
+  const vat = countrySettings && countrySettings.vat != null
+    ? ((itemPrice + shippingCost.cost + customsDuty) * (countrySettings.vat || 0)) / 100
     : 0;
+    
+  // Log warning if country settings are missing critical fields
+  if (countrySettings && (countrySettings.sales_tax == null || countrySettings.vat == null)) {
+    console.warn(`⚠️ Missing tax fields for country ${destinationCountry}:`, {
+      sales_tax: countrySettings.sales_tax,
+      vat: countrySettings.vat
+    });
+  }
   // Calculate total
   const subtotal = itemPrice + salesTax + merchantShipping + domesticShipping + shippingCost.cost;
   const totalWithCharges = subtotal + handlingCharge + insuranceAmount + customsDuty + vat;

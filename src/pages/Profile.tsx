@@ -9,13 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -97,7 +91,12 @@ const Profile = () => {
 
   const getUserInitials = () => {
     const name = profile?.full_name || user?.email || 'User';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const {
@@ -128,7 +127,11 @@ const Profile = () => {
       if (!user) return null;
 
       const [ordersResult, quotesResult] = await Promise.all([
-        supabase.from('quotes').select('id', { count: 'exact' }).eq('user_id', user.id).eq('status', 'completed'),
+        supabase
+          .from('quotes')
+          .select('id', { count: 'exact' })
+          .eq('user_id', user.id)
+          .eq('status', 'completed'),
         supabase.from('quotes').select('id', { count: 'exact' }).eq('user_id', user.id),
       ]);
 
@@ -259,7 +262,7 @@ const Profile = () => {
     try {
       // Get the country associated with this currency
       const countryCode = await currencyService.getCountryForCurrency(currencyCode);
-      
+
       // Update country in the form (currency is already updated by field.onChange)
       if (countryCode) {
         form.setValue('country', countryCode);
@@ -293,7 +296,6 @@ const Profile = () => {
       return currencyCode;
     }
   };
-
 
   if (isLoading) {
     return (
@@ -341,7 +343,10 @@ const Profile = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={getUserAvatarUrl() || undefined} alt={profile?.full_name || 'User'} />
+                <AvatarImage
+                  src={getUserAvatarUrl() || undefined}
+                  alt={profile?.full_name || 'User'}
+                />
                 <AvatarFallback className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xl font-semibold">
                   {getUserInitials()}
                 </AvatarFallback>
@@ -379,7 +384,6 @@ const Profile = () => {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Link
@@ -481,9 +485,7 @@ const Profile = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">
-                        Email
-                      </FormLabel>
+                      <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input {...field} disabled className="pl-10 bg-gray-50 text-gray-500" />
@@ -559,9 +561,7 @@ const Profile = () => {
                   <FormField
                     control={form.control}
                     name="country"
-                    render={() => (
-                      <input type="hidden" {...form.register('country')} />
-                    )}
+                    render={() => <input type="hidden" {...form.register('country')} />}
                   />
 
                   <FormField
@@ -625,7 +625,8 @@ const Profile = () => {
                       <DollarSign className="h-4 w-4 text-teal-600" />
                       <div>
                         <BodySmall className="text-teal-800 font-medium">
-                          {getCurrencyName(form.watch('preferred_display_currency'))} ({form.watch('preferred_display_currency')})
+                          {getCurrencyName(form.watch('preferred_display_currency'))} (
+                          {form.watch('preferred_display_currency')})
                         </BodySmall>
                         <BodySmall className="text-teal-600">
                           {getCountryName(form.watch('country'))}
@@ -706,16 +707,16 @@ const Profile = () => {
                 <Target className="h-5 w-5 text-gray-600" />
                 Activity Summary
               </CardTitle>
-              <CardDescription className="text-gray-600">
-                Your recent activity
-              </CardDescription>
+              <CardDescription className="text-gray-600">Your recent activity</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-teal-600" />
-                    <span className="text-sm font-medium text-gray-700">{stats?.totalOrders || 0} orders</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {stats?.totalOrders || 0} orders
+                    </span>
                   </div>
                   <Link to="/dashboard/orders">
                     <Button variant="outline" size="sm" className="text-xs">
@@ -726,7 +727,9 @@ const Profile = () => {
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-medium text-gray-700">{stats?.totalQuotes || 0} quotes</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {stats?.totalQuotes || 0} quotes
+                    </span>
                   </div>
                   <Link to="/dashboard/quotes">
                     <Button variant="outline" size="sm" className="text-xs">

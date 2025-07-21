@@ -2,19 +2,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
 
 export interface PaymentSummary {
-  finalTotal: number;           // Local currency amount (for display)
-  finalTotalUsd: number;        // USD amount (for reconciliation)
-  totalPaid: number;            // Local currency amount paid
-  totalPaidUsd: number;         // USD equivalent of all payments (for reconciliation)
-  remaining: number;            // Remaining in local currency
-  remainingUsd: number;         // Remaining in USD
-  overpaidAmount: number;       // Overpaid in local currency
-  overpaidAmountUsd: number;    // Overpaid in USD
+  finalTotal: number; // Local currency amount (for display)
+  finalTotalUsd: number; // USD amount (for reconciliation)
+  totalPaid: number; // Local currency amount paid
+  totalPaidUsd: number; // USD equivalent of all payments (for reconciliation)
+  remaining: number; // Remaining in local currency
+  remainingUsd: number; // Remaining in USD
+  overpaidAmount: number; // Overpaid in local currency
+  overpaidAmountUsd: number; // Overpaid in USD
   status: 'paid' | 'partial' | 'unpaid';
   isOverpaid: boolean;
   percentagePaid: number;
-  currency: string;             // Local currency
-  exchangeRate: number;         // Current exchange rate USD -> local
+  currency: string; // Local currency
+  exchangeRate: number; // Current exchange rate USD -> local
 }
 
 export interface DueAmountInfo {
@@ -36,7 +36,7 @@ export async function calculatePaymentSummary(
   currency: string,
 ): Promise<PaymentSummary> {
   try {
-    // Get current exchange rate for calculations  
+    // Get current exchange rate for calculations
     const currencyInfo = await currencyService.getCurrency(currency);
     const exchangeRate = currencyInfo?.rate_from_usd || 1;
 
@@ -56,57 +56,77 @@ export async function calculatePaymentSummary(
         .eq('quote_id', quoteId)
         .eq('status', 'completed');
 
-      const totals = transactions?.reduce((acc, tx) => {
-        const localAmount = parseFloat(tx.amount) || 0;
-        
-        // Use stored USD equivalent if available, otherwise calculate
-        let usdAmount = parseFloat(tx.usd_equivalent) || 0;
-        if (!usdAmount && localAmount > 0) {
-          const txExchangeRate = parseFloat(tx.exchange_rate_at_payment) || exchangeRate;
-          usdAmount = localAmount / txExchangeRate;
-        }
+      const totals = transactions?.reduce(
+        (acc, tx) => {
+          const localAmount = parseFloat(tx.amount) || 0;
 
-        return {
-          localPaid: acc.localPaid + localAmount,
-          usdPaid: acc.usdPaid + usdAmount,
-        };
-      }, { localPaid: 0, usdPaid: 0 }) || { localPaid: 0, usdPaid: 0 };
+          // Use stored USD equivalent if available, otherwise calculate
+          let usdAmount = parseFloat(tx.usd_equivalent) || 0;
+          if (!usdAmount && localAmount > 0) {
+            const txExchangeRate = parseFloat(tx.exchange_rate_at_payment) || exchangeRate;
+            usdAmount = localAmount / txExchangeRate;
+          }
 
-      return calculateSummary(finalTotal, finalTotalUsd, totals.localPaid, totals.usdPaid, currency, exchangeRate);
+          return {
+            localPaid: acc.localPaid + localAmount,
+            usdPaid: acc.usdPaid + usdAmount,
+          };
+        },
+        { localPaid: 0, usdPaid: 0 },
+      ) || { localPaid: 0, usdPaid: 0 };
+
+      return calculateSummary(
+        finalTotal,
+        finalTotalUsd,
+        totals.localPaid,
+        totals.usdPaid,
+        currency,
+        exchangeRate,
+      );
     }
 
-    const totals = paymentLedger?.reduce((acc, entry) => {
-      const type = entry.transaction_type || entry.payment_type;
-      const localAmount = parseFloat(entry.amount) || 0;
-      
-      // Calculate USD equivalent if not stored
-      let usdAmount = parseFloat(entry.usd_equivalent) || 0;
-      if (!usdAmount && localAmount > 0) {
-        const entryExchangeRate = parseFloat(entry.exchange_rate_at_payment) || exchangeRate;
-        usdAmount = localAmount / entryExchangeRate;
-      }
+    const totals = paymentLedger?.reduce(
+      (acc, entry) => {
+        const type = entry.transaction_type || entry.payment_type;
+        const localAmount = parseFloat(entry.amount) || 0;
 
-      // Handle different payment types
-      if (
-        type === 'payment' ||
-        type === 'customer_payment' ||
-        (entry.status === 'completed' && !type)
-      ) {
-        return {
-          localPaid: acc.localPaid + localAmount,
-          usdPaid: acc.usdPaid + usdAmount,
-        };
-      }
-      if (type === 'refund' || type === 'partial_refund') {
-        return {
-          localPaid: acc.localPaid - localAmount,
-          usdPaid: acc.usdPaid - usdAmount,
-        };
-      }
-      return acc;
-    }, { localPaid: 0, usdPaid: 0 }) || { localPaid: 0, usdPaid: 0 };
+        // Calculate USD equivalent if not stored
+        let usdAmount = parseFloat(entry.usd_equivalent) || 0;
+        if (!usdAmount && localAmount > 0) {
+          const entryExchangeRate = parseFloat(entry.exchange_rate_at_payment) || exchangeRate;
+          usdAmount = localAmount / entryExchangeRate;
+        }
 
-    return calculateSummary(finalTotal, finalTotalUsd, totals.localPaid, totals.usdPaid, currency, exchangeRate);
+        // Handle different payment types
+        if (
+          type === 'payment' ||
+          type === 'customer_payment' ||
+          (entry.status === 'completed' && !type)
+        ) {
+          return {
+            localPaid: acc.localPaid + localAmount,
+            usdPaid: acc.usdPaid + usdAmount,
+          };
+        }
+        if (type === 'refund' || type === 'partial_refund') {
+          return {
+            localPaid: acc.localPaid - localAmount,
+            usdPaid: acc.usdPaid - usdAmount,
+          };
+        }
+        return acc;
+      },
+      { localPaid: 0, usdPaid: 0 },
+    ) || { localPaid: 0, usdPaid: 0 };
+
+    return calculateSummary(
+      finalTotal,
+      finalTotalUsd,
+      totals.localPaid,
+      totals.usdPaid,
+      currency,
+      exchangeRate,
+    );
   } catch (error) {
     console.error('Error calculating payment summary:', error);
     const fallbackExchangeRate = 1.0;
@@ -128,11 +148,11 @@ function calculateSummary(
   // Calculate remaining amounts in both currencies
   const remaining = Math.max(0, finalTotal - totalPaid);
   const remainingUsd = Math.max(0, finalTotalUsd - totalPaidUsd);
-  
+
   // Use USD amounts for precise payment status determination (avoids exchange rate drift)
   const status = remainingUsd <= 0.01 ? 'paid' : totalPaidUsd > 0.01 ? 'partial' : 'unpaid';
   const isOverpaid = totalPaidUsd > finalTotalUsd + 0.01; // Small tolerance for floating point
-  
+
   return {
     finalTotal,
     finalTotalUsd,
@@ -176,15 +196,15 @@ export async function detectDueAmount(
   // For due amount detection, we need to fetch quote details to get USD amounts
   const { data: quote } = await supabase
     .from('quotes')
-    .select('final_total_usd, destination_currency')
+    .select('final_total_usd, currency')
     .eq('id', quoteId)
     .single();
-  
+
   const paymentSummary = await calculatePaymentSummary(
-    quoteId, 
-    newTotal, 
-    quote?.final_total_usd || newTotal, 
-    quote?.destination_currency || 'USD'
+    quoteId,
+    newTotal,
+    quote?.final_total_usd || newTotal,
+    quote?.currency || 'USD',
   );
 
   return {
@@ -263,20 +283,18 @@ export async function recordPaymentWithUsdEquivalent(
     const usdEquivalent = amount / exchangeRate;
 
     // Record in payment_transactions with USD equivalent
-    const { error: transactionError } = await supabase
-      .from('payment_transactions')
-      .insert({
-        quote_id: quoteId,
-        amount: amount.toString(),
-        currency,
-        usd_equivalent: usdEquivalent,
-        exchange_rate_at_payment: exchangeRateResult.rate,
-        local_currency: currency,
-        payment_method: paymentMethod,
-        transaction_id: transactionId,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-      });
+    const { error: transactionError } = await supabase.from('payment_transactions').insert({
+      quote_id: quoteId,
+      amount: amount.toString(),
+      currency,
+      usd_equivalent: usdEquivalent,
+      exchange_rate_at_payment: exchangeRateResult.rate,
+      local_currency: currency,
+      payment_method: paymentMethod,
+      transaction_id: transactionId,
+      status: 'completed',
+      created_at: new Date().toISOString(),
+    });
 
     if (transactionError) {
       console.error('Error recording payment transaction:', transactionError);
@@ -284,20 +302,18 @@ export async function recordPaymentWithUsdEquivalent(
     }
 
     // Also record in payment_ledger for consistency
-    const { error: ledgerError } = await supabase
-      .from('payment_ledger')
-      .insert({
-        quote_id: quoteId,
-        amount: amount.toString(),
-        currency,
-        usd_equivalent: usdEquivalent,
-        exchange_rate_at_payment: exchangeRateResult.rate,
-        transaction_type: 'customer_payment',
-        payment_method: paymentMethod,
-        transaction_id: transactionId,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-      });
+    const { error: ledgerError } = await supabase.from('payment_ledger').insert({
+      quote_id: quoteId,
+      amount: amount.toString(),
+      currency,
+      usd_equivalent: usdEquivalent,
+      exchange_rate_at_payment: exchangeRateResult.rate,
+      transaction_type: 'customer_payment',
+      payment_method: paymentMethod,
+      transaction_id: transactionId,
+      status: 'completed',
+      created_at: new Date().toISOString(),
+    });
 
     if (ledgerError) {
       console.warn('Error recording payment ledger (non-critical):', ledgerError);
@@ -306,9 +322,9 @@ export async function recordPaymentWithUsdEquivalent(
     return { success: true, usdEquivalent };
   } catch (error) {
     console.error('Error recording payment with USD equivalent:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

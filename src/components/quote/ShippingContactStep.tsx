@@ -59,15 +59,19 @@ export default function ShippingContactStep({
 
   // No longer needed - contact form handles all input
 
-  const handleContactFormSubmit = (emailData: { email: string; name?: string; useAuth?: boolean }) => {
+  const handleContactFormSubmit = (emailData: {
+    email: string;
+    name?: string;
+    useAuth?: boolean;
+  }) => {
     // Update contactInfo with the provided data
     const updatedContactInfo = {
       email: emailData.email,
       name: emailData.name || '',
     };
-    
+
     setContactInfo(updatedContactInfo);
-    
+
     // Proceed to submission with the updated data passed directly
     next({ email: emailData.email, name: emailData.name || '' });
   };
@@ -123,7 +127,7 @@ export default function ShippingContactStep({
             <User className="h-5 w-5 text-teal-600" />
             <h3 className="text-xl font-semibold text-gray-900">Shipping Address</h3>
           </div>
-          
+
           {address ? (
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200">
               <div className="space-y-3">
@@ -139,7 +143,9 @@ export default function ShippingContactStep({
                     <div>
                       {address.city}, {address.state_province_region} {address.postal_code}
                     </div>
-                    <div className="font-medium text-gray-900 mt-1">{address.destination_country}</div>
+                    <div className="font-medium text-gray-900 mt-1">
+                      {address.destination_country}
+                    </div>
                   </div>
                 </div>
                 {address.phone && (
@@ -244,8 +250,8 @@ export default function ShippingContactStep({
           <button
             type="button"
             className={`flex-1 py-4 rounded-lg font-medium text-lg transition-all duration-200 ${
-              isSubmitting 
-                ? 'bg-gray-400 cursor-not-allowed text-white' 
+              isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed text-white'
                 : 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white hover:from-teal-700 hover:to-cyan-700 shadow-sm'
             }`}
             onClick={() => {
@@ -253,7 +259,7 @@ export default function ShippingContactStep({
               if (address) {
                 const emailToUse = profile?.email || user?.email || '';
                 const nameToUse = address.recipient_name || '';
-                
+
                 setShippingContact({
                   name: nameToUse,
                   email: emailToUse,
@@ -265,7 +271,7 @@ export default function ShippingContactStep({
                   city: address.city || '',
                   zip: address.postal_code || '',
                 });
-                
+
                 // Pass the data directly to avoid state timing issues
                 next({ email: emailToUse, name: nameToUse });
               } else {
@@ -277,8 +283,19 @@ export default function ShippingContactStep({
             {isSubmitting ? (
               <div className="flex items-center justify-center gap-2">
                 <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Submitting Quote...
               </div>
@@ -376,7 +393,8 @@ export default function ShippingContactStep({
         </p>
         <div className="mt-6 p-4 bg-teal-50 border border-teal-200 rounded-lg max-w-lg mx-auto">
           <p className="text-sm text-teal-700">
-            💡 <strong>Good news:</strong> We only need your destination country for calculations, so no full address required for quotes!
+            💡 <strong>Good news:</strong> We only need your destination country for calculations,
+            so no full address required for quotes!
           </p>
         </div>
       </div>
@@ -428,11 +446,13 @@ export default function ShippingContactStep({
               <div className="border-b border-gray-200 pb-4">
                 <div className="text-sm text-gray-600 mb-2">Quote Type</div>
                 <div className="font-semibold text-gray-900">
-                  {quoteType === 'combined' ? 'Single Combined Quote' : 'Individual Quotes per Product'}
+                  {quoteType === 'combined'
+                    ? 'Single Combined Quote'
+                    : 'Individual Quotes per Product'}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {quoteType === 'combined' 
-                    ? 'One quote for all products together' 
+                  {quoteType === 'combined'
+                    ? 'One quote for all products together'
                     : 'Separate quote for each product'}
                 </div>
               </div>

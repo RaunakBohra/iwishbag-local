@@ -97,44 +97,44 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       } else {
         // Check if country/currency not set and update with destination country/currency
         if (!existingProfile.country || !existingProfile.preferred_display_currency) {
-            // Get destination country from shipping address (this is where the customer lives)
-            const destinationCountry = shippingAddress?.country;
+          // Get destination country from shipping address (this is where the customer lives)
+          const destinationCountry = shippingAddress?.country;
 
-            // Get currency for destination country using CurrencyService
-            let destinationCurrency = 'USD';
-            if (destinationCountry) {
-              try {
-                destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
-              } catch (error) {
-                console.error('Error getting currency for country:', error);
-                // Fall back to USD if there's an error
-                destinationCurrency = 'USD';
-              }
+          // Get currency for destination country using CurrencyService
+          let destinationCurrency = 'USD';
+          if (destinationCountry) {
+            try {
+              destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+            } catch (error) {
+              console.error('Error getting currency for country:', error);
+              // Fall back to USD if there's an error
+              destinationCurrency = 'USD';
             }
+          }
 
-            const updateData: Partial<TablesInsert<'profiles'>> = {};
+          const updateData: Partial<TablesInsert<'profiles'>> = {};
 
-            if (!existingProfile.country) {
-              updateData.country = destinationCountry;
+          if (!existingProfile.country) {
+            updateData.country = destinationCountry;
+          }
+
+          if (!existingProfile.preferred_display_currency) {
+            updateData.preferred_display_currency = destinationCurrency;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update(updateData)
+              .eq('id', user.id);
+
+            if (!updateError) {
+              toast({
+                title: 'Profile Updated',
+                description: `We've set your default country to ${destinationCountry} and currency to ${destinationCurrency} based on your shipping destination.`,
+              });
             }
-
-            if (!existingProfile.preferred_display_currency) {
-              updateData.preferred_display_currency = destinationCurrency;
-            }
-
-            if (Object.keys(updateData).length > 0) {
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update(updateData)
-                .eq('id', user.id);
-
-              if (!updateError) {
-                toast({
-                  title: 'Profile Updated',
-                  description: `We've set your default country to ${destinationCountry} and currency to ${destinationCurrency} based on your shipping destination.`,
-                });
-              }
-            }
+          }
         }
       }
     }
@@ -150,11 +150,13 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       // Debug logging
       console.log('Quote submission debug:', {
         countryCode,
-        shippingAddress: shippingAddress ? {
-          country: shippingAddress.country,
-          countryCode: shippingAddress.countryCode
-        } : null,
-        destinationCountry
+        shippingAddress: shippingAddress
+          ? {
+              country: shippingAddress.country,
+              countryCode: shippingAddress.countryCode,
+            }
+          : null,
+        destinationCountry,
       });
 
       const quoteData: Partial<TablesInsert<'quotes'>> = {
@@ -289,59 +291,61 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       } else {
         // Check if country/currency not set and update with destination country/currency
         if (!existingProfile.country || !existingProfile.preferred_display_currency) {
-            // Get destination country from shipping address (this is where the customer lives)
-            const destinationCountry = shippingAddress?.country;
+          // Get destination country from shipping address (this is where the customer lives)
+          const destinationCountry = shippingAddress?.country;
 
-            // Get currency for destination country using CurrencyService
-            let destinationCurrency = 'USD';
-            if (destinationCountry) {
-              try {
-                destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
-              } catch (error) {
-                console.error('Error getting currency for country:', error);
-                // Fall back to USD if there's an error
-                destinationCurrency = 'USD';
-              }
+          // Get currency for destination country using CurrencyService
+          let destinationCurrency = 'USD';
+          if (destinationCountry) {
+            try {
+              destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
+            } catch (error) {
+              console.error('Error getting currency for country:', error);
+              // Fall back to USD if there's an error
+              destinationCurrency = 'USD';
             }
+          }
 
-            const updateData: Partial<TablesInsert<'profiles'>> = {};
+          const updateData: Partial<TablesInsert<'profiles'>> = {};
 
-            if (!existingProfile.country) {
-              updateData.country = destinationCountry;
+          if (!existingProfile.country) {
+            updateData.country = destinationCountry;
+          }
+
+          if (!existingProfile.preferred_display_currency) {
+            updateData.preferred_display_currency = destinationCurrency;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update(updateData)
+              .eq('id', user.id);
+
+            if (!updateError) {
+              toast({
+                title: 'Profile Updated',
+                description: `We've set your default country to ${destinationCountry} and currency to ${destinationCurrency} based on your shipping destination.`,
+              });
             }
-
-            if (!existingProfile.preferred_display_currency) {
-              updateData.preferred_display_currency = destinationCurrency;
-            }
-
-            if (Object.keys(updateData).length > 0) {
-              const { error: updateError } = await supabase
-                .from('profiles')
-                .update(updateData)
-                .eq('id', user.id);
-
-              if (!updateError) {
-                toast({
-                  title: 'Profile Updated',
-                  description: `We've set your default country to ${destinationCountry} and currency to ${destinationCurrency} based on your shipping destination.`,
-                });
-              }
-            }
+          }
         }
       }
     }
 
     // Prepare quote data
     const destinationCountry = shippingAddress?.countryCode || shippingAddress?.country;
-    
+
     // Debug logging
     console.log('Combined quote submission debug:', {
       countryCode,
-      shippingAddress: shippingAddress ? {
-        country: shippingAddress.country,
-        countryCode: shippingAddress.countryCode
-      } : null,
-      destinationCountry
+      shippingAddress: shippingAddress
+        ? {
+            country: shippingAddress.country,
+            countryCode: shippingAddress.countryCode,
+          }
+        : null,
+      destinationCountry,
     });
 
     const quoteData: Partial<TablesInsert<'quotes'>> = {
@@ -350,7 +354,9 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       destination_country: destinationCountry, // Shipping country (where we deliver to)
       user_id: user?.id || null, // Now uses anonymous auth instead of null
       currency: selectedCountryCurrency,
-      destination_currency: getCountryCurrency(shippingAddress?.countryCode || shippingAddress?.country || countryCode),
+      destination_currency: getCountryCurrency(
+        shippingAddress?.countryCode || shippingAddress?.country || countryCode,
+      ),
       status: 'pending',
       in_cart: false,
     };
@@ -437,7 +443,11 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
     const finalEmail = user?.email || values.email;
 
     // For authenticated (non-anonymous) users, email is required
-    if (user && !user.is_anonymous && (!finalEmail || !z.string().email().safeParse(finalEmail).success)) {
+    if (
+      user &&
+      !user.is_anonymous &&
+      (!finalEmail || !z.string().email().safeParse(finalEmail).success)
+    ) {
       form.setError('email', {
         type: 'manual',
         message: 'Please enter a valid email address.',

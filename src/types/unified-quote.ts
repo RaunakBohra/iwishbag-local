@@ -75,10 +75,26 @@ export interface ShippingAddress {
   locked: boolean;
 }
 
+// Customer Preferences for Route-Based Options
+export interface CustomerPreferences {
+  insurance_opted_in?: boolean;
+  selected_insurance_coverage?: 'basic' | 'premium';
+  handling_service_level?: 'standard' | 'premium';
+  delivery_priority?: 'cost' | 'speed' | 'balance';
+}
+
+// Customer Profile Data from Auth
+export interface CustomerProfile {
+  avatar_url?: string;
+  [key: string]: any; // For additional profile data
+}
+
 // Customer Data JSONB
 export interface CustomerData {
   info: CustomerInfo;
   shipping_address: ShippingAddress;
+  preferences?: CustomerPreferences;
+  profile?: CustomerProfile;
 }
 
 // Customs Information
@@ -89,6 +105,24 @@ export interface CustomsInfo {
 }
 
 // Shipping Option (Enhanced with Smart Features)
+// Route-based handling charge configuration
+export interface RouteHandlingCharge {
+  base_fee: number;
+  percentage_of_value: number;
+  min_fee: number;
+  max_fee: number;
+}
+
+// Route-based insurance options
+export interface RouteInsuranceOptions {
+  available: boolean;
+  default_enabled: boolean;
+  coverage_percentage: number;
+  min_fee: number;
+  max_coverage: number;
+  customer_description: string;
+}
+
 export interface ShippingOption {
   id: string;
   carrier: string;
@@ -98,6 +132,9 @@ export interface ShippingOption {
   confidence: number;
   restrictions: string[];
   tracking: boolean;
+  // Route-based configuration (optional)
+  handling_charge?: RouteHandlingCharge;
+  insurance_options?: RouteInsuranceOptions;
 }
 
 // Shipping Tracking Information
@@ -130,6 +167,10 @@ export interface ShippingInfo {
   selected_option?: string;
   tracking?: ShippingTracking;
   smart_recommendations: ShippingRecommendation[];
+  // Route-based calculation tracking
+  calculated_handling?: number;
+  calculated_insurance?: number;
+  route_based_calculation?: boolean;
 }
 
 // Payment Information
@@ -192,36 +233,36 @@ export interface UnifiedQuote {
   id: string;
   display_id: string;
   user_id?: string;
-  
+
   // Business State
   status: string;
   origin_country: string;
   destination_country: string;
-  
+
   // Smart Product System
   items: QuoteItem[];
-  
+
   // Smart Financial System
   base_total_usd: number;
   final_total_usd: number;
-  
+
   // Smart Metadata
   calculation_data: CalculationData;
   customer_data: CustomerData;
   operational_data: OperationalData;
-  
+
   // System Core
   currency: string;
   in_cart: boolean;
   created_at: string;
   updated_at: string;
-  
+
   // Smart Extensions
   smart_suggestions: SmartSuggestion[];
   weight_confidence: number;
   optimization_score: number;
   expires_at?: string;
-  
+
   // Legacy Support (will be removed)
   share_token?: string;
   is_anonymous: boolean;
@@ -292,21 +333,21 @@ export interface UnifiedQuoteRow {
 
 // Utility type for transforming database row to typed interface
 export type UnifiedQuoteFromDB = {
-  [K in keyof UnifiedQuoteRow]: K extends 'items' 
+  [K in keyof UnifiedQuoteRow]: K extends 'items'
     ? QuoteItem[]
     : K extends 'calculation_data'
-    ? CalculationData
-    : K extends 'customer_data'
-    ? CustomerData
-    : K extends 'operational_data'
-    ? OperationalData
-    : K extends 'smart_suggestions'
-    ? SmartSuggestion[]
-    : UnifiedQuoteRow[K];
+      ? CalculationData
+      : K extends 'customer_data'
+        ? CustomerData
+        : K extends 'operational_data'
+          ? OperationalData
+          : K extends 'smart_suggestions'
+            ? SmartSuggestion[]
+            : UnifiedQuoteRow[K];
 };
 
 // Status type definitions
-export type QuoteStatus = 
+export type QuoteStatus =
   | 'pending'
   | 'sent'
   | 'approved'

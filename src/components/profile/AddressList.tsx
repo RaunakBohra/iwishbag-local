@@ -73,9 +73,9 @@ const AddressCard = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={onEdit}
           className="border-gray-300 text-gray-700 hover:bg-gray-50"
         >
@@ -89,10 +89,7 @@ const AddressCard = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={onDelete}
-              className="text-red-600 focus:text-red-600"
-            >
+            <DropdownMenuItem onSelect={onDelete} className="text-red-600 focus:text-red-600">
               <Trash2 className="mr-2 h-4 w-4" />
               <span>Delete</span>
             </DropdownMenuItem>
@@ -179,11 +176,8 @@ export function AddressList() {
             {addresses?.length || 0} saved {addresses?.length === 1 ? 'address' : 'addresses'}
           </BodySmall>
         </div>
-        <Button 
-          onClick={handleAdd}
-          className="bg-teal-600 hover:bg-teal-700 text-white"
-        >
-          <Plus className="mr-2 h-4 w-4" /> 
+        <Button onClick={handleAdd} className="bg-teal-600 hover:bg-teal-700 text-white">
+          <Plus className="mr-2 h-4 w-4" />
           Add Address
         </Button>
       </div>
@@ -212,12 +206,12 @@ export function AddressList() {
                 <BodySmall className="text-gray-500 mb-4">
                   Add your first shipping address to get started
                 </BodySmall>
-                <Button 
+                <Button
                   onClick={handleAdd}
                   variant="outline"
                   className="border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
-                  <Plus className="mr-2 h-4 w-4" /> 
+                  <Plus className="mr-2 h-4 w-4" />
                   Add Your First Address
                 </Button>
               </div>

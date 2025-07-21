@@ -68,7 +68,7 @@ export default function QuoteRequestPage() {
   const [submitError, setSubmitError] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('');
   const [submittedEmail, setSubmittedEmail] = useState('');
-  
+
   // Signup state for success page
   const [showSignupOption, setShowSignupOption] = useState(false);
   const [signupPassword, setSignupPassword] = useState('');
@@ -81,13 +81,13 @@ export default function QuoteRequestPage() {
 
   const handleSignup = async () => {
     if (!submittedEmail || !signupPassword) return;
-    
+
     setIsSigningUp(true);
     setSignupError('');
-    
+
     try {
       const result = await convertAnonymousToRegistered(submittedEmail, signupPassword);
-      
+
       if (result.success) {
         setSignupSuccess(true);
         setShowSignupOption(false);
@@ -142,18 +142,18 @@ export default function QuoteRequestPage() {
   const handleSubmit = async (submissionData?: { email?: string; name?: string }) => {
     setIsSubmitting(true);
     setSubmitError('');
-    
+
     try {
       // Debug logging to track email data flow
-      console.log('handleSubmit called with:', { 
-        submissionData, 
-        userEmail: user?.email, 
-        contactEmail: contactInfo.email 
+      console.log('handleSubmit called with:', {
+        submissionData,
+        userEmail: user?.email,
+        contactEmail: contactInfo.email,
       });
-      
+
       // Determine email to use - prioritize passed data, then user email, then contactInfo
       const emailToUse = submissionData?.email || user?.email || contactInfo.email;
-      
+
       // For anonymous users, email is optional (they can request quotes without email)
       // For authenticated (non-anonymous) users, validate email if provided
       if (emailToUse && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailToUse)) {
@@ -191,7 +191,7 @@ export default function QuoteRequestPage() {
             status: 'pending',
             currency: 'USD',
             user_id: user?.id || null, // Now uses anonymous auth user ID
-            items: products.map(product => ({
+            items: products.map((product) => ({
               id: crypto.randomUUID(),
               name: product.name,
               url: product.url,
@@ -199,23 +199,31 @@ export default function QuoteRequestPage() {
               options: product.notes || null,
               quantity: product.quantity || 1,
               price_usd: product.price || 0,
-              weight_kg: product.weight || 0
+              weight_kg: product.weight || 0,
             })),
             customer_data: {
               info: {
-                email: emailToUse
+                email: emailToUse,
               },
-              shipping_address: shippingAddressData
+              shipping_address: shippingAddressData,
             },
-            base_total_usd: products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0),
-            final_total_usd: products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0)
+            base_total_usd: products.reduce(
+              (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
+              0,
+            ),
+            final_total_usd: products.reduce(
+              (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
+              0,
+            ),
           })
           .select('id')
           .single();
 
         if (quoteError || !quote) {
           console.error('Error inserting quote:', quoteError);
-          setSubmitError('Failed to create quote. Please try again or contact support if the problem persists.');
+          setSubmitError(
+            'Failed to create quote. Please try again or contact support if the problem persists.',
+          );
           setIsSubmitting(false);
           return;
         }
@@ -251,31 +259,35 @@ export default function QuoteRequestPage() {
               status: 'pending',
               currency: 'USD',
               user_id: user?.id || null, // Now uses anonymous auth user ID
-              items: [{
-                id: crypto.randomUUID(),
-                name: product.name,
-                url: product.url,
-                image: product.file ? product.url : null,
-                options: product.notes || null,
-                quantity: product.quantity || 1,
-                price_usd: product.price || 0,
-                weight_kg: product.weight || 0
-              }],
+              items: [
+                {
+                  id: crypto.randomUUID(),
+                  name: product.name,
+                  url: product.url,
+                  image: product.file ? product.url : null,
+                  options: product.notes || null,
+                  quantity: product.quantity || 1,
+                  price_usd: product.price || 0,
+                  weight_kg: product.weight || 0,
+                },
+              ],
               customer_data: {
                 info: {
-                  email: emailToUse
+                  email: emailToUse,
                 },
-                shipping_address: shippingAddressData
+                shipping_address: shippingAddressData,
               },
               base_total_usd: (product.price || 0) * (product.quantity || 1),
-              final_total_usd: (product.price || 0) * (product.quantity || 1)
+              final_total_usd: (product.price || 0) * (product.quantity || 1),
             })
             .select('id')
             .single();
 
           if (quoteError || !quote) {
             console.error('Error inserting quote:', quoteError);
-            setSubmitError(`Failed to create quote for ${product.name || 'one of your products'}. Some quotes may have been created successfully.`);
+            setSubmitError(
+              `Failed to create quote for ${product.name || 'one of your products'}. Some quotes may have been created successfully.`,
+            );
             continue;
           }
 
@@ -294,10 +306,13 @@ export default function QuoteRequestPage() {
           .eq('id', user.id)
           .single();
 
-        if (existingProfile && (!existingProfile.country || !existingProfile.preferred_display_currency)) {
+        if (
+          existingProfile &&
+          (!existingProfile.country || !existingProfile.preferred_display_currency)
+        ) {
           // Use the destination country from state
           const destCountry = destinationCountry;
-          
+
           // Get currency for destination country using CurrencyService
           let destinationCurrency = 'USD';
           if (destCountry) {
@@ -336,7 +351,9 @@ export default function QuoteRequestPage() {
       setIsSubmitting(false);
     } catch (error) {
       console.error('Error submitting quote:', error);
-      setSubmitError('Something went wrong while submitting your quote. Please check your internet connection and try again.');
+      setSubmitError(
+        'Something went wrong while submitting your quote. Please check your internet connection and try again.',
+      );
       setIsSubmitting(false);
     }
   };
@@ -347,7 +364,9 @@ export default function QuoteRequestPage() {
         {/* Only show header on step 1 (product info) */}
         {!quoteSubmitted && currentStep === 1 && (
           <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Request a Quote</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+              Request a Quote
+            </h1>
             <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
               Get accurate shipping costs for your international purchases
             </p>
@@ -367,7 +386,9 @@ export default function QuoteRequestPage() {
                   Quote Request Submitted!
                 </h2>
                 <p className="text-gray-600 text-base sm:text-lg lg:text-xl">
-                  We'll review your {products?.length} {products?.length === 1 ? 'product' : 'products'} and send you a detailed quote within 24-48 hours.
+                  We'll review your {products?.length}{' '}
+                  {products?.length === 1 ? 'product' : 'products'} and send you a detailed quote
+                  within 24-48 hours.
                 </p>
               </div>
 
@@ -376,7 +397,9 @@ export default function QuoteRequestPage() {
                 <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-8">
                   <div className="flex items-center justify-center gap-2 text-teal-800">
                     <Mail className="h-5 w-5" />
-                    <span className="font-medium text-sm sm:text-base">Updates will be sent to: {submittedEmail}</span>
+                    <span className="font-medium text-sm sm:text-base">
+                      Updates will be sent to: {submittedEmail}
+                    </span>
                   </div>
                 </div>
               )}
@@ -398,7 +421,9 @@ export default function QuoteRequestPage() {
                     <div className="flex items-center justify-center gap-3 text-green-700">
                       <CheckCircle className="h-6 w-6" />
                       <div>
-                        <p className="font-semibold text-sm sm:text-base">Account Created Successfully!</p>
+                        <p className="font-semibold text-sm sm:text-base">
+                          Account Created Successfully!
+                        </p>
                         <p className="text-xs sm:text-sm">Redirecting to your dashboard...</p>
                       </div>
                     </div>
@@ -411,7 +436,8 @@ export default function QuoteRequestPage() {
                         Want to track your quote progress?
                       </h3>
                       <p className="text-teal-600 text-xs sm:text-sm lg:text-base mb-4">
-                        Create an account to get notifications and track this quote in your dashboard.
+                        Create an account to get notifications and track this quote in your
+                        dashboard.
                       </p>
                       <button
                         onClick={() => setShowSignupOption(true)}
@@ -427,10 +453,14 @@ export default function QuoteRequestPage() {
                 ) : (
                   /* Signup Form */
                   <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-6">
-                    <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-teal-800 mb-4">Create Your Account</h3>
+                    <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-teal-800 mb-4">
+                      Create Your Account
+                    </h3>
                     <div className="space-y-4">
                       <div className="text-left">
-                        <label className="block text-xs sm:text-sm font-medium text-teal-700 mb-2">Email</label>
+                        <label className="block text-xs sm:text-sm font-medium text-teal-700 mb-2">
+                          Email
+                        </label>
                         <input
                           type="email"
                           value={submittedEmail}
@@ -439,7 +469,9 @@ export default function QuoteRequestPage() {
                         />
                       </div>
                       <div className="text-left">
-                        <label className="block text-xs sm:text-sm font-medium text-teal-700 mb-2">Password</label>
+                        <label className="block text-xs sm:text-sm font-medium text-teal-700 mb-2">
+                          Password
+                        </label>
                         <input
                           type="password"
                           value={signupPassword}
@@ -482,20 +514,29 @@ export default function QuoteRequestPage() {
                 {/* Simple Next Steps */}
                 <div className="border-t border-gray-200 pt-6 space-y-4">
                   <p className="text-gray-600 text-xs sm:text-sm lg:text-base">
-                    ✓ Our team will review your request<br/>
-                    ✓ You'll receive a detailed quote via email<br/>
-                    ✓ No commitment required until you approve
+                    ✓ Our team will review your request
+                    <br />
+                    ✓ You'll receive a detailed quote via email
+                    <br />✓ No commitment required until you approve
                   </p>
-                  
+
                   {/* Simple Actions */}
                   <div className="flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm lg:text-base">
                     <button
                       onClick={() => {
                         setQuoteSubmitted(false);
                         setCurrentStep(1);
-                        setProducts([{
-                          name: '', url: '', file: null, quantity: 1, price: '', weight: '', country: '',
-                        }]);
+                        setProducts([
+                          {
+                            name: '',
+                            url: '',
+                            file: null,
+                            quantity: 1,
+                            price: '',
+                            weight: '',
+                            country: '',
+                          },
+                        ]);
                         setContactInfo({ name: '', email: '' });
                         setDestinationCountry('');
                         setShowSignupOption(false);
@@ -526,31 +567,37 @@ export default function QuoteRequestPage() {
                   <div className="flex items-center">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                        currentStep >= 1 
-                          ? 'bg-teal-600 text-white shadow-lg' 
+                        currentStep >= 1
+                          ? 'bg-teal-600 text-white shadow-lg'
                           : 'bg-gray-100 text-gray-400'
                       }`}
                     >
                       1
                     </div>
-                    <span className={`ml-2 sm:ml-3 text-xs sm:text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <span
+                      className={`ml-2 sm:ml-3 text-xs sm:text-sm font-medium ${currentStep >= 1 ? 'text-gray-900' : 'text-gray-400'}`}
+                    >
                       Products
                     </span>
                   </div>
-                  
-                  <div className={`flex-1 mx-4 h-0.5 transition-colors ${currentStep >= 2 ? 'bg-teal-600' : 'bg-gray-200'}`}></div>
-                  
+
+                  <div
+                    className={`flex-1 mx-4 h-0.5 transition-colors ${currentStep >= 2 ? 'bg-teal-600' : 'bg-gray-200'}`}
+                  ></div>
+
                   <div className="flex items-center">
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                        currentStep >= 2 
-                          ? 'bg-teal-600 text-white shadow-lg' 
+                        currentStep >= 2
+                          ? 'bg-teal-600 text-white shadow-lg'
                           : 'bg-gray-100 text-gray-400'
                       }`}
                     >
                       2
                     </div>
-                    <span className={`ml-2 sm:ml-3 text-xs sm:text-sm font-medium ${currentStep >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <span
+                      className={`ml-2 sm:ml-3 text-xs sm:text-sm font-medium ${currentStep >= 2 ? 'text-gray-900' : 'text-gray-400'}`}
+                    >
                       Contact
                     </span>
                   </div>

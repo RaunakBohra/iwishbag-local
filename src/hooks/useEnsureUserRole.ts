@@ -3,41 +3,41 @@
  * This handles cases where the trigger didn't create a role
  */
 
-import { useEffect } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
-import { useAuth } from '@/contexts/AuthContext'
+import { useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useEnsureUserRole = () => {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   // Check if user has a role
   const { data: userRole, isLoading } = useQuery({
     queryKey: ['user-role', user?.id],
     queryFn: async () => {
-      if (!user?.id) return null
-      
+      if (!user?.id) return null;
+
       const { data, error } = await supabase
         .from('user_roles')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle()
+        .maybeSingle();
 
       if (error) {
-        console.error('Error checking user role:', error)
-        return null
+        console.error('Error checking user role:', error);
+        return null;
       }
 
-      return data
+      return data;
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
-  })
+  });
 
   // Create role if missing
   const createRoleMutation = useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error('No user ID')
+      if (!user?.id) throw new Error('No user ID');
 
       const { data, error } = await supabase
         .from('user_roles')
@@ -46,35 +46,35 @@ export const useEnsureUserRole = () => {
           role: 'user',
           created_by: user.id,
           is_active: true,
-          scope: 'global'
+          scope: 'global',
         })
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
-      return data
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
-      console.log('✅ User role created successfully')
+      console.log('✅ User role created successfully');
     },
     onError: (error) => {
-      console.error('❌ Failed to create user role:', error)
-    }
-  })
+      console.error('❌ Failed to create user role:', error);
+    },
+  });
 
   // Auto-create role if user exists but has no role
   useEffect(() => {
     if (user?.id && !isLoading && !userRole && !createRoleMutation.isPending) {
-      console.log('Creating missing user role for:', user.id)
-      createRoleMutation.mutate()
+      console.log('Creating missing user role for:', user.id);
+      createRoleMutation.mutate();
     }
-  }, [user?.id, userRole, isLoading, createRoleMutation])
+  }, [user?.id, userRole, isLoading, createRoleMutation]);
 
   return {
     userRole,
     isLoading,
     hasRole: !!userRole,
     createRole: createRoleMutation.mutate,
-    isCreatingRole: createRoleMutation.isPending
-  }
-}
+    isCreatingRole: createRoleMutation.isPending,
+  };
+};

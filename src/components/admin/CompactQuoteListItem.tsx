@@ -6,12 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminCurrencyDisplay } from '@/hooks/useAdminCurrencyDisplay';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { ShareQuoteButton } from './ShareQuoteButton';
-import { 
-  Calendar, 
-  User, 
-  Package, 
-  DollarSign, 
-  MapPin, 
+import {
+  Calendar,
+  User,
+  Package,
+  DollarSign,
+  MapPin,
   ExternalLink,
   MoreHorizontal,
   Eye,
@@ -20,7 +20,7 @@ import {
   Mail,
   Copy,
   ArrowRight,
-  Phone
+  Phone,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -77,13 +77,15 @@ const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
   const badgeConfig = config[priority] || config.medium;
 
   return (
-    <Badge className={cn('text-xs font-medium', badgeConfig.className)}>
-      {badgeConfig.label}
-    </Badge>
+    <Badge className={cn('text-xs font-medium', badgeConfig.className)}>{badgeConfig.label}</Badge>
   );
 };
 
-export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuoteListItemProps) => {
+export const CompactQuoteListItem = ({
+  quote,
+  isSelected,
+  onSelect,
+}: CompactQuoteListItemProps) => {
   const navigate = useNavigate();
   const { formatAmount } = useAdminCurrencyDisplay(quote);
   const [routeCountries, setRouteCountries] = useState<{
@@ -108,7 +110,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
       return diffHours <= 1 ? 'Just now' : `${diffHours}h ago`;
@@ -118,7 +120,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
 
   useEffect(() => {
     let isMounted = true;
-    
+
     // Fetch route countries
     async function fetchRouteCountries() {
       try {
@@ -154,14 +156,17 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
     };
   }, [quote]);
 
-  const customerName = customerProfile?.full_name || quote.customer_name || quote.email || 'Unknown Customer';
+  const customerName =
+    customerProfile?.full_name || quote.customer_name || quote.email || 'Unknown Customer';
 
   return (
     <>
-      <div className={cn(
-        'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
-        isSelected && 'ring-2 ring-teal-500 border-teal-500'
-      )}>
+      <div
+        className={cn(
+          'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
+          isSelected && 'ring-2 ring-teal-500 border-teal-500',
+        )}
+      >
         <div className="flex items-center gap-4">
           {/* Selection Checkbox */}
           <div className="flex-shrink-0">
@@ -173,18 +178,29 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
           </div>
 
           {/* Status Indicator */}
-          <div className={cn(
-            'flex-shrink-0 w-2 h-12 rounded-full',
-            quote.status === 'cancelled' && 'bg-red-500',
-            quote.status === 'rejected' && 'bg-red-500',
-            quote.status === 'pending' && 'bg-yellow-500',
-            quote.status === 'approved' && 'bg-green-500',
-            quote.status === 'paid' && 'bg-teal-500',
-            quote.status === 'ordered' && 'bg-orange-500',
-            quote.status === 'shipped' && 'bg-teal-500',
-            quote.status === 'completed' && 'bg-green-600',
-            !['cancelled', 'rejected', 'pending', 'approved', 'paid', 'ordered', 'shipped', 'completed'].includes(quote.status) && 'bg-gray-300',
-          )} />
+          <div
+            className={cn(
+              'flex-shrink-0 w-2 h-12 rounded-full',
+              quote.status === 'cancelled' && 'bg-red-500',
+              quote.status === 'rejected' && 'bg-red-500',
+              quote.status === 'pending' && 'bg-yellow-500',
+              quote.status === 'approved' && 'bg-green-500',
+              quote.status === 'paid' && 'bg-teal-500',
+              quote.status === 'ordered' && 'bg-orange-500',
+              quote.status === 'shipped' && 'bg-teal-500',
+              quote.status === 'completed' && 'bg-green-600',
+              ![
+                'cancelled',
+                'rejected',
+                'pending',
+                'approved',
+                'paid',
+                'ordered',
+                'shipped',
+                'completed',
+              ].includes(quote.status) && 'bg-gray-300',
+            )}
+          />
 
           {/* Product Image */}
           {firstItem?.image_url && (
@@ -209,9 +225,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
                 {getPriorityBadge(quote.priority)}
               </div>
               <div className="flex items-center gap-2">
-                <BodySmall className="text-gray-500">
-                  {formatDate(quote.created_at)}
-                </BodySmall>
+                <BodySmall className="text-gray-500">{formatDate(quote.created_at)}</BodySmall>
                 <ShareQuoteButton quote={quote} variant="icon" />
               </div>
             </div>
@@ -244,9 +258,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700 font-medium truncate">
-                  {customerName}
-                </BodySmall>
+                <BodySmall className="text-gray-700 font-medium truncate">{customerName}</BodySmall>
               </div>
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-gray-500" />
@@ -256,9 +268,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
               </div>
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700 font-medium">
-                  {formattedAmount}
-                </BodySmall>
+                <BodySmall className="text-gray-700 font-medium">{formattedAmount}</BodySmall>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-gray-500" />
@@ -280,9 +290,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
             {customerProfile?.phone && (
               <div className="flex items-center gap-2">
                 <Phone className="h-3 w-3 text-gray-500" />
-                <BodySmall className="text-gray-600">
-                  {customerProfile.phone}
-                </BodySmall>
+                <BodySmall className="text-gray-600">{customerProfile.phone}</BodySmall>
               </div>
             )}
           </div>
@@ -298,7 +306,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
               <Eye className="h-4 w-4 mr-1" />
               View
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
@@ -376,7 +384,7 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
                 </BodySmall>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Status</BodySmall>
@@ -384,13 +392,13 @@ export const CompactQuoteListItem = ({ quote, isSelected, onSelect }: CompactQuo
               </div>
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Total Amount</BodySmall>
-                <Body className="font-semibold">
-                  {formattedAmount}
-                </Body>
+                <Body className="font-semibold">{formattedAmount}</Body>
               </div>
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Items</BodySmall>
-                <Body>{totalItems} item{totalItems !== 1 ? 's' : ''}</Body>
+                <Body>
+                  {totalItems} item{totalItems !== 1 ? 's' : ''}
+                </Body>
               </div>
               <div>
                 <BodySmall className="text-gray-500 font-medium mb-1">Route</BodySmall>

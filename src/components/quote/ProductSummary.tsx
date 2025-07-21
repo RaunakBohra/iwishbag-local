@@ -68,17 +68,23 @@ export default function ProductSummary({
           <div className="flex items-center gap-3 sm:gap-6 text-xs sm:text-sm text-gray-600">
             <span className="flex items-center gap-1 sm:gap-2 bg-teal-50 px-2 sm:px-3 py-1 rounded-full">
               <Package className="h-3 w-3 sm:h-4 sm:w-4 text-teal-600" />
-              <span className="text-xs sm:text-sm">{products.length} product{products.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs sm:text-sm">
+                {products.length} product{products.length !== 1 ? 's' : ''}
+              </span>
             </span>
             {totalValue > 0 && (
               <span className="flex items-center gap-1 sm:gap-2 bg-green-50 px-2 sm:px-3 py-1 rounded-full">
                 <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-                <span className="text-xs sm:text-sm font-medium">Total: {totalValue.toFixed(2)}</span>
+                <span className="text-xs sm:text-sm font-medium">
+                  Total: {totalValue.toFixed(2)}
+                </span>
               </span>
             )}
             <span className="flex items-center gap-1 sm:gap-2 bg-orange-50 px-2 sm:px-3 py-1 rounded-full">
               <Weight className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
-              <span className="text-xs sm:text-sm">{totalItems} item{totalItems !== 1 ? 's' : ''}</span>
+              <span className="text-xs sm:text-sm">
+                {totalItems} item{totalItems !== 1 ? 's' : ''}
+              </span>
             </span>
           </div>
         </CardHeader>
@@ -137,7 +143,9 @@ export default function ProductSummary({
                     {/* Show URL domain for verification (non-clickable since name is clickable) */}
                     {product.url && product.name && (
                       <div className="mb-2">
-                        <span className="text-xs sm:text-sm text-gray-500">Source: {extractDomain(product.url)}</span>
+                        <span className="text-xs sm:text-sm text-gray-500">
+                          Source: {extractDomain(product.url)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -149,22 +157,26 @@ export default function ProductSummary({
                   >
                     Qty: {product.quantity}
                   </Badge>
-                  {product.price && product.price.trim() !== '' && !isNaN(parseFloat(product.price)) && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-green-100 text-green-700 hover:bg-green-200 border-0"
-                    >
-                      Price: {parseFloat(product.price).toFixed(2)}
-                    </Badge>
-                  )}
-                  {product.weight && product.weight.trim() !== '' && !isNaN(parseFloat(product.weight)) && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-0"
-                    >
-                      {product.weight} kg
-                    </Badge>
-                  )}
+                  {product.price &&
+                    product.price.trim() !== '' &&
+                    !isNaN(parseFloat(product.price)) && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-700 hover:bg-green-200 border-0"
+                      >
+                        Price: {parseFloat(product.price).toFixed(2)}
+                      </Badge>
+                    )}
+                  {product.weight &&
+                    product.weight.trim() !== '' &&
+                    !isNaN(parseFloat(product.weight)) && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-0"
+                      >
+                        {product.weight} kg
+                      </Badge>
+                    )}
                   {product.country && product.country.trim() !== '' && (
                     <Badge
                       variant="outline"

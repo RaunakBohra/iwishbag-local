@@ -39,7 +39,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
       // Extract values from unified structure JSONB fields
       const calculationData = quote.calculation_data || {};
       const operationalData = quote.operational_data || {};
-      
+
       const formData: Partial<AdminQuoteFormValues> & Record<string, unknown> = {
         id: quote.id,
         sales_tax_price: calculationData.sales_tax_price || 0,
@@ -229,16 +229,23 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         // Extract from unified structure if available, fallback to direct fields
         const calcData = finalQuoteData.calculation_data || {};
         const opData = finalQuoteData.operational_data || {};
-        
-        extendedQuoteData.salesTaxPrice = calcData.sales_tax_price || finalQuoteData.sales_tax_price;
-        extendedQuoteData.domesticShipping = opData.domestic_shipping || finalQuoteData.domestic_shipping;
+
+        extendedQuoteData.salesTaxPrice =
+          calcData.sales_tax_price || finalQuoteData.sales_tax_price;
+        extendedQuoteData.domesticShipping =
+          opData.domestic_shipping || finalQuoteData.domestic_shipping;
         extendedQuoteData.handlingCharge = opData.handling_charge || finalQuoteData.handling_charge;
-        extendedQuoteData.insuranceAmount = opData.insurance_amount || finalQuoteData.insurance_amount;
-        extendedQuoteData.merchantShippingPrice = calcData.merchant_shipping_price || finalQuoteData.merchant_shipping_price;
+        extendedQuoteData.insuranceAmount =
+          opData.insurance_amount || finalQuoteData.insurance_amount;
+        extendedQuoteData.merchantShippingPrice =
+          calcData.merchant_shipping_price || finalQuoteData.merchant_shipping_price;
         extendedQuoteData.discount = calcData.discount || finalQuoteData.discount;
-        extendedQuoteData.interNationalShipping = calcData.international_shipping || finalQuoteData.international_shipping;
-        extendedQuoteData.customsAndECS = calcData.customs_and_ecs || finalQuoteData.customs_and_ecs;
-        extendedQuoteData.paymentGatewayFee = opData.payment_gateway_fee || finalQuoteData.payment_gateway_fee;
+        extendedQuoteData.interNationalShipping =
+          calcData.international_shipping || finalQuoteData.international_shipping;
+        extendedQuoteData.customsAndECS =
+          calcData.customs_and_ecs || finalQuoteData.customs_and_ecs;
+        extendedQuoteData.paymentGatewayFee =
+          opData.payment_gateway_fee || finalQuoteData.payment_gateway_fee;
         // --- End UI mapping ---
 
         // --- Remove camelCase fields before DB save ---

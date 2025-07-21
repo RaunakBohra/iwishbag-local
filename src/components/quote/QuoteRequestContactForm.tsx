@@ -10,7 +10,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 interface QuoteRequestContactFormProps {
-  onSubmit: (emailData: { email: string; name?: string; useAuth?: boolean; turnstileToken?: string }) => void;
+  onSubmit: (emailData: {
+    email: string;
+    name?: string;
+    useAuth?: boolean;
+    turnstileToken?: string;
+  }) => void;
   isSubmitting: boolean;
   submitError?: string;
   clearError?: () => void;
@@ -45,7 +50,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
           redirectTo: window.location.href,
         },
       });
-      
+
       if (error) {
         toast({
           title: 'Login Error',
@@ -56,7 +61,7 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     } catch (error) {
       console.error('Social login error:', error);
       toast({
-        title: 'Login Error', 
+        title: 'Login Error',
         description: 'Failed to login. Please try again.',
         variant: 'destructive',
       });
@@ -66,10 +71,10 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
   const handleGuestSubmit = async (turnstileToken?: string) => {
     // Clear previous errors
     if (clearError) clearError();
-    
+
     // Validate email only
     let hasErrors = false;
-    
+
     if (!guestEmail) {
       setEmailError('Email is required');
       hasErrors = true;
@@ -86,11 +91,11 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     if (hasErrors) return;
 
     // Submit with guest data (name is optional)
-    await onSubmit({ 
-      email: guestEmail, 
+    await onSubmit({
+      email: guestEmail,
       name: guestName.trim() || '', // Optional name
       useAuth: false,
-      turnstileToken
+      turnstileToken,
     });
   };
 
@@ -98,11 +103,16 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
     <div className="space-y-6">
       {/* Contact Details */}
       <div>
-        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-4">Contact Details</h3>
-        
+        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 mb-4">
+          Contact Details
+        </h3>
+
         <div className="space-y-4">
           <div>
-            <Label htmlFor="guestEmail" className="text-xs sm:text-sm font-medium text-gray-700 mb-2 block">
+            <Label
+              htmlFor="guestEmail"
+              className="text-xs sm:text-sm font-medium text-gray-700 mb-2 block"
+            >
               Email address
             </Label>
             <Input
@@ -120,10 +130,14 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
             />
             {emailError && <p className="text-xs sm:text-sm text-red-500 mt-1">{emailError}</p>}
           </div>
-          
+
           <div>
-            <Label htmlFor="guestName" className="text-xs sm:text-sm font-medium text-gray-700 mb-2 block">
-              Full name <span className="text-gray-400 font-normal text-xs sm:text-sm">(optional)</span>
+            <Label
+              htmlFor="guestName"
+              className="text-xs sm:text-sm font-medium text-gray-700 mb-2 block"
+            >
+              Full name{' '}
+              <span className="text-gray-400 font-normal text-xs sm:text-sm">(optional)</span>
             </Label>
             <Input
               id="guestName"
@@ -159,7 +173,8 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
       <div className="pt-4 border-t border-gray-200">
         <div className="text-center">
           <p className="text-xs sm:text-sm text-gray-600 mb-3">
-            Want to track your quotes? <button
+            Want to track your quotes?{' '}
+            <button
               onClick={() => handleSocialLogin('google')}
               disabled={isSubmitting}
               className="text-teal-600 hover:text-teal-700 underline font-medium text-xs sm:text-sm"
@@ -172,7 +187,12 @@ export const QuoteRequestContactForm: React.FC<QuoteRequestContactFormProps> = (
 
       <div className="text-xs sm:text-sm text-center text-gray-500">
         By submitting, you agree to our{' '}
-        <a href="/terms-conditions" className="text-teal-600 hover:text-teal-700 underline" target="_blank" rel="noopener noreferrer">
+        <a
+          href="/terms-conditions"
+          className="text-teal-600 hover:text-teal-700 underline"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           terms & conditions
         </a>
       </div>

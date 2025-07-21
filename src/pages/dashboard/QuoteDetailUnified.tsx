@@ -259,8 +259,8 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
                 toast({
                   title: 'Quote Approved!',
-                  description: user.is_anonymous 
-                    ? 'Quote approved! You can now add it to your cart.' 
+                  description: user.is_anonymous
+                    ? 'Quote approved! You can now add it to your cart.'
                     : 'Quote has been approved and is ready to add to cart.',
                 });
 
@@ -418,7 +418,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
       try {
         // Check if this is an anonymous user or a real authenticated user
         const isAnonymousUser = user.is_anonymous || !user.email;
-        
+
         // For anonymous users, keep the quote anonymous but link to the user session
         if (isAnonymousUser) {
           const { error: updateError } = await supabase
@@ -497,13 +497,13 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
   const handleCheckout = () => {
     const isAnonymousUser = user?.is_anonymous || !user;
-    
+
     console.log('🛒 CHECKOUT DEBUG:', {
       user: user ? { id: user.id, email: user.email, is_anonymous: user.is_anonymous } : null,
       isGuestMode,
       isAnonymousUser,
       quoteId: quote?.id,
-      route: isAnonymousUser && isGuestMode ? `/guest-checkout?quote=${quote?.id}` : '/checkout'
+      route: isAnonymousUser && isGuestMode ? `/guest-checkout?quote=${quote?.id}` : '/checkout',
     });
 
     if (isAnonymousUser && isGuestMode) {
@@ -714,9 +714,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           </Link>
 
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-medium text-gray-900 mb-2">
-              Quote Details
-            </h1>
+            <h1 className="text-2xl font-medium text-gray-900 mb-2">Quote Details</h1>
             <p className="text-gray-600 text-sm">
               {quote.display_id || `#${quote.id.slice(0, 8)}`}
             </p>
@@ -739,7 +737,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
         {/* Anonymous User Conversion Prompt */}
         {user?.is_anonymous && quote?.status === 'approved' && (
           <div className="mb-6">
-            <ConversionPrompt 
+            <ConversionPrompt
               trigger="quote_submitted"
               onConversionSuccess={() => {
                 // Refresh the page to show updated user state
@@ -817,7 +815,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                   <span className="text-gray-900">Product</span>
                                 )}
                               </div>
-                              
+
                               {/* Show URL domain for verification when both name and URL exist */}
                               {item.url && item.name && item.name.trim() !== '' && (
                                 <div className="text-xs text-gray-500 mt-1 text-center">
@@ -832,7 +830,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                   </a>
                                 </div>
                               )}
-                              
+
                               <div className="text-xs text-gray-600 mt-1 bg-white px-2 py-1 rounded-full inline-block border border-gray-200">
                                 Qty: {item.quantity}
                               </div>
@@ -843,16 +841,14 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                     const options = JSON.parse(item.options);
                                     return options.notes ? (
                                       <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-800 inline-block">
-                                        <span className="font-medium">Notes:</span>{' '}
-                                        {options.notes}
+                                        <span className="font-medium">Notes:</span> {options.notes}
                                       </div>
                                     ) : null;
                                   } catch {
                                     // If not JSON, treat as plain text notes
                                     return (
                                       <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-800 inline-block">
-                                        <span className="font-medium">Notes:</span>{' '}
-                                        {item.options}
+                                        <span className="font-medium">Notes:</span> {item.options}
                                       </div>
                                     );
                                   }
@@ -909,9 +905,11 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                 </h3>
                               ) : (
                                 /* Fallback if neither name nor URL */
-                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Product</h3>
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                  Product
+                                </h3>
                               )}
-                              
+
                               {/* Show URL domain for verification when both name and URL exist */}
                               {item.url && item.name && item.name.trim() !== '' && (
                                 <div className="text-sm">
@@ -942,16 +940,14 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                                     const options = JSON.parse(item.options);
                                     return options.notes ? (
                                       <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-800 inline-block">
-                                        <span className="font-medium">Notes:</span>{' '}
-                                        {options.notes}
+                                        <span className="font-medium">Notes:</span> {options.notes}
                                       </div>
                                     ) : null;
                                   } catch {
                                     // If not JSON, treat as plain text notes
                                     return (
                                       <div className="mt-2 p-2 bg-teal-50 border border-teal-200 rounded text-xs text-teal-800 inline-block">
-                                        <span className="font-medium">Notes:</span>{' '}
-                                        {item.options}
+                                        <span className="font-medium">Notes:</span> {item.options}
                                       </div>
                                     );
                                   }
@@ -969,7 +965,9 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                           <Package className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 font-medium">Cost of Goods</span>
                         </div>
-                        <span className="text-xl font-semibold text-gray-900">{formatAmount(quote.item_price)}</span>
+                        <span className="text-xl font-semibold text-gray-900">
+                          {formatAmount(quote.item_price)}
+                        </span>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
@@ -982,14 +980,18 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                             <Info className="h-3 w-3 text-gray-500 hover:text-gray-700" />
                           </button>
                         </div>
-                        <span className="text-xl font-semibold text-gray-900">{formatAmount(quote.final_total_usd)}</span>
+                        <span className="text-xl font-semibold text-gray-900">
+                          {formatAmount(quote.final_total_usd)}
+                        </span>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
                           <Weight className="h-4 w-4 text-gray-600" />
                           <span className="text-xs text-gray-600 font-medium">Total Weight</span>
                         </div>
-                        <span className="text-xl font-semibold text-gray-900">{quote.item_weight || 0} kg</span>
+                        <span className="text-xl font-semibold text-gray-900">
+                          {quote.item_weight || 0} kg
+                        </span>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-center gap-2 mb-2">
@@ -1062,13 +1064,9 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:shadow-md transition-all duration-200">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Globe className="h-3 w-3 text-gray-600" />
-                                  <span className="text-xs text-gray-600 font-medium">
-                                    Country
-                                  </span>
+                                  <span className="text-xs text-gray-600 font-medium">Country</span>
                                 </div>
-                                <div className="font-semibold text-gray-900">
-                                  {countryName}
-                                </div>
+                                <div className="font-semibold text-gray-900">{countryName}</div>
                               </div>
                             );
                           }
@@ -1076,9 +1074,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 hover:shadow-md transition-all duration-200">
                           <div className="flex items-center gap-2 mb-1">
                             <Calendar className="h-3 w-3 text-gray-600" />
-                            <span className="text-xs text-gray-600 font-medium">
-                              Delivery
-                            </span>
+                            <span className="text-xs text-gray-600 font-medium">Delivery</span>
                           </div>
                           <div className="font-semibold text-gray-900">
                             {deliveryWindow
@@ -1147,9 +1143,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div className="flex items-center gap-2 mb-2">
                                   <Globe className="h-4 w-4 text-gray-600" />
-                                  <span className="text-xs text-gray-600 font-medium">
-                                    Country
-                                  </span>
+                                  <span className="text-xs text-gray-600 font-medium">Country</span>
                                 </div>
                                 <span className="text-lg font-semibold text-gray-900">
                                   {countryName}
@@ -1161,9 +1155,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <div className="flex items-center gap-2 mb-2">
                             <Calendar className="h-4 w-4 text-gray-600" />
-                            <span className="text-xs text-gray-600 font-medium">
-                              Delivery
-                            </span>
+                            <span className="text-xs text-gray-600 font-medium">Delivery</span>
                           </div>
                           <span className="text-lg font-semibold text-gray-900">
                             {deliveryWindow
@@ -1407,11 +1399,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
               </div>
               Quote Breakdown
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 hover:bg-gray-50 border-gray-200"
-            >
+            <Button variant="outline" size="sm" className="gap-2 hover:bg-gray-50 border-gray-200">
               <Download className="h-4 w-4" />
               Download PDF
             </Button>
@@ -1419,9 +1407,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Items Section */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-gray-900">
-                Items
-              </h3>
+              <h3 className="font-semibold text-lg text-gray-900">Items</h3>
               <div className="space-y-3">
                 {quote.items?.map((item) => (
                   <div
@@ -1475,7 +1461,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                             /* Fallback if neither name nor URL */
                             <div className="font-semibold text-sm text-gray-900">Product</div>
                           )}
-                          
+
                           {/* Show URL domain for verification when both name and URL exist */}
                           {item.url && item.name && item.name.trim() !== '' && (
                             <div className="text-xs text-gray-500 mt-1">
@@ -1490,7 +1476,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                               </a>
                             </div>
                           )}
-                          
+
                           <div className="text-gray-600 text-xs bg-white px-2 py-1 rounded-full inline-block border border-gray-200 mt-1">
                             Quantity: {item.quantity}
                           </div>
@@ -1526,9 +1512,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
 
             {/* Charges & Fees Section */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-gray-900">
-                Charges & Fees
-              </h3>
+              <h3 className="font-semibold text-lg text-gray-900">Charges & Fees</h3>
               <div className="space-y-3 bg-teal-50 rounded-lg p-4 border border-teal-200">
                 {renderBreakdownRow(
                   'Total Item Price',
@@ -1608,9 +1592,7 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
               </div>
               <div className="bg-teal-50 border border-teal-200 rounded-lg p-6 shadow-sm">
                 <div className="flex justify-between items-center font-semibold text-lg">
-                  <span className="text-gray-900">
-                    Total Amount
-                  </span>
+                  <span className="text-gray-900">Total Amount</span>
                   <span className="text-gray-900 text-xl">
                     {formatAmount(quote.final_total_usd)}
                   </span>

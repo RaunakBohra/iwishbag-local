@@ -26,12 +26,14 @@ import type {
   Carrier,
 } from '../../types/shipping';
 import type { Tables } from '../../integrations/supabase/types';
+import { supabase } from '../../integrations/supabase/client';
 import { CustomsTiersManager } from './CustomsTiersManager';
 import { CurrencyInputLabel } from './DualCurrencyDisplay';
 import { ExchangeRateManager } from './ExchangeRateManager';
 import { CountrySettingsManager } from './CountrySettingsManager';
 import { MarkupManager } from './MarkupManager';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
+import { RouteBasedOptionsManager } from './RouteBasedOptionsManager';
 
 interface ShippingRouteFormProps {
   onSubmit: (data: ShippingRouteFormData) => Promise<boolean>;
@@ -42,10 +44,10 @@ interface ShippingRouteFormProps {
 function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFormProps) {
   const { data: countries = [] } = useAllCountries();
   const [formData, setFormData] = useState<ShippingRouteFormData>({
+    id: initialData?.id,
     originCountry: initialData?.originCountry || '',
     destinationCountry: initialData?.destinationCountry || '',
     baseShippingCost: initialData?.baseShippingCost || 0,
-    costPerKg: initialData?.costPerKg || 0,
     shippingPerKg: initialData?.shippingPerKg || 0,
     costPercentage: initialData?.costPercentage || 0,
     processingDays: initialData?.processingDays || 2,
@@ -86,11 +88,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       { min: 3, max: 5, cost: 35.0 },
       { min: 5, max: null, cost: 45.0 },
     ],
-    carriers: initialData?.carriers || [
-      { name: 'DHL', costMultiplier: 1.0, days: '3-5' },
-      { name: 'FedEx', costMultiplier: 0.9, days: '5-7' },
-      { name: 'USPS', costMultiplier: 0.7, days: '7-14' },
-    ],
+    carriers: initialData?.carriers || [],
     maxWeight: initialData?.maxWeight,
     restrictedItems: initialData?.restrictedItems || [],
     requiresDocumentation: initialData?.requiresDocumentation || false,
@@ -103,7 +101,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
   // Auto-calculate exchange rate when both countries are selected
   const calculateExchangeRate = async (originCountry: string, destinationCountry: string) => {
     if (!originCountry || !destinationCountry) return;
-    
+
     try {
       // Get country settings for both countries
       const { data: countrySettings, error } = await supabase
@@ -117,13 +115,13 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         return;
       }
 
-      const originRate = countrySettings?.find(c => c.code === originCountry)?.rate_from_usd;
-      const destRate = countrySettings?.find(c => c.code === destinationCountry)?.rate_from_usd;
+      const originRate = countrySettings?.find((c) => c.code === originCountry)?.rate_from_usd;
+      const destRate = countrySettings?.find((c) => c.code === destinationCountry)?.rate_from_usd;
 
       if (originRate && destRate && originRate > 0 && destRate > 0) {
         const calculatedRate = parseFloat((destRate / originRate).toFixed(4));
-        
-        setFormData(prev => ({
+
+        setFormData((prev) => ({
           ...prev,
           exchangeRate: calculatedRate,
         }));
@@ -145,27 +143,6 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
     e.preventDefault();
     setLoading(true);
     try {
-      // Transform form data to match database schema
-      const _dbData = {
-        origin_country: formData.originCountry,
-        destination_country: formData.destinationCountry,
-        base_shipping_cost: formData.baseShippingCost,
-        cost_per_kg: formData.costPerKg,
-        shipping_per_kg: formData.shippingPerKg,
-        cost_percentage: formData.costPercentage,
-        processing_days: formData.processingDays,
-        customs_clearance_days: formData.customsClearanceDays,
-        weight_unit: formData.weightUnit,
-        delivery_options: formData.deliveryOptions,
-        weight_tiers: formData.weightTiers,
-        carriers: formData.carriers,
-        max_weight: formData.maxWeight,
-        restricted_items: formData.restrictedItems,
-        requires_documentation: formData.requiresDocumentation,
-        is_active: formData.isActive,
-        exchange_rate: formData.exchangeRate,
-      };
-
       const result = await onSubmit(formData);
       if (result.success) {
         toast({
@@ -329,26 +306,6 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
                 setFormData((prev) => ({
                   ...prev,
                   baseShippingCost: parseFloat(e.target.value) || 0,
-                }))
-              }
-              required
-            />
-          </div>
-          <div>
-            <CurrencyInputLabel
-              countryCode={formData.originCountry || 'US'}
-              label={`Cost per ${formData.weightUnit.toUpperCase()}`}
-              required
-            />
-            <Input
-              id="costPerKg"
-              type="number"
-              step="0.01"
-              value={formData.costPerKg}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  costPerKg: parseFloat(e.target.value) || 0,
                 }))
               }
               required
@@ -536,6 +493,15 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         ))}
       </div>
 
+      {/* Route-Based Options Configuration */}
+      <RouteBasedOptionsManager
+        deliveryOptions={formData.deliveryOptions}
+        onUpdateDeliveryOptions={(options) =>
+          setFormData((prev) => ({ ...prev, deliveryOptions: options }))
+        }
+        currencySymbol={getCurrencySymbolFromCountry(formData.originCountry)}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="weightUnit">Weight Unit</Label>
@@ -668,7 +634,9 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
 }
 
 export function ShippingRouteManager() {
-  const [activeTab, setActiveTab] = useState<'routes' | 'customs' | 'rates' | 'countries' | 'markups'>('routes');
+  const [activeTab, setActiveTab] = useState<
+    'routes' | 'customs' | 'rates' | 'countries' | 'markups'
+  >('routes');
   const { routes, loading, error, createRoute, updateRoute, removeRoute } = useShippingRoutes();
   const { data: _countries = [] } = useAllCountries();
   const [editingRoute, setEditingRoute] = useState<Tables<'shipping_routes'> | null>(null);
@@ -705,18 +673,18 @@ export function ShippingRouteManager() {
 
   // Map DB row to form data for editing
   const mapRouteToFormData = (route: Tables<'shipping_routes'>): ShippingRouteFormData => ({
+    id: route.id,
     originCountry: route.origin_country,
     destinationCountry: route.destination_country,
     baseShippingCost: route.base_shipping_cost,
-    costPerKg: route.cost_per_kg,
-    shippingPerKg: route.shipping_per_kg || 0,
+    shippingPerKg: route.shipping_per_kg || route.cost_per_kg || 0,
     costPercentage: route.cost_percentage || 0,
     processingDays: route.processing_days || 2,
     customsClearanceDays: route.customs_clearance_days || 3,
     weightUnit: route.weight_unit || 'kg',
     deliveryOptions: route.delivery_options || [],
     weightTiers: route.weight_tiers || [],
-    carriers: route.carriers || [],
+    carriers: [], // Deprecated: use delivery_options instead
     maxWeight: route.max_weight,
     restrictedItems: route.restricted_items || [],
     requiresDocumentation: route.requires_documentation || false,
@@ -862,7 +830,8 @@ export function ShippingRouteManager() {
                         Base: {getCurrencySymbolFromCountry(route.origin_country)}
                         {route.base_shipping_cost} +{' '}
                         {getCurrencySymbolFromCountry(route.origin_country)}
-                        {route.cost_per_kg}/{route.weight_unit || 'kg'}
+                        {route.shipping_per_kg || route.cost_per_kg || 0}/
+                        {route.weight_unit || 'kg'}
                         {route.cost_percentage > 0 && ` + ${route.cost_percentage}% of price`}
                         {route.exchange_rate && route.exchange_rate !== 1 && (
                           <span className="text-xs text-teal-600 block mt-1">
@@ -877,14 +846,23 @@ export function ShippingRouteManager() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('Configure button clicked for route:', route.id);
                           setEditingRoute(route);
                           setIsEditDialogOpen(true);
                         }}
                       >
-                        Edit
+                        Configure
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(route.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => handleDelete(route.id)}
+                      >
                         Delete
                       </Button>
                     </div>
@@ -908,14 +886,26 @@ export function ShippingRouteManager() {
                       </ul>
                     </div>
                     <div>
-                      <strong>Carriers:</strong>
+                      <strong>Delivery Options:</strong>
                       <ul className="mt-1 space-y-1">
-                        {((route.carriers as Carrier[]) || []).map(
-                          (carrier: Carrier, index: number) => (
-                            <li key={index}>
-                              {carrier.name}: {carrier.days} days
+                        {((route.delivery_options as DeliveryOption[]) || []).map(
+                          (option: DeliveryOption, index: number) => (
+                            <li key={index} className="flex items-center space-x-2">
+                              <span>{option.name}</span>
+                              <Badge
+                                variant={option.active ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {option.carrier}
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                {option.min_days}-{option.max_days} days
+                              </span>
                             </li>
                           ),
+                        )}
+                        {((route.delivery_options as DeliveryOption[]) || []).length === 0 && (
+                          <li className="text-xs text-gray-500">No delivery options configured</li>
                         )}
                       </ul>
                     </div>
@@ -952,7 +942,9 @@ export function ShippingRouteManager() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">Countries & Exchange Rates</h2>
-              <p className="text-gray-600">Manage country settings, currencies, and exchange rates</p>
+              <p className="text-gray-600">
+                Manage country settings, currencies, and exchange rates
+              </p>
             </div>
           </div>
           <div className="grid gap-4">
@@ -962,10 +954,10 @@ export function ShippingRouteManager() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center space-x-2">
-                        <span>{country.name} ({country.code})</span>
-                        <Badge variant="secondary">
-                          {country.currency}
-                        </Badge>
+                        <span>
+                          {country.name} ({country.code})
+                        </span>
+                        <Badge variant="secondary">{country.currency}</Badge>
                       </CardTitle>
                       <CardDescription>
                         Exchange Rate: {country.rate_from_usd} {country.currency}/USD
@@ -997,14 +989,18 @@ export function ShippingRouteManager() {
                       <strong>Payment Gateway:</strong>
                       <div className="mt-1 space-y-1">
                         {country.payment_gateway_fixed_fee > 0 && (
-                          <div>Fixed Fee: {getCurrencySymbolFromCountry(country.code)}{country.payment_gateway_fixed_fee}</div>
+                          <div>
+                            Fixed Fee: {getCurrencySymbolFromCountry(country.code)}
+                            {country.payment_gateway_fixed_fee}
+                          </div>
                         )}
                         {country.payment_gateway_percent_fee > 0 && (
                           <div>Percent Fee: {country.payment_gateway_percent_fee}%</div>
                         )}
-                        {country.payment_gateway_fixed_fee === 0 && country.payment_gateway_percent_fee === 0 && (
-                          <div className="text-gray-500">No gateway fees</div>
-                        )}
+                        {country.payment_gateway_fixed_fee === 0 &&
+                          country.payment_gateway_percent_fee === 0 && (
+                            <div className="text-gray-500">No gateway fees</div>
+                          )}
                       </div>
                     </div>
                     <div>
@@ -1014,11 +1010,15 @@ export function ShippingRouteManager() {
                           <div>Country Markup: {country.country_markup_percentage}%</div>
                         )}
                         {country.country_markup_fixed > 0 && (
-                          <div>Fixed Markup: {getCurrencySymbolFromCountry(country.code)}{country.country_markup_fixed}</div>
+                          <div>
+                            Fixed Markup: {getCurrencySymbolFromCountry(country.code)}
+                            {country.country_markup_fixed}
+                          </div>
                         )}
-                        {country.country_markup_percentage === 0 && country.country_markup_fixed === 0 && (
-                          <div className="text-gray-500">No markups</div>
-                        )}
+                        {country.country_markup_percentage === 0 &&
+                          country.country_markup_fixed === 0 && (
+                            <div className="text-gray-500">No markups</div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -1026,10 +1026,18 @@ export function ShippingRouteManager() {
                     <strong>Additional Info:</strong>
                     <div className="mt-1 grid grid-cols-2 gap-4">
                       <div>
-                        <span className="text-gray-600">Last Updated:</span> {new Date(country.updated_at).toLocaleDateString()}
+                        <span className="text-gray-600">Last Updated:</span>{' '}
+                        {new Date(country.updated_at).toLocaleDateString()}
                       </div>
                       <div>
-                        <span className="text-gray-600">Routes:</span> {routes.filter(r => r.origin_country === country.code || r.destination_country === country.code).length}
+                        <span className="text-gray-600">Routes:</span>{' '}
+                        {
+                          routes.filter(
+                            (r) =>
+                              r.origin_country === country.code ||
+                              r.destination_country === country.code,
+                          ).length
+                        }
                       </div>
                     </div>
                   </div>

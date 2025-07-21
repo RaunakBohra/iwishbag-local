@@ -65,7 +65,7 @@ const SelectContent = React.forwardRef<
   // Debug logging, CSS injection, and event handling
   React.useEffect(() => {
     console.log('🔍 SelectContent rendered with scrollable viewport - cache cleared!');
-    
+
     // Fallback: Inject CSS directly if Tailwind classes don't work
     const existingStyle = document.getElementById('select-scrollable-fallback');
     if (!existingStyle) {
@@ -106,9 +106,11 @@ const SelectContent = React.forwardRef<
     // Enhanced event handling to prevent number input interference
     const handleDropdownWheel = (e: WheelEvent) => {
       const target = e.target as Element;
-      const isInDropdown = target.closest('[data-radix-select-content]') || target.closest('[data-radix-select-viewport]');
+      const isInDropdown =
+        target.closest('[data-radix-select-content]') ||
+        target.closest('[data-radix-select-viewport]');
       const isNumberInput = target instanceof HTMLInputElement && target.type === 'number';
-      
+
       if (isInDropdown) {
         // Allow scrolling in dropdown, prevent propagation to other elements
         e.stopPropagation();
@@ -123,38 +125,37 @@ const SelectContent = React.forwardRef<
 
     // Add event listener with capture: true to intercept events early
     document.addEventListener('wheel', handleDropdownWheel, { passive: false, capture: true });
-    
+
     return () => {
       document.removeEventListener('wheel', handleDropdownWheel, { capture: true } as any);
     };
   }, []);
-  
+
   return (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        'relative z-50 min-w-[8rem] max-h-none rounded-lg border border-gray-200 bg-white text-gray-900 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-        position === 'popper' &&
-          'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-        className,
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectPrimitive.Viewport
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
         className={cn(
-          'p-1 max-h-[300px] !overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full',
+          'relative z-50 min-w-[8rem] max-h-none rounded-lg border border-gray-200 bg-white text-gray-900 shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           position === 'popper' &&
-            'w-full min-w-[var(--radix-select-trigger-width)]',
+            'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
+          className,
         )}
-        style={{ maxHeight: '300px', overflowY: 'auto' }}
-        data-scrollable="true"
+        position={position}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
+        <SelectPrimitive.Viewport
+          className={cn(
+            'p-1 max-h-[300px] !overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full',
+            position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)]',
+          )}
+          style={{ maxHeight: '300px', overflowY: 'auto' }}
+          data-scrollable="true"
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
   );
 });
 SelectContent.displayName = SelectPrimitive.Content.displayName;

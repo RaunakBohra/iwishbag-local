@@ -1,7 +1,7 @@
-import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
-import { cn } from "@/lib/design-system";
-import { Button } from "@/components/ui/button";
+import * as React from 'react';
+import { Check, ChevronsUpDown, X } from 'lucide-react';
+import { cn } from '@/lib/design-system';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -9,13 +9,9 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 
 export interface MultiSelectOption {
   value: string;
@@ -38,14 +34,14 @@ export function MultiSelect({
   options,
   value,
   onValueChange,
-  placeholder = "Select items...",
-  emptyText = "No items found.",
+  placeholder = 'Select items...',
+  emptyText = 'No items found.',
   className,
   disabled = false,
   maxItems,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
-  const [searchValue, setSearchValue] = React.useState("");
+  const [searchValue, setSearchValue] = React.useState('');
 
   const selectedOptions = React.useMemo(() => {
     return options.filter((option) => value.includes(option.value));
@@ -75,7 +71,7 @@ export function MultiSelect({
   };
 
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn('w-full', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -90,16 +86,12 @@ export function MultiSelect({
                 <span className="text-muted-foreground">{placeholder}</span>
               ) : (
                 selectedOptions.map((option) => (
-                  <Badge
-                    key={option.value}
-                    variant="secondary"
-                    className="mr-1 mb-1"
-                  >
+                  <Badge key={option.value} variant="secondary" className="mr-1 mb-1">
                     {option.label}
                     <button
                       className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === 'Enter') {
                           handleRemove(option.value);
                         }
                       }}
@@ -136,16 +128,14 @@ export function MultiSelect({
                   >
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4",
-                        value.includes(option.value) ? "opacity-100" : "opacity-0"
+                        'mr-2 h-4 w-4',
+                        value.includes(option.value) ? 'opacity-100' : 'opacity-0',
                       )}
                     />
                     <div className="flex-1">
                       <div className="font-medium">{option.label}</div>
                       {option.description && (
-                        <div className="text-sm text-muted-foreground">
-                          {option.description}
-                        </div>
+                        <div className="text-sm text-muted-foreground">{option.description}</div>
                       )}
                     </div>
                   </CommandItem>
@@ -159,12 +149,7 @@ export function MultiSelect({
                 {selectedOptions.length} selected
                 {maxItems && ` / ${maxItems}`}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClear}
-                className="h-6 px-2 text-xs"
-              >
+              <Button variant="ghost" size="sm" onClick={handleClear} className="h-6 px-2 text-xs">
                 Clear all
               </Button>
             </div>

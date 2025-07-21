@@ -1,13 +1,26 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { SectionHeading, SectionDescription, H4, BodySmall } from '@/components/ui/typography';
-import { Search, Calculator, ShoppingBag, Truck, CheckCircle, Shield, Clock, Globe, Star, ArrowRight, PlayCircle } from 'lucide-react';
+import {
+  Search,
+  Calculator,
+  ShoppingBag,
+  Truck,
+  CheckCircle,
+  Shield,
+  Clock,
+  Globe,
+  Star,
+  ArrowRight,
+  PlayCircle,
+} from 'lucide-react';
 
 const steps = [
   {
     id: 1,
     title: 'Find Your Product',
-    description: 'Share the product link from Amazon, Flipkart, eBay, Alibaba or any international store',
+    description:
+      'Share the product link from Amazon, Flipkart, eBay, Alibaba or any international store',
     subPoints: ['500+ stores supported', 'Instant link verification', 'Real-time price tracking'],
     icon: Search,
     trustBadge: { icon: Globe, text: 'Global Stores' },
@@ -19,7 +32,8 @@ const steps = [
   {
     id: 2,
     title: 'Get Instant Quote',
-    description: 'Transparent pricing with shipping, customs, taxes, and all fees calculated upfront',
+    description:
+      'Transparent pricing with shipping, customs, taxes, and all fees calculated upfront',
     subPoints: ['No hidden charges', 'Live exchange rates', 'Customs duty included'],
     icon: Calculator,
     trustBadge: { icon: Shield, text: 'Transparent Pricing' },
@@ -100,19 +114,19 @@ export const EnhancedHowItWorksSection = () => {
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
           className="absolute top-20 right-20 w-96 h-96 bg-gradient-to-br from-teal-200/20 to-cyan-200/20 rounded-full blur-3xl"
-          animate={{ 
+          animate={{
             scale: [1, 1.2, 1],
             rotate: [0, 180, 360],
           }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
         />
         <motion.div
           className="absolute bottom-20 left-20 w-96 h-96 bg-gradient-to-br from-orange-200/20 to-pink-200/20 rounded-full blur-3xl"
-          animate={{ 
+          animate={{
             scale: [1.2, 1, 1.2],
             rotate: [360, 180, 0],
           }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
         />
       </div>
 
@@ -141,7 +155,7 @@ export const EnhancedHowItWorksSection = () => {
               Watch How It Works
             </motion.button>
           </motion.div>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -152,7 +166,7 @@ export const EnhancedHowItWorksSection = () => {
               How iwishBag Works
             </SectionHeading>
             <SectionDescription className="mx-auto max-w-3xl text-lg lg:text-xl leading-relaxed">
-              From product discovery to doorstep delivery, we've streamlined international shopping 
+              From product discovery to doorstep delivery, we've streamlined international shopping
               into a simple, transparent, and secure process. Join thousands of happy customers!
             </SectionDescription>
           </motion.div>
@@ -162,11 +176,11 @@ export const EnhancedHowItWorksSection = () => {
         <div className="relative max-w-7xl mx-auto mb-20">
           {/* Progress Line */}
           <div className="absolute top-16 left-0 right-0 h-1 bg-gray-200 rounded-full hidden lg:block">
-            <motion.div 
+            <motion.div
               className="h-full bg-gradient-to-r from-teal-500 to-orange-500 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${(activeStep / steps.length) * 100}%` }}
-              transition={{ duration: 0.8, ease: "easeInOut" }}
+              transition={{ duration: 0.8, ease: 'easeInOut' }}
             />
           </div>
 
@@ -183,56 +197,67 @@ export const EnhancedHowItWorksSection = () => {
                 onMouseEnter={() => setActiveStep(step.id)}
               >
                 {/* Enhanced Step Card */}
-                <div className={`
+                <div
+                  className={`
                   group relative rounded-3xl p-6 lg:p-8 border-2 transition-all duration-500 cursor-pointer h-full
-                  ${activeStep === step.id 
-                    ? 'border-teal-300 bg-gradient-to-br from-white to-teal-50 shadow-xl shadow-teal-100/50 scale-105' 
-                    : 'border-gray-100 bg-white hover:border-teal-200 hover:shadow-lg'
+                  ${
+                    activeStep === step.id
+                      ? 'border-teal-300 bg-gradient-to-br from-white to-teal-50 shadow-xl shadow-teal-100/50 scale-105'
+                      : 'border-gray-100 bg-white hover:border-teal-200 hover:shadow-lg'
                   }
-                `}>
-                  
+                `}
+                >
                   {/* Enhanced Step Number */}
-                  <div className={`
+                  <div
+                    className={`
                     absolute -top-4 left-6 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg z-10
-                    ${activeStep === step.id 
-                      ? 'bg-gradient-to-r from-teal-500 to-cyan-500 animate-pulse' 
-                      : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                    ${
+                      activeStep === step.id
+                        ? 'bg-gradient-to-r from-teal-500 to-cyan-500 animate-pulse'
+                        : 'bg-gradient-to-r from-gray-400 to-gray-500'
                     }
-                  `}>
+                  `}
+                  >
                     {step.id}
                   </div>
 
                   {/* Timeframe Badge */}
-                  <div className={`
+                  <div
+                    className={`
                     absolute -top-3 right-4 px-3 py-1 rounded-full text-xs font-semibold border
-                    ${activeStep === step.id
-                      ? 'bg-green-100 text-green-700 border-green-300'
-                      : 'bg-gray-100 text-gray-600 border-gray-200'
+                    ${
+                      activeStep === step.id
+                        ? 'bg-green-100 text-green-700 border-green-300'
+                        : 'bg-gray-100 text-gray-600 border-gray-200'
                     }
-                  `}>
+                  `}
+                  >
                     {step.timeframe}
                   </div>
 
                   {/* Enhanced Icon */}
-                  <div className={`
+                  <div
+                    className={`
                     w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto transition-all duration-300
-                    ${activeStep === step.id 
-                      ? `bg-gradient-to-br ${step.bgGradient} scale-110` 
-                      : 'bg-gray-50 group-hover:bg-gray-100'
+                    ${
+                      activeStep === step.id
+                        ? `bg-gradient-to-br ${step.bgGradient} scale-110`
+                        : 'bg-gray-50 group-hover:bg-gray-100'
                     }
-                  `}>
-                    <step.icon className={`w-8 h-8 ${activeStep === step.id ? 'text-teal-600' : 'text-gray-500'}`} />
+                  `}
+                  >
+                    <step.icon
+                      className={`w-8 h-8 ${activeStep === step.id ? 'text-teal-600' : 'text-gray-500'}`}
+                    />
                   </div>
 
                   {/* Content */}
                   <div className="text-center mb-6">
-                    <H4 className="mb-3 text-gray-900 font-bold">
-                      {step.title}
-                    </H4>
+                    <H4 className="mb-3 text-gray-900 font-bold">{step.title}</H4>
                     <BodySmall className="text-gray-600 leading-relaxed mb-4">
                       {step.description}
                     </BodySmall>
-                    
+
                     {/* Example Preview */}
                     {activeStep === step.id && (
                       <motion.div
@@ -250,30 +275,35 @@ export const EnhancedHowItWorksSection = () => {
                   {/* Enhanced Sub Points */}
                   <div className="space-y-3 mb-6">
                     {step.subPoints.map((point, pointIndex) => (
-                      <motion.div 
-                        key={pointIndex} 
+                      <motion.div
+                        key={pointIndex}
                         className="flex items-center gap-3 text-sm text-gray-600"
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: pointIndex * 0.1 }}
                       >
-                        <div className={`
+                        <div
+                          className={`
                           w-2 h-2 rounded-full
                           ${activeStep === step.id ? 'bg-teal-400' : 'bg-gray-300'}
-                        `} />
+                        `}
+                        />
                         {point}
                       </motion.div>
                     ))}
                   </div>
 
                   {/* Trust Badge */}
-                  <div className={`
+                  <div
+                    className={`
                     flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium mt-auto
-                    ${activeStep === step.id 
-                      ? 'bg-teal-100 text-teal-700' 
-                      : 'bg-gray-50 text-gray-600'
+                    ${
+                      activeStep === step.id
+                        ? 'bg-teal-100 text-teal-700'
+                        : 'bg-gray-50 text-gray-600'
                     }
-                  `}>
+                  `}
+                  >
                     <step.trustBadge.icon className="w-4 h-4" />
                     {step.trustBadge.text}
                   </div>
@@ -282,15 +312,17 @@ export const EnhancedHowItWorksSection = () => {
                 {/* Connection Arrow */}
                 {index < steps.length - 1 && (
                   <div className="hidden lg:flex absolute top-8 -right-6 items-center justify-center z-20">
-                    <motion.div 
+                    <motion.div
                       className="w-12 h-12 rounded-full bg-white border-2 border-teal-200 flex items-center justify-center shadow-md"
-                      animate={{ 
+                      animate={{
                         scale: activeStep >= step.id ? [1, 1.2, 1] : 1,
-                        borderColor: activeStep >= step.id ? '#14b8a6' : '#cbd5e1'
+                        borderColor: activeStep >= step.id ? '#14b8a6' : '#cbd5e1',
                       }}
                       transition={{ duration: 0.3 }}
                     >
-                      <ArrowRight className={`w-6 h-6 ${activeStep >= step.id ? 'text-teal-500' : 'text-gray-400'}`} />
+                      <ArrowRight
+                        className={`w-6 h-6 ${activeStep >= step.id ? 'text-teal-500' : 'text-gray-400'}`}
+                      />
                     </motion.div>
                   </div>
                 )}
@@ -312,7 +344,8 @@ export const EnhancedHowItWorksSection = () => {
               What Our Customers Say
             </h3>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Join thousands of satisfied customers who trust iwishBag for their international shopping needs.
+              Join thousands of satisfied customers who trust iwishBag for their international
+              shopping needs.
             </p>
           </div>
 
@@ -355,17 +388,29 @@ export const EnhancedHowItWorksSection = () => {
           className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16 max-w-5xl mx-auto"
         >
           {[
-            { label: 'Orders Processed', value: '10,000+', icon: ShoppingBag, color: 'text-teal-600' },
+            {
+              label: 'Orders Processed',
+              value: '10,000+',
+              icon: ShoppingBag,
+              color: 'text-teal-600',
+            },
             { label: 'Countries Served', value: '15+', icon: Globe, color: 'text-cyan-600' },
             { label: 'Customer Rating', value: '4.9/5', icon: Star, color: 'text-yellow-500' },
-            { label: 'Delivery Success', value: '99.8%', icon: CheckCircle, color: 'text-green-600' },
+            {
+              label: 'Delivery Success',
+              value: '99.8%',
+              icon: CheckCircle,
+              color: 'text-green-600',
+            },
           ].map((stat, index) => (
-            <motion.div 
-              key={index} 
+            <motion.div
+              key={index}
               className="text-center p-6 rounded-2xl bg-white border border-gray-100 hover:border-teal-200 transition-all duration-300 hover:shadow-lg group"
               whileHover={{ y: -5 }}
             >
-              <stat.icon className={`w-8 h-8 ${stat.color} mx-auto mb-3 group-hover:scale-110 transition-transform duration-300`} />
+              <stat.icon
+                className={`w-8 h-8 ${stat.color} mx-auto mb-3 group-hover:scale-110 transition-transform duration-300`}
+              />
               <div className="font-bold text-2xl text-gray-900 mb-1">{stat.value}</div>
               <div className="text-sm text-gray-500">{stat.label}</div>
             </motion.div>
@@ -385,9 +430,10 @@ export const EnhancedHowItWorksSection = () => {
               Ready to Start Shopping Globally?
             </h3>
             <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-              Get your instant quote now and experience hassle-free international shopping with complete transparency.
+              Get your instant quote now and experience hassle-free international shopping with
+              complete transparency.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <motion.button
                 onClick={() => (window.location.href = '/quote')}
@@ -398,7 +444,7 @@ export const EnhancedHowItWorksSection = () => {
                 Get Your Quote Now
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
               </motion.button>
-              
+
               <div className="text-sm text-gray-500">
                 <span className="block sm:inline">✓ No signup required</span>
                 <span className="hidden sm:inline mx-2">•</span>

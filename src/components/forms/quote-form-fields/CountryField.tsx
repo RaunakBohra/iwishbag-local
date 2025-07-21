@@ -34,11 +34,12 @@ export const CountryField = <TFieldValues extends FieldValues = FieldValues>({
   const countriesLoading = filter === 'shipping' ? shippingLoading : purchaseLoading;
 
   const { countries } = useCountryWithCurrency();
-  
+
   // Filter countries based on the filter type if needed
-  const filteredCountries = rawCountries && Array.isArray(rawCountries) 
-    ? countries.filter(country => rawCountries.some(rc => rc.code === country.code))
-    : countries;
+  const filteredCountries =
+    rawCountries && Array.isArray(rawCountries)
+      ? countries.filter((country) => rawCountries.some((rc) => rc.code === country.code))
+      : countries;
 
   return (
     <FormField

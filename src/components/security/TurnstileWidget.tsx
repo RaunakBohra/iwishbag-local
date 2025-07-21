@@ -2,16 +2,16 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
  * TurnstileWidget - Cloudflare Turnstile CAPTCHA Integration
- * 
+ *
  * IMPORTANT: This component is optimized for stable rendering to prevent
  * unnecessary re-renders when form inputs change. Key features:
- * 
+ *
  * 1. STABLE RENDERING: Widget renders once and stays stable during form interactions
  * 2. CALLBACK REFS: Uses refs to store latest callbacks, preventing re-renders
  * 3. MINIMAL DEPENDENCIES: Only re-renders when essential props change (siteKey, theme, size, disabled)
  * 4. PROPER CLEANUP: Automatically cleans up widgets on unmount
  * 5. DUPLICATE PREVENTION: Global registry prevents multiple widgets
- * 
+ *
  * Industry Best Practices Implemented:
  * - Widget stays stable during form typing
  * - Only resets on explicit actions (errors, expiration)
@@ -33,7 +33,7 @@ interface TurnstileWidgetProps {
 }
 
 // Global registry to track active widgets
-let activeWidgets = new Set<string>();
+const activeWidgets = new Set<string>();
 
 declare global {
   interface Window {
@@ -49,7 +49,7 @@ declare global {
           size?: 'normal' | 'compact';
           action?: string;
           cData?: string;
-        }
+        },
       ) => string;
       reset: (widgetId?: string) => void;
       remove: (widgetId?: string) => void;
@@ -111,11 +111,11 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
     script.async = true;
     script.defer = true;
-    
+
     script.onload = () => {
       setIsLoading(false);
     };
-    
+
     script.onerror = () => {
       setError('Failed to load Turnstile script');
       setIsLoading(false);
@@ -138,7 +138,13 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   // Render widget when script is loaded
   useEffect(() => {
-    if (isLoading || !window.turnstile || !containerRef.current || disabled || isRendering.current) {
+    if (
+      isLoading ||
+      !window.turnstile ||
+      !containerRef.current ||
+      disabled ||
+      isRendering.current
+    ) {
       return;
     }
 
@@ -230,7 +236,9 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   if (error) {
     return (
-      <div className={`turnstile-error p-3 border border-red-300 rounded bg-red-50 text-red-700 text-sm ${className}`}>
+      <div
+        className={`turnstile-error p-3 border border-red-300 rounded bg-red-50 text-red-700 text-sm ${className}`}
+      >
         <strong>Security verification failed:</strong> {error}
       </div>
     );
@@ -238,7 +246,9 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   if (isLoading) {
     return (
-      <div className={`turnstile-loading p-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 text-sm ${className}`}>
+      <div
+        className={`turnstile-loading p-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 text-sm ${className}`}
+      >
         <div className="flex items-center gap-2">
           <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-teal-600 rounded-full"></div>
           <span>Loading security verification...</span>

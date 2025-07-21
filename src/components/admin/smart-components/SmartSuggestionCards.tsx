@@ -7,15 +7,15 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Lightbulb, 
-  TrendingDown, 
-  Zap, 
-  Scale, 
+import {
+  Lightbulb,
+  TrendingDown,
+  Zap,
+  Scale,
   DollarSign,
   Clock,
   CheckCircle,
-  X
+  X,
 } from 'lucide-react';
 import type { SmartSuggestion } from '@/types/unified-quote';
 
@@ -34,21 +34,31 @@ export const SmartSuggestionCards: React.FC<SmartSuggestionCardsProps> = ({
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'shipping': return <Zap className="w-4 h-4" />;
-      case 'weight': return <Scale className="w-4 h-4" />;
-      case 'customs': return <DollarSign className="w-4 h-4" />;
-      case 'price': return <TrendingDown className="w-4 h-4" />;
-      default: return <Lightbulb className="w-4 h-4" />;
+      case 'shipping':
+        return <Zap className="w-4 h-4" />;
+      case 'weight':
+        return <Scale className="w-4 h-4" />;
+      case 'customs':
+        return <DollarSign className="w-4 h-4" />;
+      case 'price':
+        return <TrendingDown className="w-4 h-4" />;
+      default:
+        return <Lightbulb className="w-4 h-4" />;
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'shipping': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'weight': return 'text-orange-600 bg-orange-50 border-orange-200';
-      case 'customs': return 'text-purple-600 bg-purple-50 border-purple-200';
-      case 'price': return 'text-green-600 bg-green-50 border-green-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'shipping':
+        return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'weight':
+        return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'customs':
+        return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'price':
+        return 'text-green-600 bg-green-50 border-green-200';
+      default:
+        return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
@@ -70,8 +80,8 @@ export const SmartSuggestionCards: React.FC<SmartSuggestionCardsProps> = ({
       {/* Suggestions Grid */}
       <div className="grid gap-3">
         {suggestions.map((suggestion) => (
-          <Card 
-            key={suggestion.id} 
+          <Card
+            key={suggestion.id}
             className={`border transition-all hover:shadow-md ${getTypeColor(suggestion.type)}`}
           >
             <CardContent className="p-4">
@@ -81,53 +91,53 @@ export const SmartSuggestionCards: React.FC<SmartSuggestionCardsProps> = ({
                   <div className={`p-2 rounded-full ${getTypeColor(suggestion.type)}`}>
                     {getIcon(suggestion.type)}
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs capitalize"
-                      >
+                      <Badge variant="outline" className="text-xs capitalize">
                         {suggestion.type}
                       </Badge>
-                      <span className={`text-xs font-medium ${getConfidenceColor(suggestion.confidence)}`}>
+                      <span
+                        className={`text-xs font-medium ${getConfidenceColor(suggestion.confidence)}`}
+                      >
                         {(suggestion.confidence * 100).toFixed(0)}% confidence
                       </span>
                     </div>
-                    
-                    <p className="text-sm text-gray-800 mb-2">
-                      {suggestion.message}
-                    </p>
-                    
+
+                    <p className="text-sm text-gray-800 mb-2">{suggestion.message}</p>
+
                     {/* Impact Preview */}
                     {suggestion.potential_impact && (
                       <div className="flex items-center space-x-4 text-xs text-gray-600">
                         {suggestion.potential_impact.cost_change && (
                           <div className="flex items-center">
                             <DollarSign className="w-3 h-3 mr-1" />
-                            <span className={
-                              suggestion.potential_impact.cost_change > 0 
-                                ? 'text-red-600' 
-                                : 'text-green-600'
-                            }>
-                              {suggestion.potential_impact.cost_change > 0 ? '+' : ''}
-                              ${Math.abs(suggestion.potential_impact.cost_change).toFixed(2)}
+                            <span
+                              className={
+                                suggestion.potential_impact.cost_change > 0
+                                  ? 'text-red-600'
+                                  : 'text-green-600'
+                              }
+                            >
+                              {suggestion.potential_impact.cost_change > 0 ? '+' : ''}$
+                              {Math.abs(suggestion.potential_impact.cost_change).toFixed(2)}
                             </span>
                           </div>
                         )}
-                        
+
                         {suggestion.potential_impact.time_change && (
                           <div className="flex items-center">
                             <Clock className="w-3 h-3 mr-1" />
                             <span>{suggestion.potential_impact.time_change}</span>
                           </div>
                         )}
-                        
+
                         {suggestion.potential_impact.accuracy_improvement && (
                           <div className="flex items-center">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             <span>
-                              +{(suggestion.potential_impact.accuracy_improvement * 100).toFixed(0)}% accuracy
+                              +{(suggestion.potential_impact.accuracy_improvement * 100).toFixed(0)}
+                              % accuracy
                             </span>
                           </div>
                         )}
@@ -147,7 +157,7 @@ export const SmartSuggestionCards: React.FC<SmartSuggestionCardsProps> = ({
                       Apply
                     </Button>
                   )}
-                  
+
                   {onDismissSuggestion && (
                     <Button
                       size="sm"
@@ -173,17 +183,24 @@ export const SmartSuggestionCards: React.FC<SmartSuggestionCardsProps> = ({
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">Potential total savings:</span>
                 <span className="font-medium text-green-600">
-                  ${suggestions
-                    .filter(s => s.potential_impact?.cost_change && s.potential_impact.cost_change < 0)
+                  $
+                  {suggestions
+                    .filter(
+                      (s) => s.potential_impact?.cost_change && s.potential_impact.cost_change < 0,
+                    )
                     .reduce((sum, s) => sum + Math.abs(s.potential_impact!.cost_change!), 0)
                     .toFixed(2)}
                 </span>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <span className="text-gray-600">Avg. confidence:</span>
                 <span className="font-medium">
-                  {(suggestions.reduce((sum, s) => sum + s.confidence, 0) / suggestions.length * 100).toFixed(0)}%
+                  {(
+                    (suggestions.reduce((sum, s) => sum + s.confidence, 0) / suggestions.length) *
+                    100
+                  ).toFixed(0)}
+                  %
                 </span>
               </div>
             </div>

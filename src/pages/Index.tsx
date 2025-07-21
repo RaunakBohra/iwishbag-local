@@ -40,7 +40,6 @@ export default function Index() {
           <EnhancedHowItWorksSection />
         </Suspense>
       </LazySection>
-
     </main>
   );
 }

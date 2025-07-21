@@ -41,7 +41,7 @@ const Dashboard = () => {
   const recentActivity = [
     ...(quotes?.slice(0, 3).map((q) => ({
       type: 'quote',
-      text: `Quote #${q.display_id || q.id} - ${q.status}`,
+      text: `Quote ${q.display_id || `#${q.id.slice(0, 8)}`} - ${q.status}`,
       link: `/dashboard/quotes/${q.id}`,
       icon: <Package className="h-4 w-4 text-teal-600" />,
       date: q.created_at,
@@ -49,7 +49,7 @@ const Dashboard = () => {
     })) || []),
     ...(orders?.slice(0, 2).map((o) => ({
       type: 'order',
-      text: `Order #${o.display_id || o.id} - ${o.status}`,
+      text: `Order ${o.display_id || `#${o.id.slice(0, 8)}`} - ${o.status}`,
       link: `/dashboard/orders/${o.id}`,
       icon: <ShoppingCart className="h-4 w-4 text-green-600" />,
       date: o.created_at,
@@ -153,8 +153,8 @@ const Dashboard = () => {
               <Link to={metric.link}>
                 <Card
                   className={cn(
-                    "relative overflow-hidden group hover:shadow-md transition-all duration-200 cursor-pointer",
-                    "bg-white border border-gray-200"
+                    'relative overflow-hidden group hover:shadow-md transition-all duration-200 cursor-pointer',
+                    'bg-white border border-gray-200',
                   )}
                 >
                   <CardContent className="relative p-6">
@@ -187,7 +187,7 @@ const Dashboard = () => {
                     <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden">
                       <CardContent className="p-6">
                         <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-4">
-                          {React.cloneElement(action.icon, { className: "w-5 h-5 text-teal-600" })}
+                          {React.cloneElement(action.icon, { className: 'w-5 h-5 text-teal-600' })}
                         </div>
                         <H2 className="text-lg font-semibold mb-1">{action.label}</H2>
                         <BodySmall className="text-gray-600">

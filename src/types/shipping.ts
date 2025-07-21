@@ -1,5 +1,23 @@
 // Shipping system types for hybrid origin-destination shipping costs
 
+// Route-based handling charge configuration for delivery options
+export interface RouteHandlingChargeConfig {
+  base_fee: number;
+  percentage_of_value: number;
+  min_fee: number;
+  max_fee: number;
+}
+
+// Route-based insurance options for delivery options
+export interface RouteInsuranceConfig {
+  available: boolean;
+  default_enabled: boolean;
+  coverage_percentage: number;
+  min_fee: number;
+  max_coverage: number;
+  customer_description: string;
+}
+
 export interface DeliveryOption {
   id: string;
   name: string;
@@ -8,6 +26,9 @@ export interface DeliveryOption {
   max_days: number;
   price: number;
   active: boolean;
+  // Route-based configuration (optional)
+  handling_charge?: RouteHandlingChargeConfig;
+  insurance_options?: RouteInsuranceConfig;
 }
 
 // Database interface (matches actual database structure)
@@ -17,15 +38,14 @@ export interface ShippingRouteDB {
   destination_country: string;
   exchange_rate?: number;
   base_shipping_cost: number;
-  cost_per_kg: number;
-  shipping_per_kg?: number;
+  shipping_per_kg: number;
   cost_percentage: number;
   processing_days: number;
   customs_clearance_days: number;
   weight_unit: 'kg' | 'lb';
   delivery_options: DeliveryOption[];
   weight_tiers: WeightTier[];
-  carriers: Carrier[];
+  // carriers field removed - use delivery_options.carrier instead
   max_weight?: number;
   restricted_items?: string[];
   requires_documentation: boolean;
@@ -40,7 +60,6 @@ export interface ShippingRoute {
   destinationCountry: string;
   exchangeRate: number;
   baseShippingCost: number; // In origin country currency
-  costPerKg: number; // In origin country currency
   shippingPerKg: number; // In origin country currency
   costPercentage: number; // In origin country currency
   processingDays: number;
@@ -48,7 +67,7 @@ export interface ShippingRoute {
   weightUnit: 'kg' | 'lb';
   deliveryOptions: DeliveryOption[];
   weightTiers: WeightTier[];
-  carriers: Carrier[];
+  // carriers field removed - use delivery_options.carrier instead
   maxWeight?: number;
   restrictedItems?: string[];
   requiresDocumentation: boolean;
@@ -126,19 +145,19 @@ export interface UnifiedQuoteResult {
 }
 
 export interface ShippingRouteFormData {
+  id?: number; // Optional ID for updating existing routes
   originCountry: string; // Purchase country (all costs below are in this currency)
   destinationCountry: string;
   exchangeRate: number; // Exchange rate from origin to destination currency
   baseShippingCost: number; // In origin country currency
-  costPerKg: number; // In origin country currency
-  shippingPerKg: number; // In origin country currency
+  shippingPerKg: number; // In origin country currency (replaces costPerKg)
   costPercentage: number; // In origin country currency
   processingDays: number;
   customsClearanceDays: number;
   weightUnit: 'kg' | 'lb';
   deliveryOptions: DeliveryOption[];
   weightTiers: WeightTier[];
-  carriers: Carrier[];
+  // carriers field removed - use delivery_options.carrier instead
   maxWeight?: number;
   restrictedItems?: string[];
   requiresDocumentation: boolean;

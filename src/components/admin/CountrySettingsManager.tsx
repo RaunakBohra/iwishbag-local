@@ -35,49 +35,49 @@ interface CurrencyValidationResult {
 
 // Standard ISO currency codes for common countries
 const STANDARD_CURRENCY_CODES: { [key: string]: string } = {
-  'US': 'USD',
-  'GB': 'GBP',
-  'EU': 'EUR',
-  'DE': 'EUR',
-  'FR': 'EUR',
-  'IT': 'EUR',
-  'ES': 'EUR',
-  'NL': 'EUR',
-  'JP': 'JPY',
-  'CN': 'CNY',
-  'IN': 'INR',
-  'NP': 'NPR',
-  'AU': 'AUD',
-  'CA': 'CAD',
-  'CH': 'CHF',
-  'SG': 'SGD',
-  'HK': 'HKD',
-  'KR': 'KRW',
-  'TH': 'THB',
-  'MY': 'MYR',
-  'ID': 'IDR',
-  'PH': 'PHP',
-  'VN': 'VND',
-  'BD': 'BDT',
-  'LK': 'LKR',
-  'PK': 'PKR',
-  'AE': 'AED',
-  'SA': 'SAR',
-  'BR': 'BRL',
-  'MX': 'MXN',
-  'ZA': 'ZAR',
-  'NG': 'NGN',
-  'EG': 'EGP',
-  'TR': 'TRY',
-  'RU': 'RUB',
-  'SE': 'SEK',
-  'NO': 'NOK',
-  'DK': 'DKK',
-  'PL': 'PLN',
-  'CZ': 'CZK',
-  'HU': 'HUF',
-  'IL': 'ILS',
-  'NZ': 'NZD',
+  US: 'USD',
+  GB: 'GBP',
+  EU: 'EUR',
+  DE: 'EUR',
+  FR: 'EUR',
+  IT: 'EUR',
+  ES: 'EUR',
+  NL: 'EUR',
+  JP: 'JPY',
+  CN: 'CNY',
+  IN: 'INR',
+  NP: 'NPR',
+  AU: 'AUD',
+  CA: 'CAD',
+  CH: 'CHF',
+  SG: 'SGD',
+  HK: 'HKD',
+  KR: 'KRW',
+  TH: 'THB',
+  MY: 'MYR',
+  ID: 'IDR',
+  PH: 'PHP',
+  VN: 'VND',
+  BD: 'BDT',
+  LK: 'LKR',
+  PK: 'PKR',
+  AE: 'AED',
+  SA: 'SAR',
+  BR: 'BRL',
+  MX: 'MXN',
+  ZA: 'ZAR',
+  NG: 'NGN',
+  EG: 'EGP',
+  TR: 'TRY',
+  RU: 'RUB',
+  SE: 'SEK',
+  NO: 'NOK',
+  DK: 'DKK',
+  PL: 'PLN',
+  CZ: 'CZK',
+  HU: 'HUF',
+  IL: 'ILS',
+  NZ: 'NZD',
 };
 
 export function CountrySettingsManager() {
@@ -116,14 +116,14 @@ export function CountrySettingsManager() {
   const validateCurrencyCodes = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Check each country's currency code against standard ISO codes
       const results: CurrencyValidationResult[] = [];
-      
+
       for (const country of countries) {
         const standardCurrency = STANDARD_CURRENCY_CODES[country.code];
         const isValid = !standardCurrency || country.currency === standardCurrency;
-        
+
         if (!isValid) {
           results.push({
             country: country.name || country.code,
@@ -166,9 +166,9 @@ export function CountrySettingsManager() {
     try {
       const { error } = await supabase
         .from('country_settings')
-        .update({ 
+        .update({
           currency: newCurrency,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('code', countryCode);
 
@@ -181,7 +181,7 @@ export function CountrySettingsManager() {
 
       // Refresh data and validation
       await fetchCountries();
-      setValidationResults(prev => prev.filter(r => r.code !== countryCode));
+      setValidationResults((prev) => prev.filter((r) => r.code !== countryCode));
     } catch (error) {
       console.error('Error fixing currency code:', error);
       toast({
@@ -200,9 +200,9 @@ export function CountrySettingsManager() {
       for (const result of validationResults) {
         const { error } = await supabase
           .from('country_settings')
-          .update({ 
+          .update({
             currency: result.suggestedCurrency,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('code', result.code);
 
@@ -274,24 +274,36 @@ export function CountrySettingsManager() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">
-                  The following countries have incorrect currency codes that may prevent exchange rate updates:
+                  The following countries have incorrect currency codes that may prevent exchange
+                  rate updates:
                 </p>
                 <Button onClick={fixAllCurrencyCodes} size="sm">
                   Fix All
                 </Button>
               </div>
-              
+
               <div className="space-y-2">
                 {validationResults.map((result) => (
-                  <div key={result.code} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div
+                    key={result.code}
+                    className="flex items-center justify-between p-3 bg-orange-50 rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <Globe className="h-4 w-4 text-orange-600" />
                       <div>
-                        <p className="font-medium">{result.country} ({result.code})</p>
+                        <p className="font-medium">
+                          {result.country} ({result.code})
+                        </p>
                         <p className="text-sm text-gray-600">
-                          Current: <span className="font-mono bg-red-100 px-1 rounded">{result.currentCurrency}</span>
+                          Current:{' '}
+                          <span className="font-mono bg-red-100 px-1 rounded">
+                            {result.currentCurrency}
+                          </span>
                           {' → '}
-                          Suggested: <span className="font-mono bg-green-100 px-1 rounded">{result.suggestedCurrency}</span>
+                          Suggested:{' '}
+                          <span className="font-mono bg-green-100 px-1 rounded">
+                            {result.suggestedCurrency}
+                          </span>
                         </p>
                       </div>
                     </div>
@@ -312,10 +324,11 @@ export function CountrySettingsManager() {
 
       <div className="grid gap-4">
         {countries.map((country) => {
-          const hasValidCurrency = !STANDARD_CURRENCY_CODES[country.code] || 
-                                 country.currency === STANDARD_CURRENCY_CODES[country.code];
+          const hasValidCurrency =
+            !STANDARD_CURRENCY_CODES[country.code] ||
+            country.currency === STANDARD_CURRENCY_CODES[country.code];
           const hasValidRate = country.rate_from_usd > 0 && country.rate_from_usd !== 1;
-          
+
           return (
             <Card key={country.code}>
               <CardContent className="pt-6">

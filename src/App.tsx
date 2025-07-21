@@ -130,7 +130,6 @@ if (import.meta.env.DEV) {
   import('@/utils/recordTestPayment');
 }
 
-
 const router = createBrowserRouter([
   {
     path: 'admin',

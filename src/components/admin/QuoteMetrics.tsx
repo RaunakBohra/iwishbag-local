@@ -1,16 +1,16 @@
 import { Tables } from '@/integrations/supabase/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  FileText,
+  CheckCircle,
+  Clock,
   XCircle,
   AlertCircle,
-  Target
+  Target,
 } from 'lucide-react';
 import { BodySmall } from '@/components/ui/typography';
 
@@ -34,7 +34,15 @@ interface MetricCardProps {
   description?: string;
 }
 
-const MetricCard = ({ title, value, change, changeType, icon, iconColor, description }: MetricCardProps) => (
+const MetricCard = ({
+  title,
+  value,
+  change,
+  changeType,
+  icon,
+  iconColor,
+  description,
+}: MetricCardProps) => (
   <Card className="border-gray-200 hover:border-gray-300 transition-colors">
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
@@ -56,10 +64,15 @@ const MetricCard = ({ title, value, change, changeType, icon, iconColor, descrip
               <div className="flex items-center gap-1">
                 {changeType === 'positive' && <TrendingUp className="h-3 w-3 text-green-600" />}
                 {changeType === 'negative' && <TrendingDown className="h-3 w-3 text-red-600" />}
-                <BodySmall className={`font-medium ${
-                  changeType === 'positive' ? 'text-green-600' : 
-                  changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
-                }`}>
+                <BodySmall
+                  className={`font-medium ${
+                    changeType === 'positive'
+                      ? 'text-green-600'
+                      : changeType === 'negative'
+                        ? 'text-red-600'
+                        : 'text-gray-600'
+                  }`}
+                >
                   {change}
                 </BodySmall>
               </div>
@@ -80,15 +93,18 @@ const formatCurrency = (amount: number) => {
   return `$${amount.toFixed(0)}`;
 };
 
-const getChangePercentage = (current: number, previous: number): { change: string; type: 'positive' | 'negative' | 'neutral' } => {
+const getChangePercentage = (
+  current: number,
+  previous: number,
+): { change: string; type: 'positive' | 'negative' | 'neutral' } => {
   if (previous === 0) return { change: 'N/A', type: 'neutral' };
-  
+
   const percentage = ((current - previous) / previous) * 100;
   const sign = percentage > 0 ? '+' : '';
-  
+
   return {
     change: `${sign}${percentage.toFixed(1)}%`,
-    type: percentage > 0 ? 'positive' : percentage < 0 ? 'negative' : 'neutral'
+    type: percentage > 0 ? 'positive' : percentage < 0 ? 'negative' : 'neutral',
   };
 };
 
@@ -120,17 +136,19 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
   const totalQuotes = quotes.length;
   const totalRevenue = quotes.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
   const averageValue = totalQuotes > 0 ? totalRevenue / totalQuotes : 0;
-  
+
   // Status counts
-  const pendingQuotes = quotes.filter(q => q.status === 'pending').length;
-  const approvedQuotes = quotes.filter(q => q.status === 'approved').length;
-  const paidQuotes = quotes.filter(q => ['paid', 'ordered', 'shipped', 'completed'].includes(q.status)).length;
-  const rejectedQuotes = quotes.filter(q => ['rejected', 'cancelled'].includes(q.status)).length;
-  const highPriorityQuotes = quotes.filter(q => q.priority === 'high').length;
-  
+  const pendingQuotes = quotes.filter((q) => q.status === 'pending').length;
+  const approvedQuotes = quotes.filter((q) => q.status === 'approved').length;
+  const paidQuotes = quotes.filter((q) =>
+    ['paid', 'ordered', 'shipped', 'completed'].includes(q.status),
+  ).length;
+  const rejectedQuotes = quotes.filter((q) => ['rejected', 'cancelled'].includes(q.status)).length;
+  const highPriorityQuotes = quotes.filter((q) => q.priority === 'high').length;
+
   // Calculate conversion rate
   const conversionRate = totalQuotes > 0 ? (paidQuotes / totalQuotes) * 100 : 0;
-  
+
   // Mock previous period data for percentage changes (in real implementation, this would come from props)
   const previousPeriod = {
     totalQuotes: Math.floor(totalQuotes * 0.9),
@@ -139,7 +157,7 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
     averageValue: averageValue * 1.05,
     highPriorityQuotes: highPriorityQuotes * 1.1,
   };
-  
+
   const revenueChange = getChangePercentage(totalRevenue, previousPeriod.totalRevenue);
   const quotesChange = getChangePercentage(totalQuotes, previousPeriod.totalQuotes);
   const conversionChange = getChangePercentage(conversionRate, previousPeriod.conversionRate);
@@ -157,7 +175,7 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         iconColor="bg-green-50"
         description="This month"
       />
-      
+
       <MetricCard
         title="Total Quotes"
         value={totalQuotes.toString()}
@@ -167,7 +185,7 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         iconColor="bg-teal-50"
         description="All time"
       />
-      
+
       <MetricCard
         title="Conversion Rate"
         value={`${conversionRate.toFixed(1)}%`}
@@ -177,7 +195,7 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         iconColor="bg-orange-50"
         description="Paid quotes"
       />
-      
+
       <MetricCard
         title="Average Value"
         value={formatCurrency(averageValue)}
@@ -187,7 +205,7 @@ export const QuoteMetrics = ({ quotes, isLoading }: QuoteMetricsProps) => {
         iconColor="bg-teal-50"
         description="Per quote"
       />
-      
+
       <MetricCard
         title="High Priority"
         value={highPriorityQuotes.toString()}

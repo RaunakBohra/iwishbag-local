@@ -1,6 +1,6 @@
 /**
  * LocationDetectionService - IP-based country and currency detection
- * 
+ *
  * Priority order for currency selection:
  * 1. User Profile Preference (highest priority)
  * 2. IP-based Auto-detection (fallback if no profile)
@@ -59,7 +59,6 @@ class LocationDetectionService {
         this.cacheLocation(timezoneLocation);
         return timezoneLocation;
       }
-
     } catch (error) {
       console.warn('Location detection failed:', error);
     }
@@ -73,7 +72,7 @@ class LocationDetectionService {
   private async detectLocationByIP(): Promise<LocationData | null> {
     try {
       console.log('🌍 Detecting location via IP...');
-      
+
       // Use ipapi.co (free tier allows 1000 requests/day)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT);
@@ -81,7 +80,7 @@ class LocationDetectionService {
       const response = await fetch('https://ipapi.co/json/', {
         signal: controller.signal,
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       });
 
@@ -92,7 +91,7 @@ class LocationDetectionService {
       }
 
       const data: IPLocationResponse = await response.json();
-      
+
       // Validate response
       if (!data.country_code || !data.currency) {
         throw new Error('Invalid response format');
@@ -109,7 +108,6 @@ class LocationDetectionService {
 
       console.log('✅ IP-based location detected:', location);
       return location;
-
     } catch (error) {
       console.warn('IP-based detection failed:', error);
       return null;
@@ -125,13 +123,16 @@ class LocationDetectionService {
       console.log('🌍 Detecting location via timezone:', timezone);
 
       // Basic timezone to country mapping for major regions
-      const timezoneMap: Record<string, { country: string; countryCode: string; currency: string }> = {
+      const timezoneMap: Record<
+        string,
+        { country: string; countryCode: string; currency: string }
+      > = {
         // US timezones
         'America/New_York': { country: 'United States', countryCode: 'US', currency: 'USD' },
         'America/Chicago': { country: 'United States', countryCode: 'US', currency: 'USD' },
         'America/Denver': { country: 'United States', countryCode: 'US', currency: 'USD' },
         'America/Los_Angeles': { country: 'United States', countryCode: 'US', currency: 'USD' },
-        
+
         // European timezones
         'Europe/London': { country: 'United Kingdom', countryCode: 'GB', currency: 'GBP' },
         'Europe/Paris': { country: 'France', countryCode: 'FR', currency: 'EUR' },
@@ -163,7 +164,6 @@ class LocationDetectionService {
 
       console.warn('🌍 Timezone not recognized:', timezone);
       return null;
-
     } catch (error) {
       console.warn('Timezone-based detection failed:', error);
       return null;
@@ -173,13 +173,13 @@ class LocationDetectionService {
   /**
    * Get smart currency based on priority:
    * 1. User profile preference
-   * 2. IP-detected currency  
+   * 2. IP-detected currency
    * 3. Quote destination currency
    * 4. USD fallback
    */
   async getSmartCurrency(
     userProfileCurrency?: string,
-    quoteDestinationCountry?: string
+    quoteDestinationCountry?: string,
   ): Promise<string> {
     // 1. User profile preference (highest priority)
     if (userProfileCurrency) {
@@ -205,7 +205,8 @@ class LocationDetectionService {
     // 3. Quote destination country currency
     if (quoteDestinationCountry) {
       try {
-        const destinationCurrency = await currencyService.getCurrencyForCountry(quoteDestinationCountry);
+        const destinationCurrency =
+          await currencyService.getCurrencyForCountry(quoteDestinationCountry);
         if (destinationCurrency) {
           console.log('💰 Using quote destination currency:', destinationCurrency);
           return destinationCurrency;
@@ -225,7 +226,7 @@ class LocationDetectionService {
    */
   async getSmartCountry(
     userProfileCountry?: string,
-    quoteDestinationCountry?: string
+    quoteDestinationCountry?: string,
   ): Promise<string> {
     // 1. User profile preference
     if (userProfileCountry) {
@@ -253,13 +254,16 @@ class LocationDetectionService {
   private cacheLocation(location: LocationData): void {
     this.cachedLocation = location;
     this.cacheExpiry = Date.now() + this.CACHE_DURATION;
-    
+
     // Also cache in localStorage for persistence across sessions
     try {
-      localStorage.setItem('iwishbag_location_cache', JSON.stringify({
-        location,
-        expiry: this.cacheExpiry,
-      }));
+      localStorage.setItem(
+        'iwishbag_location_cache',
+        JSON.stringify({
+          location,
+          expiry: this.cacheExpiry,
+        }),
+      );
     } catch (error) {
       console.warn('Failed to cache location in localStorage:', error);
     }

@@ -22,23 +22,17 @@ const Returns = () => {
           <div className="grid md:grid-cols-3 gap-6">
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <h3 className="text-lg font-medium text-gray-900 mb-2">30-Day Window</h3>
-              <p className="text-gray-600">
-                Return items within 30 days of delivery
-              </p>
+              <p className="text-gray-600">Return items within 30 days of delivery</p>
             </div>
-            
+
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Original Condition</h3>
-              <p className="text-gray-600">
-                Items must be unused and in original packaging
-              </p>
+              <p className="text-gray-600">Items must be unused and in original packaging</p>
             </div>
-            
+
             <div className="text-center p-6 bg-white rounded-lg shadow-sm">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Easy Process</h3>
-              <p className="text-gray-600">
-                Simple online return request system
-              </p>
+              <p className="text-gray-600">Simple online return request system</p>
             </div>
           </div>
         </div>
@@ -48,11 +42,12 @@ const Returns = () => {
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-6">
           <div className="prose prose-gray max-w-none">
-            
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Return Policy Overview</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
+              Return Policy Overview
+            </h2>
             <p className="text-gray-600 mb-12 leading-relaxed">
-              We offer a 30-day return policy for most items. Due to the international nature of our service, 
-              please review our policy carefully before making a purchase.
+              We offer a 30-day return policy for most items. Due to the international nature of our
+              service, please review our policy carefully before making a purchase.
             </p>
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Eligible Returns</h2>
@@ -79,14 +74,14 @@ const Returns = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Clothing with tags still attached
-                  </p>
+                  <p className="text-gray-700 leading-relaxed">Clothing with tags still attached</p>
                 </li>
               </ul>
             </div>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Non-Returnable Items</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
+              Non-Returnable Items
+            </h2>
             <div className="bg-red-50 border border-red-200 p-6 rounded-lg mb-12">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Items We Cannot Accept</h3>
               <ul className="space-y-3">
@@ -104,9 +99,7 @@ const Returns = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Custom or personalized items
-                  </p>
+                  <p className="text-gray-700 leading-relaxed">Custom or personalized items</p>
                 </li>
                 <li className="flex items-start">
                   <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
@@ -116,14 +109,14 @@ const Returns = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Items returned after 30 days
-                  </p>
+                  <p className="text-gray-700 leading-relaxed">Items returned after 30 days</p>
                 </li>
               </ul>
             </div>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">How to Return an Item</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
+              How to Return an Item
+            </h2>
             <p className="text-gray-600 mb-8 leading-relaxed">
               Our return process is designed to be as simple as possible. Follow these steps:
             </p>
@@ -136,7 +129,7 @@ const Returns = () => {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Contact Us</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    Email us at returns@iwishbag.com with your order number and reason for return. 
+                    Email us at returns@iwishbag.com with your order number and reason for return.
                     We'll respond within 24 hours.
                   </p>
                 </div>
@@ -147,10 +140,12 @@ const Returns = () => {
                   <span className="text-white font-semibold">2</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Get Return Authorization</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Get Return Authorization
+                  </h3>
                   <p className="text-gray-600 leading-relaxed">
-                    We'll review your request and provide a return authorization number and 
-                    prepaid shipping label if approved.
+                    We'll review your request and provide a return authorization number and prepaid
+                    shipping label if approved.
                   </p>
                 </div>
               </div>
@@ -162,7 +157,7 @@ const Returns = () => {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Package and Ship</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    Securely package the item(s) with all original accessories and documentation. 
+                    Securely package the item(s) with all original accessories and documentation.
                     Attach the prepaid label and drop off at any authorized location.
                   </p>
                 </div>
@@ -175,8 +170,8 @@ const Returns = () => {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Receive Refund</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    Once we receive and inspect your return, we'll process your refund within 
-                    5-10 business days to your original payment method.
+                    Once we receive and inspect your return, we'll process your refund within 5-10
+                    business days to your original payment method.
                   </p>
                 </div>
               </div>
@@ -184,8 +179,8 @@ const Returns = () => {
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Refund Information</h2>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              Refunds will be processed to your original payment method once we receive and 
-              inspect the returned items.
+              Refunds will be processed to your original payment method once we receive and inspect
+              the returned items.
             </p>
 
             <div className="bg-gray-50 p-6 rounded-lg mb-12">
@@ -212,8 +207,8 @@ const Returns = () => {
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Exchanges</h2>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              We don't offer direct exchanges due to the international nature of our service. 
-              For size or color changes, please return the item and place a new order.
+              We don't offer direct exchanges due to the international nature of our service. For
+              size or color changes, please return the item and place a new order.
             </p>
 
             <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg mb-12">
@@ -225,14 +220,15 @@ const Returns = () => {
                     <li className="flex items-start">
                       <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       <p className="text-gray-700 leading-relaxed">
-                        Return shipping costs are the customer's responsibility unless the item 
-                        was defective or incorrectly described
+                        Return shipping costs are the customer's responsibility unless the item was
+                        defective or incorrectly described
                       </p>
                     </li>
                     <li className="flex items-start">
                       <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                       <p className="text-gray-700 leading-relaxed">
-                        International return shipping can be expensive - consider this when placing orders
+                        International return shipping can be expensive - consider this when placing
+                        orders
                       </p>
                     </li>
                     <li className="flex items-start">
@@ -246,22 +242,24 @@ const Returns = () => {
               </div>
             </div>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Damaged or Defective Items</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
+              Damaged or Defective Items
+            </h2>
             <p className="text-gray-600 mb-12 leading-relaxed">
-              If you receive a damaged or defective item, please contact us immediately with photos 
+              If you receive a damaged or defective item, please contact us immediately with photos
               of the damage. We'll arrange for a replacement or full refund at no cost to you.
             </p>
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Warranty Claims</h2>
             <p className="text-gray-600 mb-12 leading-relaxed">
-              For items still under manufacturer warranty, we can help facilitate warranty claims 
+              For items still under manufacturer warranty, we can help facilitate warranty claims
               with the original manufacturer. Contact us for assistance.
             </p>
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Questions?</h2>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              If you have any questions about our returns policy or need help with a return, 
-              please don't hesitate to contact us.
+              If you have any questions about our returns policy or need help with a return, please
+              don't hesitate to contact us.
             </p>
 
             <div className="bg-gray-50 p-6 rounded-lg">

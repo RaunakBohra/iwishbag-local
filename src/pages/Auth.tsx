@@ -27,8 +27,8 @@ const Auth = () => {
     <div className="h-screen flex flex-col">
       {/* Back Button */}
       <div className="absolute top-6 right-6 z-10">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="inline-flex items-center space-x-2 text-orange-500 lg:text-gray-600 hover:text-orange-600 lg:hover:text-gray-900 transition-colors duration-200"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -59,8 +59,8 @@ const Auth = () => {
           <div className="w-full max-w-md">
             {/* Logo - Above Form */}
             <div className="text-center mb-8">
-              <img 
-                src="https://res.cloudinary.com/dto2xew5c/image/upload/v1750167745/wb-logo-final_1_f7bqrp.png" 
+              <img
+                src="https://res.cloudinary.com/dto2xew5c/image/upload/v1750167745/wb-logo-final_1_f7bqrp.png"
                 alt="iwishBag"
                 className="h-16 mx-auto"
               />
@@ -89,11 +89,17 @@ const Auth = () => {
             <div className="mt-6 text-center">
               <p className="text-xs sm:text-sm text-white/80 lg:text-gray-600 leading-relaxed whitespace-nowrap">
                 By continuing, you agree to our{' '}
-                <a href="/terms-conditions" className="text-white hover:text-white/90 lg:text-gray-600 lg:hover:text-gray-900 font-medium underline">
+                <a
+                  href="/terms-conditions"
+                  className="text-white hover:text-white/90 lg:text-gray-600 lg:hover:text-gray-900 font-medium underline"
+                >
                   Terms of Service
                 </a>{' '}
                 and{' '}
-                <a href="/privacy-policy" className="text-white hover:text-white/90 lg:text-gray-600 lg:hover:text-gray-900 font-medium underline">
+                <a
+                  href="/privacy-policy"
+                  className="text-white hover:text-white/90 lg:text-gray-600 lg:hover:text-gray-900 font-medium underline"
+                >
                   Privacy Policy
                 </a>
               </p>

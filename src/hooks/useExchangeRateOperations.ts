@@ -14,11 +14,11 @@ export const useExchangeRateOperations = () => {
   const triggerUpdate = async () => {
     try {
       setIsUpdating(true);
-      
+
       // Clear relevant caches to force refetch of country settings
       await queryClient.invalidateQueries({ queryKey: ['countries'] });
       await queryClient.invalidateQueries({ queryKey: ['country-settings'] });
-      
+
       toast({
         title: 'Exchange rates refreshed',
         description: 'Country settings and exchange rates have been updated.',

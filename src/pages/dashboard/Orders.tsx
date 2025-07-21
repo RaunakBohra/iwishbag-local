@@ -71,7 +71,7 @@ export default function Orders() {
         const searchLower = searchTerm.toLowerCase();
         const productMatch = order.product_name?.toLowerCase().includes(searchLower);
         const productUrlMatch = order.product_url?.toLowerCase().includes(searchLower);
-        const orderIdMatch = order.order_display_id?.toLowerCase().includes(searchLower);
+        const orderIdMatch = order.display_id?.toLowerCase().includes(searchLower);
         const quoteIdMatch = order.display_id?.toLowerCase().includes(searchLower);
 
         // Get country name for search
@@ -121,7 +121,7 @@ export default function Orders() {
     }
 
     const csvData = filteredOrders.map((order) => ({
-      'Order ID': order.order_display_id || order.display_id || order.id.slice(0, 8),
+      'Order ID': order.display_id || order.id.slice(0, 8),
       Product: order.product_name || 'N/A',
       Status: order.status,
       'Payment Status': order.payment_status || 'unpaid',
@@ -364,7 +364,7 @@ function OrderItem({
             <div>
               <h3 className="font-semibold text-lg">{order.product_name || 'Product Order'}</h3>
               <p className="text-gray-500 text-sm">
-                Order #{order.order_display_id || order.display_id || order.id.slice(0, 8)}
+                Order {order.display_id || `#${order.id.slice(0, 8)}`}
               </p>
             </div>
             <StatusBadge status={order.status} category="order" />

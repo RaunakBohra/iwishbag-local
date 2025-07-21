@@ -6,24 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Edit, Plus, Search, Package, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  Trash2,
+  Edit,
+  Plus,
+  Search,
+  Package,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { 
-  AlertDialog, 
-  AlertDialogContent, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
@@ -149,7 +158,7 @@ export const CustomsCategories = () => {
     const formData = new FormData(e.currentTarget);
     const name = (formData.get('name') as string)?.trim();
     const duty_percent = parseFloat(formData.get('duty_percent') as string) || 0;
-    
+
     if (!name) {
       toast({
         title: 'Validation Error',
@@ -193,9 +202,10 @@ export const CustomsCategories = () => {
     }
   };
 
-  const filteredCategories = categories?.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCategories =
+    categories?.filter((category) =>
+      category.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    ) || [];
 
   if (isLoading) {
     return (
@@ -237,9 +247,7 @@ export const CustomsCategories = () => {
           <div className="flex items-center space-x-3">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <div>
-              <h3 className="text-sm font-medium text-red-800">
-                Error Loading Customs Categories
-              </h3>
+              <h3 className="text-sm font-medium text-red-800">Error Loading Customs Categories</h3>
               <p className="mt-1 text-sm text-red-700">{error.message}</p>
               <div className="mt-3 text-xs text-red-600">
                 <p>User ID: {user?.id || 'Not logged in'}</p>
@@ -269,7 +277,7 @@ export const CustomsCategories = () => {
               <Badge variant="outline" className="text-xs">
                 {isAdmin ? 'Admin Access' : 'Limited Access'}
               </Badge>
-              <Button 
+              <Button
                 onClick={() => setIsCreating(true)}
                 className="bg-teal-600 hover:bg-teal-700 text-white"
               >
@@ -292,7 +300,8 @@ export const CustomsCategories = () => {
             />
           </div>
           <div className="text-sm text-gray-600">
-            {filteredCategories.length} {filteredCategories.length === 1 ? 'category' : 'categories'}
+            {filteredCategories.length}{' '}
+            {filteredCategories.length === 1 ? 'category' : 'categories'}
           </div>
         </div>
 
@@ -305,13 +314,12 @@ export const CustomsCategories = () => {
                 {searchTerm ? 'No categories found' : 'No categories yet'}
               </h3>
               <p className="text-gray-600 mb-6">
-                {searchTerm 
-                  ? 'Try adjusting your search terms' 
-                  : 'Create your first customs category to get started'
-                }
+                {searchTerm
+                  ? 'Try adjusting your search terms'
+                  : 'Create your first customs category to get started'}
               </p>
               {!searchTerm && (
-                <Button 
+                <Button
                   onClick={() => setIsCreating(true)}
                   className="bg-teal-600 hover:bg-teal-700 text-white"
                 >
@@ -325,10 +333,18 @@ export const CustomsCategories = () => {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="text-left py-3 px-6 font-medium text-gray-900 text-sm">Category Name</th>
-                    <th className="text-left py-3 px-6 font-medium text-gray-900 text-sm">Duty Percentage</th>
-                    <th className="text-left py-3 px-6 font-medium text-gray-900 text-sm">Status</th>
-                    <th className="text-right py-3 px-6 font-medium text-gray-900 text-sm">Actions</th>
+                    <th className="text-left py-3 px-6 font-medium text-gray-900 text-sm">
+                      Category Name
+                    </th>
+                    <th className="text-left py-3 px-6 font-medium text-gray-900 text-sm">
+                      Duty Percentage
+                    </th>
+                    <th className="text-left py-3 px-6 font-medium text-gray-900 text-sm">
+                      Status
+                    </th>
+                    <th className="text-right py-3 px-6 font-medium text-gray-900 text-sm">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -341,8 +357,8 @@ export const CustomsCategories = () => {
                         <div className="text-gray-700">{category.duty_percent}%</div>
                       </td>
                       <td className="py-4 px-6">
-                        <Badge 
-                          variant={category.duty_percent > 0 ? "default" : "secondary"}
+                        <Badge
+                          variant={category.duty_percent > 0 ? 'default' : 'secondary'}
                           className="text-xs"
                         >
                           {category.duty_percent > 0 ? 'Active' : 'No Duty'}
@@ -378,22 +394,22 @@ export const CustomsCategories = () => {
       </div>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isCreating || !!editingCategory} onOpenChange={(open) => {
-        if (!open) {
-          setIsCreating(false);
-          setEditingCategory(null);
-        }
-      }}>
+      <Dialog
+        open={isCreating || !!editingCategory}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreating(false);
+            setEditingCategory(null);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingCategory ? 'Edit Category' : 'Add New Category'}
-            </DialogTitle>
+            <DialogTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
             <DialogDescription>
-              {editingCategory 
-                ? 'Update the customs category details below.' 
-                : 'Create a new customs category with duty percentage.'
-              }
+              {editingCategory
+                ? 'Update the customs category details below.'
+                : 'Create a new customs category with duty percentage.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -425,9 +441,7 @@ export const CustomsCategories = () => {
                 placeholder="0.00"
                 className="mt-1"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Enter the import duty percentage (0-100)
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Enter the import duty percentage (0-100)</p>
             </div>
             <DialogFooter>
               <Button
@@ -440,8 +454,8 @@ export const CustomsCategories = () => {
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="bg-teal-600 hover:bg-teal-700 text-white"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
@@ -468,8 +482,8 @@ export const CustomsCategories = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the category "{categoryToDelete?.name}"? 
-              This action cannot be undone and may affect existing quotes and orders.
+              Are you sure you want to delete the category "{categoryToDelete?.name}"? This action
+              cannot be undone and may affect existing quotes and orders.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

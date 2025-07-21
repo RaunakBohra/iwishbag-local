@@ -1,14 +1,14 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  XCircle, 
+import {
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
   Calendar,
   Star,
   TrendingUp,
-  DollarSign
+  DollarSign,
 } from 'lucide-react';
 import { BodySmall } from '@/components/ui/typography';
 
@@ -43,23 +43,23 @@ const FilterTab = ({ id, label, count, icon, color, isActive, onClick }: FilterT
     onClick={onClick}
     className={`
       flex items-center gap-2 px-4 py-2 h-auto rounded-lg transition-all duration-200
-      ${isActive 
-        ? `bg-${color}-600 text-white hover:bg-${color}-700` 
-        : `text-gray-700 hover:bg-${color}-50 hover:text-${color}-700`
+      ${
+        isActive
+          ? `bg-${color}-600 text-white hover:bg-${color}-700`
+          : `text-gray-700 hover:bg-${color}-50 hover:text-${color}-700`
       }
     `}
   >
-    <div className={`w-4 h-4 ${isActive ? 'text-white' : `text-${color}-600`}`}>
-      {icon}
-    </div>
+    <div className={`w-4 h-4 ${isActive ? 'text-white' : `text-${color}-600`}`}>{icon}</div>
     <span className="font-medium">{label}</span>
-    <Badge 
+    <Badge
       variant={isActive ? 'secondary' : 'outline'}
       className={`
         ml-1 text-xs
-        ${isActive 
-          ? 'bg-white/20 text-white border-white/20' 
-          : `bg-${color}-50 text-${color}-700 border-${color}-200`
+        ${
+          isActive
+            ? 'bg-white/20 text-white border-white/20'
+            : `bg-${color}-50 text-${color}-700 border-${color}-200`
         }
       `}
     >
@@ -68,10 +68,10 @@ const FilterTab = ({ id, label, count, icon, color, isActive, onClick }: FilterT
   </Button>
 );
 
-export const QuoteQuickFilters = ({ 
-  activeFilter, 
-  onFilterChange, 
-  quoteCounts 
+export const QuoteQuickFilters = ({
+  activeFilter,
+  onFilterChange,
+  quoteCounts,
 }: QuickFilterTabsProps) => {
   const filters = [
     {
@@ -79,56 +79,54 @@ export const QuoteQuickFilters = ({
       label: 'All Quotes',
       count: quoteCounts.all,
       icon: <div className="w-2 h-2 bg-current rounded-full" />,
-      color: 'gray'
+      color: 'gray',
     },
     {
       id: 'today',
       label: 'Today',
       count: quoteCounts.today,
       icon: <Calendar className="w-4 h-4" />,
-      color: 'blue'
+      color: 'blue',
     },
     {
       id: 'pending',
       label: 'Pending',
       count: quoteCounts.pending,
       icon: <Clock className="w-4 h-4" />,
-      color: 'yellow'
+      color: 'yellow',
     },
     {
       id: 'approved',
       label: 'Approved',
       count: quoteCounts.approved,
       icon: <CheckCircle className="w-4 h-4" />,
-      color: 'green'
+      color: 'green',
     },
     {
       id: 'high_priority',
       label: 'High Priority',
       count: quoteCounts.highPriority,
       icon: <AlertCircle className="w-4 h-4" />,
-      color: 'red'
+      color: 'red',
     },
     {
       id: 'paid',
       label: 'Paid',
       count: quoteCounts.paid,
       icon: <DollarSign className="w-4 h-4" />,
-      color: 'emerald'
+      color: 'emerald',
     },
     {
       id: 'rejected',
       label: 'Rejected',
       count: quoteCounts.rejected,
       icon: <XCircle className="w-4 h-4" />,
-      color: 'red'
-    }
+      color: 'red',
+    },
   ];
 
   // Filter out tabs with zero counts (except 'all')
-  const visibleFilters = filters.filter(filter => 
-    filter.id === 'all' || filter.count > 0
-  );
+  const visibleFilters = filters.filter((filter) => filter.id === 'all' || filter.count > 0);
 
   return (
     <div className="mb-6">
@@ -145,7 +143,7 @@ export const QuoteQuickFilters = ({
           </Button>
         )}
       </div>
-      
+
       <div className="flex flex-wrap gap-2">
         {visibleFilters.map((filter) => (
           <FilterTab
@@ -160,7 +158,7 @@ export const QuoteQuickFilters = ({
           />
         ))}
       </div>
-      
+
       {/* Show active filter info */}
       {activeFilter !== 'all' && (
         <div className="mt-4 p-3 bg-teal-50 rounded-lg border border-teal-200">
