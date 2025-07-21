@@ -1306,9 +1306,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 py-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <Package className="w-4 h-4 text-white" />
-                          </div>
                           <div>
                             <CardTitle className="text-lg font-semibold text-gray-900">
                               Products ({form.watch('items')?.length || 0})
@@ -1367,9 +1364,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               {/* Compact Product Header */}
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center border border-blue-200">
-                                    <Smartphone className="w-5 h-5 text-blue-600" />
-                                  </div>
                                   <div>
                                     <h4 className="text-sm font-semibold text-gray-900 flex items-center">
                                       Product {index + 1}
@@ -1869,9 +1863,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 <CardHeader className="bg-slate-50 border-b border-slate-200 py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <Package className="w-4 h-4 text-white" />
-                      </div>
                       <div>
                         <CardTitle className="text-lg font-semibold text-gray-900">
                           Order Items
@@ -1891,9 +1882,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         className="flex items-center justify-between p-4 border-b border-gray-50 last:border-0 hover:bg-gray-25"
                       >
                         <div className="flex items-center space-x-4 flex-1">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <Package className="w-5 h-5 text-gray-500" />
-                          </div>
                           <div className="flex-1">
                             {item.url ? (
                               <a
