@@ -429,11 +429,7 @@ function App() {
           <AccessibilityProvider>
             <StatusConfigProvider>
               <HelmetProvider>
-                <Suspense
-                  fallback={
-                    <div className="flex items-center justify-center min-h-screen">Loading...</div>
-                  }
-                >
+                <Suspense fallback={null}>
                   <RouterProvider router={router} />
                 </Suspense>
                 <PhoneCollectionProvider />

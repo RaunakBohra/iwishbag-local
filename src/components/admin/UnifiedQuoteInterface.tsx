@@ -578,6 +578,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
 
         if (success) {
+          // Exit editing mode FIRST to avoid UI sync issues
+          setIsEditingRoute(false);
+          
           toast({
             title: 'Route Updated',
             description: `Route changed to ${formData.origin_country} → ${formData.destination_country}`,
@@ -586,9 +589,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           // Reload the quote data to reflect changes
           await loadQuoteData();
           
-          // Force form to re-trigger watchers and calculations
-          // This ensures createLiveQuote recalculates with new route data
-          form.trigger(['origin_country', 'destination_country']);
+          // Explicitly set form values to ensure sync with fresh database data
+          form.setValue('origin_country', formData.origin_country);
+          form.setValue('destination_country', formData.destination_country);
+          
+          // Force all form watchers to re-evaluate with new values
+          form.trigger();
+          
+          console.log('🗺️ [ROUTE-SAVE] Form values after update:', {
+            origin: form.getValues('origin_country'),
+            destination: form.getValues('destination_country'),
+            formValues: formValues
+          });
           
           // Trigger shipping recalculation after route change
           await recalculateShipping();
@@ -598,7 +610,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             description: 'Failed to save route changes',
             variant: 'destructive',
           });
+          setIsEditingRoute(false);
         }
+      } else {
+        // No changes, just exit editing mode
+        setIsEditingRoute(false);
       }
     } catch (error) {
       console.error('❌ [ROUTE-SAVE] Error saving route:', error);
@@ -607,7 +623,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         description: 'An error occurred while saving route changes',
         variant: 'destructive',
       });
-    } finally {
       setIsEditingRoute(false);
     }
   };
