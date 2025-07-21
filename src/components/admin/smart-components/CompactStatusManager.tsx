@@ -8,12 +8,7 @@ import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
-import {
-  ChevronDown,
-  ChevronRight,
-  ArrowRight,
-  Zap,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, ArrowRight, Zap } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +19,8 @@ import {
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
+import { useCart } from '@/hooks/useCart';
+import { supabase } from '@/integrations/supabase/client';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 interface CompactStatusManagerProps {
@@ -40,131 +37,352 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
   showProgress = true,
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
-  const { getStatusConfig, getAllowedTransitions, isValidTransition, orderStatuses } = useStatusManagement();
+  const [optimisticStatus, setOptimisticStatus] = useState<string | null>(null);
+  const { getStatusConfig, getAllowedTransitions, isValidTransition, orderStatuses } =
+    useStatusManagement();
   const { toast } = useToast();
-  
+  const { addItem, removeItem } = useCart();
+
+  // Use optimistic status for immediate UI updates
+  const displayStatus = optimisticStatus || quote.status;
+
+  // Reset optimistic status when quote changes (parent refresh)
+  React.useEffect(() => {
+    setOptimisticStatus(null);
+  }, [quote.status]);
+
   // Determine if this is a quote or order based on dynamic status config
-  const isOrderStatus = orderStatuses.some(status => status.name === quote.status);
+  const isOrderStatus = orderStatuses.some((status) => status.name === displayStatus);
   const category: 'quote' | 'order' = isOrderStatus ? 'order' : 'quote';
 
   // Get dynamic status config from the management system
-  const currentConfig = getStatusConfig(quote.status, category);
-  const allowedTransitions = getAllowedTransitions(quote.status, category);
-  
+  const currentConfig = getStatusConfig(displayStatus, category);
+  const allowedTransitions = getAllowedTransitions(displayStatus, category);
+
   // Debug logging
   console.log(`🔍 CompactStatusManager Debug:`, {
-    status: quote.status,
+    status: displayStatus,
+    actualStatus: quote.status,
+    optimisticStatus,
     category,
     isOrderStatus,
     currentConfig: !!currentConfig,
     allowedTransitions: allowedTransitions.length,
-    transitions: allowedTransitions
+    transitions: allowedTransitions,
   });
   const canTransition = allowedTransitions.length > 0;
-  
+
   // Fallback to basic config if not found in dynamic system
   const fallbackConfig = {
     label: quote.status.charAt(0).toUpperCase() + quote.status.slice(1).replace('_', ' '),
     progressPercentage: 50,
-    customerActionText: 'View Status'
+    customerActionText: 'View Status',
   };
-  
+
   const statusConfig = currentConfig || fallbackConfig;
 
-  const handleStatusChange = async (newStatus: string) => {
-    // Validate transition
-    if (!isValidTransition(quote.status, newStatus, category)) {
-      toast({
-        title: 'Invalid Transition',
-        description: `Cannot transition from ${quote.status} to ${newStatus}`,
-        variant: 'destructive',
-      });
-      return;
+  const handleAction = async (
+    action: string,
+    actionType: 'cart' | 'status' | 'refresh' = 'status',
+    event?: React.MouseEvent,
+  ) => {
+    // Prevent form submission and event bubbling as safety measures
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
     }
-
-    // Handle self-transitions (refresh actions)
-    if (newStatus === quote.status) {
-      toast({
-        title: 'Status Refreshed',
-        description: `Refreshed ${statusConfig?.label || newStatus} status`,
-        duration: 2000,
-      });
-      onStatusUpdate(false); // Trigger refresh without database update
-      return;
-    }
-
-    // Confirm destructive actions (reset to pending)
-    if (newStatus === 'pending' && quote.status !== 'pending') {
-      // You could add a confirmation dialog here if needed
-      // For now, we'll proceed with the reset
-    }
-
+    
     setIsUpdating(true);
-    try {
-      console.log(`🔄 CompactStatusManager: Updating quote ${quote.id} status from ${quote.status} to ${newStatus}`);
-      
-      const success = await unifiedDataEngine.updateQuote(quote.id, { 
-        status: newStatus 
-      });
 
-      if (success) {
-        // Smart success messaging
-        let message = `Status changed to ${newStatus}`;
-        if (newStatus === 'pending') {
-          message = 'Reset to pending - ready for review';
-        } else if (newStatus === quote.status) {
-          message = `Refreshed ${statusConfig?.label || newStatus}`;
-        }
-        
-        toast({
-          title: 'Status Updated',
-          description: message,
-        });
-        onStatusUpdate(true); // Trigger parent component refresh with force refresh
-      } else {
-        throw new Error('Failed to update quote status');
+    try {
+      if (actionType === 'cart' && action === 'add_to_cart') {
+        // Handle cart operation
+        await handleAddToCart();
+        return;
       }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast({
-        title: 'Update Failed',
-        description: 'Failed to update status. Please try again.',
-        variant: 'destructive',
-      });
+
+      if (actionType === 'refresh' || action === displayStatus) {
+        // Handle refresh action
+        toast({
+          title: 'Status Refreshed',
+          description: `Refreshed ${statusConfig?.label || displayStatus} status`,
+          duration: 2000,
+        });
+        onStatusUpdate(false); // Trigger refresh without database update
+        return;
+      }
+
+      // Handle status change
+      await handleStatusChange(action);
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const getSmartAction = () => {
-    // Get the primary next action from allowed transitions
-    const primaryTransition = allowedTransitions[0];
-    if (!primaryTransition) return null;
-    
-    const nextConfig = getStatusConfig(primaryTransition, category);
-    
-    // Smart action labeling based on transition type
-    let actionText: string;
-    
-    if (primaryTransition === quote.status) {
-      // Self-transition: Show as "Refresh"
-      actionText = `Refresh ${statusConfig?.label || quote.status}`;
-    } else if (primaryTransition === 'pending') {
-      // Reset transition: Show as "Reset to Pending"
-      actionText = 'Reset to Pending';
-    } else {
-      // Normal transition: Use customer action text or fallback
-      actionText = statusConfig?.customerActionText || 
-                  nextConfig?.customerActionText || 
-                  `Mark ${nextConfig?.label || primaryTransition}`;
+  const handleAddToCart = async () => {
+    try {
+      // Validate quote can be added to cart
+      if (displayStatus !== 'approved') {
+        toast({
+          title: 'Cannot Add to Cart',
+          description: 'Only approved quotes can be added to cart',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Create cart item from quote
+      const cartItem = {
+        id: quote.id,
+        quoteId: quote.id,
+        productName: quote.items?.[0]?.name || 'Product',
+        finalTotal: quote.final_total_usd || 0,
+        quantity: quote.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
+        itemWeight:
+          quote.items?.reduce(
+            (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1),
+            0,
+          ) || 0,
+        imageUrl: quote.items?.[0]?.image_url,
+        countryCode: quote.destination_country || 'US',
+        purchaseCountryCode: quote.origin_country || 'US',
+        destinationCountryCode: quote.destination_country || 'US',
+        inCart: true,
+        isSelected: false,
+        createdAt: new Date(quote.created_at),
+        updatedAt: new Date(quote.updated_at),
+      };
+
+      // Add to cart
+      addItem(cartItem);
+
+      // Update quote's in_cart flag in database using direct Supabase call
+      // This is more reliable than going through UnifiedDataEngine for this simple update
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update({
+          in_cart: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', quote.id);
+
+      const success = !updateError;
+
+      if (success) {
+        toast({
+          title: 'Added to Cart',
+          description: 'Quote successfully added to cart',
+        });
+        onStatusUpdate(true);
+      } else {
+        throw new Error('Failed to update quote in database');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: 'Cart Error',
+        description: 'Failed to add quote to cart. Please try again.',
+        variant: 'destructive',
+      });
     }
-    
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    // Validate transition
+    if (!isValidTransition(displayStatus, newStatus, category)) {
+      toast({
+        title: 'Invalid Transition',
+        description: `Cannot transition from ${displayStatus} to ${newStatus}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Additional business logic validation
+    if (newStatus === 'approved' && (!quote.items || quote.items.length === 0)) {
+      toast({
+        title: 'Cannot Approve',
+        description: 'Quote must have items before it can be approved',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (newStatus === 'paid' && quote.final_total_usd <= 0) {
+      toast({
+        title: 'Cannot Mark as Paid',
+        description: 'Quote must have a valid total amount',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Optimistic update - immediately update UI
+    setOptimisticStatus(newStatus);
+
+    try {
+      console.log(
+        `CompactStatusManager: Updating quote ${quote.id} status from ${displayStatus} to ${newStatus}`,
+      );
+
+      // Handle cart-related business logic before status update
+      if (newStatus === 'rejected' || newStatus === 'expired') {
+        // Remove from cart if being rejected/expired
+        await handleRemoveFromCart();
+      }
+
+      const success = await unifiedDataEngine.updateQuote(quote.id, {
+        status: newStatus,
+      });
+
+      if (success) {
+        // Smart success messaging with business context
+        let message = `Status changed to ${newStatus}`;
+        if (newStatus === 'pending') {
+          message = 'Reset to pending - ready for review';
+        } else if (newStatus === 'approved') {
+          message = 'Quote approved - ready to add to cart';
+        } else if (newStatus === 'rejected') {
+          message = 'Quote rejected and removed from cart';
+        } else if (newStatus === 'paid') {
+          message = 'Payment confirmed - order will be processed';
+        } else if (newStatus === 'shipped') {
+          message = 'Order shipped - tracking information available';
+        }
+
+        toast({
+          title: 'Status Updated',
+          description: message,
+        });
+        
+        // Trigger parent component refresh to sync with database
+        // Delay to ensure database update is processed and to avoid interrupting optimistic update
+        setTimeout(() => {
+          // Only refresh if the optimistic status matches what we expect
+          // This prevents the refresh from overriding our optimistic state
+          if (optimisticStatus === newStatus) {
+            onStatusUpdate(true);
+          }
+        }, 500);
+      } else {
+        // Revert optimistic update on failure
+        setOptimisticStatus(null);
+        throw new Error('Failed to update quote status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      
+      // Revert optimistic update on error
+      setOptimisticStatus(null);
+      
+      toast({
+        title: 'Update Failed',
+        description: 'Failed to update status. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const handleRemoveFromCart = async () => {
+    try {
+      // Remove from cart store using the hook
+      await removeItem(quote.id);
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      // Don't throw - this is a side effect, main status update should still proceed
+    }
+  };
+
+  const getSmartAction = () => {
+    // Business-rule-based primary action detection (Industry best practice)
+    let primaryAction: string | null = null;
+    let actionText: string;
+    let actionType: 'cart' | 'status' | 'refresh' = 'status';
+
+    // Define logical next steps based on business rules (Amazon/Stripe pattern)
+    switch (displayStatus) {
+      case 'pending':
+        // For pending quotes, primary action is to send to customer
+        primaryAction = allowedTransitions.includes('sent') ? 'sent' : null;
+        actionText = 'Send Quote';
+        break;
+
+      case 'sent':
+        // For sent quotes, primary action is customer approval
+        primaryAction = allowedTransitions.includes('approved') ? 'approved' : null;
+        actionText = 'Approve Quote';
+        break;
+
+      case 'approved':
+        // For approved quotes, primary action is add to cart (business action, not status change)
+        if (statusConfig?.allowCartActions) {
+          primaryAction = 'add_to_cart'; // Special action
+          actionText = 'Add to Cart';
+          actionType = 'cart';
+        } else {
+          // Fallback to payment status if cart action not allowed
+          primaryAction = allowedTransitions.includes('payment_pending') ? 'payment_pending' : null;
+          actionText = 'Request Payment';
+        }
+        break;
+
+      case 'payment_pending':
+        primaryAction = allowedTransitions.includes('paid') ? 'paid' : null;
+        actionText = 'Mark as Paid';
+        break;
+
+      case 'paid':
+        primaryAction = allowedTransitions.includes('ordered') ? 'ordered' : null;
+        actionText = 'Create Order';
+        break;
+
+      case 'ordered':
+        primaryAction = allowedTransitions.includes('shipped') ? 'shipped' : null;
+        actionText = 'Mark Shipped';
+        break;
+
+      case 'shipped':
+        primaryAction = allowedTransitions.includes('completed') ? 'completed' : null;
+        actionText = 'Mark Delivered';
+        break;
+
+      default:
+        // For terminal or unknown statuses, no primary action
+        primaryAction = null;
+        actionText = 'No Action';
+    }
+
+    // If no logical primary action found, fall back to refresh or first valid transition
+    if (!primaryAction && allowedTransitions.length > 0) {
+      // Exclude self-transitions from primary action unless it's the only option
+      const nonSelfTransitions = allowedTransitions.filter((t) => t !== displayStatus);
+      if (nonSelfTransitions.length > 0) {
+        primaryAction = nonSelfTransitions[0];
+        const nextConfig = getStatusConfig(primaryAction, category);
+        actionText = nextConfig?.label
+          ? `Mark as ${nextConfig.label}`
+          : `Change to ${primaryAction}`;
+      } else {
+        // Only self-transition available - make it a refresh action
+        primaryAction = displayStatus;
+        actionText = `Refresh ${statusConfig?.label || displayStatus}`;
+        actionType = 'refresh';
+      }
+    }
+
+    if (!primaryAction) return null;
+
     return {
       text: actionText,
-      action: primaryTransition,
-      icon: primaryTransition === quote.status ? 
-            <ChevronDown className="w-3 h-3" /> : 
-            <ArrowRight className="w-3 h-3" />
+      action: primaryAction,
+      actionType,
+      icon:
+        actionType === 'refresh' ? (
+          <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ArrowRight className="w-3 h-3" />
+        ),
     };
   };
 
@@ -175,11 +393,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
     return (
       <div className="flex items-center space-x-2">
         {/* Current Status Badge */}
-        <StatusBadge 
-          status={quote.status} 
-          category={category}
-          className="text-xs"
-        />
+        <StatusBadge status={displayStatus} category={category} className="text-xs" />
 
         {/* Progress Bar (if enabled) */}
         {showProgress && (
@@ -199,9 +413,10 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
             {/* Smart Quick Action Button (Primary Action) */}
             {smartAction && (
               <Button
+                type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => handleStatusChange(smartAction.action)}
+                onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
                 disabled={isUpdating}
                 className="h-7 px-2 text-xs flex items-center space-x-1"
               >
@@ -209,11 +424,12 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                 <span>{smartAction.text}</span>
               </Button>
             )}
-            
+
             {/* Always show dropdown for ALL transitions */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   disabled={isUpdating}
@@ -232,7 +448,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                   return (
                     <DropdownMenuItem
                       key={nextStatus}
-                      onClick={() => handleStatusChange(nextStatus)}
+                      onClick={(e) => handleAction(nextStatus, 'status', e)}
                       className="flex items-center justify-between text-xs py-2"
                     >
                       <StatusBadge
@@ -274,11 +490,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       {/* Status Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <StatusBadge 
-            status={quote.status} 
-            category={category}
-            className="px-3 py-1"
-          />
+          <StatusBadge status={displayStatus} category={category} className="px-3 py-1" />
 
           {/* Priority Indicator */}
           {statusConfig?.requiresAction && (
@@ -296,8 +508,9 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
               {/* Smart Quick Action Button */}
               {smartAction && (
                 <Button
+                  type="button"
                   size="sm"
-                  onClick={() => handleStatusChange(smartAction.action)}
+                  onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
                   disabled={isUpdating}
                   className="flex items-center space-x-1"
                 >
@@ -310,6 +523,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     disabled={isUpdating}
@@ -328,7 +542,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                     return (
                       <DropdownMenuItem
                         key={nextStatus}
-                        onClick={() => handleStatusChange(nextStatus)}
+                        onClick={(e) => handleAction(nextStatus, 'status', e)}
                         className="flex items-center justify-between py-2"
                       >
                         <StatusBadge
@@ -350,13 +564,17 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
             // Show informational actions for terminal statuses
             <div className="flex items-center space-x-2">
               <Badge variant="secondary" className="text-xs px-3 py-1">
-                {statusConfig?.isTerminal 
-                  ? (statusConfig.isSuccessful ? '✓ Completed' : 'Final Status') 
-                  : 'No Actions Available'
-                }
+                {statusConfig?.isTerminal
+                  ? statusConfig.isSuccessful
+                    ? '✓ Completed'
+                    : 'Final Status'
+                  : 'No Actions Available'}
               </Badge>
               {statusConfig?.customerMessage && (
-                <div className="text-xs text-gray-500 italic max-w-48 truncate" title={statusConfig.customerMessage}>
+                <div
+                  className="text-xs text-gray-500 italic max-w-48 truncate"
+                  title={statusConfig.customerMessage}
+                >
                   "{statusConfig.customerMessage}"
                 </div>
               )}
@@ -384,9 +602,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       {/* Status Timeline (mini) - Dynamic based on category */}
       <div className="flex items-center justify-between text-xs text-gray-500">
         {statusConfig?.customerMessage && (
-          <div className="text-xs text-gray-600 italic">
-            "{statusConfig.customerMessage}"
-          </div>
+          <div className="text-xs text-gray-600 italic">"{statusConfig.customerMessage}"</div>
         )}
       </div>
     </div>

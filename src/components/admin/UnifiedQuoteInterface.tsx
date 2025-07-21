@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeft,
+  ArrowRight,
   Calculator,
   Truck,
   Zap,
@@ -921,6 +922,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // Update quote with form data - CONVERT ALL VALUES TO NUMBERS!
       const success = await unifiedDataEngine.updateQuote(quoteId!, {
         customs_percentage: Number(data.customs_percentage) || 0,
+        origin_country: data.origin_country || quote?.origin_country,
+        destination_country: data.destination_country || quote?.destination_country,
         calculation_data: {
           ...quote?.calculation_data,
           sales_tax_price: Number(data.sales_tax_price) || 0,
@@ -1009,6 +1012,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
       // Save the current live quote state to database
       const success = await unifiedDataEngine.updateQuote(quoteId!, {
+        origin_country: liveQuote.origin_country,
+        destination_country: liveQuote.destination_country,
         calculation_data: liveQuote.calculation_data,
         operational_data: liveQuote.operational_data,
         final_total_usd: liveQuote.final_total_usd,
@@ -1086,7 +1091,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Quote {quote.display_id}</h1>
             <div className="flex items-center space-x-4 mt-1">
-              <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
+              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                <CompactStatusManager quote={liveQuote || quote} onStatusUpdate={loadQuoteData} />
+              </div>
               <Badge variant="outline" className="flex items-center">
                 <TrendingUp className="w-3 h-3 mr-1" />
                 {optimizationScore.toFixed(0)}% Optimized
@@ -1191,7 +1198,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           </div>
                           <div>
                             <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
-                              <Package className="w-4 h-4 mr-2" /> Products ({form.watch('items')?.length || 0})
+                              <Package className="w-4 h-4 mr-2" /> Products (
+                              {form.watch('items')?.length || 0})
                             </CardTitle>
                             <CardDescription className="text-sm text-gray-600">
                               Manage product details, pricing, and quantities
@@ -1465,7 +1473,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                           }}
                                           title={`Apply AI suggestion: ${weightEstimations[index.toString()].estimated_weight} kg`}
                                         >
-                                          Apply [{weightEstimations[index.toString()].estimated_weight}]
+                                          Apply [
+                                          {weightEstimations[index.toString()].estimated_weight}]
                                         </button>
                                       )}
                                     </div>
@@ -1501,8 +1510,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   <div className="flex items-start space-x-2">
                                     <MessageCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                     <div>
-                                      <span className="text-sm font-medium text-blue-800">Customer Note:</span>
-                                      <p className="text-sm text-blue-700 mt-1 leading-relaxed">{item.options}</p>
+                                      <span className="text-sm font-medium text-blue-800">
+                                        Customer Note:
+                                      </span>
+                                      <p className="text-sm text-blue-700 mt-1 leading-relaxed">
+                                        {item.options}
+                                      </p>
                                     </div>
                                   </div>
                                 </div>
@@ -1652,12 +1665,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* Status Management */}
-              <CompactStatusManager
-                quote={liveQuote || quote}
-                onStatusUpdate={loadQuoteData}
-                compact={true}
-              />
+              {/* Status Management - Outside form to prevent submission conflicts */}
+              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                <CompactStatusManager
+                  quote={liveQuote || quote}
+                  onStatusUpdate={loadQuoteData}
+                  compact={true}
+                />
+              </div>
 
               {/* Shipping Options */}
               {shippingOptions.length > 0 && (
@@ -1764,68 +1779,24 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1 bg-white rounded px-2 py-1 border border-gray-200">
-                        <span className="text-sm">
-                          {(() => {
-                            // Simple flag mapping for common countries
-                            const flagMap: { [key: string]: string } = {
-                              US: '🇺🇸',
-                              CN: '🇨🇳',
-                              IN: '🇮🇳',
-                              GB: '🇬🇧',
-                              DE: '🇩🇪',
-                              JP: '🇯🇵',
-                              FR: '🇫🇷',
-                              CA: '🇨🇦',
-                              AU: '🇦🇺',
-                              NP: '🇳🇵',
-                              BD: '🇧🇩',
-                              PK: '🇵🇰',
-                            };
-                            return flagMap[quote.origin_country || ''] || '🌍';
-                          })()}
-                        </span>
-                        <span className="text-xs font-medium text-gray-700">
-                          {(() => {
-                            const originCountry = allCountries?.find(
-                              (c) => c.code === quote.origin_country,
-                            );
-                            return originCountry?.name || quote.origin_country || 'Origin';
-                          })()}
-                        </span>
+                      <div className="text-sm font-medium text-slate-700">
+                        {(() => {
+                          const originCountry = allCountries?.find(
+                            (c) => c.code === quote.origin_country,
+                          );
+                          return originCountry?.name || quote.origin_country || 'Origin';
+                        })()}
                       </div>
-                      <div className="text-gray-400 text-xs">→</div>
-                      <div className="flex items-center space-x-1 bg-white rounded px-2 py-1 border border-gray-200">
-                        <span className="text-sm">
-                          {(() => {
-                            // Simple flag mapping for common countries
-                            const flagMap: { [key: string]: string } = {
-                              US: '🇺🇸',
-                              CN: '🇨🇳',
-                              IN: '🇮🇳',
-                              GB: '🇬🇧',
-                              DE: '🇩🇪',
-                              JP: '🇯🇵',
-                              FR: '🇫🇷',
-                              CA: '🇨🇦',
-                              AU: '🇦🇺',
-                              NP: '🇳🇵',
-                              BD: '🇧🇩',
-                              PK: '🇵🇰',
-                            };
-                            return flagMap[quote.destination_country || ''] || '🌍';
-                          })()}
-                        </span>
-                        <span className="text-xs font-medium text-gray-700">
-                          {(() => {
-                            const destinationCountry = allCountries?.find(
-                              (c) => c.code === quote.destination_country,
-                            );
-                            return (
-                              destinationCountry?.name || quote.destination_country || 'Destination'
-                            );
-                          })()}
-                        </span>
+                      <ArrowRight className="w-4 h-4 text-slate-400" />
+                      <div className="text-sm font-medium text-slate-700">
+                        {(() => {
+                          const destinationCountry = allCountries?.find(
+                            (c) => c.code === quote.destination_country,
+                          );
+                          return (
+                            destinationCountry?.name || quote.destination_country || 'Destination'
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -1842,9 +1813,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             <Package className="w-5 h-5 text-gray-500" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 text-sm">
-                              {item.name || `Product ${index + 1}`}
-                            </h4>
+                            {item.url ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-gray-900 text-sm hover:text-blue-600 hover:underline cursor-pointer transition-colors"
+                                title="View product page"
+                              >
+                                {item.name || `Product ${index + 1}`}
+                              </a>
+                            ) : (
+                              <h4 className="font-medium text-gray-900 text-sm">
+                                {item.name || `Product ${index + 1}`}
+                              </h4>
+                            )}
                             <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                               <span>Qty: {item.quantity}</span>
                               <span>•</span>
@@ -1852,16 +1835,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Unit Price: ${Number(item.price_usd || 0).toFixed(2)}</span>
                             </div>
-                            {/* Customer Notes */}
+                            {/* Customer Notes - Inline Style */}
                             {item.options && item.options.trim() && (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                                <div className="flex items-start space-x-2">
-                                  <MessageCircle className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
-                                  <div>
-                                    <span className="font-medium text-blue-800">Customer Note:</span>
-                                    <p className="text-blue-700 mt-0.5 leading-relaxed">{item.options}</p>
-                                  </div>
-                                </div>
+                              <div className="mt-1">
+                                <span className="text-xs text-gray-600">
+                                  <span className="font-medium">Note:</span> {item.options}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -1895,12 +1874,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* Status Management */}
-              <CompactStatusManager
-                quote={liveQuote || quote}
-                onStatusUpdate={loadQuoteData}
-                compact={true}
-              />
+              {/* Status Management - Isolated to prevent event conflicts */}
+              <div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                <CompactStatusManager
+                  quote={liveQuote || quote}
+                  onStatusUpdate={loadQuoteData}
+                  compact={true}
+                />
+              </div>
 
               {/* Shipping Options */}
               {shippingOptions.length > 0 && (
@@ -1935,25 +1916,53 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 />
               )}
 
-              {/* Quote Summary - Compact */}
+              {/* Quote Summary - Enhanced At-a-Glance */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/30">
-                <CardContent className="p-3">
-                  <div className="text-sm font-medium text-blue-800 mb-3">Quote Summary</div>
-                  <div className="space-y-2">
+                <CardContent className="p-4">
+                  <div className="text-sm font-medium text-blue-800 mb-4">Quote Summary</div>
+
+                  {/* Primary Metrics - Most Important */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Value</span>
-                      <span className="text-lg font-semibold text-blue-600">
+                      <span className="text-xl font-bold text-blue-600">
                         ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
                       </span>
                     </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Route</span>
+                      <span className="text-sm font-medium text-gray-800">
+                        {(() => {
+                          const originCountry = allCountries?.find(
+                            (c) => c.code === quote.origin_country,
+                          );
+                          const destinationCountry = allCountries?.find(
+                            (c) => c.code === quote.destination_country,
+                          );
+                          return `${originCountry?.name || quote.origin_country} → ${destinationCountry?.name || quote.destination_country}`;
+                        })()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Total Weight</span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {metrics?.totalWeight || 0} kg
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Secondary Metrics Grid */}
+                  <div className="mt-4 pt-3 border-t border-blue-200">
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Items</span>
                         <span className="font-medium">{metrics?.totalItems || 0}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Weight</span>
-                        <span className="font-medium">{metrics?.totalWeight || 0} kg</span>
+                        <span className="text-gray-600">Status</span>
+                        <span className="font-medium capitalize">{quote.status}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Optimized</span>
