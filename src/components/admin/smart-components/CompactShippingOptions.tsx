@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, ShippingRecommendation } from '@/types/unified-quote';
 import { ShippingSelectionModal } from '@/components/admin/modals/ShippingSelectionModal';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface CompactShippingOptionsProps {
   quote: UnifiedQuote;
@@ -57,6 +58,9 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
   const [pendingOptionId, setPendingOptionId] = useState<string | null>(null); // NEW: Track pending selection
   const [showSaveControls, setShowSaveControls] = useState(false); // NEW: Show save/cancel buttons
   const [showModal, setShowModal] = useState(false); // NEW: Control modal visibility
+
+  // Get standardized currency display
+  const currencyDisplay = useAdminQuoteCurrency(quote);
 
   const selectedOptionId = quote.operational_data?.shipping?.selected_option;
   const selectedOption = shippingOptions.find((opt) => opt.id === selectedOptionId);
@@ -190,7 +194,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           ) : (
             <>
               <span className="text-sm font-medium text-gray-900">
-                ${selectedOption?.cost_usd.toFixed(2) || '0.00'}
+                {selectedOption ? currencyDisplay.formatDualAmount(selectedOption.cost_usd).short : currencyDisplay.formatSingleAmount(0, 'origin')}
               </span>
               {/* Show More Options button in edit mode, or toggle in view mode */}
               {editMode ? (
@@ -292,7 +296,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                     )}
                     {rec.reason === 'fast_delivery' && <Zap className="w-3 h-3 text-blue-600" />}
                     <span className="text-green-700">
-                      {option.carrier}: ${option.cost_usd.toFixed(2)}
+                      {option.carrier}: {currencyDisplay.formatDualAmount(option.cost_usd).short}
                     </span>
                     <Badge variant="outline" className="text-xs h-4 px-1">
                       {rec.reason === 'cost_savings' && `Save $${rec.savings_usd.toFixed(2)}`}
@@ -398,13 +402,12 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
 
                 {/* Price with per-kg indication */}
                 <div className="text-right">
-                  <div className="flex items-center text-sm font-semibold">
-                    <DollarSign className="w-3 h-3" />
-                    {option.cost_usd.toFixed(2)}
+                  <div className="text-sm font-semibold">
+                    {currencyDisplay.formatDualAmount(option.cost_usd).short}
                   </div>
                   <div className="text-xs text-gray-500">
                     {getTotalWeight() > 0 && (
-                      <>≈ ${(option.cost_usd / getTotalWeight()).toFixed(2)}/kg</>
+                      <>≈ {currencyDisplay.formatSingleAmount(option.cost_usd / getTotalWeight(), 'origin')}/kg</>
                     )}
                   </div>
 
@@ -443,7 +446,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           </div>
           <div>
             <div className="font-semibold text-green-600">
-              ${Math.min(...shippingOptions.map((o) => o.cost_usd)).toFixed(2)}
+              {currencyDisplay.formatDualAmount(Math.min(...shippingOptions.map((o) => o.cost_usd))).short}
             </div>
             <div className="text-gray-500">Cheapest</div>
           </div>

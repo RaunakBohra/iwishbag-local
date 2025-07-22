@@ -20,6 +20,7 @@ import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-valida
 import type { ShippingOption } from '@/types/unified-quote';
 import { BarChart3, Truck, CreditCard, Brain, MapPin } from 'lucide-react';
 import { ShippingSelectionModal } from '@/components/admin/modals/ShippingSelectionModal';
+import { currencyService } from '@/services/CurrencyService';
 
 interface CustomsTier {
   name?: string;
@@ -91,11 +92,24 @@ export const QuoteDetailForm = ({
 
   const [_originCountry, countryCode, _items] = watchedValues;
 
-  // Get country currency and name from country settings
-  const countryCurrency = useMemo(() => {
+  // Get destination country currency and name from country settings
+  const destinationCurrency = useMemo(() => {
     if (!countryCode || !allCountries) return 'USD';
     const country = allCountries.find((c) => c.code === countryCode);
     return country?.currency || 'USD';
+  }, [countryCode, allCountries]);
+
+  // Get origin country currency for input fields (all costs are in origin currency)
+  const originCurrency = useMemo(() => {
+    if (!_originCountry || !allCountries) return 'USD';
+    const country = allCountries.find((c) => c.code === _originCountry);
+    return country?.currency || 'USD';
+  }, [_originCountry, allCountries]);
+
+  const countryName = useMemo(() => {
+    if (!countryCode || !allCountries) return '';
+    const country = allCountries.find((c) => c.code === countryCode);
+    return country?.name || '';
   }, [countryCode, allCountries]);
 
   // Watch final currency for dynamic labels
@@ -103,34 +117,17 @@ export const QuoteDetailForm = ({
     useWatch({
       control: form.control,
       name: 'destination_currency',
-    }) || countryCurrency;
+    }) || destinationCurrency;
 
   // Auto-update currency field when country changes
   useEffect(() => {
-    if (countryCurrency && form.setValue) {
-      form.setValue('currency', countryCurrency);
+    if (destinationCurrency && form.setValue) {
+      form.setValue('currency', destinationCurrency);
     }
-  }, [countryCurrency, form]);
+  }, [destinationCurrency, form]);
 
-  // Get currency symbol
-  const getCurrencySymbol = (currency: string): string => {
-    const symbols: Record<string, string> = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      INR: '₹',
-      CAD: 'C$',
-      AUD: 'A$',
-      JPY: '¥',
-      CNY: '¥',
-      SGD: 'S$',
-      AED: 'د.إ',
-      SAR: 'ر.س',
-    };
-    return symbols[currency] || currency;
-  };
-
-  const currencySymbol = getCurrencySymbol(countryCurrency);
+  // Get currency symbol for input fields (origin currency - all costs are entered in origin currency)
+  const inputCurrencySymbol = currencyService.getCurrencySymbolSync(originCurrency);
 
   const handleNumberInputWheel = (e: React.WheelEvent<HTMLInputElement>) => {
     e.currentTarget.blur();
@@ -246,7 +243,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -287,7 +284,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -332,7 +329,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -360,7 +357,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -387,7 +384,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -428,7 +425,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"
@@ -455,7 +452,7 @@ export const QuoteDetailForm = ({
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {currencySymbol}
+                        {inputCurrencySymbol}
                       </span>
                       <Input
                         type="number"

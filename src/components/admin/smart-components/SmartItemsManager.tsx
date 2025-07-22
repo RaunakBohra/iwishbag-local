@@ -32,6 +32,7 @@ import {
   Brain,
 } from 'lucide-react';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface SmartItemsManagerProps {
   quote: UnifiedQuote;
@@ -40,6 +41,9 @@ interface SmartItemsManagerProps {
 
 export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onUpdateQuote }) => {
   const { toast } = useToast();
+  
+  // Get standardized currency display
+  const currencyDisplay = useAdminQuoteCurrency(quote);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -201,8 +205,8 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                       <div className="font-medium">{item.quantity}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Price (USD):</span>
-                      <div className="font-medium">${Number(item.price_usd || 0).toFixed(2)}</div>
+                      <span className="text-gray-600">Price ({currencyDisplay.originCurrency}):</span>
+                      <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Weight:</span>
@@ -218,7 +222,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                     <div>
                       <span className="text-gray-600">Total:</span>
                       <div className="font-medium">
-                        ${(Number(item.price_usd || 0) * item.quantity).toFixed(2)}
+                        {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0) * item.quantity, 'origin')}
                       </div>
                     </div>
                   </div>
@@ -393,12 +397,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
           item={quote.items.find((item) => item.id === editingItem)!}
           onSave={handleUpdateItem}
           onCancel={() => setEditingItem(null)}
+          currencyDisplay={currencyDisplay}
         />
       )}
 
       {/* Add Item Dialog */}
       {isAddingItem && (
-        <AddItemDialog onSave={handleAddItem} onCancel={() => setIsAddingItem(false)} />
+        <AddItemDialog onSave={handleAddItem} onCancel={() => setIsAddingItem(false)} currencyDisplay={currencyDisplay} />
       )}
     </div>
   );
@@ -409,9 +414,10 @@ interface EditItemDialogProps {
   item: QuoteItem;
   onSave: (item: QuoteItem) => void;
   onCancel: () => void;
+  currencyDisplay: any;
 }
 
-const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel }) => {
+const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel, currencyDisplay }) => {
   const [editForm, setEditForm] = useState({
     name: item.name,
     quantity: item.quantity,
@@ -507,7 +513,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
               />
             </div>
             <div>
-              <Label htmlFor="price">Price (USD)</Label>
+              <Label htmlFor="price">Price ({currencyDisplay.originCurrency})</Label>
               <Input
                 id="price"
                 type="number"
@@ -600,9 +606,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel 
 interface AddItemDialogProps {
   onSave: (item: Partial<QuoteItem>) => void;
   onCancel: () => void;
+  currencyDisplay: any;
 }
 
-const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
+const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currencyDisplay }) => {
   const [addForm, setAddForm] = useState({
     name: '',
     quantity: 1,
@@ -712,7 +719,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel }) => {
               />
             </div>
             <div>
-              <Label htmlFor="price">Price (USD)</Label>
+              <Label htmlFor="price">Price ({currencyDisplay.originCurrency})</Label>
               <Input
                 id="price"
                 type="number"

@@ -11,6 +11,7 @@ import { ExternalLink, Trash2 } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
 import { convertWeight } from '@/lib/weightUtils';
 import { AdminSmartWeightField } from './AdminSmartWeightField';
+import { currencyService } from '@/services/CurrencyService';
 
 type CountrySetting = Tables<'country_settings'>;
 
@@ -71,25 +72,8 @@ export const EditableAdminQuoteItemCard = ({
   // Use smart weight unit if available, otherwise fall back to route unit or kg
   const displayWeightUnitFinal = smartWeightUnit || routeWeightUnit || 'kg';
 
-  // Get currency symbol - using country currency
-  const getCurrencySymbol = (currency: string) => {
-    const symbols: { [key: string]: string } = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      INR: '₹',
-      CAD: 'C$',
-      AUD: 'A$',
-      JPY: '¥',
-      CNY: '¥',
-      SGD: 'S$',
-      AED: 'د.إ',
-      SAR: 'ر.س',
-    };
-    return symbols[currency] || currency;
-  };
-
-  const currencySymbolFinal = getCurrencySymbol(countryCurrency);
+  // Get currency symbol using centralized service
+  const currencySymbolFinal = currencyService.getCurrencySymbolSync(countryCurrency);
 
   return (
     <Card className="relative group border border-gray-200 shadow-sm rounded-xl p-0">

@@ -23,7 +23,6 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Truck,
   Clock,
-  DollarSign,
   Star,
   AlertTriangle,
   CheckCircle,
@@ -38,6 +37,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, ShippingRecommendation } from '@/types/unified-quote';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface ShippingSelectionModalProps {
   isOpen: boolean;
@@ -68,6 +68,9 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
   const [sortBy, setSortBy] = useState<SortOption>('recommendation');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Get currency display utilities for admin interface
+  const currencyDisplay = useAdminQuoteCurrency(quote);
 
   // Reset temp selection when modal opens
   useEffect(() => {
@@ -278,19 +281,18 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
 
                             {/* Price */}
                             <div className="text-right">
-                              <div className="flex items-center text-lg font-bold text-gray-900">
-                                <DollarSign className="w-4 h-4" />
-                                {option.cost_usd.toFixed(2)}
+                              <div className="text-lg font-bold text-gray-900">
+                                {currencyDisplay.formatSingleAmount(option.cost_usd, 'origin')}
                               </div>
                               <div className="text-sm text-gray-500">
                                 {getTotalWeight() > 0 && (
-                                  <>≈ ${(option.cost_usd / getTotalWeight()).toFixed(2)}/kg</>
+                                  <>≈ {currencyDisplay.formatSingleAmount(option.cost_usd / getTotalWeight(), 'origin')}/kg</>
                                 )}
                               </div>
                               {recommendation && recommendation.savings_usd > 0 && (
                                 <div className="text-sm text-green-600 font-medium">
                                   <TrendingDown className="w-3 h-3 inline mr-1" />
-                                  Save ${recommendation.savings_usd.toFixed(2)}
+                                  Save {currencyDisplay.formatSingleAmount(recommendation.savings_usd, 'origin')}
                                 </div>
                               )}
                             </div>
@@ -375,7 +377,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
                                   </div>
                                   <div className="text-green-700 text-xs">
                                     {recommendation.reason === 'cost_savings' &&
-                                      `Save $${recommendation.savings_usd.toFixed(2)} compared to other options`}
+                                      `Save ${currencyDisplay.formatSingleAmount(recommendation.savings_usd, 'origin')} compared to other options`}
                                     {recommendation.reason === 'fast_delivery' &&
                                       'Fastest available delivery option'}
                                     {recommendation.reason === 'best_value' &&

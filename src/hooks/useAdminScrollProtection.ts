@@ -144,6 +144,15 @@ export const useAdminScrollProtection = (
     console.warn('[AdminScrollProtection] Emergency unlock triggered');
     setActiveOperations(new Map());
     forceUnlock();
+    
+    // Also ensure global scroll lock is released
+    if (typeof window !== 'undefined') {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.classList.remove('scroll-locked');
+      // Clear any potential CSS variables that might be locking scroll
+      document.documentElement.style.removeProperty('--scroll-behavior');
+    }
   }, [forceUnlock]);
 
   // Cleanup stale operations (older than 30 seconds)
@@ -181,15 +190,70 @@ export const useAdminScrollProtection = (
     return () => clearInterval(cleanup);
   }, [shouldBeLocked, unlockScroll]);
 
-  // Auto-unlock on component unmount
+  // Monitor for common error patterns that should trigger unlock
   useEffect(() => {
-    return () => {
-      if (activeOperations.size > 0) {
-        console.log('[AdminScrollProtection] Component unmounting, cleaning up operations');
+    const handleError = (event: ErrorEvent) => {
+      const errorMessage = event.error?.message || event.message || '';
+      
+      // Check for specific errors that often leave scroll locked
+      const shouldUnlock = [
+        'No config found for country',
+        'Exchange rate unavailable',
+        'Missing country config',
+        'get_country_config 404',
+        'shipping calculation failed',
+        'Unable to get county config'
+      ].some(pattern => errorMessage.includes(pattern));
+      
+      if (shouldUnlock && activeOperations.size > 0) {
+        console.warn('[AdminScrollProtection] Detected error that may leave scroll locked, auto-unlocking:', errorMessage);
         emergencyUnlock();
       }
     };
-  }, [activeOperations.size, emergencyUnlock]);
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const errorMessage = event.reason?.message || String(event.reason) || '';
+      
+      // Check for promise rejections that might leave scroll locked
+      const shouldUnlock = [
+        'country config',
+        'exchange rate',
+        'shipping route',
+        'calculation failed'
+      ].some(pattern => errorMessage.toLowerCase().includes(pattern));
+      
+      if (shouldUnlock && activeOperations.size > 0) {
+        console.warn('[AdminScrollProtection] Detected promise rejection that may leave scroll locked, auto-unlocking:', errorMessage);
+        emergencyUnlock();
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, [activeOperations, emergencyUnlock]);
+
+  // Auto-unlock on component unmount - debounced to prevent multiple triggers
+  useEffect(() => {
+    let cleanup: NodeJS.Timeout;
+    
+    return () => {
+      // Clear any pending cleanup
+      if (cleanup) clearTimeout(cleanup);
+      
+      // Debounce the cleanup to prevent rapid mount/unmount cycles
+      cleanup = setTimeout(() => {
+        if (activeOperations.size > 0) {
+          console.log('[AdminScrollProtection] Component unmounting, cleaning up operations');
+          emergencyUnlock();
+        }
+      }, 100); // 100ms debounce
+    };
+  }, [emergencyUnlock]);
 
   return {
     startOperation,

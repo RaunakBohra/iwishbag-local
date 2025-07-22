@@ -18,6 +18,21 @@ interface UseGlobalScrollLockReturn {
   forceUnlock: () => void;
 }
 
+// Emergency global unlock function for debugging
+const emergencyGlobalUnlock = () => {
+  if (typeof window !== 'undefined') {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    document.body.classList.remove('scroll-locked');
+    console.log('[GlobalScrollLock] Emergency unlock executed');
+  }
+};
+
+// Make it available globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).emergencyUnlockScroll = emergencyGlobalUnlock;
+}
+
 export const useGlobalScrollLock = (options: ScrollLockOptions = {}): UseGlobalScrollLockReturn => {
   const {
     lockOnMount = false,

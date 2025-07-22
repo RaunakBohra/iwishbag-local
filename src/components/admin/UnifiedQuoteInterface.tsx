@@ -64,6 +64,7 @@ import { useBatchedFormUpdates } from '@/hooks/useBatchedFormUpdates';
 import { useLayoutShiftPrevention } from '@/hooks/useLayoutShiftPrevention';
 import { useDebouncedCalculations } from '@/hooks/useDebouncedCalculations';
 import { useAdminScrollProtection } from '@/hooks/useAdminScrollProtection';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -100,6 +101,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Core state
   const quoteId = initialQuoteId || paramId;
   const [quote, setQuote] = useState<UnifiedQuote | null>(null);
+  
+  // Get standardized currency display
+  const currencyDisplay = useAdminQuoteCurrency(quote);
   const [isLoading, setIsLoading] = useState(true);
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -167,7 +171,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     enableLogging: true,
   });
 
-  const { startOperation, endOperation, lockDuringCallback } = useAdminScrollProtection({
+  const { startOperation, endOperation } = useAdminScrollProtection({
     autoLockOnEdit: true,
     lockDuringOperations: [
       'quote-calculation',
@@ -315,6 +319,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           selected_option: optionId,
         },
       },
+      calculation_data: {
+        ...quote.calculation_data,
+        breakdown: {
+          ...quote.calculation_data?.breakdown,
+          shipping: selectedOption.cost_usd, // ✅ Update breakdown shipping cost to match selected option
+        },
+      },
     };
 
     console.log('[DEBUG] Setting optimistic quote state:', {
@@ -338,6 +349,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // Update database in background
       const updatePayload = {
         operational_data: optimisticQuote.operational_data,
+        calculation_data: optimisticQuote.calculation_data, // ✅ Also update calculation breakdown
       };
 
       console.log('💾 [DEBUG] Update payload:', updatePayload);
@@ -433,48 +445,48 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const recalculateShipping = useCallback(async () => {
     if (!quote || !formValues.items || formValues.items.length === 0) return;
 
-    return await lockDuringCallback(async () => {
-      const operationId = startOperation(
-        'shipping-recalculation',
-        'Recalculating shipping options',
+    const operationId = startOperation(
+      'shipping-recalculation',
+      'Recalculating shipping options',
+    );
+
+    try {
+      const itemsTotal = (formValues.items || []).reduce(
+        (sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1),
+        0,
       );
 
-      try {
-        const itemsTotal = (formValues.items || []).reduce(
-          (sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1),
-          0,
-        );
+      const totalWeight = (formValues.items || []).reduce(
+        (sum, item) => sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1),
+        0,
+      );
 
-        const totalWeight = (formValues.items || []).reduce(
-          (sum, item) => sum + (Number(item.item_weight) || 0) * (Number(item.quantity) || 1),
-          0,
-        );
+      if (
+        itemsTotal > 0 &&
+        totalWeight > 0 &&
+        formValues.origin_country &&
+        formValues.destination_country
+      ) {
+        console.log('Recalculating shipping options...', {
+          itemsTotal,
+          totalWeight,
+          origin: formValues.origin_country,
+          destination: formValues.destination_country,
+        });
 
-        if (
-          itemsTotal > 0 &&
-          totalWeight > 0 &&
-          formValues.origin_country &&
-          formValues.destination_country
-        ) {
-          console.log('Recalculating shipping options...', {
-            itemsTotal,
-            totalWeight,
-            origin: formValues.origin_country,
-            destination: formValues.destination_country,
-          });
+        const tempQuote = {
+          ...quote,
+          origin_country: formValues.origin_country,
+          destination_country: formValues.destination_country,
+          items: (formValues.items || []).map((item, index) => ({
+            ...quote.items[index],
+            price_usd: Number(item.item_price) || 0,
+            weight_kg: Number(item.item_weight) || 0,
+            quantity: Number(item.quantity) || 1,
+          })),
+        };
 
-          const tempQuote = {
-            ...quote,
-            origin_country: formValues.origin_country,
-            destination_country: formValues.destination_country,
-            items: (formValues.items || []).map((item, index) => ({
-              ...quote.items[index],
-              price_usd: Number(item.item_price) || 0,
-              weight_kg: Number(item.item_weight) || 0,
-              quantity: Number(item.quantity) || 1,
-            })),
-          };
-
+        try {
           const result = await smartCalculationEngine.calculateWithShippingOptions({
             quote: tempQuote,
             preferences: {
@@ -495,15 +507,46 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 { field: 'selected_shipping_option', value: optimalOption.id },
                 { field: 'international_shipping', value: optimalOption.cost_usd },
               ]);
+            } else if (formValues.selected_shipping_option && result.shipping_options.length > 0) {
+              // ✅ SIMPLE FIX: Update international shipping cost for existing selection when route changes
+              const currentlySelected = result.shipping_options.find(
+                opt => opt.id === formValues.selected_shipping_option
+              );
+              if (currentlySelected) {
+                console.log('🔄 [DEBUG] Updating international shipping cost for existing selection:', {
+                  optionId: currentlySelected.id,
+                  oldCost: formValues.international_shipping,
+                  newCost: currentlySelected.cost_usd,
+                });
+                form.setValue('international_shipping', currentlySelected.cost_usd);
+              }
             }
+          } else {
+            console.warn('❌ Shipping calculation failed:', result.error);
+            // Clear shipping options when calculation fails
+            setShippingOptions([]);
+            setShippingRecommendations([]);
           }
+        } catch (calculationError) {
+          console.error('❌ Error during shipping calculation engine call:', calculationError);
+          // Clear shipping options when engine fails
+          setShippingOptions([]);
+          setShippingRecommendations([]);
         }
-      } catch (error) {
-        console.error('❌ Error recalculating shipping:', error);
-      } finally {
-        endOperation(operationId);
+      } else {
+        console.log('⏭️ Skipping shipping recalculation - missing required data:', {
+          hasItems: (formValues.items || []).length > 0,
+          itemsTotal,
+          totalWeight,
+          hasOrigin: !!formValues.origin_country,
+          hasDestination: !!formValues.destination_country,
+        });
       }
-    });
+    } catch (error) {
+      console.error('❌ Error recalculating shipping:', error);
+    } finally {
+      endOperation(operationId);
+    }
   }, [
     quote,
     formValues.items,
@@ -512,7 +555,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     formValues.selected_shipping_option,
     form,
     batchMultipleUpdates,
-    lockDuringCallback,
     startOperation,
     endOperation,
   ]);
@@ -926,6 +968,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           sales_tax_price: Number(formValues.sales_tax_price) || 0,
           merchant_shipping_price: Number(formValues.merchant_shipping_price) || 0,
           discount: Number(formValues.discount) || 0,
+          breakdown: {
+            ...quote.calculation_data?.breakdown,
+            shipping: Number(formValues.international_shipping) || 0, // ✅ Use form value directly
+          },
         },
       };
 
@@ -1463,7 +1509,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="flex items-center space-x-8">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
+                  {currencyDisplay.formatSingleAmount(liveQuote?.final_total_usd || quote.final_total_usd, 'origin')}
                 </div>
                 <div className="text-xs text-gray-600 font-medium">Total Quote Value</div>
                 {lastSaveTime && (
@@ -1626,11 +1672,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 <div className="flex items-center space-x-3">
                                   <div className="text-right">
                                     <div className="text-lg font-bold text-green-600">
-                                      $
-                                      {(Number(item.item_price) * Number(item.quantity)).toFixed(2)}
+                                      {currencyDisplay.formatSingleAmount(
+                                        Number(item.item_price) * Number(item.quantity), 
+                                        'origin'
+                                      )}
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      ${Number(item.item_price || 0).toFixed(2)} ×{' '}
+                                      {currencyDisplay.formatSingleAmount(Number(item.item_price || 0), 'origin')} ×{' '}
                                       {item.quantity || 1}
                                     </div>
                                   </div>
@@ -1737,7 +1785,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                     </label>
                                     <div className="relative">
                                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
-                                        $
+                                        {currencyDisplay.currencySymbols.origin}
                                       </span>
                                       <input
                                         type="number"
@@ -2129,7 +2177,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Weight: {item.weight_kg} kg each</span>
                               <span>•</span>
-                              <span>Unit Price: ${Number(item.price_usd || 0).toFixed(2)}</span>
+                              <span>Unit Price: {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}</span>
                             </div>
                             {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (
@@ -2144,7 +2192,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
-                            ${(Number(item.price_usd || 0) * item.quantity).toFixed(2)}
+                            {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0) * item.quantity, 'origin')}
                           </div>
                           <div className="text-xs text-gray-500">Total</div>
                         </div>
@@ -2182,7 +2230,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Value</span>
                       <span className="text-xl font-bold text-blue-600">
-                        ${(liveQuote?.final_total_usd || quote.final_total_usd).toFixed(2)}
+                        {currencyDisplay.formatSingleAmount(liveQuote?.final_total_usd || quote.final_total_usd, 'origin')}
                       </span>
                     </div>
 

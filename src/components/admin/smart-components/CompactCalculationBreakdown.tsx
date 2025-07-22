@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface CompactCalculationBreakdownProps {
   quote: UnifiedQuote;
@@ -38,15 +39,19 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState('breakdown');
 
+  // Get standardized currency display info
+  const currencyDisplay = useAdminQuoteCurrency(quote);
+  const isDualCurrency = currencyDisplay.originCurrency !== currencyDisplay.destinationCurrency;
+
   // Reset active tab to breakdown if Exchange tab is not available
   React.useEffect(() => {
-    if (activeTab === 'exchange' && quote.currency === 'USD') {
+    if (activeTab === 'exchange' && !isDualCurrency) {
       setActiveTab('breakdown');
     }
-  }, [activeTab, quote.currency]);
+  }, [activeTab, isDualCurrency]);
 
   const breakdown = quote.calculation_data?.breakdown || {};
-  const exchangeRate = quote.calculation_data?.exchange_rate || { rate: 1, source: 'standard' };
+  const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
 
   // Calculate percentages for insights
@@ -152,7 +157,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           )}
         </div>
         <div className="flex items-center space-x-1">
-          <span className="text-lg font-bold text-blue-600">${totalCost.toFixed(2)}</span>
+          <span className="text-lg font-bold text-blue-600">{currencyDisplay.formatSingleAmount(totalCost, 'origin')}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -168,7 +173,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       <div className="grid grid-cols-4 gap-2 text-xs">
         {keyComponents.map((component, index) => (
           <div key={index} className="text-center">
-            <div className={`font-semibold ${component.color}`}>${component.amount.toFixed(0)}</div>
+            <div className={`font-semibold ${component.color}`}>{currencyDisplay.formatSingleAmount(component.amount, 'origin')}</div>
             <div className="text-gray-500 text-xs">{component.label}</div>
             <div className="text-gray-400 text-xs">{getPercentage(component.amount)}%</div>
           </div>
@@ -176,12 +181,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       </div>
 
       {/* Exchange Rate (if not USD) */}
-      {quote.currency !== 'USD' && (
+      {isDualCurrency && (
         <div className="mt-3 flex items-center justify-between text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
           <span>Exchange Rate:</span>
           <div className="flex items-center space-x-1">
             <span>
-              1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}
+              1 {currencyDisplay.originCurrency} = {exchangeRate.toFixed(4)} {currencyDisplay.destinationCurrency}
             </span>
             <Badge variant="outline" className="text-xs h-4 px-1">
               {exchangeRate.source === 'shipping_route' ? 'Route' : 'Standard'}
@@ -197,7 +202,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList
-          className={`grid w-full h-8 text-xs ${quote.currency === 'USD' ? 'grid-cols-2' : 'grid-cols-3'}`}
+          className={`grid w-full h-8 text-xs ${!isDualCurrency ? 'grid-cols-2' : 'grid-cols-3'}`}
         >
           <TabsTrigger value="breakdown" className="text-xs">
             Breakdown
@@ -205,7 +210,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           <TabsTrigger value="insights" className="text-xs">
             Insights
           </TabsTrigger>
-          {quote.currency !== 'USD' && (
+          {isDualCurrency && (
             <TabsTrigger value="exchange" className="text-xs">
               Exchange
             </TabsTrigger>
@@ -225,7 +230,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="font-medium">${Number(breakdown.items_total || 0).toFixed(2)}</div>
+                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
                   {getPercentage(Number(breakdown.items_total || 0))}%
                 </div>
@@ -245,7 +250,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">${Number(breakdown.shipping || 0).toFixed(2)}</div>
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}</div>
                   <div className="text-xs text-gray-500">
                     {getPercentage(Number(breakdown.shipping || 0))}%
                   </div>
@@ -258,26 +263,25 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   <div className="font-medium text-gray-700 mb-2">Shipping Rate Calculation:</div>
                   <div className="flex justify-between">
                     <span>• Base Rate:</span>
-                    <span>${getShippingBaseRate(selectedShippingOption).toFixed(2)}</span>
+                    <span>{currencyDisplay.formatSingleAmount(getShippingBaseRate(selectedShippingOption), 'origin')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>
-                      • Weight ({getTotalWeight()}kg × $
-                      {getShippingPerKgRate(selectedShippingOption).toFixed(2)}/kg):
+                      • Weight ({getTotalWeight()}kg × {currencyDisplay.formatSingleAmount(getShippingPerKgRate(selectedShippingOption), 'origin')}/kg):
                     </span>
-                    <span>${getShippingWeightCost(selectedShippingOption).toFixed(2)}</span>
+                    <span>{currencyDisplay.formatSingleAmount(getShippingWeightCost(selectedShippingOption), 'origin')}</span>
                   </div>
                   {getShippingValueCost(selectedShippingOption) > 0 && (
                     <div className="flex justify-between">
                       <span>
                         • Value-based ({getShippingValuePercentage(selectedShippingOption)}%):
                       </span>
-                      <span>${getShippingValueCost(selectedShippingOption).toFixed(2)}</span>
+                      <span>{currencyDisplay.formatSingleAmount(getShippingValueCost(selectedShippingOption), 'origin')}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-medium text-gray-800 border-t border-gray-200 pt-1 mt-1">
                     <span>Total Shipping:</span>
-                    <span>${Number(breakdown.shipping || 0).toFixed(2)}</span>
+                    <span>{currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}</span>
                   </div>
                 </div>
               )}
@@ -295,7 +299,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 )}
               </div>
               <div className="text-right">
-                <div className="font-medium">${Number(breakdown.customs || 0).toFixed(2)}</div>
+                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
                   {getPercentage(Number(breakdown.customs || 0))}%
                 </div>
@@ -309,7 +313,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <span className="text-gray-700">Taxes & VAT</span>
               </div>
               <div className="text-right">
-                <div className="font-medium">${Number(breakdown.taxes || 0).toFixed(2)}</div>
+                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
                   {getPercentage(Number(breakdown.taxes || 0))}%
                 </div>
@@ -326,7 +330,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="font-medium">${Number(breakdown.fees || 0).toFixed(2)}</div>
+                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
                   {getPercentage(Number(breakdown.fees || 0))}%
                 </div>
@@ -342,7 +346,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </div>
                 <div className="text-right">
                   <div className="font-medium text-red-600">
-                    -${Number(breakdown.discount || 0).toFixed(2)}
+                    -{currencyDisplay.formatSingleAmount(Number(breakdown.discount || 0), 'origin')}
                   </div>
                   <div className="text-xs text-gray-500">
                     {getPercentage(Number(breakdown.discount || 0))}%
@@ -356,10 +360,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="flex items-center justify-between text-lg font-semibold">
                 <span className="text-gray-900">Final Total</span>
                 <div className="text-right">
-                  <div className="text-blue-600">${totalCost.toFixed(2)}</div>
-                  {quote.currency !== 'USD' && (
+                  <div className="text-blue-600">{currencyDisplay.formatSingleAmount(totalCost, 'origin')}</div>
+                  {isDualCurrency && (
                     <div className="text-sm text-gray-500 font-normal">
-                      ≈ {(totalCost * exchangeRate.rate).toFixed(2)} {quote.currency}
+                      ≈ {currencyDisplay.formatSingleAmount(totalCost)}
                     </div>
                   )}
                 </div>
@@ -431,7 +435,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           )}
         </TabsContent>
 
-        {quote.currency !== 'USD' && (
+        {isDualCurrency && (
           <TabsContent value="exchange" className="p-4 pt-3 space-y-3">
             {/* Currency Conversion Calculator */}
             <div className="space-y-3">
@@ -441,15 +445,17 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="bg-blue-50 rounded-lg p-3">
                   <div className="flex justify-between items-center">
                     <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">${totalCost.toFixed(2)}</div>
-                      <div className="text-xs text-gray-600">USD (Base)</div>
+                      <div className="text-lg font-bold text-gray-900">
+                        {currencyDisplay.formatSingleAmount(totalCost, 'origin')}
+                      </div>
+                      <div className="text-xs text-gray-600">{currencyDisplay.originCurrency} (Base)</div>
                     </div>
                     <div className="text-gray-400">→</div>
                     <div className="text-center">
                       <div className="text-lg font-bold text-blue-600">
-                        {(totalCost * exchangeRate.rate).toFixed(2)} {quote.currency}
+                        {currencyDisplay.formatSingleAmount(totalCost, 'destination')}
                       </div>
-                      <div className="text-xs text-gray-600">Customer Currency</div>
+                      <div className="text-xs text-gray-600">Customer Currency ({currencyDisplay.destinationCurrency})</div>
                     </div>
                   </div>
                 </div>
@@ -463,11 +469,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <span className="text-gray-600">Items Total:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {((breakdown.items_total || 0) * exchangeRate.rate).toFixed(2)}{' '}
-                        {quote.currency}
+                        {currencyDisplay.formatSingleAmount(breakdown.items_total || 0, 'destination')}
                       </div>
                       <div className="text-xs text-gray-500">
-                        ${Number(breakdown.items_total || 0).toFixed(2)} USD
+                        {currencyDisplay.formatSingleAmount(breakdown.items_total || 0, 'origin')}
                       </div>
                     </div>
                   </div>
@@ -475,11 +480,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <span className="text-gray-600">Shipping Total:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {((breakdown.shipping || 0) * exchangeRate.rate).toFixed(2)}{' '}
-                        {quote.currency}
+                        {currencyDisplay.formatSingleAmount(breakdown.shipping || 0, 'destination')}
                       </div>
                       <div className="text-xs text-gray-500">
-                        ${Number(breakdown.shipping || 0).toFixed(2)} USD
+                        {currencyDisplay.formatSingleAmount(breakdown.shipping || 0, 'origin')}
                       </div>
                     </div>
                   </div>
@@ -487,10 +491,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <span className="text-gray-600">Customs & Duties:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {((breakdown.customs || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                        {currencyDisplay.formatSingleAmount(breakdown.customs || 0, 'destination')}
                       </div>
                       <div className="text-xs text-gray-500">
-                        ${Number(breakdown.customs || 0).toFixed(2)} USD
+                        {currencyDisplay.formatSingleAmount(breakdown.customs || 0, 'origin')}
                       </div>
                     </div>
                   </div>
@@ -498,10 +502,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <span className="text-gray-600">Processing Fees:</span>
                     <div className="text-right">
                       <div className="font-medium">
-                        {((breakdown.fees || 0) * exchangeRate.rate).toFixed(2)} {quote.currency}
+                        {currencyDisplay.formatSingleAmount(breakdown.fees || 0, 'destination')}
                       </div>
                       <div className="text-xs text-gray-500">
-                        ${Number(breakdown.fees || 0).toFixed(2)} USD
+                        {currencyDisplay.formatSingleAmount(breakdown.fees || 0, 'origin')}
                       </div>
                     </div>
                   </div>
@@ -518,7 +522,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   <div className="flex justify-between">
                     <span>Rate:</span>
                     <span>
-                      1 USD = {exchangeRate.rate.toFixed(4)} {quote.currency}
+                      1 {currencyDisplay.originCurrency} = {exchangeRate.toFixed(4)} {currencyDisplay.destinationCurrency}
                     </span>
                   </div>
                   <div className="flex justify-between">
