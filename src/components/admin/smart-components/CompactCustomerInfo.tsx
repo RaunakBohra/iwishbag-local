@@ -537,7 +537,25 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               </div>
             )}
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              // Always open customer management page - it has good search functionality
+              const customerEmail = getCustomerEmail();
+              if (customerEmail && customerEmail !== 'No email provided') {
+                // Open customer management page in new tab for admin to search by email
+                // The customer management page supports searching by email and name
+                window.open('/admin/customers', '_blank');
+              }
+            }}
+            title="Open customer management (search by email/name)"
+            disabled={!getCustomerEmail() || getCustomerEmail() === 'No email provided'}
+          >
             <ExternalLink className="w-4 h-4" />
           </Button>
         </div>

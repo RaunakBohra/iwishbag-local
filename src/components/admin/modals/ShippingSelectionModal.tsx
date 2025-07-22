@@ -38,6 +38,12 @@ import {
 } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, ShippingRecommendation } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import { 
+  formatDeliveryDays, 
+  getDeliveryDaysForSorting, 
+  isExpressDelivery, 
+  isEconomyDelivery 
+} from '@/lib/deliveryFormatUtils';
 
 interface ShippingSelectionModalProps {
   isOpen: boolean;
@@ -103,10 +109,10 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
         );
         break;
       case 'express':
-        filtered = filtered.filter((option) => parseInt(option.days.split('-')[0]) <= 5);
+        filtered = filtered.filter((option) => isExpressDelivery(option.days));
         break;
       case 'economy':
-        filtered = filtered.filter((option) => parseInt(option.days.split('-')[0]) > 7);
+        filtered = filtered.filter((option) => isEconomyDelivery(option.days));
         break;
     }
 
@@ -116,7 +122,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
         return filtered.sort((a, b) => a.cost_usd - b.cost_usd);
       case 'speed':
         return filtered.sort(
-          (a, b) => parseInt(a.days.split('-')[0]) - parseInt(b.days.split('-')[0]),
+          (a, b) => getDeliveryDaysForSorting(a.days) - getDeliveryDaysForSorting(b.days),
         );
       case 'recommendation':
         return filtered.sort((a, b) => {
@@ -267,7 +273,7 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
                                 <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
                                   <div className="flex items-center space-x-1">
                                     <Clock className="w-4 h-4" />
-                                    <span>{option.days} days</span>
+                                    <span>{formatDeliveryDays(option.days, 'admin')}</span>
                                   </div>
                                   <div className="flex items-center space-x-1">
                                     <span>{(option.confidence * 100).toFixed(0)}% confidence</span>
@@ -303,12 +309,12 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
                             <div>
                               <div className="text-gray-600 text-xs mb-1">Delivery Speed</div>
                               <div className="flex items-center space-x-1">
-                                {parseInt(option.days.split('-')[0]) <= 3 ? (
+                                {isExpressDelivery(option.days) ? (
                                   <Zap className="w-3 h-3 text-blue-600" />
                                 ) : (
                                   <Clock className="w-3 h-3 text-gray-400" />
                                 )}
-                                <span className="font-medium">{option.days} days</span>
+                                <span className="font-medium">{formatDeliveryDays(option.days, 'admin')}</span>
                               </div>
                             </div>
 

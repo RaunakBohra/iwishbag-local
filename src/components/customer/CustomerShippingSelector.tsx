@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Truck, Clock, DollarSign, Zap, CheckCircle, Package } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, RouteHandlingCharge } from '@/types/unified-quote';
 import { currencyService } from '@/services/CurrencyService';
+import { formatDeliveryDays, isExpressDelivery, getDeliveryDaysForSorting } from '@/lib/deliveryFormatUtils';
 
 interface CustomerShippingSelectorProps {
   quote: UnifiedQuote;
@@ -62,29 +63,22 @@ export const CustomerShippingSelector: React.FC<CustomerShippingSelectorProps> =
     return option.cost_usd + handlingCharge;
   };
 
-  // Get delivery time display
+  // Get delivery time display using utility
   const getDeliveryDisplay = (option: ShippingOption): string => {
-    const days = option.days;
-    if (days.includes('-')) {
-      const [min, max] = days.split('-');
-      return `${min}-${max} business days`;
-    }
-    return `${days} business days`;
+    return formatDeliveryDays(option.days, 'customer');
   };
 
-  // Get shipping method priority badge
+  // Get shipping method priority badge using utility
   const getPriorityBadge = (option: ShippingOption) => {
-    const avgDays = option.days.includes('-')
-      ? (parseInt(option.days.split('-')[0]) + parseInt(option.days.split('-')[1])) / 2
-      : parseInt(option.days);
+    const minDays = getDeliveryDaysForSorting(option.days);
 
-    if (avgDays <= 3) {
+    if (minDays <= 3) {
       return (
         <Badge variant="destructive" className="text-xs">
           Express
         </Badge>
       );
-    } else if (avgDays <= 7) {
+    } else if (minDays <= 7) {
       return (
         <Badge variant="default" className="text-xs">
           Standard

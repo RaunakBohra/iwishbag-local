@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, ShippingRecommendation } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import { formatDeliveryDays, getDeliveryDaysForSorting } from '@/lib/deliveryFormatUtils';
 
 interface CompactShippingOptionsProps {
   quote: UnifiedQuote;
@@ -211,7 +212,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
             <span>Selected: {selectedOption.name}</span>
             <div className="flex items-center space-x-2">
               <Clock className="w-3 h-3" />
-              <span>{selectedOption.days} days</span>
+              <span>{formatDeliveryDays(selectedOption.days, 'admin')}</span>
             </div>
           </div>
         </div>
@@ -361,7 +362,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                     <div className="flex items-center space-x-3 mt-1 text-xs text-gray-600">
                       <div className="flex items-center">
                         <Clock className="w-3 h-3 mr-1" />
-                        {option.days} days
+                        {formatDeliveryDays(option.days, 'admin')}
                       </div>
                       <div className="flex items-center">
                         <span>{(option.confidence * 100).toFixed(0)}% confidence</span>
@@ -476,7 +477,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           </div>
           <div>
             <div className="font-semibold text-cyan-600">
-              {Math.min(...shippingOptions.map((o) => parseInt(o.days.split('-')[0])))}
+              {Math.min(...shippingOptions.map((o) => getDeliveryDaysForSorting(o.days)))}
             </div>
             <div className="text-gray-500">Fastest (days)</div>
           </div>
