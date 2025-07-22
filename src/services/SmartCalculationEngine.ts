@@ -66,6 +66,19 @@ export class SmartCalculationEngine {
         (sum, item) => sum + item.weight_kg * item.quantity,
         0,
       );
+      
+      console.log('🏋️ [WEIGHT DEBUG] Total weight calculation:', {
+        quoteId: input.quote.id,
+        totalWeight,
+        itemBreakdown: input.quote.items.map(item => ({
+          name: item.name,
+          weight_kg: item.weight_kg,
+          quantity: item.quantity,
+          totalItemWeight: item.weight_kg * item.quantity
+        })),
+        hasZeroWeight: totalWeight === 0,
+        warningIfZero: totalWeight === 0 ? '⚠️ Zero weight detected - this will result in base-only shipping cost!' : '✅ Weight detected'
+      });
 
       // ✅ SIMPLIFIED: Don't generate shipping options in sync mode
       // Just use the breakdown values that were passed in via the quote
@@ -388,7 +401,13 @@ export class SmartCalculationEngine {
         weight_tiers: route.weight_tiers,
         delivery_options_count: route.delivery_options?.length || 0,
         delivery_options_raw: route.delivery_options,
-        exchange_rate: route.exchange_rate
+        exchange_rate: route.exchange_rate,
+        // NEW: Debug the weight tiers specifically
+        weightTierBreakdown: route.weight_tiers?.map((tier: any) => ({
+          range: `${tier.min}kg - ${tier.max === null ? '∞' : tier.max + 'kg'}`,
+          cost: tier.cost,
+          tierData: tier
+        })) || []
       } : null
     });
 
@@ -471,6 +490,16 @@ export class SmartCalculationEngine {
       // ✅ FIXED: delivery option price is a PREMIUM on top of base cost, not absolute cost
       const deliveryPremium = deliveryOption.price || 0;
       const optionCost = baseCost + deliveryPremium;
+      
+      console.log('🔍 [SHIPPING COST DEBUG] Option cost breakdown:', {
+        deliveryOptionName: deliveryOption.name,
+        deliveryOptionCarrier: deliveryOption.carrier,
+        baseCost: baseCost,
+        deliveryPremium: deliveryPremium,
+        finalOptionCost: optionCost,
+        calculationFormula: `${baseCost} (base) + ${deliveryPremium} (premium) = ${optionCost}`,
+        possibleIssue: optionCost < baseCost ? '🚨 PREMIUM IS NEGATIVE!' : '✅ Premium added correctly'
+      });
       
       // Validate that we don't accidentally create zero-cost shipping
       if (optionCost <= 0) {
@@ -621,6 +650,11 @@ export class SmartCalculationEngine {
         base_should_be: 1,
         per_kg_should_be: 50,
         note: '🚨 COMPARE: Does DB data match your modal settings?'
+      },
+      weightInputs: {
+        weight: weight,
+        value: value,
+        willCalculateWeight: weight > 0
       }
     });
 
@@ -634,21 +668,42 @@ export class SmartCalculationEngine {
 
     // Weight-based cost calculation - ADDITIVE MODEL
     if (route.weight_tiers && route.weight_tiers.length > 0) {
+      console.log('🔍 [TIER DEBUG] Weight tier matching process:', {
+        weight,
+        allTiers: route.weight_tiers,
+        tierMatchingLogic: route.weight_tiers.map((t: any) => ({
+          tier: t,
+          weightMin: t.min,
+          weightMax: t.max,
+          matches: weight >= t.min && (t.max === null || weight <= t.max),
+          reason: `${weight} >= ${t.min} AND (${t.max} === null OR ${weight} <= ${t.max})`
+        }))
+      });
+
       const tier = route.weight_tiers.find(
         (tier: any) => weight >= tier.min && (tier.max === null || weight <= tier.max),
       );
+      
+      console.log('🔍 [TIER DEBUG] Final tier selection:', {
+        selectedTier: tier,
+        weight,
+        selectionLogic: tier ? 'Found matching tier' : 'No matching tier found'
+      });
+
       if (tier) {
-        // 🚀 NEW: Additive model - tier cost ADDS to base cost (not replaces)
-        const tierCost = tier.cost;
-        baseCost += tierCost; // Add tier cost to base cost
-        console.log('📦 Using weight tier (ADDITIVE model):', { 
+        // 🚀 FIXED: Tier cost is PER-KG rate, must multiply by weight
+        const tierRatePerKg = tier.cost;
+        const tierCost = weight * tierRatePerKg;
+        baseCost += tierCost; // Add calculated tier cost to base cost
+        console.log('📦 Using weight tier (CORRECTED - PER KG MODEL):', { 
           tier, 
           weight, 
           initialBaseCost,
+          tierRatePerKg,
           tierCost,
           finalBaseCost: baseCost,
-          calculation: `${initialBaseCost} (base) + ${tierCost} (tier) = ${baseCost}`,
-          reasoning: 'Tier cost ADDS to base cost for comprehensive pricing'
+          calculation: `${initialBaseCost} (base) + (${weight}kg × ₹${tierRatePerKg}/kg = ₹${tierCost}) = ₹${baseCost}`,
+          reasoning: 'Tier cost is per-kg rate multiplied by actual weight'
         });
       } else {
         console.warn('⚠️ No matching weight tier found, falling back to per-kg calculation:', {
@@ -712,9 +767,9 @@ export class SmartCalculationEngine {
     // - Currency conversion creates confusion and incorrect pricing
     // - International shipping rates are standardized in origin currency
     //
-    // Example: India → Nepal shipping
+    // Example: India → Nepal shipping (12kg package)
     // - Shipping rates entered in INR (Indian Rupees) 
-    // - Base: ₹1, Tier: ₹15 → Final: ₹16 INR
+    // - Base: ₹1, Tier: ₹45/kg × 12kg = ₹540 → Final: ₹541 INR
     // - NO conversion to NPR (Nepali Rupees) for shipping costs
     //
     // For future developers: 
@@ -729,17 +784,21 @@ export class SmartCalculationEngine {
       note: 'Shipping costs remain in origin currency as per business rules'
     });
 
-    // 🚨 FINAL COST TRACKING (Updated to show no conversion)
-    console.log('🧮 [DEBUG] COMPLETE calculateRouteBaseCost breakdown (FIXED):', {
+    // 🚨 FINAL COST TRACKING (Updated with corrected per-kg tier calculation)
+    console.log('🧮 [DEBUG] COMPLETE calculateRouteBaseCost breakdown (CORRECTED PER-KG MODEL):', {
       step1_routeBase: route.base_shipping_cost,
       step2_afterWeightTier: baseCost,
       step3_afterValuePercentage: baseCost,
       step4_finalCostOriginCurrency: baseCost,
       currencyConversion: 'REMOVED - shipping stays in origin currency',
-      forUserExpectedVsActual: {
-        expected: 'Base + Tier = Origin Currency Amount',
-        actual: baseCost + ' (origin currency)',
-        result: baseCost === 16 ? 'Perfect!' : 'Check tier configuration'
+      calculationModel: 'Base + (Weight × TierRate/kg) + ValuePercent = Total',
+      exampleFor12kg: {
+        base: route.base_shipping_cost,
+        weight: weight,
+        expectedTierRate: '₹45/kg for 12kg = ₹540',
+        expectedTotal: route.base_shipping_cost + (weight * 45),
+        actualTotal: baseCost,
+        isCorrect: baseCost > 500 ? '✅ Looks correct for 12kg' : '❌ Too low - check calculation'
       }
     });
 
@@ -925,7 +984,7 @@ export class SmartCalculationEngine {
     const customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
 
     // Calculate other costs using route-based configuration
-    const salesTax = quote.calculation_data?.sales_tax_price || itemsTotal * 0.1;
+    const salesTax = quote.calculation_data?.breakdown?.taxes || itemsTotal * 0.1;
 
     // Calculate route-based handling charge (sync version uses existing data or simple fallback)
     const handlingFee = this.calculateRouteBasedHandlingSync(selectedShipping, itemsTotal, quote);
@@ -1083,7 +1142,7 @@ export class SmartCalculationEngine {
     const customsAmount = (itemsTotal + shippingCost) * (customsPercentage / 100);
 
     // Calculate other costs using existing data - NO HARDCODED FALLBACKS
-    const salesTax = quote.calculation_data?.sales_tax_price || 0;
+    const salesTax = quote.calculation_data?.breakdown?.taxes || 0;
     const handlingFee = quote.operational_data?.handling_charge || 0;
     const insuranceAmount = quote.operational_data?.insurance_amount || 0;
     const domesticShipping = quote.operational_data?.domestic_shipping || 0;
@@ -1116,8 +1175,6 @@ export class SmartCalculationEngine {
       final_total_usd: finalTotal,
       calculation_data: {
         ...quote.calculation_data,
-        sales_tax_price: salesTax,
-        discount: discount,
         breakdown: {
           items_total: itemsTotal,
           shipping: shippingCost, // ✅ Use the provided value directly

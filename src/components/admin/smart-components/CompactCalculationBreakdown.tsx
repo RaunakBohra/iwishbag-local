@@ -66,6 +66,13 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   console.log('[DEBUG] CompactCalculationBreakdown render:', {
     quoteId: quote.id,
     breakdownShipping: breakdown.shipping,
+    totalWeight: quote.items?.reduce((sum, item) => sum + item.weight_kg * item.quantity, 0) || 0,
+    itemWeights: quote.items?.map(item => ({ 
+      name: item.name, 
+      weight_kg: item.weight_kg, 
+      quantity: item.quantity, 
+      totalWeight: item.weight_kg * item.quantity 
+    })),
     selectedShippingOptionId: quote.operational_data?.shipping?.selected_option,
     selectedShippingOption: selectedShippingOption
       ? {
@@ -92,47 +99,25 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     return quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
   };
 
-  // Estimate shipping breakdown based on common patterns
-  const getShippingBaseRate = (option: ShippingOption) => {
-    // For database routes, this would typically be base_shipping_cost
-    // For now, estimate based on total shipping cost and weight
+  // ✅ FIXED: Show actual calculated shipping cost instead of estimates
+  const getActualShippingCost = () => {
+    // Use the actual calculated shipping cost from breakdown
+    return breakdown.shipping || 0;
+  };
+
+  const getShippingDisplayInfo = () => {
+    // Return simplified display info based on actual data
+    const totalWeight = getTotalWeight();
     const totalShipping = breakdown.shipping || 0;
-    const weight = getTotalWeight();
-    const perKgRate = getShippingPerKgRate(option);
-    const weightCost = weight * perKgRate;
-    return Math.max(0, totalShipping - weightCost - getShippingValueCost(option));
-  };
-
-  const getShippingPerKgRate = (option: ShippingOption) => {
-    // Standard rate estimation based on carrier type
-    const rateMap: Record<string, number> = {
-      DHL: 8.5,
-      FedEx: 9.0,
-      UPS: 7.5,
-      Standard: 5.0,
-      Express: 7.0,
-      Economy: 4.0,
+    
+    return {
+      totalCost: totalShipping,
+      weight: totalWeight,
+      note: 'Based on route configuration and selected carrier'
     };
-    return rateMap[option?.carrier] || 6.0;
   };
 
-  const getShippingWeightCost = (option: ShippingOption) => {
-    return getTotalWeight() * getShippingPerKgRate(option);
-  };
-
-  const getShippingValueCost = (option: ShippingOption) => {
-    // Some carriers charge a percentage of item value
-    const valuePercentage = getShippingValuePercentage(option);
-    return (getTotalValue() * valuePercentage) / 100;
-  };
-
-  const getShippingValuePercentage = (option: ShippingOption) => {
-    // Express carriers sometimes charge value-based fees
-    if (option?.carrier === 'DHL' || option?.carrier === 'FedEx') {
-      return 0.5; // 0.5% of value
-    }
-    return 0;
-  };
+  // ✅ REMOVED: Misleading estimate functions replaced with actual data display
 
   // Key cost components for compact view
   const keyComponents = [
@@ -257,31 +242,28 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </div>
               </div>
 
-              {/* Shipping Calculation Breakdown */}
+              {/* Shipping Calculation Breakdown - FIXED: Show actual data */}
               {selectedShippingOption?.carrier && (
                 <div className="ml-6 space-y-1 text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                  <div className="font-medium text-gray-700 mb-2">Shipping Rate Calculation:</div>
+                  <div className="font-medium text-gray-700 mb-2">Actual Shipping Cost:</div>
                   <div className="flex justify-between">
-                    <span>• Base Rate:</span>
-                    <span>{currencyDisplay.formatSingleAmount(getShippingBaseRate(selectedShippingOption), 'origin')}</span>
+                    <span>• Carrier:</span>
+                    <span>{selectedShippingOption.carrier}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>
-                      • Weight ({getTotalWeight()}kg × {currencyDisplay.formatSingleAmount(getShippingPerKgRate(selectedShippingOption), 'origin')}/kg):
-                    </span>
-                    <span>{currencyDisplay.formatSingleAmount(getShippingWeightCost(selectedShippingOption), 'origin')}</span>
+                    <span>• Weight:</span>
+                    <span>{getTotalWeight()}kg</span>
                   </div>
-                  {getShippingValueCost(selectedShippingOption) > 0 && (
-                    <div className="flex justify-between">
-                      <span>
-                        • Value-based ({getShippingValuePercentage(selectedShippingOption)}%):
-                      </span>
-                      <span>{currencyDisplay.formatSingleAmount(getShippingValueCost(selectedShippingOption), 'origin')}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span>• Service:</span>
+                    <span>{selectedShippingOption.name || 'Standard'}</span>
+                  </div>
                   <div className="flex justify-between font-medium text-gray-800 border-t border-gray-200 pt-1 mt-1">
                     <span>Total Shipping:</span>
                     <span>{currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    ✅ Calculated using route configuration (base + weight tiers + carrier premium)
                   </div>
                 </div>
               )}

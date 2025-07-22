@@ -75,8 +75,10 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
       quote_id: quote.id,
     });
 
-    const totalWeight =
-      quote.quote_items?.reduce((sum, item) => sum + (item.item_weight || 0), 0) || 0;
+    // Use modern items structure (same as calculations) or fallback to legacy quote_items
+    const totalWeight = quote.items
+      ? quote.items.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1), 0)
+      : quote.quote_items?.reduce((sum, item) => sum + (item.item_weight || 0) * (item.quantity || 1), 0) || 0;
 
     const renderRow = (
       label: string,
@@ -242,21 +244,22 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                           </Button>
                         </div>
                         <div className="space-y-2">
-                          {quote.quote_items?.map((item) => (
+                          {/* Support both modern items and legacy quote_items structures */}
+                          {(quote.items || quote.quote_items)?.map((item) => (
                             <div
                               key={item.id}
                               className="flex justify-between items-center text-xs sm:text-sm bg-white/20 border border-white/30 rounded-lg p-2 sm:p-3"
                             >
                               <div className="flex items-center gap-2 sm:gap-3">
-                                {item.image_url && (
+                                {(item.image || item.image_url) && (
                                   <img
-                                    src={item.image_url}
-                                    alt={item.product_name}
+                                    src={item.image || item.image_url}
+                                    alt={item.name || item.product_name}
                                     className="w-8 h-8 sm:w-10 sm:h-10 rounded-md object-cover"
                                   />
                                 )}
                                 <div>
-                                  <div className="font-medium">{item.product_name}</div>
+                                  <div className="font-medium">{item.name || item.product_name}</div>
                                   <div className="text-muted-foreground">
                                     Quantity: {item.quantity}
                                   </div>
@@ -264,7 +267,7 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                               </div>
                               <span className="font-medium">
                                 {formatAmountForDisplay(
-                                  item.item_price * item.quantity,
+                                  (item.price_usd || item.item_price) * item.quantity,
                                   getCountryCurrency(destinationCountry),
                                 )}
                               </span>
@@ -283,25 +286,20 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                           )}
                           {renderRow(
                             'Sales Tax',
-                            quote.sales_tax_price,
+                            quote.calculation_data?.breakdown?.taxes,
                             false,
                             <Percent className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}
-                          {renderRow(
-                            'Merchant Shipping',
-                            quote.merchant_shipping_price,
-                            false,
-                            <Truck className="h-3 w-3 sm:h-4 sm:w-4" />,
-                          )}
+                          {/* Merchant shipping is now included in International Shipping breakdown */}
                           {renderRow(
                             'International Shipping',
-                            quote.international_shipping,
+                            quote.calculation_data?.breakdown?.shipping,
                             false,
                             <Truck className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}
                           {renderRow(
                             'Customs & ECS',
-                            quote.customs_and_ecs,
+                            quote.calculation_data?.breakdown?.customs,
                             false,
                             <Shield className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}

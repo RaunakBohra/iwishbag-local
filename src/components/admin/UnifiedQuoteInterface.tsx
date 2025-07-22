@@ -63,7 +63,6 @@ import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import { useBatchedFormUpdates } from '@/hooks/useBatchedFormUpdates';
 import { useLayoutShiftPrevention } from '@/hooks/useLayoutShiftPrevention';
 import { useDebouncedCalculations } from '@/hooks/useDebouncedCalculations';
-import { useAdminScrollProtection } from '@/hooks/useAdminScrollProtection';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 import type {
   UnifiedQuote,
@@ -171,17 +170,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     enableLogging: true,
   });
 
-  const { startOperation, endOperation } = useAdminScrollProtection({
-    autoLockOnEdit: true,
-    lockDuringOperations: [
-      'quote-calculation',
-      'shipping-recalculation',
-      'weight-estimation',
-      'route-editing',
-      'quote-save',
-      'form-submit',
-    ],
-  });
 
   // Load quote data
   useEffect(() => {
@@ -239,7 +227,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   };
 
   const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
-    const operationId = startOperation('quote-calculation', 'Calculating smart quote features');
     try {
       setIsCalculating(true);
 
@@ -263,7 +250,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       console.error('Error calculating smart features:', error);
     } finally {
       setIsCalculating(false);
-      endOperation(operationId);
     }
   };
 
@@ -458,11 +444,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const recalculateShipping = useCallback(async () => {
     if (!quote || !formValues.items || formValues.items.length === 0) return;
 
-    const operationId = startOperation(
-      'shipping-recalculation',
-      'Recalculating shipping options',
-    );
-
     try {
       const itemsTotal = (formValues.items || []).reduce(
         (sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1),
@@ -557,8 +538,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       }
     } catch (error) {
       console.error('❌ Error recalculating shipping:', error);
-    } finally {
-      endOperation(operationId);
     }
   }, [
     quote,
@@ -568,8 +547,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     formValues.selected_shipping_option,
     form,
     batchMultipleUpdates,
-    startOperation,
-    endOperation,
   ]);
 
   // Optimized calculation scheduling - prevents layout shifts
@@ -682,8 +659,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setIsEditingRoute(false);
       return;
     }
-
-    const operationId = startOperation('route-editing', 'Saving route changes');
 
     try {
       const formData = form.getValues();
@@ -809,13 +784,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           description: 'Network error occurred. Changes have been reverted.',
           variant: 'destructive',
         });
-      } finally {
-        endOperation(operationId);
       }
     } catch (initialError) {
       console.error('❌ [ROUTE-EDITING] Initial operation error:', initialError);
       setIsEditingRoute(false);
-      endOperation(operationId);
     }
   };
 

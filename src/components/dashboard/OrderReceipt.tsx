@@ -14,16 +14,16 @@ export const OrderReceipt = ({ order }: OrderReceiptProps) => {
 
   const costItems = [
     { label: 'Item Price', value: order.item_price },
-    { label: 'Sales Tax', value: order.sales_tax_price },
-    { label: 'Merchant Shipping', value: order.merchant_shipping_price },
-    { label: 'International Shipping', value: order.international_shipping },
-    { label: 'Customs & Duties', value: order.customs_and_ecs },
+    { label: 'Sales Tax', value: order.calculation_data?.breakdown?.taxes },
+    { label: 'International Shipping', value: order.calculation_data?.breakdown?.shipping },
+    { label: 'Customs & Duties', value: order.calculation_data?.breakdown?.customs },
+    { label: 'Processing Fees', value: order.calculation_data?.breakdown?.fees },
     { label: 'Domestic Shipping', value: order.domestic_shipping },
     { label: 'Handling Charge', value: order.handling_charge },
     { label: 'Insurance', value: order.insurance_amount },
     { label: 'Payment Gateway Fee', value: order.payment_gateway_fee },
     { label: 'VAT', value: order.vat },
-    { label: 'Discount', value: order.discount, isNegative: true },
+    { label: 'Discount', value: order.calculation_data?.breakdown?.discount, isNegative: true },
   ].filter((item) => typeof item.value === 'number' && item.value !== 0);
 
   return (

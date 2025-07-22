@@ -151,9 +151,6 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         currency: countrySettings.currency || 'USD',
         final_total_usd: 0,
         calculation_data: {
-          sales_tax_price: 0,
-          merchant_shipping_price: 0,
-          discount: 0,
           breakdown: { items_total: 0, shipping: 0, customs: 0, taxes: 0, fees: 0, discount: 0 },
         },
         operational_data: {
