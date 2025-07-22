@@ -38,13 +38,13 @@ export const QUERY_COLUMNS = {
 
   /**
    * For admin quote management
-   * Includes user profile information for admin operations
+   * Basic columns only - JSONB extraction handled separately if needed
    */
   ADMIN_QUOTES: `
-    id, display_id, status, final_total_usd, created_at, 
-    destination_country, origin_country, user_id, expires_at,
-    approval_status, payment_status, in_cart, sent_at, paid_at,
-    profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)
+    id, display_id, status, final_total_usd, created_at, updated_at,
+    destination_country, origin_country, user_id, expires_at, in_cart,
+    iwish_tracking_id, tracking_status, estimated_delivery_date,
+    email_verified, quote_source, is_anonymous, customer_data, items
   `,
 
   /**
@@ -150,16 +150,9 @@ export const buildSelectQuery = (
 export const COMMON_QUERIES = {
   /**
    * Admin quotes with user profiles
+   * Direct use of ADMIN_QUOTES which already includes profile join and derived fields
    */
-  adminQuotesWithProfiles: buildSelectQuery(
-    QUERY_COLUMNS.ADMIN_QUOTES.replace(
-      'profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)',
-      ''
-    ),
-    {
-      'profiles!quotes_user_id_fkey': QUERY_COLUMNS.PROFILE_MINIMAL
-    }
-  ),
+  adminQuotesWithProfiles: QUERY_COLUMNS.ADMIN_QUOTES.trim(),
 
   /**
    * User dashboard quotes (no joins needed)

@@ -35,136 +35,10 @@ export const QuoteManagementPage = () => {
     countries: []
   });
   
-  // Available filter options (populated from database)
-  const [availableStatuses, setAvailableStatuses] = useState<StatusOption[]>([]);
-  const [availableCountries, setAvailableCountries] = useState<CountryOption[]>([]);
-  const [isLoadingFilterOptions, setIsLoadingFilterOptions] = useState(true);
-  
   // UI state
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  // Fetch available filter options from database
-  useEffect(() => {
-    const fetchFilterOptions = async () => {
-      try {
-        setIsLoadingFilterOptions(true);
-        
-        // Single optimized query to get both status and country data
-        // This reduces server load and prevents resource exhaustion
-        const { data: quotes, error } = await supabase
-          .from('quotes')
-          .select('status, destination_country')
-          .not('status', 'is', null)
-          .not('destination_country', 'is', null)
-          .limit(1000); // Reasonable limit to prevent overwhelming the server
-
-        if (error) {
-          // Provide fallback options to ensure UI remains functional
-          setAvailableStatuses([
-            { value: 'pending', label: 'Pending', count: 0 },
-            { value: 'sent', label: 'Sent', count: 0 },
-            { value: 'approved', label: 'Approved', count: 0 },
-            { value: 'rejected', label: 'Rejected', count: 0 },
-            { value: 'paid', label: 'Paid', count: 0 }
-          ]);
-          setAvailableCountries([
-            { code: 'IN', name: 'India', flag: '🇮🇳', count: 0 },
-            { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 0 },
-            { code: 'US', name: 'United States', flag: '🇺🇸', count: 0 }
-          ]);
-          return;
-        }
-
-        // Process data only if we have results
-        if (!quotes || quotes.length === 0) {
-          setAvailableStatuses([]);
-          setAvailableCountries([]);
-          return;
-        }
-
-        // Process statuses with counts
-        const statusCounts: Record<string, number> = {};
-        const countryCounts: Record<string, number> = {};
-
-        quotes.forEach(quote => {
-          if (quote.status) {
-            statusCounts[quote.status] = (statusCounts[quote.status] || 0) + 1;
-          }
-          if (quote.destination_country) {
-            countryCounts[quote.destination_country] = (countryCounts[quote.destination_country] || 0) + 1;
-          }
-        });
-
-        // Create status options
-        const statusOptions: StatusOption[] = Object.entries(statusCounts).map(([status, count]) => {
-          const statusConfig = getStatusConfig(status, 'quote');
-          return {
-            value: status,
-            label: statusConfig?.label || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
-            color: statusConfig?.color,
-            count
-          };
-        });
-
-        // Create country options
-        const countryOptions: CountryOption[] = Object.entries(countryCounts).map(([country, count]) => ({
-          code: country,
-          name: getCountryName(country),
-          flag: getCountryFlag(country),
-          count
-        }));
-
-        setAvailableStatuses(statusOptions.sort((a, b) => b.count - a.count));
-        setAvailableCountries(countryOptions.sort((a, b) => b.count - a.count));
-      } catch (error) {
-        console.error('Error fetching filter options:', error);
-        // Ensure UI remains functional with fallback data
-        setAvailableStatuses([]);
-        setAvailableCountries([]);
-      } finally {
-        setIsLoadingFilterOptions(false);
-      }
-    };
-
-    // Add a small delay to prevent immediate server overwhelming
-    const timeoutId = setTimeout(fetchFilterOptions, 100);
-    return () => clearTimeout(timeoutId);
-  }, [getStatusConfig]);
-
-  // Helper functions for country display
-  const getCountryName = (code: string): string => {
-    const countryNames: Record<string, string> = {
-      'IN': 'India',
-      'NP': 'Nepal', 
-      'US': 'United States',
-      'UK': 'United Kingdom',
-      'AU': 'Australia',
-      'CA': 'Canada',
-      'DE': 'Germany',
-      'FR': 'France',
-      'JP': 'Japan',
-      'SG': 'Singapore'
-    };
-    return countryNames[code] || code;
-  };
-
-  const getCountryFlag = (code: string): string => {
-    const countryFlags: Record<string, string> = {
-      'IN': '🇮🇳',
-      'NP': '🇳🇵',
-      'US': '🇺🇸', 
-      'UK': '🇬🇧',
-      'AU': '🇦🇺',
-      'CA': '🇨🇦',
-      'DE': '🇩🇪',
-      'FR': '🇫🇷',
-      'JP': '🇯🇵',
-      'SG': '🇸🇬'
-    };
-    return countryFlags[code] || '🌍';
-  };
 
   // Search and filter handlers for new SearchAndFilterPanel
   const handleSearch = () => {
@@ -218,7 +92,7 @@ export const QuoteManagementPage = () => {
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
-                <Body className="text-gray-600">Loading quotes...</Body>
+                <Body className="text-gray-600">Loading quotes and admin permissions...</Body>
               </div>
             </div>
           </div>
@@ -306,43 +180,6 @@ export const QuoteManagementPage = () => {
     setConfirmAction(null);
   };
 
-  // Apply quick filters
-  const applyQuickFilter = (filter: string) => {
-    setQuickFilter(filter);
-
-    // Reset other filters when using quick filters
-    setStatusFilter('all');
-    setDateRange('all');
-    setAmountRange('all');
-    setCountryFilter('all');
-    setPriorityFilter('all');
-    setSearchInput('');
-
-    // Apply the quick filter logic
-    switch (filter) {
-      case 'today':
-        setDateRange('today');
-        break;
-      case 'pending':
-        setStatusFilter('pending');
-        break;
-      case 'approved':
-        setStatusFilter('approved');
-        break;
-      case 'high_priority':
-        setPriorityFilter('high');
-        break;
-      case 'paid':
-        setStatusFilter('paid');
-        break;
-      case 'rejected':
-        setStatusFilter('rejected');
-        break;
-      default:
-        // 'all' - no additional filters
-        break;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50/40">
@@ -382,9 +219,19 @@ export const QuoteManagementPage = () => {
             onFiltersChange={setFilters}
             onSearch={handleSearch}
             onReset={handleResetFilters}
-            availableStatuses={availableStatuses}
-            availableCountries={availableCountries}
-            isLoading={isLoadingFilterOptions || quotesLoading}
+            availableStatuses={[
+              { value: 'pending', label: 'Pending', count: 0 },
+              { value: 'sent', label: 'Sent', count: 0 },
+              { value: 'approved', label: 'Approved', count: 0 },
+              { value: 'rejected', label: 'Rejected', count: 0 },
+              { value: 'paid', label: 'Paid', count: 0 }
+            ]}
+            availableCountries={[
+              { code: 'IN', name: 'India', flag: '🇮🇳', count: 0 },
+              { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 0 },
+              { code: 'US', name: 'United States', flag: '🇺🇸', count: 0 }
+            ]}
+            isLoading={quotesLoading}
             resultsCount={quotes?.length}
             className="w-full"
           />

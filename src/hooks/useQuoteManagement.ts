@@ -10,6 +10,8 @@ import { COMMON_QUERIES } from '@/lib/queryColumns';
 import { trackAdminQuery } from '@/lib/performanceTracker';
 import type { SearchFilters } from '@/components/admin/SearchAndFilterPanel';
 import * as Sentry from '@sentry/react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
 type QuoteWithItems = Tables<'quotes'> & {
   profiles?: {
@@ -42,6 +44,10 @@ export const useQuoteManagement = ({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { getStatusesForQuotesList, getStatusConfig, quoteStatuses } = useStatusManagement();
+  const { user, session } = useAuth();
+  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
+  
+  const isAuthenticated = !!user && !!session && !user.is_anonymous;
 
   const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
     queryKey: [
@@ -77,6 +83,29 @@ export const useQuoteManagement = ({
         try {
           const queryStartTime = Date.now();
           
+          // Debug authentication context
+          console.log('🔍 useQuoteManagement Authentication Debug:', {
+            userId: user?.id,
+            userEmail: user?.email,
+            isAnonymous: user?.is_anonymous,
+            hasSession: !!session,
+            sessionUserId: session?.user?.id,
+            accessToken: session?.access_token ? 'present' : 'missing',
+            isAuthenticated,
+            isAdmin
+          });
+          
+          // Validate authentication for admin operations
+          if (!isAuthenticated) {
+            console.warn('⚠️ No authenticated user for admin quote management');
+            throw new Error('Authentication required for admin operations');
+          }
+          
+          if (!isAdmin) {
+            console.warn('⚠️ Non-admin user attempting admin operations');
+            throw new Error('Admin role required for quote management');
+          }
+          
           const result = await trackAdminQuery('quotes_list', async () => {
             // PERFORMANCE FIX: Use standardized column selection with pagination
             let query = supabase
@@ -88,17 +117,11 @@ export const useQuoteManagement = ({
             // Apply status filters
             if (filters.statuses && filters.statuses.length > 0) {
               query = query.in('status', filters.statuses);
-              console.log(`DEBUG: Filtering by statuses: ${filters.statuses.join(', ')}`);
-            } else {
-              // If no specific statuses selected, show all quotes
-              const quoteStatusNames = getStatusesForQuotesList();
-              console.log('DEBUG: No specific status filter, showing all manageable quotes');
             }
 
             // Apply country filters (destination country)
             if (filters.countries && filters.countries.length > 0) {
               query = query.in('destination_country', filters.countries);
-              console.log(`DEBUG: Filtering by countries: ${filters.countries.join(', ')}`);
             }
 
             // Apply full-text search with proper parameterization to prevent SQL injection
@@ -109,21 +132,33 @@ export const useQuoteManagement = ({
               // This prevents SQL injection attacks by properly escaping user input
               query = query.or([
                 `display_id.ilike.%${sanitizedSearchTerm}%`,
-                `customer_data->>info->>email.ilike.%${sanitizedSearchTerm}%`,
+                `customer_data->'info'->>'email'.ilike.%${sanitizedSearchTerm}%`,
                 `items::text.ilike.%${sanitizedSearchTerm}%`,
                 `destination_country.ilike.%${sanitizedSearchTerm}%`
               ].join(','));
-              
-              console.log(`DEBUG: Applying search filter: "${searchTerm}"`);
             }
 
-            // Debug: print the query object
-            console.log('DEBUG: Final Supabase query for quotes:', query);
-            // Log the final query string (for REST API)
-            console.log('DEBUG: Query URL:', query.url.toString());
             const { data, error } = await query;
-            if (error) throw new Error(error.message);
-            return data || [];
+            if (error) {
+              console.error('🚨 SQL Query Error:', error);
+              console.error('🚨 Error Details:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code
+              });
+              throw new Error(`Query failed: ${error.message}`);
+            }
+            // Transform data to extract JSONB fields for easier component access
+            const transformedData = (data || []).map(quote => ({
+              ...quote,
+              email: quote.customer_data?.info?.email || null,
+              customer_name: quote.customer_data?.info?.name || null,
+              product_name: quote.items?.[0]?.name || null,
+            }));
+            
+            // Successfully transformed and loaded admin quotes
+            return transformedData;
           }, {
             page,
             pageSize,
@@ -183,7 +218,7 @@ export const useQuoteManagement = ({
         }
       });
     },
-    enabled: true, // Always run query - filtering is handled by getStatusesForQuotesList
+    enabled: isAuthenticated && !!isAdmin && !isAdminLoading, // Only run query for authenticated admin users
   });
 
   const updateMultipleQuotesStatusMutation = useMutation({
@@ -502,7 +537,7 @@ export const useQuoteManagement = ({
 
   return {
     quotes,
-    quotesLoading,
+    quotesLoading: quotesLoading || isAdminLoading,
     isRejectDialogOpen,
     setRejectDialogOpen: setIsRejectDialogOpen,
     selectedQuoteIds,
