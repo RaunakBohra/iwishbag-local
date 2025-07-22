@@ -463,7 +463,17 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
 
   return (
     <>
-      <Card className="shadow-sm border-gray-200 overflow-hidden">
+      <Card className="shadow-sm border-blue-200 bg-blue-50/20 overflow-hidden">
+        {/* Primary Selector Indicator */}
+        <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-1 w-full" />
+        <div className="px-4 pt-3 pb-2">
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+            <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">
+              Primary Shipping Selector
+            </span>
+          </div>
+        </div>
         <CompactHeader />
         {/* Show expanded options if: compact mode AND expanded, OR non-compact mode (always expanded) */}
         {(compact && isExpanded) || !compact ? <ExpandedOptions /> : null}

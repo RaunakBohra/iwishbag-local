@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { UseFormReturn } from 'react-hook-form';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { Badge } from '@/components/ui/badge';
 import { useWatch } from 'react-hook-form';
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
@@ -18,8 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
 import type { ShippingOption } from '@/types/unified-quote';
-import { BarChart3, Truck, CreditCard, Brain, MapPin } from 'lucide-react';
-import { ShippingSelectionModal } from '@/components/admin/modals/ShippingSelectionModal';
+import { BarChart3, Truck, CreditCard, Brain } from 'lucide-react';
 import { currencyService } from '@/services/CurrencyService';
 
 interface CustomsTier {
@@ -76,21 +74,7 @@ export const QuoteDetailForm = ({
   const { toast: _toast } = useToast();
   const { data: allCountries } = useAllCountries();
   const { quoteStatuses, orderStatuses } = useStatusManagement();
-  const [showShippingModal, setShowShippingModal] = useState(false);
 
-  // Handle shipping option selection from modal
-  const handleShippingSelection = async (optionId: string) => {
-    const selectedOption = shippingOptions.find((option) => option.id === optionId);
-    if (selectedOption && onSelectShippingOption) {
-      // Update the international shipping field with the selected option's cost
-      form.setValue('international_shipping', selectedOption.cost_usd);
-      form.setValue('selected_shipping_option', optionId);
-
-      // Call the parent's shipping selection handler
-      await onSelectShippingOption(optionId);
-    }
-    setShowShippingModal(false);
-  };
 
   // Watch form values
   const watchedValues = useWatch({
@@ -135,7 +119,7 @@ export const QuoteDetailForm = ({
   }, [destinationCurrency, form]);
 
   // Get currency symbol for input fields (origin currency - all costs are entered in origin currency)
-  const inputCurrencySymbol = currencyService.getCurrencySymbolSync(originCurrency);
+  const inputCurrencySymbol = currencyService.getCurrencySymbol(originCurrency);
 
   const handleNumberInputWheel = (e: React.WheelEvent<HTMLInputElement>) => {
     e.currentTarget.blur();
@@ -156,7 +140,7 @@ export const QuoteDetailForm = ({
         render={({ field }) => (
           <FormItem className="hidden">
             <FormControl>
-              <Input {...field} value={field.value || countryCurrency} />
+              <Input {...field} value={field.value || destinationCurrency} />
             </FormControl>
           </FormItem>
         )}
@@ -311,48 +295,50 @@ export const QuoteDetailForm = ({
             <FormField
               control={form.control}
               name="international_shipping"
-              render={({ field }) => (
-                <FormItem className="m-0">
-                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block flex items-center justify-between">
-                    <span>Intl Ship</span>
-                    {shippingOptions.length > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <Badge variant="outline" className="text-xs h-4 px-1">
-                          {shippingOptions.length}
-                        </Badge>
-                        {shippingOptions.length > 0 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowShippingModal(true)}
-                            className="h-4 px-1 text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            [Auto]
-                          </Button>
-                        )}
+              render={({ field }) => {
+                // Find selected shipping option for display
+                const selectedShippingOptionId = form.watch('selected_shipping_option');
+                const selectedOption = shippingOptions.find(opt => opt.id === selectedShippingOptionId);
+                
+                return (
+                  <FormItem className="m-0">
+                    <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                      Intl Ship
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                          {inputCurrencySymbol}
+                        </span>
+                        <Input
+                          type="text"
+                          value={field.value ? `${field.value}` : ''}
+                          className="h-8 pl-6 bg-gray-50 text-gray-700"
+                          readOnly
+                          placeholder="Select shipping option →"
+                        />
+                      </div>
+                    </FormControl>
+                    {selectedOption && (
+                      <div className="mt-1 text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-blue-800">
+                            {selectedOption.carrier} - {selectedOption.name}
+                          </span>
+                          <span className="text-blue-600">
+                            {selectedOption.days}
+                          </span>
+                        </div>
                       </div>
                     )}
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {inputCurrencySymbol}
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        value={field.value ?? ''}
-                        onWheel={handleNumberInputWheel}
-                        className="h-8 pl-6 bg-blue-50"
-                        readOnly
-                        placeholder="100.00"
-                      />
-                    </div>
-                  </FormControl>
-                </FormItem>
-              )}
+                    {!selectedOption && shippingOptions.length > 0 && (
+                      <div className="mt-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                        → Select shipping option in sidebar to populate this field
+                      </div>
+                    )}
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}
@@ -549,39 +535,6 @@ export const QuoteDetailForm = ({
         )}
       />
 
-      {/* Shipping Selection Modal */}
-      <ShippingSelectionModal
-        isOpen={showShippingModal}
-        onClose={() => setShowShippingModal(false)}
-        quote={
-          {
-            id: form.getValues('id'),
-            items:
-              form.getValues('items')?.map((item, index) => ({
-                id: item.id || `item-${index}`,
-                name: item.product_name || '',
-                price_usd: Number(item.item_price) || 0,
-                weight_kg: Number(item.item_weight) || 0,
-                quantity: Number(item.quantity) || 1,
-                url: item.product_url || '',
-                image: item.image_url || '',
-                options: item.options || '',
-              })) || [],
-            origin_country: form.getValues('origin_country') || '',
-            destination_country: form.getValues('destination_country') || '',
-            final_total_usd: 0,
-            operational_data: {
-              shipping: {
-                selected_option: form.getValues('selected_shipping_option'),
-              },
-            },
-          } as any
-        }
-        shippingOptions={shippingOptions}
-        recommendations={recommendations}
-        selectedOptionId={form.getValues('selected_shipping_option')}
-        onSelectOption={handleShippingSelection}
-      />
     </div>
   );
 };
