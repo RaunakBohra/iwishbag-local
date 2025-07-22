@@ -130,6 +130,7 @@ const SystemSettings = React.lazy(() =>
 const TestEmail = React.lazy(() => import('@/pages/TestEmail'));
 const PaymentManagementPageNew = React.lazy(() => import('@/pages/admin/PaymentManagementPage'));
 const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
+const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -168,6 +169,7 @@ const router = createBrowserRouter([
             ),
           },
           { path: 'customers', element: <EnhancedCustomerManagementPage /> },
+          { path: 'customers/:customerId', element: <CustomerProfile /> },
           { path: 'support-tickets', element: <SupportTicketsPage /> },
           { path: 'auto-assignment', element: <AutoAssignmentPage /> },
           { path: 'templates', element: <QuoteTemplatesPage /> },

@@ -41,6 +41,9 @@ import { useAdminRole } from '@/hooks/useAdminRole';
 import { ReplyTemplatesManager } from '@/components/support/ReplyTemplatesManager';
 import {
   TICKET_STATUS_LABELS,
+  ADMIN_TICKET_STATUS_LABELS,
+  CUSTOMER_TICKET_STATUS_LABELS,
+  TICKET_STATUS_DESCRIPTIONS,
   TICKET_STATUS_COLORS,
   TICKET_PRIORITY_LABELS,
   TICKET_PRIORITY_COLORS,
@@ -67,6 +70,8 @@ const StatusIcon = ({ status }: { status: string }) => {
       return <Clock className={iconClass} />;
     case 'in_progress':
       return <AlertTriangle className={iconClass} />;
+    case 'pending':
+      return <Clock className={iconClass} />;
     case 'resolved':
     case 'closed':
       return <CheckCircle className={iconClass} />;
@@ -109,6 +114,16 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
 
   // Check if current user can view this ticket
   const canView = ticket && (ticket.user_id === user?.id || isAdmin);
+
+  // Helper function to get appropriate status label
+  const getStatusLabel = (status: TicketStatus) => {
+    return isAdmin ? ADMIN_TICKET_STATUS_LABELS[status] : CUSTOMER_TICKET_STATUS_LABELS[status];
+  };
+
+  // Helper function to get status description
+  const getStatusDescription = (status: TicketStatus) => {
+    return isAdmin ? TICKET_STATUS_DESCRIPTIONS[status].admin : TICKET_STATUS_DESCRIPTIONS[status].customer;
+  };
 
   const handleStatusChange = (status: TicketStatus) => {
     updateStatusMutation.mutate({ ticketId, status });
@@ -239,12 +254,12 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               <SelectValue>
                 <div className={`flex items-center gap-2 ${TICKET_STATUS_COLORS[ticket.status]}`}>
                   <StatusIcon status={ticket.status} />
-                  {TICKET_STATUS_LABELS[ticket.status]}
+                  {getStatusLabel(ticket.status)}
                 </div>
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(TICKET_STATUS_LABELS).map(([status, label]) => (
+              {Object.entries(isAdmin ? ADMIN_TICKET_STATUS_LABELS : CUSTOMER_TICKET_STATUS_LABELS).map(([status, label]) => (
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
                     <StatusIcon status={status} />
@@ -411,8 +426,11 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                   className={`mt-1 inline-flex items-center gap-2 px-2 py-1 rounded-md text-sm ${TICKET_STATUS_COLORS[ticket.status]}`}
                 >
                   <StatusIcon status={ticket.status} />
-                  {TICKET_STATUS_LABELS[ticket.status]}
+                  {getStatusLabel(ticket.status)}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {getStatusDescription(ticket.status)}
+                </p>
               </div>
 
               <Separator />
@@ -509,30 +527,121 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
           {ticket.quote && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Related Order
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Related Order
+                  </div>
+                  {isAdmin && (
+                    <a
+                      href={`/admin/quotes/${ticket.quote.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                    >
+                      View Full Details
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Tracking ID</label>
-                  <p className="font-mono text-sm">
-                    {ticket.quote.iwish_tracking_id || `Quote ${ticket.quote.id.slice(0, 8)}...`}
-                  </p>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Tracking ID</label>
+                    <p className="font-mono text-sm font-medium">
+                      {ticket.quote.iwish_tracking_id || `Quote ${ticket.quote.id.slice(0, 8)}...`}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Status</label>
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant={ticket.quote.status === 'delivered' ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {ticket.quote.status}
+                      </Badge>
+                      {ticket.quote.tracking_status && (
+                        <Badge variant="outline" className="text-xs">
+                          {ticket.quote.tracking_status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Destination</label>
+                    <p className="text-sm">{ticket.quote.destination_country}</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Total Amount</label>
+                    <p className="text-sm font-semibold">
+                      ${ticket.quote.final_total_usd?.toFixed(2) || '0.00'} USD
+                    </p>
+                  </div>
+
+                  {ticket.quote.estimated_delivery_date && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Est. Delivery</label>
+                      <p className="text-sm">
+                        {new Date(ticket.quote.estimated_delivery_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+
+                  {ticket.quote.display_id && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Display ID</label>
+                      <p className="text-sm font-mono">{ticket.quote.display_id}</p>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Destination</label>
-                  <p className="text-sm">{ticket.quote.destination_country}</p>
-                </div>
+                {/* Customer Information */}
+                {ticket.quote.customer_data?.info && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <label className="text-sm font-medium text-gray-600">Customer Info</label>
+                    <div className="text-sm text-gray-700 mt-1">
+                      {ticket.quote.customer_data.info.name && (
+                        <div>Name: {ticket.quote.customer_data.info.name}</div>
+                      )}
+                      {ticket.quote.customer_data.info.email && (
+                        <div>Email: {ticket.quote.customer_data.info.email}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Total Amount</label>
-                  <p className="text-sm font-semibold">
-                    ${ticket.quote.final_total_usd?.toFixed(2) || '0.00'} USD
-                  </p>
-                </div>
+                {/* Items Preview */}
+                {ticket.quote.items && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <label className="text-sm font-medium text-gray-600">Items</label>
+                    <div className="text-sm text-gray-700 mt-1">
+                      {Array.isArray(ticket.quote.items) ? (
+                        <div className="space-y-1">
+                          {ticket.quote.items.slice(0, 3).map((item: any, index: number) => (
+                            <div key={index} className="flex justify-between">
+                              <span>{item?.name || 'Unnamed item'}</span>
+                              {item?.price && <span>${item.price}</span>}
+                            </div>
+                          ))}
+                          {ticket.quote.items.length > 3 && (
+                            <div className="text-xs text-gray-500">
+                              +{ticket.quote.items.length - 3} more items
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span>Product details available</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

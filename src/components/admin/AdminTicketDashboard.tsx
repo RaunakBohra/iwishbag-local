@@ -34,6 +34,7 @@ import {
 } from '@/hooks/useTickets';
 import {
   TICKET_STATUS_LABELS,
+  ADMIN_TICKET_STATUS_LABELS,
   TICKET_STATUS_COLORS,
   TICKET_PRIORITY_LABELS,
   TICKET_PRIORITY_COLORS,
@@ -56,6 +57,8 @@ const StatusIcon = ({ status }: { status: string }) => {
       return <Clock className={iconClass} />;
     case 'in_progress':
       return <AlertTriangle className={iconClass} />;
+    case 'pending':
+      return <Clock className={iconClass} />;
     case 'resolved':
     case 'closed':
       return <CheckCircle className={iconClass} />;
@@ -126,12 +129,12 @@ const TicketRow = ({
             <SelectValue>
               <div className={`flex items-center gap-2 ${TICKET_STATUS_COLORS[ticket.status]}`}>
                 <StatusIcon status={ticket.status} />
-                {TICKET_STATUS_LABELS[ticket.status]}
+                {ADMIN_TICKET_STATUS_LABELS[ticket.status]}
               </div>
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(TICKET_STATUS_LABELS).map(([status, label]) => (
+            {Object.entries(ADMIN_TICKET_STATUS_LABELS).map(([status, label]) => (
               <SelectItem key={status} value={status}>
                 <div className="flex items-center gap-2">
                   <StatusIcon status={status} />
@@ -186,14 +189,40 @@ const TicketRow = ({
         </div>
       </TableCell>
 
-      <TableCell>
-        {ticket.quote && (
-          <div className="text-sm">
-            <div className="font-medium text-blue-600">
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        {ticket.quote ? (
+          <div className="text-sm space-y-1">
+            <a
+              href={`/admin/quotes/${ticket.quote.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               {ticket.quote.iwish_tracking_id || `Quote ${ticket.quote.id.slice(0, 8)}...`}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500">{ticket.quote.destination_country}</span>
+              {ticket.quote.status && (
+                <Badge 
+                  variant={ticket.quote.status === 'delivered' ? 'default' : 'secondary'}
+                  className="text-xs"
+                >
+                  {ticket.quote.status}
+                </Badge>
+              )}
             </div>
-            <div className="text-gray-500">{ticket.quote.destination_country}</div>
+            {ticket.quote.final_total_usd && (
+              <div className="text-xs text-gray-600">
+                ${ticket.quote.final_total_usd.toFixed(2)} USD
+              </div>
+            )}
           </div>
+        ) : (
+          <span className="text-gray-400 text-sm">No order</span>
         )}
       </TableCell>
     </TableRow>

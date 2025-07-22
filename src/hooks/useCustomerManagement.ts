@@ -4,7 +4,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface CustomerProfile {
   id: string;
+  email: string | null;
   full_name: string | null;
+  avatar_url: string | null;
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
@@ -33,11 +35,11 @@ export const useCustomerManagement = () => {
       try {
         console.log('[CustomerManagement] Using direct database query...');
 
-        // Direct database query to get profiles with addresses
+        // Direct database query to get profiles with addresses, avatar, and email
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select(
-            'id, full_name, cod_enabled, internal_notes, created_at, user_addresses(id, address_line1, address_line2, city, country, postal_code, is_default)',
+            'id, email, full_name, avatar_url, cod_enabled, internal_notes, created_at, user_addresses(id, address_line1, address_line2, city, country, postal_code, is_default)',
           );
 
         if (profilesError) {
@@ -47,12 +49,12 @@ export const useCustomerManagement = () => {
 
         console.log('[CustomerManagement] Raw profiles data:', profiles);
 
-        // Use mock emails for now to test the full_name field
+        // Use actual email from profiles table
         const customersWithEmails =
           profiles?.map((profile) => {
-            const email = `user-${profile.id}@example.com`;
+            const email = profile.email || `user-${profile.id}@example.com`;
             console.log(
-              `[CustomerManagement] Profile ${profile.id}: full_name="${profile.full_name}", email="${email}"`,
+              `[CustomerManagement] Profile ${profile.id}: full_name="${profile.full_name}", email="${email}", avatar="${profile.avatar_url}"`,
             );
 
             return {

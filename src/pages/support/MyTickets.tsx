@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Ticket, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Ticket, Clock, CheckCircle, AlertTriangle, Package } from 'lucide-react';
 import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NewTicketForm } from '@/components/support/NewTicketForm';
 import { businessHoursService } from '@/config/businessHours';
 import {
-  TICKET_STATUS_LABELS,
+  CUSTOMER_TICKET_STATUS_LABELS,
   TICKET_STATUS_COLORS,
   TICKET_PRIORITY_LABELS,
   TICKET_PRIORITY_COLORS,
@@ -26,6 +26,8 @@ const StatusIcon = ({ status }: { status: string }) => {
       return <Clock className="h-4 w-4" />;
     case 'in_progress':
       return <AlertTriangle className="h-4 w-4" />;
+    case 'pending':
+      return <Clock className="h-4 w-4" />;
     case 'resolved':
     case 'closed':
       return <CheckCircle className="h-4 w-4" />;
@@ -59,7 +61,7 @@ const TicketCard = ({
               className={`${TICKET_STATUS_COLORS[ticket.status]} flex items-center gap-1`}
             >
               <StatusIcon status={ticket.status} />
-              {TICKET_STATUS_LABELS[ticket.status]}
+              {CUSTOMER_TICKET_STATUS_LABELS[ticket.status]}
             </Badge>
           </div>
         </div>
@@ -69,11 +71,28 @@ const TicketCard = ({
             <span className="font-medium">{TICKET_CATEGORY_LABELS[ticket.category]}</span>
 
             {ticket.quote && (
-              <span className="text-blue-600">
-                {ticket.quote.iwish_tracking_id
-                  ? ticket.quote.iwish_tracking_id
-                  : `Order ${ticket.quote.id.slice(0, 8)}...`}
-              </span>
+              <div className="flex items-center gap-2">
+                <Package className="h-3 w-3 text-blue-600" />
+                <span className="text-blue-600 font-medium">
+                  {ticket.quote.iwish_tracking_id
+                    ? ticket.quote.iwish_tracking_id
+                    : `Order ${ticket.quote.id.slice(0, 8)}...`}
+                </span>
+                <span className="text-xs text-gray-400">to {ticket.quote.destination_country}</span>
+                {ticket.quote.status && (
+                  <Badge 
+                    variant={ticket.quote.status === 'delivered' ? 'default' : 'outline'}
+                    className="text-xs"
+                  >
+                    {ticket.quote.status}
+                  </Badge>
+                )}
+                {ticket.quote.final_total_usd && (
+                  <span className="text-xs text-gray-500 font-medium">
+                    ${ticket.quote.final_total_usd.toFixed(2)}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

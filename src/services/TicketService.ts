@@ -63,22 +63,38 @@ class TicketService {
       ...baseTicket,
       user_profile: null, // Would need to fetch separately if needed
       assigned_to_profile: null, // Would need to fetch separately if needed
-      quote: null, // Would need to fetch separately if needed
+      quote: supportRecord.quote ? {
+        id: supportRecord.quote.id,
+        display_id: supportRecord.quote.display_id,
+        destination_country: supportRecord.quote.destination_country,
+        status: supportRecord.quote.status,
+        final_total_usd: supportRecord.quote.final_total_usd,
+        iwish_tracking_id: supportRecord.quote.iwish_tracking_id,
+        tracking_status: supportRecord.quote.tracking_status,
+        estimated_delivery_date: supportRecord.quote.estimated_delivery_date,
+        items: supportRecord.quote.items,
+        customer_data: supportRecord.quote.customer_data,
+      } : null,
     };
   }
 
   /**
    * Auto-close resolved tickets that have been inactive for 7 days
+   * and pending tickets that have been waiting for customer response for 5 days
    */
   async autoCloseResolvedTickets(): Promise<{ closedCount: number; message: string }> {
     try {
-      console.log('🤖 Starting auto-close process for resolved tickets...');
+      console.log('🤖 Starting auto-close process for inactive tickets...');
       
       // Find resolved tickets older than 7 days with no recent activity
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
-      // Use unified support engine to get resolved tickets
+      // Find pending tickets older than 5 days (customer hasn't responded)
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+      
+      // Get resolved tickets for auto-closure
       const resolvedTickets = await unifiedSupportEngine.getTickets({
         status: ['resolved'],
         date_range: {
@@ -87,26 +103,54 @@ class TicketService {
         }
       });
 
-      if (!resolvedTickets || resolvedTickets.length === 0) {
-        console.log('✅ No resolved tickets found for auto-closure');
-        return { closedCount: 0, message: 'No resolved tickets found for auto-closure' };
-      }
+      // Get pending tickets for auto-closure
+      const pendingTickets = await unifiedSupportEngine.getTickets({
+        status: ['pending'],
+        date_range: {
+          start: '1970-01-01T00:00:00Z', // Beginning of time
+          end: fiveDaysAgo.toISOString()
+        }
+      });
 
-      // Update tickets to closed status using unified support engine
       let closedCount = 0;
-      for (const ticket of resolvedTickets) {
-        const success = await unifiedSupportEngine.updateTicketStatus(
-          ticket.id, 
-          'closed', 
-          'Auto-closed after 7 days of inactivity'
-        );
-        if (success) closedCount++;
+      const messages: string[] = [];
+
+      // Auto-close resolved tickets (7 days)
+      if (resolvedTickets && resolvedTickets.length > 0) {
+        for (const ticket of resolvedTickets) {
+          const success = await unifiedSupportEngine.updateTicketStatus(
+            ticket.id, 
+            'closed', 
+            'Auto-closed after 7 days of inactivity'
+          );
+          if (success) closedCount++;
+        }
+        messages.push(`${resolvedTickets.length} resolved tickets auto-closed after 7 days`);
       }
 
-      console.log(`✅ Auto-closed ${closedCount} resolved tickets`);
+      // Auto-close pending tickets (5 days)
+      if (pendingTickets && pendingTickets.length > 0) {
+        for (const ticket of pendingTickets) {
+          const success = await unifiedSupportEngine.updateTicketStatus(
+            ticket.id, 
+            'closed', 
+            'Auto-closed after 5 days waiting for customer response'
+          );
+          if (success) closedCount++;
+        }
+        messages.push(`${pendingTickets.length} pending tickets auto-closed after 5 days`);
+      }
+
+      if (closedCount === 0) {
+        console.log('✅ No tickets found for auto-closure');
+        return { closedCount: 0, message: 'No tickets found for auto-closure' };
+      }
+
+      const finalMessage = messages.join('; ');
+      console.log(`✅ Auto-closed ${closedCount} tickets: ${finalMessage}`);
       return { 
         closedCount, 
-        message: `Successfully auto-closed ${closedCount} resolved tickets` 
+        message: `Successfully auto-closed ${closedCount} tickets: ${finalMessage}` 
       };
 
     } catch (error) {

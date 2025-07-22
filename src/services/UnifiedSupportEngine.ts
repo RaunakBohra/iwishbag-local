@@ -15,7 +15,7 @@ import * as Sentry from '@sentry/react';
 export type SupportSystemType = 'ticket' | 'rule' | 'template' | 'preference';
 export type InteractionType = 'reply' | 'status_change' | 'assignment' | 'escalation' | 'note';
 
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketStatus = 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TicketCategory = 'general' | 'payment' | 'shipping' | 'refund' | 'product' | 'customs';
 
@@ -145,6 +145,15 @@ class UnifiedSupportEngine {
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+  // Status transition validation rules
+  private readonly STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
+    open: ['in_progress', 'pending', 'resolved'],
+    in_progress: ['pending', 'resolved', 'open'],
+    pending: ['in_progress', 'open', 'closed'],
+    resolved: ['closed', 'open'], // Allow reopening if needed
+    closed: [] // Terminal state
+  };
+
   private constructor() {
     console.log('🎫 UnifiedSupportEngine initialized');
   }
@@ -154,6 +163,78 @@ class UnifiedSupportEngine {
       UnifiedSupportEngine.instance = new UnifiedSupportEngine();
     }
     return UnifiedSupportEngine.instance;
+  }
+
+  // ============================================================================
+  // Status Transition Validation
+  // ============================================================================
+
+  /**
+   * Validate if a status transition is allowed
+   */
+  private isValidTransition(currentStatus: TicketStatus, newStatus: TicketStatus): boolean {
+    const allowedTransitions = this.STATUS_TRANSITIONS[currentStatus];
+    return allowedTransitions.includes(newStatus);
+  }
+
+  /**
+   * Get allowed transitions for a given status
+   */
+  getAllowedTransitions(currentStatus: TicketStatus): TicketStatus[] {
+    return this.STATUS_TRANSITIONS[currentStatus] || [];
+  }
+
+  /**
+   * Get smart status suggestions based on current status and context
+   */
+  getStatusSuggestions(currentStatus: TicketStatus, isAdmin: boolean = true): {
+    suggested: TicketStatus | null;
+    reason: string;
+    all: TicketStatus[];
+  } {
+    const allowedTransitions = this.getAllowedTransitions(currentStatus);
+    
+    // Smart suggestions based on current status and user role
+    let suggested: TicketStatus | null = null;
+    let reason = '';
+
+    if (!isAdmin) {
+      // Customers can't change status - they rely on automatic transitions
+      return {
+        suggested: null,
+        reason: 'Status changes automatically based on ticket activity',
+        all: []
+      };
+    }
+
+    switch (currentStatus) {
+      case 'open':
+        suggested = 'in_progress';
+        reason = 'Start working on this ticket';
+        break;
+      case 'in_progress':
+        suggested = 'pending';
+        reason = 'Need more information from customer?';
+        break;
+      case 'pending':
+        suggested = 'in_progress';
+        reason = 'Continue working after customer response';
+        break;
+      case 'resolved':
+        suggested = 'closed';
+        reason = 'Close ticket if customer is satisfied';
+        break;
+      case 'closed':
+        suggested = null;
+        reason = 'Ticket is closed';
+        break;
+    }
+
+    return {
+      suggested,
+      reason,
+      all: allowedTransitions
+    };
   }
 
   // ============================================================================
@@ -196,11 +277,6 @@ class UnifiedSupportEngine {
    * Create a new support ticket
    */
   async createTicket(ticketData: CreateTicketData): Promise<SupportRecord | null> {
-    const transaction = Sentry.startTransaction({
-      name: 'UnifiedSupportEngine.createTicket',
-      op: 'support',
-    });
-
     try {
       console.log('🎫 Creating new support ticket:', ticketData);
 
@@ -250,16 +326,12 @@ class UnifiedSupportEngine {
         });
       }
 
-      transaction.setStatus('ok');
       return ticket;
 
     } catch (error) {
       console.error('❌ Exception in createTicket:', error);
       Sentry.captureException(error);
-      transaction.setStatus('internal_error');
       return null;
-    } finally {
-      transaction.finish();
     }
   }
 
@@ -276,7 +348,21 @@ class UnifiedSupportEngine {
 
       const { data, error } = await supabase
         .from('support_system')
-        .select('*')
+        .select(`
+          *,
+          quote:quotes(
+            id,
+            display_id,
+            destination_country,
+            status,
+            final_total_usd,
+            iwish_tracking_id,
+            tracking_status,
+            estimated_delivery_date,
+            items,
+            customer_data
+          )
+        `)
         .eq('id', ticketId)
         .eq('system_type', 'ticket')
         .single();
@@ -317,7 +403,21 @@ class UnifiedSupportEngine {
 
       let query = supabase
         .from('support_system')
-        .select('*')
+        .select(`
+          *,
+          quote:quotes(
+            id,
+            display_id,
+            destination_country,
+            status,
+            final_total_usd,
+            iwish_tracking_id,
+            tracking_status,
+            estimated_delivery_date,
+            items,
+            customer_data
+          )
+        `)
         .eq('system_type', 'ticket')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -391,11 +491,6 @@ class UnifiedSupportEngine {
     newStatus: TicketStatus,
     reason?: string
   ): Promise<boolean> {
-    const transaction = Sentry.startTransaction({
-      name: 'UnifiedSupportEngine.updateTicketStatus',
-      op: 'support',
-    });
-
     try {
       console.log('🔄 Updating ticket status:', ticketId, 'to:', newStatus);
 
@@ -408,6 +503,23 @@ class UnifiedSupportEngine {
         throw new Error('Authentication required');
       }
 
+      // Get current ticket to validate transition
+      const currentTicket = await this.getTicketById(ticketId);
+      if (!currentTicket || !currentTicket.ticket_data) {
+        throw new Error('Ticket not found');
+      }
+
+      const currentStatus = currentTicket.ticket_data.status as TicketStatus;
+      
+      // Validate status transition
+      if (!this.isValidTransition(currentStatus, newStatus)) {
+        const allowedTransitions = this.getAllowedTransitions(currentStatus);
+        console.warn(`❌ Invalid status transition: ${currentStatus} → ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`);
+        throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`);
+      }
+
+      console.log(`✅ Valid status transition: ${currentStatus} → ${newStatus}`);
+
       // Use the database function for status update
       const { data, error } = await supabase.rpc('update_support_ticket_status', {
         p_support_id: ticketId,
@@ -418,7 +530,6 @@ class UnifiedSupportEngine {
 
       if (error) {
         console.error('❌ Error updating ticket status:', error);
-        transaction.setStatus('internal_error');
         return false;
       }
 
@@ -440,16 +551,12 @@ class UnifiedSupportEngine {
         });
       }
 
-      transaction.setStatus('ok');
       return true;
 
     } catch (error) {
       console.error('❌ Exception in updateTicketStatus:', error);
       Sentry.captureException(error);
-      transaction.setStatus('internal_error');
       return false;
-    } finally {
-      transaction.finish();
     }
   }
 
@@ -506,6 +613,23 @@ class UnifiedSupportEngine {
       // Handle first response SLA
       if (interactionType === 'reply' && !isInternal) {
         await this.handleFirstResponse(ticketId);
+      }
+
+      // Auto-transition based on who is replying
+      if (interactionType === 'reply' && !isInternal) {
+        // Check if it's a customer or agent reply
+        const ticket = await this.getTicketById(ticketId);
+        if (ticket) {
+          const isCustomerReply = ticket.user_id === user.id;
+          
+          if (isCustomerReply) {
+            // Customer replied - handle pending tickets
+            await this.handleCustomerReply(ticketId);
+          } else {
+            // Agent replied - auto-transition to in_progress
+            await this.handleAgentReply(ticketId);
+          }
+        }
       }
 
       // Send notifications (async)
@@ -704,6 +828,64 @@ class UnifiedSupportEngine {
     }
   }
 
+  /**
+   * Handle customer reply - auto-transition pending tickets to open
+   */
+  private async handleCustomerReply(ticketId: string): Promise<void> {
+    try {
+      const ticket = await this.getTicketById(ticketId);
+      if (!ticket || !ticket.ticket_data) return;
+
+      const currentStatus = ticket.ticket_data.status as TicketStatus;
+
+      // If ticket is pending, transition to open when customer replies
+      if (currentStatus === 'pending') {
+        console.log('🔄 Customer replied to pending ticket, transitioning to open:', ticketId);
+        
+        await this.updateTicketStatus(
+          ticketId, 
+          'open', 
+          'Automatically reopened - customer provided response'
+        );
+
+        console.log('✅ Ticket automatically transitioned from pending to open');
+      }
+
+    } catch (error) {
+      console.error('❌ Error handling customer reply:', error);
+      // Don't throw - this is a nice-to-have feature, shouldn't break the reply process
+    }
+  }
+
+  /**
+   * Handle agent reply - auto-transition to in_progress when agents respond
+   */
+  private async handleAgentReply(ticketId: string): Promise<void> {
+    try {
+      const ticket = await this.getTicketById(ticketId);
+      if (!ticket || !ticket.ticket_data) return;
+
+      const currentStatus = ticket.ticket_data.status as TicketStatus;
+
+      // Auto-transition to in_progress when agent replies to open or pending tickets
+      if (currentStatus === 'open' || currentStatus === 'pending') {
+        console.log(`🔄 Agent replied to ${currentStatus} ticket, transitioning to in_progress:`, ticketId);
+        
+        await this.updateTicketStatus(
+          ticketId, 
+          'in_progress', 
+          `Automatically moved to in progress - agent provided response`
+        );
+
+        console.log('✅ Ticket automatically transitioned to in_progress');
+      }
+
+    } catch (error) {
+      console.error('❌ Error handling agent reply:', error);
+      // Don't throw - this is a nice-to-have feature, shouldn't break the reply process
+    }
+  }
+
   // ============================================================================
   // Auto-Assignment
   // ============================================================================
@@ -863,14 +1045,13 @@ class UnifiedSupportEngine {
       const userPrefs = await this.getUserNotificationPreferences(ticket.user_id);
       
       if (userPrefs.email_notifications) {
-        // Send email notification
-        await notificationService.sendEmail({
-          to: ticket.user_id,
-          template: `ticket_${event}`,
-          data: {
-            ticket,
-            ...eventData
-          }
+        // For now, just log the notification intent
+        // TODO: Implement full ticket email notifications
+        console.log('📧 Would send ticket email notification:', {
+          event,
+          ticketId: ticket.id,
+          userId: ticket.user_id,
+          template: `ticket_${event}`
         });
       }
 

@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
 import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
+import { addBusinessDays, format } from 'date-fns';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -537,7 +538,38 @@ export class SmartCalculationEngine {
         fullCalculation: `${route.base_shipping_cost} (route base) + tier cost + ${deliveryPremium} (${deliveryOption.name} premium) = ${optionCost} (origin currency)`,
       });
 
-      const deliveryDays = `${deliveryOption.min_days}-${deliveryOption.max_days}`;
+      // ✅ FIX: Calculate total delivery days including processing + customs + shipping
+      const processingDays = route.processing_days || 2; // Default 2 days
+      const customsClearanceDays = route.customs_clearance_days || 3; // Default 3 days
+      const localDeliveryDays = 1; // Standard 1 day local delivery
+      
+      const totalMinDays = processingDays + deliveryOption.min_days + customsClearanceDays + localDeliveryDays;
+      const totalMaxDays = processingDays + deliveryOption.max_days + customsClearanceDays + localDeliveryDays;
+      
+      // Calculate actual delivery dates (business days)
+      const currentDate = new Date();
+      const estimatedDeliveryMin = addBusinessDays(currentDate, totalMinDays);
+      const estimatedDeliveryMax = addBusinessDays(currentDate, totalMaxDays);
+      
+      const deliveryDays = totalMinDays === totalMaxDays 
+        ? `${totalMinDays} days (by ${format(estimatedDeliveryMin, 'MMM do')})`
+        : `${totalMinDays}-${totalMaxDays} days (${format(estimatedDeliveryMin, 'MMM do')}-${format(estimatedDeliveryMax, 'MMM do')})`;
+
+      console.log('📅 [DELIVERY DAYS DEBUG] Complete delivery timeline calculation:', {
+        deliveryOptionName: deliveryOption.name,
+        breakdown: {
+          processingDays: `${processingDays} days (order processing)`,
+          shippingDays: `${deliveryOption.min_days}-${deliveryOption.max_days} days (${deliveryOption.carrier} transit)`,
+          customsClearance: `${customsClearanceDays} days (customs processing)`,
+          localDelivery: `${localDeliveryDays} day (final delivery)`,
+        },
+        totalDays: deliveryDays,
+        estimatedDates: {
+          minDate: format(estimatedDeliveryMin, 'EEEE, MMMM do, yyyy'),
+          maxDate: format(estimatedDeliveryMax, 'EEEE, MMMM do, yyyy'),
+        },
+        formula: `${processingDays} + ${deliveryOption.min_days}-${deliveryOption.max_days} + ${customsClearanceDays} + ${localDeliveryDays} = ${totalMinDays}-${totalMaxDays} days`
+      });
 
       options.push({
         id: `${route.id}_delivery_${deliveryOption.id}`,
@@ -586,13 +618,45 @@ export class SmartCalculationEngine {
 
     const baseCost = countrySettings.min_shipping + params.weight * countrySettings.additional_weight;
 
+    // ✅ FIX: Country fallback should also include processing + customs days
+    const processingDays = 2; // Default processing time
+    const customsClearanceDays = 3; // Default customs clearance time
+    const shippingDays = 7; // Standard shipping estimate
+    const localDeliveryDays = 1; // Local delivery
+    
+    const totalDays = processingDays + shippingDays + customsClearanceDays + localDeliveryDays;
+    const totalMaxDays = processingDays + 14 + customsClearanceDays + localDeliveryDays; // Max case
+    
+    // Calculate actual delivery dates
+    const currentDate = new Date();
+    const estimatedDeliveryMin = addBusinessDays(currentDate, totalDays);
+    const estimatedDeliveryMax = addBusinessDays(currentDate, totalMaxDays);
+    
+    const deliveryDays = `${totalDays}-${totalMaxDays} days (${format(estimatedDeliveryMin, 'MMM do')}-${format(estimatedDeliveryMax, 'MMM do')})`;
+
+    console.log('🏳️ [COUNTRY FALLBACK DEBUG] Standard delivery calculation:', {
+      fallbackReason: 'No specific shipping route found',
+      destinationCountry: params.destinationCountry,
+      breakdown: {
+        processingDays: `${processingDays} days (order processing)`,
+        shippingDays: `${shippingDays}-14 days (standard shipping)`,
+        customsClearance: `${customsClearanceDays} days (customs processing)`,
+        localDelivery: `${localDeliveryDays} day (final delivery)`,
+      },
+      totalDays: deliveryDays,
+      estimatedDates: {
+        minDate: format(estimatedDeliveryMin, 'EEEE, MMMM do, yyyy'),
+        maxDate: format(estimatedDeliveryMax, 'EEEE, MMMM do, yyyy'),
+      },
+    });
+
     return [
       {
         id: `country_${params.destinationCountry.toLowerCase()}_standard`,
         carrier: 'Country Standard',
         name: 'Standard Delivery',
         cost_usd: Math.round(baseCost * 100) / 100,
-        days: '7-14',
+        days: deliveryDays,
         confidence: 0.8,
         restrictions: ['country_fallback'],
         tracking: true,

@@ -1,6 +1,6 @@
 // TypeScript types for the support ticket system
 
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketStatus = 'open' | 'in_progress' | 'pending' | 'resolved' | 'closed';
 
 export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
 
@@ -53,9 +53,15 @@ export interface TicketWithDetails extends SupportTicket {
   };
   quote?: {
     id: string;
-    final_total_usd: number;
+    display_id?: string;
     destination_country: string;
+    status: string;
+    final_total_usd?: number;
     iwish_tracking_id?: string;
+    tracking_status?: string;
+    estimated_delivery_date?: string;
+    items?: any;
+    customer_data?: any;
   };
   reply_count?: number;
   latest_reply_at?: string;
@@ -141,8 +147,54 @@ export interface TicketSortOptions {
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
   open: 'Open',
   in_progress: 'In Progress',
+  pending: 'Waiting for Response',
   resolved: 'Resolved',
   closed: 'Closed',
+};
+
+// Admin-specific labels (more detailed for internal use)
+export const ADMIN_TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  pending: 'Awaiting Customer Reply',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+// Customer-specific labels (user-friendly language)
+export const CUSTOMER_TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  open: 'Open',
+  in_progress: 'Being Worked On',
+  pending: 'Waiting for Your Response',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+// Status descriptions for tooltips and help text
+export const TICKET_STATUS_DESCRIPTIONS: Record<TicketStatus, {
+  customer: string;
+  admin: string;
+}> = {
+  open: {
+    customer: 'Your ticket has been received and will be reviewed by our support team.',
+    admin: 'New ticket that needs attention from support team.'
+  },
+  in_progress: {
+    customer: 'Our support team is actively working on your issue.',
+    admin: 'Ticket is currently being worked on by a support agent.'
+  },
+  pending: {
+    customer: 'We need more information from you. Please check your messages and reply to continue.',
+    admin: 'Waiting for customer to provide additional information or response.'
+  },
+  resolved: {
+    customer: 'Your issue has been resolved. The ticket will automatically close in a few days if no further action is needed.',
+    admin: 'Issue has been resolved. Will auto-close after 7 days unless customer responds.'
+  },
+  closed: {
+    customer: 'This ticket has been closed. Create a new ticket if you need further assistance.',
+    admin: 'Ticket is closed and archived.'
+  }
 };
 
 export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
@@ -174,6 +226,7 @@ export const CUSTOMER_HELP_TYPE_LABELS: Record<CustomerHelpType, string> = {
 export const TICKET_STATUS_COLORS: Record<TicketStatus, string> = {
   open: 'bg-blue-100 text-blue-800',
   in_progress: 'bg-yellow-100 text-yellow-800',
+  pending: 'bg-orange-100 text-orange-800',
   resolved: 'bg-green-100 text-green-800',
   closed: 'bg-gray-100 text-gray-800',
 };

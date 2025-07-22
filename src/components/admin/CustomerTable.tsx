@@ -42,6 +42,7 @@ export type Customer = {
   id: string;
   email: string;
   full_name: string | null;
+  avatar_url: string | null;
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
