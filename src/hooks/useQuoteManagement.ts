@@ -69,42 +69,22 @@ export const useQuoteManagement = ({
     pageSize
   });
 
+  // INVESTIGATION: Test if query key arrays are causing the issue
   const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
     queryKey: [
-      'admin-quotes',
-      searchTerm,
-      filters.statuses,
-      filters.countries,
-      page,
-      pageSize,
+      'admin-quotes-fixed',
+      searchTerm || 'empty',
+      filters.statuses?.join(',') || 'no-status',
+      filters.countries?.join(',') || 'no-country', 
+      `page-${page}`,
+      `size-${pageSize}`,
     ],
     queryFn: async () => {
-      console.log('🚀 [useQuoteManagement] Main query function STARTED');
+      console.log('🚀 [useQuoteManagement] Main query function STARTED - NO SENTRY');
       
-      // Enhanced Sentry monitoring for search query operations
-      const searchTransaction = Sentry.startTransaction({
-        name: 'Advanced Search Query Execution',
-        op: 'db.query.search',
-      });
-
-      return Sentry.withScope(async (scope) => {
-        scope.setTag('component', 'useQuoteManagement');
-        scope.setTag('operation', 'search_quotes');
-        scope.setContext('search_parameters', {
-          searchTerm: searchTerm,
-          statusFilters: filters.statuses,
-          countryFilters: filters.countries,
-          page,
-          pageSize,
-          hasSearchTerm: !!searchTerm?.trim(),
-          hasStatusFilters: filters.statuses.length > 0,
-          hasCountryFilters: filters.countries.length > 0,
-        });
-        scope.setLevel('info');
-
-        try {
-          console.log('🚀 [useQuoteManagement] Main query function - inside try block');
-          const queryStartTime = Date.now();
+      try {
+        console.log('🚀 [useQuoteManagement] Main query function - inside try block');
+        const queryStartTime = Date.now();
           
           // Debug authentication context
           console.log('🔍 useQuoteManagement Authentication Debug:', {
@@ -129,167 +109,54 @@ export const useQuoteManagement = ({
             throw new Error('Admin role required for quote management');
           }
           
-          const result = await trackAdminQuery('quotes_list', async () => {
-            // TEMPORARY FIX: Use same simple query as test until we identify the issue
-            let query = supabase
-              .from('quotes')
-              .select('id, display_id, status, final_total_usd, created_at, updated_at, destination_country, origin_country, user_id, expires_at, in_cart, iwish_tracking_id, tracking_status, estimated_delivery_date, email_verified, quote_source, is_anonymous, customer_data, items')
-              .order('created_at', { ascending: false })
-              .range(page * pageSize, (page + 1) * pageSize - 1);
-              
-            // Log the exact query being built
-            console.log('🔍 [useQuoteManagement] Building query with:', {
-              columnSelection: 'explicit columns (not COMMON_QUERIES)',
-              pagination: `page ${page}, pageSize ${pageSize}, range: ${page * pageSize} to ${(page + 1) * pageSize - 1}`,
-              appliedOrder: 'created_at DESC'
-            });
-
-            // TEMPORARY: Comment out all filtering to test if filters are the issue
-            console.log('🔍 [useQuoteManagement] Filter application debug:', {
-              statusFilterWillApply: filters.statuses && filters.statuses.length > 0,
-              statusFilter: filters.statuses,
-              countryFilterWillApply: filters.countries && filters.countries.length > 0,
-              countryFilter: filters.countries,
-              searchFilterWillApply: !!(searchTerm && searchTerm.trim()),
-              searchFilter: searchTerm
-            });
+          // INVESTIGATION: Test exact same query as working test query
+          console.log('🔍 [useQuoteManagement] Testing exact same structure as working test query...');
+          
+          // Use exact same query structure as the working test query
+          const { data, error } = await supabase
+            .from('quotes')
+            .select('id, display_id, status, final_total_usd, created_at, customer_data, items')
+            .order('created_at', { ascending: false })
+            .limit(10);
             
-            // Apply status filters
-            if (filters.statuses && filters.statuses.length > 0) {
-              console.log('🔍 [useQuoteManagement] Applying status filter:', filters.statuses);
-              query = query.in('status', filters.statuses);
-            }
-
-            // Apply country filters (destination country)
-            if (filters.countries && filters.countries.length > 0) {
-              console.log('🔍 [useQuoteManagement] Applying country filter:', filters.countries);
-              query = query.in('destination_country', filters.countries);
-            }
-
-            // Apply full-text search with proper parameterization to prevent SQL injection
-            if (searchTerm && searchTerm.trim()) {
-              const sanitizedSearchTerm = searchTerm.trim();
-              console.log('🔍 [useQuoteManagement] Applying search filter:', sanitizedSearchTerm);
-              
-              // SECURITY FIX: Use Supabase's parameterized query methods instead of string interpolation
-              // This prevents SQL injection attacks by properly escaping user input
-              query = query.or([
-                `display_id.ilike.%${sanitizedSearchTerm}%`,
-                `customer_data->'info'->>'email'.ilike.%${sanitizedSearchTerm}%`,
-                `items::text.ilike.%${sanitizedSearchTerm}%`,
-                `destination_country.ilike.%${sanitizedSearchTerm}%`
-              ].join(','));
-            }
-
-            const { data, error } = await query;
-            
-            // Enhanced debug logging for query results
-            console.log('🔍 [useQuoteManagement] Query Results Debug:', {
-              hasError: !!error,
-              errorDetails: error ? {
-                message: error.message,
-                details: error.details,
-                hint: error.hint,
-                code: error.code
-              } : null,
-              rawDataCount: data?.length || 0,
-              rawData: data?.slice(0, 2) || [], // Log first 2 records for debugging
-              appliedFilters: {
-                statusFilter: filters.statuses?.length > 0 ? filters.statuses : 'none',
-                countryFilter: filters.countries?.length > 0 ? filters.countries : 'none',
-                searchFilter: searchTerm ? searchTerm : 'none'
-              }
-            });
-            
-            if (error) {
-              console.error('🚨 SQL Query Error:', error);
-              console.error('🚨 Error Details:', {
-                message: error.message,
-                details: error.details,
-                hint: error.hint,
-                code: error.code
-              });
-              throw new Error(`Query failed: ${error.message}`);
-            }
-            
-            // Transform data to extract JSONB fields for easier component access
-            const transformedData = (data || []).map(quote => ({
-              ...quote,
-              email: quote.customer_data?.info?.email || null,
-              customer_name: quote.customer_data?.info?.name || null,
-              product_name: quote.items?.[0]?.name || null,
-            }));
-            
-            // Debug logging for transformation
-            console.log('🔍 [useQuoteManagement] Data Transformation Debug:', {
-              originalCount: data?.length || 0,
-              transformedCount: transformedData.length,
-              sampleTransformed: transformedData.slice(0, 2),
-              transformationSuccessful: transformedData.length === (data?.length || 0)
-            });
-            
-            // Successfully transformed and loaded admin quotes
-            return transformedData;
-          }, {
-            page,
-            pageSize,
-            filters: {
-              search: searchTerm,
-              statuses: filters.statuses,
-              countries: filters.countries,
-            }
+          console.log('🔍 [useQuoteManagement] Main Query Results (same as test):', {
+            hasError: !!error,
+            errorMessage: error?.message,
+            dataCount: data?.length || 0,
+            data: data || []
           });
-
-          // Log performance metrics
-          const queryDuration = Date.now() - queryStartTime;
-          scope.setContext('performance_metrics', {
-            queryDurationMs: queryDuration,
-            resultCount: result.length,
-            isSlowQuery: queryDuration > 2000,
-          });
-
-          // Monitor performance and alert on slow queries
-          if (queryDuration > 2000) {
-            scope.setLevel('warning');
-            Sentry.addBreadcrumb({
-              message: 'Slow search query detected',
-              level: 'warning',
-              data: {
-                duration: queryDuration,
-                filters: filters,
-                searchTerm: searchTerm,
-              }
-            });
+          
+          if (error) {
+            console.error('🚨 Main Query Error:', error);
+            throw error;
           }
+          
+          // Transform data to extract JSONB fields for easier component access
+          const transformedData = (data || []).map(quote => ({
+            ...quote,
+            email: quote.customer_data?.info?.email || null,
+            customer_name: quote.customer_data?.info?.name || null,
+            product_name: quote.items?.[0]?.name || null,
+          }));
+          
+          console.log('🔍 [useQuoteManagement] Transformation Debug:', {
+            originalCount: data?.length || 0,
+            transformedCount: transformedData.length
+          });
+          
+          const result = transformedData;
 
-          searchTransaction.setStatus('ok');
+          // Log performance metrics  
+          const queryDuration = Date.now() - queryStartTime;
+          console.log('🚀 [useQuoteManagement] Query completed in:', queryDuration, 'ms');
+
           return result;
         } catch (error) {
-          scope.setLevel('error');
-          scope.setContext('error_details', {
-            errorMessage: error instanceof Error ? error.message : 'Unknown error',
-            searchTerm: searchTerm,
-            filters: filters,
-          });
-          
-          Sentry.captureException(error, {
-            tags: {
-              component: 'useQuoteManagement',
-              operation: 'search_query_failed',
-            },
-            extra: {
-              searchParams: { searchTerm, filters, page, pageSize },
-            }
-          });
-          
-          searchTransaction.setStatus('internal_error');
+          console.error('🚨 [useQuoteManagement] Query error:', error);
           throw error;
-        } finally {
-          searchTransaction.finish();
         }
-      });
     },
-    enabled: isAuthenticated && !!isAdmin && !isAdminLoading, // Only run query for authenticated admin users
+    enabled: !!user && !!session && !!isAdmin, // Simplified enablement logic matching test query
     staleTime: 0, // Force fresh queries for debugging
     cacheTime: 0, // Don't cache for debugging
   });
@@ -321,26 +188,28 @@ export const useQuoteManagement = ({
     cacheTime: 0,
   });
 
-  // TEMPORARY: Emergency bypass - use test query results as main query
-  const finalQuotes = testQuotes || [];
-  const finalLoading = testLoading;
+  // INVESTIGATION: Compare main query vs test query results
+  const finalQuotes = quotes || testQuotes || [];
+  const finalLoading = quotesLoading || testLoading;
 
   // Debug logging for final query state
-  console.log('🔍 [useQuoteManagement] Final Query State:', {
-    quotesLoading,
-    quotesCount: quotes?.length || 0,
-    quotes: quotes?.slice(0, 2) || [], // Log first 2 quotes for debugging
-    queryEnabled: isAuthenticated && !!isAdmin && !isAdminLoading,
-    hookReturnValues: {
-      hasQuotes: !!quotes,
-      quotesLength: quotes?.length || 0,
-      isLoading: quotesLoading || isAdminLoading
+  console.log('🔍 [useQuoteManagement] Final Query State Comparison:', {
+    mainQuery: {
+      quotesLoading,
+      quotesCount: quotes?.length || 0,
+      quotes: quotes?.slice(0, 2) || [], // Log first 2 quotes for debugging
+      queryEnabled: isAuthenticated && !!isAdmin && !isAdminLoading,
     },
-    // Test query comparison
-    testQueryResults: {
+    testQuery: {
       testLoading,
       testQuotesCount: testQuotes?.length || 0,
       testQuotes: testQuotes?.slice(0, 2) || []
+    },
+    final: {
+      usingMainQuery: !!(quotes && quotes.length > 0),
+      usingTestQuery: !quotes && !!(testQuotes && testQuotes.length > 0),
+      finalCount: finalQuotes.length,
+      finalLoading: finalLoading || isAdminLoading
     }
   });
 
@@ -659,7 +528,7 @@ export const useQuoteManagement = ({
   const isDeletingQuotes = deleteQuotesMutation.isPending;
 
   return {
-    quotes: finalQuotes, // TEMPORARY: Use test query results
+    quotes: finalQuotes, // INVESTIGATION: Main query or test query fallback
     quotesLoading: finalLoading || isAdminLoading,
     isRejectDialogOpen,
     setRejectDialogOpen: setIsRejectDialogOpen,
