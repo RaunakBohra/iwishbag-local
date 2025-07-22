@@ -46,7 +46,8 @@ const chargeDescriptions = {
   'International Shipping': 'Cost of shipping your items internationally',
   'Customs & ECS': 'Customs duties and Electronic Cargo Security fees',
   'Domestic Shipping': 'Final delivery cost to your address',
-  'Handling Charge': 'Fee for processing and preparing your shipment',
+  'Handling Charge': 'Carrier fee for processing, packaging, and preparing your shipment for international delivery',
+  'Package Protection': 'Optional insurance coverage protecting against loss, damage, or theft during shipping',
   Insurance: 'Optional insurance coverage for your shipment',
   'Payment Gateway Fee': 'Processing fee for payment transactions',
   Discount: 'Any applicable discounts or promotions',
@@ -311,13 +312,13 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                           )}
                           {renderRow(
                             'Handling Charge',
-                            quote.handling_charge,
+                            quote.operational_data?.calculated_handling || quote.operational_data?.handling_charge || quote.handling_charge,
                             false,
                             <Package className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}
                           {renderRow(
-                            'Insurance',
-                            quote.insurance_amount,
+                            'Package Protection',
+                            quote.operational_data?.calculated_insurance || quote.operational_data?.insurance_amount || quote.insurance_amount,
                             false,
                             <Shield className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}

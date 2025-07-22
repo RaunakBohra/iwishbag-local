@@ -81,7 +81,8 @@ import { CompactShippingManager } from './smart-components/CompactShippingManage
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { QuoteDetailForm } from './QuoteDetailForm';
-import { Form } from '@/components/ui/form';
+import { Form, FormField, FormItem, FormControl } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AdminQuoteFormValues, adminQuoteFormSchema } from './admin-quote-form-validation';
@@ -2295,6 +2296,114 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   isSaving={isCalculating}
                 />
               )}
+
+              {/* 5.5. Admin Override Controls - Handling & Insurance */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center space-x-2 text-sm">
+                    <Settings className="w-4 h-4 text-orange-600" />
+                    <span>Admin Overrides</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Handling Charge Override */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-700">
+                      Handling Charge Override
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1">
+                        <FormField
+                          control={form.control}
+                          name="handling_charge"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="Auto-calculated"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(Number(e.target.value));
+                                    scheduleCalculation();
+                                  }}
+                                  className="text-xs"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Auto: {currencyDisplay.formatSingleAmount(
+                          liveQuote?.operational_data?.calculated_handling || 0,
+                          'origin'
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Override carrier handling charge calculation
+                    </p>
+                  </div>
+
+                  {/* Insurance Override */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-gray-700">
+                      Insurance Override
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1">
+                        <FormField
+                          control={form.control}
+                          name="insurance_amount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="Auto-calculated"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(Number(e.target.value));
+                                    scheduleCalculation();
+                                  }}
+                                  className="text-xs"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Auto: {currencyDisplay.formatSingleAmount(
+                          liveQuote?.operational_data?.calculated_insurance || 0,
+                          'origin'
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Override customer insurance selection
+                    </p>
+                  </div>
+
+                  {/* Customer Preferences Info */}
+                  <div className="pt-2 border-t border-gray-200 space-y-1">
+                    <h4 className="text-xs font-medium text-gray-700">Customer Preferences:</h4>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      <div>Insurance Opted: {
+                        liveQuote?.customer_data?.preferences?.insurance_opted_in ? 
+                        <span className="text-green-600">Yes</span> : 
+                        <span className="text-red-600">No</span>
+                      }</div>
+                      <div>Selected Carrier: {
+                        liveQuote?.operational_data?.shipping?.selected_option || 'Auto'
+                      }</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* 6. Payment Management - Sixth Priority (conditional) */}
               {[

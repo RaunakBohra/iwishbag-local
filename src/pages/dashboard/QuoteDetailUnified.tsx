@@ -60,6 +60,7 @@ import ConversionPrompt from '@/components/auth/ConversionPrompt';
 // Tables removed - not used
 import { GuestCurrencyProvider, useGuestCurrency } from '@/contexts/GuestCurrencyContext';
 import { GuestCurrencySelector } from '@/components/guest/GuestCurrencySelector';
+import { CustomerQuoteOptions } from '@/components/customer/CustomerQuoteOptions';
 
 // Utility function to extract clean domain from URL
 const extractDomain = (url: string): string => {
@@ -1225,6 +1226,56 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
               </CardContent>
             </Card>
 
+            {/* Customer Quote Options - Show for approved quotes */}
+            {quote.status === 'approved' && (
+              <CustomerQuoteOptions
+                quote={quote}
+                shippingOptions={[]} // TODO: Fetch shipping options from SmartCalculationEngine
+                onUpdateQuote={async (updates) => {
+                  try {
+                    const { error } = await supabase
+                      .from('quotes')
+                      .update(updates)
+                      .eq('id', quote.id);
+                    
+                    if (error) throw error;
+                    
+                    // Refresh quote data
+                    queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
+                    if (shareToken) {
+                      queryClient.invalidateQueries({ queryKey: ['share-quote', shareToken] });
+                    }
+                    
+                    toast({
+                      title: 'Quote Updated',
+                      description: 'Your preferences have been saved successfully.',
+                    });
+                    
+                    return true;
+                  } catch (error) {
+                    console.error('Error updating quote:', error);
+                    toast({
+                      title: 'Update Failed',
+                      description: 'Failed to update quote preferences. Please try again.',
+                      variant: 'destructive',
+                    });
+                    return false;
+                  }
+                }}
+                onRecalculate={() => {
+                  // Trigger quote recalculation
+                  queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
+                  if (shareToken) {
+                    queryClient.invalidateQueries({ queryKey: ['share-quote', shareToken] });
+                  }
+                }}
+                showShippingSelector={true}
+                showInsuranceToggle={true}
+                showHandlingCharges={true}
+                isRecalculating={false}
+              />
+            )}
+
             {/* Need Help Section - Conditional for authenticated users */}
             {!isGuestMode && user && (
               <div className="flex justify-center py-6">
@@ -1607,13 +1658,13 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                 )}
                 {renderBreakdownRow(
                   'Handling Charge',
-                  quote.handling_charge,
+                  quote.operational_data?.calculated_handling || quote.operational_data?.handling_charge || quote.handling_charge,
                   false,
                   <Package className="h-4 w-4 text-amber-600" />,
                 )}
                 {renderBreakdownRow(
-                  'Insurance',
-                  quote.insurance_amount,
+                  'Package Protection',
+                  quote.operational_data?.calculated_insurance || quote.operational_data?.insurance_amount || quote.insurance_amount,
                   false,
                   <Shield className="h-4 w-4 text-emerald-600" />,
                 )}
