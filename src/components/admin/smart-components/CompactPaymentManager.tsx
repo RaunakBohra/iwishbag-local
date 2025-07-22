@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { UnifiedQuote } from '@/types/unified-quote';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface PaymentInfo {
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
@@ -53,6 +54,9 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('status');
+
+  // Get standardized currency display
+  const currencyDisplay = useAdminQuoteCurrency(quote);
 
   // Default payment info if not provided
   const payment: PaymentInfo = paymentInfo || {
@@ -149,7 +153,7 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
           </Badge>
         </div>
         <div className="flex items-center space-x-1">
-          <span className="text-sm font-medium text-gray-900">${payment.amount.toFixed(2)}</span>
+          <span className="text-sm font-medium text-gray-900">{currencyDisplay.formatDualAmount(payment.amount).short}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -278,7 +282,7 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
               <div>
                 <div className="text-gray-500 mb-1">Amount</div>
                 <div className="font-medium">
-                  {payment.currency} {payment.amount.toFixed(2)}
+                  {currencyDisplay.formatDualAmount(payment.amount).short}
                 </div>
               </div>
             </div>

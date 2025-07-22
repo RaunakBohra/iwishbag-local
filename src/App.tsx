@@ -15,7 +15,6 @@ import { Toaster } from '@/components/ui/toaster';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
-import { SentryTestTrigger } from '@/components/debug/SentryTestTrigger';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
@@ -453,7 +452,6 @@ function App() {
                 </Suspense>
                 <PhoneCollectionProvider />
                 <Toaster />
-                <SentryTestTrigger />
               </HelmetProvider>
             </StatusConfigProvider>
           </AccessibilityProvider>

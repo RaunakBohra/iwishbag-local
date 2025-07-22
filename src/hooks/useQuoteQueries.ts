@@ -51,25 +51,12 @@ export const useQuoteQueries = (id: string | undefined) => {
           },
         });
 
-        // Database values are already stored in USD, no conversion needed
-        // Just map to camelCase for UI consistency
-        data.salesTaxPrice = data.sales_tax_price || 0;
-        data.merchantShippingPrice = data.merchant_shipping_price || 0;
-        data.domesticShipping = data.domestic_shipping || 0;
-        data.handlingCharge = data.handling_charge || 0;
-        data.insuranceAmount = data.insurance_amount || 0;
-        data.discount = data.discount || 0;
-        data.interNationalShipping = data.international_shipping || 0;
-        data.customsAndECS = data.customs_and_ecs || 0;
-        data.paymentGatewayFee = data.payment_gateway_fee || 0;
-
-        logger.debug('Mapped values (USD from database)', {
-          salesTaxPrice: data.salesTaxPrice,
-          merchantShippingPrice: data.merchantShippingPrice,
-          domesticShipping: data.domesticShipping,
-          handlingCharge: data.handlingCharge,
-          insuranceAmount: data.insuranceAmount,
-          discount: data.discount,
+        // Legacy field mappings removed - components now use breakdown structure
+        // Modern data structure: calculation_data.breakdown contains all cost breakdowns
+        logger.debug('Quote data loaded with breakdown structure', {
+          quoteId: data.id,
+          hasBreakdown: !!data.calculation_data?.breakdown,
+          breakdown: data.calculation_data?.breakdown,
           exchangeRate: exchangeRate,
         });
       }

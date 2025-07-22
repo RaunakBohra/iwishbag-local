@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Package, Truck, Clock, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { formatDualCurrency } from '@/lib/currencyUtils';
+import { formatDualCurrencyNew } from '@/lib/currencyUtils';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 // Delivery option interface
@@ -457,7 +457,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                               const purchaseCountry = quote.destination_country || 'US';
                               const deliveryCountry = quote.destination_country || 'US';
                               const exchangeRate = quote.exchange_rate;
-                              const dualCurrency = formatDualCurrency(
+                              const dualCurrency = formatDualCurrencyNew(
                                 option.cost,
                                 purchaseCountry,
                                 deliveryCountry,
@@ -470,9 +470,9 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
 
                               return showDualCurrency ? (
                                 <div className="text-xs">
-                                  <div>{dualCurrency.purchase}</div>
+                                  <div>{dualCurrency.origin}</div>
                                   <div className="text-muted-foreground">
-                                    {dualCurrency.delivery}
+                                    {dualCurrency.destination}
                                   </div>
                                 </div>
                               ) : (

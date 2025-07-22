@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { calculateUnifiedQuote } from './shipping-calculator.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -398,36 +397,8 @@ async function calculateFinalQuote(
     discount: 0,
     customsCategory: customsResult.category || 'general',
   };
-  // Calculate using unified calculator
-  const unifiedResult = await calculateUnifiedQuote(unifiedInput, supabase);
-  return {
-    item_price: itemPriceUSD,
-    item_weight: weightResult.weight,
-    final_total_usd: unifiedResult.totalCost,
-    sub_total:
-      unifiedResult.breakdown.itemPrice +
-      unifiedResult.breakdown.internationalShipping +
-      unifiedResult.breakdown.customsDuty +
-      unifiedResult.breakdown.domesticShipping +
-      unifiedResult.breakdown.handlingCharge +
-      unifiedResult.breakdown.insuranceAmount,
-    vat: unifiedResult.breakdown.vat,
-    international_shipping: unifiedResult.breakdown.internationalShipping,
-    customs_and_ecs: unifiedResult.breakdown.customsDuty,
-    payment_gateway_fee: 0,
-    destination_currency: destinationCountrySettings.currency,
-    final_total_local: unifiedResult.totalCost * (destinationCountrySettings.rate_from_usd || 1),
-    confidence_score: weightResult.confidence,
-    status: 'calculated',
-    // New fields for shipping routes
-    origin_country: unifiedResult.settings.originCountry,
-    shipping_method: unifiedResult.settings.usedSettings,
-    shipping_route_id: unifiedResult.settings.usedRoute?.id || null,
-    // Additional info for debugging
-    shipping_carrier: unifiedResult.shippingCost.carrier,
-    shipping_delivery_days: unifiedResult.shippingCost.deliveryDays,
-    breakdown: unifiedResult.breakdown,
-  };
+  // ERROR: No more hardcoded calculators - admin must configure shipping routes
+  throw new Error(`Auto-quote calculation requires configured shipping routes for ${purchaseCountry} → ${userShippingCountry}. Please configure complete shipping route data in the admin panel.`);
 }
 async function createAutoQuote(quoteCalculation, userId, purchaseCountry, supabase) {
   // Get user email if userId is provided

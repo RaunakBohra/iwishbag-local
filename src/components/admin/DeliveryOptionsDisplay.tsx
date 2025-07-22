@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Truck, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryOption } from '@/types/shipping';
-import { formatDualCurrency } from '@/lib/currencyUtils';
+import { formatDualCurrencyNew } from '@/lib/currencyUtils';
 
 interface DeliveryOptionsDisplayProps {
   routeId: number;
@@ -101,7 +101,7 @@ export const DeliveryOptionsDisplay = ({
                   <div className="flex items-center gap-1">
                     <DollarSign className="h-3 w-3" />
                     {(() => {
-                      const dualCurrency = formatDualCurrency(
+                      const dualCurrency = formatDualCurrencyNew(
                         option.price,
                         purchaseCountry,
                         deliveryCountry,
@@ -112,8 +112,8 @@ export const DeliveryOptionsDisplay = ({
 
                       return showDualCurrency ? (
                         <div className="text-xs">
-                          <div>{dualCurrency.purchase}</div>
-                          <div className="text-muted-foreground">{dualCurrency.delivery}</div>
+                          <div>{dualCurrency.origin}</div>
+                          <div className="text-muted-foreground">{dualCurrency.destination}</div>
                         </div>
                       ) : (
                         <span>${option.price.toFixed(2)}</span>

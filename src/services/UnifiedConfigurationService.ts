@@ -1,6 +1,5 @@
 // ============================================================================
 // UNIFIED CONFIGURATION SERVICE - Centralized Configuration Management
-// Replaces: CurrencyService (partially), CalculationDefaultsService, SystemSettings
 // Provides unified access to all application configuration data
 // ============================================================================
 

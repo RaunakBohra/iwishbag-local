@@ -1,21 +1,16 @@
 export type QuotePriority = 'low' | 'medium' | 'high' | 'urgent';
 
+// Legacy QuoteBreakdown interface - DEPRECATED
+// Use calculation_data.breakdown structure from UnifiedQuote instead
 export interface QuoteBreakdown {
+  // Modern structure: { items_total, shipping, customs, taxes, fees, discount }
+  // Legacy fields maintained for backward compatibility only
   item_price: number;
-  sales_tax_price: number;
-  merchant_shipping_price: number;
-  international_shipping: number;
-  customs_and_ecs: number;
-  domestic_shipping: number;
-  handling_charge: number;
-  insurance_amount: number;
-  payment_gateway_fee: number;
   sub_total: number;
-  vat: number;
-  discount: number;
   final_total_usd: number;
   final_total_local?: number;
   exchange_rate: number;
+  discount: number;
 }
 
 export type QuoteStatus =

@@ -58,7 +58,7 @@ export const TemplateFormFields = ({ control }: TemplateFormFieldsProps) => {
           name="item_price"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Price (USD)</FormLabel>
+              <FormLabel>Price (Base Currency)</FormLabel>
               <FormControl>
                 <Input type="number" placeholder="e.g., 15.99" {...field} />
               </FormControl>

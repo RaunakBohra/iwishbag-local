@@ -313,7 +313,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
         <div className="space-y-2">
           <Label htmlFor="item-price" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
-            Item Price (USD)
+            Item Price (Base Currency)
           </Label>
           <Input
             id="item-price"

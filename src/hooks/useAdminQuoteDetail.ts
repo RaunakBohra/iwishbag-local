@@ -67,15 +67,8 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
           image_url: item.image || '',
         })),
       };
-      // Map snake_case to camelCase for UI breakdown (for display only)
-      formData.salesTaxPrice = calculationData.sales_tax_price || 0;
-      formData.merchantShippingPrice = calculationData.merchant_shipping_price || 0;
-      formData.interNationalShipping = calculationData.international_shipping || 0;
-      formData.customsAndECS = calculationData.customs_and_ecs || 0;
-      formData.domesticShipping = operationalData.domestic_shipping || 0;
-      formData.handlingCharge = operationalData.handling_charge || 0;
-      formData.insuranceAmount = operationalData.insurance_amount || 0;
-      formData.paymentGatewayFee = operationalData.payment_gateway_fee || 0;
+      // Legacy field mappings removed - components now use breakdown structure directly
+      // calculation_data.breakdown contains: items_total, shipping, customs, taxes, fees, discount
       try {
         form.reset(formData);
       } catch (error) {
@@ -211,53 +204,8 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         });
         // --- End Priority Logic ---
 
-        // --- Map snake_case to camelCase for UI breakdown (using USD-calculated values) ---
-        interface ExtendedQuoteData extends Partial<Tables<'quotes'>> {
-          id: string;
-          salesTaxPrice?: number;
-          domesticShipping?: number;
-          handlingCharge?: number;
-          insuranceAmount?: number;
-          merchantShippingPrice?: number;
-          discount?: number;
-          interNationalShipping?: number;
-          customsAndECS?: number;
-          paymentGatewayFee?: number;
-        }
-
-        const extendedQuoteData = finalQuoteData as ExtendedQuoteData;
-        // Extract from unified structure if available, fallback to direct fields
-        const calcData = finalQuoteData.calculation_data || {};
-        const opData = finalQuoteData.operational_data || {};
-
-        extendedQuoteData.salesTaxPrice =
-          calcData.sales_tax_price || finalQuoteData.sales_tax_price;
-        extendedQuoteData.domesticShipping =
-          opData.domestic_shipping || finalQuoteData.domestic_shipping;
-        extendedQuoteData.handlingCharge = opData.handling_charge || finalQuoteData.handling_charge;
-        extendedQuoteData.insuranceAmount =
-          opData.insurance_amount || finalQuoteData.insurance_amount;
-        extendedQuoteData.merchantShippingPrice =
-          calcData.merchant_shipping_price || finalQuoteData.merchant_shipping_price;
-        extendedQuoteData.discount = calcData.discount || finalQuoteData.discount;
-        extendedQuoteData.interNationalShipping =
-          calcData.international_shipping || finalQuoteData.international_shipping;
-        extendedQuoteData.customsAndECS =
-          calcData.customs_and_ecs || finalQuoteData.customs_and_ecs;
-        extendedQuoteData.paymentGatewayFee =
-          opData.payment_gateway_fee || finalQuoteData.payment_gateway_fee;
-        // --- End UI mapping ---
-
-        // --- Remove camelCase fields before DB save ---
-        delete extendedQuoteData.salesTaxPrice;
-        delete extendedQuoteData.merchantShippingPrice;
-        delete extendedQuoteData.interNationalShipping;
-        delete extendedQuoteData.customsAndECS;
-        delete extendedQuoteData.domesticShipping;
-        delete extendedQuoteData.handlingCharge;
-        delete extendedQuoteData.insuranceAmount;
-        delete extendedQuoteData.paymentGatewayFee;
-        // --- End removal ---
+        // Legacy field mappings removed - components now use breakdown structure directly
+        // calculation_data.breakdown contains all cost breakdowns in structured format
 
         updateQuote(finalQuoteData);
       }

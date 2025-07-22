@@ -328,10 +328,23 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       },
     };
 
-    console.log('[DEBUG] Setting optimistic quote state:', {
-      originalShippingOption: quote.operational_data?.shipping?.selected_option,
-      newShippingOption: optimisticQuote.operational_data.shipping.selected_option,
-      fullOperationalData: optimisticQuote.operational_data,
+    console.log('🔍 [DEBUG] Shipping Option Selected - Optimistic Update:', {
+      quoteId: quote.id,
+      selectedOption: {
+        id: selectedOption.id,
+        name: selectedOption.name,
+        carrier: selectedOption.carrier,
+        cost_usd: selectedOption.cost_usd
+      },
+      breakdownUpdate: {
+        oldShipping: quote.calculation_data?.breakdown?.shipping,
+        newShipping: selectedOption.cost_usd,
+        shippingChange: selectedOption.cost_usd - (quote.calculation_data?.breakdown?.shipping || 0)
+      },
+      operationalDataUpdate: {
+        originalSelectedOption: quote.operational_data?.shipping?.selected_option,
+        newSelectedOption: optimisticQuote.operational_data.shipping.selected_option
+      }
     });
 
     // Set optimistic state immediately (no page refresh)

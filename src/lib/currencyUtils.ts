@@ -88,35 +88,6 @@ export const getCountryCurrencyMap = (): { [key: string]: string } => {
   return result;
 };
 
-// Format amount in dual currencies (purchase and delivery)
-export const formatDualCurrency = (
-  amount: number | null | undefined,
-  purchaseCountry: string,
-  deliveryCountry: string,
-  exchangeRate?: number,
-): { purchase: string; delivery: string } => {
-  if (amount === null || amount === undefined) {
-    return { purchase: 'N/A', delivery: 'N/A' };
-  }
-
-  const purchaseCurrency = getCountryCurrency(purchaseCountry);
-  const deliveryCurrency = getCountryCurrency(deliveryCountry);
-
-  // Format in purchase currency (amount is already in purchase currency)
-  const purchaseDisplay = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: purchaseCurrency,
-  }).format(amount);
-
-  // Format in delivery currency using exchange rate
-  const deliveryAmount = exchangeRate ? amount * exchangeRate : amount;
-  const deliveryDisplay = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: deliveryCurrency,
-  }).format(deliveryAmount);
-
-  return { purchase: purchaseDisplay, delivery: deliveryDisplay };
-};
 
 // Exchange rate interface
 export interface ExchangeRateResult {

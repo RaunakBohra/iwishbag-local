@@ -18,15 +18,7 @@ interface QuoteItem {
 interface QuoteWithCosts extends Tables<'quotes'> {
   profiles?: { preferred_display_currency?: string } | null;
   quote_items?: QuoteItem[];
-  salesTaxPrice?: number;
-  merchantShippingPrice?: number;
-  interNationalShipping?: number;
-  customsAndECS?: number;
-  domesticShipping?: number;
-  handlingCharge?: number;
-  insuranceAmount?: number;
-  paymentGatewayFee?: number;
-  discount?: number;
+  // Legacy fields removed - now using calculation_data.breakdown structure
 }
 
 interface QuoteCalculatedCostsProps {
@@ -147,16 +139,19 @@ export const QuoteCalculatedCosts = ({ quote }: QuoteCalculatedCostsProps) => {
           {/* Item Price */}
           {originalItemPrice && renderRow('Total Item Price', originalItemPrice)}
 
-          {/* Other costs */}
-          {renderRow('Sales Tax', quote.salesTaxPrice)}
-          {renderRow('Merchant Shipping', quote.merchantShippingPrice)}
-          {renderRow('International Shipping', quote.interNationalShipping)}
-          {renderRow('Customs & ECS', quote.customsAndECS)}
-          {renderRow('Domestic Shipping', quote.domesticShipping)}
-          {renderRow('Handling Charge', quote.handlingCharge)}
-          {renderRow('Insurance', quote.insuranceAmount)}
-          {renderRow('Payment Gateway Fee', quote.paymentGatewayFee)}
-          {renderRow('Discount', quote.discount, true)}
+          {/* Other costs - Updated to use breakdown structure */}
+          {renderRow('Taxes', quote.calculation_data?.breakdown?.taxes)}
+          {console.log('🔍 [DEBUG] QuoteCalculatedCosts reading shipping from breakdown:', {
+            quoteId: quote.id,
+            shippingValue: quote.calculation_data?.breakdown?.shipping,
+            fullBreakdown: quote.calculation_data?.breakdown,
+            hasCalculationData: !!quote.calculation_data,
+            hasBreakdown: !!quote.calculation_data?.breakdown
+          })}
+          {renderRow('International Shipping', quote.calculation_data?.breakdown?.shipping)}
+          {renderRow('Customs & Duties', quote.calculation_data?.breakdown?.customs)}
+          {renderRow('Fees & Charges', quote.calculation_data?.breakdown?.fees)}
+          {renderRow('Discount', quote.calculation_data?.breakdown?.discount, true)}
 
           <div className="border-t my-2"></div>
 

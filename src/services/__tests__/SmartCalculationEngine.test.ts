@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SmartCalculationEngine } from '../SmartCalculationEngine';
 import { currencyService } from '../CurrencyService';
-import { calculationDefaultsService } from '../CalculationDefaultsService';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 // Mock dependencies
 vi.mock('../CurrencyService');
-vi.mock('../CalculationDefaultsService');
 vi.mock('@/lib/customs-tier-calculator');
 vi.mock('@/integrations/supabase/client');
 

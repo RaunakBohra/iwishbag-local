@@ -138,8 +138,8 @@ export const CreateQuoteModal = ({
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
       .insert({
-        destination_country: purchaseCountry, // Purchase country (for calculation system)
-        origin_country: purchaseCountry, // Also set origin_country for consistency
+        destination_country: shippingCountry, // Shipping destination (where goods are delivered)
+        origin_country: purchaseCountry, // Purchase origin (where goods are bought from)
         currency: originCurrency, // Currency for calculations
         status: defaultStatus,
         // For registered users, link to their profile
