@@ -75,6 +75,30 @@ export const QuoteDetailForm = ({
   const { data: allCountries } = useAllCountries();
   const { quoteStatuses, orderStatuses } = useStatusManagement();
 
+  // Auto-apply detected handling charge when available and field is empty
+  useEffect(() => {
+    const currentHandlingCharge = form.getValues('handling_charge');
+    if (detectedHandlingCharge && detectedHandlingCharge > 0 && (!currentHandlingCharge || currentHandlingCharge === 0)) {
+      console.log('🎯 [DEBUG] Auto-applying detected handling charge to form field:', {
+        detectedHandlingCharge,
+        currentHandlingCharge,
+      });
+      form.setValue('handling_charge', detectedHandlingCharge);
+    }
+  }, [detectedHandlingCharge, form]);
+
+  // Auto-apply detected insurance amount when available and field is empty  
+  useEffect(() => {
+    const currentInsuranceAmount = form.getValues('insurance_amount');
+    if (detectedInsuranceAmount && detectedInsuranceAmount > 0 && (!currentInsuranceAmount || currentInsuranceAmount === 0)) {
+      console.log('🛡️ [DEBUG] Auto-applying detected insurance amount to form field:', {
+        detectedInsuranceAmount,
+        currentInsuranceAmount,
+      });
+      form.setValue('insurance_amount', detectedInsuranceAmount);
+    }
+  }, [detectedInsuranceAmount, form]);
+
 
   // Watch form values
   const watchedValues = useWatch({
