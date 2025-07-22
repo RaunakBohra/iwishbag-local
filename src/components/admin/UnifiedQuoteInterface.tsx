@@ -2456,27 +2456,64 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </div>
                   </div>
 
-                  {/* Secondary Metrics Grid */}
-                  <div className="mt-4 pt-3 border-t border-blue-200">
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Items</span>
-                        <span className="font-medium">{metrics?.totalItems || 0}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Status</span>
-                        <span className="font-medium capitalize">{quote.status}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Optimized</span>
-                        <span className="font-medium">{optimizationScore.toFixed(0)}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">AI Confidence</span>
-                        <span className="font-medium">{metrics?.avgWeightConfidence}%</span>
+                  {/* View Mode: Show Selected Shipping Details */}
+                  {!isEditMode && (
+                    <div className="mt-4 pt-3 border-t border-blue-200">
+                      {(() => {
+                        const selectedShippingOptionId = quote.operational_data?.shipping?.selected_option;
+                        const selectedShippingOption = shippingOptions.find(opt => opt.id === selectedShippingOptionId);
+                        const shippingCost = liveQuote?.calculation_data?.breakdown?.shipping || quote.calculation_data?.breakdown?.shipping || 0;
+                        
+                        if (selectedShippingOption) {
+                          return (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Shipping</span>
+                              <div className="text-right">
+                                <div className="text-sm font-semibold text-gray-800">
+                                  {selectedShippingOption.carrier} {selectedShippingOption.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {selectedShippingOption.days} • {currencyDisplay.formatSingleAmount(shippingCost, 'origin')}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        } else if (shippingCost > 0) {
+                          return (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Shipping</span>
+                              <span className="text-sm font-semibold text-gray-800">
+                                {currencyDisplay.formatSingleAmount(shippingCost, 'origin')}
+                              </span>
+                            </div>
+                          );
+                        } else {
+                          return (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Shipping</span>
+                              <span className="text-xs text-amber-600">Not selected</span>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Edit Mode: Show Essential Metrics Only */}
+                  {isEditMode && (
+                    <div className="mt-4 pt-3 border-t border-blue-200">
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Items</span>
+                          <span className="font-medium">{metrics?.totalItems || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status</span>
+                          <span className="font-medium capitalize">{quote.status}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -2494,8 +2531,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* 5. Shipping Options - Fifth Priority (operational) */}
-              {shippingOptions.length > 0 && (
+              {/* 5. Shipping Options - Only show in Edit Mode */}
+              {isEditMode && shippingOptions.length > 0 && (
                 <CompactShippingOptions
                   quote={liveQuote || quote}
                   shippingOptions={shippingOptions}
