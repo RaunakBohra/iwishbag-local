@@ -260,12 +260,18 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
             </Button>
           </div>
           <div className="space-y-2">
-            {recommendations.slice(0, 2).map((rec, index) => {
-              const option = shippingOptions.find((opt) => opt.id === rec.option_id);
-              if (!option) return null;
+            {recommendations
+              // Deduplicate by option_id to prevent duplicate recommendations
+              .filter((rec, index, arr) => 
+                arr.findIndex(r => r.option_id === rec.option_id) === index
+              )
+              .slice(0, 2)
+              .map((rec) => {
+                const option = shippingOptions.find((opt) => opt.id === rec.option_id);
+                if (!option) return null;
 
-              return (
-                <div key={index} className="flex items-center justify-between">
+                return (
+                  <div key={rec.option_id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2 text-xs">
                     {rec.reason === 'cost_savings' && (
                       <TrendingDown className="w-3 h-3 text-green-600" />
