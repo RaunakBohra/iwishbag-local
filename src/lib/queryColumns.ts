@@ -21,7 +21,7 @@ export const QUERY_COLUMNS = {
    */
   QUOTE_LIST: `
     id, display_id, status, final_total_usd, created_at,
-    destination_country, approval_status, payment_status
+    destination_country
   `,
 
   /**
@@ -32,7 +32,7 @@ export const QUERY_COLUMNS = {
     id, display_id, status, final_total_usd,
     created_at, updated_at, items, shipping_address, breakdown, 
     destination_country, origin_country, customs_percentage, vat, discount, 
-    exchange_rate, approval_status, payment_status, expires_at,
+    exchange_rate, expires_at,
     iwish_tracking_id, tracking_status, estimated_delivery_date
   `,
 
@@ -62,7 +62,7 @@ export const QUERY_COLUMNS = {
    */
   USER_QUOTES: `
     id, display_id, status, final_total_usd,
-    created_at, destination_country, approval_status, payment_status,
+    created_at, destination_country,
     in_cart, expires_at, iwish_tracking_id, tracking_status, estimated_delivery_date
   `,
 
@@ -92,7 +92,7 @@ export const QUERY_COLUMNS = {
    */
   ANALYTICS: `
     id, status, final_total_usd, created_at, destination_country, 
-    origin_country, payment_status, approval_status
+    origin_country
   `,
 
   /**
@@ -101,7 +101,7 @@ export const QUERY_COLUMNS = {
    */
   PAYMENT_DATA: `
     id, display_id, final_total_usd,
-    payment_status, payment_method, paid_at, user_id, customer_data
+    paid_at, user_id, customer_data
   `,
 
   /**
@@ -109,7 +109,7 @@ export const QUERY_COLUMNS = {
    * Standard profile fields for user information
    */
   PROFILE_INFO: `
-    full_name, email, preferred_display_currency, phone
+    full_name, preferred_display_currency, phone
   `,
 
   /**
@@ -117,7 +117,7 @@ export const QUERY_COLUMNS = {
    * Only essential profile data
    */
   PROFILE_MINIMAL: `
-    full_name, email, preferred_display_currency
+    full_name, preferred_display_currency
   `,
 } as const;
 

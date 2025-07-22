@@ -36,7 +36,7 @@ const AdminDashboard = () => {
       const { data, error } = await supabase
         .from('quotes')
         .select(
-          'id, display_id, email, status, destination_country, final_total_usd, currency, created_at, product_name, quantity, payment_method, payment_status, user_id',
+          'id, display_id, status, destination_country, final_total_usd, created_at, customer_data, items, user_id',
         )
         .order('created_at', { ascending: false })
         .limit(1000); // Limit to prevent excessive data loading
@@ -53,7 +53,7 @@ const AdminDashboard = () => {
       const { data, error } = await supabase
         .from('quotes')
         .select(
-          'id, display_id, email, status, destination_country, final_total_usd, currency, created_at, product_name, quantity, payment_method, payment_status, user_id',
+          'id, display_id, status, destination_country, final_total_usd, created_at, customer_data, items, user_id',
         )
         .in('status', getStatusesForOrdersList())
         .order('created_at', { ascending: false })

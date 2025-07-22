@@ -191,11 +191,15 @@ export const useStatusTransitions = () => {
       // Get quote details for notification
       const { data: quote } = await supabase
         .from('quotes')
-        .select('email, display_id, product_name, final_total_usd')
+        .select('display_id, final_total_usd, customer_data, items')
         .eq('id', event.quoteId)
         .single();
 
-      if (!quote || !quote.email) {
+      // Extract email and product name from JSONB fields
+      const customerEmail = quote?.customer_data?.info?.email;
+      const productName = quote?.items?.[0]?.name || 'Product';
+      
+      if (!quote || !customerEmail) {
         console.log('No email found for quote, skipping notification');
         return;
       }
@@ -218,7 +222,7 @@ export const useStatusTransitions = () => {
           .replace(/\{\{customer_name\}\}/g, 'Customer')
           .replace(/\{\{quote_id\}\}/g, quote.display_id || event.quoteId)
           .replace(/\{\{order_id\}\}/g, quote.display_id || event.quoteId)
-          .replace(/\{\{product_name\}\}/g, quote.product_name || 'Product')
+          .replace(/\{\{product_name\}\}/g, productName)
           .replace(/\{\{total_amount\}\}/g, `$${quote.final_total_usd?.toFixed(2) || '0.00'}`)
           .replace(/\{\{tracking_number\}\}/g, 'TBD')
           .replace(/\{\{dashboard_url\}\}/g, `${window.location.origin}/dashboard`)
@@ -229,7 +233,7 @@ export const useStatusTransitions = () => {
         if (accessToken) {
           await supabase.functions.invoke('send-email', {
             body: {
-              to: quote.email,
+              to: customerEmail,
               subject: emailSubject,
               html: emailHtml,
             },
@@ -237,7 +241,7 @@ export const useStatusTransitions = () => {
           });
 
           console.log(
-            `Status notification email sent for quote ${event.quoteId} to ${quote.email}`,
+            `Status notification email sent for quote ${event.quoteId} to ${customerEmail}`,
           );
         }
       }
