@@ -21,15 +21,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, HelpCircle } from 'lucide-react';
-import { useCreateCustomerTicket, useUserTickets } from '@/hooks/useTickets';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, HelpCircle, Package, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { useCreateCustomerTicket } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDashboardState } from '@/hooks/useDashboardState';
 import {
   TICKET_PRIORITY_LABELS,
   TICKET_CATEGORY_LABELS,
   type TicketPriority,
   type TicketCategory,
 } from '@/types/ticket';
+import type { UnifiedQuote } from '@/types/unified-quote';
+import type { Tables } from '@/integrations/supabase/types';
+
+// Extended quote type that includes tracking fields (database has them, types might be out of sync)
+type QuoteWithTracking = Tables<'quotes'> & {
+  iwish_tracking_id?: string | null;
+  tracking_status?: string | null;
+  estimated_delivery_date?: string | null;
+  shipping_carrier?: string | null;
+  tracking_number?: string | null;
+  items?: any; // JSONB field
+};
 
 // Customer-friendly form validation schema
 const newTicketSchema = z.object({
@@ -58,9 +72,11 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
   const { user } = useAuth();
   const createTicketMutation = useCreateCustomerTicket();
 
-  // Get user's quotes for dropdown selection
-  const { data: userTickets } = useUserTickets(user?.id);
-  const userQuotes = userTickets?.map((t) => t.quote).filter(Boolean) || [];
+  // Get user's quotes and orders for dropdown selection
+  const { quotes, orders } = useDashboardState();
+  const userQuotes = [...(quotes || []), ...(orders || [])].filter(quote => 
+    quote && quote.id && quote.destination_country
+  );
 
   const form = useForm<NewTicketForm>({
     resolver: zodResolver(newTicketSchema),
@@ -71,6 +87,53 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       quote_id: preSelectedQuoteId || '',
     },
   });
+
+  // Watch help_type to conditionally show order selection
+  const helpType = form.watch('help_type');
+  const selectedQuoteId = form.watch('quote_id');
+
+  // Clear quote_id when switching away from order_issue
+  if (helpType !== 'order_issue' && selectedQuoteId) {
+    form.setValue('quote_id', '');
+  }
+
+  // Find selected quote for context display
+  const selectedQuote: QuoteWithTracking | null = selectedQuoteId 
+    ? (userQuotes.find(quote => quote.id === selectedQuoteId) as QuoteWithTracking)
+    : null;
+
+  // Auto-populate subject when help type or order changes
+  const currentSubject = form.watch('subject');
+  const autoGenerateSubject = () => {
+    if (!currentSubject || currentSubject.startsWith('Issue with') || currentSubject.startsWith('Payment Problem') || currentSubject.startsWith('Account Question')) {
+      let newSubject = '';
+      switch (helpType) {
+        case 'order_issue':
+          if (selectedQuote) {
+            newSubject = `Issue with Order ${selectedQuote.iwish_tracking_id || selectedQuote.id.slice(0, 8)}`;
+          } else {
+            newSubject = 'Order or Delivery Issue';
+          }
+          break;
+        case 'payment_problem':
+          newSubject = 'Payment Problem';
+          break;
+        case 'account_question':
+          newSubject = 'Account Question';
+          break;
+        default:
+          newSubject = 'Support Request';
+      }
+      if (newSubject !== currentSubject) {
+        form.setValue('subject', newSubject);
+      }
+    }
+  };
+
+  // Trigger auto-generation when help type or selected quote changes
+  if (helpType || selectedQuoteId) {
+    autoGenerateSubject();
+  }
 
   const onSubmit = async (values: NewTicketForm) => {
     if (!user) {
@@ -109,38 +172,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Quote Selection (Optional) */}
-            {userQuotes.length > 0 && (
-              <FormField
-                control={form.control}
-                name="quote_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Related Order (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a quote/order if related" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="">No related order</SelectItem>
-                        {userQuotes.map((quote) => (
-                          <SelectItem key={quote.id} value={quote.id}>
-                            {quote.iwish_tracking_id
-                              ? `${quote.iwish_tracking_id} - ${quote.destination_country}`
-                              : `Quote ${quote.id.slice(0, 8)}... - ${quote.destination_country}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {/* What do you need help with? */}
+            {/* What do you need help with? - Now comes first */}
             <FormField
               control={form.control}
               name="help_type"
@@ -165,16 +197,123 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
               )}
             />
 
+            {/* Debug info - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="p-2 bg-yellow-50 border text-xs">
+                Debug: helpType={helpType}, userQuotes.length={userQuotes.length}
+              </div>
+            )}
+
+            {/* Order Selection - Only shown for order issues */}
+            {helpType === 'order_issue' && userQuotes.length > 0 && (
+              <FormField
+                control={form.control}
+                name="quote_id"
+                render={({ field }) => (
+                  <FormItem className="transition-all duration-300 ease-in-out">
+                    <FormLabel>Which order do you need help with?</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select the order you need help with" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {userQuotes.map((quote) => (
+                          <SelectItem key={quote.id} value={quote.id}>
+                            {(quote as QuoteWithTracking).iwish_tracking_id
+                              ? `${(quote as QuoteWithTracking).iwish_tracking_id} - ${quote.destination_country}`
+                              : `Order ${quote.id.slice(0, 8)}... - ${quote.destination_country}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Order Context Display - Shows details of selected order */}
+            {selectedQuote && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg transition-all duration-300 ease-in-out">
+                <div className="flex items-start gap-3">
+                  <Package className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-medium text-blue-900">Order Details</h4>
+                      <Badge variant={selectedQuote.status === 'delivered' ? 'default' : 'secondary'}>
+                        {selectedQuote.status}
+                      </Badge>
+                      {selectedQuote.tracking_status && (
+                        <Badge variant="outline">
+                          {selectedQuote.tracking_status}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
+                      {selectedQuote.iwish_tracking_id && (
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          <span>ID: {selectedQuote.iwish_tracking_id}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span>To: {selectedQuote.destination_country}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        <span>Total: ${selectedQuote.final_total_usd?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      
+                      {selectedQuote.estimated_delivery_date && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          <span>Est. Delivery: {new Date(selectedQuote.estimated_delivery_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {selectedQuote.items && (
+                      <div className="mt-2 text-xs text-blue-700">
+                        Items: {Array.isArray(selectedQuote.items) 
+                          ? selectedQuote.items.map((item: any) => item?.name || 'Unnamed item').join(', ')
+                          : 'Product details available'
+                        }
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Helpful message when order issue is selected but no orders exist */}
+            {helpType === 'order_issue' && userQuotes.length === 0 && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  We don't see any orders in your account yet. If you have a question about an order, 
+                  please include the order details in your message below.
+                </p>
+              </div>
+            )}
+
             {/* Subject */}
             <FormField
               control={form.control}
               name="subject"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Subject</FormLabel>
+                  <FormLabel>Subject (auto-filled, you can edit)</FormLabel>
                   <FormControl>
                     <Input placeholder="Brief description of your issue" {...field} />
                   </FormControl>
+                  <p className="text-xs text-gray-500">
+                    We've suggested a subject based on your issue type, but feel free to modify it.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
