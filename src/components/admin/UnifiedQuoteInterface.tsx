@@ -44,6 +44,7 @@ import {
   User,
   Smartphone,
   MessageCircle,
+  Settings,
 } from 'lucide-react';
 import {
   Select,
@@ -56,7 +57,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
+import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { normalizeShippingOptionId } from '@/utils/shippingOptionUtils';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 
 // Performance optimization hooks
@@ -80,6 +83,7 @@ import { CompactPaymentManager } from './smart-components/CompactPaymentManager'
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
+import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import { QuoteDetailForm } from './QuoteDetailForm';
 import { Form, FormField, FormItem, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -375,6 +379,41 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       } else {
         console.log('✅ [DEBUG] Database update successful!');
+        
+        // Trigger recalculation to update handling charges and other dependent values
+        console.log('🔄 [DEBUG] Triggering recalculation after shipping option change...');
+        try {
+          const calculationResult = smartCalculationEngine.calculateLiveSync({
+            quote: optimisticQuote,
+            preferences: {
+              speed_priority: 'medium',
+              cost_priority: 'medium',
+              show_all_options: false,
+            },
+          });
+          
+          if (calculationResult.success) {
+            console.log('✅ [DEBUG] Recalculation successful:', {
+              handlingCharge: calculationResult.updated_quote.calculation_data.breakdown.handling_charge,
+              finalTotal: calculationResult.updated_quote.final_total_usd
+            });
+            
+            // Update both quote state and live quote with recalculated values
+            setQuote(calculationResult.updated_quote);
+            if (isEditMode) {
+              setLiveQuote(calculationResult.updated_quote);
+            }
+            
+            // Update form with recalculated values
+            form.setValue('handling_charge', calculationResult.updated_quote.calculation_data.breakdown.handling_charge || 0);
+            form.setValue('final_total_usd', calculationResult.updated_quote.final_total_usd || 0);
+            
+          } else {
+            console.warn('⚠️ [DEBUG] Recalculation failed:', calculationResult.error);
+          }
+        } catch (recalcError) {
+          console.error('❌ [DEBUG] Recalculation error:', recalcError);
+        }
       }
     } catch (error) {
       console.error('❌ [DEBUG] Error updating shipping option:', error);
@@ -1388,7 +1427,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             </div>
           </div>
 
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end space-x-3">
+            <ShareQuoteButtonV2 quote={quote} variant="button" size="sm" />
             <ModeToggle
               isEditMode={isEditMode}
               onToggle={handleModeToggle}
@@ -1936,28 +1976,200 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   </Card>
 
                   {/* Quote Detail Form - Direct Integration */}
-                  <QuoteDetailForm
-                    form={form}
-                    detectedCustomsPercentage={customsTierInfo?.customs_percentage}
-                    detectedCustomsTier={
-                      customsTierInfo?.applied_tier
-                        ? {
-                            name: customsTierInfo.applied_tier.rule_name,
-                            customs_percentage: customsTierInfo.customs_percentage,
-                            description: customsTierInfo.fallback_used
-                              ? 'Fallback tier applied'
-                              : 'Smart tier applied',
-                          }
-                        : undefined
+                  {(() => {
+                    // Calculate default values for handling and insurance
+                    if (!liveQuote) {
+                      console.log('🔧 [DEBUG] No liveQuote available');
+                      return null;
                     }
-                    onCalculateSmartCustoms={calculateSmartCustoms}
-                    isCalculatingCustoms={isCalculatingCustoms}
-                    shippingOptions={shippingOptions}
-                    recommendations={shippingRecommendations}
-                    onSelectShippingOption={handleShippingOptionSelect}
-                    onShowShippingDetails={() => setShowShippingDetails(true)}
-                    isEditingRoute={isEditingRoute}
-                  />
+
+                    // Wait for shipping options to be loaded
+                    if (!shippingOptions || shippingOptions.length === 0) {
+                      console.log('🔧 [DEBUG] Shipping options not loaded yet, showing form without defaults');
+                      // Show form without defaults while waiting for shipping options
+                      return (
+                        <QuoteDetailForm
+                          form={form}
+                          detectedCustomsPercentage={customsTierInfo?.customs_percentage}
+                          detectedCustomsTier={
+                            customsTierInfo?.applied_tier
+                              ? {
+                                  name: customsTierInfo.applied_tier.rule_name,
+                                  customs_percentage: customsTierInfo.customs_percentage,
+                                  description: customsTierInfo.fallback_used
+                                    ? 'Fallback tier applied'
+                                    : 'Smart tier applied',
+                                }
+                              : undefined
+                          }
+                          onCalculateSmartCustoms={calculateSmartCustoms}
+                          isCalculatingCustoms={isCalculatingCustoms}
+                          shippingOptions={shippingOptions}
+                          recommendations={shippingRecommendations}
+                          onSelectShippingOption={handleShippingOptionSelect}
+                          onShowShippingDetails={() => setShowShippingDetails(true)}
+                          isEditingRoute={isEditingRoute}
+                        />
+                      );
+                    }
+
+                    const selectedOptionId = liveQuote.operational_data?.shipping?.selected_option;
+                    const normalizedId = normalizeShippingOptionId(selectedOptionId);
+                    const selectedOption = shippingOptions.find(opt => opt.id === normalizedId);
+                    
+                    console.log('🔧 [DEBUG] Shipping option matching:', {
+                      originalId: selectedOptionId,
+                      normalizedId,
+                      foundOption: selectedOption?.id,
+                      availableOptions: shippingOptions.map(opt => opt.id),
+                      shippingOptionsCount: shippingOptions.length,
+                      firstOptionSample: shippingOptions[0],
+                    });
+
+                    // Additional debug for the exact matching logic
+                    console.log('🔧 [DEBUG] Detailed matching attempt:', {
+                      searchingFor: normalizedId,
+                      matches: shippingOptions.map(opt => ({
+                        id: opt.id,
+                        matches: opt.id === normalizedId,
+                        hasHandling: !!opt.handling_charge,
+                        hasInsurance: !!opt.insurance_options
+                      }))
+                    });
+
+                    // If no selected option found, try to create a fallback from the shipping route
+                    let fallbackOption = null;
+                    if (!selectedOption && normalizedId) {
+                      console.log('🔧 [DEBUG] Attempting to create fallback option for:', normalizedId);
+                      
+                      // Try to create a basic option structure for calculation
+                      fallbackOption = {
+                        id: normalizedId,
+                        carrier: normalizedId.includes('dhl') ? 'DHL' : normalizedId.includes('fedex') ? 'FedEx' : 'Unknown',
+                        name: normalizedId.replace('_', ' ').toUpperCase(),
+                        cost_usd: 0,
+                        // Add handling_charge config for all shipping options (fallback if DB fails)
+                        handling_charge: 
+                          normalizedId === 'dhl_standard' ? {
+                            base_fee: 5,
+                            percentage_of_value: 2,
+                            min_fee: 3,
+                            max_fee: 50
+                          } : 
+                          normalizedId === 'dhl_express' ? {
+                            base_fee: 8,
+                            percentage_of_value: 2.5,
+                            min_fee: 5,
+                            max_fee: 80
+                          } : 
+                          normalizedId === 'fedex_standard' ? {
+                            base_fee: 6,
+                            percentage_of_value: 1.8,
+                            min_fee: 4,
+                            max_fee: 60
+                          } : undefined,
+                        // Add insurance_options config for all shipping options (fallback if DB fails)
+                        insurance_options: 
+                          normalizedId === 'dhl_standard' ? {
+                            coverage_percentage: 1.5,
+                            max_coverage: 5000,
+                            min_fee: 2,
+                            available: true,
+                            default_enabled: false
+                          } : 
+                          normalizedId === 'dhl_express' ? {
+                            coverage_percentage: 1.5,
+                            max_coverage: 10000,
+                            min_fee: 3,
+                            available: true,
+                            default_enabled: false
+                          } : 
+                          normalizedId === 'fedex_standard' ? {
+                            coverage_percentage: 1.2,
+                            max_coverage: 7500,
+                            min_fee: 2.5,
+                            available: true,
+                            default_enabled: false
+                          } : undefined
+                      };
+                      
+                      console.log('🔧 [DEBUG] Created fallback option:', fallbackOption);
+                    }
+
+                    const optionToUse = selectedOption || fallbackOption;
+                    const calculationData = calculationDefaultsService.getCalculationData(liveQuote, optionToUse);
+
+                    // Debug: Check current breakdown structure
+                    console.log('🔧 [DEBUG] Current breakdown structure:', {
+                      quoteId: liveQuote.id,
+                      breakdown: liveQuote.calculation_data?.breakdown,
+                      hasHandling: !!liveQuote.calculation_data?.breakdown?.handling,
+                      hasInsurance: !!liveQuote.calculation_data?.breakdown?.insurance,
+                      oldFeesValue: liveQuote.calculation_data?.breakdown?.fees,
+                    });
+
+                    return (
+                      <QuoteDetailForm
+                        form={form}
+                        detectedCustomsPercentage={customsTierInfo?.customs_percentage}
+                        detectedCustomsTier={
+                          customsTierInfo?.applied_tier
+                            ? {
+                                name: customsTierInfo.applied_tier.rule_name,
+                                customs_percentage: customsTierInfo.customs_percentage,
+                                description: customsTierInfo.fallback_used
+                                  ? 'Fallback tier applied'
+                                  : 'Smart tier applied',
+                              }
+                            : undefined
+                        }
+                        detectedHandlingCharge={calculationData.handlingDefault}
+                        detectedInsuranceAmount={calculationData.insuranceDefault}
+                        handlingExplanation={calculationData.handlingExplanation}
+                        insuranceExplanation={calculationData.insuranceExplanation}
+                        onCalculateSmartCustoms={calculateSmartCustoms}
+                        isCalculatingCustoms={isCalculatingCustoms}
+                        shippingOptions={shippingOptions}
+                        recommendations={shippingRecommendations}
+                        onSelectShippingOption={handleShippingOptionSelect}
+                        onShowShippingDetails={() => setShowShippingDetails(true)}
+                        isEditingRoute={isEditingRoute}
+                      />
+                    );
+                  })()}
+
+                  {/* Debug: Force Recalculation Button */}
+                  {liveQuote && !liveQuote.calculation_data?.breakdown?.handling && (
+                    <Card className="border-yellow-200 bg-yellow-50 mb-4">
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-yellow-800">
+                              <strong>Legacy Breakdown Detected</strong> - This quote uses the old breakdown structure.
+                            </p>
+                            <p className="text-xs text-yellow-600 mt-1">
+                              Click "Update Breakdown" to separate handling and insurance line items.
+                            </p>
+                          </div>
+                          <Button
+                            onClick={async () => {
+                              console.log('🔧 Forcing breakdown recalculation...');
+                              await recalculateShipping();
+                              toast({
+                                title: 'Breakdown Updated',
+                                description: 'Quote breakdown has been updated with separate handling and insurance fields.',
+                                duration: 3000,
+                              });
+                            }}
+                            size="sm"
+                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                          >
+                            Update Breakdown
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
@@ -2298,7 +2510,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               )}
 
               {/* 5.5. Admin Override Controls - Handling & Insurance */}
-              <Card>
+              {isEditMode && (
+                <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center space-x-2 text-sm">
                     <Settings className="w-4 h-4 text-orange-600" />
@@ -2313,26 +2526,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </label>
                     <div className="flex items-center space-x-2">
                       <div className="flex-1">
-                        <FormField
-                          control={form.control}
-                          name="handling_charge"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Auto-calculated"
-                                  {...field}
-                                  onChange={(e) => {
-                                    field.onChange(Number(e.target.value));
-                                    scheduleCalculation();
-                                  }}
-                                  className="text-xs"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Auto-calculated"
+                          value={form.watch('handling_charge') || ''}
+                          onChange={(e) => {
+                            form.setValue('handling_charge', Number(e.target.value));
+                            scheduleCalculation();
+                          }}
+                          className="text-xs"
                         />
                       </div>
                       <div className="text-xs text-gray-500">
@@ -2354,26 +2557,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </label>
                     <div className="flex items-center space-x-2">
                       <div className="flex-1">
-                        <FormField
-                          control={form.control}
-                          name="insurance_amount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Auto-calculated"
-                                  {...field}
-                                  onChange={(e) => {
-                                    field.onChange(Number(e.target.value));
-                                    scheduleCalculation();
-                                  }}
-                                  className="text-xs"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Auto-calculated"
+                          value={form.watch('insurance_amount') || ''}
+                          onChange={(e) => {
+                            form.setValue('insurance_amount', Number(e.target.value));
+                            scheduleCalculation();
+                          }}
+                          className="text-xs"
                         />
                       </div>
                       <div className="text-xs text-gray-500">
@@ -2404,6 +2597,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   </div>
                 </CardContent>
               </Card>
+              )}
 
               {/* 6. Payment Management - Sixth Priority (conditional) */}
               {[

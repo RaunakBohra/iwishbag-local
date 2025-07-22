@@ -41,6 +41,10 @@ interface QuoteDetailFormProps {
   };
   detectedCustomsPercentage?: number;
   detectedCustomsTier?: CustomsTier;
+  detectedHandlingCharge?: number;
+  detectedInsuranceAmount?: number;
+  handlingExplanation?: string;
+  insuranceExplanation?: string;
   isOrder?: boolean;
   onCalculateSmartCustoms?: () => void;
   isCalculatingCustoms?: boolean;
@@ -56,6 +60,10 @@ export const QuoteDetailForm = ({
   shippingAddress: _shippingAddress,
   detectedCustomsPercentage,
   detectedCustomsTier,
+  detectedHandlingCharge,
+  detectedInsuranceAmount,
+  handlingExplanation,
+  insuranceExplanation,
   isOrder = false,
   onCalculateSmartCustoms,
   isCalculatingCustoms = false,
@@ -381,22 +389,46 @@ export const QuoteDetailForm = ({
                   <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
                     Insurance
                   </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {inputCurrencySymbol}
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <div className="relative flex-1">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                          {inputCurrencySymbol}
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          value={field.value ?? ''}
+                          onWheel={handleNumberInputWheel}
+                          className="h-8 pl-6"
+                          placeholder={detectedInsuranceAmount ? `Default: ${detectedInsuranceAmount.toFixed(2)}` : "10.00"}
+                        />
+                      </div>
+                    </FormControl>
+                    {detectedInsuranceAmount !== undefined && 
+                     detectedInsuranceAmount !== Number(field.value) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          form.setValue('insurance_amount', detectedInsuranceAmount)
+                        }
+                        className="h-8 px-2 text-xs"
+                      >
+                        Apply Default
+                      </Button>
+                    )}
+                  </div>
+                  {insuranceExplanation && (
+                    <div className="mt-1">
+                      <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
+                        {insuranceExplanation}
                       </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        value={field.value ?? ''}
-                        onWheel={handleNumberInputWheel}
-                        className="h-8 pl-6"
-                        placeholder="10.00"
-                      />
                     </div>
-                  </FormControl>
+                  )}
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -422,22 +454,46 @@ export const QuoteDetailForm = ({
                   <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
                     Handling
                   </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {inputCurrencySymbol}
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <div className="relative flex-1">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                          {inputCurrencySymbol}
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          value={field.value ?? ''}
+                          onWheel={handleNumberInputWheel}
+                          className="h-8 pl-6"
+                          placeholder={detectedHandlingCharge ? `Default: ${detectedHandlingCharge.toFixed(2)}` : "15.00"}
+                        />
+                      </div>
+                    </FormControl>
+                    {detectedHandlingCharge && 
+                     detectedHandlingCharge !== Number(field.value) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          form.setValue('handling_charge', detectedHandlingCharge)
+                        }
+                        className="h-8 px-2 text-xs"
+                      >
+                        Apply Default
+                      </Button>
+                    )}
+                  </div>
+                  {handlingExplanation && (
+                    <div className="mt-1">
+                      <span className="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                        {handlingExplanation}
                       </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        value={field.value ?? ''}
-                        onWheel={handleNumberInputWheel}
-                        className="h-8 pl-6"
-                        placeholder="15.00"
-                      />
                     </div>
-                  </FormControl>
+                  )}
+                  <FormMessage />
                 </FormItem>
               )}
             />

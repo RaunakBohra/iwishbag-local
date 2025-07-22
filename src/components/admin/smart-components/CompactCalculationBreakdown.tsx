@@ -43,12 +43,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const isDualCurrency = currencyDisplay.originCurrency !== currencyDisplay.destinationCurrency;
 
-  // Reset active tab to breakdown if Exchange tab is not available
+  // Reset active tab to breakdown if invalid tab
   React.useEffect(() => {
-    if (activeTab === 'exchange' && !isDualCurrency) {
+    if (activeTab === 'exchange') {
       setActiveTab('breakdown');
     }
-  }, [activeTab, isDualCurrency]);
+  }, [activeTab]);
 
   const breakdown = quote.calculation_data?.breakdown || {};
   const exchangeRate = currencyDisplay.exchangeRate;
@@ -65,27 +65,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   // Debug logging for breakdown component
   console.log('[DEBUG] CompactCalculationBreakdown render:', {
     quoteId: quote.id,
-    breakdownShipping: breakdown.shipping,
+    breakdown: breakdown,
+    breakdownFees: breakdown.fees,
+    breakdownHandling: breakdown.handling,
+    breakdownInsurance: breakdown.insurance,
     totalWeight: quote.items?.reduce((sum, item) => sum + item.weight_kg * item.quantity, 0) || 0,
-    itemWeights: quote.items?.map(item => ({ 
-      name: item.name, 
-      weight_kg: item.weight_kg, 
-      quantity: item.quantity, 
-      totalWeight: item.weight_kg * item.quantity 
-    })),
     selectedShippingOptionId: quote.operational_data?.shipping?.selected_option,
-    selectedShippingOption: selectedShippingOption
-      ? {
-          id: selectedShippingOption.id,
-          carrier: selectedShippingOption.carrier,
-          cost: selectedShippingOption.cost_usd,
-        }
-      : null,
-    shippingOptionsAvailable: shippingOptions.map((opt) => ({
-      id: opt.id,
-      carrier: opt.carrier,
-      cost: opt.cost_usd,
-    })),
     totalCost: quote.final_total_usd,
     calculationData: quote.calculation_data,
   });
@@ -120,12 +105,30 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   // ✅ REMOVED: Misleading estimate functions replaced with actual data display
 
   // Key cost components for compact view
-  const keyComponents = [
+  const totalFees = (breakdown.fees || 0) + (breakdown.handling || 0) + (breakdown.insurance || 0);
+  
+  // Debug the fees calculation
+  console.log('[DEBUG] Fees calculation:', {
+    fees: breakdown.fees,
+    handling: breakdown.handling,
+    insurance: breakdown.insurance,
+    totalFees: totalFees
+  });
+  
+  const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
     { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
-    { label: 'Fees', amount: breakdown.fees || 0, color: 'text-gray-600' },
+    { label: 'Fees', amount: totalFees, color: 'text-gray-600' },
   ];
+  
+  const keyComponents = allComponents.filter(component => component.amount > 0);
+  
+  // Debug the filtering
+  console.log('[DEBUG] Component filtering:', {
+    allComponents: allComponents.map(c => ({label: c.label, amount: c.amount})),
+    filteredComponents: keyComponents.map(c => ({label: c.label, amount: c.amount}))
+  });
 
   // Compact header view
   const CompactHeader = () => (
@@ -155,30 +158,16 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       </div>
 
       {/* Compact Cost Grid */}
-      <div className="grid grid-cols-4 gap-2 text-xs">
+      <div className={`grid gap-2 text-xs ${keyComponents.length <= 2 ? 'grid-cols-2' : keyComponents.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
         {keyComponents.map((component, index) => (
           <div key={index} className="text-center">
             <div className={`font-semibold ${component.color}`}>{currencyDisplay.formatSingleAmount(component.amount, 'origin')}</div>
             <div className="text-gray-500 text-xs">{component.label}</div>
-            <div className="text-gray-400 text-xs">{getPercentage(component.amount)}%</div>
+            <div className="text-gray-400 text-xs">{currencyDisplay.formatSingleAmount(component.amount, 'destination')}</div>
           </div>
         ))}
       </div>
 
-      {/* Exchange Rate (if not USD) */}
-      {isDualCurrency && (
-        <div className="mt-3 flex items-center justify-between text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
-          <span>Exchange Rate:</span>
-          <div className="flex items-center space-x-1">
-            <span>
-              1 {currencyDisplay.originCurrency} = {exchangeRate.toFixed(4)} {currencyDisplay.destinationCurrency}
-            </span>
-            <Badge variant="outline" className="text-xs h-4 px-1">
-              {exchangeRate.source === 'shipping_route' ? 'Route' : 'Standard'}
-            </Badge>
-          </div>
-        </div>
-      )}
     </div>
   );
 
@@ -186,20 +175,13 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const ExpandedDetails = () => (
     <div className="border-t border-gray-100">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList
-          className={`grid w-full h-8 text-xs ${!isDualCurrency ? 'grid-cols-2' : 'grid-cols-3'}`}
-        >
+        <TabsList className="grid w-full h-8 text-xs grid-cols-2">
           <TabsTrigger value="breakdown" className="text-xs">
             Breakdown
           </TabsTrigger>
           <TabsTrigger value="insights" className="text-xs">
             Insights
           </TabsTrigger>
-          {isDualCurrency && (
-            <TabsTrigger value="exchange" className="text-xs">
-              Exchange
-            </TabsTrigger>
-          )}
         </TabsList>
 
         <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
@@ -217,7 +199,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="text-right">
                 <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
-                  {getPercentage(Number(breakdown.items_total || 0))}%
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'destination')}
                 </div>
               </div>
             </div>
@@ -237,36 +219,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="text-right">
                   <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}</div>
                   <div className="text-xs text-gray-500">
-                    {getPercentage(Number(breakdown.shipping || 0))}%
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'destination')}
                   </div>
                 </div>
               </div>
 
               {/* Shipping Calculation Breakdown - FIXED: Show actual data */}
-              {selectedShippingOption?.carrier && (
-                <div className="ml-6 space-y-1 text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                  <div className="font-medium text-gray-700 mb-2">Actual Shipping Cost:</div>
-                  <div className="flex justify-between">
-                    <span>• Carrier:</span>
-                    <span>{selectedShippingOption.carrier}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>• Weight:</span>
-                    <span>{getTotalWeight()}kg</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>• Service:</span>
-                    <span>{selectedShippingOption.name || 'Standard'}</span>
-                  </div>
-                  <div className="flex justify-between font-medium text-gray-800 border-t border-gray-200 pt-1 mt-1">
-                    <span>Total Shipping:</span>
-                    <span>{currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    ✅ Calculated using route configuration (base + weight tiers + carrier premium)
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Customs & Duties */}
@@ -283,7 +241,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="text-right">
                 <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
-                  {getPercentage(Number(breakdown.customs || 0))}%
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'destination')}
                 </div>
               </div>
             </div>
@@ -297,27 +255,64 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="text-right">
                 <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
-                  {getPercentage(Number(breakdown.taxes || 0))}%
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'destination')}
                 </div>
               </div>
             </div>
 
-            {/* Processing Fees */}
+            {/* Payment Gateway Fee */}
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center space-x-2">
                 <Zap className="w-4 h-4 text-gray-600" />
-                <span className="text-gray-700">Processing Fees</span>
-                <Badge variant="outline" className="text-xs h-4 px-1">
-                  Gateway + Handling
-                </Badge>
+                <span className="text-gray-700">Payment Gateway Fee</span>
               </div>
               <div className="text-right">
                 <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'origin')}</div>
                 <div className="text-xs text-gray-500">
-                  {getPercentage(Number(breakdown.fees || 0))}%
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'destination')}
                 </div>
               </div>
             </div>
+
+            {/* Handling Charge (if separate) */}
+            {(() => {
+              const shouldShow = breakdown.handling && Number(breakdown.handling) > 0;
+              console.log('[DEBUG] Handling check:', {handling: breakdown.handling, type: typeof breakdown.handling, numberValue: Number(breakdown.handling), shouldShow: shouldShow});
+              return shouldShow;
+            })() && (
+              <div className="flex items-center justify-between text-sm bg-red-500">
+                <div className="flex items-center space-x-2">
+                  <Zap className="w-4 h-4 text-orange-600" />
+                  <span className="text-gray-700">HANDLING CHARGE SHOULD NOT SHOW</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'origin')}</div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'destination')}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Insurance (if separate) */}
+            {(() => {
+              const shouldShow = breakdown.insurance && Number(breakdown.insurance) > 0;
+              console.log('[DEBUG] Insurance check:', {insurance: breakdown.insurance, type: typeof breakdown.insurance, numberValue: Number(breakdown.insurance), shouldShow: shouldShow});
+              return shouldShow;
+            })() && (
+              <div className="flex items-center justify-between text-sm bg-blue-500">
+                <div className="flex items-center space-x-2">
+                  <Zap className="w-4 h-4 text-purple-600" />
+                  <span className="text-gray-700">INSURANCE SHOULD NOT SHOW</span>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'origin')}</div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'destination')}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Discount */}
             {(breakdown.discount || 0) > 0 && (
@@ -331,7 +326,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     -{currencyDisplay.formatSingleAmount(Number(breakdown.discount || 0), 'origin')}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {getPercentage(Number(breakdown.discount || 0))}%
+                    -{currencyDisplay.formatSingleAmount(Number(breakdown.discount || 0), 'destination')}
                   </div>
                 </div>
               </div>
@@ -359,10 +354,12 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center bg-green-50 p-3 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Shipping Cost</div>
-              <div className="text-2xl font-bold text-green-600">
-                {getPercentage(breakdown.shipping || 0)}%
+              <div className="text-lg font-bold text-green-600">
+                {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'destination')}
               </div>
-              <div className="text-xs text-gray-500">of total cost</div>
+              <div className="text-xs text-gray-500">
+                {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}
+              </div>
             </div>
             <div className="text-center bg-blue-50 p-3 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Optimization Score</div>
@@ -416,115 +413,6 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             </div>
           )}
         </TabsContent>
-
-        {isDualCurrency && (
-          <TabsContent value="exchange" className="p-4 pt-3 space-y-3">
-            {/* Currency Conversion Calculator */}
-            <div className="space-y-3">
-              {/* Main Conversion Display */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-700">Total Amount Conversion</div>
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <div className="flex justify-between items-center">
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-gray-900">
-                        {currencyDisplay.formatSingleAmount(totalCost, 'origin')}
-                      </div>
-                      <div className="text-xs text-gray-600">{currencyDisplay.originCurrency} (Base)</div>
-                    </div>
-                    <div className="text-gray-400">→</div>
-                    <div className="text-center">
-                      <div className="text-lg font-bold text-blue-600">
-                        {currencyDisplay.formatSingleAmount(totalCost, 'destination')}
-                      </div>
-                      <div className="text-xs text-gray-600">Customer Currency ({currencyDisplay.destinationCurrency})</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Component-wise Conversions */}
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-gray-700">Detailed Conversions</div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Items Total:</span>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(breakdown.items_total || 0, 'destination')}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {currencyDisplay.formatSingleAmount(breakdown.items_total || 0, 'origin')}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Shipping Total:</span>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(breakdown.shipping || 0, 'destination')}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {currencyDisplay.formatSingleAmount(breakdown.shipping || 0, 'origin')}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Customs & Duties:</span>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(breakdown.customs || 0, 'destination')}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {currencyDisplay.formatSingleAmount(breakdown.customs || 0, 'origin')}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Processing Fees:</span>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(breakdown.fees || 0, 'destination')}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {currencyDisplay.formatSingleAmount(breakdown.fees || 0, 'origin')}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Rate Source Details */}
-              <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                <div className="flex items-center space-x-1 mb-1">
-                  <Info className="w-3 h-3" />
-                  <span className="font-medium">Exchange Rate Details</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span>Rate:</span>
-                    <span>
-                      1 {currencyDisplay.originCurrency} = {exchangeRate.toFixed(4)} {currencyDisplay.destinationCurrency}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Source:</span>
-                    <span>
-                      {exchangeRate.source === 'shipping_route'
-                        ? 'Route-specific'
-                        : 'Standard market'}
-                    </span>
-                  </div>
-                  <div className="text-gray-500 text-xs mt-1">
-                    {exchangeRate.source === 'shipping_route'
-                      ? 'Using shipping route specific rate for enhanced accuracy on this route'
-                      : 'Using standard market exchange rate from our currency service'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

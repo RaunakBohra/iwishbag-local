@@ -5,7 +5,7 @@ import { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 import { useAdminCurrencyDisplay } from '@/hooks/useAdminCurrencyDisplay';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
-import { ShareQuoteButton } from './ShareQuoteButton';
+import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import {
   Calendar,
   User,
@@ -226,7 +226,7 @@ export const CompactQuoteListItem = ({
               </div>
               <div className="flex items-center gap-2">
                 <BodySmall className="text-gray-500">{formatDate(quote.created_at)}</BodySmall>
-                <ShareQuoteButton quote={quote} variant="icon" />
+                <ShareQuoteButtonV2 quote={quote} variant="icon" />
               </div>
             </div>
 

@@ -6,6 +6,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { currencyService } from '@/services/CurrencyService';
+import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import type {
   UnifiedQuote,
@@ -1043,7 +1044,9 @@ export class SmartCalculationEngine {
         shipping: selectedShipping.cost_usd,
         customs: customsAmount,
         taxes: salesTax + vatAmount,
-        fees: handlingFee + insuranceAmount + paymentGatewayFee,
+        fees: paymentGatewayFee,
+        handling: handlingFee,
+        insurance: insuranceAmount,
         discount: discount,
         finalTotal: Math.round(finalTotal * 100) / 100
       }
@@ -1060,7 +1063,9 @@ export class SmartCalculationEngine {
           shipping: selectedShipping.cost_usd,
           customs: customsAmount,
           taxes: salesTax + vatAmount,
-          fees: handlingFee + insuranceAmount + paymentGatewayFee,
+          fees: paymentGatewayFee, // Only gateway fees, not handling/insurance
+          handling: handlingFee, // ✨ NEW: Separate handling field
+          insurance: insuranceAmount, // ✨ NEW: Separate insurance field
           discount: discount,
         },
         exchange_rate: {
@@ -1180,7 +1185,9 @@ export class SmartCalculationEngine {
           shipping: shippingCost, // ✅ Use the provided value directly
           customs: customsAmount,
           taxes: salesTax,
-          fees: handlingFee + insuranceAmount + paymentGatewayFee,
+          fees: paymentGatewayFee,
+        handling: handlingFee,
+        insurance: insuranceAmount,
           discount: discount,
         },
         exchange_rate: {
@@ -1292,7 +1299,9 @@ export class SmartCalculationEngine {
         shipping: selectedShipping.cost_usd,
         customs: customsAmount,
         taxes: salesTax + vatAmount, // Include VAT in taxes like live calculator
-        fees: handlingFee + insuranceAmount + paymentGatewayFee,
+        fees: paymentGatewayFee,
+        handling: handlingFee,
+        insurance: insuranceAmount,
         discount: discount,
       },
       exchange_rate: {
@@ -1437,47 +1446,22 @@ export class SmartCalculationEngine {
       quoteId: quote.id,
     });
 
-    // Check if shipping option has route-based handling charge configuration
-    const routeHandlingConfig = (shippingOption as any).handling_charge;
-
-    if (routeHandlingConfig) {
-      console.log('📦 [DEBUG] Using route-based handling charge:', routeHandlingConfig);
-
-      const baseHandling = routeHandlingConfig.base_fee || 0;
-      const percentageHandling = routeHandlingConfig.percentage_of_value
-        ? (itemsTotal * routeHandlingConfig.percentage_of_value) / 100
-        : 0;
-      const totalHandling = baseHandling + percentageHandling;
-
-      // Apply min/max bounds
-      const minFee = routeHandlingConfig.min_fee || 0;
-      const maxFee = routeHandlingConfig.max_fee || Infinity;
-      const finalHandling = Math.max(minFee, Math.min(maxFee, totalHandling));
-
-      console.log('📦 [DEBUG] Route-based handling calculation:', {
-        baseHandling,
-        percentageHandling,
-        totalHandling,
-        minFee,
-        maxFee,
-        finalHandling,
-      });
-
-      return finalHandling;
-    }
-
-    // Fallback to existing operational data
+    // Check if there's a manual override first
     const existingHandling = quote.operational_data?.handling_charge;
     if (existingHandling && existingHandling > 0) {
-      console.log('📦 [DEBUG] Using existing operational handling:', existingHandling);
+      console.log('📦 [DEBUG] Using manual override handling:', existingHandling);
       return existingHandling;
     }
 
-    // No fallback calculations - require explicit configuration
-    console.error(`❌ No handling charge configuration found for route ${quote.origin_country} → ${quote.destination_country}. Admin must configure route-specific handling charges or provide operational data.`);
+    // Use CalculationDefaultsService for route-based calculation
+    const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(quote, shippingOption);
     
-    // Return 0 instead of hardcoded values to force proper configuration
-    return 0;
+    console.log('📦 [DEBUG] Route-based handling from CalculationDefaultsService:', {
+      calculatedDefault,
+      shippingOptionId: shippingOption.id,
+    });
+
+    return calculatedDefault;
   }
 
   /**

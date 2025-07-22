@@ -312,19 +312,19 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                           )}
                           {renderRow(
                             'Handling Charge',
-                            quote.operational_data?.calculated_handling || quote.operational_data?.handling_charge || quote.handling_charge,
+                            quote.calculation_data?.breakdown?.handling,
                             false,
                             <Package className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}
                           {renderRow(
                             'Package Protection',
-                            quote.operational_data?.calculated_insurance || quote.operational_data?.insurance_amount || quote.insurance_amount,
+                            quote.calculation_data?.breakdown?.insurance,
                             false,
                             <Shield className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}
                           {renderRow(
                             'Payment Gateway Fee',
-                            quote.payment_gateway_fee,
+                            quote.calculation_data?.breakdown?.fees,
                             false,
                             <CreditCard className="h-3 w-3 sm:h-4 sm:w-4" />,
                           )}

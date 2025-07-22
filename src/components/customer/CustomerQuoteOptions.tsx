@@ -14,6 +14,7 @@ import { InsuranceToggle } from './InsuranceToggle';
 import { CustomerShippingSelector } from './CustomerShippingSelector';
 import type { UnifiedQuote, ShippingOption, CustomerPreferences } from '@/types/unified-quote';
 import { currencyService } from '@/services/CurrencyService';
+import { normalizeShippingOptionId } from '@/utils/shippingOptionUtils';
 
 interface CustomerQuoteOptionsProps {
   quote: UnifiedQuote;
@@ -42,7 +43,8 @@ export const CustomerQuoteOptions: React.FC<CustomerQuoteOptionsProps> = ({
 
   // Get current selections
   const selectedShippingOptionId = quote.operational_data?.shipping?.selected_option;
-  const selectedShippingOption = shippingOptions.find((opt) => opt.id === selectedShippingOptionId);
+  const normalizedId = normalizeShippingOptionId(selectedShippingOptionId);
+  const selectedShippingOption = shippingOptions.find((opt) => opt.id === normalizedId);
   const currentPreferences = quote.customer_data?.preferences || {};
 
   // Calculate current totals for display
