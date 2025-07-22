@@ -127,26 +127,46 @@ export const useQuoteManagement = ({
           }
           
           const result = await trackAdminQuery('quotes_list', async () => {
-            // PERFORMANCE FIX: Use standardized column selection with pagination
+            // TEMPORARY FIX: Use same simple query as test until we identify the issue
             let query = supabase
               .from('quotes')
-              .select(COMMON_QUERIES.adminQuotesWithProfiles)
+              .select('id, display_id, status, final_total_usd, created_at, updated_at, destination_country, origin_country, user_id, expires_at, in_cart, iwish_tracking_id, tracking_status, estimated_delivery_date, email_verified, quote_source, is_anonymous, customer_data, items')
               .order('created_at', { ascending: false })
               .range(page * pageSize, (page + 1) * pageSize - 1);
+              
+            // Log the exact query being built
+            console.log('🔍 [useQuoteManagement] Building query with:', {
+              columnSelection: 'explicit columns (not COMMON_QUERIES)',
+              pagination: `page ${page}, pageSize ${pageSize}, range: ${page * pageSize} to ${(page + 1) * pageSize - 1}`,
+              appliedOrder: 'created_at DESC'
+            });
 
+            // TEMPORARY: Comment out all filtering to test if filters are the issue
+            console.log('🔍 [useQuoteManagement] Filter application debug:', {
+              statusFilterWillApply: filters.statuses && filters.statuses.length > 0,
+              statusFilter: filters.statuses,
+              countryFilterWillApply: filters.countries && filters.countries.length > 0,
+              countryFilter: filters.countries,
+              searchFilterWillApply: !!(searchTerm && searchTerm.trim()),
+              searchFilter: searchTerm
+            });
+            
             // Apply status filters
             if (filters.statuses && filters.statuses.length > 0) {
+              console.log('🔍 [useQuoteManagement] Applying status filter:', filters.statuses);
               query = query.in('status', filters.statuses);
             }
 
             // Apply country filters (destination country)
             if (filters.countries && filters.countries.length > 0) {
+              console.log('🔍 [useQuoteManagement] Applying country filter:', filters.countries);
               query = query.in('destination_country', filters.countries);
             }
 
             // Apply full-text search with proper parameterization to prevent SQL injection
             if (searchTerm && searchTerm.trim()) {
               const sanitizedSearchTerm = searchTerm.trim();
+              console.log('🔍 [useQuoteManagement] Applying search filter:', sanitizedSearchTerm);
               
               // SECURITY FIX: Use Supabase's parameterized query methods instead of string interpolation
               // This prevents SQL injection attacks by properly escaping user input
