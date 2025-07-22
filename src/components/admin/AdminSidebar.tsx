@@ -17,6 +17,7 @@ import {
   Brain,
   Ticket,
   MessageSquare,
+  Zap,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -73,6 +74,11 @@ const menuGroups = [
         title: 'Support Tickets',
         url: '/admin/support-tickets',
         icon: Ticket,
+      },
+      {
+        title: 'Auto Assignment',
+        url: '/admin/auto-assignment',
+        icon: Zap,
       },
       {
         title: 'Payment Proofs',

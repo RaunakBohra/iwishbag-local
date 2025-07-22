@@ -55,6 +55,7 @@ const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetai
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
 const EmailConfirmation = React.lazy(() => import('@/pages/auth/EmailConfirmation'));
 const OAuthCallback = React.lazy(() => import('@/pages/auth/OAuthCallback'));
+const VerifyQuoteApproval = React.lazy(() => import('@/pages/auth/VerifyQuoteApproval'));
 const FonepayCallback = React.lazy(() => import('@/pages/api/fonepay-callback'));
 const EsewaSuccess = React.lazy(() => import('@/pages/payment-callback/esewa-success'));
 const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-failure'));
@@ -70,6 +71,7 @@ const PaymentManagement = React.lazy(() => import('@/pages/admin/PaymentManageme
 const ShippingRoutesPage = React.lazy(() => import('@/pages/admin/ShippingRoutes'));
 const StatusManagementPage = React.lazy(() => import('@/pages/admin/StatusManagement'));
 const SupportTicketsPage = React.lazy(() => import('@/pages/admin/SupportTickets'));
+const AutoAssignmentPage = React.lazy(() => import('@/pages/admin/AutoAssignment'));
 const PayUDebugPage = React.lazy(() =>
   import('@/pages/admin/PayUDebugPage').then((m) => ({
     default: m.PayUDebugPage,
@@ -168,6 +170,7 @@ const router = createBrowserRouter([
           },
           { path: 'customers', element: <EnhancedCustomerManagementPage /> },
           { path: 'support-tickets', element: <SupportTicketsPage /> },
+          { path: 'auto-assignment', element: <AutoAssignmentPage /> },
           { path: 'templates', element: <QuoteTemplatesPage /> },
           {
             path: 'quotes/:id',
@@ -218,6 +221,10 @@ const router = createBrowserRouter([
   {
     path: 'auth/callback',
     element: <OAuthCallback />,
+  },
+  {
+    path: 'auth/verify-quote',
+    element: <VerifyQuoteApproval />,
   },
   {
     path: '/',

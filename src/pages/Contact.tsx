@@ -34,6 +34,7 @@ import { cn } from '@/lib/design-system';
 import { Link } from 'react-router-dom';
 import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 import { ContactTicketForm } from '@/components/support/ContactTicketForm';
+import { businessHoursService } from '@/config/businessHours';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -127,13 +128,17 @@ const Contact = () => {
     });
   };
 
+  // Business hours status
+  const isCurrentlyBusinessHours = businessHoursService.isCurrentlyBusinessHours();
+  const businessHoursMessage = businessHoursService.getAutoResponseMessage();
+
   const contactMethods = [
     {
       icon: Mail,
       title: 'Quick Contact',
       description: 'General questions & inquiries',
       contact: footerSettings?.email || 'contact@iwishbag.com',
-      availability: 'We respond within 24 hours',
+      availability: isCurrentlyBusinessHours ? 'We respond within 4 hours during business hours' : 'We respond by next business day',
       bgColor: 'bg-teal-50',
       iconColor: 'text-teal-600',
       type: 'email',
@@ -143,7 +148,7 @@ const Contact = () => {
       title: 'Order Support',
       description: 'Help with orders & tracking',
       contact: 'Track your issue with tickets',
-      availability: 'Full conversation history',
+      availability: isCurrentlyBusinessHours ? 'Support team is online now' : 'Next response during business hours',
       bgColor: 'bg-purple-50',
       iconColor: 'text-purple-600',
       type: 'ticket',
@@ -152,10 +157,10 @@ const Contact = () => {
       icon: MessageCircle,
       title: 'Live Chat',
       description: 'Real-time assistance',
-      contact: 'Available 24/7',
-      availability: 'Average response time: 2 minutes',
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-600',
+      contact: isCurrentlyBusinessHours ? 'Support team available now' : 'Currently offline',
+      availability: 'Mon-Fri: 10 AM - 5 PM IST',
+      bgColor: isCurrentlyBusinessHours ? 'bg-green-50' : 'bg-gray-50',
+      iconColor: isCurrentlyBusinessHours ? 'text-green-600' : 'text-gray-600',
       type: 'chat',
     },
   ];
@@ -210,6 +215,25 @@ const Contact = () => {
             <Body className="text-gray-600 max-w-2xl mx-auto text-sm">
               Choose the best way to get help with your international shopping needs.
             </Body>
+          </div>
+
+          {/* Business Hours Status */}
+          <div className={`mx-auto max-w-md mb-6 p-4 rounded-lg border text-center ${isCurrentlyBusinessHours 
+            ? 'bg-green-50 border-green-200' 
+            : 'bg-orange-50 border-orange-200'
+          }`}>
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Clock className={`w-4 h-4 ${isCurrentlyBusinessHours ? 'text-green-600' : 'text-orange-600'}`} />
+              <span className={`font-medium text-sm ${isCurrentlyBusinessHours ? 'text-green-900' : 'text-orange-900'}`}>
+                {isCurrentlyBusinessHours ? '🟢 Support team is online' : '🔴 Support team is offline'}
+              </span>
+            </div>
+            <p className={`text-xs ${isCurrentlyBusinessHours ? 'text-green-700' : 'text-orange-700'}`}>
+              Business hours: Monday - Friday, 10:00 AM - 5:00 PM IST
+            </p>
+            <p className={`text-xs mt-1 ${isCurrentlyBusinessHours ? 'text-green-600' : 'text-orange-600'}`}>
+              {businessHoursMessage}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

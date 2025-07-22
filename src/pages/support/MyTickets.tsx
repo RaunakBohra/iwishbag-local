@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useUserTickets } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
 import { NewTicketForm } from '@/components/support/NewTicketForm';
+import { businessHoursService } from '@/config/businessHours';
 import {
   TICKET_STATUS_LABELS,
   TICKET_STATUS_COLORS,
@@ -184,6 +185,38 @@ export default function MyTicketsPage() {
           <Plus className="mr-2 h-4 w-4" />
           Get Help
         </Button>
+      </div>
+
+      {/* Business Hours Status */}
+      <div className={`mb-6 p-4 rounded-lg border ${
+        businessHoursService.isCurrentlyBusinessHours()
+        ? 'bg-green-50 border-green-200' 
+        : 'bg-orange-50 border-orange-200'
+      }`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className={`w-4 h-4 ${
+            businessHoursService.isCurrentlyBusinessHours() 
+            ? 'text-green-600' 
+            : 'text-orange-600'
+          }`} />
+          <span className={`font-medium text-sm ${
+            businessHoursService.isCurrentlyBusinessHours() 
+            ? 'text-green-900' 
+            : 'text-orange-900'
+          }`}>
+            {businessHoursService.isCurrentlyBusinessHours() 
+            ? '🟢 Support team is online' 
+            : '🔴 Support team is offline'
+            }
+          </span>
+        </div>
+        <p className={`text-xs ${
+          businessHoursService.isCurrentlyBusinessHours() 
+          ? 'text-green-700' 
+          : 'text-orange-700'
+        }`}>
+          {businessHoursService.getAutoResponseMessage()}
+        </p>
       </div>
 
       {/* Stats Cards */}

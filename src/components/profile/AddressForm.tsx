@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { unifiedConfigService } from '@/services/UnifiedConfigurationService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -48,11 +49,31 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const { toast } = useToast();
 
   const { data: allCountries, isLoading: countriesLoading } = useQuery({
-    queryKey: ['country-settings'],
+    queryKey: ['country-configurations'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('country_settings').select('*').order('name');
-      if (error) throw new Error(error.message);
-      return data || [];
+      try {
+        const allCountries = await unifiedConfigService.getAllCountries();
+        
+        if (!allCountries) {
+          return [];
+        }
+
+        // Transform to match expected format
+        const countryList = Object.entries(allCountries).map(([code, config]) => ({
+          code,
+          name: config.name,
+          currency: config.currency,
+          symbol: config.symbol,
+          rate_from_usd: config.rate_from_usd,
+          minimum_payment_amount: config.minimum_payment_amount,
+          shipping_allowed: true, // Default to true since we don't have this field in unified config
+        }));
+
+        // Sort by name
+        return countryList.sort((a, b) => a.name.localeCompare(b.name));
+      } catch (error) {
+        throw new Error('Failed to fetch country configurations');
+      }
     },
   });
 

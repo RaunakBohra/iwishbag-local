@@ -5,6 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { ticketNotificationService } from './TicketNotificationService';
+import { unifiedSupportEngine } from './UnifiedSupportEngine';
 import type {
   SupportTicket,
   TicketReply,
@@ -34,6 +35,39 @@ class TicketService {
   private constructor() {}
 
   /**
+   * Transform unified support record to legacy ticket format
+   */
+  private transformToLegacyTicket(supportRecord: any): SupportTicket {
+    return {
+      id: supportRecord.id,
+      user_id: supportRecord.user_id,
+      quote_id: supportRecord.quote_id || null,
+      subject: supportRecord.ticket_data?.subject || '',
+      description: supportRecord.ticket_data?.description || '',
+      priority: supportRecord.ticket_data?.priority || 'medium',
+      category: supportRecord.ticket_data?.category || 'general',
+      status: supportRecord.ticket_data?.status || 'open',
+      assigned_to: supportRecord.ticket_data?.assigned_to || null,
+      created_at: supportRecord.created_at,
+      updated_at: supportRecord.updated_at,
+    };
+  }
+
+  /**
+   * Transform unified support record to legacy TicketWithDetails format
+   */
+  private transformToLegacyTicketWithDetails(supportRecord: any): TicketWithDetails {
+    const baseTicket = this.transformToLegacyTicket(supportRecord);
+    
+    return {
+      ...baseTicket,
+      user_profile: null, // Would need to fetch separately if needed
+      assigned_to_profile: null, // Would need to fetch separately if needed
+      quote: null, // Would need to fetch separately if needed
+    };
+  }
+
+  /**
    * Auto-close resolved tickets that have been inactive for 7 days
    */
   async autoCloseResolvedTickets(): Promise<{ closedCount: number; message: string }> {
@@ -44,41 +78,35 @@ class TicketService {
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
-      const { data: resolvedTickets, error: fetchError } = await supabase
-        .from('support_tickets')
-        .select('id, subject, user_id, updated_at')
-        .eq('status', 'resolved')
-        .lt('updated_at', sevenDaysAgo.toISOString());
-
-      if (fetchError) {
-        console.error('❌ Error fetching resolved tickets:', fetchError);
-        throw new Error(`Failed to fetch resolved tickets: ${fetchError.message}`);
-      }
+      // Use unified support engine to get resolved tickets
+      const resolvedTickets = await unifiedSupportEngine.getTickets({
+        status: ['resolved'],
+        date_range: {
+          start: '1970-01-01T00:00:00Z', // Beginning of time
+          end: sevenDaysAgo.toISOString()
+        }
+      });
 
       if (!resolvedTickets || resolvedTickets.length === 0) {
         console.log('✅ No resolved tickets found for auto-closure');
         return { closedCount: 0, message: 'No resolved tickets found for auto-closure' };
       }
 
-      // Update tickets to closed status
-      const ticketIds = resolvedTickets.map(ticket => ticket.id);
-      const { error: updateError } = await supabase
-        .from('support_tickets')
-        .update({ 
-          status: 'closed',
-          updated_at: new Date().toISOString()
-        })
-        .in('id', ticketIds);
-
-      if (updateError) {
-        console.error('❌ Error updating tickets to closed:', updateError);
-        throw new Error(`Failed to close tickets: ${updateError.message}`);
+      // Update tickets to closed status using unified support engine
+      let closedCount = 0;
+      for (const ticket of resolvedTickets) {
+        const success = await unifiedSupportEngine.updateTicketStatus(
+          ticket.id, 
+          'closed', 
+          'Auto-closed after 7 days of inactivity'
+        );
+        if (success) closedCount++;
       }
 
-      console.log(`✅ Auto-closed ${resolvedTickets.length} resolved tickets`);
+      console.log(`✅ Auto-closed ${closedCount} resolved tickets`);
       return { 
-        closedCount: resolvedTickets.length, 
-        message: `Successfully auto-closed ${resolvedTickets.length} resolved tickets` 
+        closedCount, 
+        message: `Successfully auto-closed ${closedCount} resolved tickets` 
       };
 
     } catch (error) {
@@ -176,51 +204,24 @@ class TicketService {
     try {
       console.log('🎫 Creating new support ticket:', ticketData);
 
-      // Get authenticated user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('❌ User not authenticated:', authError);
-        throw new Error('Authentication required to create support ticket');
-      }
+      // Use unified support engine to create ticket
+      const supportRecord = await unifiedSupportEngine.createTicket({
+        subject: ticketData.subject,
+        description: ticketData.description,
+        priority: ticketData.priority,
+        category: ticketData.category,
+        quote_id: ticketData.quote_id,
+      });
 
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          quote_id: ticketData.quote_id || null,
-          subject: ticketData.subject,
-          description: ticketData.description,
-          priority: ticketData.priority,
-          category: ticketData.category,
-          status: 'open',
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Error creating ticket:', error);
+      if (!supportRecord) {
+        console.error('❌ Failed to create ticket via unified support engine');
         return null;
       }
 
-      console.log('✅ Ticket created successfully:', data.id);
+      console.log('✅ Ticket created successfully via unified engine:', supportRecord.id);
       this.clearCache();
 
-      // Send notifications for the new ticket
-      try {
-        // Get full ticket data with user profile for notifications
-        const ticketWithProfile = await this.getTicketById(data.id);
-        if (ticketWithProfile) {
-          await ticketNotificationService.notifyTicketCreated(ticketWithProfile as any);
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send ticket creation notifications:', notificationError);
-        // Don't fail the ticket creation if notifications fail
-      }
-
-      return data as SupportTicket;
+      return this.transformToLegacyTicket(supportRecord);
     } catch (error) {
       console.error('❌ Exception in createTicket:', error);
       return null;
@@ -236,16 +237,6 @@ class TicketService {
     try {
       console.log('🎫 Creating customer support ticket:', customerData);
 
-      // Get authenticated user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('❌ User not authenticated:', authError);
-        throw new Error('Authentication required to create support ticket');
-      }
-
       const hasOrder = !!customerData.quote_id;
       const autoCategory = this.autoCategorize(
         customerData.help_type,
@@ -254,45 +245,28 @@ class TicketService {
       );
       const autoPriority = this.autoPrioritize(customerData.help_type, customerData.description);
 
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          quote_id: customerData.quote_id || null,
-          subject: customerData.subject,
-          description: customerData.description,
-          priority: autoPriority,
-          category: autoCategory,
-          status: 'open',
-        })
-        .select()
-        .single();
+      // Use unified support engine to create ticket
+      const supportRecord = await unifiedSupportEngine.createTicket({
+        subject: customerData.subject,
+        description: customerData.description,
+        priority: autoPriority,
+        category: autoCategory,
+        quote_id: customerData.quote_id,
+      });
 
-      if (error) {
-        console.error('❌ Error creating customer ticket:', error);
+      if (!supportRecord) {
+        console.error('❌ Failed to create customer ticket via unified support engine');
         return null;
       }
 
       console.log(
-        '✅ Customer ticket created successfully:',
-        data.id,
+        '✅ Customer ticket created successfully via unified engine:',
+        supportRecord.id,
         `[${autoCategory}/${autoPriority}]`,
       );
       this.clearCache();
 
-      // Send notifications for the new customer ticket
-      try {
-        // Get full ticket data with user profile for notifications
-        const ticketWithProfile = await this.getTicketById(data.id);
-        if (ticketWithProfile) {
-          await ticketNotificationService.notifyTicketCreated(ticketWithProfile as any);
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send customer ticket creation notifications:', notificationError);
-        // Don't fail the ticket creation if notifications fail
-      }
-
-      return data as SupportTicket;
+      return this.transformToLegacyTicket(supportRecord);
     } catch (error) {
       console.error('❌ Exception in createCustomerTicket:', error);
       return null;
@@ -306,32 +280,19 @@ class TicketService {
     try {
       console.log('📋 Fetching user tickets for:', userId);
 
-      let query = supabase
-        .from('support_tickets')
-        .select(
-          `
-          *,
-          user_profile:profiles!support_tickets_user_id_fkey(id, full_name, email),
-          assigned_to_profile:profiles!support_tickets_assigned_to_fkey(id, full_name, email),
-          quote:quotes!support_tickets_quote_id_fkey(id, final_total_usd, destination_country, iwish_tracking_id)
-        `,
-        )
-        .order('created_at', { ascending: false });
+      // Use unified support engine to get tickets
+      const supportRecords = await unifiedSupportEngine.getTickets({}, userId);
 
-      // If userId is provided, filter by it (for customer view)
-      if (userId) {
-        query = query.eq('user_id', userId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('❌ Error fetching user tickets:', error);
+      if (!supportRecords || supportRecords.length === 0) {
+        console.log('✅ No tickets found for user');
         return [];
       }
 
-      console.log(`✅ Fetched ${data?.length || 0} tickets`);
-      return data as TicketWithDetails[];
+      // Transform to legacy format (simplified - would need additional queries for full details)
+      const tickets = supportRecords.map(record => this.transformToLegacyTicketWithDetails(record));
+
+      console.log(`✅ Fetched ${tickets.length} tickets via unified engine`);
+      return tickets;
     } catch (error) {
       console.error('❌ Exception in getUserTickets:', error);
       return [];
@@ -348,53 +309,33 @@ class TicketService {
     try {
       console.log('👨‍💼 Fetching admin tickets with filters:', filters, sort);
 
-      let query = supabase.from('support_tickets').select(`
-          *,
-          user_profile:profiles!support_tickets_user_id_fkey(id, full_name, email),
-          assigned_to_profile:profiles!support_tickets_assigned_to_fkey(id, full_name, email),
-          quote:quotes!support_tickets_quote_id_fkey(id, final_total_usd, destination_country, iwish_tracking_id)
-        `);
+      // Use unified support engine to get tickets with filters
+      const supportRecords = await unifiedSupportEngine.getTickets(filters || {});
 
-      // Apply filters
-      if (filters) {
-        if (filters.status && filters.status.length > 0) {
-          query = query.in('status', filters.status);
-        }
-        if (filters.priority && filters.priority.length > 0) {
-          query = query.in('priority', filters.priority);
-        }
-        if (filters.category && filters.category.length > 0) {
-          query = query.in('category', filters.category);
-        }
-        if (filters.assigned_to) {
-          query = query.eq('assigned_to', filters.assigned_to);
-        }
-        if (filters.user_id) {
-          query = query.eq('user_id', filters.user_id);
-        }
-        if (filters.date_range) {
-          query = query
-            .gte('created_at', filters.date_range.start)
-            .lte('created_at', filters.date_range.end);
-        }
-      }
-
-      // Apply sorting
-      if (sort) {
-        query = query.order(sort.field, { ascending: sort.direction === 'asc' });
-      } else {
-        query = query.order('created_at', { ascending: false });
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('❌ Error fetching admin tickets:', error);
+      if (!supportRecords || supportRecords.length === 0) {
+        console.log('✅ No admin tickets found');
         return [];
       }
 
-      console.log(`✅ Fetched ${data?.length || 0} admin tickets`);
-      return data as TicketWithDetails[];
+      // Transform to legacy format (simplified - would need additional queries for full details)
+      let tickets = supportRecords.map(record => this.transformToLegacyTicketWithDetails(record));
+
+      // Apply sorting if specified (simple implementation)
+      if (sort) {
+        tickets.sort((a, b) => {
+          const aValue = a[sort.field as keyof TicketWithDetails] as any;
+          const bValue = b[sort.field as keyof TicketWithDetails] as any;
+          
+          if (sort.direction === 'asc') {
+            return aValue > bValue ? 1 : -1;
+          } else {
+            return aValue < bValue ? 1 : -1;
+          }
+        });
+      }
+
+      console.log(`✅ Fetched ${tickets.length} admin tickets via unified engine`);
+      return tickets;
     } catch (error) {
       console.error('❌ Exception in getAdminTickets:', error);
       return [];
@@ -408,26 +349,19 @@ class TicketService {
     try {
       console.log('🔍 Fetching ticket by ID:', ticketId);
 
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select(
-          `
-          *,
-          user_profile:profiles!support_tickets_user_id_fkey(id, full_name, email),
-          assigned_to_profile:profiles!support_tickets_assigned_to_fkey(id, full_name, email),
-          quote:quotes!support_tickets_quote_id_fkey(id, final_total_usd, destination_country, iwish_tracking_id)
-        `,
-        )
-        .eq('id', ticketId)
-        .single();
+      // Use unified support engine to get ticket by ID
+      const supportRecord = await unifiedSupportEngine.getTicketById(ticketId);
 
-      if (error) {
-        console.error('❌ Error fetching ticket:', error);
+      if (!supportRecord) {
+        console.log('❌ Ticket not found via unified engine:', ticketId);
         return null;
       }
 
-      console.log('✅ Ticket fetched successfully:', data.id);
-      return data as TicketWithDetails;
+      // Transform to legacy format (simplified - would need additional queries for full details)
+      const ticket = this.transformToLegacyTicketWithDetails(supportRecord);
+
+      console.log('✅ Ticket fetched successfully via unified engine:', ticket.id);
+      return ticket;
     } catch (error) {
       console.error('❌ Exception in getTicketById:', error);
       return null;
@@ -498,75 +432,34 @@ class TicketService {
     try {
       console.log('💭 Creating ticket reply:', replyData);
 
-      // Get authenticated user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('❌ User not authenticated:', authError);
-        throw new Error('Authentication required to create reply');
-      }
+      // Use unified support engine to add interaction (reply)
+      const interaction = await unifiedSupportEngine.addInteraction(
+        replyData.ticket_id,
+        'reply',
+        { message: replyData.message },
+        replyData.is_internal || false
+      );
 
-      const { data, error } = await supabase
-        .from('ticket_replies')
-        .insert({
-          ticket_id: replyData.ticket_id,
-          user_id: user.id,
-          message: replyData.message,
-          is_internal: replyData.is_internal || false,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Error creating reply:', error);
+      if (!interaction) {
+        console.error('❌ Failed to create reply via unified support engine');
         return null;
       }
 
-      // Update ticket's updated_at timestamp
-      await supabase
-        .from('support_tickets')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', replyData.ticket_id);
-
-      console.log('✅ Reply created successfully:', data.id);
+      console.log('✅ Reply created successfully via unified engine:', interaction.id);
       this.clearCache();
 
-      // Send notifications for the new reply
-      try {
-        // Get ticket data with user profile for notifications
-        const ticket = await this.getTicketById(replyData.ticket_id);
-        if (ticket) {
-          // Determine if this is a customer or admin reply
-          const isCustomerReply = user.id === ticket.user_id;
-          
-          const replyWithProfile = {
-            id: data.id,
-            message: replyData.message,
-            user_id: user.id,
-            created_at: data.created_at,
-            user_profile: {
-              id: user.id,
-              // We'll use the ticket's user profile data for the customer
-              // For admin replies, we might not have the admin profile readily available
-              full_name: isCustomerReply ? ticket.user_profile?.full_name : undefined,
-              email: isCustomerReply ? ticket.user_profile?.email : undefined,
-            },
-          };
+      // Transform to legacy format for backward compatibility
+      const legacyReply: TicketReply = {
+        id: interaction.id,
+        ticket_id: replyData.ticket_id,
+        user_id: interaction.user_id,
+        message: interaction.content?.message || replyData.message,
+        is_internal: interaction.is_internal,
+        created_at: interaction.created_at,
+        updated_at: interaction.created_at,
+      };
 
-          await ticketNotificationService.notifyTicketReply(
-            ticket as any,
-            replyWithProfile as any,
-            isCustomerReply
-          );
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send reply notifications:', notificationError);
-        // Don't fail the reply creation if notifications fail
-      }
-
-      return data as TicketReply;
+      return legacyReply;
     } catch (error) {
       console.error('❌ Exception in createReply:', error);
       return null;
@@ -580,46 +473,21 @@ class TicketService {
     try {
       console.log('🔄 Updating ticket status:', ticketId, status);
 
-      // Get current ticket data before update to compare status
-      const currentTicket = await this.getTicketById(ticketId);
-      const oldStatus = currentTicket?.status;
+      // Use unified support engine to update ticket status
+      const success = await unifiedSupportEngine.updateTicketStatus(
+        ticketId, 
+        status, 
+        'Status updated via legacy TicketService'
+      );
 
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({ status })
-        .eq('id', ticketId);
-
-      if (error) {
-        console.error('❌ Error updating ticket status:', error);
-        return false;
+      if (success) {
+        console.log('✅ Ticket status updated successfully via unified engine');
+        this.clearCache();
+      } else {
+        console.error('❌ Failed to update ticket status via unified engine');
       }
 
-      console.log('✅ Ticket status updated successfully');
-      this.clearCache();
-
-      // Send notification for status change
-      try {
-        if (oldStatus && oldStatus !== status) {
-          // Get updated ticket data with user profile for notifications
-          const updatedTicket = await this.getTicketById(ticketId);
-          if (updatedTicket) {
-            if (status === 'closed') {
-              await ticketNotificationService.notifyTicketClosed(updatedTicket as any);
-            } else {
-              await ticketNotificationService.notifyTicketStatusUpdate(
-                updatedTicket as any,
-                oldStatus,
-                status
-              );
-            }
-          }
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send status update notifications:', notificationError);
-        // Don't fail the status update if notifications fail
-      }
-
-      return true;
+      return success;
     } catch (error) {
       console.error('❌ Exception in updateTicketStatus:', error);
       return false;
@@ -633,19 +501,21 @@ class TicketService {
     try {
       console.log('👤 Assigning ticket:', ticketId, 'to:', adminUserId);
 
-      const { error } = await supabase
-        .from('support_tickets')
-        .update({ assigned_to: adminUserId })
-        .eq('id', ticketId);
+      // Use unified support engine to assign ticket
+      const success = await unifiedSupportEngine.assignTicket(
+        ticketId, 
+        adminUserId || '', 
+        'Ticket assigned via legacy TicketService'
+      );
 
-      if (error) {
-        console.error('❌ Error assigning ticket:', error);
-        return false;
+      if (success) {
+        console.log('✅ Ticket assigned successfully via unified engine');
+        this.clearCache();
+      } else {
+        console.error('❌ Failed to assign ticket via unified engine');
       }
 
-      console.log('✅ Ticket assigned successfully');
-      this.clearCache();
-      return true;
+      return success;
     } catch (error) {
       console.error('❌ Exception in assignTicket:', error);
       return false;
@@ -665,23 +535,20 @@ class TicketService {
     try {
       console.log('📊 Fetching ticket statistics');
 
-      const { data, error } = await supabase.from('support_tickets').select('status');
+      // Use unified support engine to get ticket stats
+      const stats = await unifiedSupportEngine.getTicketStats();
 
-      if (error) {
-        console.error('❌ Error fetching ticket stats:', error);
-        return { total: 0, open: 0, in_progress: 0, resolved: 0, closed: 0 };
-      }
-
-      const stats = {
-        total: data.length,
-        open: data.filter((t) => t.status === 'open').length,
-        in_progress: data.filter((t) => t.status === 'in_progress').length,
-        resolved: data.filter((t) => t.status === 'resolved').length,
-        closed: data.filter((t) => t.status === 'closed').length,
+      // Transform to legacy format (simplified version)
+      const legacyStats = {
+        total: stats.total,
+        open: stats.open,
+        in_progress: stats.in_progress,
+        resolved: stats.resolved,
+        closed: stats.closed,
       };
 
-      console.log('✅ Ticket stats:', stats);
-      return stats;
+      console.log('✅ Ticket stats via unified engine:', legacyStats);
+      return legacyStats;
     } catch (error) {
       console.error('❌ Exception in getTicketStats:', error);
       return { total: 0, open: 0, in_progress: 0, resolved: 0, closed: 0 };

@@ -22,6 +22,7 @@ export interface CartItem {
   destinationCountryCode: string; // Where we deliver to (e.g., Nepal)
   inCart: boolean;
   isSelected: boolean;
+  priority?: number; // Optional priority field (may not exist in database)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -304,14 +305,12 @@ export const useCartStore = create<CartStore>()(
               throw quotesError;
             }
 
-            // 🚨 DEBUG: Log cart data to check if local currency fields are loaded
+            // 🚨 DEBUG: Log cart data to check loaded fields
             console.log(
               '🔍 [CartStore] Cart quotes loaded:',
               cartQuotes?.slice(0, 1).map((q) => ({
                 id: q.id,
                 final_total_usd: q.final_total_usd,
-                final_total_local: q.final_total_local,
-                destination_currency: q.destination_currency,
                 origin_country: q.origin_country,
                 destination_country: q.destination_country,
               })),
@@ -335,7 +334,6 @@ export const useCartStore = create<CartStore>()(
               final_total_usd: number;
               destination_country: string;
               origin_country: string;
-              currency: string;
               customer_data?: {
                 shipping_address?: Record<string, unknown>;
               };
@@ -412,8 +410,8 @@ export const useCartStore = create<CartStore>()(
                 quoteId: quote.id,
                 productName: firstItem?.name || quote.product_name || 'Unknown Product',
                 finalTotal: quote.final_total_usd || totalPrice, // USD amount
-                finalTotalLocal: quote.final_total_local, // Local currency amount
-                finalCurrency: quote.destination_currency, // Local currency code
+                finalTotalLocal: undefined, // Local currency calculation not available from database
+                finalCurrency: undefined, // Local currency code not available from database
                 quantity: totalQuantity,
                 itemWeight: totalWeight,
                 imageUrl: firstItem?.image_url || quote.image_url,
@@ -423,6 +421,7 @@ export const useCartStore = create<CartStore>()(
                 destinationCountryCode: destinationCountry,
                 inCart: quote.in_cart || false,
                 isSelected: false,
+                priority: undefined, // Priority field not available from database
                 createdAt: new Date(quote.created_at),
                 updatedAt: new Date(quote.updated_at),
               };
@@ -432,8 +431,6 @@ export const useCartStore = create<CartStore>()(
                 quoteId: quote.id,
                 rawQuote: {
                   final_total_usd: quote.final_total_usd,
-                  final_total_local: quote.final_total_local,
-                  destination_currency: quote.destination_currency,
                   origin_country: quote.origin_country,
                   destination_country: quote.destination_country,
                 },

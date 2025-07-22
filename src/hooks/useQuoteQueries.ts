@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { logger } from '@/lib/logger';
+import { unifiedConfigService } from '@/services/UnifiedConfigurationService';
 
 type Quote = Tables<'quotes'>;
 type QuoteWithItems = Quote & {
@@ -78,11 +79,33 @@ export const useQuoteQueries = (id: string | undefined) => {
   });
 
   const { data: countries } = useQuery({
-    queryKey: ['country-settings'],
+    queryKey: ['country-configurations'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('country_settings').select('*').order('name');
-      if (error) throw new Error(error.message);
-      return data || [];
+      try {
+        // Get all countries from unified configuration system
+        const allCountries = await unifiedConfigService.getAllCountries();
+        
+        if (!allCountries) {
+          return [];
+        }
+
+        // Transform to match expected format
+        const countryList = Object.entries(allCountries).map(([code, config]) => ({
+          code,
+          name: config.name,
+          currency: config.currency,
+          symbol: config.symbol,
+          rate_from_usd: config.rate_from_usd,
+          minimum_payment_amount: config.minimum_payment_amount,
+          shipping_allowed: true, // Default to true since we don't have this field in unified config
+        }));
+
+        // Sort by name
+        return countryList.sort((a, b) => a.name.localeCompare(b.name));
+      } catch (error) {
+        logger.error('Error fetching country configurations', error);
+        throw error;
+      }
     },
   });
 

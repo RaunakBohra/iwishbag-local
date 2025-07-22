@@ -564,7 +564,7 @@ export class UnifiedDataEngine {
       },
       exchange_rate: {
         rate: 1,
-        source: 'country_settings',
+        source: 'unified_configuration',
         confidence: 1,
       },
       smart_optimizations: [],
@@ -592,7 +592,7 @@ export class UnifiedDataEngine {
         tier_suggestions: [],
       },
       shipping: {
-        method: 'country_settings',
+        method: 'unified_configuration',
         available_options: [],
         smart_recommendations: [],
       },

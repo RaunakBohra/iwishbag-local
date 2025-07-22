@@ -74,3 +74,6 @@ yarn.lock
 !README.md
 !CLAUDE.md
 !docs/**/*.md
+
+*storybook.log
+storybook-static

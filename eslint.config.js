@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -8,7 +11,6 @@ import prettierPlugin from 'eslint-plugin-prettier';
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'coverage'] },
-
   // Main source code configuration
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended, prettier],
@@ -54,7 +56,6 @@ export default tseslint.config(
       'prettier/prettier': 'error',
     },
   },
-
   // Node.js configuration files
   {
     files: ['*.config.{js,ts}', 'scripts/**/*.{js,ts}', 'src/scripts/**/*.{js,ts}'],
@@ -90,7 +91,6 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn', // More lenient for config files
     },
   },
-
   // Supabase Edge Functions (Deno environment)
   {
     files: ['supabase/functions/**/*.{ts,js}'],
@@ -123,7 +123,6 @@ export default tseslint.config(
       ],
     },
   },
-
   // Test files
   {
     files: ['**/*.test.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}', '**/test/**/*.{ts,tsx}'],
@@ -157,4 +156,5 @@ export default tseslint.config(
       ],
     },
   },
+  storybook.configs["flat/recommended"]
 );

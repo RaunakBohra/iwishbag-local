@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { businessHoursService } from '@/config/businessHours';
 import {
   TicketIcon,
   Clock,
   CheckCircle,
   AlertTriangle,
-  Search,
-  Filter,
   Users,
   TrendingUp,
+  Timer,
+  XCircle,
 } from 'lucide-react';
+import { TicketSearchAndFilterPanel, type TicketSearchFilters } from '@/components/admin/TicketSearchAndFilterPanel';
+import { SLABadge, SLASummaryCard, SLAWarningAlert } from '@/components/admin/SLAIndicator';
+import { useSLASummary, useSLAMonitoring } from '@/hooks/useSLA';
+import { CriticalBreachAlert, BreachStatsCards } from '@/components/admin/SLABreachAlerts';
+import { useBreachMonitoring } from '@/hooks/useSLABreaches';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,7 +36,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   useAdminTickets,
   useTicketStats,
@@ -50,6 +54,8 @@ import {
   type TicketCategory,
   type TicketFilters,
 } from '@/types/ticket';
+import { useSLAStatus, useSLAUtils } from '@/hooks/useSLA';
+import { useManualAssignTicket } from '@/hooks/useAutoAssignment';
 import { formatDistanceToNow } from 'date-fns';
 
 const StatCard = ({
@@ -102,6 +108,9 @@ const TicketRow = ({
 }) => {
   const updateStatusMutation = useUpdateTicketStatus();
   const assignTicketMutation = useAssignTicket();
+  const { data: slaStatus } = useSLAStatus(ticket);
+  const { formatTimeRemaining } = useSLAUtils();
+  const manualAssignMutation = useManualAssignTicket();
 
   const handleStatusChange = (status: TicketStatus) => {
     updateStatusMutation.mutate({ ticketId: ticket.id, status });
@@ -110,6 +119,11 @@ const TicketRow = ({
   const handleAssign = (assignedTo: string) => {
     const assigned_to = assignedTo === 'unassigned' ? null : assignedTo;
     assignTicketMutation.mutate({ ticketId: ticket.id, adminUserId: assigned_to });
+  };
+
+  const handleAutoAssign = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    manualAssignMutation.mutate(ticket.id);
   };
 
   return (
@@ -169,38 +183,76 @@ const TicketRow = ({
         </Select>
       </TableCell>
 
+      <TableCell>
+        {slaStatus ? (
+          <div className="space-y-1">
+            {/* Response SLA Badge */}
+            {slaStatus.response_sla.deadline && (
+              <SLABadge
+                status={slaStatus.response_sla.status}
+                timeRemaining={formatTimeRemaining(slaStatus.response_sla.time_remaining)}
+                type="response"
+              />
+            )}
+            {/* Resolution SLA Badge */}
+            {slaStatus.resolution_sla.deadline && (
+              <SLABadge
+                status={slaStatus.resolution_sla.status}
+                timeRemaining={formatTimeRemaining(slaStatus.resolution_sla.time_remaining)}
+                type="resolution"
+              />
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-400">-</div>
+        )}
+      </TableCell>
+
       <TableCell onClick={(e) => e.stopPropagation()}>
-        <Select
-          value={ticket.assigned_to || 'unassigned'}
-          onValueChange={handleAssign}
-          disabled={assignTicketMutation.isPending}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue>
-              <span className={ticket.assigned_to ? 'text-gray-900' : 'text-gray-500'}>
-                {ticket.assigned_to_profile?.full_name || 
-                 ticket.assigned_to_profile?.email || 
-                 'Unassigned'}
-              </span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">
-              <span className="text-gray-500">Unassigned</span>
-            </SelectItem>
-            {adminUsers
-              .filter(user => user.role === 'admin' || user.role === 'moderator')
-              .map(adminUser => (
-                <SelectItem key={adminUser.id} value={adminUser.id}>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{adminUser.full_name || adminUser.email}</span>
-                    <span className="text-xs text-gray-500 capitalize">{adminUser.role}</span>
-                  </div>
-                </SelectItem>
-              ))
-            }
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1">
+          <Select
+            value={ticket.assigned_to || 'unassigned'}
+            onValueChange={handleAssign}
+            disabled={assignTicketMutation.isPending}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue>
+                <span className={ticket.assigned_to ? 'text-gray-900' : 'text-gray-500'}>
+                  {ticket.assigned_to_profile?.full_name || 
+                   ticket.assigned_to_profile?.email || 
+                   'Unassigned'}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">
+                <span className="text-gray-500">Unassigned</span>
+              </SelectItem>
+              {adminUsers
+                .filter(user => user.role === 'admin' || user.role === 'moderator')
+                .map(adminUser => (
+                  <SelectItem key={adminUser.id} value={adminUser.id}>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{adminUser.full_name || adminUser.email}</span>
+                      <span className="text-xs text-gray-500 capitalize">{adminUser.role}</span>
+                    </div>
+                  </SelectItem>
+                ))
+              }
+            </SelectContent>
+          </Select>
+          {!ticket.assigned_to && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleAutoAssign}
+              disabled={manualAssignMutation.isPending}
+              title="Auto-assign using rules"
+            >
+              ⚡
+            </Button>
+          )}
+        </div>
       </TableCell>
 
       <TableCell>
@@ -224,42 +276,94 @@ const TicketRow = ({
 };
 
 export const AdminTicketDashboard = () => {
-  const [searchInput, setSearchInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   
-  const { users: adminUsers = [] } = useUserRoles();
-
-  // Build filters object
-  const filters: TicketFilters = {};
-  if (statusFilter !== 'all') {
-    filters.status = [statusFilter as TicketStatus];
-  }
-  if (priorityFilter !== 'all') {
-    filters.priority = [priorityFilter as TicketPriority];
-  }
-  if (categoryFilter !== 'all') {
-    filters.category = [categoryFilter as TicketCategory];
-  }
-
-  const { data: tickets = [], isLoading } = useAdminTickets(filters);
-  const { data: stats } = useTicketStats();
-
-  // Filter tickets by search term
-  const filteredTickets = tickets.filter((ticket) => {
-    if (!searchInput) return true;
-    const searchLower = searchInput.toLowerCase();
-    return (
-      ticket.subject.toLowerCase().includes(searchLower) ||
-      ticket.description.toLowerCase().includes(searchLower) ||
-      ticket.user_profile?.email?.toLowerCase().includes(searchLower) ||
-      ticket.user_profile?.full_name?.toLowerCase().includes(searchLower) ||
-      ticket.quote?.iwish_tracking_id?.toLowerCase().includes(searchLower)
-    );
+  // Enhanced filters state
+  const [filters, setFilters] = useState<TicketSearchFilters>({
+    searchText: '',
+    statuses: [],
+    priorities: [],
+    categories: [],
+    assignedTo: [],
+    assignmentStatus: 'all',
+    slaStatus: 'all',
+    hasOrder: null,
+    countries: [],
   });
+  
+  const { users: adminUsers = [], user } = useUserRoles();
+  
+  // Business hours status
+  const isBusinessHours = businessHoursService.isCurrentlyBusinessHours();
+
+  // Convert enhanced filters to legacy format for the API
+  const legacyFilters: TicketFilters = useMemo(() => {
+    const converted: TicketFilters = {};
+    
+    if (filters.statuses && filters.statuses.length > 0) {
+      converted.status = filters.statuses;
+    }
+    if (filters.priorities && filters.priorities.length > 0) {
+      converted.priority = filters.priorities;
+    }
+    if (filters.categories && filters.categories.length > 0) {
+      converted.category = filters.categories;
+    }
+    
+    // Handle assignment status
+    if (filters.assignmentStatus === 'mine' && user?.id) {
+      converted.assigned_to = user.id;
+    } else if (filters.assignmentStatus === 'unassigned') {
+      converted.assigned_to = 'unassigned';
+    } else if (filters.assignmentStatus === 'assigned') {
+      converted.assigned_to = 'assigned';
+    }
+    
+    return converted;
+  }, [filters, user?.id]);
+
+  const { data: tickets = [], isLoading } = useAdminTickets(legacyFilters);
+  const { data: stats } = useTicketStats();
+  const { data: slaStats } = useSLASummary();
+  const { summary: slaMonitoring, breachedTickets } = useSLAMonitoring();
+  
+  // Initialize breach monitoring (background task)
+  useBreachMonitoring(true);
+
+  // Filter tickets by search term and other client-side filters
+  const filteredTickets = useMemo(() => {
+    let filtered = tickets;
+
+    // Apply search text filter
+    if (filters.searchText) {
+      const searchLower = filters.searchText.toLowerCase();
+      filtered = filtered.filter((ticket) =>
+        ticket.subject.toLowerCase().includes(searchLower) ||
+        ticket.description.toLowerCase().includes(searchLower) ||
+        ticket.user_profile?.email?.toLowerCase().includes(searchLower) ||
+        ticket.user_profile?.full_name?.toLowerCase().includes(searchLower) ||
+        ticket.quote?.iwish_tracking_id?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply order filter
+    if (filters.hasOrder !== null) {
+      filtered = filtered.filter((ticket) => {
+        const hasQuote = !!ticket.quote;
+        return filters.hasOrder ? hasQuote : !hasQuote;
+      });
+    }
+
+    // Apply country filter
+    if (filters.countries && filters.countries.length > 0) {
+      filtered = filtered.filter((ticket) =>
+        ticket.quote?.destination_country && 
+        filters.countries.includes(ticket.quote.destination_country)
+      );
+    }
+
+    return filtered;
+  }, [tickets, filters]);
 
   // Handle ticket click
   const handleTicketClick = (ticketId: string) => {
@@ -268,6 +372,68 @@ export const AdminTicketDashboard = () => {
 
   const handleBackToList = () => {
     setSelectedTicketId(null);
+  };
+
+  // Prepare filter options for the filter panel
+  const availableStatuses = Object.entries(TICKET_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+    count: stats ? stats[value as keyof typeof stats] || 0 : 0
+  }));
+
+  const availablePriorities = Object.entries(TICKET_PRIORITY_LABELS).map(([value, label]) => ({
+    value,
+    label,
+    count: tickets.filter(t => t.priority === value).length
+  }));
+
+  const availableCategories = Object.entries(TICKET_CATEGORY_LABELS).map(([value, label]) => ({
+    value,
+    label,
+    count: tickets.filter(t => t.category === value).length
+  }));
+
+  const availableAssignees = adminUsers
+    .filter(user => user.role === 'admin' || user.role === 'moderator')
+    .map(user => ({
+      id: user.id,
+      name: user.full_name || user.email,
+      email: user.email,
+      role: user.role,
+      count: tickets.filter(t => t.assigned_to === user.id).length
+    }));
+
+  const availableCountries = [...new Set(tickets
+    .filter(t => t.quote?.destination_country)
+    .map(t => t.quote!.destination_country))]
+    .map(country => ({
+      value: country,
+      label: country,
+      count: tickets.filter(t => t.quote?.destination_country === country).length
+    }));
+
+  // Filter handlers
+  const handleFiltersChange = (newFilters: TicketSearchFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleSearch = () => {
+    // Search is handled automatically via the filteredTickets useMemo
+    // This could trigger additional API calls in the future if needed
+  };
+
+  const handleReset = () => {
+    setFilters({
+      searchText: '',
+      statuses: [],
+      priorities: [],
+      categories: [],
+      assignedTo: [],
+      assignmentStatus: 'all',
+      slaStatus: 'all',
+      hasOrder: null,
+      countries: [],
+    });
   };
 
   // Show ticket detail view if a ticket is selected
@@ -283,9 +449,20 @@ export const AdminTicketDashboard = () => {
         <p className="text-gray-600 text-sm">Manage customer support requests and inquiries</p>
       </div>
 
+      {/* Critical Breach Alert */}
+      <CriticalBreachAlert />
+      
+      {/* SLA Warning Alert */}
+      {slaStats && (slaStats.response_sla_breached > 0 || slaStats.resolution_sla_breached > 0) && (
+        <SLAWarningAlert
+          breachedCount={slaStats.response_sla_breached + slaStats.resolution_sla_breached}
+          criticalCount={0} // We'll calculate this in a future enhancement
+        />
+      )}
+
       {/* Compact Stats */}
       {stats && (
-        <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
@@ -331,101 +508,71 @@ export const AdminTicketDashboard = () => {
               <CheckCircle className="h-5 w-5 text-gray-600" />
             </div>
           </div>
+          
+          {/* Business Hours Status Card */}
+          <div className={`bg-gradient-to-r ${
+            isBusinessHours 
+            ? 'from-green-50 to-green-100 border-green-200' 
+            : 'from-orange-50 to-orange-100 border-orange-200'
+          } rounded-lg p-3 border`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-xs font-medium ${
+                  isBusinessHours ? 'text-green-700' : 'text-orange-700'
+                }`}>
+                  Support
+                </p>
+                <p className={`text-lg font-bold ${
+                  isBusinessHours ? 'text-green-800' : 'text-orange-800'
+                }`}>
+                  {isBusinessHours ? 'Online' : 'Offline'}
+                </p>
+              </div>
+              <Clock className={`h-5 w-5 ${
+                isBusinessHours ? 'text-green-600' : 'text-orange-600'
+              }`} />
+            </div>
+          </div>
+
+          {/* SLA Summary Cards */}
+          {slaStats && (
+            <>
+              <SLASummaryCard
+                title="Response SLA Met"
+                value={slaStats.response_sla_met}
+                total={slaStats.total_tickets}
+                icon={CheckCircle}
+                status={slaStats.response_sla_breached > 0 ? 'warning' : 'good'}
+              />
+              <SLASummaryCard
+                title="Resolution SLA Met"
+                value={slaStats.resolution_sla_met}
+                total={slaStats.total_tickets}
+                icon={Timer}
+                status={slaStats.resolution_sla_breached > 0 ? 'warning' : 'good'}
+              />
+            </>
+          )}
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Filters</CardTitle>
-            <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Advanced Filters
-                </Button>
-              </CollapsibleTrigger>
-            </Collapsible>
-          </div>
-        </CardHeader>
+      {/* Breach Statistics */}
+      <BreachStatsCards />
 
-        <CardContent className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search tickets by subject, description, customer, or tracking ID..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <Collapsible open={showAdvancedFilters}>
-            <CollapsibleContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-                {/* Status Filter */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Status</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      {Object.entries(TICKET_STATUS_LABELS).map(([status, label]) => (
-                        <SelectItem key={status} value={status}>
-                          <div className="flex items-center gap-2">
-                            <StatusIcon status={status} />
-                            {label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Priority Filter */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Priority</label>
-                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All priorities" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Priorities</SelectItem>
-                      {Object.entries(TICKET_PRIORITY_LABELS).map(([priority, label]) => (
-                        <SelectItem key={priority} value={priority}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Category Filter */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Category</label>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {Object.entries(TICKET_CATEGORY_LABELS).map(([category, label]) => (
-                        <SelectItem key={category} value={category}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
+      {/* Enhanced Search and Filter Panel */}
+      <TicketSearchAndFilterPanel
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        onSearch={handleSearch}
+        onReset={handleReset}
+        availableStatuses={availableStatuses}
+        availablePriorities={availablePriorities}
+        availableCategories={availableCategories}
+        availableAssignees={availableAssignees}
+        availableCountries={availableCountries}
+        isLoading={isLoading}
+        resultsCount={filteredTickets.length}
+      />
 
       {/* Tickets Table */}
       <Card>
@@ -459,6 +606,7 @@ export const AdminTicketDashboard = () => {
                     <TableHead>Category</TableHead>
                     <TableHead>Priority</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>SLA Status</TableHead>
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead>Related Order</TableHead>

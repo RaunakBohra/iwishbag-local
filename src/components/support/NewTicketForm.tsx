@@ -22,14 +22,9 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, HelpCircle } from 'lucide-react';
-import { useCreateCustomerTicket, useUserTickets } from '@/hooks/useTickets';
+import { useUnifiedSupport } from '@/hooks/useUnifiedSupport';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  TICKET_PRIORITY_LABELS,
-  TICKET_CATEGORY_LABELS,
-  type TicketPriority,
-  type TicketCategory,
-} from '@/types/ticket';
+import type { TicketCategory, TicketPriority } from '@/services/UnifiedSupportEngine';
 
 // Customer-friendly form validation schema
 const newTicketSchema = z.object({
@@ -41,7 +36,8 @@ const newTicketSchema = z.object({
     .string()
     .min(10, 'Description must be at least 10 characters')
     .max(2000, 'Description must be less than 2000 characters'),
-  help_type: z.enum(['order_issue', 'account_question', 'payment_problem', 'other'] as const),
+  category: z.enum(['general', 'payment', 'shipping', 'refund', 'product', 'customs'] as const),
+  priority: z.enum(['low', 'medium', 'high', 'urgent'] as const).default('medium'),
   quote_id: z.string().optional(),
 });
 
@@ -54,20 +50,23 @@ interface NewTicketFormProps {
 }
 
 export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTicketFormProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
-  const createTicketMutation = useCreateCustomerTicket();
+  const { createTicket, isCreating } = useUnifiedSupport({ 
+    userId: user?.id,
+    autoRefresh: false 
+  });
 
-  // Get user's quotes for dropdown selection
-  const { data: userTickets } = useUserTickets(user?.id);
-  const userQuotes = userTickets?.map((t) => t.quote).filter(Boolean) || [];
+  // TODO: Get user's quotes for dropdown selection
+  // This would need to be implemented with a separate quotes hook
+  const userQuotes: any[] = [];
 
   const form = useForm<NewTicketForm>({
     resolver: zodResolver(newTicketSchema),
     defaultValues: {
       subject: '',
       description: '',
-      help_type: 'other',
+      category: 'general',
+      priority: 'medium',
       quote_id: preSelectedQuoteId || '',
     },
   });
@@ -78,14 +77,13 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
-      await createTicketMutation.mutateAsync({
-        quote_id: values.quote_id || undefined,
+      await createTicket({
         subject: values.subject,
         description: values.description,
-        help_type: values.help_type,
+        priority: values.priority,
+        category: values.category,
+        quote_id: values.quote_id || undefined,
       });
 
       // Reset form on success
@@ -93,8 +91,6 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       onSuccess?.();
     } catch (error) {
       console.error('Error submitting ticket:', error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -140,10 +136,10 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
               />
             )}
 
-            {/* What do you need help with? */}
+            {/* Category */}
             <FormField
               control={form.control}
-              name="help_type"
+              name="category"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>What do you need help with?</FormLabel>
@@ -154,10 +150,37 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="order_issue">Order or Delivery Issue</SelectItem>
-                      <SelectItem value="payment_problem">Payment Problem</SelectItem>
-                      <SelectItem value="account_question">Account Question</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="general">General Question</SelectItem>
+                      <SelectItem value="payment">Payment Issue</SelectItem>
+                      <SelectItem value="shipping">Shipping & Delivery</SelectItem>
+                      <SelectItem value="refund">Refund Request</SelectItem>
+                      <SelectItem value="product">Product Question</SelectItem>
+                      <SelectItem value="customs">Customs & Duties</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Priority */}
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="low">Low - General inquiry</SelectItem>
+                      <SelectItem value="medium">Medium - Standard issue</SelectItem>
+                      <SelectItem value="high">High - Important issue</SelectItem>
+                      <SelectItem value="urgent">Urgent - Critical issue</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -201,13 +224,13 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
 
             {/* Form Actions */}
             <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={isSubmitting} className="flex-1">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isSubmitting ? 'Creating Ticket...' : 'Create Ticket'}
+              <Button type="submit" disabled={isCreating} className="flex-1">
+                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isCreating ? 'Creating Ticket...' : 'Create Ticket'}
               </Button>
 
               {onCancel && (
-                <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isCreating}>
                   Cancel
                 </Button>
               )}

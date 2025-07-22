@@ -1,19 +1,18 @@
 import { CompactQuoteListItem } from './CompactQuoteListItem';
 import { CreateQuoteModal } from './CreateQuoteModal';
 import { RejectQuoteDialog } from './RejectQuoteDialog';
-import { QuoteFilters } from './QuoteFilters';
 import { QuoteMetrics } from './QuoteMetrics';
-import { QuoteQuickFilters } from './QuoteQuickFilters';
+import { SearchAndFilterPanel, SearchFilters, StatusOption, CountryOption } from './SearchAndFilterPanel';
 import { useQuoteManagement } from '@/hooks/useQuoteManagement';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
-import { StatusDebugger } from '../debug/StatusDebugger';
 
 import { QuoteListHeader } from './QuoteListHeader';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileText, Plus, Search, BarChart3, Filter } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { FileText, Plus, Search, BarChart3 } from 'lucide-react';
 import { H1, H2, Body, BodySmall } from '@/components/ui/typography';
 import {
   AlertDialog,
@@ -25,25 +24,161 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export const QuoteManagementPage = () => {
   const { getStatusConfig } = useStatusManagement();
 
-  // Filter states managed in the page
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchInput, setSearchInput] = useState('');
-  const [purchaseCountryFilter, setPurchaseCountryFilter] = useState('all');
-  const [shippingCountryFilter, setShippingCountryFilter] = useState('all');
-  const [dateRange, setDateRange] = useState('all');
-  const [amountRange, setAmountRange] = useState('all');
-  const [countryFilter, setCountryFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
+  // New unified filter state
+  const [filters, setFilters] = useState<SearchFilters>({
+    searchText: '',
+    statuses: [],
+    countries: []
+  });
+  
+  // Available filter options (populated from database)
+  const [availableStatuses, setAvailableStatuses] = useState<StatusOption[]>([]);
+  const [availableCountries, setAvailableCountries] = useState<CountryOption[]>([]);
+  const [isLoadingFilterOptions, setIsLoadingFilterOptions] = useState(true);
+  
+  // UI state
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [quickFilter, setQuickFilter] = useState('all');
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Fetch available filter options from database
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        setIsLoadingFilterOptions(true);
+        
+        // Single optimized query to get both status and country data
+        // This reduces server load and prevents resource exhaustion
+        const { data: quotes, error } = await supabase
+          .from('quotes')
+          .select('status, destination_country')
+          .not('status', 'is', null)
+          .not('destination_country', 'is', null)
+          .limit(1000); // Reasonable limit to prevent overwhelming the server
+
+        if (error) {
+          // Provide fallback options to ensure UI remains functional
+          setAvailableStatuses([
+            { value: 'pending', label: 'Pending', count: 0 },
+            { value: 'sent', label: 'Sent', count: 0 },
+            { value: 'approved', label: 'Approved', count: 0 },
+            { value: 'rejected', label: 'Rejected', count: 0 },
+            { value: 'paid', label: 'Paid', count: 0 }
+          ]);
+          setAvailableCountries([
+            { code: 'IN', name: 'India', flag: '🇮🇳', count: 0 },
+            { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 0 },
+            { code: 'US', name: 'United States', flag: '🇺🇸', count: 0 }
+          ]);
+          return;
+        }
+
+        // Process data only if we have results
+        if (!quotes || quotes.length === 0) {
+          setAvailableStatuses([]);
+          setAvailableCountries([]);
+          return;
+        }
+
+        // Process statuses with counts
+        const statusCounts: Record<string, number> = {};
+        const countryCounts: Record<string, number> = {};
+
+        quotes.forEach(quote => {
+          if (quote.status) {
+            statusCounts[quote.status] = (statusCounts[quote.status] || 0) + 1;
+          }
+          if (quote.destination_country) {
+            countryCounts[quote.destination_country] = (countryCounts[quote.destination_country] || 0) + 1;
+          }
+        });
+
+        // Create status options
+        const statusOptions: StatusOption[] = Object.entries(statusCounts).map(([status, count]) => {
+          const statusConfig = getStatusConfig(status, 'quote');
+          return {
+            value: status,
+            label: statusConfig?.label || status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+            color: statusConfig?.color,
+            count
+          };
+        });
+
+        // Create country options
+        const countryOptions: CountryOption[] = Object.entries(countryCounts).map(([country, count]) => ({
+          code: country,
+          name: getCountryName(country),
+          flag: getCountryFlag(country),
+          count
+        }));
+
+        setAvailableStatuses(statusOptions.sort((a, b) => b.count - a.count));
+        setAvailableCountries(countryOptions.sort((a, b) => b.count - a.count));
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+        // Ensure UI remains functional with fallback data
+        setAvailableStatuses([]);
+        setAvailableCountries([]);
+      } finally {
+        setIsLoadingFilterOptions(false);
+      }
+    };
+
+    // Add a small delay to prevent immediate server overwhelming
+    const timeoutId = setTimeout(fetchFilterOptions, 100);
+    return () => clearTimeout(timeoutId);
+  }, [getStatusConfig]);
+
+  // Helper functions for country display
+  const getCountryName = (code: string): string => {
+    const countryNames: Record<string, string> = {
+      'IN': 'India',
+      'NP': 'Nepal', 
+      'US': 'United States',
+      'UK': 'United Kingdom',
+      'AU': 'Australia',
+      'CA': 'Canada',
+      'DE': 'Germany',
+      'FR': 'France',
+      'JP': 'Japan',
+      'SG': 'Singapore'
+    };
+    return countryNames[code] || code;
+  };
+
+  const getCountryFlag = (code: string): string => {
+    const countryFlags: Record<string, string> = {
+      'IN': '🇮🇳',
+      'NP': '🇳🇵',
+      'US': '🇺🇸', 
+      'UK': '🇬🇧',
+      'AU': '🇦🇺',
+      'CA': '🇨🇦',
+      'DE': '🇩🇪',
+      'FR': '🇫🇷',
+      'JP': '🇯🇵',
+      'SG': '🇸🇬'
+    };
+    return countryFlags[code] || '🌍';
+  };
+
+  // Search and filter handlers for new SearchAndFilterPanel
+  const handleSearch = () => {
+    // The search is automatically triggered by React Query when filters change
+    // This handler can be used for additional analytics/logging if needed
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      searchText: '',
+      statuses: [],
+      countries: []
+    });
+  };
 
   const {
     quotes,
@@ -64,13 +199,7 @@ export const QuoteManagementPage = () => {
     handleDeleteQuotes,
     isDeletingQuotes,
   } = useQuoteManagement({
-    statusFilter,
-    searchInput,
-    purchaseCountryFilter,
-    shippingCountryFilter,
-    dateRange,
-    amountRange,
-    priorityFilter,
+    filters
   });
 
   if (quotesLoading) {
@@ -144,16 +273,6 @@ export const QuoteManagementPage = () => {
 
   // Get selected quotes for bulk actions
   const _selectedQuotes = quotes?.filter((q) => selectedQuoteIds.includes(q.id)) || [];
-
-  // Clear all filters
-  const clearAllFilters = () => {
-    setSearchInput('');
-    setStatusFilter('all');
-    setDateRange('all');
-    setAmountRange('all');
-    setCountryFilter('all');
-    setPriorityFilter('all');
-  };
 
   // Confirmation dialog handlers
   const handleRequestBulkAction = (action: string) => {
@@ -256,67 +375,28 @@ export const QuoteManagementPage = () => {
         <QuoteMetrics quotes={quotes || []} isLoading={quotesLoading} />
 
         {/* Main Content Card */}
+        {/* Search and Filter Panel */}
+        <div className="mb-6">
+          <SearchAndFilterPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            onSearch={handleSearch}
+            onReset={handleResetFilters}
+            availableStatuses={availableStatuses}
+            availableCountries={availableCountries}
+            isLoading={isLoadingFilterOptions || quotesLoading}
+            resultsCount={quotes?.length}
+            className="w-full"
+          />
+        </div>
+
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           {/* Card Header */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <H2 className="text-gray-900">Quotes</H2>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Advanced Filters
-              </Button>
             </div>
-
-            {/* Search Bar */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search quotes by ID, customer, email, or product..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10 border-gray-300 focus:border-teal-500 focus:ring-teal-500"
-              />
-            </div>
-
-            {/* Quick Filters */}
-            <QuoteQuickFilters
-              activeFilter={quickFilter}
-              onFilterChange={applyQuickFilter}
-              quoteCounts={quoteCounts}
-            />
           </div>
-
-          {/* Advanced Filters (Collapsible) */}
-          <Collapsible open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
-            <CollapsibleContent>
-              <div className="px-6 pb-4 border-b border-gray-200">
-                <QuoteFilters
-                  searchTerm={searchInput}
-                  onSearchTermChange={setSearchInput}
-                  statusFilter={statusFilter}
-                  onStatusFilterChange={setStatusFilter}
-                  dateRange={dateRange}
-                  onDateRangeChange={setDateRange}
-                  amountRange={amountRange}
-                  onAmountRangeChange={setAmountRange}
-                  countryFilter={countryFilter}
-                  onCountryFilterChange={setCountryFilter}
-                  priorityFilter={priorityFilter}
-                  onPriorityFilterChange={setPriorityFilter}
-                  onClearFilters={clearAllFilters}
-                  purchaseCountryFilter={purchaseCountryFilter}
-                  onPurchaseCountryFilterChange={setPurchaseCountryFilter}
-                  shippingCountryFilter={shippingCountryFilter}
-                  onShippingCountryFilterChange={setShippingCountryFilter}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
 
           {/* List Header */}
           <div className="px-6 py-4 border-b border-gray-200">
@@ -353,21 +433,15 @@ export const QuoteManagementPage = () => {
                 </div>
                 <H2 className="text-gray-900 mb-2">No quotes found</H2>
                 <Body className="text-gray-600 mb-6">
-                  {searchInput ||
-                  statusFilter !== 'all' ||
-                  dateRange !== 'all' ||
-                  amountRange !== 'all' ||
-                  countryFilter !== 'all' ||
-                  priorityFilter !== 'all'
+                  {filters.searchText ||
+                  filters.statuses.length > 0 ||
+                  filters.countries.length > 0
                     ? 'Try adjusting your filters to see more results.'
                     : 'Get started by creating your first quote.'}
                 </Body>
-                {!searchInput &&
-                  statusFilter === 'all' &&
-                  dateRange === 'all' &&
-                  amountRange === 'all' &&
-                  countryFilter === 'all' &&
-                  priorityFilter === 'all' && (
+                {!filters.searchText &&
+                  filters.statuses.length === 0 &&
+                  filters.countries.length === 0 && (
                     <Button
                       onClick={() => setIsCreateModalOpen(true)}
                       className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white"
@@ -427,7 +501,6 @@ export const QuoteManagementPage = () => {
       </AlertDialog>
 
       {/* Debug Component - Remove in production */}
-      <StatusDebugger />
     </div>
   );
 };

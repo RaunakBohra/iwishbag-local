@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { unifiedConfigService } from './UnifiedConfigurationService';
 
 export interface Currency {
   code: string;
@@ -59,7 +60,7 @@ class CurrencyService {
   }
 
   /**
-   * Get all unique currencies from country_settings table
+   * Get all unique currencies from unified configuration system
    */
   async getAllCurrencies(): Promise<Currency[]> {
     if (this.allCurrenciesCache && this.isCacheValid()) {
@@ -67,42 +68,38 @@ class CurrencyService {
     }
 
     try {
-      const { data: countrySettings, error } = await supabase
-        .from('country_settings')
-        .select(
-          'currency, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator',
-        )
-        .not('currency', 'is', null)
-        .order('currency');
-
-      if (error) {
-        console.error('Error fetching currencies from country_settings:', error);
+      // Get all countries from unified configuration
+      const allCountries = await unifiedConfigService.getAllCountries();
+      
+      if (!allCountries || Object.keys(allCountries).length === 0) {
+        console.warn('No countries found in unified config, using fallback currencies');
         return this.getFallbackCurrencies();
       }
 
       // Group by currency and get the most complete data for each
       const currencyMap = new Map<string, Currency>();
 
-      countrySettings.forEach((cs) => {
-        const existing = currencyMap.get(cs.currency);
+      Object.values(allCountries).forEach((countryConfig) => {
+        if (!countryConfig.currency) return;
+        
+        const existing = currencyMap.get(countryConfig.currency);
         const currency: Currency = {
-          code: cs.currency,
-          name: this.getCurrencyNameSync(cs.currency),
-          symbol: this.getCurrencySymbolSync(cs.currency),
-          decimal_places: cs.decimal_places ?? this.getCurrencyDecimalPlacesSync(cs.currency),
-          min_payment_amount: cs.minimum_payment_amount ?? undefined,
-          thousand_separator: cs.thousand_separator ?? ',',
-          decimal_separator: cs.decimal_separator ?? '.',
+          code: countryConfig.currency,
+          name: countryConfig.name || this.getCurrencyNameSync(countryConfig.currency),
+          symbol: countryConfig.symbol || this.getCurrencySymbolSync(countryConfig.currency),
+          decimal_places: this.getCurrencyDecimalPlacesSync(countryConfig.currency),
+          min_payment_amount: countryConfig.minimum_payment_amount ?? undefined,
+          thousand_separator: ',',
+          decimal_separator: '.',
           is_active: true,
         };
 
         // Keep the one with more complete data (prefer non-null values)
         if (
           !existing ||
-          (cs.minimum_payment_amount && !existing.min_payment_amount) ||
-          (cs.decimal_places && !existing.decimal_places)
+          (countryConfig.minimum_payment_amount && !existing.min_payment_amount)
         ) {
-          currencyMap.set(cs.currency, currency);
+          currencyMap.set(countryConfig.currency, currency);
         }
       });
 
@@ -138,7 +135,7 @@ class CurrencyService {
   }
 
   /**
-   * Get country-to-currency mapping from database
+   * Get country-to-currency mapping from unified configuration system
    */
   async getCountryCurrencyMap(): Promise<Map<string, string>> {
     if (this.countryCurrencyMapCache.size > 0 && this.isCacheValid()) {
@@ -146,20 +143,18 @@ class CurrencyService {
     }
 
     try {
-      const { data: countrySettings, error } = await supabase
-        .from('country_settings')
-        .select('code, currency')
-        .not('currency', 'is', null);
-
-      if (error) {
-        console.error('Error fetching country-currency mapping:', error);
+      // Get all countries from unified configuration
+      const allCountries = await unifiedConfigService.getAllCountries();
+      
+      if (!allCountries || Object.keys(allCountries).length === 0) {
+        console.warn('No countries found in unified config, using fallback mapping');
         return this.getFallbackCountryCurrencyMap();
       }
 
       const map = new Map<string, string>();
-      countrySettings.forEach((cs) => {
-        if (cs.code && cs.currency) {
-          map.set(cs.code, cs.currency);
+      Object.entries(allCountries).forEach(([countryCode, countryConfig]) => {
+        if (countryCode && countryConfig.currency) {
+          map.set(countryCode, countryConfig.currency);
         }
       });
 
@@ -289,23 +284,21 @@ class CurrencyService {
    * Get currency decimal places
    */
   /**
-   * Get decimal places for currency from database or fallback
+   * Get decimal places for currency from unified configuration or fallback
    */
   async getCurrencyDecimalPlaces(currencyCode: string): Promise<number> {
     try {
-      const { data: countrySettings, error } = await supabase
-        .from('country_settings')
-        .select('decimal_places')
-        .eq('currency', currencyCode)
-        .not('decimal_places', 'is', null)
-        .limit(1)
-        .single();
-
-      if (!error && countrySettings?.decimal_places !== null) {
-        return countrySettings.decimal_places;
+      // Try to find a country that uses this currency
+      const allCountries = await unifiedConfigService.getAllCountries();
+      
+      for (const [countryCode, countryConfig] of Object.entries(allCountries)) {
+        if (countryConfig.currency === currencyCode) {
+          // Use the same fallback logic for consistency
+          return this.getCurrencyDecimalPlacesSync(currencyCode);
+        }
       }
     } catch (error) {
-      console.error('Error fetching decimal places:', error);
+      console.error('Error fetching decimal places from unified config:', error);
     }
 
     return this.getCurrencyDecimalPlacesSync(currencyCode);
@@ -391,18 +384,17 @@ class CurrencyService {
    */
   async getCountryForCurrency(currencyCode: string): Promise<string | null> {
     try {
-      const { data: countrySettings, error } = await supabase
-        .from('country_settings')
-        .select('code')
-        .eq('currency', currencyCode)
-        .limit(1)
-        .single();
-
-      if (!error && countrySettings?.code) {
-        return countrySettings.code;
+      // Get all countries from unified configuration
+      const allCountries = await unifiedConfigService.getAllCountries();
+      
+      // Find the first country that uses this currency
+      for (const [countryCode, countryConfig] of Object.entries(allCountries)) {
+        if (countryConfig.currency === currencyCode) {
+          return countryCode;
+        }
       }
     } catch (error) {
-      console.error('Error fetching country for currency:', error);
+      console.error('Error fetching country for currency from unified config:', error);
     }
 
     // Fallback to hardcoded mapping
@@ -454,19 +446,17 @@ class CurrencyService {
    */
   async getMinimumPaymentAmount(currencyCode: string): Promise<number> {
     try {
-      const { data: countrySettings, error } = await supabase
-        .from('country_settings')
-        .select('minimum_payment_amount')
-        .eq('currency', currencyCode)
-        .not('minimum_payment_amount', 'is', null)
-        .limit(1)
-        .single();
-
-      if (!error && countrySettings?.minimum_payment_amount) {
-        return countrySettings.minimum_payment_amount;
+      // Get all countries from unified configuration
+      const allCountries = await unifiedConfigService.getAllCountries();
+      
+      // Find a country that uses this currency and has minimum payment amount
+      for (const [countryCode, countryConfig] of Object.entries(allCountries)) {
+        if (countryConfig.currency === currencyCode && countryConfig.minimum_payment_amount) {
+          return countryConfig.minimum_payment_amount;
+        }
       }
     } catch (error) {
-      console.error('Error fetching minimum payment amount:', error);
+      console.error('Error fetching minimum payment amount from unified config:', error);
     }
 
     // Fallback to hardcoded values
@@ -616,26 +606,18 @@ class CurrencyService {
         return shippingRoute.exchange_rate;
       }
 
-      // Tier 2: Fallback to country settings USD-based conversion
-      const [originResult, destResult] = await Promise.all([
-        supabase
-          .from('country_settings')
-          .select('currency, rate_from_usd')
-          .eq('code', originCountry)
-          .single(),
-        supabase
-          .from('country_settings')
-          .select('currency, rate_from_usd')
-          .eq('code', destinationCountry)
-          .single(),
+      // Tier 2: Fallback to unified configuration USD-based conversion
+      const [originConfig, destConfig] = await Promise.all([
+        unifiedConfigService.getCountryConfig(originCountry),
+        unifiedConfigService.getCountryConfig(destinationCountry),
       ]);
 
-      if (originResult.error || destResult.error) {
-        throw new Error(`Country settings not found: ${originCountry} or ${destinationCountry}`);
+      if (!originConfig || !destConfig) {
+        throw new Error(`Country configuration not found: ${originCountry} or ${destinationCountry}`);
       }
 
-      const originRate = originResult.data.rate_from_usd;
-      const destRate = destResult.data.rate_from_usd;
+      const originRate = originConfig.rate_from_usd;
+      const destRate = destConfig.rate_from_usd;
 
       if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
         throw new Error(

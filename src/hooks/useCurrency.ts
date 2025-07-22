@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
-import { useAllCountries } from '@/hooks/useAllCountries';
-import { currencyService } from '@/services/CurrencyService';
+import { useQuery } from '@tanstack/react-query';
+import { unifiedConfigService } from '@/services/UnifiedConfigurationService';
 
 /**
  * Simplified unified currency hook
@@ -15,22 +15,29 @@ export function useCurrency(
   originCountry?: string,
   destinationCountry?: string,
 ) {
-  const { data: countries } = useAllCountries();
+  // Get all countries with their configurations
+  const { data: countries } = useQuery({
+    queryKey: ['countries', 'all'],
+    queryFn: () => unifiedConfigService.getAllCountries(),
+    staleTime: 30 * 60 * 1000, // 30 minutes - country data is stable
+  });
 
-  // Get exchange rate using simplified 2-tier system
+  // Get the specific country config for the currency
+  const countryWithCurrency = useMemo(() => {
+    if (!countries) return null;
+    return Object.entries(countries).find(([_, config]) => config.currency === currencyCode)?.[1];
+  }, [countries, currencyCode]);
+
+  // Get exchange rate using unified config system
   const exchangeRate = useMemo(() => {
     if (!currencyCode || currencyCode === 'USD') return 1;
-
-    // For immediate display purposes, use country settings rate_from_usd
-    // The async CurrencyService.getExchangeRate() should be used for critical business operations
-    const country = countries?.find((c) => c.currency === currencyCode);
-    return country?.rate_from_usd || 1;
-  }, [currencyCode, countries]);
+    return countryWithCurrency?.rate_from_usd || 1;
+  }, [currencyCode, countryWithCurrency]);
 
   // Get currency symbol
   const symbol = useMemo(() => {
-    return currencyService.getCurrencySymbol(currencyCode);
-  }, [currencyCode]);
+    return countryWithCurrency?.symbol || '$';
+  }, [countryWithCurrency]);
 
   // Format amount in the specified currency
   const formatAmount = useMemo(() => {
@@ -71,17 +78,18 @@ export function useCurrency(
     formatNumber,
     // Helper function to get country currency
     getCountryCurrency: (countryCode: string) => {
-      const country = countries?.find((c) => c.code === countryCode);
-      return country?.currency || 'USD';
+      if (!countries) return 'USD';
+      return countries[countryCode]?.currency || 'USD';
     },
     // Helper function to check if currency is supported
     isSupported: () => {
-      return currencyService.getCurrencySymbol(currencyCode) !== currencyCode;
+      return !!countryWithCurrency;
     },
     // Helper function for business-critical operations requiring exact exchange rates
     getExactExchangeRate: useCallback(async (originCountry: string, destinationCountry: string) => {
       try {
-        return await currencyService.getExchangeRate(originCountry, destinationCountry);
+        const rate = await unifiedConfigService.convertCurrency(1, originCountry, destinationCountry);
+        return rate;
       } catch (error) {
         console.error('Failed to get exact exchange rate:', error);
         throw error;

@@ -20,7 +20,9 @@ type EmailTemplate =
   | 'ticket_reply'
   | 'ticket_closed'
   | 'admin_new_ticket'
-  | 'admin_new_reply';
+  | 'admin_new_reply'
+  | 'quote_verification_email'
+  | 'quote_verification_success';
 
 interface QuoteEmailData {
   quoteId: string;
@@ -36,6 +38,14 @@ interface QuoteEmailData {
 interface PasswordResetEmailData {
   resetLink: string;
   customerName?: string;
+}
+
+interface QuoteVerificationEmailData {
+  quoteId: string;
+  customerName?: string;
+  customerEmail: string;
+  verificationLink: string;
+  expiryHours: number;
 }
 
 interface ContactFormEmailData {
@@ -68,6 +78,7 @@ interface TicketEmailData {
 type EmailData =
   | QuoteEmailData
   | PasswordResetEmailData
+  | QuoteVerificationEmailData
   | ContactFormEmailData
   | PaymentLinkEmailData
   | TicketEmailData;
@@ -145,6 +156,12 @@ export const useEmailNotifications = () => {
           break;
         case 'admin_new_reply':
           subject = 'ticketSubject' in data ? `[ADMIN] New Reply: ${data.ticketSubject}` : '[ADMIN] New Ticket Reply';
+          break;
+        case 'quote_verification_email':
+          subject = 'quoteId' in data ? `Verify Your Quote Approval - Quote #${data.quoteId}` : 'Verify Your Quote Approval';
+          break;
+        case 'quote_verification_success':
+          subject = 'quoteId' in data ? `Quote Approved Successfully - Quote #${data.quoteId}` : 'Quote Approved Successfully';
           break;
         default: {
           const quoteId = 'quoteId' in data ? data.quoteId : 'N/A';
@@ -450,6 +467,69 @@ export const useEmailNotifications = () => {
           `;
         }
         break;
+      case 'quote_verification_email':
+        if ('quoteId' in data && 'verificationLink' in data) {
+          content = `
+            <p>Thank you for your interest in approving quote #${data.quoteId}. To complete the approval process, please verify your email address.</p>
+            
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Quote Details</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+              <p><strong>Customer Email:</strong> ${data.customerEmail}</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.verificationLink}" style="display: inline-block; background-color: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Verify Email & Approve Quote</a>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">Or copy and paste this link into your browser:</p>
+            <p style="color: #2563eb; font-size: 14px; word-break: break-all;">${data.verificationLink}</p>
+            
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #f59e0b;">
+              <p style="margin: 0; color: #d97706;"><strong>Important:</strong></p>
+              <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #92400e;">
+                <li>This verification link will expire in ${data.expiryHours || 24} hours</li>
+                <li>You must verify your email before you can approve the quote</li>
+                <li>If you didn't request this quote, you can safely ignore this email</li>
+              </ul>
+            </div>
+            
+            <p>After verification, you'll be able to:</p>
+            <ul>
+              <li>Review complete quote details</li>
+              <li>Approve or reject the quote</li>
+              <li>Proceed to secure checkout if approved</li>
+            </ul>
+          `;
+        }
+        break;
+      case 'quote_verification_success':
+        if ('quoteId' in data) {
+          content = `
+            <div style="background-color: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #10b981;">
+              <h3 style="margin-top: 0; color: #065f46;">✓ Email Verified Successfully!</h3>
+              <p style="color: #047857;">Your email has been verified and your quote has been approved.</p>
+            </div>
+            
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Next Steps</h3>
+              <p><strong>Quote ID:</strong> ${data.quoteId}</p>
+              <p>Your quote is now approved and ready for checkout. You can:</p>
+              <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Proceed to secure payment</li>
+                <li>Review your order details</li>
+                <li>Track your order status</li>
+              </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${window.location.origin}/quote/${data.quoteId}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Your Quote</a>
+            </div>
+            
+            <p>Thank you for choosing iwishBag for your international shopping needs!</p>
+          `;
+        }
+        break;
       default:
         content = `<p>You have received an update regarding your quote.</p>`;
     }
@@ -744,6 +824,42 @@ export const useEmailNotifications = () => {
     });
   };
 
+  // Quote verification email functions
+  const sendQuoteVerificationEmail = (verificationData: {
+    to: string;
+    quoteId: string;
+    customerName: string;
+    verificationLink: string;
+    expiryHours?: number;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: verificationData.to,
+      template: 'quote_verification_email',
+      data: {
+        quoteId: verificationData.quoteId,
+        customerName: verificationData.customerName,
+        customerEmail: verificationData.to,
+        verificationLink: verificationData.verificationLink,
+        expiryHours: verificationData.expiryHours || 24,
+      },
+    });
+  };
+
+  const sendQuoteVerificationSuccessEmail = (successData: {
+    to: string;
+    quoteId: string;
+    customerName: string;
+  }) => {
+    return sendEmailMutation.mutate({
+      to: successData.to,
+      template: 'quote_verification_success',
+      data: {
+        quoteId: successData.quoteId,
+        customerName: successData.customerName,
+      },
+    });
+  };
+
   return {
     sendEmail: sendEmailMutation.mutate,
     isSending: sendEmailMutation.isPending,
@@ -764,5 +880,8 @@ export const useEmailNotifications = () => {
     sendTicketClosedEmail,
     sendAdminNewTicketEmail,
     sendAdminNewReplyEmail,
+    // Quote verification functions
+    sendQuoteVerificationEmail,
+    sendQuoteVerificationSuccessEmail,
   };
 };

@@ -21,43 +21,43 @@ export interface BusinessHours {
  * Customize this based on your support team's availability
  */
 export const defaultBusinessHours: BusinessHours = {
-  timezone: 'Asia/Kolkata', // Indian Standard Time
+  timezone: 'Asia/Kolkata', // Delhi/India Standard Time
   days: [
     {
       day: 'monday',
       isWorkingDay: true,
-      startTime: '09:00',
-      endTime: '18:00'
+      startTime: '10:00',
+      endTime: '17:00'
     },
     {
       day: 'tuesday',
       isWorkingDay: true,
-      startTime: '09:00',
-      endTime: '18:00'
+      startTime: '10:00',
+      endTime: '17:00'
     },
     {
       day: 'wednesday',
       isWorkingDay: true,
-      startTime: '09:00',
-      endTime: '18:00'
+      startTime: '10:00',
+      endTime: '17:00'
     },
     {
       day: 'thursday',
       isWorkingDay: true,
-      startTime: '09:00',
-      endTime: '18:00'
+      startTime: '10:00',
+      endTime: '17:00'
     },
     {
       day: 'friday',
       isWorkingDay: true,
-      startTime: '09:00',
-      endTime: '18:00'
+      startTime: '10:00',
+      endTime: '17:00'
     },
     {
       day: 'saturday',
-      isWorkingDay: true,
-      startTime: '10:00',
-      endTime: '16:00'
+      isWorkingDay: false,
+      startTime: '00:00',
+      endTime: '00:00'
     },
     {
       day: 'sunday',
@@ -182,7 +182,7 @@ export class BusinessHoursService {
     } else {
       const nextBusinessStart = this.getNextBusinessHoursStart();
       const nextBusinessTime = this.formatBusinessTime(nextBusinessStart);
-      return `Thank you for contacting us! We've received your request. Our business hours are Monday-Saturday 9 AM to 6 PM IST. We'll respond by ${nextBusinessTime}.`;
+      return `Thank you for contacting us! We've received your request. Our business hours are Monday-Friday 10 AM to 5 PM IST. We'll respond by ${nextBusinessTime}.`;
     }
   }
 

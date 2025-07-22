@@ -25,6 +25,9 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { AuthModal } from '@/components/forms/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmailNotifications } from '@/hooks/useEmailNotifications';
+import { rateLimitService } from '@/services/RateLimitService';
+import { auditLogService } from '@/services/AuditLogService';
 
 interface GuestApprovalDialogProps {
   isOpen: boolean;
@@ -51,6 +54,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
   const [currentView, setCurrentView] = useState<'options' | 'signin' | 'signup'>('options');
   const { toast } = useToast();
   const { user } = useAuth();
+  const { sendQuoteVerificationEmail, isSending } = useEmailNotifications();
 
   // Store pending action when auth modal is shown
   useEffect(() => {
@@ -134,10 +138,22 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
     }
 
     if (hasErrors) return;
+
+    // Check rate limiting
+    const rateLimitCheck = rateLimitService.canGenerateShareLink('anonymous-user', false);
+    if (!rateLimitCheck.allowed) {
+      toast({
+        title: 'Too Many Requests',
+        description: rateLimitCheck.message || 'Please try again later.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // First, initialize anonymous authentication if needed
+      // Initialize anonymous authentication if needed
       const {
         data: { user: currentUser },
         error: authError,
@@ -156,46 +172,68 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
         throw new Error('Failed to establish user session');
       }
 
-      // Update quote with email, name, approve, and link to anonymous user
-      const { error } = await supabase
+      // Step 1: Initiate email verification (this updates quote with verification token)
+      const { data: verificationToken, error: verificationError } = await supabase
+        .rpc('initiate_quote_email_verification', {
+          p_quote_id: quoteId,
+          p_email: guestEmail
+        });
+
+      if (verificationError) throw verificationError;
+
+      // Step 2: Update quote with customer details and link to anonymous user
+      const { error: updateError } = await supabase
         .from('quotes')
         .update({
-          email: guestEmail,
           customer_name: guestName,
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          user_id: userId, // Link to anonymous user
-          is_anonymous: true, // Mark as anonymous user quote
+          user_id: userId,
+          is_anonymous: true,
         })
         .eq('id', quoteId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Add quote to cart automatically for seamless checkout
-      const { error: cartError } = await supabase
-        .from('quotes')
-        .update({ in_cart: true })
-        .eq('id', quoteId);
-
-      if (cartError) {
-        console.error('Failed to add to cart:', cartError);
-        // Don't throw error - approval was successful
-      }
-
-      toast({
-        title: 'Quote Approved!',
-        description: 'Added to cart. Redirecting to checkout...',
+      // Step 3: Send verification email
+      const verificationLink = `${window.location.origin}/auth/verify-quote?token=${verificationToken}&redirect=${encodeURIComponent(window.location.pathname)}`;
+      
+      await sendQuoteVerificationEmail({
+        to: guestEmail,
+        quoteId: quoteId.substring(0, 8), // Use first 8 chars for display
+        customerName: guestName,
+        verificationLink,
+        expiryHours: 24,
       });
 
-      // Redirect to guest checkout with quote parameter (now works with anonymous auth)
-      setTimeout(() => {
-        window.location.href = `/guest-checkout?quote=${quoteId}`;
-      }, 1000);
+      // Step 4: Log the verification initiation
+      await auditLogService.logAction(
+        quoteId,
+        'email_verification_sent',
+        {
+          details: {
+            customer_email: guestEmail,
+            customer_name: guestName,
+            verification_initiated_at: new Date().toISOString()
+          }
+        }
+      );
+
+      // Record rate limit usage
+      rateLimitService.recordShareLinkGeneration('anonymous-user');
+
+      toast({
+        title: 'Verification Email Sent!',
+        description: `Please check ${guestEmail} and click the verification link to approve your quote.`,
+      });
+
+      // Close the dialog
+      if (onClose) onClose();
+      if (onOpenChange) onOpenChange(false);
+
     } catch (error) {
-      console.error('Error approving quote:', error);
+      console.error('Error sending verification email:', error);
       toast({
         title: 'Error',
-        description: 'Failed to approve quote. Please try again.',
+        description: 'Failed to send verification email. Please try again.',
         variant: 'destructive',
       });
       setIsSubmitting(false);
@@ -290,7 +328,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
           <DialogDescription>
             {action === 'approve'
               ? currentView === 'options'
-                ? 'Enter your email to approve this quote and continue to checkout.'
+                ? 'Enter your email and name. We\'ll send you a verification link to complete your quote approval.'
                 : currentView === 'signin'
                   ? 'Sign in to your account to continue with this quote.'
                   : 'Create an account to continue with this quote.'
@@ -342,18 +380,18 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
 
                 <Button
                   onClick={handleGuestCheckout}
-                  disabled={isSubmitting || !guestEmail || !guestName}
+                  disabled={isSubmitting || isSending || !guestEmail || !guestName}
                   className="w-full h-12 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-base transition-all duration-200"
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || isSending ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                      Approving Quote...
+                      Sending Verification Email...
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-5 w-5 mr-2" />
-                      Approve Quote & Continue
+                      <Mail className="h-5 w-5 mr-2" />
+                      Send Verification Email
                     </>
                   )}
                 </Button>

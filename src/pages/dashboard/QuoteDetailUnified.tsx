@@ -206,6 +206,61 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
   const canTakeActions = isGuestMode || isQuoteOwner;
   const isExpired = quote?.status === 'expired';
 
+  // Lightweight behavior tracking - just view count and duration
+  useEffect(() => {
+    let viewStartTime: number | null = null;
+    
+    const trackView = async () => {
+      if (quote?.id && !isLoading) {
+        try {
+          viewStartTime = Date.now();
+          await supabase.rpc('update_quote_view_tracking', {
+            p_quote_id: quote.id,
+            p_duration_seconds: 0 // Initial view
+          });
+        } catch (error) {
+          // Silently fail - don't impact user experience
+          console.debug('View tracking failed:', error);
+        }
+      }
+    };
+
+    const trackViewEnd = async () => {
+      if (quote?.id && viewStartTime) {
+        try {
+          const duration = Math.floor((Date.now() - viewStartTime) / 1000);
+          await supabase.rpc('update_quote_view_tracking', {
+            p_quote_id: quote.id,
+            p_duration_seconds: duration
+          });
+        } catch (error) {
+          // Silently fail
+          console.debug('View duration tracking failed:', error);
+        }
+      }
+    };
+
+    // Track initial view
+    if (quote?.id) {
+      trackView();
+    }
+
+    // Track when user leaves
+    const handleBeforeUnload = () => trackViewEnd();
+    const handleVisibilityChange = () => {
+      if (document.hidden) trackViewEnd();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      trackViewEnd();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [quote?.id, isLoading]);
+
   // Check for pending actions from guest approval
   useEffect(() => {
     const checkPendingAction = async () => {

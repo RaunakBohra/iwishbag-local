@@ -18,9 +18,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { ManualAnalysisTasks } from '@/components/admin/ManualAnalysisTasks';
 import { AdminAnalytics } from '@/components/admin/AdminAnalytics';
 import { SimpleEnhancedAnalytics } from '@/components/admin/SimpleEnhancedAnalytics';
+import { SimpleShareStats } from '@/components/admin/SimpleShareStats';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { SystemHealthCheck } from '@/components/admin/SystemHealthCheck';
 
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -273,6 +275,15 @@ const AdminDashboard = () => {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="overview">Dashboard Overview</TabsTrigger>
+          <TabsTrigger value="health-check">System Health Check</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="health-check" className="space-y-6">
+          <SystemHealthCheck />
+        </TabsContent>
+        
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
@@ -327,6 +338,11 @@ const AdminDashboard = () => {
           ) : (
             <AdminAnalytics />
           )}
+
+          {/* Share Analytics - Lightweight BI */}
+          <div className="mt-8">
+            <SimpleShareStats />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

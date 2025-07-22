@@ -114,6 +114,24 @@ export interface TicketFilters {
   };
 }
 
+// Enhanced filter interface for the new filter panel
+export interface EnhancedTicketFilters {
+  searchText?: string;
+  statuses?: TicketStatus[];
+  priorities?: TicketPriority[];
+  categories?: TicketCategory[];
+  assignedTo?: string[];
+  assignmentStatus?: 'all' | 'assigned' | 'unassigned' | 'mine';
+  slaStatus?: 'all' | 'on_track' | 'approaching_deadline' | 'overdue';
+  hasOrder?: boolean | null;
+  countries?: string[];
+  dateRange?: {
+    from: Date;
+    to: Date;
+    type: 'created' | 'updated' | 'resolved';
+  };
+}
+
 export interface TicketSortOptions {
   field: 'created_at' | 'updated_at' | 'priority' | 'status';
   direction: 'asc' | 'desc';

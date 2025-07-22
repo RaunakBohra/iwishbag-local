@@ -139,7 +139,11 @@
       "WebFetch(domain:polaris.shopify.com)",
       "WebFetch(domain:polaris-react.shopify.com)",
       "WebFetch(domain:www.nngroup.com)",
-      "Bash(npx playwright install:*)"
+      "Bash(npx playwright install:*)",
+      "Bash(npx storybook@latest init:*)",
+      "Bash(git worktree:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp:*)"
     ],
     "deny": []
   }

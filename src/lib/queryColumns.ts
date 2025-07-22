@@ -21,7 +21,7 @@ export const QUERY_COLUMNS = {
    */
   QUOTE_LIST: `
     id, display_id, status, final_total_usd, created_at,
-    destination_country, priority, approval_status, payment_status
+    destination_country, approval_status, payment_status
   `,
 
   /**
@@ -29,10 +29,10 @@ export const QUERY_COLUMNS = {
    * Includes all data needed for quote calculations and display
    */
   QUOTE_DETAIL: `
-    id, display_id, status, final_total_usd, final_total_local, destination_currency,
+    id, display_id, status, final_total_usd,
     created_at, updated_at, items, shipping_address, breakdown, 
     destination_country, origin_country, customs_percentage, vat, discount, 
-    exchange_rate, priority, approval_status, payment_status, expires_at,
+    exchange_rate, approval_status, payment_status, expires_at,
     iwish_tracking_id, tracking_status, estimated_delivery_date
   `,
 
@@ -42,7 +42,7 @@ export const QUERY_COLUMNS = {
    */
   ADMIN_QUOTES: `
     id, display_id, status, final_total_usd, created_at, 
-    destination_country, origin_country, priority, user_id, expires_at,
+    destination_country, origin_country, user_id, expires_at,
     approval_status, payment_status, in_cart, sent_at, paid_at,
     profiles!quotes_user_id_fkey(full_name, email, preferred_display_currency)
   `,
@@ -52,8 +52,8 @@ export const QUERY_COLUMNS = {
    * Optimized for cart display and operations
    */
   CART_ITEMS: `
-    id, display_id, final_total_usd, final_total_local, destination_currency,
-    created_at, destination_country, origin_country, items, in_cart, priority
+    id, display_id, final_total_usd,
+    created_at, destination_country, origin_country, items, in_cart
   `,
 
   /**
@@ -61,8 +61,8 @@ export const QUERY_COLUMNS = {
    * User-focused columns for quote management
    */
   USER_QUOTES: `
-    id, display_id, status, final_total_usd, final_total_local, destination_currency,
-    created_at, destination_country, priority, approval_status, payment_status,
+    id, display_id, status, final_total_usd,
+    created_at, destination_country, approval_status, payment_status,
     in_cart, expires_at, iwish_tracking_id, tracking_status, estimated_delivery_date
   `,
 
@@ -71,10 +71,10 @@ export const QUERY_COLUMNS = {
    * Orders (quotes with payment_status = 'paid')
    */
   ORDER_LIST: `
-    id, display_id, status, final_total_usd, final_total_local, destination_currency,
+    id, display_id, status, final_total_usd,
     created_at, paid_at, shipped_at, destination_country, origin_country,
     iwish_tracking_id, tracking_status, shipping_carrier, tracking_number,
-    estimated_delivery_date, priority
+    estimated_delivery_date
   `,
 
   /**
@@ -83,7 +83,7 @@ export const QUERY_COLUMNS = {
    */
   SEARCH_RESULTS: `
     id, display_id, status, final_total_usd, created_at,
-    destination_country, priority, customer_data
+    destination_country, customer_data
   `,
 
   /**
@@ -92,7 +92,7 @@ export const QUERY_COLUMNS = {
    */
   ANALYTICS: `
     id, status, final_total_usd, created_at, destination_country, 
-    origin_country, payment_status, approval_status, priority
+    origin_country, payment_status, approval_status
   `,
 
   /**
@@ -100,7 +100,7 @@ export const QUERY_COLUMNS = {
    * Payment-related information only
    */
   PAYMENT_DATA: `
-    id, display_id, final_total_usd, final_total_local, destination_currency,
+    id, display_id, final_total_usd,
     payment_status, payment_method, paid_at, user_id, customer_data
   `,
 

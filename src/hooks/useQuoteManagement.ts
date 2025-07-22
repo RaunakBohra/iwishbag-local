@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { COMMON_QUERIES } from '@/lib/queryColumns';
 import { trackAdminQuery } from '@/lib/performanceTracker';
+import type { SearchFilters } from '@/components/admin/SearchAndFilterPanel';
+import * as Sentry from '@sentry/react';
 
 type QuoteWithItems = Tables<'quotes'> & {
   profiles?: {
@@ -18,25 +20,24 @@ type QuoteWithItems = Tables<'quotes'> & {
   } | null;
 };
 
-export const useQuoteManagement = (filters = {}) => {
-  const {
-    purchaseCountryFilter = 'all',
-    shippingCountryFilter = 'all',
-    statusFilter = 'all',
-    searchInput = '',
-    dateRange = 'all',
-    amountRange = 'all',
-    priorityFilter = 'all',
-    page = 0,
-    pageSize = 25, // Default page size for better performance
-  } = filters;
+interface UseQuoteManagementProps {
+  filters: SearchFilters;
+  page?: number;
+  pageSize?: number;
+}
+
+export const useQuoteManagement = ({ 
+  filters,
+  page = 0,
+  pageSize = 25
+}: UseQuoteManagementProps) => {
 
   // Internal state management
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
   const [activeStatusUpdate, setActiveStatusUpdate] = useState<string | null>(null);
 
-  const searchTerm = useDebounce(searchInput, 500);
+  const searchTerm = useDebounce(filters.searchText, 500);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -45,135 +46,140 @@ export const useQuoteManagement = (filters = {}) => {
   const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
     queryKey: [
       'admin-quotes',
-      statusFilter,
       searchTerm,
-      purchaseCountryFilter,
-      shippingCountryFilter,
-      dateRange,
-      amountRange,
-      priorityFilter,
+      filters.statuses,
+      filters.countries,
       page,
       pageSize,
     ],
     queryFn: async () => {
-      return trackAdminQuery('quotes_list', async () => {
-        // PERFORMANCE FIX: Use standardized column selection with pagination
-        let query = supabase
-          .from('quotes')
-          .select(COMMON_QUERIES.adminQuotesWithProfiles)
-          .order('created_at', { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1); // PERFORMANCE FIX: Pagination
+      // Enhanced Sentry monitoring for search query operations
+      const searchTransaction = Sentry.startTransaction({
+        name: 'Advanced Search Query Execution',
+        op: 'db.query.search',
+      });
 
-      // TEMPORARY: Disable status filtering to debug "quotes not found" issue
-      // Filter based on status management configuration
-      const quoteStatusNames = getStatusesForQuotesList();
-      console.log('DEBUG: Quote statuses allowed in quotes list:', quoteStatusNames);
-      console.log('DEBUG: Current statusFilter:', statusFilter);
+      return Sentry.withScope(async (scope) => {
+        scope.setTag('component', 'useQuoteManagement');
+        scope.setTag('operation', 'search_quotes');
+        scope.setContext('search_parameters', {
+          searchTerm: searchTerm,
+          statusFilters: filters.statuses,
+          countryFilters: filters.countries,
+          page,
+          pageSize,
+          hasSearchTerm: !!searchTerm?.trim(),
+          hasStatusFilters: filters.statuses.length > 0,
+          hasCountryFilters: filters.countries.length > 0,
+        });
+        scope.setLevel('info');
 
-      if (statusFilter !== 'all') {
-        // Apply specific status filter only
-        query = query.eq('status', statusFilter);
-        console.log(`DEBUG: Filtering by specific status: ${statusFilter}`);
-      } else {
-        // Show ALL quotes regardless of status (for debugging)
-        console.log('DEBUG: Showing ALL quotes (status filter disabled for debugging)');
-        // Temporarily disabled: query = query.in('status', quoteStatusNames);
-      }
+        try {
+          const queryStartTime = Date.now();
+          
+          const result = await trackAdminQuery('quotes_list', async () => {
+            // PERFORMANCE FIX: Use standardized column selection with pagination
+            let query = supabase
+              .from('quotes')
+              .select(COMMON_QUERIES.adminQuotesWithProfiles)
+              .order('created_at', { ascending: false })
+              .range(page * pageSize, (page + 1) * pageSize - 1);
 
-      if (purchaseCountryFilter && purchaseCountryFilter !== 'all') {
-        query = query.eq('origin_country', purchaseCountryFilter);
-      }
+            // Apply status filters
+            if (filters.statuses && filters.statuses.length > 0) {
+              query = query.in('status', filters.statuses);
+              console.log(`DEBUG: Filtering by statuses: ${filters.statuses.join(', ')}`);
+            } else {
+              // If no specific statuses selected, show all quotes
+              const quoteStatusNames = getStatusesForQuotesList();
+              console.log('DEBUG: No specific status filter, showing all manageable quotes');
+            }
 
-      if (shippingCountryFilter && shippingCountryFilter !== 'all') {
-        query = query.eq('destination_country', shippingCountryFilter);
-      }
+            // Apply country filters (destination country)
+            if (filters.countries && filters.countries.length > 0) {
+              query = query.in('destination_country', filters.countries);
+              console.log(`DEBUG: Filtering by countries: ${filters.countries.join(', ')}`);
+            }
 
-      if (priorityFilter && priorityFilter !== 'all') {
-        query = query.eq('priority', priorityFilter);
-      }
+            // Apply full-text search with proper parameterization to prevent SQL injection
+            if (searchTerm && searchTerm.trim()) {
+              const sanitizedSearchTerm = searchTerm.trim();
+              
+              // SECURITY FIX: Use Supabase's parameterized query methods instead of string interpolation
+              // This prevents SQL injection attacks by properly escaping user input
+              query = query.or([
+                `display_id.ilike.%${sanitizedSearchTerm}%`,
+                `customer_data->>info->>email.ilike.%${sanitizedSearchTerm}%`,
+                `items::text.ilike.%${sanitizedSearchTerm}%`,
+                `destination_country.ilike.%${sanitizedSearchTerm}%`
+              ].join(','));
+              
+              console.log(`DEBUG: Applying search filter: "${searchTerm}"`);
+            }
 
-      // Date filter
-      if (dateRange && dateRange !== 'all') {
-        const now = new Date();
-        let startDate: Date | null = null;
-        switch (dateRange) {
-          case 'today':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            break;
-          case 'yesterday':
-            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-            break;
-          case '7days':
-            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            break;
-          case '30days':
-            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            break;
-          case '90days':
-            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-            break;
-          case 'thisMonth':
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            break;
-          case 'lastMonth':
-            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            break;
-          default:
-            startDate = null;
-        }
-        if (startDate) {
-          query = query.gte('created_at', startDate.toISOString());
-        }
-      }
+            // Debug: print the query object
+            console.log('DEBUG: Final Supabase query for quotes:', query);
+            // Log the final query string (for REST API)
+            console.log('DEBUG: Query URL:', query.url.toString());
+            const { data, error } = await query;
+            if (error) throw new Error(error.message);
+            return data || [];
+          }, {
+            page,
+            pageSize,
+            filters: {
+              search: searchTerm,
+              statuses: filters.statuses,
+              countries: filters.countries,
+            }
+          });
 
-      // Amount filter
-      if (amountRange && amountRange !== 'all') {
-        switch (amountRange) {
-          case '0-100':
-            query = query.gte('final_total_usd', 0).lte('final_total_usd', 100);
-            break;
-          case '100-500':
-            query = query.gte('final_total_usd', 100).lte('final_total_usd', 500);
-            break;
-          case '500-1000':
-            query = query.gte('final_total_usd', 500).lte('final_total_usd', 1000);
-            break;
-          case '1000-5000':
-            query = query.gte('final_total_usd', 1000).lte('final_total_usd', 5000);
-            break;
-          case '5000+':
-            query = query.gte('final_total_usd', 5000);
-            break;
-        }
-      }
+          // Log performance metrics
+          const queryDuration = Date.now() - queryStartTime;
+          scope.setContext('performance_metrics', {
+            queryDurationMs: queryDuration,
+            resultCount: result.length,
+            isSlowQuery: queryDuration > 2000,
+          });
 
-      if (searchTerm) {
-        const searchString = `%${searchTerm}%`;
-        // Updated search for unified structure: search in customer_data.info.email instead of email column
-        // and use items JSONB array instead of product_name column
-        query = query.or(
-          `display_id.ilike.${searchString},destination_country.ilike.${searchString},customer_data->>info->>email.ilike.${searchString}`,
-        );
-      }
+          // Monitor performance and alert on slow queries
+          if (queryDuration > 2000) {
+            scope.setLevel('warning');
+            Sentry.addBreadcrumb({
+              message: 'Slow search query detected',
+              level: 'warning',
+              data: {
+                duration: queryDuration,
+                filters: filters,
+                searchTerm: searchTerm,
+              }
+            });
+          }
 
-        // Debug: print the query object
-        console.log('DEBUG: Final Supabase query for quotes:', query);
-        // Log the final query string (for REST API)
-        console.log('DEBUG: Query URL:', query.url.toString());
-        const { data, error } = await query;
-        if (error) throw new Error(error.message);
-        return data || [];
-      }, {
-        page,
-        pageSize,
-        filters: {
-          status: statusFilter,
-          search: searchTerm,
-          purchaseCountry: purchaseCountryFilter,
-          shippingCountry: shippingCountryFilter,
-          dateRange,
-          amountRange,
-          priority: priorityFilter,
+          searchTransaction.setStatus('ok');
+          return result;
+        } catch (error) {
+          scope.setLevel('error');
+          scope.setContext('error_details', {
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            searchTerm: searchTerm,
+            filters: filters,
+          });
+          
+          Sentry.captureException(error, {
+            tags: {
+              component: 'useQuoteManagement',
+              operation: 'search_query_failed',
+            },
+            extra: {
+              searchParams: { searchTerm, filters, page, pageSize },
+            }
+          });
+          
+          searchTransaction.setStatus('internal_error');
+          throw error;
+        } finally {
+          searchTransaction.finish();
         }
       });
     },
@@ -182,53 +188,114 @@ export const useQuoteManagement = (filters = {}) => {
 
   const updateMultipleQuotesStatusMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
-      const updateObject: Partial<Tables<'quotes'>> = { status };
+      // Sentry monitoring for status update operations
+      const updateTransaction = Sentry.startTransaction({
+        name: 'Bulk Quote Status Update',
+        op: 'db.mutation.status_update',
+      });
 
-      // DYNAMIC: Check if this status represents a paid state
-      const statusConfig = getStatusConfig(status, 'order');
-      if (statusConfig?.isSuccessful && statusConfig?.countsAsOrder) {
-        updateObject.paid_at = new Date().toISOString();
+      return Sentry.withScope(async (scope) => {
+        scope.setTag('component', 'useQuoteManagement');
+        scope.setTag('operation', 'bulk_status_update');
+        scope.setContext('update_parameters', {
+          quoteIds: ids,
+          newStatus: status,
+          quoteCount: ids.length,
+        });
 
-        for (const quoteId of ids) {
-          const { data: currentQuote, error: fetchError } = await supabase
-            .from('quotes')
-            .select('order_display_id, status')
-            .eq('id', quoteId)
-            .single();
+        try {
+          const updateObject: Partial<Tables<'quotes'>> = { status };
 
-          if (fetchError) {
-            console.error(`Failed to fetch quote ${quoteId}: ${fetchError.message}`);
-            continue;
+          // DYNAMIC: Check if this status represents a paid state
+          const statusConfig = getStatusConfig(status, 'order');
+          if (statusConfig?.isSuccessful && statusConfig?.countsAsOrder) {
+            updateObject.paid_at = new Date().toISOString();
+
+            scope.setContext('status_config', {
+              isSuccessful: statusConfig.isSuccessful,
+              countsAsOrder: statusConfig.countsAsOrder,
+              requiresPaymentProcessing: true,
+            });
+
+            for (const quoteId of ids) {
+              const { data: currentQuote, error: fetchError } = await supabase
+                .from('quotes')
+                .select('order_display_id, status')
+                .eq('id', quoteId)
+                .single();
+
+              if (fetchError) {
+                scope.setLevel('warning');
+                Sentry.addBreadcrumb({
+                  message: 'Failed to fetch quote for update',
+                  level: 'warning',
+                  data: { quoteId, error: fetchError.message }
+                });
+                console.error(`Failed to fetch quote ${quoteId}: ${fetchError.message}`);
+                continue;
+              }
+
+              const singleUpdate: Partial<Tables<'quotes'>> = { ...updateObject };
+              if (currentQuote) {
+                if (!currentQuote.order_display_id) {
+                  singleUpdate.order_display_id = `ORD-${quoteId.substring(0, 6).toUpperCase()}`;
+                }
+                // DYNAMIC: Check for payment pending statuses
+                if (
+                  currentQuote.status.includes('cod_pending') ||
+                  currentQuote.status.includes('cod')
+                ) {
+                  singleUpdate.payment_method = 'cod';
+                } else if (
+                  currentQuote.status.includes('bank_transfer') ||
+                  currentQuote.status.includes('transfer')
+                ) {
+                  singleUpdate.payment_method = 'bank_transfer';
+                }
+              }
+
+              const { error } = await supabase.from('quotes').update(singleUpdate).eq('id', quoteId);
+
+              if (error) {
+                const updateError = new Error(`Failed to update quote ${quoteId}: ${error.message}`);
+                scope.setLevel('error');
+                Sentry.captureException(updateError, {
+                  tags: { quoteId, operation: 'individual_quote_update' }
+                });
+                throw updateError;
+              }
+            }
+            
+            updateTransaction.setStatus('ok');
+            return;
           }
 
-          const singleUpdate: Partial<Tables<'quotes'>> = { ...updateObject };
-          if (currentQuote) {
-            if (!currentQuote.order_display_id) {
-              singleUpdate.order_display_id = `ORD-${quoteId.substring(0, 6).toUpperCase()}`;
-            }
-            // DYNAMIC: Check for payment pending statuses
-            if (
-              currentQuote.status.includes('cod_pending') ||
-              currentQuote.status.includes('cod')
-            ) {
-              singleUpdate.payment_method = 'cod';
-            } else if (
-              currentQuote.status.includes('bank_transfer') ||
-              currentQuote.status.includes('transfer')
-            ) {
-              singleUpdate.payment_method = 'bank_transfer';
-            }
+          // Bulk update for non-payment statuses
+          const { error } = await supabase.from('quotes').update(updateObject).in('id', ids);
+          if (error) {
+            const bulkError = new Error(error.message);
+            scope.setLevel('error');
+            Sentry.captureException(bulkError, {
+              tags: { operation: 'bulk_quote_update' }
+            });
+            throw bulkError;
           }
 
-          const { error } = await supabase.from('quotes').update(singleUpdate).eq('id', quoteId);
-
-          if (error) throw new Error(`Failed to update quote ${quoteId}: ${error.message}`);
+          updateTransaction.setStatus('ok');
+        } catch (error) {
+          scope.setLevel('error');
+          scope.setContext('error_details', {
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            quoteIds: ids,
+            targetStatus: status,
+          });
+          
+          updateTransaction.setStatus('internal_error');
+          throw error;
+        } finally {
+          updateTransaction.finish();
         }
-        return;
-      }
-
-      const { error } = await supabase.from('quotes').update(updateObject).in('id', ids);
-      if (error) throw new Error(error.message);
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });

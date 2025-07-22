@@ -305,6 +305,58 @@ export class NotificationService {
   }
 
   /**
+   * Notify admin of high-value quote approval (lightweight BI alert)
+   * Only sends for quotes over $1000 USD
+   */
+  async notifyHighValueQuoteApproval(quote: UnifiedQuote): Promise<void> {
+    try {
+      const quoteValue = quote.final_total_usd || 0;
+      const threshold = 1000; // $1000 USD threshold
+
+      if (quoteValue < threshold) {
+        return; // Skip notification for lower value quotes
+      }
+
+      const adminEmails = await this.getAdminEmails();
+      if (!adminEmails.length) {
+        console.warn('⚠️ No admin emails found for high-value quote notification');
+        return;
+      }
+
+      const emailData: EmailNotificationData = {
+        to: adminEmails,
+        subject: `🎯 High-Value Quote Approved - $${quoteValue.toFixed(2)} USD`,
+        templateName: 'High Value Quote Alert',
+        variables: {
+          quote_id: quote.display_id || quote.id,
+          customer_name: this.getCustomerName(quote),
+          customer_email: this.getCustomerEmail(quote),
+          quote_value: `$${quoteValue.toFixed(2)} USD`,
+          admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`,
+        },
+        priority: 'high',
+      };
+
+      await this.sendEmailNotification(emailData);
+
+      // Create internal high-priority notification
+      await this.createInternalNotification({
+        quote_id: quote.id,
+        message_type: 'high_value_approval',
+        thread_type: 'internal',
+        priority: 'high',
+        subject: `High-value quote approved - $${quoteValue.toFixed(2)}`,
+        content: `Customer ${this.getCustomerName(quote)} approved a high-value quote worth $${quoteValue.toFixed(2)} USD. Immediate attention recommended.`,
+        sender_id: 'system',
+      });
+
+      console.log(`✅ High-value quote notification sent: $${quoteValue.toFixed(2)} USD`);
+    } catch (error) {
+      console.error('❌ Failed to send high-value quote notification:', error);
+    }
+  }
+
+  /**
    * Get unread message count for a user
    */
   async getUnreadMessageCount(userId: string, quoteId?: string): Promise<number> {
