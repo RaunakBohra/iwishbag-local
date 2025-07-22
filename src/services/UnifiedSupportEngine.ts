@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { supabase } from '../integrations/supabase/client';
-import { notificationService } from './NotificationService';
+import { notificationService, NotificationService } from './NotificationService';
 import * as Sentry from '@sentry/react';
 
 // ============================================================================
@@ -1045,14 +1045,8 @@ class UnifiedSupportEngine {
       const userPrefs = await this.getUserNotificationPreferences(ticket.user_id);
       
       if (userPrefs.email_notifications) {
-        // For now, just log the notification intent
-        // TODO: Implement full ticket email notifications
-        console.log('📧 Would send ticket email notification:', {
-          event,
-          ticketId: ticket.id,
-          userId: ticket.user_id,
-          template: `ticket_${event}`
-        });
+        // Send actual email notification
+        await this.sendTicketEmailNotification(ticket, event, eventData);
       }
 
       // Add more notification channels as needed (SMS, in-app, etc.)
@@ -1060,6 +1054,260 @@ class UnifiedSupportEngine {
     } catch (error) {
       console.error('❌ Error sending notifications:', error);
       Sentry.captureException(error);
+    }
+  }
+
+  /**
+   * Send email notification for ticket events using enhanced NotificationService
+   */
+  private async sendTicketEmailNotification(
+    ticket: SupportRecord,
+    event: 'created' | 'reply_added' | 'status_updated' | 'sla_breach',
+    eventData?: any
+  ): Promise<void> {
+    try {
+      console.log('📧 Sending enhanced email notification for ticket:', ticket.id, event);
+
+      // Convert SupportRecord to TicketWithDetails format
+      const ticketWithDetails = await this.convertToTicketWithDetails(ticket);
+      if (!ticketWithDetails) {
+        console.warn('⚠️ Could not convert ticket for notification:', ticket.id);
+        return;
+      }
+
+      // Prepare additional data for different event types
+      let additionalData: any = {};
+      
+      if (event === 'status_updated' && eventData) {
+        additionalData = {
+          oldStatus: eventData.old_status,
+          newStatus: eventData.new_status
+        };
+      } else if (event === 'reply_added' && eventData) {
+        additionalData = {
+          replyMessage: eventData.reply_message || 'New reply available'
+        };
+      } else if (event === 'sla_breach' && eventData) {
+        additionalData = {
+          slaType: eventData.breach_type || 'response'
+        };
+      }
+
+      // Use NotificationService to send comprehensive email
+      await notificationService.sendTicketEmailNotification(
+        ticketWithDetails,
+        event,
+        additionalData
+      );
+
+      console.log('✅ Enhanced ticket email notification sent successfully');
+
+    } catch (error) {
+      console.error('❌ Failed to send enhanced ticket email notification:', error);
+      // Don't throw - email failures shouldn't break the ticket system
+    }
+  }
+
+  /**
+   * Convert SupportRecord to TicketWithDetails for notification system
+   */
+  private async convertToTicketWithDetails(ticket: SupportRecord): Promise<any | null> {
+    try {
+      if (!ticket.ticket_data) return null;
+
+      // Get user profile information
+      let userProfile = null;
+      if (ticket.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, email, phone')
+          .eq('id', ticket.user_id)
+          .single();
+        userProfile = profile;
+      }
+
+      // Convert to TicketWithDetails format
+      const ticketWithDetails = {
+        id: ticket.id,
+        user_id: ticket.user_id,
+        quote_id: ticket.quote_id,
+        subject: ticket.ticket_data.subject,
+        description: ticket.ticket_data.description,
+        status: ticket.ticket_data.status,
+        priority: ticket.ticket_data.priority,
+        category: ticket.ticket_data.category,
+        assigned_to: ticket.ticket_data.assigned_to,
+        created_at: ticket.created_at,
+        updated_at: ticket.updated_at,
+        user_profile: userProfile,
+        quote: ticket.quote || null
+      };
+
+      return ticketWithDetails;
+
+    } catch (error) {
+      console.error('❌ Error converting ticket for notifications:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get customer email from ticket data
+   */
+  private getCustomerEmailFromTicket(ticket: SupportRecord): string | null {
+    // Try to get email from quote data first
+    if (ticket.quote?.customer_data?.info?.email) {
+      return ticket.quote.customer_data.info.email;
+    }
+
+    // Fallback: get from user profile (would need to fetch separately)
+    // For now, return a placeholder - in real implementation, fetch user profile
+    return null;
+  }
+
+  /**
+   * Generate email content based on event type
+   */
+  private generateEmailContent(
+    ticket: SupportRecord,
+    event: 'created' | 'reply_added' | 'status_updated' | 'sla_breach',
+    eventData?: any
+  ): { subject: string; html: string; template: string } {
+    const ticketData = ticket.ticket_data!;
+    const ticketId = ticket.id.slice(0, 8);
+    
+    switch (event) {
+      case 'created':
+        return {
+          subject: `Support Ticket Created - #${ticketId}`,
+          template: 'ticket_created',
+          html: `
+            <h2>Your Support Ticket Has Been Created</h2>
+            <p>Hello,</p>
+            <p>We've received your support request and will respond within 24 hours.</p>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <strong>Ticket #${ticketId}</strong><br>
+              <strong>Subject:</strong> ${ticketData.subject}<br>
+              <strong>Status:</strong> Open<br>
+              <strong>Priority:</strong> ${ticketData.priority}
+            </div>
+            
+            <p><strong>Your message:</strong></p>
+            <p style="background: #f0f0f0; padding: 10px; border-radius: 3px;">${ticketData.description}</p>
+            
+            <p>You can track your ticket progress in your account dashboard.</p>
+            <p>Best regards,<br>iwishBag Support Team</p>
+          `
+        };
+
+      case 'status_updated':
+        const newStatus = eventData?.new_status || ticketData.status;
+        const statusLabels: Record<string, string> = {
+          open: 'Open',
+          in_progress: 'Being Worked On',
+          pending: 'Waiting for Your Response',
+          resolved: 'Resolved',
+          closed: 'Closed'
+        };
+        
+        return {
+          subject: `Ticket Update - #${ticketId} is now ${statusLabels[newStatus]}`,
+          template: 'ticket_status_updated',
+          html: `
+            <h2>Your Support Ticket Has Been Updated</h2>
+            <p>Hello,</p>
+            <p>Your support ticket status has been updated.</p>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <strong>Ticket #${ticketId}</strong><br>
+              <strong>Subject:</strong> ${ticketData.subject}<br>
+              <strong>New Status:</strong> <span style="color: #0066cc; font-weight: bold;">${statusLabels[newStatus]}</span>
+            </div>
+            
+            ${newStatus === 'pending' ? `
+              <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                <strong>Action Required:</strong> We need additional information from you to continue. Please check your ticket and reply with the requested details.
+              </div>
+            ` : ''}
+            
+            ${newStatus === 'resolved' ? `
+              <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+                <strong>Issue Resolved:</strong> Your issue has been resolved! If you need further assistance, please reply within 7 days.
+              </div>
+            ` : ''}
+            
+            <p>View your ticket in your account dashboard for more details.</p>
+            <p>Best regards,<br>iwishBag Support Team</p>
+          `
+        };
+
+      case 'reply_added':
+        const isCustomerReply = eventData?.is_customer_reply || false;
+        if (isCustomerReply) {
+          // Don't email customer about their own reply
+          return { subject: '', html: '', template: '' };
+        }
+        
+        return {
+          subject: `New Response to Your Ticket - #${ticketId}`,
+          template: 'ticket_reply',
+          html: `
+            <h2>New Response to Your Support Ticket</h2>
+            <p>Hello,</p>
+            <p>Our support team has responded to your ticket.</p>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <strong>Ticket #${ticketId}</strong><br>
+              <strong>Subject:</strong> ${ticketData.subject}<br>
+              <strong>Status:</strong> Being Worked On
+            </div>
+            
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #2196f3;">
+              <strong>Support Team Response:</strong><br>
+              Please check your ticket for the full response and any follow-up questions.
+            </div>
+            
+            <p>You can view the complete conversation and reply in your account dashboard.</p>
+            <p>Best regards,<br>iwishBag Support Team</p>
+          `
+        };
+
+      case 'sla_breach':
+        return {
+          subject: `Urgent: Delayed Response on Ticket #${ticketId}`,
+          template: 'ticket_sla_breach',
+          html: `
+            <h2>We're Working to Resolve Your Ticket</h2>
+            <p>Hello,</p>
+            <p>We apologize for the delay in responding to your support request.</p>
+            
+            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+              <strong>Ticket #${ticketId}</strong><br>
+              <strong>Subject:</strong> ${ticketData.subject}<br>
+              <strong>Status:</strong> High Priority
+            </div>
+            
+            <p>Your ticket has been escalated and will receive priority attention from our support team.</p>
+            <p>We'll respond as soon as possible with an update or resolution.</p>
+            
+            <p>Thank you for your patience.</p>
+            <p>Best regards,<br>iwishBag Support Team</p>
+          `
+        };
+
+      default:
+        return {
+          subject: `Ticket Update - #${ticketId}`,
+          template: 'ticket_generic',
+          html: `
+            <h2>Your Support Ticket Has Been Updated</h2>
+            <p>Hello,</p>
+            <p>Your support ticket #${ticketId} has been updated.</p>
+            <p>Please check your account dashboard for details.</p>
+            <p>Best regards,<br>iwishBag Support Team</p>
+          `
+        };
     }
   }
 

@@ -14,6 +14,8 @@ import type {
   TicketFilters,
   TicketSortOptions,
   TicketStatus,
+  CreateSurveyData,
+  CustomerSatisfactionSurvey,
 } from '@/types/ticket';
 
 // Query keys for consistent caching
@@ -26,6 +28,8 @@ export const ticketKeys = {
   replies: (ticketId: string) => [...ticketKeys.all, 'replies', ticketId] as const,
   stats: () => [...ticketKeys.all, 'stats'] as const,
   userTickets: (userId: string) => [...ticketKeys.all, 'user', userId] as const,
+  survey: (ticketId: string) => [...ticketKeys.all, 'survey', ticketId] as const,
+  surveyStats: () => [...ticketKeys.all, 'survey-stats'] as const,
 };
 
 /**
@@ -330,5 +334,86 @@ export const useCreateReply = () => {
         variant: 'destructive',
       });
     },
+  });
+};
+
+// ============================================================================
+// Customer Satisfaction Survey Hooks
+// ============================================================================
+
+/**
+ * Hook to submit customer satisfaction survey
+ */
+export const useSubmitSatisfactionSurvey = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (surveyData: CreateSurveyData) => ticketService.submitSatisfactionSurvey(surveyData),
+    onSuccess: (data, variables) => {
+      if (data) {
+        // Invalidate survey-related queries
+        queryClient.invalidateQueries({ queryKey: ticketKeys.survey(variables.ticket_id) });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.ticket_id) });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.surveyStats() });
+
+        toast({
+          title: 'Thank You!',
+          description: 'Your feedback has been submitted successfully.',
+        });
+      } else {
+        toast({
+          title: 'Submission Failed',
+          description: 'Failed to submit your feedback. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error('Error submitting satisfaction survey:', error);
+      toast({
+        title: 'Submission Failed',
+        description: 'Failed to submit your feedback. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+/**
+ * Hook to check if a ticket has a completed survey
+ */
+export const useHasCompletedSurvey = (ticketId: string | undefined) => {
+  return useQuery({
+    queryKey: ticketKeys.survey(ticketId || ''),
+    queryFn: () => ticketService.hasCompletedSurvey(ticketId!),
+    enabled: !!ticketId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Hook to get satisfaction survey for a ticket
+ */
+export const useSatisfactionSurvey = (ticketId: string | undefined) => {
+  return useQuery({
+    queryKey: ticketKeys.survey(ticketId || ''),
+    queryFn: () => ticketService.getSatisfactionSurvey(ticketId!),
+    enabled: !!ticketId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+/**
+ * Hook to get survey statistics (admin only)
+ */
+export const useSurveyStatistics = (filters?: {
+  dateRange?: { start: string; end: string };
+  ticketCategory?: string;
+}) => {
+  return useQuery({
+    queryKey: [...ticketKeys.surveyStats(), { filters }],
+    queryFn: () => ticketService.getSurveyStatistics(filters),
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };

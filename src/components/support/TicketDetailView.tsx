@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Package,
   MessageSquare,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,9 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Select,
@@ -34,11 +37,15 @@ import {
   useCreateReply,
   useUpdateTicketStatus,
   useUpdateTicket,
+  useHasCompletedSurvey,
+  useSubmitSatisfactionSurvey,
 } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { ReplyTemplatesManager } from '@/components/support/ReplyTemplatesManager';
+import { CustomerSatisfactionSurvey } from '@/components/support/CustomerSatisfactionSurvey';
+import { InternalNotesPanel } from '@/components/support/InternalNotesPanel';
 import {
   TICKET_STATUS_LABELS,
   ADMIN_TICKET_STATUS_LABELS,
@@ -59,6 +66,7 @@ const replySchema = z.object({
     .string()
     .min(1, 'Message is required')
     .max(2000, 'Message must be less than 2000 characters'),
+  is_internal: z.boolean().default(false),
 });
 
 type ReplyForm = z.infer<typeof replySchema>;
@@ -88,6 +96,7 @@ interface TicketDetailViewProps {
 export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { users: adminUsers = [] } = useUserRoles();
@@ -96,14 +105,18 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   const { data: ticket, isLoading: ticketLoading } = useTicketDetail(ticketId);
   
   const { data: replies = [], isLoading: repliesLoading } = useTicketReplies(ticketId);
+  const { data: hasCompletedSurvey = false } = useHasCompletedSurvey(ticketId);
+  
   const createReplyMutation = useCreateReply();
   const updateStatusMutation = useUpdateTicketStatus();
   const updateTicketMutation = useUpdateTicket();
+  const submitSurveyMutation = useSubmitSatisfactionSurvey();
 
   const form = useForm<ReplyForm>({
     resolver: zodResolver(replySchema),
     defaultValues: {
       message: '',
+      is_internal: false,
     },
   });
 
@@ -170,16 +183,47 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
       await createReplyMutation.mutateAsync({
         ticket_id: ticketId,
         message: values.message,
-        is_internal: false, // For now, all replies are public
+        is_internal: values.is_internal,
       });
 
-      form.reset();
+      form.reset({
+        message: '',
+        is_internal: false,
+      });
     } catch (error) {
       console.error('Error submitting reply:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleSurveySubmit = async (surveyData: import('@/types/ticket').CreateSurveyData) => {
+    await submitSurveyMutation.mutateAsync(surveyData);
+    setShowSurvey(false);
+  };
+
+  const handleSurveySkip = () => {
+    setShowSurvey(false);
+  };
+
+  // Show survey for non-admin users when ticket is resolved and survey not completed
+  const shouldShowSurvey = ticket && 
+    !isAdmin && 
+    ticket.user_id === user?.id && 
+    ticket.status === 'resolved' && 
+    !hasCompletedSurvey &&
+    !showSurvey;
+
+  // Auto-show survey when ticket is resolved
+  React.useEffect(() => {
+    if (shouldShowSurvey) {
+      const timer = setTimeout(() => {
+        setShowSurvey(true);
+      }, 2000); // Show survey after 2 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowSurvey]);
 
   if (ticketLoading) {
     return (
@@ -397,11 +441,56 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                       )}
                     />
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={isSubmitting}>
-                        <Send className="mr-2 h-4 w-4" />
-                        {isSubmitting ? 'Sending...' : 'Send Reply'}
-                      </Button>
+                    {/* Internal Note Toggle (Admin Only) */}
+                    {isAdmin && (
+                      <FormField
+                        control={form.control}
+                        name="is_internal"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                                <Lock className="h-4 w-4 text-orange-600" />
+                                Internal Note
+                              </FormLabel>
+                              <p className="text-xs text-gray-600">
+                                Only visible to support team members - customers won't see this message
+                              </p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    <div className="flex justify-between items-center">
+                      {form.watch('is_internal') && isAdmin && (
+                        <div className="flex items-center gap-2 text-sm text-orange-600">
+                          <Shield className="h-4 w-4" />
+                          <span>This will be an internal note</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2 ml-auto">
+                        <Button type="submit" disabled={isSubmitting}>
+                          {form.watch('is_internal') ? (
+                            <Lock className="mr-2 h-4 w-4" />
+                          ) : (
+                            <Send className="mr-2 h-4 w-4" />
+                          )}
+                          {isSubmitting 
+                            ? 'Sending...' 
+                            : form.watch('is_internal') 
+                              ? 'Add Internal Note' 
+                              : 'Send Reply'
+                          }
+                        </Button>
+                      </div>
                     </div>
                   </form>
                 </Form>
@@ -410,6 +499,31 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
           )}
 
           <div ref={messagesEndRef} />
+
+          {/* Customer Satisfaction Survey */}
+          {showSurvey && ticket && (
+            <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-4 text-center">
+                <h3 className="text-lg font-semibold text-blue-900">🎉 Issue Resolved!</h3>
+                <p className="text-blue-700">Help us improve by sharing your experience</p>
+              </div>
+              <CustomerSatisfactionSurvey
+                ticket={ticket}
+                onSubmit={handleSurveySubmit}
+                onSkip={handleSurveySkip}
+                isLoading={submitSurveyMutation.isPending}
+              />
+            </div>
+          )}
+
+          {/* Survey completion confirmation */}
+          {!showSurvey && hasCompletedSurvey && ticket?.status === 'resolved' && !isAdmin && (
+            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+              <p className="text-green-800">
+                ✅ Thank you for your feedback! Your responses help us improve our service.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -644,6 +758,14 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Internal Notes Panel (Admin Only) */}
+          {isAdmin && (
+            <InternalNotesPanel 
+              replies={replies} 
+              isLoading={repliesLoading}
+            />
           )}
         </div>
       </div>

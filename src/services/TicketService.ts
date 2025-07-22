@@ -40,6 +40,7 @@ class TicketService {
   private transformToLegacyTicket(supportRecord: any): SupportTicket {
     return {
       id: supportRecord.id,
+      display_id: supportRecord.display_id || null,
       user_id: supportRecord.user_id,
       quote_id: supportRecord.quote_id || null,
       subject: supportRecord.ticket_data?.subject || '',
@@ -596,6 +597,215 @@ class TicketService {
     } catch (error) {
       console.error('❌ Exception in getTicketStats:', error);
       return { total: 0, open: 0, in_progress: 0, resolved: 0, closed: 0 };
+    }
+  }
+
+  // ============================================================================
+  // Customer Satisfaction Survey Methods
+  // ============================================================================
+
+  /**
+   * Submit customer satisfaction survey
+   */
+  async submitSatisfactionSurvey(surveyData: import('@/types/ticket').CreateSurveyData): Promise<string | null> {
+    try {
+      console.log('📊 Submitting satisfaction survey:', surveyData);
+
+      const { data, error } = await supabase
+        .from('customer_satisfaction_surveys')
+        .insert({
+          ticket_id: surveyData.ticket_id,
+          rating: surveyData.rating,
+          feedback: surveyData.feedback || null,
+          experience_rating: surveyData.experience_rating,
+          response_time_rating: surveyData.response_time_rating,
+          resolution_rating: surveyData.resolution_rating,
+          would_recommend: surveyData.would_recommend,
+          additional_comments: surveyData.additional_comments || null,
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        console.error('❌ Error submitting satisfaction survey:', error);
+        return null;
+      }
+
+      console.log('✅ Satisfaction survey submitted successfully:', data.id);
+      
+      // Update ticket metadata to indicate survey was completed
+      await this.updateTicketSurveyStatus(surveyData.ticket_id, true);
+      
+      this.clearCache();
+      return data.id;
+    } catch (error) {
+      console.error('❌ Exception in submitSatisfactionSurvey:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get satisfaction survey for a ticket
+   */
+  async getSatisfactionSurvey(ticketId: string): Promise<import('@/types/ticket').CustomerSatisfactionSurvey | null> {
+    try {
+      const cacheKey = `survey_${ticketId}`;
+      if (this.cache.has(cacheKey)) {
+        return this.cache.get(cacheKey);
+      }
+
+      const { data, error } = await supabase
+        .from('customer_satisfaction_surveys')
+        .select('*')
+        .eq('ticket_id', ticketId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No survey found - this is expected for many tickets
+          return null;
+        }
+        console.error('❌ Error fetching satisfaction survey:', error);
+        return null;
+      }
+
+      this.cache.set(cacheKey, data);
+      return data as import('@/types/ticket').CustomerSatisfactionSurvey;
+    } catch (error) {
+      console.error('❌ Exception in getSatisfactionSurvey:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if ticket has a completed survey
+   */
+  async hasCompletedSurvey(ticketId: string): Promise<boolean> {
+    try {
+      const survey = await this.getSatisfactionSurvey(ticketId);
+      return survey !== null;
+    } catch (error) {
+      console.error('❌ Exception in hasCompletedSurvey:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update ticket metadata to track survey completion
+   */
+  private async updateTicketSurveyStatus(ticketId: string, surveyCompleted: boolean): Promise<void> {
+    try {
+      // Use unified support engine to update ticket metadata
+      const ticket = await unifiedSupportEngine.getTicketById(ticketId);
+      if (!ticket || !ticket.ticket_data) {
+        console.warn('⚠️ Ticket not found for survey status update:', ticketId);
+        return;
+      }
+
+      const updatedTicketData = {
+        ...ticket.ticket_data,
+        metadata: {
+          ...ticket.ticket_data.metadata,
+          survey_completed: surveyCompleted,
+          survey_completed_at: surveyCompleted ? new Date().toISOString() : null
+        }
+      };
+
+      const { error } = await supabase
+        .from('support_system')
+        .update({ 
+          ticket_data: updatedTicketData,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', ticketId);
+
+      if (error) {
+        console.error('❌ Error updating ticket survey status:', error);
+      } else {
+        console.log('✅ Ticket survey status updated successfully');
+      }
+    } catch (error) {
+      console.error('❌ Exception in updateTicketSurveyStatus:', error);
+    }
+  }
+
+  /**
+   * Get survey statistics for admin dashboard
+   */
+  async getSurveyStatistics(filters?: {
+    dateRange?: { start: string; end: string };
+    ticketCategory?: string;
+  }): Promise<{
+    totalSurveys: number;
+    averageRating: number;
+    averageExperienceRating: number;
+    averageResponseTimeRating: number;
+    averageResolutionRating: number;
+    recommendationPercentage: number;
+    ratingDistribution: Record<number, number>;
+  } | null> {
+    try {
+      console.log('📈 Fetching survey statistics with filters:', filters);
+
+      let query = supabase
+        .from('customer_satisfaction_surveys')
+        .select('*');
+
+      // Apply date filters if provided
+      if (filters?.dateRange) {
+        query = query
+          .gte('created_at', filters.dateRange.start)
+          .lte('created_at', filters.dateRange.end);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching survey statistics:', error);
+        return null;
+      }
+
+      if (!data || data.length === 0) {
+        return {
+          totalSurveys: 0,
+          averageRating: 0,
+          averageExperienceRating: 0,
+          averageResponseTimeRating: 0,
+          averageResolutionRating: 0,
+          recommendationPercentage: 0,
+          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        };
+      }
+
+      const totalSurveys = data.length;
+      const averageRating = data.reduce((sum, survey) => sum + survey.rating, 0) / totalSurveys;
+      const averageExperienceRating = data.reduce((sum, survey) => sum + survey.experience_rating, 0) / totalSurveys;
+      const averageResponseTimeRating = data.reduce((sum, survey) => sum + survey.response_time_rating, 0) / totalSurveys;
+      const averageResolutionRating = data.reduce((sum, survey) => sum + survey.resolution_rating, 0) / totalSurveys;
+      const recommendationCount = data.filter(survey => survey.would_recommend).length;
+      const recommendationPercentage = (recommendationCount / totalSurveys) * 100;
+
+      // Rating distribution
+      const ratingDistribution = data.reduce((dist, survey) => {
+        dist[survey.rating] = (dist[survey.rating] || 0) + 1;
+        return dist;
+      }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+
+      const statistics = {
+        totalSurveys,
+        averageRating: Math.round(averageRating * 100) / 100,
+        averageExperienceRating: Math.round(averageExperienceRating * 100) / 100,
+        averageResponseTimeRating: Math.round(averageResponseTimeRating * 100) / 100,
+        averageResolutionRating: Math.round(averageResolutionRating * 100) / 100,
+        recommendationPercentage: Math.round(recommendationPercentage * 100) / 100,
+        ratingDistribution
+      };
+
+      console.log('✅ Survey statistics calculated:', statistics);
+      return statistics;
+    } catch (error) {
+      console.error('❌ Exception in getSurveyStatistics:', error);
+      return null;
     }
   }
 

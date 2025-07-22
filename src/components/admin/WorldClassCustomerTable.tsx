@@ -81,6 +81,14 @@ interface WorldClassCustomerTableProps {
   isUpdating?: boolean;
   onExport: () => void;
   onFiltersChange?: (conditions: FilterCondition[], searchQuery: string) => void;
+  onAddCustomer?: () => void;
+  onBulkEmail?: (customerIds: string[]) => void;
+  onBulkTag?: (customerIds: string[]) => void;
+  onBulkExport?: (customerIds: string[]) => void;
+  onEditCustomer?: (customerId: string) => void;
+  onSendEmail?: (customerId: string, email: string) => void;
+  onViewMessages?: (customerId: string) => void;
+  onViewOrders?: (customerId: string) => void;
 }
 
 type SortField = 'name' | 'email' | 'location' | 'joinDate' | 'totalSpent' | 'orders' | 'lastActivity' | 'status';
@@ -96,6 +104,14 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   isUpdating = false,
   onExport,
   onFiltersChange,
+  onAddCustomer,
+  onBulkEmail,
+  onBulkTag,
+  onBulkExport,
+  onEditCustomer,
+  onSendEmail,
+  onViewMessages,
+  onViewOrders,
 }) => {
   const navigate = useNavigate();
   // Table state
@@ -432,7 +448,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => onAddCustomer?.()}
+            >
               <UserPlus className="w-4 h-4 mr-2" />
               Add Customer
             </Button>
@@ -457,15 +477,30 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               {selectedCustomers.length} customer{selectedCustomers.length !== 1 ? 's' : ''} selected
             </span>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm" className="text-blue-700 border-blue-300">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-blue-700 border-blue-300"
+                onClick={() => onBulkEmail?.(selectedCustomers)}
+              >
                 <Mail className="w-4 h-4 mr-2" />
                 Email
               </Button>
-              <Button variant="outline" size="sm" className="text-blue-700 border-blue-300">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-blue-700 border-blue-300"
+                onClick={() => onBulkTag?.(selectedCustomers)}
+              >
                 <Tag className="w-4 h-4 mr-2" />
                 Tag
               </Button>
-              <Button variant="outline" size="sm" className="text-blue-700 border-blue-300">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-blue-700 border-blue-300"
+                onClick={() => onBulkExport?.(selectedCustomers)}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Export Selected
               </Button>
@@ -670,20 +705,32 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           <Eye className="w-4 h-4 mr-2" />
                           View Profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onEditCustomer?.(customer.id)}
+                          className="cursor-pointer"
+                        >
                           <Edit className="w-4 h-4 mr-2" />
                           Edit Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onSendEmail?.(customer.id, customer.email)}
+                          className="cursor-pointer"
+                        >
                           <Mail className="w-4 h-4 mr-2" />
                           Send Email
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onViewMessages?.(customer.id)}
+                          className="cursor-pointer"
+                        >
                           <MessageSquare className="w-4 h-4 mr-2" />
                           View Messages
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onViewOrders?.(customer.id)}
+                          className="cursor-pointer"
+                        >
                           <ExternalLink className="w-4 h-4 mr-2" />
                           View Orders
                         </DropdownMenuItem>
@@ -721,7 +768,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               Clear Filters
             </Button>
           ) : (
-            <Button>
+            <Button onClick={() => onAddCustomer?.()}>
               <UserPlus className="w-4 h-4 mr-2" />
               Add First Customer
             </Button>

@@ -8,6 +8,11 @@ import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { BulkTagModal } from '@/components/admin/modals/BulkTagModal';
+import { SendEmailModal } from '@/components/admin/modals/SendEmailModal';
+import { CustomerMessageModal } from '@/components/admin/modals/CustomerMessageModal';
+import { EditCustomerModal } from '@/components/admin/modals/EditCustomerModal';
+import { Customer } from '@/components/admin/CustomerTable';
 import { format } from 'date-fns';
 import {
   ArrowLeft,
@@ -115,6 +120,12 @@ export const CustomerProfile: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Modal states
+  const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [customerMessageOpen, setCustomerMessageOpen] = useState(false);
+  const [editCustomerOpen, setEditCustomerOpen] = useState(false);
 
   // Fetch customer profile data
   const { data: customer, isLoading: customerLoading, error: customerError } = useQuery({
@@ -312,6 +323,86 @@ export const CustomerProfile: React.FC = () => {
 
   const primaryAddress = customer.user_addresses?.find(addr => addr.is_primary) || customer.user_addresses?.[0];
 
+  // Button handlers
+  const handleEditCustomer = () => {
+    if (customer) {
+      setEditCustomerOpen(true);
+    }
+  };
+
+  const handleSendEmail = () => {
+    if (customer) {
+      setSendEmailOpen(true);
+    }
+  };
+
+  const handleCreateTicket = () => {
+    if (customer) {
+      setCustomerMessageOpen(true);
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (customer) {
+      setCustomerMessageOpen(true);
+    }
+  };
+
+  const handleAddTag = () => {
+    if (customer) {
+      setBulkTagOpen(true);
+    }
+  };
+
+  const handleExportData = () => {
+    if (!customer || !orders) return;
+    
+    const csvContent = 
+      'data:text/csv;charset=utf-8,' +
+      'Field,Value\\n' +
+      `Customer ID,${customer.id}\\n` +
+      `Name,"${customer.full_name || 'N/A'}"\\n` +
+      `Email,"${customer.email}"\\n` +
+      `Phone,"${customer.phone || 'N/A'}"\\n` +
+      `COD Enabled,${customer.cod_enabled ? 'Yes' : 'No'}\\n` +
+      `Joined Date,"${format(new Date(customer.created_at), 'MMM d, yyyy')}"\\n` +
+      `Total Spent,$${analytics.totalSpent.toFixed(2)}\\n` +
+      `Total Orders,${analytics.orderCount}\\n` +
+      `Total Quotes,${analytics.quoteCount}\\n` +
+      `Average Order Value,$${analytics.avgOrderValue.toFixed(2)}\\n` +
+      `Health Score,${healthScore}%\\n` +
+      `Customer Lifetime Value,$${analytics.customerLifetimeValue.toFixed(2)}\\n` +
+      `Risk Score,${analytics.riskScore}%\\n` +
+      `Order Frequency,${analytics.orderFrequency}\\n`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `customer_${customer.id}_export.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: 'Export Successful',
+      description: `Customer data exported successfully`,
+    });
+  };
+
+  // Convert customer to the format expected by modals
+  const customerForModals = customer ? {
+    id: customer.id,
+    email: customer.email,
+    full_name: customer.full_name,
+    phone: customer.phone,
+    avatar_url: customer.avatar_url,
+    cod_enabled: customer.cod_enabled,
+    internal_notes: customer.internal_notes,
+    created_at: customer.created_at,
+    updated_at: customer.updated_at,
+    user_addresses: customer.user_addresses
+  } : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -350,20 +441,20 @@ export const CustomerProfile: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEditCustomer}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Customer
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSendEmail}>
                 <Mail className="h-4 w-4 mr-2" />
                 Send Email
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCreateTicket}>
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Create Ticket
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportData}>
                 <Download className="h-4 w-4 mr-2" />
                 Export Data
               </DropdownMenuItem>
@@ -725,19 +816,19 @@ export const CustomerProfile: React.FC = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleSendMessage}>
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleSendEmail}>
                   <Mail className="h-4 w-4 mr-2" />
                   Send Email
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleCreateTicket}>
                   <FileText className="h-4 w-4 mr-2" />
                   Create Ticket
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm">
+                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleAddTag}>
                   <Tag className="h-4 w-4 mr-2" />
                   Add Tag
                 </Button>
@@ -745,6 +836,36 @@ export const CustomerProfile: React.FC = () => {
             </Card>
           </div>
         </div>
+        
+        {/* Modals */}
+        {customerForModals && (
+          <>
+            <EditCustomerModal
+              open={editCustomerOpen}
+              onOpenChange={setEditCustomerOpen}
+              customer={customerForModals}
+            />
+            
+            <BulkTagModal
+              open={bulkTagOpen}
+              onOpenChange={setBulkTagOpen}
+              selectedCustomers={[customerForModals]}
+            />
+            
+            <SendEmailModal
+              open={sendEmailOpen}
+              onOpenChange={setSendEmailOpen}
+              recipients={[customerForModals]}
+              isBulk={false}
+            />
+            
+            <CustomerMessageModal
+              open={customerMessageOpen}
+              onOpenChange={setCustomerMessageOpen}
+              customer={customerForModals}
+            />
+          </>
+        )}
       </div>
     </div>
   );

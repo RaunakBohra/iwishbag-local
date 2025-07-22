@@ -1,17 +1,37 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCustomerManagement } from '@/hooks/useCustomerManagement';
-import { CustomerMetrics } from './CustomerMetrics';
+import { CompactCustomerMetrics } from './CompactCustomerMetrics';
 import { WorldClassCustomerTable } from './WorldClassCustomerTable';
+import { AddCustomerModal } from './modals/AddCustomerModal';
+import { BulkTagModal } from './modals/BulkTagModal';
+import { SendEmailModal } from './modals/SendEmailModal';
+import { CustomerMessageModal } from './modals/CustomerMessageModal';
+import { EditCustomerModal } from './modals/EditCustomerModal';
 import { H1, H2, Body, BodySmall } from '@/components/ui/typography';
 import { Users } from 'lucide-react';
+import { Customer } from './CustomerTable';
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export const EnhancedCustomerManagementPage = () => {
-
+  const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Modal states
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
+  const [bulkTagOpen, setBulkTagOpen] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [customerMessageOpen, setCustomerMessageOpen] = useState(false);
+  const [editCustomerOpen, setEditCustomerOpen] = useState(false);
+  
+  // Modal data
+  const [selectedCustomersForBulk, setSelectedCustomersForBulk] = useState<Customer[]>([]);
+  const [selectedCustomersForEmail, setSelectedCustomersForEmail] = useState<Customer[]>([]);
+  const [selectedCustomerForMessage, setSelectedCustomerForMessage] = useState<Customer | null>(null);
+  const [selectedCustomerForEdit, setSelectedCustomerForEdit] = useState<Customer | null>(null);
 
   const { customers, isLoading, updateCodMutation, updateNotesMutation, updateProfileMutation } =
     useCustomerManagement();
@@ -94,6 +114,85 @@ export const EnhancedCustomerManagementPage = () => {
     });
   };
 
+  // Button handlers
+  const handleAddCustomer = () => {
+    setAddCustomerOpen(true);
+  };
+
+  const handleBulkEmail = (customerIds: string[]) => {
+    const selectedCustomers = customers?.filter(c => customerIds.includes(c.id)) || [];
+    setSelectedCustomersForEmail(selectedCustomers);
+    setSendEmailOpen(true);
+  };
+
+  const handleBulkTag = (customerIds: string[]) => {
+    const selectedCustomers = customers?.filter(c => customerIds.includes(c.id)) || [];
+    setSelectedCustomersForBulk(selectedCustomers);
+    setBulkTagOpen(true);
+  };
+
+  const handleBulkExport = (customerIds: string[]) => {
+    const selectedCustomers = customers?.filter(c => customerIds.includes(c.id)) || [];
+    if (selectedCustomers.length === 0) return;
+    
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      'ID,Name,Email,Location,Join Date,Total Spent,Orders,Avg Order Value,Status\n' +
+      selectedCustomers
+        .map((customer) => {
+          const analytics = customerAnalytics?.find((a) => a.customerId === customer.id);
+          const status = customer.internal_notes?.includes('VIP')
+            ? 'VIP'
+            : customer.cod_enabled
+              ? 'Active'
+              : 'Inactive';
+          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.user_addresses[0]?.city || 'N/A'}, ${customer.user_addresses[0]?.country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
+        })
+        .join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `selected_customers_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: 'Export Successful',
+      description: `${selectedCustomers.length} selected customers exported to CSV`,
+    });
+  };
+
+  const handleEditCustomer = (customerId: string) => {
+    const customer = customers?.find(c => c.id === customerId);
+    if (customer) {
+      setSelectedCustomerForEdit(customer);
+      setEditCustomerOpen(true);
+    }
+  };
+
+  const handleSendEmail = (customerId: string, email: string) => {
+    const customer = customers?.find(c => c.id === customerId);
+    if (customer) {
+      setSelectedCustomersForEmail([customer]);
+      setSendEmailOpen(true);
+    }
+  };
+
+  const handleViewMessages = (customerId: string) => {
+    const customer = customers?.find(c => c.id === customerId);
+    if (customer) {
+      setSelectedCustomerForMessage(customer);
+      setCustomerMessageOpen(true);
+    }
+  };
+
+  const handleViewOrders = (customerId: string) => {
+    // Navigate to orders filtered by customer
+    navigate(`/admin/quotes?customer=${customerId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50/40">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -112,8 +211,8 @@ export const EnhancedCustomerManagementPage = () => {
           </div>
         </div>
 
-        {/* Metrics Dashboard */}
-        <CustomerMetrics
+        {/* Compact Metrics Dashboard */}
+        <CompactCustomerMetrics
           customers={customers || []}
           customerAnalytics={customerAnalytics || []}
           isLoading={isLoading}
@@ -135,7 +234,50 @@ export const EnhancedCustomerManagementPage = () => {
             updateProfileMutation.isPending
           }
           onExport={exportCustomers}
+          onAddCustomer={handleAddCustomer}
+          onBulkEmail={handleBulkEmail}
+          onBulkTag={handleBulkTag}
+          onBulkExport={handleBulkExport}
+          onEditCustomer={handleEditCustomer}
+          onSendEmail={handleSendEmail}
+          onViewMessages={handleViewMessages}
+          onViewOrders={handleViewOrders}
         />
+        
+        {/* Modals */}
+        <AddCustomerModal
+          open={addCustomerOpen}
+          onOpenChange={setAddCustomerOpen}
+        />
+        
+        <BulkTagModal
+          open={bulkTagOpen}
+          onOpenChange={setBulkTagOpen}
+          selectedCustomers={selectedCustomersForBulk}
+        />
+        
+        <SendEmailModal
+          open={sendEmailOpen}
+          onOpenChange={setSendEmailOpen}
+          recipients={selectedCustomersForEmail}
+          isBulk={selectedCustomersForEmail.length > 1}
+        />
+        
+        {selectedCustomerForMessage && (
+          <CustomerMessageModal
+            open={customerMessageOpen}
+            onOpenChange={setCustomerMessageOpen}
+            customer={selectedCustomerForMessage}
+          />
+        )}
+        
+        {selectedCustomerForEdit && (
+          <EditCustomerModal
+            open={editCustomerOpen}
+            onOpenChange={setEditCustomerOpen}
+            customer={selectedCustomerForEdit}
+          />
+        )}
       </div>
     </div>
   );

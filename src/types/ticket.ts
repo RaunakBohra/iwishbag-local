@@ -18,6 +18,7 @@ export type CustomerHelpType = 'order_issue' | 'account_question' | 'payment_pro
 
 export interface SupportTicket {
   id: string;
+  display_id?: string | null;
   user_id: string;
   quote_id?: string | null;
   subject: string;
@@ -105,6 +106,32 @@ export interface CreateReplyData {
   ticket_id: string;
   message: string;
   is_internal?: boolean;
+}
+
+// Customer Satisfaction Survey Types
+export interface CustomerSatisfactionSurvey {
+  id: string;
+  ticket_id: string;
+  rating: number; // 1-5 stars
+  feedback?: string;
+  experience_rating: number; // 1-5 for overall experience
+  response_time_rating: number; // 1-5 for response time
+  resolution_rating: number; // 1-5 for resolution quality
+  would_recommend: boolean;
+  additional_comments?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSurveyData {
+  ticket_id: string;
+  rating: number;
+  feedback?: string;
+  experience_rating: number;
+  response_time_rating: number;
+  resolution_rating: number;
+  would_recommend: boolean;
+  additional_comments?: string;
 }
 
 // Filter and sort types for admin dashboard
