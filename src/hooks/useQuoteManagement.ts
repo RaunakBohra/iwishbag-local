@@ -49,6 +49,26 @@ export const useQuoteManagement = ({
   
   const isAuthenticated = !!user && !!session && !user.is_anonymous;
 
+  // Enhanced debug logging for query enablement
+  console.log('🔍 [useQuoteManagement] Query Enablement Debug:', {
+    isAuthenticated,
+    isAdmin,
+    isAdminLoading,
+    user: user ? { id: user.id, email: user.email, isAnonymous: user.is_anonymous } : null,
+    session: session ? { userId: session.user?.id, hasAccessToken: !!session.access_token } : null,
+    filters: {
+      searchText: filters.searchText,
+      statuses: filters.statuses,
+      countries: filters.countries,
+      statusesLength: filters.statuses?.length || 0,
+      countriesLength: filters.countries?.length || 0
+    },
+    queryWillRun: isAuthenticated && !!isAdmin && !isAdminLoading,
+    searchTerm,
+    page,
+    pageSize
+  });
+
   const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
     queryKey: [
       'admin-quotes',
@@ -139,6 +159,25 @@ export const useQuoteManagement = ({
             }
 
             const { data, error } = await query;
+            
+            // Enhanced debug logging for query results
+            console.log('🔍 [useQuoteManagement] Query Results Debug:', {
+              hasError: !!error,
+              errorDetails: error ? {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code
+              } : null,
+              rawDataCount: data?.length || 0,
+              rawData: data?.slice(0, 2) || [], // Log first 2 records for debugging
+              appliedFilters: {
+                statusFilter: filters.statuses?.length > 0 ? filters.statuses : 'none',
+                countryFilter: filters.countries?.length > 0 ? filters.countries : 'none',
+                searchFilter: searchTerm ? searchTerm : 'none'
+              }
+            });
+            
             if (error) {
               console.error('🚨 SQL Query Error:', error);
               console.error('🚨 Error Details:', {
@@ -149,6 +188,7 @@ export const useQuoteManagement = ({
               });
               throw new Error(`Query failed: ${error.message}`);
             }
+            
             // Transform data to extract JSONB fields for easier component access
             const transformedData = (data || []).map(quote => ({
               ...quote,
@@ -156,6 +196,14 @@ export const useQuoteManagement = ({
               customer_name: quote.customer_data?.info?.name || null,
               product_name: quote.items?.[0]?.name || null,
             }));
+            
+            // Debug logging for transformation
+            console.log('🔍 [useQuoteManagement] Data Transformation Debug:', {
+              originalCount: data?.length || 0,
+              transformedCount: transformedData.length,
+              sampleTransformed: transformedData.slice(0, 2),
+              transformationSuccessful: transformedData.length === (data?.length || 0)
+            });
             
             // Successfully transformed and loaded admin quotes
             return transformedData;
@@ -219,6 +267,50 @@ export const useQuoteManagement = ({
       });
     },
     enabled: isAuthenticated && !!isAdmin && !isAdminLoading, // Only run query for authenticated admin users
+  });
+
+  // TEMPORARY: Simplified test query to bypass all complex logic
+  const { data: testQuotes, isLoading: testLoading } = useQuery({
+    queryKey: ['admin-quotes-test'],
+    queryFn: async () => {
+      console.log('🧪 [Test Query] Running simplified admin query...');
+      
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, display_id, status, final_total_usd, created_at, customer_data, items')
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      console.log('🧪 [Test Query] Results:', {
+        hasError: !!error,
+        errorMessage: error?.message,
+        dataCount: data?.length || 0,
+        data: data || []
+      });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user && !!session, // Simpler auth check
+  });
+
+  // Debug logging for final query state
+  console.log('🔍 [useQuoteManagement] Final Query State:', {
+    quotesLoading,
+    quotesCount: quotes?.length || 0,
+    quotes: quotes?.slice(0, 2) || [], // Log first 2 quotes for debugging
+    queryEnabled: isAuthenticated && !!isAdmin && !isAdminLoading,
+    hookReturnValues: {
+      hasQuotes: !!quotes,
+      quotesLength: quotes?.length || 0,
+      isLoading: quotesLoading || isAdminLoading
+    },
+    // Test query comparison
+    testQueryResults: {
+      testLoading,
+      testQuotesCount: testQuotes?.length || 0,
+      testQuotes: testQuotes?.slice(0, 2) || []
+    }
   });
 
   const updateMultipleQuotesStatusMutation = useMutation({
