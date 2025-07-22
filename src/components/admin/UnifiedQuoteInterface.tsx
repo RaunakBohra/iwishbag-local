@@ -84,6 +84,7 @@ import { CompactShippingManager } from './smart-components/CompactShippingManage
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
+import { ApprovalWorkflowCard } from './ApprovalWorkflowCard';
 import { QuoteDetailForm } from './QuoteDetailForm';
 import { Form, FormField, FormItem, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -2138,38 +2139,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     );
                   })()}
 
-                  {/* Debug: Force Recalculation Button */}
-                  {liveQuote && !liveQuote.calculation_data?.breakdown?.handling && (
-                    <Card className="border-yellow-200 bg-yellow-50 mb-4">
-                      <CardContent className="pt-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-yellow-800">
-                              <strong>Legacy Breakdown Detected</strong> - This quote uses the old breakdown structure.
-                            </p>
-                            <p className="text-xs text-yellow-600 mt-1">
-                              Click "Update Breakdown" to separate handling and insurance line items.
-                            </p>
-                          </div>
-                          <Button
-                            onClick={async () => {
-                              console.log('🔧 Forcing breakdown recalculation...');
-                              await recalculateShipping();
-                              toast({
-                                title: 'Breakdown Updated',
-                                description: 'Quote breakdown has been updated with separate handling and insurance fields.',
-                                duration: 3000,
-                              });
-                            }}
-                            size="sm"
-                            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                          >
-                            Update Breakdown
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                  {/* Legacy breakdown auto-updates on load, no manual intervention needed */}
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
@@ -2229,6 +2199,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 onUpdateQuote={loadQuoteData}
                 compact={true}
                 editMode={isEditMode}
+              />
+
+              {/* Approval Workflow */}
+              <ApprovalWorkflowCard
+                quoteId={quote.id}
+                quote={quote}
+                showActions={true}
               />
 
               {/* Status Management - Outside form to prevent submission conflicts */}
@@ -2416,6 +2393,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 onUpdateQuote={loadQuoteData}
                 compact={true}
                 editMode={isEditMode}
+              />
+
+              {/* 1.5. Approval Workflow - High Priority (business process) */}
+              <ApprovalWorkflowCard
+                quoteId={quote.id}
+                quote={quote}
+                showActions={true}
               />
 
               {/* 2. Quote Summary - Second Priority (order overview) */}

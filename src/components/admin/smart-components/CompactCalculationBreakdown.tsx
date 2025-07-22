@@ -62,18 +62,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     (opt) => opt.id === quote.operational_data?.shipping?.selected_option,
   );
 
-  // Debug logging for breakdown component
-  console.log('[DEBUG] CompactCalculationBreakdown render:', {
-    quoteId: quote.id,
-    breakdown: breakdown,
-    breakdownFees: breakdown.fees,
-    breakdownHandling: breakdown.handling,
-    breakdownInsurance: breakdown.insurance,
-    totalWeight: quote.items?.reduce((sum, item) => sum + item.weight_kg * item.quantity, 0) || 0,
-    selectedShippingOptionId: quote.operational_data?.shipping?.selected_option,
-    totalCost: quote.final_total_usd,
-    calculationData: quote.calculation_data,
-  });
+  // Debug logging for breakdown component (removed for production)
 
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
@@ -107,13 +96,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   // Key cost components for compact view
   const totalFees = (breakdown.fees || 0) + (breakdown.handling || 0) + (breakdown.insurance || 0);
   
-  // Debug the fees calculation
-  console.log('[DEBUG] Fees calculation:', {
-    fees: breakdown.fees,
-    handling: breakdown.handling,
-    insurance: breakdown.insurance,
-    totalFees: totalFees
-  });
+  // Debug logging removed - handling and insurance properly hidden when 0
   
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
@@ -123,12 +106,6 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   ];
   
   const keyComponents = allComponents.filter(component => component.amount > 0);
-  
-  // Debug the filtering
-  console.log('[DEBUG] Component filtering:', {
-    allComponents: allComponents.map(c => ({label: c.label, amount: c.amount})),
-    filteredComponents: keyComponents.map(c => ({label: c.label, amount: c.amount}))
-  });
 
   // Compact header view
   const CompactHeader = () => (
@@ -275,15 +252,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             </div>
 
             {/* Handling Charge (if separate) */}
-            {(() => {
-              const shouldShow = breakdown.handling && Number(breakdown.handling) > 0;
-              console.log('[DEBUG] Handling check:', {handling: breakdown.handling, type: typeof breakdown.handling, numberValue: Number(breakdown.handling), shouldShow: shouldShow});
-              return shouldShow;
-            })() && (
-              <div className="flex items-center justify-between text-sm bg-red-500">
+            {!!(breakdown.handling && Number(breakdown.handling) > 0) && (
+              <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <Zap className="w-4 h-4 text-orange-600" />
-                  <span className="text-gray-700">HANDLING CHARGE SHOULD NOT SHOW</span>
+                  <span className="text-gray-700">Handling Charge</span>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'origin')}</div>
@@ -295,15 +268,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             )}
 
             {/* Insurance (if separate) */}
-            {(() => {
-              const shouldShow = breakdown.insurance && Number(breakdown.insurance) > 0;
-              console.log('[DEBUG] Insurance check:', {insurance: breakdown.insurance, type: typeof breakdown.insurance, numberValue: Number(breakdown.insurance), shouldShow: shouldShow});
-              return shouldShow;
-            })() && (
-              <div className="flex items-center justify-between text-sm bg-blue-500">
+            {!!(breakdown.insurance && Number(breakdown.insurance) > 0) && (
+              <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <Zap className="w-4 h-4 text-purple-600" />
-                  <span className="text-gray-700">INSURANCE SHOULD NOT SHOW</span>
+                  <span className="text-gray-700">Package Protection</span>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'origin')}</div>
