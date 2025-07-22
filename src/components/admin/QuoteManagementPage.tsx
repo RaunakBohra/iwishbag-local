@@ -31,7 +31,6 @@ export const QuoteManagementPage = () => {
   // New unified filter state
   const [filters, setFilters] = useState<SearchFilters>({
     searchText: '',
-    statuses: [],
     countries: []
   });
   
@@ -49,7 +48,6 @@ export const QuoteManagementPage = () => {
   const handleResetFilters = () => {
     setFilters({
       searchText: '',
-      statuses: [],
       countries: []
     });
   };
@@ -219,13 +217,6 @@ export const QuoteManagementPage = () => {
             onFiltersChange={setFilters}
             onSearch={handleSearch}
             onReset={handleResetFilters}
-            availableStatuses={[
-              { value: 'pending', label: 'Pending', count: 0 },
-              { value: 'sent', label: 'Sent', count: 0 },
-              { value: 'approved', label: 'Approved', count: 0 },
-              { value: 'rejected', label: 'Rejected', count: 0 },
-              { value: 'paid', label: 'Paid', count: 0 }
-            ]}
             availableCountries={[
               { code: 'IN', name: 'India', flag: '🇮🇳', count: 0 },
               { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 0 },
@@ -281,13 +272,11 @@ export const QuoteManagementPage = () => {
                 <H2 className="text-gray-900 mb-2">No quotes found</H2>
                 <Body className="text-gray-600 mb-6">
                   {filters.searchText ||
-                  filters.statuses.length > 0 ||
                   filters.countries.length > 0
                     ? 'Try adjusting your filters to see more results.'
                     : 'Get started by creating your first quote.'}
                 </Body>
                 {!filters.searchText &&
-                  filters.statuses.length === 0 &&
                   filters.countries.length === 0 && (
                     <Button
                       onClick={() => setIsCreateModalOpen(true)}

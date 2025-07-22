@@ -22,14 +22,12 @@ import {
   ChevronDown, 
   ChevronUp,
   MapPin,
-  Activity,
   X
 } from 'lucide-react';
 
 // Types for search and filter state
 export interface SearchFilters {
   searchText: string;
-  statuses: string[];
   countries: string[];
   dateRange?: {
     from: Date;
@@ -42,7 +40,6 @@ export interface SearchAndFilterPanelProps {
   onFiltersChange: (filters: SearchFilters) => void;
   onSearch: () => void;
   onReset: () => void;
-  availableStatuses?: StatusOption[];
   availableCountries?: CountryOption[];
   isLoading?: boolean;
   resultsCount?: number;
@@ -91,7 +88,6 @@ export function SearchAndFilterPanel({
   onFiltersChange,
   onSearch,
   onReset,
-  availableStatuses = DEFAULT_STATUS_OPTIONS,
   availableCountries = DEFAULT_COUNTRY_OPTIONS,
   isLoading = false,
   resultsCount,
@@ -135,16 +131,6 @@ export function SearchAndFilterPanel({
     });
   };
 
-  const handleStatusToggle = (status: string) => {
-    const newStatuses = filters.statuses.includes(status)
-      ? filters.statuses.filter(s => s !== status)
-      : [...filters.statuses, status];
-    
-    onFiltersChange({
-      ...filters,
-      statuses: newStatuses
-    });
-  };
 
   const handleCountryToggle = (country: string) => {
     const newCountries = filters.countries.includes(country)
@@ -157,25 +143,16 @@ export function SearchAndFilterPanel({
     });
   };
 
-  const removeStatusFilter = (status: string) => {
-    handleStatusToggle(status);
-  };
-
   const removeCountryFilter = (country: string) => {
     handleCountryToggle(country);
   };
 
-  const hasActiveFilters = filters.searchText || filters.statuses.length > 0 || filters.countries.length > 0;
-  const activeFilterCount = (filters.statuses.length + filters.countries.length) + (filters.searchText ? 1 : 0);
+  const hasActiveFilters = filters.searchText || filters.countries.length > 0;
+  const activeFilterCount = filters.countries.length + (filters.searchText ? 1 : 0);
 
   const getCountryName = (code: string) => {
     const country = availableCountries.find(c => c.code === code);
     return country ? `${country.flag} ${country.name}` : code;
-  };
-
-  const getStatusLabel = (value: string) => {
-    const status = availableStatuses.find(s => s.value === value);
-    return status?.label || value;
   };
 
   // Enhanced search handler with Sentry monitoring
@@ -189,7 +166,6 @@ export function SearchAndFilterPanel({
       scope.setTag('component', 'SearchAndFilterPanel');
       scope.setContext('search_params', {
         searchText: filters.searchText,
-        statusCount: filters.statuses.length,
         countryCount: filters.countries.length,
         hasActiveFilters: hasActiveFilters,
       });
@@ -258,42 +234,6 @@ export function SearchAndFilterPanel({
 
             {/* Filter Controls Row */}
             <div className="flex flex-wrap gap-3">
-              {/* Status Filter Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    Status
-                    {filters.statuses.length > 0 && (
-                      <Badge variant="secondary" className="ml-1">
-                        {filters.statuses.length}
-                      </Badge>
-                    )}
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {availableStatuses.map((status) => (
-                    <DropdownMenuCheckboxItem
-                      key={status.value}
-                      checked={filters.statuses.includes(status.value)}
-                      onCheckedChange={() => handleStatusToggle(status.value)}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span>{status.label}</span>
-                        {status.count !== undefined && (
-                          <Badge variant="outline" className="text-xs">
-                            {status.count}
-                          </Badge>
-                        )}
-                      </div>
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               {/* Country Filter Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -348,19 +288,6 @@ export function SearchAndFilterPanel({
                       </button>
                     </Badge>
                   )}
-                  
-                  {filters.statuses.map((status) => (
-                    <Badge key={status} variant="outline" className="flex items-center gap-1">
-                      <Activity className="h-3 w-3" />
-                      {getStatusLabel(status)}
-                      <button
-                        onClick={() => removeStatusFilter(status)}
-                        className="ml-1 hover:text-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
                   
                   {filters.countries.map((country) => (
                     <Badge key={country} variant="outline" className="flex items-center gap-1">

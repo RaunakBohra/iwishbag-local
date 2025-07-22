@@ -74,7 +74,6 @@ export const useQuoteManagement = ({
     queryKey: [
       'admin-quotes-fixed',
       searchTerm || 'empty',
-      filters.statuses?.join(',') || 'no-status',
       filters.countries?.join(',') || 'no-country', 
       `page-${page}`,
       `size-${pageSize}`,
