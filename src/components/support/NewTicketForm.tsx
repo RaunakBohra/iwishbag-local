@@ -84,14 +84,14 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       description: '',
       category: 'general',
       priority: 'medium',
-      quote_id: preSelectedQuoteId || '',
+      quote_id: preSelectedQuoteId || 'none',
     },
   });
 
   const selectedQuoteId = form.watch('quote_id');
 
   // Find selected quote for context display
-  const selectedQuote: QuoteWithTracking | null = selectedQuoteId 
+  const selectedQuote: QuoteWithTracking | null = selectedQuoteId && selectedQuoteId !== 'none'
     ? (userQuotes.find(quote => quote.id === selectedQuoteId) as QuoteWithTracking)
     : null;
 
@@ -106,7 +106,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       description: values.description,
       priority: values.priority,
       category: values.category,
-      quote_id: values.quote_id || undefined,
+      quote_id: values.quote_id && values.quote_id !== 'none' ? values.quote_id : undefined,
     }, {
       onSuccess: () => {
         form.reset();
@@ -126,7 +126,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* What do you need help with? - Now comes first */
+            {/* What do you need help with? - Now comes first */}
             <FormField
               control={form.control}
               name="category"
@@ -153,7 +153,6 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
               )}
             />
 
-            {/* Priority */}
             <FormField
               control={form.control}
               name="priority"
@@ -193,7 +192,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">No related order</SelectItem>
+                        <SelectItem value="none">No related order</SelectItem>
                         {userQuotes.map((quote) => (
                           <SelectItem key={quote.id} value={quote.id}>
                             {(quote as QuoteWithTracking).iwish_tracking_id
