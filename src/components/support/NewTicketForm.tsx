@@ -55,7 +55,7 @@ const newTicketSchema = z.object({
     .min(10, 'Description must be at least 10 characters')
     .max(2000, 'Description must be less than 2000 characters'),
   category: z.enum(['general', 'payment', 'shipping', 'refund', 'product', 'customs'] as const),
-  priority: z.enum(['low', 'medium', 'high', 'urgent'] as const).default('medium'),
+  priority: z.enum(['low', 'medium', 'high', 'urgent'] as const).optional(),
   quote_id: z.string().optional(),
 });
 
@@ -83,7 +83,6 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       subject: '',
       description: '',
       category: 'general',
-      priority: 'medium',
       quote_id: preSelectedQuoteId || 'none',
     },
   });
@@ -104,7 +103,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
     createTicket({
       subject: values.subject,
       description: values.description,
-      priority: values.priority,
+      priority: values.priority || 'medium', // Default to medium for customer tickets
       category: values.category,
       quote_id: values.quote_id && values.quote_id !== 'none' ? values.quote_id : undefined,
     }, {
@@ -153,29 +152,6 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="low">Low - General inquiry</SelectItem>
-                      <SelectItem value="medium">Medium - Standard issue</SelectItem>
-                      <SelectItem value="high">High - Important issue</SelectItem>
-                      <SelectItem value="urgent">Urgent - Critical issue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {/* Order Selection - Always shown if quotes exist */}
             {userQuotes.length > 0 && (
