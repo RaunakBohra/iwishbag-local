@@ -84,7 +84,6 @@ import { CompactShippingManager } from './smart-components/CompactShippingManage
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
-import { ApprovalWorkflowCard } from './ApprovalWorkflowCard';
 import { QuoteDetailForm } from './QuoteDetailForm';
 import { Form, FormField, FormItem, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -1172,15 +1171,45 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     const smartCustomsPercentage =
       operationalData.customs?.percentage || calculationData.customs_percentage || 0;
 
+    // ✅ AUTO-APPLY: Check for handling charge defaults when no existing value
+    const existingHandling = operationalData.handling_charge || 0;
+    let handlingChargeValue = existingHandling;
+    
+    // Auto-apply default handling charge if no existing value and backend config available
+    if (existingHandling === 0 && calculationData.handlingDefault && calculationData.handlingDefault > 0) {
+      handlingChargeValue = calculationData.handlingDefault;
+      console.log('🎯 [DEBUG] Auto-applying default handling charge in form:', {
+        quoteId: quoteData.id,
+        existingHandling,
+        defaultHandling: calculationData.handlingDefault,
+        autoAppliedValue: handlingChargeValue,
+      });
+    }
+
+    // ✅ AUTO-APPLY: Check for insurance defaults when no existing value
+    const existingInsurance = operationalData.insurance_amount || 0;
+    let insuranceAmountValue = existingInsurance;
+    
+    // Auto-apply default insurance if no existing value and backend config available
+    if (existingInsurance === 0 && calculationData.insuranceDefault && calculationData.insuranceDefault > 0) {
+      insuranceAmountValue = calculationData.insuranceDefault;
+      console.log('🛡️ [DEBUG] Auto-applying default insurance amount in form:', {
+        quoteId: quoteData.id,
+        existingInsurance,
+        defaultInsurance: calculationData.insuranceDefault,
+        autoAppliedValue: insuranceAmountValue,
+      });
+    }
+
     form.reset({
       id: quoteData.id,
       customs_percentage: smartCustomsPercentage,
       sales_tax_price: calculationData.sales_tax_price || 0,
       merchant_shipping_price: calculationData.merchant_shipping_price || 0,
       domestic_shipping: operationalData.domestic_shipping || 0,
-      handling_charge: operationalData.handling_charge || 0,
+      handling_charge: handlingChargeValue,
       discount: calculationData.discount || 0,
-      insurance_amount: operationalData.insurance_amount || 0,
+      insurance_amount: insuranceAmountValue,
       international_shipping: calculationData.breakdown?.shipping || 0,
       selected_shipping_option: operationalData.shipping?.selected_option || null,
       origin_country: quoteData.origin_country,
@@ -2201,12 +2230,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 editMode={isEditMode}
               />
 
-              {/* Approval Workflow */}
-              <ApprovalWorkflowCard
-                quoteId={quote.id}
-                quote={quote}
-                showActions={true}
-              />
 
               {/* Status Management - Outside form to prevent submission conflicts */}
               <CompactStatusManager
@@ -2395,12 +2418,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 editMode={isEditMode}
               />
 
-              {/* 1.5. Approval Workflow - High Priority (business process) */}
-              <ApprovalWorkflowCard
-                quoteId={quote.id}
-                quote={quote}
-                showActions={true}
-              />
 
               {/* 2. Quote Summary - Second Priority (order overview) */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/30">

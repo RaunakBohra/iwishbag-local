@@ -1446,22 +1446,28 @@ export class SmartCalculationEngine {
       quoteId: quote.id,
     });
 
-    // Check if there's a manual override first
+    // ✅ AUTO-APPLY: Calculate default handling charge when available in backend
+    const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(quote, shippingOption);
+    
+    // If backend configuration is available, use calculated default (auto-apply)
+    if (calculatedDefault > 0) {
+      console.log('📦 [DEBUG] Auto-applying route-based handling charge:', {
+        calculatedDefault,
+        shippingOptionId: shippingOption.id,
+        autoApplied: true,
+      });
+      return calculatedDefault;
+    }
+
+    // Fallback: Check if there's a manual override when no backend config available
     const existingHandling = quote.operational_data?.handling_charge;
     if (existingHandling && existingHandling > 0) {
-      console.log('📦 [DEBUG] Using manual override handling:', existingHandling);
+      console.log('📦 [DEBUG] Using manual override handling (no backend config):', existingHandling);
       return existingHandling;
     }
 
-    // Use CalculationDefaultsService for route-based calculation
-    const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(quote, shippingOption);
-    
-    console.log('📦 [DEBUG] Route-based handling from CalculationDefaultsService:', {
-      calculatedDefault,
-      shippingOptionId: shippingOption.id,
-    });
-
-    return calculatedDefault;
+    console.log('📦 [DEBUG] No handling charge - no backend config and no manual override');
+    return 0;
   }
 
   /**
@@ -1544,30 +1550,33 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): number {
-    // Check if shipping option has route-based handling charge configuration
-    const routeHandlingConfig = (shippingOption as any).handling_charge;
+    console.log('🎯 [DEBUG] calculateRouteBasedHandlingSync called:', {
+      shippingOptionId: shippingOption.id,
+      itemsTotal,
+      quoteId: quote.id,
+    });
 
-    if (routeHandlingConfig) {
-      const baseHandling = routeHandlingConfig.base_fee || 0;
-      const percentageHandling = routeHandlingConfig.percentage_of_value
-        ? (itemsTotal * routeHandlingConfig.percentage_of_value) / 100
-        : 0;
-      const totalHandling = baseHandling + percentageHandling;
-
-      // Apply min/max bounds
-      const minFee = routeHandlingConfig.min_fee || 0;
-      const maxFee = routeHandlingConfig.max_fee || Infinity;
-      return Math.max(minFee, Math.min(maxFee, totalHandling));
+    // ✅ AUTO-APPLY: Use CalculationDefaultsService for consistent calculation
+    const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(quote, shippingOption);
+    
+    // If backend configuration is available, use calculated default (auto-apply)
+    if (calculatedDefault > 0) {
+      console.log('📦 [DEBUG] Auto-applying route-based handling charge (sync):', {
+        calculatedDefault,
+        shippingOptionId: shippingOption.id,
+        autoApplied: true,
+      });
+      return calculatedDefault;
     }
 
-    // Fallback to existing operational data
+    // Fallback to existing operational data when no backend config available
     const existingHandling = quote.operational_data?.handling_charge;
     if (existingHandling && existingHandling > 0) {
+      console.log('📦 [DEBUG] Using manual override handling (sync, no backend config):', existingHandling);
       return existingHandling;
     }
 
-    // No hardcoded fallbacks in sync operation
-    console.warn(`⚠️ No handling charge configuration for sync operation ${quote.origin_country} → ${quote.destination_country}`);
+    console.log('📦 [DEBUG] No handling charge (sync) - no backend config and no manual override');
     return 0;
   }
 
