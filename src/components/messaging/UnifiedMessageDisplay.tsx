@@ -6,7 +6,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Send,
@@ -45,8 +44,6 @@ export interface MessageDisplayProps {
 
   // States
   isSending: boolean;
-  isComposing: boolean;
-  onComposingChange: (composing: boolean) => void;
 
   // Utilities
   formatTimestamp: (timestamp: string) => string;
@@ -66,8 +63,6 @@ export const UnifiedMessageDisplay: React.FC<MessageDisplayProps> = ({
   onRemoveAttachment,
   onFileSelect,
   isSending,
-  isComposing,
-  onComposingChange,
   formatTimestamp,
 }) => {
   const { user } = useAuth();
@@ -288,28 +283,17 @@ export const UnifiedMessageDisplay: React.FC<MessageDisplayProps> = ({
           {/* Input Area */}
           <div className="flex items-end space-x-1">
             <div className="flex-1">
-              {isComposing ? (
-                <Textarea
-                  value={message}
-                  onChange={(e) => onMessageChange(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type a message... (Ctrl+Enter to send)"
-                  className={cn(
-                    'resize-none',
-                    variant === 'compact' ? 'min-h-[60px] text-xs' : 'min-h-[80px] text-sm',
-                  )}
-                  rows={variant === 'compact' ? 3 : 4}
-                />
-              ) : (
-                <Input
-                  value={message}
-                  onChange={(e) => onMessageChange(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onFocus={() => onComposingChange(true)}
-                  placeholder="Type a message..."
-                  className={variant === 'compact' ? 'text-xs' : 'text-sm'}
-                />
-              )}
+              <Textarea
+                value={message}
+                onChange={(e) => onMessageChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type a message... (Ctrl+Enter to send)"
+                className={cn(
+                  'resize-none',
+                  variant === 'compact' ? 'min-h-[60px] text-xs' : 'min-h-[60px] text-sm',
+                )}
+                rows={variant === 'compact' ? 3 : 3}
+              />
             </div>
 
             {/* Action Buttons */}
@@ -345,24 +329,11 @@ export const UnifiedMessageDisplay: React.FC<MessageDisplayProps> = ({
           </div>
 
           {/* Composer Footer */}
-          {isComposing && (
-            <div className="flex justify-between items-center mt-1">
-              <p className={cn('text-gray-500', variant === 'compact' ? 'text-xs' : 'text-sm')}>
-                Ctrl+Enter to send
-              </p>
-              <Button
-                size="sm"
-                variant="ghost"
-                className={cn(variant === 'compact' ? 'h-6 px-2 text-xs' : 'h-7 px-3 text-sm')}
-                onClick={() => {
-                  onComposingChange(false);
-                  onMessageChange('');
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
+          <div className="flex justify-end items-center mt-1">
+            <p className={cn('text-gray-500', variant === 'compact' ? 'text-xs' : 'text-sm')}>
+              Ctrl+Enter to send
+            </p>
+          </div>
         </div>
       )}
     </div>
