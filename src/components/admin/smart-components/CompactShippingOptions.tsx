@@ -22,10 +22,8 @@ import {
   Save,
   X,
   Loader2,
-  MoreHorizontal,
 } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, ShippingRecommendation } from '@/types/unified-quote';
-import { ShippingSelectionModal } from '@/components/admin/modals/ShippingSelectionModal';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface CompactShippingOptionsProps {
@@ -57,7 +55,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
   const [showRecommendations, setShowRecommendations] = useState(true);
   const [pendingOptionId, setPendingOptionId] = useState<string | null>(null); // NEW: Track pending selection
   const [showSaveControls, setShowSaveControls] = useState(false); // NEW: Show save/cancel buttons
-  const [showModal, setShowModal] = useState(false); // NEW: Control modal visibility
 
   // Get standardized currency display
   const currencyDisplay = useAdminQuoteCurrency(quote);
@@ -116,15 +113,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
     }
   };
 
-  // NEW: Handle modal selection and save
-  const handleModalSelection = async (optionId: string) => {
-    if (onSaveShippingOption) {
-      await onSaveShippingOption(optionId);
-    } else {
-      onSelectOption(optionId);
-    }
-    setShowModal(false);
-  };
 
   // NEW: Cancel the pending selection
   const handleCancelSelection = () => {
@@ -196,32 +184,20 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
               <span className="text-sm font-medium text-gray-900">
                 {selectedOption ? currencyDisplay.formatDualAmount(selectedOption.cost_usd).short : currencyDisplay.formatSingleAmount(0, 'origin')}
               </span>
-              {/* Show More Options button in edit mode, or toggle in view mode */}
-              {editMode ? (
+              {/* Unified chevron toggle for both edit and view modes */}
+              {compact && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowModal(true)}
-                  className="h-6 px-2 text-xs"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="h-6 w-6 p-0"
                 >
-                  <MoreHorizontal className="w-3 h-3 mr-1" />
-                  More
+                  {isExpanded ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
                 </Button>
-              ) : (
-                compact && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="h-6 w-6 p-0"
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="w-3 h-3" />
-                    ) : (
-                      <ChevronDown className="w-3 h-3" />
-                    )}
-                  </Button>
-                )
               )}
             </>
           )}
@@ -418,6 +394,48 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                   )}
                 </div>
               </div>
+
+              {/* Inline Save Controls for Edit Mode */}
+              {editMode && pendingOptionId === option.id && (
+                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between bg-blue-50/50 -m-3 mt-3 p-3 rounded-b-lg">
+                  <div className="text-xs text-blue-700">
+                    <span className="font-medium">Confirm selection:</span> {option.carrier} - {option.name}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCancelSelection();
+                      }}
+                      disabled={isSaving}
+                      className="h-7 px-2 text-xs text-gray-600 hover:text-gray-800"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSaveSelection();
+                      }}
+                      disabled={isSaving}
+                      className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isSaving ? (
+                        <div className="flex items-center">
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Saving...
+                        </div>
+                      ) : (
+                        'Confirm'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -479,17 +497,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
         {(compact && isExpanded) || !compact ? <ExpandedOptions /> : null}
       </Card>
 
-      {/* Shipping Selection Modal */}
-      <ShippingSelectionModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        quote={quote}
-        shippingOptions={shippingOptions}
-        recommendations={recommendations}
-        selectedOptionId={getDisplayOptionId()}
-        onSelectOption={handleModalSelection}
-        isSaving={isSaving}
-      />
     </>
   );
 };
