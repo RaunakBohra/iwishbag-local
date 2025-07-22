@@ -79,6 +79,8 @@ export const useQuoteManagement = ({
       pageSize,
     ],
     queryFn: async () => {
+      console.log('🚀 [useQuoteManagement] Main query function STARTED');
+      
       // Enhanced Sentry monitoring for search query operations
       const searchTransaction = Sentry.startTransaction({
         name: 'Advanced Search Query Execution',
@@ -101,6 +103,7 @@ export const useQuoteManagement = ({
         scope.setLevel('info');
 
         try {
+          console.log('🚀 [useQuoteManagement] Main query function - inside try block');
           const queryStartTime = Date.now();
           
           // Debug authentication context
@@ -287,6 +290,8 @@ export const useQuoteManagement = ({
       });
     },
     enabled: isAuthenticated && !!isAdmin && !isAdminLoading, // Only run query for authenticated admin users
+    staleTime: 0, // Force fresh queries for debugging
+    cacheTime: 0, // Don't cache for debugging
   });
 
   // TEMPORARY: Simplified test query to bypass all complex logic
@@ -312,7 +317,13 @@ export const useQuoteManagement = ({
       return data || [];
     },
     enabled: !!user && !!session, // Simpler auth check
+    staleTime: 0,
+    cacheTime: 0,
   });
+
+  // TEMPORARY: Emergency bypass - use test query results as main query
+  const finalQuotes = testQuotes || [];
+  const finalLoading = testLoading;
 
   // Debug logging for final query state
   console.log('🔍 [useQuoteManagement] Final Query State:', {
@@ -648,8 +659,8 @@ export const useQuoteManagement = ({
   const isDeletingQuotes = deleteQuotesMutation.isPending;
 
   return {
-    quotes,
-    quotesLoading: quotesLoading || isAdminLoading,
+    quotes: finalQuotes, // TEMPORARY: Use test query results
+    quotesLoading: finalLoading || isAdminLoading,
     isRejectDialogOpen,
     setRejectDialogOpen: setIsRejectDialogOpen,
     selectedQuoteIds,
