@@ -43,7 +43,6 @@ export const useQuoteQueries = (id: string | undefined) => {
           origin_country: data.origin_country,
           raw_values: {
             sales_tax_price: data.sales_tax_price,
-            merchant_shipping_price: data.merchant_shipping_price,
             domestic_shipping: data.domestic_shipping,
             handling_charge: data.handling_charge,
             insurance_amount: data.insurance_amount,

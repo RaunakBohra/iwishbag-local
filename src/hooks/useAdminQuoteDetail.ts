@@ -43,7 +43,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
       const formData: Partial<AdminQuoteFormValues> & Record<string, unknown> = {
         id: quote.id,
         sales_tax_price: calculationData.sales_tax_price || 0,
-        merchant_shipping_price: calculationData.merchant_shipping_price || 0,
         domestic_shipping: operationalData.domestic_shipping || 0,
         handling_charge: operationalData.handling_charge || 0,
         discount: calculationData.discount || 0,
@@ -132,7 +131,6 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
         calculation_data: {
           ...quote!.calculation_data,
           sales_tax_price: Number(data.sales_tax_price) || 0,
-          merchant_shipping_price: Number(data.merchant_shipping_price) || 0,
           discount: Number(data.discount) || 0,
         },
       };

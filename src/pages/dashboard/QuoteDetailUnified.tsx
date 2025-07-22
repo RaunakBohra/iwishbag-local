@@ -1633,12 +1633,6 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
                   <Percent className="h-4 w-4 text-green-600" />,
                 )}
                 {renderBreakdownRow(
-                  'Merchant Shipping',
-                  quote.merchant_shipping_price,
-                  false,
-                  <Truck className="h-4 w-4 text-orange-600" />,
-                )}
-                {renderBreakdownRow(
                   'International Shipping',
                   quote.international_shipping,
                   false,

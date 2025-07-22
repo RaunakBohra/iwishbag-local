@@ -27,7 +27,6 @@ export const adminQuoteItemSchema = z.object({
 export const adminQuoteFormSchema = z.object({
   id: z.string(),
   sales_tax_price: emptyStringToNull,
-  merchant_shipping_price: emptyStringToNull,
   domestic_shipping: emptyStringToNull,
   handling_charge: emptyStringToNull,
   discount: emptyStringToNull,

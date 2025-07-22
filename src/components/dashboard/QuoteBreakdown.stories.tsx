@@ -27,7 +27,6 @@ const createMockQuote = (overrides = {}) => ({
   final_total_local: 12574.17,
   item_price: 120.00,
   sales_tax_price: 8.40,
-  merchant_shipping_price: 12.59,
   international_shipping: 25.00,
   customs_and_ecs: 18.90,
   domestic_shipping: 15.00,

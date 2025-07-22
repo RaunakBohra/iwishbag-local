@@ -4,7 +4,7 @@
 // Features: Tabbed interface, horizontal layout, smart collapsing, inline editing
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,6 +114,56 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     refetchInterval: 30000, // Refresh every 30 seconds
     initialData: 0,
   });
+
+  // Fetch total message count for this quote
+  const { data: totalCount, isLoading: totalCountLoading, isError: totalCountError } = useQuery({
+    queryKey: ['total-messages', quote.id],
+    queryFn: async () => {
+      console.log('🔄 [DEBUG] React Query calling getTotalMessageCount for quote:', quote.id);
+      const result = await quoteMessageService.getTotalMessageCount(quote.id);
+      console.log('🔄 [DEBUG] React Query received result:', result);
+      return result;
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds for testing (same as unread)
+    staleTime: 0, // Always consider stale (force fresh data)
+    cacheTime: 30000, // Cache for 30 seconds
+    retry: 2, // Retry failed requests
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
+  });
+
+  // Manual cache invalidation effect for debugging
+  useEffect(() => {
+    console.log('🔄 [DEBUG] Component mounted, invalidating cache for quote:', quote.id);
+    queryClient.invalidateQueries({ queryKey: ['total-messages', quote.id] });
+  }, []); // Only run once on mount
+
+  // Set up real-time subscription for message updates
+  useEffect(() => {
+    const subscription = supabase
+      .channel(`quote-messages-${quote.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'messages',
+          filter: `quote_id=eq.${quote.id}`,
+        },
+        (payload) => {
+          console.log('📨 [DEBUG] Real-time message update:', payload);
+          // Invalidate both message count queries to refresh the data
+          queryClient.invalidateQueries({ queryKey: ['unread-messages', quote.id] });
+          queryClient.invalidateQueries({ queryKey: ['total-messages', quote.id] });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [quote.id, queryClient]);
 
   // Only log when addresses are found/loaded (reduce console spam)
   if (savedAddresses && savedAddresses.length > 0 && !addressesLoading) {
@@ -367,6 +417,24 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     return 'No phone provided';
   };
 
+  // Debug message counts specifically
+  console.log('📊 [DEBUG] Message counts UI STATE:', {
+    quote_id: quote.id,
+    unreadCount,
+    totalCount,
+    totalCountLoading,
+    totalCountError,
+    unreadCountType: typeof unreadCount,
+    totalCountType: typeof totalCount,
+    hasUnread: (unreadCount || 0) > 0,
+    hasMessages: (totalCount || 0) > 0,
+    displayValues: {
+      showRedBadge: unreadCount && unreadCount > 0,
+      showBlueDot: (!unreadCount || unreadCount === 0) && totalCount && totalCount > 0,
+      showTotalCount: totalCount && totalCount > 0,
+    }
+  });
+
   // Debug logging to understand the data structure
   console.log('🔍 [DEBUG] CompactCustomerInfo data:', {
     quote_id: quote.id,
@@ -399,6 +467,12 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       count: savedAddresses?.length || 0,
       has_default: savedAddresses?.some((addr) => addr.is_default) || false,
       loading: addressesLoading,
+    },
+    message_counts: {
+      unread: unreadCount || 0,
+      total: totalCount || 0,
+      has_unread: (unreadCount || 0) > 0,
+      has_messages: (totalCount || 0) > 0,
     },
   });
 
@@ -436,10 +510,31 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             title="Open messages"
           >
             <MessageSquare className="w-4 h-4" />
+            
+            {/* Red badge for unread messages (urgent, action required) */}
             {unreadCount && unreadCount > 0 && (
               <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-4 w-4 p-0 flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
+            )}
+            
+            {/* Blue dot indicator for conversations with messages (when no unread) */}
+            {(!unreadCount || unreadCount === 0) && totalCount && totalCount > 0 && (
+              <div 
+                className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"
+                title={`${totalCount} message${totalCount > 1 ? 's' : ''} in conversation`}
+              />
+            )}
+            
+            {/* Subtle total count indicator at bottom-right when messages exist */}
+            {totalCount && totalCount > 0 && (
+              <div 
+                className="absolute -bottom-0.5 -right-0.5 text-xs text-gray-400 bg-white rounded px-1 leading-none"
+                style={{ fontSize: '10px' }}
+                title={`Total: ${totalCount} message${totalCount > 1 ? 's' : ''}`}
+              >
+                {totalCount > 99 ? '99+' : totalCount}
+              </div>
             )}
           </Button>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -540,11 +635,18 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             Actions
           </TabsTrigger>
           <TabsTrigger value="messages" className="text-xs">
-            Messages{' '}
+            Messages
+            {/* Red badge for unread messages */}
             {unreadCount && unreadCount > 0 && (
               <Badge className="ml-1 bg-red-500 text-white text-xs h-3 px-1">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
+            )}
+            {/* Gray total count indicator */}
+            {totalCount && totalCount > 0 && (
+              <span className="ml-1 text-xs text-gray-500">
+                ({totalCount > 99 ? '99+' : totalCount})
+              </span>
             )}
           </TabsTrigger>
         </TabsList>

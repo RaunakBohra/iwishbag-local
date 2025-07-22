@@ -288,34 +288,7 @@ export const QuoteDetailForm = ({
           </h4>
         </div>
         <div className="p-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="merchant_shipping_price"
-              render={({ field }) => (
-                <FormItem className="m-0">
-                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                    Merchant
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                        {inputCurrencySymbol}
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...field}
-                        value={field.value ?? ''}
-                        onWheel={handleNumberInputWheel}
-                        className="h-8 pl-6"
-                        placeholder="50.00"
-                      />
-                    </div>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+          <div className="grid grid-cols-1 gap-4">
             <FormField
               control={form.control}
               name="international_shipping"
@@ -327,7 +300,7 @@ export const QuoteDetailForm = ({
                 return (
                   <FormItem className="m-0">
                     <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
-                      Intl Ship
+                      iwishBag Shipping Cost
                     </FormLabel>
                     <FormControl>
                       <div className="relative">

@@ -54,7 +54,6 @@ serve(async (req) => {
       sub_total: 0,
       domestic_shipping: 0,
       international_shipping: null,
-      merchant_shipping_price: null,
       sales_tax_price: null,
       vat: null,
       customs_and_ecs: null,

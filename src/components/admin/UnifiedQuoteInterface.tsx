@@ -138,7 +138,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       id: '',
       customs_percentage: 0,
       sales_tax_price: 0,
-      merchant_shipping_price: 0,
       domestic_shipping: 0,
       handling_charge: 0,
       discount: 0,
@@ -991,7 +990,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         calculation_data: {
           ...quote.calculation_data,
           sales_tax_price: Number(formValues.sales_tax_price) || 0,
-          merchant_shipping_price: Number(formValues.merchant_shipping_price) || 0,
           discount: Number(formValues.discount) || 0,
           breakdown: {
             ...quote.calculation_data?.breakdown,
@@ -1205,7 +1203,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       id: quoteData.id,
       customs_percentage: smartCustomsPercentage,
       sales_tax_price: calculationData.sales_tax_price || 0,
-      merchant_shipping_price: calculationData.merchant_shipping_price || 0,
       domestic_shipping: operationalData.domestic_shipping || 0,
       handling_charge: handlingChargeValue,
       discount: calculationData.discount || 0,
@@ -1275,7 +1272,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         calculation_data: {
           ...quote?.calculation_data,
           sales_tax_price: Number(data.sales_tax_price) || 0,
-          merchant_shipping_price: Number(data.merchant_shipping_price) || 0,
           discount: Number(data.discount) || 0,
           customs_percentage: Number(data.customs_percentage) || 0,
           breakdown: {

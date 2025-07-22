@@ -210,6 +210,51 @@ export class QuoteMessageService {
   }
 
   /**
+   * Get total message count for a quote (excludes internal admin messages)
+   */
+  async getTotalMessageCount(quoteId: string): Promise<number> {
+    try {
+      const user = await this.getCurrentUser();
+      if (!user) return 0;
+
+      const isAdmin = await this.isUserAdmin(user.id);
+      
+      console.log('🔍 [DEBUG] Getting total message count:', { quoteId, userId: user.id, isAdmin });
+
+      // First, try to get all messages for this quote to see what we can access
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('id, sender_id, recipient_id, is_internal, created_at')
+        .eq('quote_id', quoteId)
+        .eq('is_internal', false)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        console.error('❌ Failed to get messages for count:', messagesError);
+        return 0;
+      }
+
+      const totalCount = messages?.length || 0;
+      console.log('✅ [DEBUG] Total message count result:', { 
+        quoteId, 
+        totalCount, 
+        isAdmin,
+        messagesPreview: messages?.slice(0, 3).map(m => ({
+          id: m.id,
+          sender_id: m.sender_id,
+          recipient_id: m.recipient_id,
+          is_internal: m.is_internal
+        }))
+      });
+      
+      return totalCount;
+    } catch (error) {
+      console.error('❌ Error getting total message count:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Subscribe to real-time updates for a quote's messages
    */
   subscribeToQuoteMessages(quoteId: string, callback: (payload: any) => void) {
