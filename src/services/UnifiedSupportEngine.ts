@@ -1119,7 +1119,7 @@ class UnifiedSupportEngine {
       let userProfile = null;
       if (ticket.user_id) {
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('profiles_with_phone')
           .select('full_name, email, phone')
           .eq('id', ticket.user_id)
           .single();

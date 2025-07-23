@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import imageCompression from 'browser-image-compression';
-import { MessageItem } from './MessageItem';
+import { MessageItemEnhanced as MessageItem } from './MessageItemEnhanced';
 
 type Message = Tables<'messages'> & {
   attachment_url?: string | null;

@@ -1,40 +1,28 @@
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 import { formatDateCompact } from '@/lib/dateUtils';
-import { PriorityBadge } from './shared/PriorityBadge';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
-import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import {
   Calendar,
   User,
   Package,
   DollarSign,
   MapPin,
-  ExternalLink,
   MoreHorizontal,
   Eye,
   Edit,
   Trash2,
   Mail,
   Copy,
-  ArrowRight,
   Phone,
+  Clock,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +31,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
-import { useCountryUtils } from '@/lib/countryUtils';
+import { getCustomerDisplayData, shouldShowEmailSeparately } from '@/lib/customerDisplayUtils';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { Body, BodySmall } from '@/components/ui/typography';
 
@@ -57,7 +45,6 @@ interface CompactQuoteListItemProps {
   isSelected: boolean;
   onSelect: (quoteId: string, selected: boolean) => void;
 }
-
 
 export const CompactQuoteListItem = ({
   quote,
@@ -74,15 +61,12 @@ export const CompactQuoteListItem = ({
     full_name: string | null;
     phone: string | null;
   } | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const { countries: allCountries } = useCountryUtils();
 
   const firstItem = quote.items?.[0];
   const totalItems = quote.items?.length || 0;
   const productName = firstItem?.name || 'Product name not specified';
 
   const formattedAmount = formatDualAmount(quote.final_total_usd || 0).short;
-
 
   useEffect(() => {
     let isMounted = true;
@@ -103,7 +87,7 @@ export const CompactQuoteListItem = ({
     async function fetchCustomerProfile() {
       if (quote.user_id) {
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('profiles_with_phone')
           .select('full_name, phone')
           .eq('id', quote.user_id)
           .single();
@@ -122,293 +106,234 @@ export const CompactQuoteListItem = ({
     };
   }, [quote]);
 
-  const customerName =
-    customerProfile?.full_name || quote.customer_name || quote.email || 'Unknown Customer';
+  // Use unified customer display logic
+  const customerDisplayData = getCustomerDisplayData(quote, customerProfile);
+  const displayName = customerDisplayData.name;
+  const customerEmail = shouldShowEmailSeparately(quote, displayName, customerDisplayData.email)
+    ? customerDisplayData.email
+    : null;
+
+  // Helper function to get status color for circular indicator
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-500';
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'sent':
+        return 'bg-blue-500';
+      case 'paid':
+        return 'bg-teal-500';
+      case 'ordered':
+        return 'bg-orange-500';
+      case 'shipped':
+        return 'bg-teal-600';
+      case 'completed':
+        return 'bg-green-600';
+      case 'cancelled':
+      case 'rejected':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-400';
+    }
+  };
+
+  // Calculate expiry info
+  const expiryInfo = useMemo(() => {
+    if (!quote.expires_at) return null;
+    const expiryDate = new Date(quote.expires_at);
+    const now = new Date();
+    const diffTime = expiryDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) return { text: 'Expired', urgent: true };
+    if (diffDays === 1) return { text: '1 day left', urgent: true };
+    if (diffDays <= 3) return { text: `${diffDays} days left`, urgent: true };
+    return { text: `${diffDays} days left`, urgent: false };
+  }, [quote.expires_at]);
 
   return (
     <>
       <div
         className={cn(
-          'bg-white border border-gray-200 rounded-lg p-3 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
+          'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
           isSelected && 'ring-2 ring-teal-500 border-teal-500',
         )}
       >
-        <div className="flex items-center gap-4">
-          {/* Selection Checkbox */}
-          <div className="flex-shrink-0">
+        {/* ROW 1: Identity & Status */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            {/* Selection Checkbox */}
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelect(quote.id, !!checked)}
-              className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
+              className="data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600 flex-shrink-0"
             />
-          </div>
 
-          {/* Status Indicator */}
-          <div
-            className={cn(
-              'flex-shrink-0 w-2 h-12 rounded-full',
-              quote.status === 'cancelled' && 'bg-red-500',
-              quote.status === 'rejected' && 'bg-red-500',
-              quote.status === 'pending' && 'bg-yellow-500',
-              quote.status === 'approved' && 'bg-green-500',
-              quote.status === 'paid' && 'bg-teal-500',
-              quote.status === 'ordered' && 'bg-orange-500',
-              quote.status === 'shipped' && 'bg-teal-500',
-              quote.status === 'completed' && 'bg-green-600',
-              ![
-                'cancelled',
-                'rejected',
-                'pending',
-                'approved',
-                'paid',
-                'ordered',
-                'shipped',
-                'completed',
-              ].includes(quote.status) && 'bg-gray-300',
-            )}
-          />
+            {/* Status Indicator Circle */}
+            <div
+              className={cn('w-3 h-3 rounded-full flex-shrink-0', getStatusColor(quote.status))}
+            />
 
-          {/* Product Image */}
-          {firstItem?.image_url && (
-            <div className="flex-shrink-0">
-              <img
-                src={firstItem.image_url}
-                alt="Product"
-                className="w-12 h-12 object-cover rounded-lg border border-gray-200"
-              />
-            </div>
-          )}
+            {/* Quote ID */}
+            <Body className="font-semibold text-gray-900 flex-shrink-0">
+              {quote.display_id || `#QT-${quote.id.substring(0, 8).toUpperCase()}`}
+            </Body>
 
-          {/* Main Content */}
-          <div className="flex-1 min-w-0">
-            {/* Header Row */}
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-3">
-                <Body className="font-semibold text-gray-900">
-                  {quote.display_id || `QT-${quote.id.substring(0, 8).toUpperCase()}`}
-                </Body>
-                <StatusBadge status={quote.status} />
-                <PriorityBadge priority={quote.priority} />
-              </div>
-              <div className="flex items-center gap-2">
-                <BodySmall className="text-gray-500">{formatDateCompact(quote.created_at)}</BodySmall>
-                <ShareQuoteButtonV2 quote={quote} variant="icon" />
-              </div>
-            </div>
-
-            {/* Product Name Row */}
-            <div className="flex items-center gap-2 mb-1">
-              <Package className="h-4 w-4 text-gray-500" />
-              <BodySmall className="text-gray-700 font-medium truncate">
+            {/* Product Icon & Name */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Package className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <Body className="text-gray-700 truncate">
                 {productName}
                 {totalItems > 1 && (
-                  <span className="text-gray-500 ml-1">
-                    +{totalItems - 1} more item{totalItems - 1 !== 1 ? 's' : ''}
+                  <span className="text-gray-500 text-sm ml-1 hidden sm:inline">
+                    (+{totalItems - 1} more)
                   </span>
                 )}
-              </BodySmall>
-              {firstItem?.product_url && (
-                <a
-                  href={firstItem.product_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-teal-600 hover:text-teal-800"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+              </Body>
+            </div>
+
+            {/* Status Badge - Better positioned */}
+            <div className="hidden md:block">
+              <StatusBadge status={quote.status} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Time - Better positioned */}
+            <div className="hidden lg:flex items-center gap-1 text-gray-500">
+              <Clock className="h-4 w-4" />
+              <BodySmall>{formatDateCompact(quote.created_at)}</BodySmall>
+            </div>
+
+            {/* Actions - Cleaner layout */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/admin/quotes/${quote.id}`)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 h-8 px-3"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1">View</span>
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-50">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Quote
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Email
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 2: Customer & Business Data */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-3 sm:gap-0">
+          {/* Left side - Customer and core business data */}
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+            {/* Customer Info */}
+            <div className="flex items-center gap-2 min-w-0">
+              <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-gray-700 font-medium truncate">{displayName}</span>
+                {customerDisplayData.isGuest && (
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                    Guest
+                  </span>
+                )}
+              </div>
+              {customerEmail && (
+                <>
+                  <span className="text-gray-400 hidden sm:inline">•</span>
+                  <span className="text-gray-600 truncate hidden sm:inline">{customerEmail}</span>
+                </>
+              )}
+              {customerDisplayData.phone && (
+                <>
+                  <span className="text-gray-400 hidden md:inline">•</span>
+                  <div className="flex items-center gap-1 hidden md:flex">
+                    <Phone className="h-3 w-3 text-gray-500" />
+                    <span className="text-gray-600">{customerDisplayData.phone}</span>
+                  </div>
+                </>
               )}
             </div>
 
-            {/* Info Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-1">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700 font-medium truncate">{customerName}</BodySmall>
-              </div>
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700">
-                  {totalItems} item{totalItems !== 1 ? 's' : ''}
-                </BodySmall>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700 font-medium">{formattedAmount}</BodySmall>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-700 truncate">
-                  {routeCountries ? (
-                    <ShippingRouteDisplay
-                      originCountry={routeCountries.origin}
-                      destinationCountry={routeCountries.destination}
-                      website={quote.website || ''}
-                    />
-                  ) : (
-                    'Loading...'
-                  )}
-                </BodySmall>
-              </div>
+            {/* Price */}
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-700 font-medium">{formattedAmount}</span>
             </div>
 
-            {/* Phone Number (if available) */}
-            {customerProfile?.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-3 w-3 text-gray-500" />
-                <BodySmall className="text-gray-600">{customerProfile.phone}</BodySmall>
-              </div>
-            )}
+            {/* Route - Hidden on mobile */}
+            <div className="flex items-center gap-2 hidden sm:flex">
+              <MapPin className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-600">
+                {routeCountries ? (
+                  <ShippingRouteDisplay
+                    originCountry={routeCountries.origin}
+                    destinationCountry={routeCountries.destination}
+                    website={quote.website || ''}
+                  />
+                ) : (
+                  <span className="text-gray-400">Loading...</span>
+                )}
+              </span>
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/admin/quotes/${quote.id}`)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View
-            </Button>
+          {/* Right side info */}
+          <div className="flex items-center gap-4">
+            {/* Item count */}
+            <div className="flex items-center gap-1">
+              <Package className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-600">
+                {totalItems} item{totalItems !== 1 ? 's' : ''}
+              </span>
+            </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2 h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsPreviewOpen(true)}>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Quick Preview
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/admin/quotes/${quote.id}`)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Quote
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Expiry Info */}
+            {expiryInfo && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <span
+                  className={cn(
+                    'text-sm',
+                    expiryInfo.urgent ? 'text-red-600 font-medium' : 'text-gray-600',
+                  )}
+                >
+                  {expiryInfo.text}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Quick Preview Dialog */}
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Quote {quote.display_id || quote.id} - Quick Preview
-            </DialogTitle>
-            <DialogDescription>
-              {customerName} • {formatDateCompact(quote.created_at)}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Product Information */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="h-4 w-4 text-gray-500" />
-                <BodySmall className="text-gray-500 font-medium">Product</BodySmall>
-              </div>
-              <div className="flex items-center gap-2">
-                <Body className="font-medium text-gray-900">{productName}</Body>
-                {firstItem?.product_url && (
-                  <a
-                    href={firstItem.product_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-teal-600 hover:text-teal-800"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
-              {totalItems > 1 && (
-                <BodySmall className="text-gray-600 mt-1">
-                  +{totalItems - 1} more item{totalItems - 1 !== 1 ? 's' : ''}
-                </BodySmall>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <BodySmall className="text-gray-500 font-medium mb-1">Status</BodySmall>
-                <StatusBadge status={quote.status} />
-              </div>
-              <div>
-                <BodySmall className="text-gray-500 font-medium mb-1">Total Amount</BodySmall>
-                <Body className="font-semibold">{formattedAmount}</Body>
-              </div>
-              <div>
-                <BodySmall className="text-gray-500 font-medium mb-1">Items</BodySmall>
-                <Body>
-                  {totalItems} item{totalItems !== 1 ? 's' : ''}
-                </Body>
-              </div>
-              <div>
-                <BodySmall className="text-gray-500 font-medium mb-1">Route</BodySmall>
-                <Body>
-                  {routeCountries ? (
-                    <ShippingRouteDisplay
-                      originCountry={routeCountries.origin}
-                      destinationCountry={routeCountries.destination}
-                      website={quote.website || ''}
-                    />
-                  ) : (
-                    'Loading...'
-                  )}
-                </Body>
-              </div>
-            </div>
-            {quote.notes && (
-              <div>
-                <BodySmall className="text-gray-500 font-medium mb-1">Notes</BodySmall>
-                <Body className="text-gray-700">{quote.notes}</Body>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsPreviewOpen(false)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              Close
-            </Button>
-            <Button
-              onClick={() => {
-                setIsPreviewOpen(false);
-                navigate(`/admin/quotes/${quote.id}`);
-              }}
-              className="bg-teal-600 hover:bg-teal-700 text-white"
-            >
-              <ArrowRight className="h-4 w-4 mr-2" />
-              View Full Details
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

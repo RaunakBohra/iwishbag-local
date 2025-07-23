@@ -432,19 +432,36 @@ export class NotificationService {
    */
   private async sendEmailNotification(data: EmailNotificationData): Promise<void> {
     try {
-      // Call the existing email notification hook
-      const { useEmailNotifications } = await import('@/hooks/useEmailNotifications');
-      const emailService = useEmailNotifications();
-
-      // For now, use the existing email system
-      // TODO: Implement direct Resend API integration in Phase 3
-      console.log('📧 Email notification prepared:', {
+      console.log('📧 Sending email notification via Resend API:', {
         to: data.to,
         subject: data.subject,
         template: data.templateName,
       });
 
-      // This will be replaced with direct Resend API calls in Phase 3
+      // Generate HTML content from template
+      const htmlContent = this.generateEmailTemplate(data.templateName, data.variables);
+      
+      // Send to each recipient
+      const emailPromises = data.to.map(async (email) => {
+        const { error } = await supabase.functions.invoke('send-email', {
+          body: {
+            to: email,
+            subject: data.subject,
+            html: htmlContent,
+            from: 'iwishBag Support <support@iwishbag.com>', // Use your verified domain
+          },
+        });
+
+        if (error) {
+          console.error(`❌ Failed to send email to ${email}:`, error);
+          throw new Error(`Failed to send email to ${email}: ${error.message}`);
+        }
+
+        console.log(`✅ Email sent successfully to ${email}`);
+      });
+
+      await Promise.all(emailPromises);
+      console.log('✅ All email notifications sent successfully');
     } catch (error) {
       console.error('❌ Failed to send email notification:', error);
       throw error;
@@ -461,19 +478,121 @@ export class NotificationService {
     text: string;
   }): Promise<void> {
     try {
-      // For Phase 1, we'll use the existing email system
-      // TODO: Implement direct Resend API integration in Phase 3
-      console.log('📧 Ticket email notification prepared:', {
+      console.log('📧 Sending ticket email via Resend API:', {
         to: data.to,
         subject: data.subject,
       });
 
-      // This will be replaced with direct Resend API calls in Phase 3
-      // For now, we simulate sending the email
+      const { error } = await supabase.functions.invoke('send-email', {
+        body: {
+          to: data.to,
+          subject: data.subject,
+          html: data.html,
+          from: 'iwishBag Support <support@iwishbag.com>', // Use your verified domain
+        },
+      });
+
+      if (error) {
+        console.error('❌ Failed to send ticket email:', error);
+        throw new Error(`Failed to send ticket email: ${error.message}`);
+      }
+
+      console.log('✅ Ticket email sent successfully via Resend API');
     } catch (error) {
       console.error('❌ Failed to send ticket email:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate HTML email content from template
+   */
+  private generateEmailTemplate(templateName: string, variables: Record<string, string>): string {
+    const baseStyle = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
+        <div style="background: linear-gradient(135deg, #0f766e 0%, #06b6d4 100%); color: white; padding: 30px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px;">iwishBag</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">Global Shopping Made Simple</p>
+        </div>
+        <div style="padding: 30px; background: white;">
+          {{CONTENT}}
+        </div>
+        <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
+          <p>iwishBag Support Team | support@iwishbag.com</p>
+          <p>Need help? Visit our <a href="https://iwishbag.com/support" style="color: #0f766e;">Support Center</a></p>
+        </div>
+      </div>
+    `;
+
+    let content = '';
+    
+    switch (templateName) {
+      case 'New Customer Message Notification':
+        content = `
+          <h2 style="color: #333; margin-top: 0;">New Customer Message</h2>
+          <div style="background: #fff3e0; border: 1px solid #ff9800; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Quote:</strong> #${variables.quote_id}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Customer:</strong> ${variables.customer_name}</p>
+            <p style="margin: 5px 0 0 0;"><strong>From:</strong> ${variables.sender_email}</p>
+          </div>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold;">Message:</p>
+            <p style="margin: 10px 0 0 0;">${variables.message_content}</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${variables.quote_url}" style="background: #0f766e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">View Quote & Reply</a>
+          </div>
+        `;
+        break;
+
+      case 'Quote Discussion New Message':
+        content = `
+          <h2 style="color: #333; margin-top: 0;">Hello ${variables.customer_name},</h2>
+          <p>You have a new message about your quote #${variables.quote_id}.</p>
+          <div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; font-weight: bold;">From: ${variables.sender_name}</p>
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 10px;">
+              <p style="margin: 0;">${variables.message_content}</p>
+            </div>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${variables.quote_url}" style="background: #2196f3; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">View Full Conversation</a>
+          </div>
+          <p>Thank you for choosing iwishBag!</p>
+        `;
+        break;
+
+      case 'Payment Proof Upload Notification':
+        content = `
+          <h2 style="color: #333; margin-top: 0;">Payment Proof Uploaded</h2>
+          <div style="background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0;"><strong>Quote:</strong> #${variables.quote_id}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Customer:</strong> ${variables.customer_name}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Status:</strong> Requires verification</p>
+          </div>
+          <div style="background: #fff3e0; border: 1px solid #ff9800; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 0; color: #f57c00;">⚡ <strong>Action Required:</strong></p>
+            <p style="margin: 5px 0 0 0; color: #f57c00;">Please verify the payment proof and update the quote status.</p>
+          </div>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${variables.quote_url}" style="background: #4caf50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Payment</a>
+          </div>
+        `;
+        break;
+
+      default:
+        content = `
+          <h2 style="color: #333; margin-top: 0;">iwishBag Notification</h2>
+          <p>You have a new notification from iwishBag.</p>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            ${Object.entries(variables).map(([key, value]) => 
+              `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`
+            ).join('')}
+          </div>
+        `;
+    }
+
+    return baseStyle.replace('{{CONTENT}}', content);
   }
 
   /**

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, CheckCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DueAmountInfo } from '@/lib/paymentUtils';
-import { PaymentLinkGenerator } from './PaymentLinkGenerator';
+import { EnhancedPaymentLinkGenerator } from './EnhancedPaymentLinkGenerator';
 
 interface QuoteWithCustomerInfo {
   id?: string;
@@ -135,15 +135,22 @@ export function DueAmountNotification({
           {/* Actions */}
           {showActions && dueInfo.hasDueAmount && (
             <div className="flex items-center gap-2 mt-3">
-              <PaymentLinkGenerator
+              <EnhancedPaymentLinkGenerator
                 quoteId={quote?.id || ''}
                 amount={dueInfo.dueAmount}
                 currency={currency}
-                customerInfo={{
-                  name: quote?.shipping_address?.name || quote?.user?.full_name || '',
-                  email: quote?.shipping_address?.email || quote?.user?.email || '',
-                  phone: quote?.shipping_address?.phone || quote?.user?.phone || '',
-                }}
+                customerInfo={(() => {
+                  // Unified customer info with proper fallbacks and guest detection
+                  const name = quote?.shipping_address?.name || quote?.user?.full_name || '';
+                  const email = quote?.shipping_address?.email || quote?.user?.email || '';
+                  const phone = quote?.shipping_address?.phone || quote?.user?.phone || '';
+                  
+                  return {
+                    name: name || (email ? 'Guest Customer' : 'Customer'),
+                    email,
+                    phone,
+                  };
+                })()}
                 onLinkCreated={handleLinkCreated}
               />
 

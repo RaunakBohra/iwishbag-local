@@ -392,29 +392,112 @@ export const useQuoteManagement = ({
     }
   };
 
-  // Placeholder bulk action functions - TODO: Implement these
+  // Bulk action functions implementation
   const handleBulkReject = () => {
-    console.log('Bulk reject action - not implemented');
+    console.log('🚫 Initiating bulk reject for:', selectedQuoteIds.length, 'quotes');
+    setIsRejectDialogOpen(true);
   };
 
   const handleBulkApprove = () => {
-    console.log('Bulk approve action - not implemented');
+    console.log('✅ Initiating bulk approve for:', selectedQuoteIds.length, 'quotes');
+    
+    // Find approved status from configuration
+    const approvedStatusConfig = quoteStatuses.find(
+      (s) => s.name === 'approved' || s.id === 'approved',
+    );
+    const approvedStatus = approvedStatusConfig?.name || 'approved';
+    
+    updateMultipleQuotesStatusMutation.mutate({
+      ids: selectedQuoteIds,
+      status: approvedStatus,
+    });
   };
 
   const handleBulkExport = () => {
-    console.log('Bulk export action - not implemented');
+    console.log('📊 Initiating bulk export for:', selectedQuoteIds.length, 'quotes');
+    
+    if (selectedQuoteIds.length === 0) {
+      toast({
+        title: 'No quotes selected',
+        description: 'Please select quotes to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Filter quotes to only export selected ones
+    const selectedQuotes = quotes?.filter(quote => selectedQuoteIds.includes(quote.id)) || [];
+    
+    const csvContent = [
+      ['Quote ID', 'Product', 'Email', 'Status', 'Price', 'Total', 'Created', 'Customer', 'Internal ID'].join(','),
+      ...selectedQuotes.map((quote) =>
+        [
+          quote.display_id || '',
+          (quote.product_name || '').replace(/,/g, ';'), // Replace commas to avoid CSV issues
+          quote.email || '',
+          quote.status || '',
+          quote.item_price || '',
+          quote.final_total_usd || '',
+          new Date(quote.created_at).toLocaleDateString(),
+          (quote.customer_name || '').replace(/,/g, ';'),
+          quote.id,
+        ].join(','),
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `selected-quotes-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast({
+      title: 'Export completed',
+      description: `${selectedQuotes.length} quotes exported successfully`,
+    });
   };
 
   const handleBulkEmail = () => {
-    console.log('Bulk email action - not implemented');
+    console.log('📧 Initiating bulk email for:', selectedQuoteIds.length, 'quotes');
+    
+    // This would typically open a bulk email modal
+    // For now, show a toast with quote count and email addresses
+    const selectedQuotes = quotes?.filter(quote => selectedQuoteIds.includes(quote.id)) || [];
+    const emailAddresses = selectedQuotes.map(quote => quote.email).filter(Boolean);
+    
+    toast({
+      title: 'Bulk Email',
+      description: `Ready to send email to ${emailAddresses.length} customers. Email modal integration needed.`,
+    });
+    
+    // TODO: Open bulk email modal with selectedQuoteIds
+    // This would integrate with SendEmailModal component
   };
 
   const handleBulkDuplicate = () => {
-    console.log('Bulk duplicate action - not implemented');
+    console.log('📋 Initiating bulk duplicate for:', selectedQuoteIds.length, 'quotes');
+    
+    toast({
+      title: 'Bulk Duplicate',
+      description: `Feature coming soon. Would duplicate ${selectedQuoteIds.length} quotes.`,
+    });
+    
+    // TODO: Implement bulk duplication logic
+    // This would create new quotes based on selected ones
   };
 
   const handleBulkPriority = () => {
-    console.log('Bulk priority action - not implemented');
+    console.log('⭐ Initiating bulk priority change for:', selectedQuoteIds.length, 'quotes');
+    
+    toast({
+      title: 'Bulk Priority Change',
+      description: `Feature coming soon. Would update priority for ${selectedQuoteIds.length} quotes.`,
+    });
+    
+    // TODO: Implement priority change modal/logic
+    // This would allow setting high/medium/low priority for selected quotes
   };
 
 

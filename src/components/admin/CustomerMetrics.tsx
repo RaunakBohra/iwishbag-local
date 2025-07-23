@@ -10,8 +10,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { H2, Body, BodySmall } from '@/components/ui/typography';
-import { CustomerAnalytics } from './CustomerTable';
-import { Customer } from './CustomerTable';
+import { CustomerAnalytics, Customer } from '@/types/customer';
 
 interface CustomerMetricsProps {
   customers: Customer[];

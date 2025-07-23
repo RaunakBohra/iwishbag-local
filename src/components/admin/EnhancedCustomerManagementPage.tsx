@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomerManagement } from '@/hooks/useCustomerManagement';
+import { useCustomerManagementFixed as useCustomerManagement } from '@/hooks/useCustomerManagementFixed';
 import { CompactCustomerMetrics } from './CompactCustomerMetrics';
 import { WorldClassCustomerTable } from './WorldClassCustomerTable';
 import { AddCustomerModal } from './modals/AddCustomerModal';

@@ -1,0 +1,166 @@
+{
+  "name": "iwishBag - Global Shopping Assistant",
+  "short_name": "iwishBag",
+  "description": "Shop internationally from Amazon, Flipkart, eBay, Alibaba with iwishBag. Get quotes, track orders, and save on global shipping.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FF6B35",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "dir": "ltr",
+  "categories": ["shopping", "business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-quote-list.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Quote management on mobile"
+    },
+    {
+      "src": "/screenshots/desktop-dashboard.png", 
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Admin dashboard on desktop"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Quote",
+      "short_name": "Quote",
+      "description": "Create a new quote request",
+      "url": "/quote/new",
+      "icons": [
+        {
+          "src": "/icons/shortcut-quote.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My Quotes",
+      "short_name": "Quotes", 
+      "description": "View your quote history",
+      "url": "/dashboard/quotes",
+      "icons": [
+        {
+          "src": "/icons/shortcut-history.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Track Order",
+      "short_name": "Track",
+      "description": "Track your order status",
+      "url": "/track",
+      "icons": [
+        {
+          "src": "/icons/shortcut-track.png",
+          "sizes": "96x96", 
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Support",
+      "short_name": "Help",
+      "description": "Contact customer support",
+      "url": "/support",
+      "icons": [
+        {
+          "src": "/icons/shortcut-support.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/quote/new",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "name",
+      "text": "description", 
+      "url": "product_url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+iwishbag",
+      "url": "/quote/new?product_url=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.iwishbag.app",
+      "id": "com.iwishbag.app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/iwishbag/id123456789"
+    }
+  ]
+}

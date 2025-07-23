@@ -137,7 +137,7 @@ serve(async (req) => {
     }
     // Get user profile for subscriber info
     const { data: profile } = await supabaseAdmin
-      .from('profiles')
+      .from('profiles_with_phone')
       .select('full_name, email, phone, country')
       .eq('id', user.id)
       .single();

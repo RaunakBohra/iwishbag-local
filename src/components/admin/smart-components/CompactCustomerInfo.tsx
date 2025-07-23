@@ -5,6 +5,7 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
+import { getCustomerDisplayData, getCustomerTypeLabel } from '@/lib/customerDisplayUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -116,7 +117,11 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   });
 
   // Fetch total message count for this quote
-  const { data: totalCount, isLoading: totalCountLoading, isError: totalCountError } = useQuery({
+  const {
+    data: totalCount,
+    isLoading: totalCountLoading,
+    isError: totalCountError,
+  } = useQuery({
     queryKey: ['total-messages', quote.id],
     queryFn: async () => {
       console.log('🔄 [DEBUG] React Query calling getTotalMessageCount for quote:', quote.id);
@@ -155,7 +160,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           // Invalidate both message count queries to refresh the data
           queryClient.invalidateQueries({ queryKey: ['unread-messages', quote.id] });
           queryClient.invalidateQueries({ queryKey: ['total-messages', quote.id] });
-        }
+        },
       )
       .subscribe();
 
@@ -355,66 +360,23 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     return null;
   };
 
-  // Helper to get customer name from multiple possible sources
-  const getCustomerName = () => {
-    // First check stored quote data
-    const storedName = customerInfo?.name;
+  // Use unified customer display system
+  const customerDisplayData = getCustomerDisplayData(quote, null);
+  const customerTypeLabel = getCustomerTypeLabel(customerDisplayData.type);
 
-    if (storedName) return storedName;
-
-    // If quote belongs to current user and no stored name, use auth context
-    if (user && quote.user_id === user.id) {
-      const authName = user.user_metadata?.name || user.user_metadata?.full_name;
-      if (authName) return authName;
-
-      // Fallback to email prefix for OAuth users
-      if (user.email) return user.email.split('@')[0];
-    }
-
-    return 'Anonymous Customer';
-  };
+  // Helper functions using unified system
+  const getCustomerName = () => customerDisplayData.name;
+  const getCustomerEmail = () => customerDisplayData.email || 'No email provided';
+  const getCustomerPhone = () => customerDisplayData.phone || 'No phone provided';
 
   const getCustomerInitials = () => {
-    // Use the enhanced name getter that includes auth context fallback
-    const name = getCustomerName();
+    const name = customerDisplayData.name;
     return name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  // Helper to get customer email from multiple possible sources
-  const getCustomerEmail = () => {
-    // First check stored quote data
-    const storedEmail = customerInfo?.email;
-
-    if (storedEmail) return storedEmail;
-
-    // If quote belongs to current user, use auth context
-    if (user && quote.user_id === user.id && user.email) {
-      return user.email;
-    }
-
-    return 'No email provided';
-  };
-
-  // Helper to get customer phone from multiple possible sources
-  const getCustomerPhone = () => {
-    // First check stored quote data
-    const storedPhone = customerInfo?.phone;
-
-    if (storedPhone) return storedPhone;
-
-    // If quote belongs to current user, use auth context
-    if (user && quote.user_id === user.id) {
-      // Check both direct phone field and user_metadata (auth.users.phone is primary)
-      const authPhone = user.phone || user.user_metadata?.phone || user.user_metadata?.phone_number;
-      if (authPhone) return authPhone;
-    }
-
-    return 'No phone provided';
   };
 
   // Debug message counts specifically
@@ -432,7 +394,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       showRedBadge: unreadCount && unreadCount > 0,
       showBlueDot: (!unreadCount || unreadCount === 0) && totalCount && totalCount > 0,
       showTotalCount: totalCount && totalCount > 0,
-    }
+    },
   });
 
   // Debug logging to understand the data structure
@@ -488,11 +450,19 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               {getCustomerInitials()}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <div className="font-medium text-gray-900">{getCustomerName()}</div>
-            <div className="text-xs text-gray-500">
-              {quote.quote_source || 'Unknown'} • {isAnonymous ? 'Guest' : 'Registered'}
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <div className="font-medium text-gray-900">{getCustomerName()}</div>
+              {customerDisplayData.isGuest && (
+                <Badge variant="secondary" className="text-xs">
+                  Guest
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">
+                {customerTypeLabel}
+              </Badge>
             </div>
+            <div className="text-xs text-gray-500">{quote.quote_source || 'Unknown'}</div>
           </div>
         </div>
         <div className="flex items-center space-x-1">
@@ -510,25 +480,25 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
             title="Open messages"
           >
             <MessageSquare className="w-4 h-4" />
-            
+
             {/* Red badge for unread messages (urgent, action required) */}
-            {unreadCount && unreadCount > 0 && (
+            {unreadCount > 0 && (
               <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-4 w-4 p-0 flex items-center justify-center">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
             )}
-            
+
             {/* Blue dot indicator for conversations with messages (when no unread) */}
-            {(!unreadCount || unreadCount === 0) && totalCount && totalCount > 0 && (
-              <div 
+            {(!unreadCount || unreadCount === 0) && totalCount > 0 && (
+              <div
                 className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"
                 title={`${totalCount} message${totalCount > 1 ? 's' : ''} in conversation`}
               />
             )}
-            
+
             {/* Subtle total count indicator at bottom-right when messages exist */}
-            {totalCount && totalCount > 0 && (
-              <div 
+            {totalCount > 0 && (
+              <div
                 className="absolute -bottom-0.5 -right-0.5 text-xs text-gray-400 bg-white rounded px-1 leading-none"
                 style={{ fontSize: '10px' }}
                 title={`Total: ${totalCount} message${totalCount > 1 ? 's' : ''}`}
@@ -537,14 +507,14 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
               </div>
             )}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-8 w-8 p-0"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              
+
               // Always open customer management page - it has good search functionality
               const customerEmail = getCustomerEmail();
               if (customerEmail && customerEmail !== 'No email provided') {
@@ -655,13 +625,13 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           <TabsTrigger value="messages" className="text-xs">
             Messages
             {/* Red badge for unread messages */}
-            {unreadCount && unreadCount > 0 && (
+            {unreadCount > 0 && (
               <Badge className="ml-1 bg-red-500 text-white text-xs h-3 px-1">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
             )}
             {/* Gray total count indicator */}
-            {totalCount && totalCount > 0 && (
+            {totalCount > 0 && (
               <span className="ml-1 text-xs text-gray-500">
                 ({totalCount > 99 ? '99+' : totalCount})
               </span>

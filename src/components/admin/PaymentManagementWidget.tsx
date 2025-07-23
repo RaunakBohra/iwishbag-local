@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -547,37 +548,38 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
             </div>
 
             {/* Customer Information */}
-            {(paymentDetails.customer_name || transactionData.customer_info) && (
-              <div className="space-y-2">
-                <h4 className="font-medium flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Customer Information
-                </h4>
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                  {(paymentDetails.customer_name || transactionData.customer_info?.name) && (
+            {(() => {
+              const customerData = getCustomerDisplayData(quote);
+              return customerData.name !== 'Unknown Customer' && (
+                <div className="space-y-2">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Customer Information
+                    {customerData.isGuest && (
+                      <Badge variant="secondary" className="text-xs">Guest</Badge>
+                    )}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-sm text-muted-foreground">Name</p>
-                      <p className="text-sm">
-                        {paymentDetails.customer_name || transactionData.customer_info?.name}
-                      </p>
+                      <p className="text-sm">{customerData.name}</p>
                     </div>
-                  )}
-                  {(paymentDetails.customer_email || transactionData.customer_info?.email) && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="text-sm">
-                        {paymentDetails.customer_email || transactionData.customer_info?.email}
-                      </p>
-                    </div>
-                  )}
-                  {(paymentDetails.customer_phone || transactionData.customer_info?.phone) && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Phone</p>
-                      <p className="text-sm">
-                        {paymentDetails.customer_phone || transactionData.customer_info?.phone}
-                      </p>
-                    </div>
-                  )}
+                    {customerData.email && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="text-sm">{customerData.email}</p>
+                      </div>
+                    )}
+                    {customerData.phone && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone</p>
+                        <p className="text-sm">{customerData.phone}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
                 </div>
               </div>
             )}

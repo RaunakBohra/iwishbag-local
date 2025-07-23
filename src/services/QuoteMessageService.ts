@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fileUploadService } from './FileUploadService';
 import { notificationService, Message } from './NotificationService';
 import { UnifiedQuote } from '@/types/unified-quote';
+import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
 
 export interface SendMessageRequest {
   quoteId: string;
@@ -370,11 +371,12 @@ export class QuoteMessageService {
 
     try {
       if (quote) {
-        // Get customer info
+        // Get customer info using unified display logic
+        const customerData = getCustomerDisplayData(quote);
         participants.customer = {
           id: quote.user_id || '',
-          name: quote.customer_data?.info?.name || quote.customer_name || 'Customer',
-          email: quote.customer_data?.info?.email || quote.email || 'No email provided',
+          name: customerData.name,
+          email: customerData.email || 'No email provided',
         };
 
         // Get admin users

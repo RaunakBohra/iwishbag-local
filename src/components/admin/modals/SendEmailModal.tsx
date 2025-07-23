@@ -29,7 +29,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useMutation } from '@tanstack/react-query';
 import { Mail, Send, Users, FileText, File, AlertCircle } from 'lucide-react';
-import { Customer } from '../CustomerTable';
+import { Customer } from '@/types/customer';
 
 const sendEmailSchema = z.object({
   subject: z.string().min(1, 'Subject is required'),

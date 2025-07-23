@@ -147,7 +147,6 @@ export const QuoteManagementPage = () => {
             onFiltersChange={updateFilters}
             onSearch={handleSearch}
             onReset={handleResetFilters}
-            onCreateQuote={() => setIsCreateModalOpen(true)}
             availableCountries={availableCountries}
             isLoading={true}
           />

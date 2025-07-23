@@ -1,5 +1,6 @@
 // src/pages/Checkout.tsx
 import React, { useState, useEffect, useMemo } from 'react';
+import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -2040,10 +2041,22 @@ export default function Checkout() {
                           <div className="flex items-center gap-3">
                             <CheckCircle className="h-5 w-5 text-green-600" />
                             <div>
-                              <p className="font-medium text-green-900">
-                                {guestQuote.customer_name || 'Guest Customer'}
-                              </p>
-                              <p className="text-sm text-green-700">{guestQuote.email}</p>
+                              {(() => {
+                                const customerData = getCustomerDisplayData(guestQuote);
+                                return (
+                                  <>
+                                    <p className="font-medium text-green-900">
+                                      {customerData.name}
+                                      {customerData.isGuest && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">Guest</Badge>
+                                      )}
+                                    </p>
+                                    {customerData.email && (
+                                      <p className="text-sm text-green-700">{customerData.email}</p>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </div>
                           <Button

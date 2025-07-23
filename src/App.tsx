@@ -132,6 +132,7 @@ const TestEmail = React.lazy(() => import('@/pages/TestEmail'));
 const PaymentManagementPageNew = React.lazy(() => import('@/pages/admin/PaymentManagementPage'));
 const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
 const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
+const DuplicateComponentsPreview = React.lazy(() => import('@/pages/admin/DuplicateComponentsPreview'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -199,6 +200,7 @@ const router = createBrowserRouter([
           { path: 'status-management', element: <StatusManagementPage /> },
           { path: 'payment-proofs', element: <PaymentManagementPageNew /> },
           { path: 'debug/status', element: <StatusDebug /> },
+          { path: 'cleanup/duplicates', element: <DuplicateComponentsPreview /> },
           { path: 'debug/payu', element: <PayUDebugPage /> },
           { path: 'ml/weight-estimator', element: <MLWeightEstimatorTester /> },
           { path: 'blog', element: <BlogManagementPage /> },

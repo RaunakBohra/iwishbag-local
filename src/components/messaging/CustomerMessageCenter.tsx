@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare } from 'lucide-react';
 import { NewMessageForm } from './NewMessageForm';
-import { MessageList } from './MessageList';
+import { MessageListEnhanced as MessageList } from './MessageListEnhanced';
 import {
   Accordion,
   AccordionContent,

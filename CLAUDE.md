@@ -722,6 +722,99 @@ CREATE POLICY "Users can access own quotes" ON quotes
 - **Minimize API Calls**: Focus on proper cache invalidation rather than making extra database queries
 - **Component Communication**: Use React Query's cache as the communication layer between components displaying the same data
 
+## Customer Display Standards - CRITICAL DOCUMENTATION
+**NEVER create custom customer display logic without using this section**
+
+### Unified Customer Display System (As of July 2025)
+The customer display system has been **centralized and standardized** using `/src/lib/customerDisplayUtils.ts` to eliminate inconsistencies across the platform.
+
+#### **ALWAYS Use customerDisplayUtils.ts**
+```typescript
+import { 
+  getCustomerDisplayData, 
+  getCustomerDisplayName,
+  getCustomerDisplayEmail,
+  shouldShowEmailSeparately,
+  getCustomerType,
+  getCustomerTypeLabel 
+} from '@/lib/customerDisplayUtils';
+
+// Standard pattern for ALL customer displays
+const customerData = getCustomerDisplayData(quote, customerProfile);
+const displayName = customerData.name;
+const shouldShowEmail = shouldShowEmailSeparately(quote, displayName, customerData.email);
+```
+
+#### **Customer Type Handling**
+- **Registered Users**: Show actual name from profiles + email separately
+- **Guest Users**: Show "Guest Customer" + guest badge + email  
+- **Admin-Created Orders**: Show manually entered customer name + email
+- **OAuth Users**: Show profile name from auth metadata + email
+
+#### **Proper Display Priority Chain**
+1. **Primary**: `quote.customer_data.info.name` (works for all scenarios)
+2. **Profiles**: `customerProfile?.full_name` (registered users)
+3. **Legacy**: `quote.customer_name` (admin-created orders)
+4. **Email Prefix**: For registered users without full name (e.g., "John" from "john@example.com")
+5. **Guest Label**: "Guest Customer" for anonymous users
+6. **Last Resort**: "Unknown Customer" (rare)
+
+#### **Email Display Logic**
+- Use `shouldShowEmailSeparately()` to determine when to show email
+- **Show email separately** when display name is a real name
+- **Don't show email separately** when email is used as the display name
+- **Always show email** for "Guest Customer" and "Unknown Customer"
+
+#### **Customer Type Indicators**
+```typescript
+// Add customer type badges in admin interfaces
+{customerData.isGuest && (
+  <Badge variant="secondary" className="text-xs">Guest</Badge>
+)}
+
+// Customer type labels for detailed views
+const typeLabel = getCustomerTypeLabel(customerData.type);
+// Returns: "Registered User", "Guest User", "Admin Entry", "Unknown"
+```
+
+### **Components Already Using Standards (✅ Optimized)**
+- `CompactQuoteListItem.tsx` - Admin quote list items
+- `UnifiedPaymentModal.tsx` - Payment link customer info
+- `PaymentManagementWidget.tsx` - Transaction customer details
+- `QuoteMessageService.ts` - Customer messaging
+- `Checkout.tsx` - Guest checkout displays
+- `DueAmountNotification.tsx` - Payment notifications
+
+### **DO NOT:**
+- ❌ Create custom customer display logic in new components
+- ❌ Use hardcoded fallback chains like `name || email || 'Customer'`
+- ❌ Display email as customer name
+- ❌ Skip customer type indicators in admin interfaces
+- ❌ Use inconsistent "Guest" vs "Unknown" labeling
+
+### **ALWAYS:**
+- ✅ Import and use `customerDisplayUtils.ts` functions
+- ✅ Test all customer scenarios (registered, guest, admin-created)
+- ✅ Add customer type badges in admin interfaces
+- ✅ Use `shouldShowEmailSeparately()` for email display decisions
+- ✅ Follow the established display priority chain
+- ✅ Maintain consistency with existing optimized components
+
+### **Quick Integration Pattern**
+```typescript
+// Replace ANY custom customer display logic with:
+const customerData = getCustomerDisplayData(quote, customerProfile);
+
+// Then use:
+customerData.name      // Proper customer name
+customerData.email     // Customer email (or null)
+customerData.phone     // Customer phone (or null) 
+customerData.type      // 'registered' | 'guest' | 'admin_created' | 'unknown'
+customerData.isGuest   // boolean for badge display
+```
+
+This system ensures **professional, consistent customer display** across all iwishBag touchpoints and eliminates customer information inconsistencies.
+
 ## Development Scripts & Commands
 
 ### Essential Development Commands

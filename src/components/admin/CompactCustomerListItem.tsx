@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Customer, CustomerAnalytics } from './CustomerTable';
+import { Customer, CustomerAnalytics } from '@/types/customer';
 import { CustomerCodToggle } from './CustomerCodToggle';
 import { CustomerEmailDialog } from './CustomerEmailDialog';
 import {

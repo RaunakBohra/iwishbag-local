@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Send, User, AlertCircle, FileText, Ticket } from 'lucide-react';
-import { Customer } from '../CustomerTable';
+import { Customer } from '@/types/customer';
 
 const messageSchema = z.object({
   type: z.enum(['note', 'message', 'ticket']),

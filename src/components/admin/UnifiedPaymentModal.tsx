@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
 import {
   Dialog,
   DialogContent,
@@ -1149,20 +1150,14 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           amount={paymentSummary.remaining}
                           currency="USD"
                           quote={quote}
-                          customerInfo={{
-                            name:
-                              quote.shipping_address?.fullName ||
-                              quote.shipping_address?.name ||
-                              quote.profiles?.full_name ||
-                              quote.customer_name ||
-                              '',
-                            email:
-                              quote.shipping_address?.email ||
-                              quote.profiles?.email ||
-                              quote.email ||
-                              '',
-                            phone: quote.shipping_address?.phone || quote.customer_phone || '',
-                          }}
+                          customerInfo={(() => {
+                            const customerData = getCustomerDisplayData(quote, quote.profiles);
+                            return {
+                              name: customerData.name,
+                              email: customerData.email || '',
+                              phone: customerData.phone || quote.customer_phone || '',
+                            };
+                          })()}
                           onLinkCreated={(link) => {
                             toast({
                               title: 'Enhanced Payment Link Created',

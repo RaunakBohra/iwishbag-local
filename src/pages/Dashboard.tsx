@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useUserTickets } from '@/hooks/useTickets';
+import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
@@ -28,6 +29,7 @@ import { cn } from '@/lib/design-system';
 const Dashboard = () => {
   const { user, quotes, orders, isLoading, isError } = useDashboardState();
   const { data: tickets = [] } = useUserTickets(user?.id);
+  const { unreadCount: unreadMessages, isLoading: isLoadingMessages } = useUnreadMessagesCount();
 
   // Metrics
   const activeQuotes =
@@ -40,7 +42,6 @@ const Dashboard = () => {
   const deliveredOrders = orders?.filter((o) => o.status === 'completed').length || 0;
   const openTickets =
     tickets?.filter((t) => t.status === 'open' || t.status === 'in_progress').length || 0;
-  const unreadMessages = 0; // TODO: Connect to real unread messages count
 
   // Recent activity (quotes and orders, most recent 5)
   const recentActivity = [

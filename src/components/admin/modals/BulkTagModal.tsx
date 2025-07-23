@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Tag, Plus, X, Users, Hash } from 'lucide-react';
-import { Customer } from '../CustomerTable';
+import { Customer } from '@/types/customer';
 
 interface BulkTagModalProps {
   open: boolean;

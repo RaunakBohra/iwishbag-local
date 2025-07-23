@@ -4,27 +4,18 @@
  * Inspired by Shopify, Amazon Seller Central, and modern SaaS platforms
  */
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Search, 
-  Filter, 
-  RotateCcw, 
-  ChevronDown,
-  MapPin,
-  Plus,
-  Download
-} from 'lucide-react';
+import { Search, RotateCcw, ChevronDown, MapPin, Download } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
 
 type QuoteWithItems = Tables<'quotes'> & {
@@ -50,7 +41,6 @@ interface UnifiedAdminToolbarProps {
   onFiltersChange: (filters: SearchFilters) => void;
   onSearch: () => void;
   onReset: () => void;
-  onCreateQuote?: () => void;
   onExport?: () => void;
   availableCountries?: CountryOption[];
   isLoading?: boolean;
@@ -63,20 +53,19 @@ export const UnifiedAdminToolbar = ({
   onFiltersChange,
   onSearch,
   onReset,
-  onCreateQuote,
   onExport,
   availableCountries = [],
-  isLoading = false,
-  className = ''
+  _isLoading = false,
+  className = '',
 }: UnifiedAdminToolbarProps) => {
-
   // Calculate status counts
   const statusCounts = {
-    pending: quotes.filter(q => q.status === 'pending').length,
-    sent: quotes.filter(q => q.status === 'sent').length, 
-    approved: quotes.filter(q => q.status === 'approved').length,
-    paid: quotes.filter(q => ['paid', 'ordered', 'shipped', 'completed'].includes(q.status)).length,
-    rejected: quotes.filter(q => ['rejected', 'cancelled'].includes(q.status)).length,
+    pending: quotes.filter((q) => q.status === 'pending').length,
+    sent: quotes.filter((q) => q.status === 'sent').length,
+    approved: quotes.filter((q) => q.status === 'approved').length,
+    paid: quotes.filter((q) => ['paid', 'ordered', 'shipped', 'completed'].includes(q.status))
+      .length,
+    rejected: quotes.filter((q) => ['rejected', 'cancelled'].includes(q.status)).length,
   };
 
   const totalQuotes = quotes.length;
@@ -88,65 +77,68 @@ export const UnifiedAdminToolbar = ({
 
   const handleCountryToggle = (countryCode: string) => {
     const newCountries = filters.countries.includes(countryCode)
-      ? filters.countries.filter(c => c !== countryCode)
+      ? filters.countries.filter((c) => c !== countryCode)
       : [...filters.countries, countryCode];
     onFiltersChange({ ...filters, countries: newCountries });
   };
 
   const getStatusBadgeColor = (status: string, count: number) => {
     if (count === 0) return 'bg-gray-100 text-gray-400 border-gray-200';
-    
+
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
-      case 'sent': return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200'; 
-      case 'approved': return 'bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200';
-      case 'paid': return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
+      case 'sent':
+        return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200';
+      case 'approved':
+        return 'bg-teal-100 text-teal-800 border-teal-200 hover:bg-teal-200';
+      case 'paid':
+        return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   return (
     <div className={`bg-white border border-gray-200 rounded-lg p-4 mb-6 ${className}`}>
       <div className="flex items-center justify-between gap-4">
-        
         {/* Left: Status Analytics as Inline Badges */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-sm font-medium text-gray-700 mr-2">
-            {totalQuotes} quotes
-          </span>
-          
+          <span className="text-sm font-medium text-gray-700 mr-2">{totalQuotes} quotes</span>
+
           {/* Status Badges - Always Visible */}
-          <Badge 
-            variant="outline" 
+          <Badge
+            variant="outline"
             className={`text-xs font-medium cursor-default ${getStatusBadgeColor('pending', statusCounts.pending)}`}
           >
             Pending {statusCounts.pending}
           </Badge>
-          
-          <Badge 
-            variant="outline" 
+
+          <Badge
+            variant="outline"
             className={`text-xs font-medium cursor-default ${getStatusBadgeColor('sent', statusCounts.sent)}`}
           >
             Sent {statusCounts.sent}
           </Badge>
-          
-          <Badge 
-            variant="outline" 
+
+          <Badge
+            variant="outline"
             className={`text-xs font-medium cursor-default ${getStatusBadgeColor('approved', statusCounts.approved)}`}
           >
             Approved {statusCounts.approved}
           </Badge>
-          
-          <Badge 
-            variant="outline" 
+
+          <Badge
+            variant="outline"
             className={`text-xs font-medium cursor-default ${getStatusBadgeColor('paid', statusCounts.paid)}`}
           >
             Completed {statusCounts.paid}
           </Badge>
-          
-          <Badge 
-            variant="outline" 
+
+          <Badge
+            variant="outline"
             className={`text-xs font-medium cursor-default ${getStatusBadgeColor('rejected', statusCounts.rejected)}`}
           >
             Rejected {statusCounts.rejected}
@@ -173,7 +165,6 @@ export const UnifiedAdminToolbar = ({
 
         {/* Right: Filters & Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          
           {/* Country Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -212,8 +203,8 @@ export const UnifiedAdminToolbar = ({
 
           {/* Reset Filters */}
           {hasActiveFilters && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={onReset}
               className="flex items-center gap-2"
@@ -225,25 +216,14 @@ export const UnifiedAdminToolbar = ({
 
           {/* Action Buttons */}
           {onExport && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={onExport}
               className="flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
               Export
-            </Button>
-          )}
-
-          {onCreateQuote && (
-            <Button 
-              size="sm"
-              onClick={onCreateQuote}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Quote
             </Button>
           )}
         </div>
