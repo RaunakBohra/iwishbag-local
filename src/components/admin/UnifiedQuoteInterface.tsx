@@ -740,6 +740,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       currentFormValues.customs_percentage,
       currentFormValues.handling_charge,
       currentFormValues.insurance_amount,
+      currentFormValues.origin_country,        // ✅ ADD: Country changes affect shipping routes
+      currentFormValues.destination_country,   // ✅ ADD: Country changes affect shipping routes
       itemsWeight, // Include calculated weight as dependency
       // Removed Date.now() to prevent infinite calculation loops
     ]);
@@ -751,11 +753,38 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       console.log('🔄 [FORM-MONITOR] Form values changed, scheduling calculation:', {
         itemsCount: formValues.items.length,
         totalWeight: formValues.items.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 0), 0),
-        quoteId: quote.id
+        quoteId: quote.id,
+        origin: formValues.origin_country,
+        destination: formValues.destination_country
       });
       scheduleFormCalculation();
     }
-  }, [formValues.items, scheduleFormCalculation, quote?.id]);
+  }, [
+    formValues.items, 
+    formValues.origin_country,        // ✅ ADD: Country changes trigger shipping recalculation
+    formValues.destination_country,   // ✅ ADD: Country changes trigger shipping recalculation
+    scheduleFormCalculation, 
+    quote?.id
+  ]);
+
+  // Dedicated country change monitor for immediate shipping recalculation
+  React.useEffect(() => {
+    if (quote?.id && formValues.origin_country && formValues.destination_country) {
+      console.log('🌍 [COUNTRY-MONITOR] Country changed, triggering immediate shipping recalculation:', {
+        origin: formValues.origin_country,
+        destination: formValues.destination_country,
+        quoteId: quote.id
+      });
+      
+      // Trigger immediate calculation when countries change (affects shipping routes)
+      scheduleFormCalculation();
+    }
+  }, [
+    formValues.origin_country,
+    formValues.destination_country,
+    quote?.id,
+    scheduleFormCalculation
+  ]);
 
   // Smart weight estimation state
   const [weightEstimations, setWeightEstimations] = useState<{ [key: string]: any }>({});
