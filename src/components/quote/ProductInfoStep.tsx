@@ -48,6 +48,14 @@ import {
   FileText,
   MapPin,
   ArrowRight,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  File,
+  FileImage,
+  FileSpreadsheet,
+  Image,
+  Eye,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
@@ -75,6 +83,7 @@ export default function ProductInfoStep({
   const [errors, setErrors] = useState({});
   const [countryValidationError, setCountryValidationError] = useState('');
   const [destinationCountryError, setDestinationCountryError] = useState('');
+  const [uploadStates, setUploadStates] = useState({}); // Track upload states for each product
 
   // Smart default country selection (no external API calls to avoid CORS/rate limit issues)
   useEffect(() => {
@@ -113,6 +122,7 @@ export default function ProductInfoStep({
       name: '',
       url: '',
       file: null,
+      imageUrl: '', // Separate field for uploaded image URL
       quantity: 1,
       price: '',
       weight: '',
@@ -122,7 +132,14 @@ export default function ProductInfoStep({
     setProducts([...products, newProduct]);
   };
 
-  const removeProduct = (idx) => setProducts(products.filter((_, i) => i !== idx));
+  const removeProduct = (idx) => {
+    setProducts(products.filter((_, i) => i !== idx));
+    setUploadStates(prev => {
+      const newStates = { ...prev };
+      delete newStates[idx];
+      return newStates;
+    });
+  };
 
   const updateProduct = (index, field, value) => {
     const newProducts = [...products];
@@ -140,24 +157,193 @@ export default function ProductInfoStep({
     setProducts(newProducts);
   };
 
+
   const handleFileUpload = async (index, file) => {
     if (!file) return;
 
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `product-images/${fileName}`;
-
-    const { error } = await supabase.storage.from('product-images').upload(filePath, file);
-
-    if (error) {
-      console.error('Error uploading file:', error);
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      setUploadStates(prev => ({
+        ...prev,
+        [index]: { status: 'error', message: 'File size must be less than 10MB' }
+      }));
       return;
     }
 
-    const { data } = supabase.storage.from('product-images').getPublicUrl(filePath);
+    // Validate file type
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain', 'text/csv'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      setUploadStates(prev => ({
+        ...prev,
+        [index]: { status: 'error', message: 'File type not supported. Please upload images, PDFs, or documents.' }
+      }));
+      return;
+    }
 
-    updateProduct(index, 'file', file);
-    updateProduct(index, 'url', data.publicUrl);
+    // Set uploading state
+    setUploadStates(prev => ({
+      ...prev,
+      [index]: { status: 'uploading', message: 'Uploading...' }
+    }));
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error } = await supabase.storage.from('quote-requests').upload(filePath, file);
+
+      if (error) {
+        console.error('Error uploading file:', error);
+        setUploadStates(prev => ({
+          ...prev,
+          [index]: { status: 'error', message: 'Upload failed. Please try again.' }
+        }));
+        return;
+      }
+
+      const { data } = supabase.storage.from('quote-requests').getPublicUrl(filePath);
+
+      // Track the uploaded file in database for cleanup
+      try {
+        const sessionId = localStorage.getItem('anonymous_session_id') || crypto.randomUUID();
+        if (!localStorage.getItem('anonymous_session_id')) {
+          localStorage.setItem('anonymous_session_id', sessionId);
+        }
+
+        const { error: trackError } = await supabase.rpc('track_uploaded_file', {
+          p_file_path: filePath,
+          p_file_name: file.name,
+          p_file_size: file.size,
+          p_file_type: file.type,
+          p_session_id: sessionId
+        });
+
+        if (trackError) {
+          console.warn('Failed to track uploaded file:', trackError);
+          // Continue anyway - tracking is not critical for user experience
+        }
+      } catch (trackError) {
+        console.warn('Error tracking uploaded file:', trackError);
+        // Continue anyway - tracking is not critical for user experience
+      }
+
+      // Update product with file info
+      updateProduct(index, 'file', file);
+      updateProduct(index, 'imageUrl', data.publicUrl);
+
+      // Set success state
+      setUploadStates(prev => ({
+        ...prev,
+        [index]: { status: 'success', message: 'Upload successful' }
+      }));
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadStates(prev => ({
+        ...prev,
+        [index]: { status: 'error', message: 'Upload failed. Please try again.' }
+      }));
+    }
+  };
+
+  const handleDeleteFile = (index) => {
+    updateProduct(index, 'file', null);
+    updateProduct(index, 'imageUrl', '');
+    setUploadStates(prev => {
+      const newStates = { ...prev };
+      delete newStates[index];
+      return newStates;
+    });
+  };
+
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (file) => {
+    if (!file) return File;
+    
+    const type = file.type.toLowerCase();
+    const name = file.name.toLowerCase();
+    
+    // Images
+    if (type.startsWith('image/')) {
+      return Image;
+    }
+    
+    // PDFs
+    if (type === 'application/pdf' || name.endsWith('.pdf')) {
+      return FileText;
+    }
+    
+    // Excel files
+    if (type.includes('spreadsheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      return FileSpreadsheet;
+    }
+    
+    // Word documents
+    if (type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) {
+      return FileText;
+    }
+    
+    // Default
+    return File;
+  };
+
+  const isImageFile = (file) => {
+    return file && file.type.startsWith('image/');
+  };
+
+  const FileChip = ({ file, onDelete, onView, index }) => {
+    const FileIcon = getFileIcon(file);
+    const isImage = file.type.startsWith('image/');
+    
+    return (
+      <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 max-w-xs">
+        <FileIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-green-800 truncate">
+            {file.name}
+          </p>
+          <p className="text-xs text-green-600">
+            {formatFileSize(file.size)}
+          </p>
+        </div>
+        <div className="flex gap-1">
+          {isImage && (
+            <button
+              onClick={onView}
+              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+              title="Preview"
+            >
+              <Eye className="h-3 w-3" />
+            </button>
+          )}
+          <button
+            onClick={onDelete}
+            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded transition-colors"
+            title="Remove"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const validate = () => {
@@ -194,7 +380,7 @@ export default function ProductInfoStep({
         newErrors[`url-${index}`] = 'Please enter a valid URL';
       }
       if (!product.country) {
-        newErrors[`country-${index}`] = 'Purchase country is required';
+        newErrors[`country-${index}`] = 'Purchase country is required for shipping calculations';
       }
       if (!product.quantity || product.quantity < 1) {
         newErrors[`quantity-${index}`] = 'Quantity must be at least 1';
@@ -496,7 +682,7 @@ export default function ProductInfoStep({
 
               <div className="mt-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                  Product URL or Upload Image *
+                  Product URL or Upload File *
                 </label>
                 <div className="flex gap-3">
                   <input
@@ -506,27 +692,82 @@ export default function ProductInfoStep({
                     className="flex-1 border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                     placeholder="Paste product URL (Amazon, eBay, etc.)"
                   />
-                  <label className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
-                    <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="text-xs sm:text-sm font-medium">Upload</span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(index, e.target.files[0])}
-                    />
-                  </label>
+                  
+                  {/* Enhanced Upload Button - Show when no file uploaded */}
+                  {!product.file && uploadStates[index]?.status !== 'uploading' && (
+                    <label className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white border border-teal-600 rounded-lg cursor-pointer hover:bg-teal-700 hover:border-teal-700 transition-all duration-200 shadow-sm">
+                      <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                      <span className="text-xs sm:text-sm font-medium">Upload File</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                        onChange={(e) => handleFileUpload(index, e.target.files[0])}
+                      />
+                    </label>
+                  )}
+
+                  {/* Uploading State */}
+                  {uploadStates[index]?.status === 'uploading' && (
+                    <div className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-50 border border-blue-300 rounded-lg">
+                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin text-blue-600" />
+                      <span className="text-xs sm:text-sm font-medium text-blue-700">Uploading...</span>
+                    </div>
+                  )}
+
+                  {/* File Management Buttons - Show when file uploaded */}
+                  {product.file && uploadStates[index]?.status !== 'uploading' && (
+                    <div className="flex gap-2">
+                      <label className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors" title="Change file">
+                        <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">Change</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                          onChange={(e) => handleFileUpload(index, e.target.files[0])}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteFile(index)}
+                        className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-red-50 border border-red-300 rounded-lg hover:bg-red-100 transition-colors text-red-600"
+                        title="Delete file"
+                      >
+                        <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">Delete</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
+                
+                {/* File Display - Enhanced chip when file is uploaded */}
+                {product.file && (
+                  <div className="mt-2">
+                    <FileChip 
+                      file={product.file}
+                      onDelete={() => handleDeleteFile(index)}
+                      onView={() => window.open(product.imageUrl, '_blank')}
+                      index={index}
+                    />
+                  </div>
+                )}
+                
+                {/* Upload Error State */}
+                {uploadStates[index]?.status === 'error' && (
+                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                      <p className="text-red-600 text-xs sm:text-sm font-medium flex-1">
+                        {uploadStates[index].message}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* URL Validation Error */}
                 {errors[`url-${index}`] && (
                   <p className="text-red-500 text-xs sm:text-sm mt-2">{errors[`url-${index}`]}</p>
-                )}
-                {product.file && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <p className="text-green-600 text-xs sm:text-sm font-medium">
-                      {product.file.name}
-                    </p>
-                  </div>
                 )}
               </div>
 

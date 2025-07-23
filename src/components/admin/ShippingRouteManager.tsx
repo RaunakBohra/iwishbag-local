@@ -94,6 +94,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
     requiresDocumentation: initialData?.requiresDocumentation || false,
     isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
     exchangeRate: initialData?.exchangeRate ?? 1,
+    vatPercentage: initialData?.vatPercentage,
+    customsPercentage: initialData?.customsPercentage,
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -370,6 +372,58 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
                 )}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* VAT & Customs Configuration */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">Tax Configuration</h3>
+        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+          <strong>VAT Hierarchy:</strong> Configure route-specific VAT and customs rates. If left empty, system will fallback to destination country defaults.
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="vatPercentage">VAT Percentage (%)</Label>
+            <Input
+              id="vatPercentage"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={formData.vatPercentage || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  vatPercentage: e.target.value ? parseFloat(e.target.value) : undefined,
+                }))
+              }
+              placeholder="e.g., 13.00 (leave empty for country default)"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Route-specific VAT override for {formData.destinationCountry || 'destination country'}
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="customsPercentage">Customs Percentage (%)</Label>
+            <Input
+              id="customsPercentage"
+              type="number"
+              step="0.01"
+              min="0"
+              max="100"
+              value={formData.customsPercentage || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  customsPercentage: e.target.value ? parseFloat(e.target.value) : undefined,
+                }))
+              }
+              placeholder="e.g., 5.00 (leave empty for country default)"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Route-specific customs duty override for {formData.destinationCountry || 'destination country'}
+            </div>
           </div>
         </div>
       </div>
@@ -690,6 +744,8 @@ export function ShippingRouteManager() {
     requiresDocumentation: route.requires_documentation || false,
     isActive: route.is_active !== undefined ? route.is_active : true,
     exchangeRate: route.exchange_rate ?? 1,
+    vatPercentage: route.vat_percentage,
+    customsPercentage: route.customs_percentage,
   });
 
   if (loading) {

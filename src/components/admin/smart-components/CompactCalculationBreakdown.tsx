@@ -50,9 +50,31 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     }
   }, [activeTab]);
 
-  const breakdown = quote.calculation_data?.breakdown || {};
+  const breakdown = React.useMemo(() => {
+    console.log('🔄 [CompactCalculationBreakdown] Breakdown data changed:', {
+      quoteId: quote.id,
+      newBreakdown: quote.calculation_data?.breakdown,
+      hasShipping: !!quote.calculation_data?.breakdown?.shipping,
+      shippingAmount: quote.calculation_data?.breakdown?.shipping,
+      timestamp: new Date().toISOString()
+    });
+    return quote.calculation_data?.breakdown || {};
+  }, [quote.calculation_data]);
+  
   const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
+
+  // 🔍 DEBUG: Log breakdown data to trace destination_tax issue
+  console.log('🔍 [CompactCalculationBreakdown] DEBUG:', {
+    quoteId: quote.id,
+    hasCalculationData: !!quote.calculation_data,
+    hasBreakdown: !!quote.calculation_data?.breakdown,
+    breakdown: breakdown,
+    destination_tax: breakdown.destination_tax,
+    destination_tax_type: typeof breakdown.destination_tax,
+    destination_tax_number: Number(breakdown.destination_tax),
+    destination_tax_condition: !!(breakdown.destination_tax && Number(breakdown.destination_tax) > 0),
+  });
 
   // Calculate percentages for insights
   const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
@@ -70,7 +92,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   };
 
   const getTotalValue = () => {
-    return quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
   };
 
   // ✅ FIXED: Show actual calculated shipping cost instead of estimates
@@ -96,12 +118,16 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   // Key cost components for compact view
   const totalFees = (breakdown.fees || 0) + (breakdown.handling || 0) + (breakdown.insurance || 0);
   
-  // Debug logging removed - handling and insurance properly hidden when 0
+  // ✅ TRANSPARENT TAX MODEL: Include both purchase tax and destination tax
+  const totalTaxes = (breakdown.purchase_tax || 0) + (breakdown.destination_tax || 0) + 
+                     // Fallback to legacy taxes field if new fields don't exist
+                     (!breakdown.purchase_tax && !breakdown.destination_tax ? (breakdown.taxes || 0) : 0);
   
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
     { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
+    { label: 'Taxes', amount: totalTaxes, color: 'text-orange-600' },
     { label: 'Fees', amount: totalFees, color: 'text-gray-600' },
   ];
   
@@ -223,19 +249,62 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             </div>
 
-            {/* Taxes & VAT */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <Calculator className="w-4 h-4 text-orange-600" />
-                <span className="text-gray-700">Taxes & VAT</span>
-              </div>
-              <div className="text-right">
-                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}</div>
-                <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'destination')}
+            {/* Purchase Tax (Transparent Tax Model) */}
+            {!!(breakdown.purchase_tax && Number(breakdown.purchase_tax) > 0) && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calculator className="w-4 h-4 text-orange-600" />
+                  <span className="text-gray-700">Purchase Tax</span>
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    Origin
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.purchase_tax || 0), 'origin')}</div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.purchase_tax || 0), 'destination')}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Destination Tax (VAT/GST) - New Transparent Model */}
+            {!!(breakdown.destination_tax && Number(breakdown.destination_tax) > 0) && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calculator className="w-4 h-4 text-purple-600" />
+                  <span className="text-gray-700">Destination Tax (VAT)</span>
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    Local
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax || 0), 'origin')}</div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax || 0), 'destination')}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Legacy Taxes (Backward Compatibility) - Only show if new fields don't exist */}
+            {!!(breakdown.taxes && Number(breakdown.taxes) > 0 && !breakdown.purchase_tax && !breakdown.destination_tax) && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calculator className="w-4 h-4 text-orange-600" />
+                  <span className="text-gray-700">Taxes & VAT</span>
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    Legacy
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}</div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'destination')}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Payment Gateway Fee */}
             <div className="flex items-center justify-between text-sm">

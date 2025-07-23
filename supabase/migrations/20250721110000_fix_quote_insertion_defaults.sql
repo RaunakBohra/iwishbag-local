@@ -4,7 +4,7 @@
 -- ============================================================================
 
 -- Add better defaults for required fields to prevent insertion failures
-ALTER TABLE quotes ALTER COLUMN base_total_usd SET DEFAULT 0;
+ALTER TABLE quotes ALTER COLUMN costprice_total_usd SET DEFAULT 0;
 ALTER TABLE quotes ALTER COLUMN final_total_usd SET DEFAULT 0;
 ALTER TABLE quotes ALTER COLUMN items SET DEFAULT '[]'::jsonb;
 ALTER TABLE quotes ALTER COLUMN customer_data SET DEFAULT '{}'::jsonb;

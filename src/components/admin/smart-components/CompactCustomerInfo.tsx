@@ -481,17 +481,17 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           >
             <MessageSquare className="w-4 h-4" />
 
-            {/* Red badge for unread messages (urgent, action required) */}
+            {/* Modern unread message indicator */}
             {unreadCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs h-4 w-4 p-0 flex items-center justify-center">
+              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-medium shadow-lg border-2 border-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
-              </Badge>
+              </div>
             )}
 
             {/* Blue dot indicator for conversations with messages (when no unread) */}
             {(!unreadCount || unreadCount === 0) && totalCount > 0 && (
               <div
-                className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"
+                className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full border-2 border-white shadow-sm"
                 title={`${totalCount} message${totalCount > 1 ? 's' : ''} in conversation`}
               />
             )}
@@ -624,11 +624,11 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           </TabsTrigger>
           <TabsTrigger value="messages" className="text-xs">
             Messages
-            {/* Red badge for unread messages */}
+            {/* Modern unread messages indicator */}
             {unreadCount > 0 && (
-              <Badge className="ml-1 bg-red-500 text-white text-xs h-3 px-1">
+              <span className="ml-1 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs h-4 px-2 rounded-full flex items-center justify-center font-medium shadow-sm">
                 {unreadCount > 9 ? '9+' : unreadCount}
-              </Badge>
+              </span>
             )}
             {/* Gray total count indicator */}
             {totalCount > 0 && (

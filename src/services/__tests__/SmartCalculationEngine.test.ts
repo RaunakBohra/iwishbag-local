@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SmartCalculationEngine } from '../SmartCalculationEngine';
 import { currencyService } from '../CurrencyService';
+import { calculationDefaultsService } from '../CalculationDefaultsService';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 // Mock dependencies
 vi.mock('../CurrencyService');
+vi.mock('../CalculationDefaultsService');
 vi.mock('@/lib/customs-tier-calculator');
 vi.mock('@/integrations/supabase/client');
 
@@ -78,9 +80,8 @@ describe('SmartCalculationEngine', () => {
 
     // Setup default currency service mocks
     vi.mocked(currencyService.getExchangeRate).mockResolvedValue(1.0);
-    vi.mocked(calculationDefaultsService.calculateHandlingCharge).mockResolvedValue(5);
-    vi.mocked(calculationDefaultsService.calculateInsurance).mockResolvedValue(3);
-    vi.mocked(calculationDefaultsService.logFallbackUsage).mockResolvedValue();
+    vi.mocked(calculationDefaultsService.calculateHandlingDefault).mockReturnValue(5);
+    vi.mocked(calculationDefaultsService.calculateInsuranceDefault).mockReturnValue(3);
   });
 
   afterEach(() => {
@@ -521,6 +522,170 @@ describe('SmartCalculationEngine', () => {
       // The calculation seems to be using a different base - let's just verify it used the fallback
       expect(breakdown?.customs).toBeGreaterThan(10);
       expect(breakdown?.customs).toBeLessThan(30);
+    });
+  });
+
+  describe('Transparent Tax Model - New Implementation', () => {
+    it('should calculate purchase tax transparently and include in customs base', () => {
+      const mockQuote = createMockQuote({
+        items: [
+          {
+            id: 'item-1',
+            name: 'Electronics Item',
+            price_usd: 100,
+            weight_kg: 1,
+            quantity: 1,
+            sku: 'TEST-001',
+            category: 'Electronics',
+          },
+        ],
+        operational_data: {
+          purchase_tax_rate: 8.88, // NY sales tax rate
+          customs: {
+            percentage: 15, // 15% customs
+            smart_tier: {
+              vat_percentage: 5, // 5% destination VAT
+            },
+          },
+          shipping: {
+            selected_option: 'standard',
+          },
+          handling_charge: 5,
+          insurance_amount: 3,
+        },
+      });
+
+      const result = calculationEngine.calculateLiveSync({
+        quote: mockQuote,
+      });
+
+      expect(result.success).toBe(true);
+      const breakdown = result.updated_quote.calculation_data?.breakdown;
+      const operational = result.updated_quote.operational_data;
+
+      // Verify purchase tax calculation
+      expect(breakdown?.items_total).toBe(100);
+      expect(breakdown?.purchase_tax).toBe(8.88); // 100 * 0.0888
+      expect(operational?.actual_item_cost).toBe(108.88); // 100 + 8.88
+
+      // Verify customs calculated on actual item cost (including purchase tax)
+      const expectedCustomsBase = 108.88 + (breakdown?.shipping || 0);
+      const expectedCustoms = expectedCustomsBase * 0.15;
+      expect(breakdown?.customs).toBeCloseTo(expectedCustoms, 2);
+
+      // Verify VAT calculated on full taxable base
+      const vatBase = 108.88 + (breakdown?.shipping || 0) + (breakdown?.customs || 0) + 5 + 3;
+      const expectedVAT = vatBase * 0.05;
+      expect(breakdown?.destination_tax).toBeCloseTo(expectedVAT, 2);
+
+      // Verify transparent breakdown structure
+      expect(breakdown?.purchase_tax).toBeDefined();
+      expect(breakdown?.destination_tax).toBeDefined();
+      expect(breakdown?.handling).toBe(5);
+      expect(breakdown?.insurance).toBe(3);
+    });
+
+    it('should handle zero purchase tax gracefully', () => {
+      const mockQuote = createMockQuote({
+        items: [
+          {
+            id: 'item-1',
+            name: 'Product',
+            price_usd: 100,
+            weight_kg: 1,
+            quantity: 1,
+            sku: 'TEST-001',
+            category: 'General',
+          },
+        ],
+        operational_data: {
+          purchase_tax_rate: 0, // No purchase tax
+          customs: {
+            percentage: 10,
+            smart_tier: {
+              vat_percentage: 0, // No VAT
+            },
+          },
+          shipping: {
+            selected_option: 'standard',
+          },
+        },
+      });
+
+      const result = calculationEngine.calculateLiveSync({
+        quote: mockQuote,
+      });
+
+      expect(result.success).toBe(true);
+      const breakdown = result.updated_quote.calculation_data?.breakdown;
+
+      expect(breakdown?.items_total).toBe(100);
+      expect(breakdown?.purchase_tax).toBe(0);
+      expect(breakdown?.destination_tax).toBe(0);
+      expect(result.updated_quote.operational_data?.actual_item_cost).toBe(100);
+    });
+
+    it('should demonstrate cost difference vs old model', () => {
+      const mockQuote = createMockQuote({
+        items: [
+          {
+            id: 'item-1',
+            name: 'Laptop',
+            price_usd: 500,
+            weight_kg: 3,
+            quantity: 1,
+            sku: 'LAPTOP-001',
+            category: 'Electronics',
+          },
+        ],
+        operational_data: {
+          purchase_tax_rate: 8.88, // NY tax
+          customs: {
+            percentage: 15,
+            smart_tier: {
+              vat_percentage: 5,
+            },
+          },
+          shipping: {
+            selected_option: 'standard',
+          },
+          handling_charge: 12,
+          insurance_amount: 5,
+        },
+      });
+
+      const result = calculationEngine.calculateLiveSync({
+        quote: mockQuote,
+      });
+
+      expect(result.success).toBe(true);
+      const breakdown = result.updated_quote.calculation_data?.breakdown;
+
+      // OLD MODEL would have calculated:
+      // - Customs on $500 + shipping = ~$80.25
+      // - VAT on $500 only = $25
+      
+      // NEW TRANSPARENT MODEL calculates:
+      const actualItemCost = 500 + (500 * 0.0888); // $544.40
+      const shipping = breakdown?.shipping || 0;
+      const expectedCustoms = (actualItemCost + shipping) * 0.15;
+      const vatBase = actualItemCost + shipping + expectedCustoms + 12 + 5;
+      const expectedVAT = vatBase * 0.05;
+
+      // Verify higher, more accurate calculations
+      expect(breakdown?.customs).toBeGreaterThan(80.25); // Higher than old model
+      expect(breakdown?.destination_tax).toBeGreaterThan(25); // Higher than old model
+      expect(breakdown?.purchase_tax).toBe(44.40); // Transparent purchase cost
+
+      console.log('Transparent Tax Model Results:', {
+        oldCustomsBase: 500 + shipping,
+        newCustomsBase: actualItemCost + shipping,
+        oldVATBase: 500,
+        newVATBase: vatBase,
+        purchaseTaxTransparent: breakdown?.purchase_tax,
+        customsImprovement: (breakdown?.customs || 0) - 80.25,
+        vatImprovement: (breakdown?.destination_tax || 0) - 25,
+      });
     });
   });
 });

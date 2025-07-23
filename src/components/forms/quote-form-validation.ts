@@ -17,7 +17,7 @@ const quoteItemSchema = z
       .int('Quantity must be a whole number')
       .min(1, 'Quantity must be at least 1')
       .max(999, 'Quantity cannot exceed 999'),
-    options: z
+    customer_notes: z
       .string()
       .optional()
       .transform((val) => (val ? sanitizeHtml(val).slice(0, 500) : val)),

@@ -140,7 +140,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
           {
             id: '1',
             name: 'Product',
-            price_usd: parseFloat(itemPrice) || 0,
+            costprice_origin: parseFloat(itemPrice) || 0,
             weight_kg: parseFloat(itemWeight) || 0,
             quantity: 1,
             url: '',

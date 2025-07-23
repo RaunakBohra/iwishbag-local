@@ -69,7 +69,7 @@ export class TicketNotificationService {
         .from('user_roles')
         .select(`
           user_id,
-          profiles!inner(email, full_name)
+          profiles(email, full_name)
         `)
         .eq('role', 'admin');
 
@@ -79,8 +79,8 @@ export class TicketNotificationService {
       }
 
       const emails = adminRoles
-        .map(role => (role.profiles as any)?.email)
-        .filter(email => email && email.includes('@'));
+        ?.map(role => (role.profiles as any)?.email)
+        ?.filter(email => email && email.includes('@')) || [];
 
       return emails.length > 0 ? emails : ['admin@iwishbag.com'];
     } catch (error) {

@@ -97,10 +97,10 @@ const CustomerOrderDetailPage = () => {
                   {order.items.map((item, index) => (
                     <div key={item.id}>
                       <p className="font-semibold">{item.name || 'N/A'}</p>
-                      {item.options &&
+                      {item.customer_notes &&
                         (() => {
                           try {
-                            const options = JSON.parse(item.options);
+                            const options = JSON.parse(item.customer_notes);
                             return options.notes ? (
                               <div className="bg-teal-50 border border-teal-200 rounded-lg p-2 my-2">
                                 <span className="font-semibold text-teal-800">Product Notes:</span>

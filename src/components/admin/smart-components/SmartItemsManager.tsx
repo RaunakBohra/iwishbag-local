@@ -50,7 +50,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
   const [newItem, setNewItem] = useState<Partial<QuoteItem>>({
     name: '',
     quantity: 1,
-    price_usd: 0,
+    costprice_origin: 0,
     weight_kg: 0,
   });
 
@@ -192,9 +192,9 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                   <div className="flex items-center space-x-2 mb-2">
                     <Package className="w-4 h-4 text-gray-500" />
                     <h4 className="font-medium">{item.name}</h4>
-                    {item.options && (
+                    {item.customer_notes && (
                       <Badge variant="outline" className="text-xs">
-                        {item.options}
+                        {item.customer_notes}
                       </Badge>
                     )}
                   </div>
@@ -206,7 +206,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                     </div>
                     <div>
                       <span className="text-gray-600">Price ({currencyDisplay.originCurrency}):</span>
-                      <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}</div>
+                      <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0), 'origin')}</div>
                     </div>
                     <div>
                       <span className="text-gray-600">Weight:</span>
@@ -222,7 +222,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                     <div>
                       <span className="text-gray-600">Total:</span>
                       <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0) * item.quantity, 'origin')}
+                        {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0) * item.quantity, 'origin')}
                       </div>
                     </div>
                   </div>
@@ -421,9 +421,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel,
   const [editForm, setEditForm] = useState({
     name: item.name,
     quantity: item.quantity,
-    price_usd: item.price_usd,
+    costprice_origin: item.costprice_origin,
     weight_kg: item.weight_kg,
-    options: item.options || '',
+    customer_notes: item.customer_notes || ''
   });
   const [weightEstimation, setWeightEstimation] = useState<any>(null);
   const [isEstimating, setIsEstimating] = useState(false);
@@ -473,9 +473,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel,
       ...item,
       name: editForm.name,
       quantity: editForm.quantity,
-      price_usd: editForm.price_usd,
+      costprice_origin: editForm.costprice_origin,
       weight_kg: editForm.weight_kg,
-      options: editForm.options,
+      customer_notes: editForm.customer_notes,
     };
 
     onSave(updatedItem);
@@ -519,10 +519,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel,
                 type="number"
                 step="0.01"
                 min="0"
-                value={editForm.price_usd}
+                value={editForm.costprice_origin}
                 onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))
-                }
+                  setEditForm((prev) => ({ ...prev, costprice_origin: parseFloat(e.target.value) || 0 }))
+                )
               />
             </div>
           </div>
@@ -581,11 +581,11 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel,
           </div>
 
           <div>
-            <Label htmlFor="options">Options/Notes</Label>
+            <Label htmlFor="customer_notes">Customer Notes</Label>
             <Input
-              id="options"
-              value={editForm.options}
-              onChange={(e) => setEditForm((prev) => ({ ...prev, options: e.target.value }))}
+              id="customer_notes"
+              value={editForm.customer_notes}
+              onChange={(e) => setEditForm((prev) => ({ ...prev, customer_notes: e.target.value }))}
               placeholder="Size, color, specifications..."
             />
           </div>
@@ -613,9 +613,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
   const [addForm, setAddForm] = useState({
     name: '',
     quantity: 1,
-    price_usd: 0,
+    costprice_origin: 0,
     weight_kg: 0,
-    options: '',
+    customer_notes: '',
     url: '',
   });
   const [weightEstimation, setWeightEstimation] = useState<any>(null);
@@ -666,9 +666,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
       id: `item_${Date.now()}`, // Temporary ID
       name: addForm.name,
       quantity: addForm.quantity,
-      price_usd: addForm.price_usd,
+      costprice_origin: addForm.costprice_origin,
       weight_kg: addForm.weight_kg,
-      options: addForm.options,
+      customer_notes: addForm.customer_notes,
       url: addForm.url,
     };
 
@@ -725,9 +725,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                 type="number"
                 step="0.01"
                 min="0"
-                value={addForm.price_usd}
+                value={addForm.costprice_origin}
                 onChange={(e) =>
-                  setAddForm((prev) => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))
+                  setAddForm((prev) => ({ ...prev, costprice_origin: parseFloat(e.target.value) || 0 }))
                 }
               />
             </div>
@@ -795,11 +795,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
           </div>
 
           <div>
-            <Label htmlFor="options">Options/Notes</Label>
+            <Label htmlFor="customer_notes">Customer Notes</Label>
             <Input
-              id="options"
-              value={addForm.options}
-              onChange={(e) => setAddForm((prev) => ({ ...prev, options: e.target.value }))}
+              id="customer_notes"
+              value={addForm.customer_notes}
+              onChange={(e) => setAddForm((prev) => ({ ...prev, customer_notes: e.target.value })))
               placeholder="Size, color, specifications..."
             />
           </div>

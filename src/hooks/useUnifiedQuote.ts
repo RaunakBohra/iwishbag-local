@@ -134,6 +134,30 @@ export const useUnifiedQuote = ({
         setSmartSuggestions(result.optimization_suggestions);
         setOptimizationScore(result.updated_quote.optimization_score);
         setLastCalculated(new Date());
+
+        // ✅ FIX: Persist async calculation results to database (useUnifiedQuote hook)
+        // This ensures that sync calculations can access the smart_tier data
+        try {
+          console.log('💾 [HOOK-FIX] Persisting async calculation results to database:', {
+            quoteId: quoteData.id,
+            vatPercentage: result.updated_quote.operational_data?.customs?.smart_tier?.vat_percentage,
+          });
+
+          const success = await unifiedDataEngine.updateQuote(quoteData.id, {
+            calculation_data: result.updated_quote.calculation_data,
+            operational_data: result.updated_quote.operational_data,
+            final_total_usd: result.updated_quote.final_total_usd,
+            optimization_score: result.updated_quote.optimization_score,
+          });
+
+          if (success) {
+            console.log('✅ [HOOK-FIX] Successfully persisted async calculation results to database');
+          } else {
+            console.error('❌ [HOOK-FIX] Failed to persist async calculation results to database');
+          }
+        } catch (persistError) {
+          console.error('❌ [HOOK-FIX] Error persisting async calculation results:', persistError);
+        }
       } else {
         throw new Error(result.error || 'Calculation failed');
       }

@@ -51,6 +51,7 @@ interface QuoteDetailFormProps {
   onSelectShippingOption?: (optionId: string) => Promise<void>;
   onShowShippingDetails?: () => void;
   isEditingRoute?: boolean;
+  onTriggerCalculation?: () => void; // ✅ NEW: For real-time calculations
 }
 
 export const QuoteDetailForm = ({
@@ -70,6 +71,7 @@ export const QuoteDetailForm = ({
   onSelectShippingOption,
   onShowShippingDetails,
   isEditingRoute = false,
+  onTriggerCalculation, // ✅ NEW: Extract calculation trigger
 }: QuoteDetailFormProps) => {
   const { toast: _toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -267,6 +269,13 @@ export const QuoteDetailForm = ({
                         {...field}
                         value={field.value ?? ''}
                         onWheel={handleNumberInputWheel}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          // ✅ NEW: Trigger real-time calculation when sales tax changes
+                          if (onTriggerCalculation) {
+                            onTriggerCalculation();
+                          }
+                        }}
                         className="h-8 pl-6"
                         placeholder="0.00"
                       />

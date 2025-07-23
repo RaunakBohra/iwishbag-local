@@ -332,7 +332,7 @@ class UnifiedConfigurationService {
         const fallback: CalculationConfig = {
           default_handling_charge_percent: 5.0,
           default_insurance_percent: 2.0,
-          default_customs_percentage: 10.0,
+          default_customs_percentage: 0.0,
           default_domestic_shipping: 5.0,
           weight_estimation_multiplier: 1.2,
           volume_weight_divisor: 5000,

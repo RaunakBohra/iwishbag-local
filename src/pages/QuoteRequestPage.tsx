@@ -53,6 +53,7 @@ export default function QuoteRequestPage() {
       name: '',
       url: '',
       file: null,
+      imageUrl: '', // Separate field for uploaded image URL
       quantity: 1,
       price: '',
       weight: '',
@@ -182,24 +183,48 @@ export default function QuoteRequestPage() {
           weight: product.weight,
         }));
 
+        // CRITICAL FIX: Ensure origin_country is properly captured
+        const originCountry = products[0]?.country;
+        if (!originCountry) {
+          setSubmitError('Origin country is required. Please select the purchase country for your products.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!destinationCountry) {
+          setSubmitError('Destination country is required. Please select where you want the products delivered.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // ✅ FIX: Get the correct currency for the origin country
+        let originCurrency = 'USD';
+        try {
+          originCurrency = await currencyService.getCurrencyForCountry(originCountry);
+        } catch (error) {
+          console.error('Error getting currency for origin country:', error);
+          // Fallback to USD if currency service fails
+          originCurrency = 'USD';
+        }
+
         // Submit combined quote to Supabase using unified structure
         const { data: quote, error: quoteError } = await supabase
           .from('quotes')
           .insert({
-            destination_country: destinationCountry || '',
-            origin_country: products[0]?.country || '',
+            destination_country: destinationCountry,
+            origin_country: originCountry,
             status: 'pending',
-            currency: 'USD',
+            currency: originCurrency,
             user_id: user?.id || null, // Now uses anonymous auth user ID
             items: products.map((product) => ({
               id: crypto.randomUUID(),
               name: product.name,
               url: product.url,
-              image: product.file ? product.url : null,
+              image: product.imageUrl || null, // Use separate imageUrl field
               options: product.notes || null,
               quantity: product.quantity || 1,
-              price_usd: product.price || 0,
-              weight_kg: product.weight || 0,
+              costprice_origin: product.price || 0,
+              weight_kg: product.weight || 1,
             })),
             customer_data: {
               info: {
@@ -207,7 +232,9 @@ export default function QuoteRequestPage() {
               },
               shipping_address: shippingAddressData,
             },
-            base_total_usd: products.reduce(
+            // ✅ FIX: Prices are now in origin currency, store original values
+            // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
+            costprice_total_usd: products.reduce(
               (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
               0,
             ),
@@ -247,27 +274,68 @@ export default function QuoteRequestPage() {
           setIsSubmitting(false);
           return;
         }
+
+        // Mark uploaded files as used (combined quote)
+        try {
+          for (const product of products) {
+            if (product.imageUrl) {
+              const fileName = product.imageUrl.split('/').pop();
+              if (fileName) {
+                await supabase.rpc('mark_file_as_used', {
+                  p_file_path: fileName,
+                  p_quote_id: quote.id
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to mark files as used:', error);
+          // Don't fail the quote creation for this
+        }
       } else {
         // Separate quotes: Create individual quote for each product
         for (const product of products) {
+          // CRITICAL FIX: Ensure origin_country is properly captured for each product
+          if (!product.country) {
+            setSubmitError(`Origin country is required for "${product.name || 'one of your products'}". Please select the purchase country.`);
+            setIsSubmitting(false);
+            return;
+          }
+
+          if (!destinationCountry) {
+            setSubmitError('Destination country is required. Please select where you want the products delivered.');
+            setIsSubmitting(false);
+            return;
+          }
+
+          // ✅ FIX: Get the correct currency for each product's origin country
+          let productOriginCurrency = 'USD';
+          try {
+            productOriginCurrency = await currencyService.getCurrencyForCountry(product.country);
+          } catch (error) {
+            console.error('Error getting currency for product origin country:', error);
+            // Fallback to USD if currency service fails
+            productOriginCurrency = 'USD';
+          }
+
           // Submit individual quote to Supabase using unified structure
           const { data: quote, error: quoteError } = await supabase
             .from('quotes')
             .insert({
-              destination_country: destinationCountry || '',
-              origin_country: product.country || '',
+              destination_country: destinationCountry,
+              origin_country: product.country,
               status: 'pending',
-              currency: 'USD',
+              currency: productOriginCurrency,
               user_id: user?.id || null, // Now uses anonymous auth user ID
               items: [
                 {
                   id: crypto.randomUUID(),
                   name: product.name,
                   url: product.url,
-                  image: product.file ? product.url : null,
+                  image: product.imageUrl || null, // Use separate imageUrl field
                   options: product.notes || null,
                   quantity: product.quantity || 1,
-                  price_usd: product.price || 0,
+                  costprice_origin: product.price || 0,
                   weight_kg: product.weight || 0,
                 },
               ],
@@ -277,7 +345,9 @@ export default function QuoteRequestPage() {
                 },
                 shipping_address: shippingAddressData,
               },
-              base_total_usd: (product.price || 0) * (product.quantity || 1),
+              // ✅ FIX: Prices are now in origin currency, store original values  
+              // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
+              costprice_total_usd: (product.price || 0) * (product.quantity || 1),
               final_total_usd: (product.price || 0) * (product.quantity || 1),
             })
             .select('id')
@@ -289,6 +359,22 @@ export default function QuoteRequestPage() {
               `Failed to create quote for ${product.name || 'one of your products'}. Some quotes may have been created successfully.`,
             );
             continue;
+          }
+
+          // Mark uploaded file as used (separate quote)
+          try {
+            if (product.imageUrl) {
+              const fileName = product.imageUrl.split('/').pop();
+              if (fileName) {
+                await supabase.rpc('mark_file_as_used', {
+                  p_file_path: fileName,
+                  p_quote_id: quote.id
+                });
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to mark file as used:', error);
+            // Don't fail the quote creation for this
           }
 
           // Items are now stored in the JSONB items array within the quote
@@ -531,6 +617,7 @@ export default function QuoteRequestPage() {
                             name: '',
                             url: '',
                             file: null,
+                            imageUrl: '', // Include imageUrl field in reset
                             quantity: 1,
                             price: '',
                             weight: '',

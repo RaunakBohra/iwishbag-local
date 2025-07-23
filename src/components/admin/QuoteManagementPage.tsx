@@ -408,3 +408,5 @@ export const QuoteManagementPage = () => {
     </div>
   );
 };
+
+export default QuoteManagementPage;

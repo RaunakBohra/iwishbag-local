@@ -9,9 +9,9 @@ export interface QuoteItem {
   name: string;
   url?: string;
   image?: string;
-  options?: string;
+  customer_notes?: string;
   quantity: number;
-  price_usd: number;
+  costprice_origin: number; // Cost price in origin country currency (INR, NPR, etc.)
   weight_kg: number;
   smart_data: {
     weight_confidence: number; // 0-1 scale
@@ -22,14 +22,20 @@ export interface QuoteItem {
   };
 }
 
-// Financial Calculation Breakdown
+// Financial Calculation Breakdown (Transparent Tax Model)
 export interface CalculationBreakdown {
-  items_total: number;
-  shipping: number;
-  customs: number;
-  taxes: number;
-  fees: number;
-  discount: number;
+  items_total: number;         // Base product price (before purchase tax)
+  purchase_tax?: number;       // ✅ NEW: Origin country purchase tax (transparent)
+  shipping: number;            // International shipping cost
+  customs: number;             // Customs duty (calculated on actualItemCost base)
+  destination_tax?: number;    // ✅ NEW: Destination country VAT/GST only
+  fees: number;                // Payment gateway fees
+  handling?: number;           // Handling charges (separate from fees)
+  insurance?: number;          // Insurance amount (separate from fees)
+  discount: number;            // Applied discounts
+  
+  // Legacy field for backward compatibility (deprecated)
+  taxes?: number;              // @deprecated Use destination_tax instead
 }
 
 // Exchange Rate Information
@@ -211,6 +217,18 @@ export interface OperationalData {
   payment: PaymentInfo;
   timeline: TimelineEntry[];
   admin: AdminInfo;
+  
+  // Additional calculated fields (added dynamically by SmartCalculationEngine)
+  handling_charge?: number;
+  insurance_amount?: number;
+  payment_gateway_fee?: number;
+  domestic_shipping?: number;
+  vat_amount?: number;
+  
+  // ✅ NEW: Purchase tax tracking (Transparent Tax Model)
+  purchase_tax_amount?: number;    // Amount of purchase tax applied
+  purchase_tax_rate?: number;      // Rate used for purchase tax calculation (e.g., 8.88 for NY)
+  actual_item_cost?: number;       // items_total + purchase_tax (for debugging)
 }
 
 // Smart Suggestion
@@ -250,7 +268,7 @@ export interface UnifiedQuote {
   items: QuoteItem[];
 
   // Smart Financial System
-  base_total_usd: number;
+  costprice_total_usd: number;
   final_total_usd: number;
 
   // Smart Metadata
@@ -283,9 +301,9 @@ export interface QuoteItemInput {
   name: string;
   url?: string;
   image?: string;
-  options?: string;
+  customer_notes?: string;
   quantity: number;
-  price_usd: number;
+  costprice_origin: number; // Cost price in origin country currency
   weight_kg: number;
 }
 
@@ -318,7 +336,7 @@ export interface UnifiedQuoteRow {
   origin_country: string;
   destination_country: string;
   items: any; // JSONB from database
-  base_total_usd: number;
+  costprice_total_usd: number;
   final_total_usd: number;
   calculation_data: any; // JSONB from database
   customer_data: any; // JSONB from database

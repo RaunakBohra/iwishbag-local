@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS quotes_unified (
   -- }]
   
   -- Smart Financial System (2)
-  base_total_usd numeric(12,2) NOT NULL DEFAULT 0,
+  costprice_total_usd numeric(12,2) NOT NULL DEFAULT 0,
   final_total_usd numeric(12,2) NOT NULL DEFAULT 0,
   
   -- Smart Metadata (3)
@@ -191,7 +191,7 @@ CREATE INDEX idx_quotes_unified_smart_suggestions_gin ON quotes_unified USING gi
 
 -- Add constraints for data integrity
 ALTER TABLE quotes_unified 
-  ADD CONSTRAINT quotes_unified_base_total_check CHECK (base_total_usd >= 0),
+  ADD CONSTRAINT quotes_unified_costprice_total_check CHECK (costprice_total_usd >= 0),
   ADD CONSTRAINT quotes_unified_final_total_check CHECK (final_total_usd >= 0),
   ADD CONSTRAINT quotes_unified_items_not_empty CHECK (jsonb_array_length(items) > 0),
   ADD CONSTRAINT quotes_unified_weight_confidence_check CHECK (weight_confidence >= 0 AND weight_confidence <= 1),

@@ -91,7 +91,7 @@ const createMockQuote = (overrides: Partial<UnifiedQuote> = {}): UnifiedQuote =>
     {
       id: 'item-1',
       name: 'Test Product',
-      price_usd: 100,
+      costprice_origin: 100,
       weight_kg: 2,
       quantity: 1,
       sku: 'TEST-001',

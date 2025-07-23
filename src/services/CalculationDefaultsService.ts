@@ -51,12 +51,12 @@ export class CalculationDefaultsService {
     }
 
     const config: HandlingChargeConfig = selectedOption.handling_charge;
-    // Use base_total_usd as primary source, fallback to calculated value from items
-    const itemsValue = quote.base_total_usd || quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+    // Use costprice_total_usd as primary source, fallback to calculated value from items
+    const itemsValue = quote.costprice_total_usd || quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
     
     console.log('[CalculationDefaults] Items value extracted:', {
       quoteId: quote.id,
-      base_total_usd: quote.base_total_usd,
+      costprice_total_usd: quote.costprice_total_usd,
       itemsValue,
       itemsCount: quote.items?.length,
       originCountry: quote.origin_country,
@@ -110,8 +110,8 @@ export class CalculationDefaultsService {
     }
 
     const config: InsuranceConfig = selectedOption.insurance_options;
-    // Use base_total_usd as primary source, fallback to calculated value from items
-    const itemsValue = quote.base_total_usd || quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+    // Use costprice_total_usd as primary source, fallback to calculated value from items
+    const itemsValue = quote.costprice_total_usd || quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     // Check if customer opted in or if it's default enabled
     const shouldCalculate = customerOptedIn || config.default_enabled;
@@ -227,7 +227,7 @@ export class CalculationDefaultsService {
     const customerOptedIn = quote.customer_data?.preferences?.insurance_opted_in || false;
     const handlingDefault = this.calculateHandlingDefault(quote, selectedOption);
     const insuranceDefault = this.calculateInsuranceDefault(quote, selectedOption, customerOptedIn);
-    const itemsValue = quote.base_total_usd || quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+    const itemsValue = quote.costprice_total_usd || quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     const currentHandling = quote.operational_data?.handling_charge || 0;
     const currentInsurance = quote.operational_data?.insurance_amount || 0;

@@ -13,7 +13,7 @@ INSERT INTO quotes_unified (
   origin_country,
   destination_country,
   items,
-  base_total_usd,
+  costprice_total_usd,
   final_total_usd,
   calculation_data,
   customer_data,
@@ -86,7 +86,7 @@ SELECT
   ) as items,
   
   -- Financial totals
-  COALESCE(q.item_price, 0) as base_total_usd,
+  COALESCE(q.item_price, 0) as costprice_total_usd,
   COALESCE(q.final_total_usd, 0) as final_total_usd,
   
   -- Smart Calculation Data JSONB
@@ -308,7 +308,7 @@ BEGIN
   RETURN QUERY
   SELECT id, 'Invalid financial totals', 'WARNING'
   FROM quotes_unified 
-  WHERE base_total_usd < 0 OR final_total_usd < 0;
+  WHERE costprice_total_usd < 0 OR final_total_usd < 0;
   
   -- Check for missing customer data for non-anonymous quotes
   RETURN QUERY

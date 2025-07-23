@@ -54,10 +54,42 @@ export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): A
     const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
     const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
 
-    // Get exchange rate from quote data
-    const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 
-                        quote.exchange_rate || 
-                        1;
+    // Get exchange rate from quote data with fallback calculation
+    let exchangeRate = quote.calculation_data?.exchange_rate?.rate || 
+                      quote.exchange_rate || 
+                      1;
+
+    // ✅ FALLBACK: If rate is 1 but countries are different, calculate real rate
+    if (exchangeRate === 1 && originCountry !== destinationCountry) {
+      try {
+        // Attempt to calculate exchange rate from country settings
+        const fallbackMap = currencyService.getFallbackCountryCurrencyMapSync();
+        const originCurrencySync = fallbackMap.get(originCountry) || 'USD';
+        const destCurrencySync = fallbackMap.get(destinationCountry) || 'USD';
+        
+        if (originCurrencySync !== destCurrencySync) {
+          // Simple cross-rate calculation using known rates
+          const commonRates: Record<string, number> = {
+            'USD': 1,
+            'INR': 83.15,
+            'NPR': 133.2,
+            'EUR': 0.85,
+            'GBP': 0.76,
+          };
+          
+          const originRate = commonRates[originCurrencySync];
+          const destRate = commonRates[destCurrencySync];
+          
+          if (originRate && destRate) {
+            const calculatedRate = destRate / originRate;
+            console.log(`🔄 [FALLBACK] Calculated exchange rate for ${originCountry}→${destinationCountry}: ${calculatedRate}`);
+            exchangeRate = calculatedRate;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ [FALLBACK] Could not calculate fallback exchange rate:', error);
+      }
+    }
 
     // Get currency symbols
     const originSymbol = currencyService.getCurrencySymbolSync(originCurrency);

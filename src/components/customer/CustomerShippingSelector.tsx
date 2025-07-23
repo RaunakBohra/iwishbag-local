@@ -33,7 +33,7 @@ export const CustomerShippingSelector: React.FC<CustomerShippingSelectorProps> =
 
   // Calculate items total for handling calculation
   const itemsTotal =
-    quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
+    quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
 
   // Calculate handling charge for an option
   const calculateHandlingCharge = (option: ShippingOption): number => {

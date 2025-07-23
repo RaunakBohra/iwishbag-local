@@ -34,7 +34,7 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
 
   // Calculate items total for insurance calculation
   const itemsTotal =
-    quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
+    quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
 
   // Calculate insurance cost
   const calculateInsuranceCost = (): number => {

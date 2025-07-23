@@ -74,7 +74,7 @@ export const CustomsTierDisplay: React.FC<CustomsTierDisplayProps> = ({
     if (found) destinationCountry = found.code;
   }
   const quotePrice =
-    quote.items?.reduce((sum: number, item: any) => sum + (item.price_usd || 0), 0) || 0;
+    quote.items?.reduce((sum: number, item: any) => sum + (item.costprice_origin || 0), 0) || 0;
   const quoteWeight =
     quote.items?.reduce((sum: number, item: any) => sum + (item.weight_kg || 0), 0) || 0;
 

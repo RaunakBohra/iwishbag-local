@@ -9,7 +9,7 @@ export const templateFormSchema = z.object({
   item_price: z.coerce.number().positive().optional().or(z.literal('')),
   item_weight: z.coerce.number().positive().optional().or(z.literal('')),
   quantity: z.coerce.number().min(1).default(1),
-  options: z.string().optional(),
+  customer_notes: z.string().optional(),
   image_url: z.string().url({ message: 'Please enter a valid URL.' }).optional().or(z.literal('')),
   product_url: z
     .string()

@@ -37,7 +37,7 @@ ALTER INDEX idx_quotes_unified_smart_suggestions_gin RENAME TO idx_quotes_smart_
 ALTER INDEX quotes_unified_display_id_key RENAME TO quotes_display_id_key;
 
 -- Update constraint names
-ALTER TABLE quotes RENAME CONSTRAINT quotes_unified_base_total_check TO quotes_base_total_check;
+ALTER TABLE quotes RENAME CONSTRAINT quotes_unified_costprice_total_check TO quotes_costprice_total_check;
 ALTER TABLE quotes RENAME CONSTRAINT quotes_unified_final_total_check TO quotes_final_total_check;
 ALTER TABLE quotes RENAME CONSTRAINT quotes_unified_items_not_empty TO quotes_items_not_empty;
 ALTER TABLE quotes RENAME CONSTRAINT quotes_unified_weight_confidence_check TO quotes_weight_confidence_check;

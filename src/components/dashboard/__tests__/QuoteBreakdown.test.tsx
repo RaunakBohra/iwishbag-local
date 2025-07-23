@@ -27,7 +27,7 @@ vi.mock('../QuoteItemCard', () => ({
   QuoteItemCard: ({ item }: { item: any }) => (
     <div data-testid="quote-item-card">
       <div>{item.product_name}</div>
-      <div>Price: ${item.price_usd}</div>
+      <div>Price: ${item.costprice_origin}</div>
     </div>
   ),
 }));
@@ -80,7 +80,7 @@ const createMockQuote = (overrides = {}) => ({
     {
       id: 'item-1',
       product_name: 'Test Product',
-      price_usd: 100,
+      costprice_origin: 100,
       quantity: 1,
       weight_kg: 2,
     },
@@ -202,14 +202,14 @@ describe('QuoteBreakdown', () => {
           {
             id: 'item-1',
             product_name: 'Laptop',
-            price_usd: 800,
+            costprice_origin: 800,
             quantity: 1,
             weight_kg: 3,
           },
           {
             id: 'item-2',
             product_name: 'Mouse',
-            price_usd: 25,
+            costprice_origin: 25,
             quantity: 2,
             weight_kg: 0.2,
           },
@@ -293,14 +293,14 @@ describe('QuoteBreakdown', () => {
           {
             id: 'electronics-1',
             product_name: 'iPhone 15',
-            price_usd: 999,
+            costprice_origin: 999,
             quantity: 1,
             weight_kg: 0.5,
           },
           {
             id: 'clothing-1',
             product_name: 'Jacket',
-            price_usd: 150,
+            costprice_origin: 150,
             quantity: 2,
             weight_kg: 1.2,
           },
@@ -400,7 +400,7 @@ describe('QuoteBreakdown', () => {
           {
             id: 'malformed-item',
             product_name: null, // Invalid product name
-            price_usd: 0,
+            costprice_origin: 0,
             quantity: 1,
             weight_kg: 0,
           },

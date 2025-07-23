@@ -51,6 +51,7 @@ const PaymentTest = React.lazy(() => import('@/pages/PaymentTest'));
 const PaypalSuccess = React.lazy(() => import('@/pages/PaypalSuccess'));
 const PaypalFailure = React.lazy(() => import('@/pages/PaypalFailure'));
 const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified'));
+const UnifiedQuotePage = React.lazy(() => import('@/pages/unified/UnifiedQuotePage'));
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
 const EmailConfirmation = React.lazy(() => import('@/pages/auth/EmailConfirmation'));
 const OAuthCallback = React.lazy(() => import('@/pages/auth/OAuthCallback'));
@@ -62,6 +63,7 @@ const TrackingPage = React.lazy(() =>
   import('@/pages/TrackingPage').then((m) => ({ default: m.TrackingPage })),
 );
 const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTickets'));
+
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
@@ -84,11 +86,7 @@ const AdminLayout = React.lazy(() =>
     default: m.AdminLayout,
   })),
 );
-const QuoteManagementPage = React.lazy(() =>
-  import('@/components/admin/QuoteManagementPage').then((m) => ({
-    default: m.QuoteManagementPage,
-  })),
-);
+const QuoteManagementPage = React.lazy(() => import('@/components/admin/QuoteManagementPage'));
 // OrderManagementPage removed - will be replaced by unified interface
 const EnhancedCustomerManagementPage = React.lazy(() =>
   import('@/components/admin/EnhancedCustomerManagementPage').then((m) => ({
@@ -375,7 +373,11 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard/quotes/:id',
-            element: <QuoteDetailUnified />,
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <UnifiedQuotePage mode="view" />
+              </ErrorBoundary>
+            ),
           },
           {
             path: 'dashboard/orders',

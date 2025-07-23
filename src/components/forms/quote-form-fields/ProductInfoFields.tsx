@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 interface ProductFormItem {
   productUrl: string;
   productName: string;
-  options: string;
+  customer_notes: string;
 }
 
 // Define the form data structure
@@ -115,7 +115,7 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
       {/* Product Options */}
       <FormField
         control={control}
-        name={`items.${index}.options`}
+        name={`items.${index}.customer_notes`}
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center space-x-2">

@@ -127,7 +127,7 @@ export const CreateQuoteModal = ({
       name: item.productName,
       url: item.productUrl,
       quantity: item.quantity,
-      price_usd: item.price,
+      costprice_origin: item.price,
       weight_kg: item.weight,
     }));
 
@@ -147,7 +147,7 @@ export const CreateQuoteModal = ({
         is_anonymous: !isRegisteredUser, // Anonymous only for non-registered users
         // Insert items and totals directly to satisfy constraints
         items: itemsArray,
-        base_total_usd: baseTotal,
+        costprice_total_usd: baseTotal,
         final_total_usd: baseTotal,
         // Store customer data in JSONB field
         customer_data: {

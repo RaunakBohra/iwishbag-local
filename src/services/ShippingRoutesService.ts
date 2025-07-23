@@ -42,6 +42,8 @@ export async function upsertShippingRoute(
     requires_documentation: routeData.requiresDocumentation,
     is_active: routeData.isActive,
     exchange_rate: routeData.exchangeRate,
+    vat_percentage: routeData.vatPercentage,
+    customs_percentage: routeData.customsPercentage,
   };
 
   let result;

@@ -13,6 +13,12 @@
 export const normalizeShippingOptionId = (id: string): string => {
   if (!id) return '';
   
+  // Don't normalize the new format: "1_delivery_option_1753281135320" - keep it as is
+  // This ID format should match exactly with what's in the shipping options array
+  if (id.includes('_delivery_option_')) {
+    return id; // Keep the full ID format
+  }
+  
   // Handle legacy format: "1_delivery_dhl_standard" → "dhl_standard"  
   if (id.includes('_delivery_')) {
     return id.split('_delivery_')[1];

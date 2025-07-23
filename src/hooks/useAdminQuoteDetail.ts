@@ -61,7 +61,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
           item_weight: item.weight_kg || 0,
           quantity: item.quantity || 1,
           product_name: item.name || '',
-          options: item.options || '',
+          customer_notes: item.customer_notes || ''
           product_url: item.url || '',
           image_url: item.image || '',
         })),
@@ -88,7 +88,7 @@ export const useAdminQuoteDetail = (id: string | undefined) => {
       item_weight: item.item_weight || 0,
       quantity: item.quantity,
       product_name: item.product_name,
-      options: item.options,
+      customer_notes: item.customer_notes,
       product_url: item.product_url,
       image_url: item.image_url,
     }));

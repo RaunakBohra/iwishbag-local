@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
+import { currencyService } from '@/services/CurrencyService';
 import type {
   UnifiedQuote,
   UnifiedQuoteRow,
@@ -52,7 +53,7 @@ export class UnifiedDataEngine {
       shipping_carrier: row.shipping_carrier || null,
       tracking_number: row.tracking_number || null,
       items: Array.isArray(row.items) ? row.items : [],
-      base_total_usd: row.base_total_usd,
+      costprice_total_usd: row.costprice_total_usd,
       final_total_usd: row.final_total_usd,
       calculation_data: row.calculation_data || this.getDefaultCalculationData(),
       customer_data: row.customer_data || this.getDefaultCustomerData(),
@@ -82,11 +83,11 @@ export class UnifiedDataEngine {
       id: item.id || `item_${Date.now()}_${Math.random()}`,
       name: item.product_name || item.name || 'Unknown Product',
       quantity: item.quantity || 1,
-      price_usd: item.price_usd || item.price || 0,
+      costprice_origin: item.costprice_origin || item.price || 0,
       weight_kg: item.weight_kg || item.weight || 0.5,
       url: item.product_url || item.url || '',
       image_url: item.image_url || '',
-      options: item.options || '',
+      customer_notes: item.options || '',
       smart_data: {
         weight_confidence: 0.5, // Default confidence for old data
         category_detected: 'general',
@@ -134,7 +135,7 @@ export class UnifiedDataEngine {
     const operational_data: OperationalData = {
       customs: {
         category: 'general',
-        percentage: oldQuote.customs_percentage || 10,
+        percentage: oldQuote.customs_percentage || 0,
         tier_suggestions: [],
       },
       shipping: {
@@ -172,7 +173,7 @@ export class UnifiedDataEngine {
       origin_country: oldQuote.origin_country || 'US',
       destination_country: oldQuote.destination_country || 'US',
       items,
-      base_total_usd: oldQuote.item_price || 0,
+      costprice_total_usd: oldQuote.item_price || 0,
       final_total_usd: oldQuote.final_total_usd || 0,
       currency: oldQuote.currency || oldQuote.destination_currency || 'USD',
       calculation_data,
@@ -236,6 +237,11 @@ export class UnifiedDataEngine {
 
     // Enhance customer data with profile information if available and customer data is empty
     if (profileData && !quote.is_anonymous) {
+      // Ensure customer info object exists
+      if (!quote.customer_data.info) {
+        quote.customer_data.info = {};
+      }
+      
       // Only update if customer info is empty or missing name
       if (!quote.customer_data.info.name && profileData.full_name) {
         quote.customer_data.info.name = profileData.full_name;
@@ -336,14 +342,22 @@ export class UnifiedDataEngine {
   }
 
   /**
-   * Create new quote with smart defaults
+   * Create new quote with smart defaults and automatic calculation
    */
   async createQuote(input: QuoteCalculationInput): Promise<QuoteCalculationResult> {
     try {
+      console.log('🚀 [QUOTE-CREATION-FIX] Starting enhanced quote creation with smart calculation');
+      
       // Generate smart suggestions for new quote
       const smartSuggestions = await this.generateSmartSuggestions(input.items);
 
-      // Create quote data
+      // ✅ FIX: Get smart calculation data with real exchange rate
+      const calculationData = await this.getDefaultCalculationData(
+        input.origin_country,
+        input.destination_country
+      );
+
+      // Create quote data with smart defaults
       const quoteData = {
         display_id: null, // Let database trigger generate sequential ID (#1001, #1002, etc.)
         status: 'pending',
@@ -360,9 +374,9 @@ export class UnifiedDataEngine {
             optimization_hints: [],
           },
         })),
-        base_total_usd: input.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0),
-        final_total_usd: 0, // Will be calculated
-        calculation_data: this.getDefaultCalculationData(),
+        costprice_total_usd: input.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0),
+        final_total_usd: 0, // Will be calculated by SmartCalculationEngine
+        calculation_data: calculationData, // ✅ FIX: Now has real exchange rate
         customer_data: input.customer_data || this.getDefaultCustomerData(),
         operational_data: this.getDefaultOperationalData(),
         currency: 'USD',
@@ -371,20 +385,77 @@ export class UnifiedDataEngine {
         optimization_score: 0,
       };
 
+      // Insert basic quote first
       const { data, error } = await supabase.from('quotes').insert(quoteData).select().single();
 
       if (error) throw error;
 
-      const quote = this.transformFromDB(data);
+      const basicQuote = this.transformFromDB(data);
+      
+      console.log('✅ [QUOTE-CREATION-FIX] Basic quote created:', {
+        id: basicQuote.id,
+        route: `${basicQuote.origin_country}→${basicQuote.destination_country}`,
+        exchangeRate: basicQuote.calculation_data?.exchange_rate?.rate,
+        exchangeSource: basicQuote.calculation_data?.exchange_rate?.source
+      });
 
+      // ✅ FIX: Now trigger SmartCalculationEngine for VAT, customs, etc.
+      try {
+        // Import SmartCalculationEngine dynamically to avoid circular dependency
+        const { smartCalculationEngine } = await import('./SmartCalculationEngine');
+        
+        console.log('🧠 [QUOTE-CREATION-FIX] Running smart calculation for new quote...');
+        
+        const smartResult = await smartCalculationEngine.calculateWithShippingOptions({
+          quote: basicQuote,
+          preferences: {
+            speed_priority: 'medium',
+            cost_priority: 'medium',
+            show_all_options: false, // For creation, just get basic calculation
+          },
+        });
+
+        if (smartResult.success) {
+          console.log('🎯 [QUOTE-CREATION-FIX] Smart calculation successful, saving results...');
+          
+          // Save smart calculation results back to database
+          const updateSuccess = await this.updateQuote(basicQuote.id, {
+            calculation_data: smartResult.updated_quote.calculation_data,
+            operational_data: smartResult.updated_quote.operational_data,
+            final_total_usd: smartResult.updated_quote.final_total_usd,
+            optimization_score: smartResult.updated_quote.optimization_score,
+          });
+
+          if (updateSuccess) {
+            console.log('✅ [QUOTE-CREATION-FIX] Quote creation complete with smart calculation');
+            return {
+              success: true,
+              quote: smartResult.updated_quote,
+              smart_suggestions: [...smartSuggestions, ...smartResult.optimization_suggestions],
+              shipping_options: smartResult.shipping_options,
+            };
+          } else {
+            console.warn('⚠️ [QUOTE-CREATION-FIX] Failed to save smart calculation results, returning basic quote');
+          }
+        } else {
+          console.warn('⚠️ [QUOTE-CREATION-FIX] Smart calculation failed:', smartResult.error);
+        }
+      } catch (smartError) {
+        console.error('❌ [QUOTE-CREATION-FIX] Smart calculation error:', smartError);
+        // Continue with basic quote if smart calculation fails
+      }
+
+      // Fallback: return basic quote if smart calculation fails
+      console.log('📋 [QUOTE-CREATION-FIX] Returning basic quote (smart calculation skipped)');
       return {
         success: true,
-        quote,
+        quote: basicQuote,
         smart_suggestions: smartSuggestions,
-        shipping_options: [], // Will be populated by SmartCalculationEngine
+        shipping_options: [],
       };
+      
     } catch (error) {
-      console.error('Error creating quote:', error);
+      console.error('❌ [QUOTE-CREATION-FIX] Error creating quote:', error);
       return {
         success: false,
         quote: {} as UnifiedQuote,
@@ -464,13 +535,13 @@ export class UnifiedDataEngine {
 
     const updatedItems = [...quote.items, newItem];
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price_usd * item.quantity,
+      (sum, item) => sum + item.costprice_origin * item.quantity,
       0,
     );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
-      base_total_usd: newBaseTotal,
+      costprice_total_usd: newBaseTotal,
     });
   }
 
@@ -483,13 +554,13 @@ export class UnifiedDataEngine {
     );
 
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price_usd * item.quantity,
+      (sum, item) => sum + item.costprice_origin * item.quantity,
       0,
     );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
-      base_total_usd: newBaseTotal,
+      costprice_total_usd: newBaseTotal,
     });
   }
 
@@ -501,13 +572,13 @@ export class UnifiedDataEngine {
     if (updatedItems.length === 0) return false; // Don't allow empty quotes
 
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price_usd * item.quantity,
+      (sum, item) => sum + item.costprice_origin * item.quantity,
       0,
     );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
-      base_total_usd: newBaseTotal,
+      costprice_total_usd: newBaseTotal,
     });
   }
 
@@ -533,7 +604,7 @@ export class UnifiedDataEngine {
     }
 
     // Price validation suggestions
-    const totalValue = items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+    const totalValue = items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
     if (totalValue > 1000) {
       suggestions.push({
         id: crypto.randomUUID(),
@@ -550,9 +621,32 @@ export class UnifiedDataEngine {
   }
 
   /**
-   * Default data structures
+   * Default data structures with smart exchange rate calculation
    */
-  private getDefaultCalculationData(): CalculationData {
+  private async getDefaultCalculationData(originCountry?: string, destinationCountry?: string): Promise<CalculationData> {
+    let exchangeRate = {
+      rate: 1,
+      source: 'default',
+      confidence: 1,
+    };
+
+    // ✅ FIX: Calculate real exchange rate if countries are different
+    if (originCountry && destinationCountry && originCountry !== destinationCountry) {
+      try {
+        console.log(`🔄 [EXCHANGE-FIX] Calculating exchange rate for ${originCountry}→${destinationCountry}`);
+        const rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
+        exchangeRate = {
+          rate,
+          source: 'currency_service',
+          confidence: 0.95,
+        };
+        console.log(`✅ [EXCHANGE-FIX] Exchange rate calculated: ${rate}`);
+      } catch (error) {
+        console.warn(`⚠️ [EXCHANGE-FIX] Failed to get exchange rate for ${originCountry}→${destinationCountry}:`, error);
+        // Keep default rate: 1
+      }
+    }
+
     return {
       breakdown: {
         items_total: 0,
@@ -562,11 +656,7 @@ export class UnifiedDataEngine {
         fees: 0,
         discount: 0,
       },
-      exchange_rate: {
-        rate: 1,
-        source: 'unified_configuration',
-        confidence: 1,
-      },
+      exchange_rate: exchangeRate,
       smart_optimizations: [],
     };
   }

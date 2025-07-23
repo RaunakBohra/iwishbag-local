@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { calculateCorrectBaseTotalUSD, getExchangeRateFromQuote } from '@/utils/currencyConversion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -243,12 +244,68 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
-  const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
+  // ✅ HELPER: Create enhanced quote with current form values
+  const createEnhancedQuote = (baseQuote?: UnifiedQuote): UnifiedQuote | null => {
+    const currentFormValues = form.getValues();
+    const quoteToCalculate = baseQuote || quote;
+    
+    if (!quoteToCalculate) {
+      console.error('❌ No quote data available for enhancement');
+      return null;
+    }
+
+    return {
+      ...quoteToCalculate,
+      operational_data: {
+        ...quoteToCalculate.operational_data,
+        // ✅ KEY FIX: Map sales_tax_price from form to purchase_tax_rate expected by engine
+        purchase_tax_rate: currentFormValues.sales_tax_price ? 
+          (Number(currentFormValues.sales_tax_price) / (quoteToCalculate.calculation_data?.breakdown?.items_total || 100)) * 100 : 
+          undefined,
+        customs: {
+          ...quoteToCalculate.operational_data?.customs,
+          percentage: Number(currentFormValues.customs_percentage) || quoteToCalculate.operational_data?.customs?.percentage || 0,
+        },
+        handling_charge: Number(currentFormValues.handling_charge) || quoteToCalculate.operational_data?.handling_charge,
+        insurance_amount: Number(currentFormValues.insurance_amount) || quoteToCalculate.operational_data?.insurance_amount,
+      },
+      items: currentFormValues.items?.map((item, index) => ({
+        ...quoteToCalculate.items[index],
+        name: item.product_name || quoteToCalculate.items[index]?.name || '',
+        costprice_origin: Number(item.item_price) || 0,
+        weight_kg: Number(item.item_weight) || 0,
+        quantity: Number(item.quantity) || 1,
+      })) || quoteToCalculate.items,
+    };
+  };
+
+  const calculateSmartFeatures = async (baseQuote?: UnifiedQuote) => {
     try {
       setIsCalculating(true);
+      
+      // ✅ NEW: Always use enhanced quote data
+      const enhancedQuote = createEnhancedQuote(baseQuote);
+      if (!enhancedQuote) return;
+
+      console.log('🔄 [REAL-TIME] Calculating with form values:', {
+        salesTaxPrice: currentFormValues.sales_tax_price,
+        salesTaxPriceType: typeof currentFormValues.sales_tax_price,
+        itemsTotal: quoteToCalculate.calculation_data?.breakdown?.items_total,
+        calculatedPurchaseTaxRate: currentFormValues.sales_tax_price ? 
+          (Number(currentFormValues.sales_tax_price) / (quoteToCalculate.calculation_data?.breakdown?.items_total || 100)) * 100 : 
+          undefined,
+        finalPurchaseTaxRate: enhancedQuote.operational_data?.purchase_tax_rate,
+        customsPercentage: enhancedQuote.operational_data?.customs?.percentage,
+      });
+
+      console.log('📤 [DEBUG] Sending enhanced quote to SmartCalculationEngine:', {
+        quoteId: enhancedQuote.id,
+        operationalData: enhancedQuote.operational_data,
+        purchaseTaxRate: enhancedQuote.operational_data?.purchase_tax_rate,
+      });
 
       const result = await smartCalculationEngine.calculateWithShippingOptions({
-        quote: quoteData,
+        quote: enhancedQuote,
         preferences: {
           speed_priority: 'medium',
           cost_priority: 'medium',
@@ -257,11 +314,51 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
 
       if (result.success) {
-        setQuote(result.updated_quote);
+        setLiveQuote(result.updated_quote); // ✅ Update live quote for real-time display
         setShippingOptions(result.shipping_options);
         setShippingRecommendations(result.smart_recommendations);
         setSmartSuggestions(result.optimization_suggestions);
         setOptimizationScore(result.updated_quote.optimization_score);
+        
+        console.log('✅ [REAL-TIME] Calculation success, updated breakdown:', {
+          purchaseTax: result.updated_quote.calculation_data?.breakdown?.purchase_tax,
+          destinationTax: result.updated_quote.calculation_data?.breakdown?.destination_tax,
+          customs: result.updated_quote.calculation_data?.breakdown?.customs,
+          vatPercentage: result.updated_quote.operational_data?.customs?.smart_tier?.vat_percentage,
+        });
+
+        // ✅ FIX: Persist async calculation results to database
+        // This ensures that sync calculations can access the smart_tier data
+        try {
+          console.log('💾 [FIX] Persisting async calculation results to database:', {
+            quoteId: quote?.id,
+            operationalDataUpdate: {
+              customs: result.updated_quote.operational_data?.customs,
+              shipping: result.updated_quote.operational_data?.shipping,
+            },
+            calculationDataUpdate: {
+              breakdown: result.updated_quote.calculation_data?.breakdown,
+              exchange_rate: result.updated_quote.calculation_data?.exchange_rate,
+            }
+          });
+
+          const success = await unifiedDataEngine.updateQuote(quote!.id, {
+            calculation_data: result.updated_quote.calculation_data,
+            operational_data: result.updated_quote.operational_data,
+            final_total_usd: result.updated_quote.final_total_usd,
+            optimization_score: result.updated_quote.optimization_score,
+          });
+
+          if (success) {
+            console.log('✅ [FIX] Successfully persisted async calculation results to database');
+            // Refresh the quote from database to ensure consistency
+            await refreshQuote();
+          } else {
+            console.error('❌ [FIX] Failed to persist async calculation results to database');
+          }
+        } catch (persistError) {
+          console.error('❌ [FIX] Error persisting async calculation results:', persistError);
+        }
       }
     } catch (error) {
       console.error('Error calculating smart features:', error);
@@ -395,8 +492,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         // Trigger recalculation to update handling charges and other dependent values
         console.log('🔄 [DEBUG] Triggering recalculation after shipping option change...');
         try {
+          // ✅ FIX: Use enhanced quote data for consistent calculations
+          const enhancedQuote = createEnhancedQuote(optimisticQuote);
           const calculationResult = smartCalculationEngine.calculateLiveSync({
-            quote: optimisticQuote,
+            quote: enhancedQuote || optimisticQuote,
             preferences: {
               speed_priority: 'medium',
               cost_priority: 'medium',
@@ -526,7 +625,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           destination_country: formValues.destination_country,
           items: (formValues.items || []).map((item, index) => ({
             ...quote.items[index],
-            price_usd: Number(item.item_price) || 0,
+            costprice_origin: Number(item.item_price) || 0,
             weight_kg: Number(item.item_weight) || 0,
             quantity: Number(item.quantity) || 1,
           })),
@@ -976,7 +1075,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         items: (formValues.items || []).map((item, index) => ({
           ...quote.items[index],
           name: item.product_name || '',
-          price_usd: Number(item.item_price) || 0,
+          costprice_origin: Number(item.item_price) || 0,
           weight_kg: Number(item.item_weight) || 0,
           quantity: Number(item.quantity) || 1,
           url: item.product_url || '',
@@ -1011,9 +1110,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         },
       };
 
+      // ✅ FIX: Use enhanced quote data for consistent calculations
+      const enhancedQuote = createEnhancedQuote(updatedQuote);
+      
       // Use SmartCalculationEngine sync mode for instant live updates
       const calculationResult = smartCalculationEngine.calculateLiveSync({
-        quote: updatedQuote,
+        quote: enhancedQuote || updatedQuote,
         preferences: {
           speed_priority: 'medium',
           cost_priority: 'medium',
@@ -1055,10 +1157,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setLiveQuote(createLiveQuote);
     } else if (quote) {
       console.log('[DEBUG] Recalculating liveQuote (view mode)');
+      // ✅ FIX: Use enhanced quote data for consistent calculations (even in view mode)
+      const enhancedQuote = createEnhancedQuote(quote);
+      
       // View mode: Recalculate using SmartCalculationEngine for consistency
       try {
         const calculationResult = smartCalculationEngine.calculateLiveSync({
-          quote,
+          quote: enhancedQuote || quote,
           preferences: {
             speed_priority: 'medium',
             cost_priority: 'medium',
@@ -1229,7 +1334,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       status: quoteData.status,
       items: (quoteData.items || []).map((item, index) => ({
         id: item.id || `item-${index}`,
-        item_price: item.price_usd || 0,
+        item_price: item.costprice_origin || 0,
         item_weight: item.weight_kg || 0,
         quantity: item.quantity || 1,
         product_name: item.name || '',
@@ -1245,6 +1350,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     try {
       setIsCalculating(true);
       console.log('💾 [SAVE] Form data being submitted:', data);
+      console.log('💰 [SAVE] Item price updates being processed:', {
+        itemCount: data.items?.length || 0,
+        priceUpdates: data.items?.map((item, index) => ({
+          index: index + 1,
+          id: item.id,
+          name: item.product_name || 'Unnamed',
+          oldPrice: quote?.items?.[index]?.costprice_origin || 0,
+          newPrice: Number(item.item_price) || 0,
+          priceChange: (Number(item.item_price) || 0) - (quote?.items?.[index]?.costprice_origin || 0)
+        })) || []
+      });
 
       // Validate form data before submission
       const formErrors = form.formState.errors;
@@ -1277,26 +1393,88 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         return;
       }
 
+      // ✅ FIX: Map sales tax to correct field and trigger recalculation
+      const salesTaxPrice = Number(data.sales_tax_price) || 0;
+      const itemsTotal = data.items?.reduce((sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0) || 0;
+      const purchaseTaxRate = itemsTotal > 0 ? (salesTaxPrice / itemsTotal) * 100 : 0;
+      
+      console.log('💾 [SAVE-FIX] Correcting sales tax field mapping:', {
+        salesTaxPrice,
+        itemsTotal,
+        calculatedPurchaseTaxRate: purchaseTaxRate,
+        explanation: `Sales Tax $${salesTaxPrice} on $${itemsTotal} = ${purchaseTaxRate}%`
+      });
+
+      // ✅ FIX: Calculate proper USD totals using exchange rate conversion
+      const exchangeRate = getExchangeRateFromQuote(quote!);
+      
+      // Items total is in local currency, convert to USD for costprice_total_usd
+      const baseTotalUsd = itemsTotal / exchangeRate;
+      
+      // Final total calculation components
+      const internationalShipping = Number(data.international_shipping) || quote?.calculation_data?.breakdown?.shipping || 0;
+      const handlingCharge = Number(data.handling_charge) || 0;
+      const insuranceAmount = Number(data.insurance_amount) || 0;
+      const discount = Number(data.discount) || 0;
+      
+      // Preserve calculated amounts from existing breakdown (these come from SmartCalculationEngine)
+      const customs = quote?.calculation_data?.breakdown?.customs || 0;
+      const destinationTax = quote?.calculation_data?.breakdown?.destination_tax || 0;
+      const fees = quote?.calculation_data?.breakdown?.fees || 0;
+      
+      const finalTotalUsd = itemsTotal + salesTaxPrice + internationalShipping + handlingCharge + 
+                          insuranceAmount + customs + destinationTax + fees - discount;
+
+      console.log('💾 [SAVE-CALC] Manual save calculation breakdown:', {
+        itemsTotal,
+        itemsTotalCurrency: `${quote?.origin_country} local currency`,
+        exchangeRate,
+        baseTotalUsd,
+        salesTaxPrice, 
+        internationalShipping,
+        handlingCharge,
+        insuranceAmount,
+        customs,
+        destinationTax,
+        fees,
+        discount,
+        finalTotalUsd,
+        currencyFix: `Items: ${itemsTotal} local → $${baseTotalUsd.toFixed(2)} USD (÷${exchangeRate})`
+      });
+
       // Update quote with form data - CONVERT ALL VALUES TO NUMBERS!
       const success = await unifiedDataEngine.updateQuote(quoteId!, {
         customs_percentage: Number(data.customs_percentage) || 0,
         origin_country: data.origin_country || quote?.origin_country,
         destination_country: data.destination_country || quote?.destination_country,
+        costprice_total_usd: Math.round(baseTotalUsd * 100) / 100, // ✅ FIX: Correct USD conversion
+        final_total_usd: Math.round(finalTotalUsd * 100) / 100, // ✅ FIX: Update final total
         calculation_data: {
           ...quote?.calculation_data,
-          sales_tax_price: Number(data.sales_tax_price) || 0,
+          // ✅ LEGACY: Keep sales_tax_price for backward compatibility but it's not used by engine
+          sales_tax_price: salesTaxPrice,
           discount: Number(data.discount) || 0,
           customs_percentage: Number(data.customs_percentage) || 0,
           breakdown: {
             ...quote?.calculation_data?.breakdown,
-            shipping:
-              Number(data.international_shipping) ||
-              quote?.calculation_data?.breakdown?.shipping ||
-              0,
+            // ✅ FIX: Update all form-editable breakdown fields
+            items_total: data.items?.reduce((sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0) || 0,
+            purchase_tax: salesTaxPrice, // Transparent purchase tax amount
+            shipping: Number(data.international_shipping) || quote?.calculation_data?.breakdown?.shipping || 0,
+            handling: Number(data.handling_charge) || quote?.calculation_data?.breakdown?.handling || 0,
+            insurance: Number(data.insurance_amount) || quote?.calculation_data?.breakdown?.insurance || 0,
+            discount: Number(data.discount) || 0,
+            // Preserve calculated fields that should not be overwritten by form data
+            customs: quote?.calculation_data?.breakdown?.customs || 0,
+            destination_tax: quote?.calculation_data?.breakdown?.destination_tax || 0, 
+            fees: quote?.calculation_data?.breakdown?.fees || 0,
+            taxes: quote?.calculation_data?.breakdown?.taxes || 0, // Legacy field
           },
         },
         operational_data: {
           ...quote?.operational_data,
+          // ✅ FIX: Map sales tax to purchase_tax_rate (what SmartCalculationEngine actually uses)
+          purchase_tax_rate: purchaseTaxRate,
           domestic_shipping: Number(data.domestic_shipping) || 0,
           handling_charge: Number(data.handling_charge) || 0,
           insurance_amount: Number(data.insurance_amount) || 0,
@@ -1309,7 +1487,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           data.items?.map((item) => ({
             id: item.id,
             name: item.product_name || '',
-            price_usd: Number(item.item_price) || 0,
+            costprice_origin: Number(item.item_price) || 0,
             weight_kg: Number(item.item_weight) || 0,
             quantity: Number(item.quantity) || 1,
             url: item.product_url || '',
@@ -1319,8 +1497,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
 
       console.log('✅ [SAVE] Update success:', success);
-
+      
       if (success) {
+        console.log('✅ [SAVE] Items successfully saved to database:', {
+          savedItemCount: data.items?.length || 0,
+          savedItems: data.items?.map((item) => ({
+            id: item.id,
+            name: item.product_name || '',
+            costprice_origin: Number(item.item_price) || 0,
+            quantity: Number(item.quantity) || 1
+          })) || []
+        });
         setLastSaveTime(new Date());
         
         // 🚀 AUTO-STATUS PROGRESSION: pending → sent
@@ -1370,8 +1557,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           });
         }
         
-        // Removed setIsEditMode(false) - keep user in edit mode for continued editing
-        await loadQuoteData(); // Reload to get fresh data
+        // ✅ FIX: Trigger recalculation after save to update breakdown with new sales tax
+        console.log('🔄 [SAVE-FIX] Triggering recalculation after save to update breakdown');
+        await loadQuoteData(); // Reload to get fresh data first
+        
+        // Then trigger calculation with new data to update the breakdown display
+        await calculateSmartFeatures();
       } else {
         toast({
           title: 'Error',
@@ -1918,9 +2109,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                         value={item.item_price || ''}
                                         onChange={(e) => {
                                           const items = form.getValues('items') || [];
+                                          const oldPrice = items[index]?.item_price || 0;
+                                          const newPrice = parseFloat(e.target.value) || 0;
+                                          
+                                          console.log(`💰 [PRICE-UPDATE] Item ${index + 1} price changed:`, {
+                                            itemId: items[index]?.id,
+                                            itemName: items[index]?.product_name || 'Unnamed',
+                                            oldPrice: oldPrice,
+                                            newPrice: newPrice,
+                                            change: newPrice - oldPrice,
+                                            inputValue: e.target.value
+                                          });
+                                          
                                           items[index] = {
                                             ...items[index],
-                                            item_price: parseFloat(e.target.value) || 0,
+                                            item_price: newPrice,
                                           };
                                           form.setValue('items', items);
                                         }}
@@ -1954,6 +2157,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             item_weight: parseFloat(e.target.value) || 0,
                                           };
                                           form.setValue('items', items);
+                                          scheduleCalculation();
                                         }}
                                         placeholder="0.2"
                                       />
@@ -2248,6 +2452,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         onSelectShippingOption={handleShippingOptionSelect}
                         onShowShippingDetails={() => setShowShippingDetails(true)}
                         isEditingRoute={isEditingRoute}
+                        onTriggerCalculation={() => scheduleCalculation('sales-tax-update', calculateSmartFeatures, [liveQuote || quote])} // ✅ NEW: Real-time calculation trigger
                       />
                     );
                   })()}
@@ -2257,6 +2462,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={() => handleModeToggle(false)}
                       disabled={isCalculating}
@@ -2265,6 +2471,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       Cancel
                     </Button>
                     <Button
+                      type="button"
                       onClick={() => calculateSmartFeatures(liveQuote || quote)}
                       disabled={isCalculating}
                       variant="outline"
@@ -2273,6 +2480,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       {isCalculating ? 'Calculating...' : 'Recalculate'}
                     </Button>
                     <Button
+                      type="button"
                       onClick={async () => {
                         console.log('💾 [EDIT-SAVE] Save button clicked');
                         console.log('💾 [EDIT-SAVE] Current form values:', form.getValues());
@@ -2361,11 +2569,25 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               )}
 
               {/* Live Cost Breakdown */}
-              <CompactCalculationBreakdown
-                quote={liveQuote || quote}
-                shippingOptions={shippingOptions}
-                isCalculating={isCalculating}
-              />
+              {(() => {
+                const usedQuote = liveQuote || quote;
+                console.log('🔍 [UnifiedQuoteInterface] Passing quote to CompactCalculationBreakdown:', {
+                  quoteId: quote?.id,
+                  hasLiveQuote: !!liveQuote,
+                  usingLiveQuote: !!liveQuote,
+                  originalCalculationData: quote?.calculation_data,
+                  liveCalculationData: liveQuote?.calculation_data,
+                  usedCalculationData: usedQuote?.calculation_data,
+                });
+                return (
+                  <CompactCalculationBreakdown
+                    key={`breakdown-${usedQuote?.id}-${JSON.stringify(usedQuote?.calculation_data?.breakdown)}`}
+                    quote={usedQuote}
+                    shippingOptions={shippingOptions}
+                    isCalculating={isCalculating}
+                  />
+                );
+              })()}
 
               {/* AI Insights - Compact Version */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/20">
@@ -2464,7 +2686,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Weight: {item.weight_kg} kg each</span>
                               <span>•</span>
-                              <span>Unit Price: {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}</span>
+                              <span>Unit Price: {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0), 'origin')}</span>
                             </div>
                             {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (
@@ -2479,7 +2701,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
-                            {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0) * item.quantity, 'origin')}
+                            {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0) * item.quantity, 'origin')}
                           </div>
                           <div className="text-xs text-gray-500">Total</div>
                         </div>
@@ -2491,6 +2713,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
               {/* Cost Breakdown - Clean Professional Style */}
               <CompactCalculationBreakdown
+                key={`breakdown-${(liveQuote || quote)?.id}-${JSON.stringify((liveQuote || quote)?.calculation_data?.breakdown)}`}
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}

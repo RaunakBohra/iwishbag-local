@@ -385,17 +385,27 @@ export class QuoteMessageService {
           .select(
             `
             user_id,
-            profiles!inner(email, full_name)
+            profiles(email, full_name)
           `,
           )
           .eq('role', 'admin');
 
         if (!error && admins) {
-          participants.admins = admins.map((admin) => ({
-            id: admin.user_id,
-            name: (admin.profiles as any)?.full_name || 'Admin',
-            email: (admin.profiles as any)?.email || 'admin@iwishbag.com',
-          }));
+          participants.admins = admins
+            .filter(admin => admin.profiles) // Only include admins with profiles
+            .map((admin) => ({
+              id: admin.user_id,
+              name: (admin.profiles as any)?.full_name || 'Admin',
+              email: (admin.profiles as any)?.email || 'admin@iwishbag.com',
+            }));
+        } else if (error) {
+          console.error('Error fetching admin users:', error);
+          // Fallback admin user
+          participants.admins = [{
+            id: 'system',
+            name: 'Admin',
+            email: 'admin@iwishbag.com'
+          }];
         }
       }
     } catch (error) {

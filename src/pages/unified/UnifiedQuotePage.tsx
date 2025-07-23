@@ -1,695 +1,1225 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   ArrowLeft,
-  Share2,
-  Download,
-  Edit,
-  Trash2,
-  AlertTriangle,
-  Loader2,
-  Mobile,
-  Monitor,
-  Tablet,
-  CheckCircle,
-  Clock,
-  User,
   Package,
   MapPin,
-  Calendar
+  Clock,
+  User,
+  Phone,
+  Mail,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle,
+  XCircle,
+  MessageCircle,
+  Loader2,
+  AlertTriangle,
+  Truck,
+  FileText,
+  CreditCard,
+  ShoppingCart,
+  Eye,
+  CheckCircle2,
+  Shield,
+  Lock,
+  Monitor,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-// Import our unified components
-import { UnifiedQuoteCard } from '@/components/unified/UnifiedQuoteCard';
-import { UnifiedQuoteBreakdown } from '@/components/unified/UnifiedQuoteBreakdown';
-import { UnifiedQuoteActions } from '@/components/unified/UnifiedQuoteActions';
-import { UnifiedQuoteForm } from '@/components/unified/UnifiedQuoteForm';
-import { QuoteThemeProvider, useQuoteTheme } from '@/contexts/QuoteThemeContext';
-
-// Hooks
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { useColorVariantTesting } from '@/hooks/useColorVariantTesting';
-
-// Services
 import { supabase } from '@/integrations/supabase/client';
+import { useCartStore } from '@/stores/cartStore';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
-// PWA and mobile detection
-const useDeviceDetection = () => {
-  const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
-  const [isStandalone, setIsStandalone] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-
-  useEffect(() => {
-    // Device detection
-    const checkDevice = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setDeviceType('mobile');
-      } else if (width < 1024) {
-        setDeviceType('tablet');
-      } else {
-        setDeviceType('desktop');
-      }
-    };
-
-    // PWA detection
-    const checkPWA = () => {
-      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isIOSStandalone = (window.navigator as any).standalone === true;
-      
-      setIsStandalone(isStandaloneMode || (isIOS && isIOSStandalone));
-    };
-
-    // Install prompt detection
-    const handleInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-
-    checkDevice();
-    checkPWA();
-    
-    window.addEventListener('resize', checkDevice);
-    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-
-    return () => {
-      window.removeEventListener('resize', checkDevice);
-      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
-    };
-  }, []);
-
-  const promptInstall = useCallback(async () => {
-    if (!installPrompt) return false;
-
-    const result = await installPrompt.prompt();
-    console.log('Install prompt result:', result);
-    setInstallPrompt(null);
-    
-    return result.outcome === 'accepted';
-  }, [installPrompt]);
-
-  return {
-    deviceType,
-    isStandalone,
-    installPrompt: installPrompt ? promptInstall : null,
-    isMobile: deviceType === 'mobile',
-    isTablet: deviceType === 'tablet',
-    isDesktop: deviceType === 'desktop'
-  };
-};
-
-// Performance monitoring hook
-const usePagePerformance = (pageName: string) => {
-  const [metrics, setMetrics] = useState({
-    loadTime: 0,
-    renderTime: 0,
-    interactionTime: 0
-  });
-
-  useEffect(() => {
-    const startTime = performance.now();
-    
-    // Measure initial render
-    const observer = new PerformanceObserver((list) => {
-      const entries = list.getEntries();
-      
-      entries.forEach((entry) => {
-        if (entry.entryType === 'navigation') {
-          const navEntry = entry as PerformanceNavigationTiming;
-          setMetrics(prev => ({
-            ...prev,
-            loadTime: navEntry.loadEventEnd - navEntry.navigationStart
-          }));
-        }
-        
-        if (entry.entryType === 'measure' && entry.name === 'component-render') {
-          setMetrics(prev => ({
-            ...prev,
-            renderTime: entry.duration
-          }));
-        }
-      });
-    });
-
-    observer.observe({ type: 'navigation', buffered: true });
-    observer.observe({ type: 'measure', buffered: true });
-
-    // Mark render complete
-    setTimeout(() => {
-      const renderTime = performance.now() - startTime;
-      performance.mark('component-render-start');
-      performance.mark('component-render-end');
-      performance.measure('component-render', 'component-render-start', 'component-render-end');
-      
-      setMetrics(prev => ({
-        ...prev,
-        renderTime
-      }));
-    }, 0);
-
-    // Track to analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'page_performance', {
-        page_name: pageName,
-        load_time: metrics.loadTime,
-        render_time: metrics.renderTime,
-        device_type: window.innerWidth < 768 ? 'mobile' : 'desktop'
-      });
-    }
-
-    return () => observer.disconnect();
-  }, [pageName, metrics.loadTime, metrics.renderTime]);
-
-  return metrics;
-};
-
-// Main page component
+// Clean, minimal quote detail page following Amazon/Stripe design principles
 interface UnifiedQuotePageProps {
-  mode?: 'view' | 'edit' | 'create';
+  mode?: 'view' | 'edit';
 }
 
-const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) => {
-  const { quoteId } = useParams<{ quoteId: string }>();
+const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) => {
+  const { id: quoteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: isAdmin } = useAdminRole();
-  const { trackConversion } = useColorVariantTesting();
-  const { colors } = useQuoteTheme();
-  
-  // Device and performance detection
-  const device = useDeviceDetection();
-  const performance = usePagePerformance(`unified-quote-${mode}`);
-  
-  // State management
-  const [isEditing, setIsEditing] = useState(mode === 'edit' || mode === 'create');
-  const [showBreakdown, setShowBreakdown] = useState(!device.isMobile);
   const queryClient = useQueryClient();
+  const { addItem: addToCart } = useCartStore();
+
+  // Simple state management
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Determine view mode
-  const viewMode = useMemo(() => {
-    if (isAdmin) return 'admin';
-    if (user) return 'customer';
-    return 'guest';
-  }, [isAdmin, user]);
+  const viewMode = isAdmin ? 'admin' : user ? 'customer' : 'guest';
 
-  // Fetch quote data
-  const { 
-    data: quote, 
-    isLoading, 
+  // Fetch quote data with optimized caching - must be declared before useEffects that reference it
+  const {
+    data: quote,
+    isLoading,
     error,
-    refetch 
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ['quote', quoteId],
     queryFn: async () => {
-      if (!quoteId || mode === 'create') return null;
-      
-      const { data, error } = await supabase
-        .from('quotes')
-        .select(`
-          *,
-          items:quote_items(*),
-          profiles:profiles(preferred_display_currency)
-        `)
-        .eq('id', quoteId)
-        .single();
+      if (!quoteId) throw new Error('No quote ID provided');
+
+      const { data, error } = await supabase.from('quotes').select('*').eq('id', quoteId).single();
 
       if (error) throw error;
       return data as UnifiedQuote;
     },
-    enabled: !!quoteId && mode !== 'create'
+    enabled: !!quoteId,
+    staleTime: 5 * 60 * 1000, // 5 minutes - quote data is relatively stable
+    gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache longer
+    refetchOnWindowFocus: false, // Don't refetch on window focus for better UX
+    refetchOnMount: false, // Use cached data if available and not stale
+    retry: 2, // Retry failed requests twice
   });
 
-  // Quote action mutation
-  const quoteActionMutation = useMutation({
-    mutationFn: async ({ action, quote: quoteData, optimistic }: { 
-      action: string; 
-      quote: UnifiedQuote; 
-      optimistic?: boolean;
-    }) => {
-      // Handle different actions
-      switch (action) {
-        case 'approve':
-          const { error: approveError } = await supabase
-            .from('quotes')
-            .update({ status: 'approved' })
-            .eq('id', quoteData.id);
-          if (approveError) throw approveError;
-          break;
-          
-        case 'reject':
-          const { error: rejectError } = await supabase
-            .from('quotes')
-            .update({ status: 'rejected' })
-            .eq('id', quoteData.id);
-          if (rejectError) throw rejectError;
-          break;
-          
-        case 'add-to-cart':
-          // Add to cart logic here
-          trackConversion('quote_added_to_cart', quoteData.final_total_usd);
-          break;
-          
-        case 'edit':
-          setIsEditing(true);
-          break;
-          
-        case 'delete':
-          const { error: deleteError } = await supabase
-            .from('quotes')
-            .delete()
-            .eq('id', quoteData.id);
-          if (deleteError) throw deleteError;
-          navigate(viewMode === 'admin' ? '/admin/quotes' : '/dashboard/quotes');
-          break;
-          
-        default:
-          console.warn(`Unhandled action: ${action}`);
-      }
-      
-      return { action, success: true };
-    },
-    onSuccess: (result) => {
-      toast.success(`Quote ${result.action} successful`);
-      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-    },
-    onError: (error) => {
-      console.error('Quote action failed:', error);
-      toast.error('Action failed. Please try again.');
-    }
-  });
+  // Performance monitoring - now quote is defined
+  React.useEffect(() => {
+    if (quote && !isLoading) {
+      // Mark when quote details are fully loaded
+      performance.mark('quote-detail-loaded');
 
-  // Form submission handler
-  const handleFormSubmit = useCallback(async (formData: any, files?: File[]) => {
-    try {
-      if (mode === 'create') {
-        // Create new quote
-        const { data: newQuote, error } = await supabase
-          .from('quotes')
-          .insert({
-            user_id: user?.id,
-            customer_data: {
-              info: {
-                name: formData.customerName,
-                email: formData.customerEmail,
-                phone: formData.customerPhone
-              }
-            },
-            destination_country: formData.destinationCountry,
-            shipping_address: { formatted: formData.shippingAddress },
-            notes: formData.specialInstructions,
-            status: 'pending'
-          })
-          .select()
-          .single();
+      // Measure time from navigation start
+      if (performance.getEntriesByName('quote-detail-start').length > 0) {
+        performance.measure('quote-detail-load-time', 'quote-detail-start', 'quote-detail-loaded');
+        const measure = performance.getEntriesByName('quote-detail-load-time')[0];
 
-        if (error) throw error;
-
-        // Add items
-        if (newQuote) {
-          const { error: itemError } = await supabase
-            .from('quote_items')
-            .insert({
-              quote_id: newQuote.id,
-              name: formData.productName,
-              product_url: formData.productUrl,
-              quantity: formData.quantity,
-              price: formData.estimatedPrice
-            });
-
-          if (itemError) throw itemError;
+        // Log performance metrics (only in development)
+        if (import.meta.env.DEV) {
+          console.log(`📊 Quote detail loaded in ${measure.duration.toFixed(2)}ms`);
         }
-
-        toast.success('Quote request submitted successfully!');
-        navigate(`/quote/${newQuote.id}`);
-        
-      } else {
-        // Update existing quote
-        const { error } = await supabase
-          .from('quotes')
-          .update({
-            notes: formData.specialInstructions,
-            admin_notes: formData.adminNotes,
-            priority: formData.priority
-          })
-          .eq('id', quoteId);
-
-        if (error) throw error;
-
-        toast.success('Quote updated successfully!');
-        setIsEditing(false);
-        refetch();
       }
-      
-      trackConversion('quote_form_submitted', 1);
-      
-    } catch (error) {
-      console.error('Form submission error:', error);
-      toast.error('Failed to save quote. Please try again.');
-      throw error;
     }
-  }, [mode, user?.id, quoteId, navigate, refetch, trackConversion]);
+  }, [quote, isLoading]);
 
-  // Loading state
+  // Mark component mount for performance tracking
+  React.useEffect(() => {
+    performance.mark('quote-detail-start');
+
+    return () => {
+      // Cleanup performance entries on unmount
+      performance.clearMarks('quote-detail-start');
+      performance.clearMarks('quote-detail-loaded');
+      performance.clearMeasures('quote-detail-load-time');
+    };
+  }, []);
+
+  // Prefetch related data for better perceived performance
+  React.useEffect(() => {
+    if (quote && user) {
+      // Prefetch quotes list when user might navigate back
+      queryClient.prefetchQuery({
+        queryKey: ['quotes', user.id],
+        queryFn: async () => {
+          const { data } = await supabase
+            .from('quotes')
+            .select('id, display_id, status, created_at, final_total_usd')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+          return data || [];
+        },
+        staleTime: 2 * 60 * 1000, // 2 minutes
+      });
+    }
+  }, [quote, user, queryClient]);
+
+  // Optimized action handler with optimistic updates
+  const handleAction = async (action: 'approve' | 'reject') => {
+    if (!quote) {
+      console.error('No quote data available');
+      toast.error('Quote data not available. Please refresh the page.');
+      return;
+    }
+
+    if (!user) {
+      console.error('User not authenticated');
+      toast.error('Please log in to perform this action.');
+      return;
+    }
+
+    console.log('Attempting to', action, 'quote:', quote.id, 'Current status:', quote.status);
+
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+    setActionLoading(action);
+
+    // Optimistic update - immediately update UI
+    queryClient.setQueryData(['quote', quoteId], (oldData: UnifiedQuote | undefined) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+    });
+
+    try {
+      // Perform actual database update with user context
+      const { error } = await supabase
+        .from('quotes')
+        .update({
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', quote.id)
+        .eq('user_id', user.id); // Ensure user owns this quote
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      toast.success(`Quote ${action}d successfully!`);
+
+      // Refetch to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
+    } catch (error) {
+      console.error(`Failed to ${action} quote:`, error);
+      
+      // More specific error messages
+      if (error.code === 'PGRST116') {
+        toast.error('You do not have permission to modify this quote.');
+      } else if (error.code === 'PGRST301') {
+        toast.error('Quote not found or access denied.');
+      } else {
+        toast.error(`Failed to ${action} quote. Please try again.`);
+      }
+
+      // Revert optimistic update on error
+      queryClient.setQueryData(['quote', quoteId], quote);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Stripe-style status badge
+  const getStatusColor = (status: string) => {
+    const colors = {
+      pending: 'text-amber-600 bg-amber-50 border-amber-200',
+      sent: 'text-blue-600 bg-blue-50 border-blue-200',
+      approved: 'text-green-600 bg-green-50 border-green-200',
+      rejected: 'text-red-600 bg-red-50 border-red-200',
+      paid: 'text-purple-600 bg-purple-50 border-purple-200',
+      ordered: 'text-orange-600 bg-orange-50 border-orange-200',
+      shipped: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+      completed: 'text-green-600 bg-green-50 border-green-200',
+    };
+    return colors[status] || colors['pending'];
+  };
+
+  // Loading state - skeleton loader for better perceived performance
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading quote...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Error Loading Quote</h2>
-            <p className="text-gray-600 mb-4">
-              {error instanceof Error ? error.message : 'Failed to load quote'}
-            </p>
-            <div className="flex gap-2 justify-center">
-              <Button onClick={() => refetch()} variant="outline">
-                Try Again
-              </Button>
-              <Button onClick={() => navigate(-1)}>
-                Go Back
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Mobile layout
-  if (device.isMobile) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Mobile header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-            
-            <div className="flex items-center gap-2">
-              {mode === 'view' && quote && (
-                <>
-                  <Badge variant="outline" className="text-xs">
-                    {quote.status}
-                  </Badge>
-                  <Button variant="ghost" size="sm">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
+      <div className="min-h-screen bg-white">
+        {/* Header skeleton */}
+        <div className="border-b border-gray-200 bg-white">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="flex items-center gap-3">
+                  <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
             </div>
           </div>
-          
-          {/* PWA install prompt */}
-          {device.installPrompt && !device.isStandalone && (
-            <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Mobile className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-blue-700">Install iwishBag App</span>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={device.installPrompt}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Install
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="p-4 space-y-4">
-          {/* Form or Quote Display */}
-          {isEditing ? (
-            <UnifiedQuoteForm
-              mode={mode === 'create' ? 'create' : 'edit'}
-              existingQuote={quote || undefined}
-              viewMode={viewMode}
-              onSubmit={handleFormSubmit}
-              onCancel={() => setIsEditing(false)}
-              compact={true}
-              className="shadow-none border-0"
-            />
-          ) : quote ? (
-            <>
-              {/* Quote Card */}
-              <UnifiedQuoteCard
-                quote={quote}
-                viewMode={viewMode}
-                layout="card"
-                className="shadow-sm"
-              />
-
-              {/* Expandable Breakdown */}
-              <Card className="shadow-sm">
-                <button
-                  onClick={() => setShowBreakdown(!showBreakdown)}
-                  className="w-full p-4 text-left flex items-center justify-between"
-                >
-                  <span className="font-medium">Price Breakdown</span>
-                  <Badge variant="outline">
-                    ${quote.final_total_usd?.toFixed(2)}
-                  </Badge>
-                </button>
-                
-                {showBreakdown && (
-                  <div className="border-t">
-                    <UnifiedQuoteBreakdown
-                      quote={quote}
-                      viewMode={viewMode}
-                      compact={true}
-                      className="shadow-none border-0"
-                    />
+        {/* Content skeleton */}
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:space-y-0 space-y-4">
+            {/* Left column skeleton */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Product card skeleton */}
+              <div className="border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-6 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse"></div>
                   </div>
-                )}
-              </Card>
-
-              {/* Mobile Actions */}
-              <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4">
-                <UnifiedQuoteActions
-                  quote={quote}
-                  viewMode={viewMode}
-                  layout="vertical"
-                  size="lg"
-                  onAction={(action, quote, optimistic) => 
-                    quoteActionMutation.mutate({ action, quote, optimistic })
-                  }
-                  className="w-full"
-                />
+                </div>
               </div>
-            </>
-          ) : null}
+
+              {/* Price card skeleton */}
+              <div className="border border-gray-200 rounded-lg p-6">
+                <div className="h-6 w-1/3 bg-gray-200 rounded animate-pulse mb-4"></div>
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="flex justify-between">
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shipping card skeleton */}
+              <div className="border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 w-24 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right column skeleton */}
+            <div className="lg:col-span-1 space-y-4">
+              <div className="border border-gray-200 rounded-lg p-6">
+                <div className="h-5 w-20 bg-gray-200 rounded animate-pulse mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Desktop/Tablet layout
+  // Error state - clean and helpful
+  if (error || !quote) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="max-w-md mx-auto text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Quote Not Found</h2>
+          <p className="text-gray-600 mb-6">
+            {error instanceof Error
+              ? error.message
+              : "This quote doesn't exist or you don't have permission to view it."}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => refetch()} variant="outline">
+              Try Again
+            </Button>
+            <Button onClick={() => navigate('/dashboard/quotes')}>Back to Quotes</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Get first item for display - items are stored as JSONB array
+  const firstItem = Array.isArray(quote.items) ? quote.items[0] : null;
+  const canTakeAction = viewMode === 'customer' && ['sent'].includes(quote.status);
+
+  // Debug logging for action availability
+  if (import.meta.env.DEV) {
+    console.log('Action Debug:', {
+      viewMode,
+      isAdmin,
+      user: !!user,
+      quoteStatus: quote.status,
+      canTakeAction,
+      quoteId: quote.id,
+      userId: user?.id,
+      quoteUserId: quote.user_id
+    });
+  }
+
+  // Get customer information from various sources
+  const customerInfo = {
+    name:
+      quote.customer_data?.info?.name ||
+      user?.user_metadata?.name ||
+      user?.user_metadata?.full_name ||
+      'Customer',
+    email: quote.customer_data?.info?.email || user?.email || 'Not provided',
+    phone: quote.customer_data?.info?.phone || user?.user_metadata?.phone || 'Not provided',
+    avatar: quote.customer_data?.profile?.avatar_url || user?.user_metadata?.avatar_url,
+  };
+
+  // Get shipping address information
+  const shippingAddress = quote.customer_data?.shipping_address || {
+    line1: 'Address not provided',
+    city: '',
+    state: '',
+    country: quote.destination_country,
+  };
+
+  // Format address for display
+  const formattedAddress = [
+    shippingAddress.line1,
+    shippingAddress.line2,
+    [shippingAddress.city, shippingAddress.state].filter(Boolean).join(', '),
+    shippingAddress.postal,
+    shippingAddress.country,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  // Get calculation breakdown - MATCH ADMIN COMPACTCALCULATIONBREAKDOWN EXACTLY
+  const breakdown = quote.calculation_data?.breakdown || {};
+  const operationalData = quote.operational_data || {};
+
+  // Use exact same field mapping as admin CompactCalculationBreakdown
+  const pricing = {
+    itemsTotal: Number(breakdown.items_total || 0),
+    purchaseTax: Number(breakdown.purchase_tax || 0),
+    internationalShipping: Number(breakdown.shipping || 0),
+    customs: Number(breakdown.customs || 0),
+    destinationTax: Number(breakdown.destination_tax || 0),
+    serviceHandling: Number(breakdown.handling || 0),
+    insurance: Number(breakdown.insurance || 0),
+    paymentFees: Number(breakdown.fees || 0),
+    domesticShipping: quote.domestic_shipping || 0,
+    discount: Number(breakdown.discount || 0),
+    finalTotal: quote.final_total_usd || 0,
+    // Calculate total taxes using same logic as admin
+    totalTaxes:
+      Number(breakdown.purchase_tax || 0) +
+      Number(breakdown.destination_tax || 0) +
+      // Fallback to legacy taxes field if new fields don't exist
+      (!breakdown.purchase_tax && !breakdown.destination_tax ? Number(breakdown.taxes || 0) : 0),
+    // Calculate total fees using same logic as admin
+    totalFees:
+      Number(breakdown.fees || 0) +
+      Number(breakdown.handling || 0) +
+      Number(breakdown.insurance || 0),
+  };
+
+  // Get tracking information
+  const trackingInfo = {
+    iwishTrackingId: quote.iwish_tracking_id,
+    trackingStatus: quote.tracking_status || 'pending',
+    estimatedDelivery: quote.estimated_delivery_date,
+    carrier: quote.shipping_carrier,
+    externalTracking: quote.tracking_number,
+  };
+
+  // Get delivery estimate from shipping options or operational data
+  const deliveryEstimate = operationalData.shipping?.selected_option
+    ? operationalData.shipping.available_options?.find(
+        (opt) => opt.id === operationalData.shipping.selected_option,
+      )?.days || '7-14 business days'
+    : '7-14 business days';
+
+  // Status-based layout configuration
+  const getQuoteStatusConfig = (status: string) => {
+    const configs = {
+      pending: {
+        title: 'Quote Under Review',
+        subtitle: "We're preparing your custom quote",
+        primaryAction: null, // No action for customer
+        showPricing: false,
+        phase: 'preparation',
+      },
+      sent: {
+        title: 'Quote Ready for Review',
+        subtitle: 'Please review and approve your quote to proceed',
+        primaryAction: 'Approve Quote',
+        showPricing: true,
+        phase: 'review',
+      },
+      approved: {
+        title: 'Quote Approved - Ready for Payment',
+        subtitle: 'Complete your payment to place the order',
+        primaryAction: 'Proceed to Payment',
+        showPricing: true,
+        phase: 'payment',
+      },
+      paid: {
+        title: 'Payment Confirmed - Order Placed',
+        subtitle: 'Your order is being processed',
+        primaryAction: 'Track Order',
+        showPricing: true,
+        phase: 'processing',
+      },
+      shipped: {
+        title: 'Order Shipped',
+        subtitle: 'Your order is on the way',
+        primaryAction: 'Track Package',
+        showPricing: true,
+        phase: 'shipping',
+      },
+      rejected: {
+        title: 'Quote Declined',
+        subtitle: 'Request a new quote or contact support',
+        primaryAction: 'Request New Quote',
+        showPricing: true,
+        phase: 'declined',
+      },
+    };
+    return configs[status] || configs['pending'];
+  };
+
+  const statusConfig = getQuoteStatusConfig(quote.status);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Desktop header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+    <div className="min-h-screen bg-white">
+      {/* Stripe-style minimal header */}
+      <div className="border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                onClick={() => navigate(-1)}
-                className="flex items-center gap-2"
+                onClick={() => navigate('/dashboard/quotes')}
+                className="text-gray-600 hover:text-gray-900 -ml-2"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Back
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Quotes
               </Button>
-              
-              <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 text-gray-400" />
-                <h1 className="text-lg font-semibold">
-                  {mode === 'create' ? 'New Quote Request' :
-                   mode === 'edit' ? 'Edit Quote' :
-                   quote?.display_id || `Quote #${quoteId?.slice(0, 8)}`}
-                </h1>
-                {quote && (
-                  <Badge variant="outline">{quote.status}</Badge>
-                )}
-              </div>
+              <div className="w-px h-6 bg-gray-300"></div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Quote {quote.display_id || quote.id.slice(0, 8)}
+              </h1>
             </div>
-
-            <div className="flex items-center gap-2">
-              {/* Device indicator */}
-              <div className="flex items-center gap-1 text-sm text-gray-500">
-                {device.isDesktop && <Monitor className="h-4 w-4" />}
-                {device.isTablet && <Tablet className="h-4 w-4" />}
-                {device.isMobile && <Mobile className="h-4 w-4" />}
-                <span className="hidden sm:inline">{device.deviceType}</span>
-              </div>
-
-              {mode === 'view' && quote && !isEditing && (
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                  
-                  <Button variant="outline" size="sm">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
-                  
-                  {viewMode === 'admin' && (
-                    <Button
-                      onClick={() => setIsEditing(true)}
-                      size="sm"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              )}
+            <div className="flex items-center gap-3">
+              <Badge className={cn('font-medium', getStatusColor(quote.status))}>
+                {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+              </Badge>
+              <Button variant="outline" size="sm" className="text-sm">
+                <FileText className="h-4 w-4 mr-2" />
+                Export
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isEditing ? (
-          <div className="max-w-4xl mx-auto">
-            <UnifiedQuoteForm
-              mode={mode === 'create' ? 'create' : 'edit'}
-              existingQuote={quote || undefined}
-              viewMode={viewMode}
-              onSubmit={handleFormSubmit}
-              onCancel={() => setIsEditing(false)}
-            />
-          </div>
-        ) : quote ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main content */}
-            <div className="lg:col-span-2 space-y-6">
-              <UnifiedQuoteCard
-                quote={quote}
-                viewMode={viewMode}
-                layout="detail"
-              />
-
-              <UnifiedQuoteActions
-                quote={quote}
-                viewMode={viewMode}
-                layout="horizontal"
-                size="md"
-                onAction={(action, quote, optimistic) => 
-                  quoteActionMutation.mutate({ action, quote, optimistic })
-                }
-              />
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-6">
-              <UnifiedQuoteBreakdown
-                quote={quote}
-                viewMode={viewMode}
-                showComparisons={viewMode === 'admin'}
-              />
-
-              {/* Quote metadata */}
-              <Card>
-                <CardContent className="p-4 space-y-3">
-                  <h3 className="font-medium text-gray-900">Quote Details</h3>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>Created {new Date(quote.created_at).toLocaleDateString()}</span>
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left column - Quote details */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Quote summary */}
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900">{statusConfig.title}</h2>
+                  <p className="text-gray-600 mt-1">
+                    Created on{' '}
+                    {new Date(quote.created_at).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-900">
+                    ${pricing.finalTotal.toFixed(2)}
+                  </div>
+                  <div className="text-sm text-gray-500">Total amount</div>
+                  {pricing.discount > 0 && (
+                    <div className="text-sm text-green-600 mt-1">
+                      (Saved ${pricing.discount.toFixed(2)})
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span>Customer: {quote.customer_data?.info?.name || 'Unknown'}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Progress bar - Stripe style */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                  <span>Quote progress</span>
+                  <span>
+                    {['pending'].includes(quote.status)
+                      ? '1'
+                      : ['sent'].includes(quote.status)
+                        ? '2'
+                        : ['approved'].includes(quote.status)
+                          ? '3'
+                          : '4'}{' '}
+                    of 4 steps completed
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full"
+                    style={{
+                      width: ['pending'].includes(quote.status)
+                        ? '25%'
+                        : ['sent'].includes(quote.status)
+                          ? '50%'
+                          : ['approved'].includes(quote.status)
+                            ? '75%'
+                            : '100%',
+                    }}
+                  ></div>
+                </div>
+                <div className="flex justify-between text-xs text-gray-500 mt-2">
+                  <span>Submitted</span>
+                  <span>Prepared</span>
+                  <span>Approved</span>
+                  <span>Paid</span>
+                </div>
+              </div>
+
+              {/* Product card */}
+              <div className="border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    {firstItem?.image ? (
+                      <img
+                        src={firstItem.image}
+                        alt={firstItem.name}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    ) : (
+                      <Package className="h-8 w-8 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 mb-2">
+                      {firstItem?.name || 'Product Name Not Available'}
+                    </h3>
+                    <div className="flex items-center gap-6 text-sm text-gray-600 mb-2">
+                      <span>Qty: {firstItem?.quantity || 1}</span>
+                      <span>Weight: {firstItem?.weight_kg || 'TBD'} kg</span>
+                      <span>From: {quote.origin_country}</span>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <span>Destination: {quote.destination_country}</span>
-                    </div>
-                    
-                    {quote.expires_at && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span>Expires {new Date(quote.expires_at).toLocaleDateString()}</span>
+                    {firstItem?.options && (
+                      <div className="text-xs text-gray-500 mb-2">Options: {firstItem.options}</div>
+                    )}
+                    {firstItem?.url ? (
+                      <Button variant="link" className="p-0 h-auto text-blue-600 text-sm" asChild>
+                        <a href={firstItem.url} target="_blank" rel="noopener noreferrer">
+                          <Eye className="h-4 w-4 mr-1" />
+                          View original product →
+                        </a>
+                      </Button>
+                    ) : (
+                      <div className="text-xs text-gray-400">
+                        Original product link not available
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Performance metrics (development only) */}
-              {process.env.NODE_ENV === 'development' && (
-                <Card>
-                  <CardContent className="p-4">
-                    <h3 className="font-medium text-gray-900 mb-3">Performance</h3>
-                    <div className="space-y-1 text-xs text-gray-600">
-                      <div>Load: {performance.loadTime.toFixed(0)}ms</div>
-                      <div>Render: {performance.renderTime.toFixed(0)}ms</div>
-                      <div>Device: {device.deviceType}</div>
-                      <div>PWA: {device.isStandalone ? 'Yes' : 'No'}</div>
+                  <div className="text-right">
+                    <div className="font-medium text-gray-900">
+                      $
+                      {typeof firstItem?.price_usd === 'number'
+                        ? firstItem.price_usd.toFixed(2)
+                        : '0.00'}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                    <div className="text-sm text-gray-500">Product cost</div>
+                    {firstItem?.smart_data?.weight_confidence && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        Weight confidence:{' '}
+                        {Math.round(firstItem.smart_data.weight_confidence * 100)}%
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing breakdown */}
+            {statusConfig.showPricing && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Pricing breakdown</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowBreakdown(!showBreakdown)}
+                    className="text-blue-600"
+                  >
+                    {showBreakdown ? 'Hide' : 'Show'} details
+                    {showBreakdown ? (
+                      <ChevronUp className="h-4 w-4 ml-1" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 ml-1" />
+                    )}
+                  </Button>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg">
+                  <div className="p-6 space-y-4">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Product cost</span>
+                      <span className="font-medium">${pricing.itemsTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">International shipping</span>
+                      <span className="font-medium">
+                        ${pricing.internationalShipping.toFixed(2)}
+                      </span>
+                    </div>
+                    {/* Combined customs & duties (includes customs + taxes + gateway fees) */}
+                    {pricing.customs + pricing.totalTaxes + pricing.paymentFees > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Customs & duties</span>
+                        <span className="font-medium">
+                          ${(pricing.customs + pricing.totalTaxes + pricing.paymentFees).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {/* Show service fees (handling + insurance) if they exist */}
+                    {pricing.serviceHandling + pricing.insurance > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service fees</span>
+                        <span className="font-medium">
+                          ${(pricing.serviceHandling + pricing.insurance).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+
+                    {showBreakdown && (
+                      <div className="pt-4 border-t space-y-3">
+                        {pricing.domesticShipping > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Domestic shipping</span>
+                            <span className="font-medium">
+                              ${pricing.domesticShipping.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {pricing.serviceHandling > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Handling charge</span>
+                            <span className="font-medium">
+                              ${pricing.serviceHandling.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {pricing.insurance > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Package protection</span>
+                            <span className="font-medium">${pricing.insurance.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {pricing.paymentFees > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Payment gateway fee</span>
+                            <span className="font-medium">${pricing.paymentFees.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {pricing.discount > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-green-600">Discount applied</span>
+                            <span className="font-medium text-green-600">
+                              -${pricing.discount.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-500 space-y-1">
+                          <p>• International shipping includes air freight and handling</p>
+                          <p>
+                            • Customs duties calculated at current rates for{' '}
+                            {quote.destination_country}
+                          </p>
+                          <p>• Service fee covers processing and customer support</p>
+                          {trackingInfo.iwishTrackingId && (
+                            <p>• Track your order with ID: {trackingInfo.iwishTrackingId}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-gray-200 p-6 bg-gray-50">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold text-gray-900">Total</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        ${pricing.finalTotal.toFixed(2)} USD
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">Quote valid for 30 days</p>
+                    {pricing.discount > 0 && (
+                      <p className="text-sm text-green-600 mt-1">
+                        🎉 You saved ${pricing.discount.toFixed(2)} with this quote!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Shipping information */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Shipping information</h3>
+              <div className="border border-gray-200 rounded-lg p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                      Delivery address
+                    </h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="font-medium text-gray-900">{customerInfo.name}</div>
+                      <div>{formattedAddress}</div>
+                      {customerInfo.email !== 'Not provided' && (
+                        <div className="text-xs text-blue-600 mt-2">📧 {customerInfo.email}</div>
+                      )}
+                      {customerInfo.phone !== 'Not provided' && (
+                        <div className="text-xs text-blue-600">📞 {customerInfo.phone}</div>
+                      )}
+                      {shippingAddress.locked && (
+                        <div className="text-xs text-amber-600 mt-1">
+                          🔒 Address locked after payment
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                      Estimated delivery
+                    </h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="font-medium text-blue-600">
+                        {trackingInfo.estimatedDelivery
+                          ? new Date(trackingInfo.estimatedDelivery).toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          : `${deliveryEstimate} after payment`}
+                      </div>
+                      <div>Express international shipping</div>
+                      {trackingInfo.carrier && (
+                        <div className="text-xs text-gray-500">Via {trackingInfo.carrier}</div>
+                      )}
+                      {trackingInfo.iwishTrackingId && (
+                        <div className="text-xs font-medium text-purple-600 mt-2">
+                          🚚 iwishBag Tracking: {trackingInfo.iwishTrackingId}
+                        </div>
+                      )}
+                      {trackingInfo.externalTracking && (
+                        <div className="text-xs text-gray-500">
+                          External Tracking: {trackingInfo.externalTracking}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="max-w-4xl mx-auto">
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode={viewMode}
-              onSubmit={handleFormSubmit}
-              onCancel={() => navigate(-1)}
-            />
+
+          {/* Right sidebar */}
+          <div className="space-y-6">
+            {/* Action card */}
+            <div className="border border-gray-200 rounded-lg p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Quote actions</h3>
+
+              {canTakeAction && (
+                <div className="space-y-3">
+                  <Button
+                    onClick={() => handleAction('approve')}
+                    disabled={!!actionLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+                    size="lg"
+                  >
+                    {actionLoading === 'approve' ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Approve quote
+                  </Button>
+
+                  <Button
+                    onClick={() => handleAction('reject')}
+                    disabled={!!actionLoading}
+                    variant="outline"
+                    className="w-full border-gray-300 hover:bg-gray-50"
+                  >
+                    {actionLoading === 'reject' ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Decline
+                  </Button>
+                </div>
+              )}
+
+              {/* Debug info in development */}
+              {import.meta.env.DEV && (
+                <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                  <div><strong>Debug Info:</strong></div>
+                  <div>View Mode: {viewMode}</div>
+                  <div>Quote Status: {quote.status}</div>
+                  <div>Can Take Action: {canTakeAction ? 'Yes' : 'No'}</div>
+                  <div>User ID: {user?.id}</div>
+                  <div>Quote User ID: {quote.user_id}</div>
+                </div>
+              )}
+
+              {!canTakeAction && (
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">{statusConfig.subtitle}</p>
+                  {statusConfig.primaryAction && (
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      size="lg"
+                      disabled={!!actionLoading}
+                      onClick={async () => {
+                        switch (quote.status) {
+                          case 'approved':
+                            // Add quote to cart first, then navigate to cart
+                            try {
+                              setActionLoading('payment');
+                              
+                              // Convert quote to cart item format and add to cart
+                              const cartItem = {
+                                id: quote.id,
+                                quoteId: quote.id,
+                                displayId: quote.display_id || quote.id.slice(0, 8),
+                                status: quote.status,
+                                finalTotal: quote.final_total_usd || 0,
+                                items: quote.items || [],
+                                originCountry: quote.origin_country,
+                                destinationCountry: quote.destination_country,
+                                createdAt: quote.created_at,
+                                selected: true, // Auto-select when adding to cart
+                              };
+                              
+                              // Add to cart store (this will also update the database)
+                              await addToCart(cartItem);
+                              
+                              // Navigate to cart page
+                              navigate('/cart');
+                              toast.success('Quote added to cart! Complete your checkout.');
+                              
+                            } catch (error) {
+                              console.error('Failed to add quote to cart:', error);
+                              toast.error('Failed to add quote to cart. Please try again.');
+                            } finally {
+                              setActionLoading(null);
+                            }
+                            break;
+                          case 'paid':
+                          case 'shipped':
+                            // Navigate to tracking page
+                            if (quote.iwish_tracking_id) {
+                              navigate(`/track/${quote.iwish_tracking_id}`);
+                            } else {
+                              navigate(`/track?quote=${quote.id}`);
+                            }
+                            break;
+                          case 'rejected':
+                            // Navigate to new quote request
+                            navigate('/request-quote');
+                            break;
+                          default:
+                            toast.info('This action will be available soon!');
+                        }
+                      }}
+                    >
+                      {actionLoading === 'payment' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Adding to Cart...
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          {statusConfig.primaryAction}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    const subject = `Question about Quote ${quote.display_id || quote.id.slice(0, 8)}`;
+                    const body = `Hi iwishBag Support,
+
+I have a question about my quote:
+
+Quote ID: ${quote.display_id || quote.id}
+Status: ${quote.status}
+Total: $${pricing.finalTotal.toFixed(2)}
+Customer: ${customerInfo.name}
+Email: ${customerInfo.email}
+
+My question:
+[Please describe your question here]
+
+Thank you for your assistance!`;
+
+                    const mailtoUrl = `mailto:support@iwishbag.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    window.location.href = mailtoUrl;
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Ask a question
+                </Button>
+              </div>
+            </div>
+
+            {/* Payment security - Stripe style */}
+            <div className="border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <Lock className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">Secure payments</h4>
+                  <p className="text-sm text-gray-600">Your payment is protected</p>
+                </div>
+              </div>
+
+              <ul className="text-sm text-gray-600 space-y-2">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span>SSL encrypted transactions</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span>PCI DSS compliant</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span>Money-back guarantee</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span>24/7 fraud monitoring</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Support */}
+            <div className="border border-gray-200 rounded-lg p-6">
+              <h4 className="font-semibold text-gray-900 mb-4">Need help?</h4>
+
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    // Open WhatsApp chat with pre-filled message
+                    const message = `Hi iwishBag Support! I need help with my quote:
+
+Quote ID: ${quote.display_id || quote.id}
+Status: ${quote.status}
+Customer: ${customerInfo.name}
+
+Please assist me with my quote inquiry.`;
+
+                    const whatsappUrl = `https://wa.me/918000000000?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, '_blank');
+                  }}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Chat support
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    const subject = `Support Request - Quote ${quote.display_id || quote.id.slice(0, 8)}`;
+                    const body = `Hi iwishBag Support,
+
+I need assistance with my quote:
+
+Quote Details:
+- Quote ID: ${quote.display_id || quote.id}
+- Status: ${quote.status}
+- Total Amount: $${pricing.finalTotal.toFixed(2)}
+- Origin: ${quote.origin_country}
+- Destination: ${quote.destination_country}
+
+Customer Information:
+- Name: ${customerInfo.name}
+- Email: ${customerInfo.email}
+- Phone: ${customerInfo.phone}
+
+Issue Description:
+[Please describe your issue or question here]
+
+Thank you for your prompt assistance!
+
+Best regards,
+${customerInfo.name}`;
+
+                    const mailtoUrl = `mailto:support@iwishbag.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    window.location.href = mailtoUrl;
+                  }}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email us
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    // Show call options with quote context
+                    const message = `📞 Call iwishBag Support
+
+International: +91-800-IWISHBAG
+US/Canada: +1-800-494-7422
+India: +91-800-494-7422
+
+Please mention your Quote ID: ${quote.display_id || quote.id.slice(0, 8)}
+
+Our support team is available 24/7 to assist you with your quote and shipping needs.`;
+
+                    toast.info(message, {
+                      duration: 8000,
+                      action: {
+                        label: 'Call Now',
+                        onClick: () => {
+                          window.location.href = 'tel:+918004947422';
+                        },
+                      },
+                    });
+                  }}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call support
+                </Button>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="font-medium text-gray-700">Response time</div>
+                    <div className="text-green-600">&lt; 2 hours</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-700">Availability</div>
+                    <div className="text-blue-600">24/7</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-700">Languages</div>
+                    <div>English, Hindi</div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-700">Satisfaction</div>
+                    <div className="text-yellow-600">4.9/5 ⭐</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quote timeline */}
+            <div className="border border-gray-200 rounded-lg p-6">
+              <h4 className="font-semibold text-gray-900 mb-4">Quote timeline</h4>
+
+              <div className="space-y-4">
+                {operationalData.timeline
+                  ?.slice(-3)
+                  .reverse()
+                  .map((entry, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <div
+                        className={cn(
+                          'w-2 h-2 rounded-full mt-2',
+                          entry.status === quote.status
+                            ? 'bg-blue-600'
+                            : ['approved', 'paid', 'shipped', 'completed'].includes(entry.status)
+                              ? 'bg-green-600'
+                              : 'bg-gray-400',
+                        )}
+                      ></div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm capitalize">
+                          {entry.status.replace('_', ' ')}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(entry.timestamp).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                        {entry.notes && (
+                          <div className="text-xs text-gray-600 mt-1">{entry.notes}</div>
+                        )}
+                      </div>
+                    </div>
+                  )) || (
+                  // Fallback timeline if no operational data
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">
+                          Quote {quote.status}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(quote.updated_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">Quote created</div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(quote.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment methods preview */}
+            <div className="border border-gray-200 rounded-lg p-6">
+              <h4 className="font-semibold text-gray-900 mb-4">Payment methods</h4>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-2 border border-gray-200 rounded">
+                  <CreditCard className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">Credit / Debit cards</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 border border-gray-200 rounded">
+                  <DollarSign className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">Bank transfer</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 border border-gray-200 rounded">
+                  <Monitor className="h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">Digital wallets</span>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 };
 
-// Main component with theme provider
-export const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = (props) => {
-  return (
-    <QuoteThemeProvider>
-      <UnifiedQuotePageContent {...props} />
-    </QuoteThemeProvider>
-  );
-};
-
 export default UnifiedQuotePage;
+export { UnifiedQuotePage };
