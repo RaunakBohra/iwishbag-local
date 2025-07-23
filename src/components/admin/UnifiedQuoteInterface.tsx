@@ -67,6 +67,7 @@ import { useBatchedFormUpdates } from '@/hooks/useBatchedFormUpdates';
 import { useLayoutShiftPrevention } from '@/hooks/useLayoutShiftPrevention';
 import { useDebouncedCalculations } from '@/hooks/useDebouncedCalculations';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import { useStatusTransitions } from '@/hooks/useStatusTransitions';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -182,6 +183,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     maxPendingCalculations: 3,
     enableLogging: true,
   });
+
+  // Status transitions for auto-progression
+  const { handleQuoteSent } = useStatusTransitions();
 
 
   // Load quote data
@@ -1318,10 +1322,54 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
       if (success) {
         setLastSaveTime(new Date());
-        toast({
-          title: 'Quote updated',
-          description: 'Quote has been successfully updated. You can continue editing.',
+        
+        // 🚀 AUTO-STATUS PROGRESSION: pending → sent
+        // Check if quote calculations were saved and status should auto-progress
+        const currentStatus = quote?.status;
+        const hasCalculationData = data.items && data.items.length > 0 && 
+          (Number(data.international_shipping) > 0 || 
+           Number(data.customs_percentage) > 0 || 
+           Number(data.sales_tax_price) > 0);
+        
+        console.log('🔄 [AUTO-STATUS] Checking auto-progression conditions:', {
+          currentStatus,
+          hasCalculationData,
+          quoteId: quoteId,
+          items: data.items?.length || 0,
+          internationalShipping: Number(data.international_shipping) || 0,
+          customsPercentage: Number(data.customs_percentage) || 0,
+          salesTax: Number(data.sales_tax_price) || 0
         });
+
+        // Auto-progress from 'pending' to 'sent' when calculations are saved
+        if (currentStatus === 'pending' && hasCalculationData && quoteId) {
+          try {
+            console.log('✅ [AUTO-STATUS] Triggering auto-progression: pending → sent');
+            await handleQuoteSent(quoteId, currentStatus);
+            
+            toast({
+              title: 'Quote updated and sent',
+              description: 'Quote has been calculated and automatically marked as sent. You can continue editing.',
+            });
+          } catch (statusError) {
+            console.error('❌ [AUTO-STATUS] Failed to auto-progress status:', statusError);
+            // Don't fail the whole operation, just show normal success message
+            toast({
+              title: 'Quote updated',
+              description: 'Quote has been successfully updated. You can continue editing.',
+            });
+          }
+        } else {
+          // Normal update without status change
+          console.log('ℹ️ [AUTO-STATUS] No auto-progression needed:', {
+            reason: currentStatus !== 'pending' ? 'Status not pending' : 'No calculation data'
+          });
+          toast({
+            title: 'Quote updated',
+            description: 'Quote has been successfully updated. You can continue editing.',
+          });
+        }
+        
         // Removed setIsEditMode(false) - keep user in edit mode for continued editing
         await loadQuoteData(); // Reload to get fresh data
       } else {
@@ -1662,33 +1710,28 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="md:col-span-2 space-y-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
-                  {/* Products Section - World Class Design */}
+                  {/* Products Section - Clean and Simple */}
                   <Card className="shadow-sm border-gray-200">
-                    <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 py-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div>
-                            <CardTitle className="text-lg font-semibold text-gray-900">
-                              Products ({form.watch('items')?.length || 0})
-                            </CardTitle>
-                            <CardDescription className="text-sm text-gray-600">
-                              Manage product details, pricing, and quantities
-                            </CardDescription>
-                          </div>
-                        </div>
-                        <Button
+                    {/* Show "Add More" link when products exist */}
+                    {form.watch('items')?.length > 0 && (
+                      <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/30">
+                        <button
                           type="button"
-                          variant="outline"
-                          size="sm"
                           onClick={addNewItem}
-                          className="border-blue-300 text-blue-700 hover:bg-blue-50 font-medium"
+                          className="text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
                         >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Product
-                        </Button>
+                          + Add another product
+                        </button>
                       </div>
-                    </CardHeader>
+                    )}
                     <CardContent className="p-0">
+                      {form.watch('items')?.length === 0 && (
+                        <div className="p-8 text-center text-gray-500">
+                          <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm">No products added yet</p>
+                          <p className="text-xs mt-1">Add your first product to get started</p>
+                        </div>
+                      )}
                       {form.watch('items')?.map((item, index) => {
                         const smartData = quote?.items[index]?.smart_data;
                         const weightConfidence = smartData?.weight_confidence || 0;
@@ -2028,6 +2071,23 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       })}
                     </CardContent>
                   </Card>
+
+                  {/* Add Product Button - Only show when no products exist */}
+                  {(!form.watch('items') || form.watch('items')?.length === 0) && (
+                    <div className="flex justify-center -my-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addNewItem}
+                        className="rounded-full px-4 py-2 h-8 border-red-300 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 shadow-sm border-2 flex items-center space-x-2"
+                        title="Add Product"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span className="text-sm font-medium">Add Product</span>
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Quote Detail Form - Direct Integration */}
                   {(() => {

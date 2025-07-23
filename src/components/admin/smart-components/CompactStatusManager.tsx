@@ -394,6 +394,13 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
     return (
       <Card className="shadow-sm border-gray-200">
         <CardContent className="p-3">
+          {/* Component Header */}
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-gray-700 flex items-center space-x-1">
+              <span>Status Management</span>
+            </h4>
+          </div>
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {/* Current Status Badge */}
@@ -420,56 +427,58 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                   <Button
                     type="button"
                     size="sm"
-                    variant="outline"
+                    variant={smartAction.actionType === 'cart' ? 'default' : 'outline'}
                     onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
                     disabled={isUpdating}
-                    className="h-7 px-2 text-xs flex items-center space-x-1"
+                    className={`h-7 px-2 text-xs flex items-center space-x-1 font-medium ${
+                      smartAction.actionType === 'cart'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : smartAction.actionType === 'refresh'
+                        ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                        : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                    }`}
                   >
                     {smartAction.icon}
                     <span>{smartAction.text}</span>
                   </Button>
                 )}
 
-                {/* Always show dropdown for ALL transitions */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isUpdating}
-                      className="h-7 w-7 p-0 flex items-center justify-center"
-                      title="More status options"
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
-                      Available Transitions
-                    </div>
-                    {allowedTransitions.map((nextStatus) => {
-                      const isPrimary = smartAction?.action === nextStatus;
-                      return (
-                        <DropdownMenuItem
-                          key={nextStatus}
-                          onClick={(e) => handleAction(nextStatus, 'status', e)}
-                          className="flex items-center justify-between text-xs py-2"
-                        >
-                          <StatusBadge
-                            status={nextStatus}
-                            category={category}
-                            className="text-xs h-5"
-                            showIcon={true}
-                          />
-                          {isPrimary && (
-                            <span className="text-xs text-blue-600 font-medium ml-2">Primary</span>
-                          )}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Simple dropdown for other status options - Only show if there are alternatives */}
+                {allowedTransitions.length > 1 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={isUpdating}
+                        className="h-7 px-2 flex items-center space-x-1 text-gray-600 hover:text-gray-900"
+                        title="More status options"
+                      >
+                        <span className="text-xs">More</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      {allowedTransitions
+                        .filter(status => status !== smartAction?.action)
+                        .map((nextStatus) => (
+                          <DropdownMenuItem
+                            key={nextStatus}
+                            onClick={(e) => handleAction(nextStatus, 'status', e)}
+                            className="text-xs py-2"
+                          >
+                            <StatusBadge
+                              status={nextStatus}
+                              category={category}
+                              className="text-xs h-5"
+                              showIcon={true}
+                            />
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             ) : (
               // Show enhanced messaging for terminal statuses
@@ -495,6 +504,9 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
   return (
     <Card className="shadow-sm border-gray-200">
       <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold text-gray-800 mb-3">
+          Status Management
+        </CardTitle>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <StatusBadge status={displayStatus} category={category} className="px-3 py-1" />
@@ -517,55 +529,57 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                   <Button
                     type="button"
                     size="sm"
+                    variant={smartAction.actionType === 'cart' ? 'default' : 'outline'}
                     onClick={(e) => handleAction(smartAction.action, smartAction.actionType, e)}
                     disabled={isUpdating}
-                    className="flex items-center space-x-1"
+                    className={`flex items-center space-x-1 font-medium ${
+                      smartAction.actionType === 'cart'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : smartAction.actionType === 'refresh'
+                        ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                        : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                    }`}
                   >
                     <Zap className="w-3 h-3" />
                     <span>{smartAction.text}</span>
                   </Button>
                 )}
 
-                {/* Always show dropdown for ALL transitions */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isUpdating}
-                      className="flex items-center space-x-1"
-                    >
-                      <span>All Actions</span>
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="px-2 py-1.5 text-xs font-medium text-gray-500 border-b border-gray-100">
-                      Available Transitions
-                    </div>
-                    {allowedTransitions.map((nextStatus) => {
-                      const isPrimary = smartAction?.action === nextStatus;
-                      return (
-                        <DropdownMenuItem
-                          key={nextStatus}
-                          onClick={(e) => handleAction(nextStatus, 'status', e)}
-                          className="flex items-center justify-between py-2"
-                        >
-                          <StatusBadge
-                            status={nextStatus}
-                            category={category}
-                            className="text-xs h-6"
-                            showIcon={true}
-                          />
-                          {isPrimary && (
-                            <span className="text-xs text-blue-600 font-medium ml-2">Primary</span>
-                          )}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Simple dropdown for other status options - Only show if there are alternatives */}
+                {allowedTransitions.length > 1 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isUpdating}
+                        className="flex items-center space-x-1"
+                      >
+                        <span>More Options</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {allowedTransitions
+                        .filter(status => status !== smartAction?.action)
+                        .map((nextStatus) => (
+                          <DropdownMenuItem
+                            key={nextStatus}
+                            onClick={(e) => handleAction(nextStatus, 'status', e)}
+                            className="py-2"
+                          >
+                            <StatusBadge
+                              status={nextStatus}
+                              category={category}
+                              className="text-sm h-6"
+                              showIcon={true}
+                            />
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             ) : (
               // Show informational actions for terminal statuses

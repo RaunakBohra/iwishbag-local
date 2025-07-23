@@ -106,11 +106,12 @@ const CustomsCategories = React.lazy(() =>
   })),
 );
 const UnifiedQuoteInterface = React.lazy(() => import('@/components/admin/UnifiedQuoteInterface'));
-const QuoteTemplatesPage = React.lazy(() =>
-  import('@/components/admin/QuoteTemplatesPage').then((m) => ({
-    default: m.QuoteTemplatesPage,
-  })),
-);
+// QuoteTemplatesPage component is not found - commenting out to fix build
+// const QuoteTemplatesPage = React.lazy(() =>
+//   import('@/components/admin/QuoteTemplatesPage').then((m) => ({
+//     default: m.QuoteTemplatesPage,
+//   })),
+// );
 const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement'));
 const BankAccountSettings = React.lazy(() =>
   import('@/components/admin/BankAccountSettings').then((m) => ({
@@ -172,7 +173,7 @@ const router = createBrowserRouter([
           { path: 'customers/:customerId', element: <CustomerProfile /> },
           { path: 'support-tickets', element: <SupportTicketsPage /> },
           { path: 'auto-assignment', element: <AutoAssignmentPage /> },
-          { path: 'templates', element: <QuoteTemplatesPage /> },
+          // { path: 'templates', element: <QuoteTemplatesPage /> }, // Component not found - commented out
           {
             path: 'quotes/:id',
             element: (
