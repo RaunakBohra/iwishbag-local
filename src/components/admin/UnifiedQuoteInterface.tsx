@@ -185,6 +185,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     enableLogging: true,
   });
 
+
   // Status transitions for auto-progression
   const { handleQuoteSent } = useStatusTransitions();
 
@@ -283,10 +284,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     try {
       setIsCalculating(true);
       
+      // Get current form values for calculations
+      const currentFormValues = form.getValues();
+      
       // ✅ NEW: Always use enhanced quote data
       const enhancedQuote = createEnhancedQuote(baseQuote);
       if (!enhancedQuote) return;
 
+      const quoteToCalculate = baseQuote || quote;
+      
       console.log('🔄 [REAL-TIME] Calculating with form values:', {
         salesTaxPrice: currentFormValues.sales_tax_price,
         salesTaxPriceType: typeof currentFormValues.sales_tax_price,
@@ -352,7 +358,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           if (success) {
             console.log('✅ [FIX] Successfully persisted async calculation results to database');
             // Refresh the quote from database to ensure consistency
-            await refreshQuote();
+            try {
+              const freshQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
+              if (freshQuoteData) {
+                setQuote(freshQuoteData);
+                console.log('🔄 [FIX] Successfully refreshed quote data from database');
+              }
+            } catch (refreshError) {
+              console.error('❌ [FIX] Error refreshing quote data:', refreshError);
+            }
           } else {
             console.error('❌ [FIX] Failed to persist async calculation results to database');
           }
@@ -366,6 +380,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setIsCalculating(false);
     }
   };
+
 
   const handleShippingOptionSelect = async (optionId: string) => {
     console.log('[DEBUG] handleShippingOptionSelect called with:', {
@@ -715,6 +730,32 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   }, [isEditMode, scheduleCalculation, recalculateShipping, quote]);
   const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
+
+  // Schedule form-based calculations when inputs change
+  const scheduleFormCalculation = React.useCallback(() => {
+    const currentFormValues = form.getValues();
+    const itemsWeight = currentFormValues.items?.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 0), 0) || 0;
+    scheduleCalculation('form-update', () => calculateSmartFeatures(liveQuote || quote), [
+      JSON.stringify(currentFormValues.items), // Use JSON string to detect deep changes
+      currentFormValues.customs_percentage,
+      currentFormValues.handling_charge,
+      currentFormValues.insurance_amount,
+      itemsWeight, // Include calculated weight as dependency
+      // Removed Date.now() to prevent infinite calculation loops
+    ]);
+  }, [scheduleCalculation, form, calculateSmartFeatures, liveQuote, quote]);
+
+  // Monitor form values for automatic calculation triggers
+  React.useEffect(() => {
+    if (formValues.items?.length > 0 && quote?.id) {
+      console.log('🔄 [FORM-MONITOR] Form values changed, scheduling calculation:', {
+        itemsCount: formValues.items.length,
+        totalWeight: formValues.items.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 0), 0),
+        quoteId: quote.id
+      });
+      scheduleFormCalculation();
+    }
+  }, [formValues.items, scheduleFormCalculation, quote?.id]);
 
   // Smart weight estimation state
   const [weightEstimations, setWeightEstimations] = useState<{ [key: string]: any }>({});
@@ -2157,7 +2198,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             item_weight: parseFloat(e.target.value) || 0,
                                           };
                                           form.setValue('items', items);
-                                          scheduleCalculation();
+                                          scheduleFormCalculation();
                                         }}
                                         placeholder="0.2"
                                       />
@@ -2898,7 +2939,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           value={form.watch('handling_charge') || ''}
                           onChange={(e) => {
                             form.setValue('handling_charge', Number(e.target.value));
-                            scheduleCalculation();
+                            scheduleFormCalculation();
                           }}
                           className="text-xs"
                         />
@@ -2929,7 +2970,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           value={form.watch('insurance_amount') || ''}
                           onChange={(e) => {
                             form.setValue('insurance_amount', Number(e.target.value));
-                            scheduleCalculation();
+                            scheduleFormCalculation();
                           }}
                           className="text-xs"
                         />

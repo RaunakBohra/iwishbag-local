@@ -54,12 +54,16 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     console.log('🔄 [CompactCalculationBreakdown] Breakdown data changed:', {
       quoteId: quote.id,
       newBreakdown: quote.calculation_data?.breakdown,
-      hasShipping: !!quote.calculation_data?.breakdown?.shipping,
-      shippingAmount: quote.calculation_data?.breakdown?.shipping,
-      timestamp: new Date().toISOString()
+      hasMerchantShipping: !!quote.calculation_data?.breakdown?.merchant_shipping,
+      merchantShippingAmount: quote.calculation_data?.breakdown?.merchant_shipping,
+      hasInternationalShipping: !!quote.calculation_data?.breakdown?.shipping,
+      internationalShippingAmount: quote.calculation_data?.breakdown?.shipping,
+      timestamp: new Date().toISOString(),
+      debugTypesWorking: 'TypeScript interfaces now include merchant_shipping fields! 🎉'
     });
     return quote.calculation_data?.breakdown || {};
   }, [
+    quote.calculation_data?.breakdown?.merchant_shipping,
     quote.calculation_data?.breakdown?.shipping,
     quote.calculation_data?.breakdown?.items_total,
     quote.calculation_data?.breakdown?.customs,
@@ -74,12 +78,13 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   // Force re-render when shipping costs change
   React.useEffect(() => {
-    console.log('🚢 [CompactCalculationBreakdown] Shipping cost changed:', {
+    console.log('🚢 [CompactCalculationBreakdown] Shipping costs changed:', {
       quoteId: quote.id,
-      shippingCost: breakdown.shipping,
+      merchantShipping: breakdown.merchant_shipping,
+      internationalShipping: breakdown.shipping,
       timestamp: new Date().toISOString()
     });
-  }, [breakdown.shipping, quote.id]);
+  }, [breakdown.merchant_shipping, breakdown.shipping, quote.id]);
 
   // 🔍 DEBUG: Log breakdown data to trace destination_tax issue
   console.log('🔍 [CompactCalculationBreakdown] DEBUG:', {
@@ -142,7 +147,8 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
-    { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
+    { label: 'Merchant Shipping', amount: breakdown.merchant_shipping || 0, color: 'text-teal-600' },
+    { label: 'International Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
     { label: 'Taxes', amount: totalTaxes, color: 'text-orange-600' },
     { label: 'Fees', amount: totalFees, color: 'text-gray-600' },
@@ -224,7 +230,26 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             </div>
 
-            {/* Shipping - Enhanced with Detailed Breakdown */}
+            {/* Merchant Shipping */}
+            {!!(breakdown.merchant_shipping && Number(breakdown.merchant_shipping) > 0) && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <ExternalLink className="w-4 h-4 text-teal-600" />
+                  <span className="text-gray-700">Merchant Shipping</span>
+                  <Badge variant="outline" className="text-xs h-4 px-1">
+                    To Hub
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.merchant_shipping || 0), 'origin')}</div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.merchant_shipping || 0), 'destination')}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* International Shipping - Enhanced with Detailed Breakdown */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">

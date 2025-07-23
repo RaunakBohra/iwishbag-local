@@ -37,6 +37,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { supabase } from '@/integrations/supabase/client';
 import { useCartStore } from '@/stores/cartStore';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 // Clean, minimal quote detail page following Amazon/Stripe design principles
@@ -83,6 +84,9 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
     refetchOnMount: false, // Use cached data if available and not stale
     retry: 2, // Retry failed requests twice
   });
+
+  // Get currency display formatting for user's preferred currency
+  const { formatPrice, formatPriceWithUSD, displayCurrency, isLoadingCurrency } = useQuoteDisplayCurrency(quote || {} as UnifiedQuote);
 
   // Performance monitoring - now quote is defined
   React.useEffect(() => {
@@ -373,8 +377,8 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
   const breakdown = quote.calculation_data?.breakdown || {};
   const operationalData = quote.operational_data || {};
 
-  // Use exact same field mapping as admin CompactCalculationBreakdown
-  const pricing = {
+  // Use exact same field mapping as admin CompactCalculationBreakdown with USD amounts
+  const pricingUSD = {
     itemsTotal: Number(breakdown.items_total || 0),
     purchaseTax: Number(breakdown.purchase_tax || 0),
     internationalShipping: Number(breakdown.shipping || 0),
@@ -383,7 +387,7 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
     serviceHandling: Number(breakdown.handling || 0),
     insurance: Number(breakdown.insurance || 0),
     paymentFees: Number(breakdown.fees || 0),
-    domesticShipping: quote.domestic_shipping || 0,
+    domesticShipping: operationalData.domestic_shipping || 0,
     discount: Number(breakdown.discount || 0),
     finalTotal: quote.final_total_usd || 0,
     // Calculate total taxes using same logic as admin
@@ -520,12 +524,12 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-gray-900">
-                    ${pricing.finalTotal.toFixed(2)}
+                    {formatPrice(pricingUSD.finalTotal)}
                   </div>
                   <div className="text-sm text-gray-500">Total amount</div>
-                  {pricing.discount > 0 && (
+                  {pricingUSD.discount > 0 && (
                     <div className="text-sm text-green-600 mt-1">
-                      (Saved ${pricing.discount.toFixed(2)})
+                      (Saved {formatPrice(pricingUSD.discount)})
                     </div>
                   )}
                 </div>
@@ -650,68 +654,68 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
                   <div className="p-6 space-y-4">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Product cost</span>
-                      <span className="font-medium">${pricing.itemsTotal.toFixed(2)}</span>
+                      <span className="font-medium">{formatPrice(pricingUSD.itemsTotal)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">International shipping</span>
                       <span className="font-medium">
-                        ${pricing.internationalShipping.toFixed(2)}
+                        {formatPrice(pricingUSD.internationalShipping)}
                       </span>
                     </div>
                     {/* Combined customs & duties (includes customs + taxes + gateway fees) */}
-                    {pricing.customs + pricing.totalTaxes + pricing.paymentFees > 0 && (
+                    {pricingUSD.customs + pricingUSD.totalTaxes + pricingUSD.paymentFees > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Customs & duties</span>
                         <span className="font-medium">
-                          ${(pricing.customs + pricing.totalTaxes + pricing.paymentFees).toFixed(2)}
+                          {formatPrice(pricingUSD.customs + pricingUSD.totalTaxes + pricingUSD.paymentFees)}
                         </span>
                       </div>
                     )}
                     {/* Show service fees (handling + insurance) if they exist */}
-                    {pricing.serviceHandling + pricing.insurance > 0 && (
+                    {pricingUSD.serviceHandling + pricingUSD.insurance > 0 && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Service fees</span>
                         <span className="font-medium">
-                          ${(pricing.serviceHandling + pricing.insurance).toFixed(2)}
+                          {formatPrice(pricingUSD.serviceHandling + pricingUSD.insurance)}
                         </span>
                       </div>
                     )}
 
                     {showBreakdown && (
                       <div className="pt-4 border-t space-y-3">
-                        {pricing.domesticShipping > 0 && (
+                        {pricingUSD.domesticShipping > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Domestic shipping</span>
                             <span className="font-medium">
-                              ${pricing.domesticShipping.toFixed(2)}
+                              {formatPrice(pricingUSD.domesticShipping)}
                             </span>
                           </div>
                         )}
-                        {pricing.serviceHandling > 0 && (
+                        {pricingUSD.serviceHandling > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Handling charge</span>
                             <span className="font-medium">
-                              ${pricing.serviceHandling.toFixed(2)}
+                              {formatPrice(pricingUSD.serviceHandling)}
                             </span>
                           </div>
                         )}
-                        {pricing.insurance > 0 && (
+                        {pricingUSD.insurance > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Package protection</span>
-                            <span className="font-medium">${pricing.insurance.toFixed(2)}</span>
+                            <span className="font-medium">{formatPrice(pricingUSD.insurance)}</span>
                           </div>
                         )}
-                        {pricing.paymentFees > 0 && (
+                        {pricingUSD.paymentFees > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Payment gateway fee</span>
-                            <span className="font-medium">${pricing.paymentFees.toFixed(2)}</span>
+                            <span className="font-medium">{formatPrice(pricingUSD.paymentFees)}</span>
                           </div>
                         )}
-                        {pricing.discount > 0 && (
+                        {pricingUSD.discount > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-green-600">Discount applied</span>
                             <span className="font-medium text-green-600">
-                              -${pricing.discount.toFixed(2)}
+                              -{formatPrice(pricingUSD.discount)}
                             </span>
                           </div>
                         )}
@@ -734,13 +738,13 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Total</span>
                       <span className="text-lg font-bold text-gray-900">
-                        ${pricing.finalTotal.toFixed(2)} USD
+                        {formatPriceWithUSD(pricingUSD.finalTotal)}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">Quote valid for 30 days</p>
-                    {pricing.discount > 0 && (
+                    {pricingUSD.discount > 0 && (
                       <p className="text-sm text-green-600 mt-1">
-                        🎉 You saved ${pricing.discount.toFixed(2)} with this quote!
+                        🎉 You saved {formatPrice(pricingUSD.discount)} with this quote!
                       </p>
                     )}
                   </div>
@@ -952,7 +956,7 @@ I have a question about my quote:
 
 Quote ID: ${quote.display_id || quote.id}
 Status: ${quote.status}
-Total: $${pricing.finalTotal.toFixed(2)}
+Total: {formatPrice(pricingUSD.finalTotal)}
 Customer: ${customerInfo.name}
 Email: ${customerInfo.email}
 
@@ -1042,7 +1046,7 @@ I need assistance with my quote:
 Quote Details:
 - Quote ID: ${quote.display_id || quote.id}
 - Status: ${quote.status}
-- Total Amount: $${pricing.finalTotal.toFixed(2)}
+- Total Amount: {formatPrice(pricingUSD.finalTotal)}
 - Origin: ${quote.origin_country}
 - Destination: ${quote.destination_country}
 

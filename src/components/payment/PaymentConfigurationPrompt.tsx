@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { cn } from '@/lib/utils';
 
 interface PaymentConfigurationPromptProps {
   currency: string;

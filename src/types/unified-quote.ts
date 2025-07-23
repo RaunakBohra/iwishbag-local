@@ -25,6 +25,7 @@ export interface QuoteItem {
 // Financial Calculation Breakdown (Transparent Tax Model)
 export interface CalculationBreakdown {
   items_total: number;         // Base product price (before purchase tax)
+  merchant_shipping?: number;  // Merchant to hub shipping cost
   purchase_tax?: number;       // ✅ NEW: Origin country purchase tax (transparent)
   shipping: number;            // International shipping cost
   customs: number;             // Customs duty (calculated on actualItemCost base)
@@ -270,6 +271,7 @@ export interface UnifiedQuote {
   // Smart Financial System
   costprice_total_usd: number;
   final_total_usd: number;
+  merchant_shipping_price?: number;
 
   // Smart Metadata
   calculation_data: CalculationData;

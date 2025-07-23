@@ -207,7 +207,7 @@ class VATService {
    * Returns null if data is not cached or expired
    */
   getCachedVATData(originCountry: string, destinationCountry: string): VATResult | null {
-    const cacheKey = `${originCountry}→${destinationCountry}`;
+    const cacheKey = `${originCountry}-${destinationCountry}`; // ✅ FIX: Use consistent dash format
     const cached = this.cache.get(cacheKey);
     
     if (cached && this.isCacheValid(cached)) {
@@ -216,6 +216,14 @@ class VATService {
     }
     
     return null;
+  }
+
+  /**
+   * Check if cached data is still valid (within TTL)
+   */
+  private isCacheValid(cached: TaxLookupResult): boolean {
+    const cacheAge = Date.now() - ((cached as any).cachedAt || 0);
+    return cacheAge < this.CACHE_TTL;
   }
 
   /**

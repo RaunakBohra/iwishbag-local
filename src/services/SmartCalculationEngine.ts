@@ -1181,6 +1181,7 @@ export class SmartCalculationEngine {
     // ✅ TRANSPARENT MODEL: Calculate totals with separate tax components
     const subtotal =
       actualItemCost +           // Items + purchase tax combined
+      (quote.merchant_shipping_price || 0) + // Merchant to hub shipping
       selectedShipping.cost_usd +
       customsAmount +
       handlingFee +
@@ -1223,6 +1224,7 @@ export class SmartCalculationEngine {
         ...quote.calculation_data,
         breakdown: {
           items_total: itemsTotal,                    // Base product price
+          merchant_shipping: quote.merchant_shipping_price || 0, // Merchant to hub shipping
           purchase_tax: purchaseTax,                  // ✅ NEW: Transparent purchase tax
           shipping: selectedShipping.cost_usd,        // International shipping cost
           customs: customsAmount,                     // Customs duty (on actualItemCost base)
@@ -1413,6 +1415,7 @@ export class SmartCalculationEngine {
     // ✅ TRANSPARENT MODEL: Calculate totals with separate tax components
     const subtotal =
       actualItemCost +
+      (quote.merchant_shipping_price || 0) + // Merchant to hub shipping
       shippingCost +
       customsAmount +
       handlingFee +
@@ -1430,6 +1433,7 @@ export class SmartCalculationEngine {
         ...quote.calculation_data,
         breakdown: {
           items_total: itemsTotal,              // Base product price
+          merchant_shipping: quote.merchant_shipping_price || 0, // Merchant to hub shipping
           purchase_tax: purchaseTax,            // ✅ NEW: Transparent purchase tax
           shipping: shippingCost,               // International shipping cost
           customs: customsAmount,               // Customs duty (on actualItemCost base)
@@ -1565,6 +1569,7 @@ export class SmartCalculationEngine {
     // ✅ TRANSPARENT MODEL: Calculate totals with separate tax components
     const subtotal =
       actualItemCost +           // Items + purchase tax combined
+      (quote.merchant_shipping_price || 0) + // Merchant to hub shipping
       selectedShipping.cost_usd +
       customsAmount +
       handlingFee +
@@ -1580,6 +1585,7 @@ export class SmartCalculationEngine {
       ...quote.calculation_data,
       breakdown: {
         items_total: itemsTotal,                    // Base product price
+        merchant_shipping: quote.merchant_shipping_price || 0, // Merchant to hub shipping
         purchase_tax: purchaseTax,                  // ✅ NEW: Transparent purchase tax
         shipping: selectedShipping.cost_usd,        // International shipping cost
         customs: customsAmount,                     // Customs duty (on actualItemCost base)
