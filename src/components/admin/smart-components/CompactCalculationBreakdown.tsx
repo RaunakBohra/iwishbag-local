@@ -59,10 +59,27 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       timestamp: new Date().toISOString()
     });
     return quote.calculation_data?.breakdown || {};
-  }, [quote.calculation_data]);
+  }, [
+    quote.calculation_data?.breakdown?.shipping,
+    quote.calculation_data?.breakdown?.items_total,
+    quote.calculation_data?.breakdown?.customs,
+    quote.calculation_data?.breakdown?.handling,
+    quote.calculation_data?.breakdown?.insurance,
+    quote.calculation_data?.breakdown?.fees,
+    quote.final_total_usd
+  ]);
   
   const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
+
+  // Force re-render when shipping costs change
+  React.useEffect(() => {
+    console.log('🚢 [CompactCalculationBreakdown] Shipping cost changed:', {
+      quoteId: quote.id,
+      shippingCost: breakdown.shipping,
+      timestamp: new Date().toISOString()
+    });
+  }, [breakdown.shipping, quote.id]);
 
   // 🔍 DEBUG: Log breakdown data to trace destination_tax issue
   console.log('🔍 [CompactCalculationBreakdown] DEBUG:', {

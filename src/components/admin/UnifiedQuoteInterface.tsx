@@ -2581,7 +2581,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 });
                 return (
                   <CompactCalculationBreakdown
-                    key={`breakdown-${usedQuote?.id}-${JSON.stringify(usedQuote?.calculation_data?.breakdown)}`}
+                    key={`breakdown-${usedQuote?.id}-${usedQuote?.final_total_usd}`}
                     quote={usedQuote}
                     shippingOptions={shippingOptions}
                     isCalculating={isCalculating}
@@ -2713,7 +2713,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
               {/* Cost Breakdown - Clean Professional Style */}
               <CompactCalculationBreakdown
-                key={`breakdown-${(liveQuote || quote)?.id}-${JSON.stringify((liveQuote || quote)?.calculation_data?.breakdown)}`}
+                key={`breakdown-${(liveQuote || quote)?.id}-${(liveQuote || quote)?.final_total_usd}`}
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
