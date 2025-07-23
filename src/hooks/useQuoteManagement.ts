@@ -72,11 +72,14 @@ export const useQuoteManagement = ({
   // INVESTIGATION: Test if query key arrays are causing the issue
   const { data: quotes, isLoading: quotesLoading } = useQuery<QuoteWithItems[]>({
     queryKey: [
-      'admin-quotes-fixed',
-      searchTerm || 'empty',
-      filters.countries?.join(',') || 'no-country', 
-      `page-${page}`,
-      `size-${pageSize}`,
+      'admin-quotes',
+      {
+        search: searchTerm || '',
+        statuses: filters.statuses || [],
+        countries: filters.countries || [],
+        page,
+        pageSize
+      }
     ],
     queryFn: async () => {
       console.log('🚀 [useQuoteManagement] Main query function STARTED - NO SENTRY');
@@ -111,12 +114,31 @@ export const useQuoteManagement = ({
           // INVESTIGATION: Test exact same query as working test query
           console.log('🔍 [useQuoteManagement] Testing exact same structure as working test query...');
           
-          // Use exact same query structure as the working test query
-          const { data, error } = await supabase
+          // Use proper admin query with all necessary fields
+          let query = supabase
             .from('quotes')
-            .select('id, display_id, status, final_total_usd, created_at, customer_data, items')
-            .order('created_at', { ascending: false })
-            .limit(10);
+            .select(COMMON_QUERIES.adminQuotesWithProfiles)
+            .order('created_at', { ascending: false });
+
+          // Apply filters
+          if (searchTerm && searchTerm.trim()) {
+            query = query.or(`display_id.ilike.%${searchTerm}%,customer_data->info->>email.ilike.%${searchTerm}%`);
+          }
+
+          if (filters.statuses && filters.statuses.length > 0) {
+            query = query.in('status', filters.statuses);
+          }
+
+          if (filters.countries && filters.countries.length > 0) {
+            query = query.in('destination_country', filters.countries);
+          }
+
+          // Apply pagination
+          const start = page * pageSize;
+          const end = start + pageSize - 1;
+          query = query.range(start, end);
+
+          const { data, error } = await query;
             
           console.log('🔍 [useQuoteManagement] Main Query Results (same as test):', {
             hasError: !!error,
@@ -155,62 +177,11 @@ export const useQuoteManagement = ({
           throw error;
         }
     },
-    enabled: !!user && !!session && !!isAdmin, // Simplified enablement logic matching test query
-    staleTime: 0, // Force fresh queries for debugging
-    cacheTime: 0, // Don't cache for debugging
+    enabled: isAuthenticated && !!isAdmin && !isAdminLoading,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for performance
+    gcTime: 10 * 60 * 1000 // 10 minutes garbage collection
   });
 
-  // TEMPORARY: Simplified test query to bypass all complex logic
-  const { data: testQuotes, isLoading: testLoading } = useQuery({
-    queryKey: ['admin-quotes-test'],
-    queryFn: async () => {
-      console.log('🧪 [Test Query] Running simplified admin query...');
-      
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, display_id, status, final_total_usd, created_at, customer_data, items')
-        .order('created_at', { ascending: false })
-        .limit(10);
-        
-      console.log('🧪 [Test Query] Results:', {
-        hasError: !!error,
-        errorMessage: error?.message,
-        dataCount: data?.length || 0,
-        data: data || []
-      });
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user && !!session, // Simpler auth check
-    staleTime: 0,
-    cacheTime: 0,
-  });
-
-  // INVESTIGATION: Compare main query vs test query results
-  const finalQuotes = quotes || testQuotes || [];
-  const finalLoading = quotesLoading || testLoading;
-
-  // Debug logging for final query state
-  console.log('🔍 [useQuoteManagement] Final Query State Comparison:', {
-    mainQuery: {
-      quotesLoading,
-      quotesCount: quotes?.length || 0,
-      quotes: quotes?.slice(0, 2) || [], // Log first 2 quotes for debugging
-      queryEnabled: isAuthenticated && !!isAdmin && !isAdminLoading,
-    },
-    testQuery: {
-      testLoading,
-      testQuotesCount: testQuotes?.length || 0,
-      testQuotes: testQuotes?.slice(0, 2) || []
-    },
-    final: {
-      usingMainQuery: !!(quotes && quotes.length > 0),
-      usingTestQuery: !quotes && !!(testQuotes && testQuotes.length > 0),
-      finalCount: finalQuotes.length,
-      finalLoading: finalLoading || isAdminLoading
-    }
-  });
 
   const updateMultipleQuotesStatusMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
@@ -528,8 +499,8 @@ export const useQuoteManagement = ({
   const isDeletingQuotes = deleteQuotesMutation.isPending;
 
   return {
-    quotes: finalQuotes, // INVESTIGATION: Main query or test query fallback
-    quotesLoading: finalLoading || isAdminLoading,
+    quotes: quotes || [],
+    quotesLoading: quotesLoading || isAdminLoading,
     isRejectDialogOpen,
     setRejectDialogOpen: setIsRejectDialogOpen,
     selectedQuoteIds,

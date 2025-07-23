@@ -216,24 +216,23 @@ export function SearchAndFilterPanel({
         </CardHeader>
 
         <CollapsibleContent>
-          <CardContent className="space-y-4">
-            {/* Search Text Input */}
-            <div className="space-y-2">
-              <Label htmlFor="search-text">Search Quotes</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search-text"
-                  placeholder="Search by quote ID, customer name, items..."
-                  value={filters.searchText}
-                  onChange={(e) => handleSearchTextChange(e.target.value)}
-                  className="pl-10"
-                />
+          <CardContent className="space-y-3 pt-4 pb-4">
+            {/* Inline Search and Filter Controls */}
+            <div className="flex flex-wrap gap-3 items-end">
+              {/* Search Text Input */}
+              <div className="flex-1 min-w-[300px] space-y-1">
+                <Label htmlFor="search-text" className="text-sm">Search Quotes</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="search-text"
+                    placeholder="Search by quote ID, customer name, items..."
+                    value={filters.searchText}
+                    onChange={(e) => handleSearchTextChange(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-            </div>
-
-            {/* Filter Controls Row */}
-            <div className="flex flex-wrap gap-3">
               {/* Country Filter Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -269,6 +268,26 @@ export function SearchAndFilterPanel({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
+              
+              {/* Action Buttons - Inline */}
+              <Button 
+                onClick={handleSearchWithMonitoring}
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                <Search className="h-4 w-4" />
+                {isLoading ? 'Searching...' : 'Search'}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={onReset}
+                disabled={!hasActiveFilters || isLoading}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset
+              </Button>
             </div>
 
             {/* Active Filters Display */}
@@ -305,27 +324,6 @@ export function SearchAndFilterPanel({
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button 
-                onClick={handleSearchWithMonitoring}
-                disabled={isLoading}
-                className="flex items-center gap-2"
-              >
-                <Search className="h-4 w-4" />
-                {isLoading ? 'Searching...' : 'Search'}
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={onReset}
-                disabled={!hasActiveFilters || isLoading}
-                className="flex items-center gap-2"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset
-              </Button>
-            </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

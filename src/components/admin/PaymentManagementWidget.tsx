@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { UnifiedPaymentModal } from './UnifiedPaymentModal';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 
 interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
@@ -266,7 +266,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Order Total</span>
               <span className="font-semibold">
-                {formatAmountForDisplay(paymentSummary.finalTotal, paymentCurrency)}
+                {currencyService.formatAmount(paymentSummary.finalTotal, paymentCurrency)}
               </span>
             </div>
 
@@ -279,7 +279,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                   paymentSummary.totalPayments > 0 ? 'text-green-600' : 'text-gray-500',
                 )}
               >
-                {formatAmountForDisplay(paymentSummary.totalPayments, paymentCurrency)}
+                {currencyService.formatAmount(paymentSummary.totalPayments, paymentCurrency)}
               </span>
             </div>
 
@@ -288,7 +288,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Refunds</span>
                 <span className="font-semibold text-red-600">
-                  -{formatAmountForDisplay(paymentSummary.totalRefunds, paymentCurrency)}
+                  -{currencyService.formatAmount(paymentSummary.totalRefunds, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -299,7 +299,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Net Paid</span>
                   <span className="font-bold">
-                    {formatAmountForDisplay(paymentSummary.totalPaid, paymentCurrency)}
+                    {currencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
                   </span>
                 </div>
               </div>
@@ -311,7 +311,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 <div className="flex items-center justify-between bg-orange-50 p-2 rounded">
                   <span className="text-sm font-medium text-orange-800">Balance Due</span>
                   <span className="font-bold text-orange-600">
-                    {formatAmountForDisplay(paymentSummary.remaining, paymentCurrency)}
+                    {currencyService.formatAmount(paymentSummary.remaining, paymentCurrency)}
                   </span>
                 </div>
               )}
@@ -321,7 +321,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div className="flex items-center justify-between bg-teal-50 p-2 rounded">
                 <span className="text-sm font-medium text-teal-800">Overpayment</span>
                 <span className="font-bold text-teal-600">
-                  {formatAmountForDisplay(paymentSummary.overpaidAmount, paymentCurrency)}
+                  {currencyService.formatAmount(paymentSummary.overpaidAmount, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -345,7 +345,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                             netAmount > 0 ? 'text-green-700' : 'text-red-700',
                           )}
                         >
-                          {formatAmountForDisplay(Math.abs(netAmount), curr)}
+                          {currencyService.formatAmount(Math.abs(netAmount), curr)}
                         </span>
                       </div>
                     );
@@ -533,7 +533,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div>
                 <p className="text-sm text-muted-foreground">Amount</p>
                 <p className="font-medium">
-                  {formatAmountForDisplay(paymentSummary.totalPaid, paymentCurrency)}
+                  {currencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
                 </p>
               </div>
               <div>

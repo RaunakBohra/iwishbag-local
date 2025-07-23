@@ -3,90 +3,8 @@ import { logger } from './logger';
 import { Quote, ShippingAddress } from '@/types/quote';
 import { currencyService } from '@/services/CurrencyService';
 
-export const formatAmountForDisplay = (
-  amount: number | null | undefined,
-  currency: string = 'USD',
-  exchangeRate: number = 1,
-  options?: Intl.NumberFormatOptions,
-): string => {
-  if (amount === null || amount === undefined) {
-    return 'N/A';
-  }
-
-  // Convert amount using exchange rate (amount is in USD, convert to target currency)
-  const convertedAmount = amount * exchangeRate;
-
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    ...options,
-  }).format(convertedAmount);
-};
-
-// Get currency symbol for a given currency code (async version with database lookup)
-export const getCurrencySymbolAsync = async (currency: string): Promise<string> => {
-  try {
-    const currencyInfo = await currencyService.getCurrency(currency);
-    if (currencyInfo?.symbol) {
-      return currencyInfo.symbol;
-    }
-  } catch (error) {
-    console.warn('Failed to get currency symbol from service, using fallback', error);
-  }
-
-  // Fallback to CurrencyService
-  return currencyService.getCurrencySymbol(currency);
-};
-
-// Get currency symbol for a given currency code (synchronous version)
-export const getCurrencySymbol = (currency: string): string => {
-  return currencyService.getCurrencySymbol(currency);
-};
-
-// Get currency for a given country code (async version with database lookup)
-export const getCountryCurrencyAsync = async (countryCode: string): Promise<string> => {
-  try {
-    return await currencyService.getCurrencyForCountry(countryCode);
-  } catch (error) {
-    console.warn('Failed to get country currency from service, using fallback', error);
-    return 'USD';
-  }
-};
-
-// Get currency for a given country code (synchronous version)
-// Note: This uses CurrencyService which has fallbacks for critical countries
-export const getCountryCurrency = (countryCode: string): string => {
-  return currencyService.getCurrencyForCountrySync(countryCode);
-};
-
-// Get the currency map for reverse lookup (async version with database lookup)
-export const getCountryCurrencyMapAsync = async (): Promise<{
-  [key: string]: string;
-}> => {
-  try {
-    const map = await currencyService.getCountryCurrencyMap();
-    const result: { [key: string]: string } = {};
-    map.forEach((currency, country) => {
-      result[country] = currency;
-    });
-    return result;
-  } catch (error) {
-    console.warn('Failed to get country currency map from service, using fallback', error);
-    return { US: 'USD' }; // Minimal fallback
-  }
-};
-
-// Get the currency map for reverse lookup (synchronous version)
-// Note: This uses CurrencyService fallbacks for critical countries
-export const getCountryCurrencyMap = (): { [key: string]: string } => {
-  // Use CurrencyService's fallback mapping which has the most up-to-date critical mappings
-  const fallbackMap = currencyService.getFallbackCountryCurrencyMapSync();
-  const result: { [key: string]: string } = {};
-  fallbackMap.forEach((currency, country) => {
-    result[country] = currency;
-  });
-  return result;
-};
+// SIMPLIFIED: Remove all wrapper functions around CurrencyService
+// All currency operations should go through hooks or CurrencyService directly
 
 
 // Exchange rate interface
@@ -115,8 +33,8 @@ export async function getExchangeRate(
     return cached.result;
   }
 
-  const fromCurr = fromCurrency || getCountryCurrency(fromCountry);
-  const toCurr = toCurrency || getCountryCurrency(toCountry);
+  const fromCurr = fromCurrency || currencyService.getCurrencyForCountrySync(fromCountry);
+  const toCurr = toCurrency || currencyService.getCurrencyForCountrySync(toCountry);
 
   // Same currency, no conversion needed
   if (fromCurr === toCurr) {
@@ -240,166 +158,20 @@ export function convertCurrency(
   return Math.round(converted * 100) / 100;
 }
 
-// Format amount in dual currencies (origin and destination) - NEW VERSION
-export const formatDualCurrencyNew = (
-  amount: number | null | undefined,
-  originCountry: string,
-  destinationCountry: string,
-  exchangeRate?: number,
-): { origin: string; destination: string; short: string } => {
-  if (amount === null || amount === undefined) {
-    return { origin: 'N/A', destination: 'N/A', short: 'N/A' };
-  }
+// REMOVED: formatDualCurrencyNew, formatCustomerCurrency, getCurrencySymbolFromCountry
+// USE: useQuoteCurrency() hook or useAdminQuoteCurrency() hook for all formatting
 
-  const originCurrency = getCountryCurrency(originCountry);
-  const destinationCurrency = getCountryCurrency(destinationCountry);
-
-  // Format in origin currency (amount is already in origin currency)
-  const originSymbol = getCurrencySymbol(originCurrency);
-  const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
-
-  // Format in destination currency using exchange rate
-  if (exchangeRate && exchangeRate !== 1) {
-    const convertedAmount = convertCurrency(amount, exchangeRate, destinationCurrency);
-    const destinationSymbol = getCurrencySymbol(destinationCurrency);
-    const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
-
-    return {
-      origin: originFormatted,
-      destination: destinationFormatted,
-      short: `${originFormatted}/${destinationFormatted}`,
-    };
-  }
-
-  // Same currency or no exchange rate
-  return {
-    origin: originFormatted,
-    destination: originFormatted,
-    short: originFormatted,
-  };
-};
-
-// Format amount for customer display (single currency)
-export const formatCustomerCurrency = (
-  amount: number | null | undefined,
-  originCountry: string,
-  customerPreferredCurrency: string,
-  exchangeRate?: number,
-): string => {
-  if (amount === null || amount === undefined) {
-    return 'N/A';
-  }
-
-  const originCurrency = getCountryCurrency(originCountry);
-
-  // If customer prefers origin currency, no conversion needed
-  if (customerPreferredCurrency === originCurrency) {
-    const symbol = getCurrencySymbol(originCurrency);
-    return `${symbol}${amount.toLocaleString()}`;
-  }
-
-  // Convert to customer's preferred currency using the provided exchange rate
-  if (exchangeRate && exchangeRate !== 1) {
-    const convertedAmount = convertCurrency(amount, exchangeRate, customerPreferredCurrency);
-    const symbol = getCurrencySymbol(customerPreferredCurrency);
-    return `${symbol}${convertedAmount.toLocaleString()}`;
-  }
-
-  // Fallback to origin currency
-  const symbol = getCurrencySymbol(originCurrency);
-  return `${symbol}${amount.toLocaleString()}`;
-};
-
-// Get currency symbol from country code (for shipping route forms)
-export const getCurrencySymbolFromCountry = (countryCode: string): string => {
-  const currency = getCountryCurrency(countryCode);
-  return getCurrencySymbol(currency);
-};
-
-// Normalize country names to country codes for currency operations
+// SIMPLIFIED: Basic country code normalization only
 export const normalizeCountryForCurrency = (country: string): string => {
   if (!country) return 'US';
-
-  // If it's already a 2-character code, ensure it's uppercase
+  
+  // If it's already a 2-character code, return uppercase
   if (country.length === 2) {
     return country.toUpperCase();
   }
-
-  // Extended country name to code mapping for currency operations
-  const countryNameToCode: { [key: string]: string } = {
-    Nepal: 'NP',
-    India: 'IN',
-    'United States': 'US',
-    USA: 'US',
-    'United States of America': 'US',
-    China: 'CN',
-    Australia: 'AU',
-    'United Kingdom': 'GB',
-    UK: 'GB',
-    Canada: 'CA',
-    Germany: 'DE',
-    France: 'FR',
-    Japan: 'JP',
-    'South Korea': 'KR',
-    Korea: 'KR',
-    Thailand: 'TH',
-    Malaysia: 'MY',
-    Singapore: 'SG',
-    Philippines: 'PH',
-    Indonesia: 'ID',
-    Vietnam: 'VN',
-    Bangladesh: 'BD',
-    'Sri Lanka': 'LK',
-    Pakistan: 'PK',
-    Myanmar: 'MM',
-    Cambodia: 'KH',
-    Laos: 'LA',
-    Taiwan: 'TW',
-    'Hong Kong': 'HK',
-    'South Africa': 'ZA',
-    Egypt: 'EG',
-    Nigeria: 'NG',
-    Brazil: 'BR',
-    Argentina: 'AR',
-    Mexico: 'MX',
-    Chile: 'CL',
-    Peru: 'PE',
-    Colombia: 'CO',
-    Ecuador: 'EC',
-    Uruguay: 'UY',
-    Paraguay: 'PY',
-    Bolivia: 'BO',
-    Venezuela: 'VE',
-  };
-
-  // Direct lookup
-  if (countryNameToCode[country]) {
-    return countryNameToCode[country];
-  }
-
-  // Try case-insensitive lookup
-  const caseInsensitiveMatch = Object.keys(countryNameToCode).find(
-    (name) => name.toLowerCase() === country.toLowerCase(),
-  );
-  if (caseInsensitiveMatch) {
-    return countryNameToCode[caseInsensitiveMatch];
-  }
-
-  // Try partial match
-  const partialMatch = Object.keys(countryNameToCode).find(
-    (name) =>
-      name.toLowerCase().includes(country.toLowerCase()) ||
-      country.toLowerCase().includes(name.toLowerCase()),
-  );
-
-  if (partialMatch) {
-    console.log(
-      `Using partial match for ${country}: ${partialMatch} -> ${countryNameToCode[partialMatch]}`,
-    );
-    return countryNameToCode[partialMatch];
-  }
-
-  console.warn(`Unknown country name in currency operation: ${country}, defaulting to US`);
+  
+  // For longer strings, use database-driven country lookup instead of hardcoded mapping
+  console.warn(`Long country name in currency operation: ${country}, defaulting to US. Use country code instead.`);
   return 'US';
 };
 

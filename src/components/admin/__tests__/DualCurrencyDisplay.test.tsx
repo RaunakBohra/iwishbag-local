@@ -6,39 +6,30 @@ import {
   CurrencyInputLabel,
 } from '../DualCurrencyDisplay';
 
-// Mock the currency utilities
-vi.mock('../../../lib/currencyUtils', () => ({
-  formatDualCurrencyNew: vi.fn((amount, originCountry, destinationCountry, exchangeRate) => {
-    // Mock implementation that formats amounts based on countries
-    const originSymbol = originCountry === 'US' ? '$' : originCountry === 'IN' ? '₹' : '€';
-    const destSymbol = destinationCountry === 'US' ? '$' : destinationCountry === 'IN' ? '₹' : '€';
-
-    if (!amount) {
-      return {
-        origin: `${originSymbol}0.00`,
-        destination: `${destSymbol}0.00`,
-        short: `${originSymbol}0.00 / ${destSymbol}0.00`,
+// Mock the CurrencyService
+vi.mock('../../../services/CurrencyService', () => ({
+  currencyService: {
+    getCurrencyForCountrySync: vi.fn((countryCode) => {
+      const currencies = {
+        US: 'USD',
+        IN: 'INR', 
+        NP: 'NPR',
+        GB: 'GBP',
+        EU: 'EUR',
       };
-    }
-
-    const destAmount = exchangeRate ? amount * exchangeRate : amount;
-
-    return {
-      origin: `${originSymbol}${amount.toFixed(2)}`,
-      destination: `${destSymbol}${destAmount.toFixed(2)}`,
-      short: `${originSymbol}${amount.toFixed(2)} / ${destSymbol}${destAmount.toFixed(2)}`,
-    };
-  }),
-  getCurrencySymbolFromCountry: vi.fn((countryCode) => {
-    const symbols = {
-      US: '$',
-      IN: '₹',
-      NP: '₨',
-      GB: '£',
-      EU: '€',
-    };
-    return symbols[countryCode as keyof typeof symbols] || '$';
-  }),
+      return currencies[countryCode as keyof typeof currencies] || 'USD';
+    }),
+    getCurrencySymbol: vi.fn((currency) => {
+      const symbols = {
+        USD: '$',
+        INR: '₹',
+        NPR: '₨',
+        GBP: '£',
+        EUR: '€',
+      };
+      return symbols[currency as keyof typeof symbols] || '$';
+    }),
+  },
 }));
 
 // Mock lucide-react icons

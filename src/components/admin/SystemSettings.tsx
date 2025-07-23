@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2, Settings, DollarSign, Bell, RefreshCw, Heart } from 'lucide-react';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { ConfigurationHealthCheck } from './ConfigurationHealthCheck';
 import { useState } from 'react';
 
 export const SystemSettings = () => {
@@ -52,6 +53,9 @@ export const SystemSettings = () => {
           Configure global system settings and feature toggles
         </p>
       </div>
+
+      {/* Configuration Health Check */}
+      <ConfigurationHealthCheck />
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Exchange Rate Settings */}

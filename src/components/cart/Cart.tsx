@@ -12,33 +12,13 @@ import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 import { Tables } from '@/integrations/supabase/types';
 
-// Mock quote type for cart display
-interface MockQuote {
-  id: string;
-  origin_country: string;
-  destination_country: string;
-  shipping_address?: {
-    destination_country: string;
-  };
-}
-
 // Component to display cart item price with proper currency conversion
 const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number }) => {
-  // Create a mock quote object for the cart item with correct field mappings
-  const mockQuote: MockQuote = {
-    id: item.quoteId,
-    origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
-    destination_country: item.destinationCountryCode || item.countryCode, // Where shipping to
-    shipping_address: {
-      destination_country: item.destinationCountryCode || item.countryCode,
-    },
-  };
-
-  // Use the quote currency hook
+  // Use cart item's currency data directly - no mock quotes needed
   const { formatAmount } = useQuoteCurrency({
-    origin_country: mockQuote.origin_country,
-    destination_country: mockQuote.destination_country,
-    destination_currency: item.currency || 'USD',
+    origin_country: item.purchaseCountryCode,
+    destination_country: item.destinationCountryCode,
+    destination_currency: item.finalCurrency || 'USD',
   });
 
   return <>{formatAmount(item.finalTotal * quantity)}</>;
@@ -48,21 +28,12 @@ const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number })
 const CartTotal = ({ items }: { items: CartItem[] }) => {
   if (items.length === 0) return <>$0.00</>;
 
-  // Use the first item's currency context for the total
+  // Use the first item's currency context for the total - all items should have same destination
   const firstItem = items[0];
-  const mockQuote: MockQuote = {
-    id: firstItem.quoteId,
-    origin_country: firstItem.purchaseCountryCode || firstItem.countryCode,
-    destination_country: firstItem.destinationCountryCode || firstItem.countryCode,
-    shipping_address: {
-      destination_country: firstItem.destinationCountryCode || firstItem.countryCode,
-    },
-  };
-
   const { formatAmount } = useQuoteCurrency({
-    origin_country: mockQuote.origin_country,
-    destination_country: mockQuote.destination_country,
-    destination_currency: firstItem.currency || 'USD',
+    origin_country: firstItem.purchaseCountryCode,
+    destination_country: firstItem.destinationCountryCode,
+    destination_currency: firstItem.finalCurrency || 'USD',
   });
 
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal * item.quantity, 0);

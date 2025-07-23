@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { currencyService } from '@/services/CurrencyService';
-import { formatDualCurrencyNew } from '@/lib/currencyUtils';
+// SIMPLIFIED: Use CurrencyService directly instead of utility functions
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 export interface AdminCurrencyDisplay {
@@ -63,9 +63,36 @@ export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): A
     const originSymbol = currencyService.getCurrencySymbolSync(originCurrency);
     const destinationSymbol = currencyService.getCurrencySymbolSync(destinationCurrency);
 
-    // Format dual amount function using existing utility
+    // Format dual amount function with inline implementation
     const formatDualAmount = (amount: number) => {
-      return formatDualCurrencyNew(amount, originCountry, destinationCountry, exchangeRate);
+      // Format in origin currency
+      const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
+
+      // Convert and format in destination currency if different
+      if (exchangeRate && exchangeRate !== 1) {
+        let convertedAmount = amount * exchangeRate;
+        // Round to whole numbers for most Asian currencies
+        const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
+        if (noDecimalCurrencies.includes(destinationCurrency)) {
+          convertedAmount = Math.round(convertedAmount);
+        } else {
+          convertedAmount = Math.round(convertedAmount * 100) / 100;
+        }
+        const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
+
+        return {
+          origin: originFormatted,
+          destination: destinationFormatted,
+          short: `${originFormatted}/${destinationFormatted}`,
+        };
+      }
+
+      // Same currency or no exchange rate
+      return {
+        origin: originFormatted,
+        destination: originFormatted,
+        short: originFormatted,
+      };
     };
 
     // Format single amount in specified currency

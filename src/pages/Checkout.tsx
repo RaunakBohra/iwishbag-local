@@ -36,7 +36,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
 import { Tables } from '@/integrations/supabase/types';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { useCurrency, useQuoteCurrency } from '@/hooks/useCurrency';
+import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
@@ -55,7 +55,7 @@ import {
   isAddressComplete,
   extractQuoteShippingAddress,
 } from '@/lib/addressUtils';
-import { formatAmountForDisplay } from '@/lib/currencyUtils';
+// REMOVED: formatAmountForDisplay - using useQuoteCurrency hook only
 import { checkoutSessionService } from '@/services/CheckoutSessionService';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { formatBankDetailsForEmail } from '@/lib/bankDetailsFormatter';
@@ -100,82 +100,30 @@ interface AddressFormData {
 }
 
 // Component to display checkout item price with proper currency conversion
-const CheckoutItemPrice = ({
-  item,
-  displayCurrency,
-  exchangeRate = 1,
-}: {
-  item: CartItem;
-  displayCurrency?: string;
-  exchangeRate?: number;
-}) => {
-  // Always call hooks at the top
-  const { data: _userProfile } = useUserProfile();
+const CheckoutItemPrice = ({ item }: { item: CartItem }) => {
+  // Use cart item's currency data directly - no mock quotes needed
+  const { formatAmount } = useQuoteCurrency({
+    origin_country: item.purchaseCountryCode,
+    destination_country: item.destinationCountryCode,
+    destination_currency: item.finalCurrency || 'USD',
+  });
 
-  // Create mock quote for hook with correct field mappings
-  const mockQuote = {
-    id: item.quoteId,
-    origin_country: item.purchaseCountryCode || item.countryCode, // Where buying from
-    destination_country: item.destinationCountryCode || item.countryCode, // Where shipping to
-    shipping_address: {
-      destination_country: item.destinationCountryCode || item.countryCode,
-    },
-  };
-
-  const currency = useQuoteCurrency(mockQuote as QuoteType);
-  const { formatAmount } = currency;
-
-  // Payment conversion removed - using simplified currency system
-
-  // If displayCurrency is provided, use that currency with proper exchange rate from country settings
-  if (displayCurrency) {
-    return <>{formatAmountForDisplay(item.finalTotal, displayCurrency, exchangeRate)}</>;
-  }
-
-  // For authenticated users, use the existing quote display currency logic
   return <>{formatAmount(item.finalTotal)}</>;
 };
 
 // Component to display checkout total with proper currency conversion
-const CheckoutTotal = ({
-  items,
-  displayCurrency,
-  exchangeRate = 1,
-}: {
-  items: CartItem[];
-  displayCurrency?: string;
-  exchangeRate?: number;
-}) => {
-  // Use the first item to determine the quote format (all items should have same destination)
+const CheckoutTotal = ({ items }: { items: CartItem[] }) => {
+  if (items.length === 0) return <>$0.00</>;
+
+  // Use the first item's currency context for the total - all items should have same destination
   const firstItem = items[0];
+  const { formatAmount } = useQuoteCurrency({
+    origin_country: firstItem.purchaseCountryCode,
+    destination_country: firstItem.destinationCountryCode,
+    destination_currency: firstItem.finalCurrency || 'USD',
+  });
 
-  // Create mock quote for hook with correct field mappings - provide default values to ensure hook is always called consistently
-  const mockQuote = {
-    id: firstItem?.quoteId || 'default',
-    origin_country: firstItem?.purchaseCountryCode || firstItem?.countryCode || 'US',
-    destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
-    shipping_address: {
-      destination_country: firstItem?.destinationCountryCode || firstItem?.countryCode || 'US',
-    },
-  };
-
-  // Always call hooks at the top with consistent parameters
-  const currency = useQuoteCurrency(mockQuote as QuoteType);
-  const { formatAmount } = currency;
-
-  if (!firstItem) return <>$0.00</>;
-
-  // Payment conversion removed - using simplified currency system
-
-  // Calculate total from all items
   const totalAmount = items.reduce((sum, item) => sum + item.finalTotal, 0);
-
-  // If displayCurrency is provided, use that currency with proper exchange rate
-  if (displayCurrency) {
-    return <>{formatAmountForDisplay(totalAmount, displayCurrency, exchangeRate)}</>;
-  }
-
-  // For authenticated users, use the existing quote display currency logic
   return <>{formatAmount(totalAmount)}</>;
 };
 
@@ -2756,11 +2704,7 @@ export default function Checkout() {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-sm">
-                            <CheckoutItemPrice
-                              item={item}
-                              displayCurrency={paymentCurrency}
-                              exchangeRate={exchangeRate}
-                            />
+                            <CheckoutItemPrice item={item} />
                           </div>
                         </div>
                       </div>
@@ -2772,11 +2716,7 @@ export default function Checkout() {
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total:</span>
                       <span>
-                        <CheckoutTotal
-                          items={selectedCartItems}
-                          displayCurrency={paymentCurrency}
-                          exchangeRate={exchangeRate}
-                        />
+                        <CheckoutTotal items={selectedCartItems} />
                       </span>
                     </div>
 
@@ -2801,11 +2741,7 @@ export default function Checkout() {
                     ) : (
                       <>
                         Place Order -{' '}
-                        <CheckoutTotal
-                          items={selectedCartItems}
-                          displayCurrency={paymentCurrency}
-                          exchangeRate={exchangeRate}
-                        />
+                        <CheckoutTotal items={selectedCartItems} />
                       </>
                     )}
                   </Button>

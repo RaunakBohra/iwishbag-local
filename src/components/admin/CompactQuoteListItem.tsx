@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
-import { useAdminCurrencyDisplay } from '@/hooks/useAdminCurrencyDisplay';
+import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import { formatDateCompact } from '@/lib/dateUtils';
+import { PriorityBadge } from './shared/PriorityBadge';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import {
@@ -56,30 +58,6 @@ interface CompactQuoteListItemProps {
   onSelect: (quoteId: string, selected: boolean) => void;
 }
 
-const getPriorityBadge = (priority: QuoteWithItems['priority']) => {
-  if (!priority) return null;
-
-  const config = {
-    low: {
-      label: 'Low',
-      className: 'bg-gray-100 text-gray-700 border-gray-300',
-    },
-    medium: {
-      label: 'Medium',
-      className: 'bg-teal-100 text-teal-700 border-teal-300',
-    },
-    high: {
-      label: 'High',
-      className: 'bg-red-100 text-red-700 border-red-300',
-    },
-  };
-
-  const badgeConfig = config[priority] || config.medium;
-
-  return (
-    <Badge className={cn('text-xs font-medium', badgeConfig.className)}>{badgeConfig.label}</Badge>
-  );
-};
 
 export const CompactQuoteListItem = ({
   quote,
@@ -87,7 +65,7 @@ export const CompactQuoteListItem = ({
   onSelect,
 }: CompactQuoteListItemProps) => {
   const navigate = useNavigate();
-  const { formatAmount } = useAdminCurrencyDisplay(quote);
+  const { formatDualAmount } = useAdminQuoteCurrency(quote);
   const [routeCountries, setRouteCountries] = useState<{
     origin: string;
     destination: string;
@@ -103,20 +81,8 @@ export const CompactQuoteListItem = ({
   const totalItems = quote.items?.length || 0;
   const productName = firstItem?.name || 'Product name not specified';
 
-  const formattedAmount = formatAmount(quote.final_total_usd || 0);
+  const formattedAmount = formatDualAmount(quote.final_total_usd || 0).short;
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-      const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-      return diffHours <= 1 ? 'Just now' : `${diffHours}h ago`;
-    }
-    return diffDays === 1 ? 'Yesterday' : `${diffDays}d ago`;
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -163,7 +129,7 @@ export const CompactQuoteListItem = ({
     <>
       <div
         className={cn(
-          'bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
+          'bg-white border border-gray-200 rounded-lg p-3 hover:border-gray-300 hover:shadow-sm transition-all duration-200',
           isSelected && 'ring-2 ring-teal-500 border-teal-500',
         )}
       >
@@ -216,22 +182,22 @@ export const CompactQuoteListItem = ({
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {/* Header Row */}
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-3">
                 <Body className="font-semibold text-gray-900">
                   {quote.display_id || `QT-${quote.id.substring(0, 8).toUpperCase()}`}
                 </Body>
                 <StatusBadge status={quote.status} />
-                {getPriorityBadge(quote.priority)}
+                <PriorityBadge priority={quote.priority} />
               </div>
               <div className="flex items-center gap-2">
-                <BodySmall className="text-gray-500">{formatDate(quote.created_at)}</BodySmall>
+                <BodySmall className="text-gray-500">{formatDateCompact(quote.created_at)}</BodySmall>
                 <ShareQuoteButtonV2 quote={quote} variant="icon" />
               </div>
             </div>
 
             {/* Product Name Row */}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-1">
               <Package className="h-4 w-4 text-gray-500" />
               <BodySmall className="text-gray-700 font-medium truncate">
                 {productName}
@@ -255,7 +221,7 @@ export const CompactQuoteListItem = ({
             </div>
 
             {/* Info Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-1">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-gray-500" />
                 <BodySmall className="text-gray-700 font-medium truncate">{customerName}</BodySmall>
@@ -355,7 +321,7 @@ export const CompactQuoteListItem = ({
               Quote {quote.display_id || quote.id} - Quick Preview
             </DialogTitle>
             <DialogDescription>
-              {customerName} • {formatDate(quote.created_at)}
+              {customerName} • {formatDateCompact(quote.created_at)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

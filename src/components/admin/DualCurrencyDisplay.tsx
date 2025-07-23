@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { formatDualCurrencyNew, getCurrencySymbolFromCountry } from '../../lib/currencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 import { AlertTriangle, CheckCircle, Info, Calculator } from 'lucide-react';
 
 interface DualCurrencyDisplayProps {
@@ -29,12 +29,40 @@ export function DualCurrencyDisplay({
   isTransactional = false,
   showEstimateIndicator = true,
 }: DualCurrencyDisplayProps) {
-  const { origin, destination, short } = formatDualCurrencyNew(
-    amount,
-    originCountry,
-    destinationCountry,
-    exchangeRate,
-  );
+  // Format dual currency inline using CurrencyService
+  const formatDualCurrency = (amount: number, originCountry: string, destinationCountry: string, exchangeRate?: number) => {
+    const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
+    
+    const originSymbol = currencyService.getCurrencySymbol(originCurrency);
+    const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
+
+    if (exchangeRate && exchangeRate !== 1) {
+      let convertedAmount = amount * exchangeRate;
+      const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
+      if (noDecimalCurrencies.includes(destinationCurrency)) {
+        convertedAmount = Math.round(convertedAmount);
+      } else {
+        convertedAmount = Math.round(convertedAmount * 100) / 100;
+      }
+      const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
+      const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
+      
+      return {
+        origin: originFormatted,
+        destination: destinationFormatted,
+        short: `${originFormatted}/${destinationFormatted}`,
+      };
+    }
+
+    return {
+      origin: originFormatted,
+      destination: originFormatted,
+      short: originFormatted,
+    };
+  };
+
+  const { origin, destination, short } = formatDualCurrency(amount || 0, originCountry, destinationCountry, exchangeRate);
 
   const isSameCurrency = origin === destination;
   const hasWarning = warning || exchangeRateSource === 'fallback';
@@ -98,8 +126,8 @@ export function DualCurrencyDisplay({
         <div>Destination: {destination}</div>
         {exchangeRate && exchangeRate !== 1 && (
           <div>
-            Rate: 1 {getCurrencySymbolFromCountry(originCountry)} = {exchangeRate}{' '}
-            {getCurrencySymbolFromCountry(destinationCountry)}
+            Rate: 1 {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(originCountry))} = {exchangeRate}{' '}
+            {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(destinationCountry))}
           </div>
         )}
         <div className="flex items-center gap-1 flex-wrap">Source: {getStatusBadge()}</div>
@@ -175,7 +203,32 @@ export function SimpleDualCurrency({
   exchangeRate,
   className = '',
 }: SimpleDualCurrencyProps) {
-  const { short } = formatDualCurrencyNew(amount, originCountry, destinationCountry, exchangeRate);
+  // Format dual currency inline using CurrencyService
+  const formatDualCurrency = (amount: number, originCountry: string, destinationCountry: string, exchangeRate?: number) => {
+    const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
+    
+    const originSymbol = currencyService.getCurrencySymbol(originCurrency);
+    const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
+
+    if (exchangeRate && exchangeRate !== 1) {
+      let convertedAmount = amount * exchangeRate;
+      const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
+      if (noDecimalCurrencies.includes(destinationCurrency)) {
+        convertedAmount = Math.round(convertedAmount);
+      } else {
+        convertedAmount = Math.round(convertedAmount * 100) / 100;
+      }
+      const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
+      const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
+      
+      return `${originFormatted}/${destinationFormatted}`;
+    }
+
+    return originFormatted;
+  };
+
+  const short = formatDualCurrency(amount || 0, originCountry, destinationCountry, exchangeRate);
 
   return <span className={`font-medium ${className}`}>{short}</span>;
 }
@@ -193,7 +246,7 @@ export function CurrencyInputLabel({
   required = false,
   className = '',
 }: CurrencyInputLabelProps) {
-  const symbol = getCurrencySymbolFromCountry(countryCode);
+  const symbol = currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(countryCode));
 
   return (
     <label className={`block text-sm font-medium text-gray-700 ${className}`}>

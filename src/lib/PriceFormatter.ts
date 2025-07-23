@@ -4,7 +4,7 @@
  */
 
 import { currencyService } from '@/services/CurrencyService';
-import { formatDualCurrencyNew, getCurrencySymbol, getCountryCurrency, convertCurrency } from './currencyUtils';
+// SIMPLIFIED: Use CurrencyService directly instead of wrapper functions
 
 export interface PriceResult {
   formatted: string;
@@ -51,7 +51,15 @@ class PriceFormatter {
       // Convert amount if needed
       let convertedAmount = amount;
       if (exchangeRate && exchangeRate !== 1) {
-        convertedAmount = convertCurrency(amount, exchangeRate, targetCurrency);
+        // Simple conversion: amount * rate
+        convertedAmount = amount * exchangeRate;
+        // Round to whole numbers for most Asian currencies
+        const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
+        if (noDecimalCurrencies.includes(targetCurrency)) {
+          convertedAmount = Math.round(convertedAmount);
+        } else {
+          convertedAmount = Math.round(convertedAmount * 100) / 100;
+        }
       }
 
       // Format using CurrencyService
@@ -64,8 +72,8 @@ class PriceFormatter {
       };
     } catch (error) {
       console.error('[PriceFormatter] formatPrice error:', error);
-      // Fallback formatting
-      const symbol = getCurrencySymbol('USD');
+      // Fallback formatting using CurrencyService
+      const symbol = currencyService.getCurrencySymbol('USD');
       return {
         formatted: `${symbol}${amount.toFixed(2)}`,
         currency: 'USD',
@@ -95,26 +103,43 @@ class PriceFormatter {
         rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
       }
 
-      // Use existing dual currency formatting
-      const dualResult = formatDualCurrencyNew(amount, originCountry, destinationCountry, rate);
-
+      // Get currencies for both countries
       const originCurrency = await currencyService.getCurrencyForCountry(originCountry);
       const destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
 
-      const destinationAmount = rate && rate !== 1 ? convertCurrency(amount, rate, destinationCurrency) : amount;
+      // Format in origin currency (amount is already in origin currency)
+      const originSymbol = currencyService.getCurrencySymbol(originCurrency);
+      const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
+
+      // Convert and format in destination currency
+      let destinationAmount = amount;
+      let destinationFormatted = originFormatted;
+      
+      if (rate && rate !== 1) {
+        destinationAmount = amount * rate;
+        // Round to whole numbers for most Asian currencies
+        const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
+        if (noDecimalCurrencies.includes(destinationCurrency)) {
+          destinationAmount = Math.round(destinationAmount);
+        } else {
+          destinationAmount = Math.round(destinationAmount * 100) / 100;
+        }
+        const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
+        destinationFormatted = `${destinationSymbol}${destinationAmount.toLocaleString()}`;
+      }
 
       return {
         origin: {
-          formatted: dualResult.origin,
+          formatted: originFormatted,
           currency: originCurrency,
           amount
         },
         destination: {
-          formatted: dualResult.destination,
+          formatted: destinationFormatted,
           currency: destinationCurrency,
           amount: destinationAmount
         },
-        display: dualResult.short
+        display: originCurrency === destinationCurrency ? originFormatted : `${originFormatted}/${destinationFormatted}`
       };
     } catch (error) {
       console.error('[PriceFormatter] formatDualPrice error:', error);

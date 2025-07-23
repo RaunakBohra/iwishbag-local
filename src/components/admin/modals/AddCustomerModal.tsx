@@ -37,12 +37,12 @@ const addCustomerSchema = z.object({
   phone: z.string().optional(),
   codEnabled: z.boolean().default(true),
   internalNotes: z.string().optional(),
-  // Address fields
-  addressLine1: z.string().min(5, 'Address is required'),
+  // Address fields (optional)
+  addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
-  city: z.string().min(2, 'City is required'),
-  country: z.string().min(2, 'Country is required'),
-  postalCode: z.string().min(3, 'Postal code is required'),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  postalCode: z.string().optional(),
 });
 
 type AddCustomerFormData = z.infer<typeof addCustomerSchema>;

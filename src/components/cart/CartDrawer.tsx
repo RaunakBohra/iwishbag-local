@@ -13,33 +13,13 @@ import { Tables } from '@/integrations/supabase/types';
 import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 
-// Mock quote type for cart display
-interface MockQuote {
-  id: string;
-  origin_country: string;
-  destination_country: string;
-  shipping_address?: {
-    destination_country: string;
-  };
-}
-
 // Component to display cart item price with proper currency conversion
 const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number }) => {
-  // Create a mock quote object for the cart item
-  const mockQuote: MockQuote = {
-    id: item.quoteId,
-    origin_country: item.purchaseCountryCode || item.countryCode,
-    destination_country: item.destinationCountryCode || item.countryCode,
-    shipping_address: {
-      destination_country: item.destinationCountryCode || item.countryCode,
-    },
-  };
-
-  // Use the quote currency hook
+  // Use cart item's currency data directly - no mock quotes needed
   const { formatAmount } = useQuoteCurrency({
-    origin_country: mockQuote.origin_country,
-    destination_country: mockQuote.destination_country,
-    destination_currency: item.currency || 'USD',
+    origin_country: item.purchaseCountryCode,
+    destination_country: item.destinationCountryCode,
+    destination_currency: item.finalCurrency || 'USD',
   });
 
   return <>{formatAmount(item.finalTotal * quantity)}</>;

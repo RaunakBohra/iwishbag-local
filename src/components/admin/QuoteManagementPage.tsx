@@ -1,19 +1,28 @@
 import { CompactQuoteListItem } from './CompactQuoteListItem';
 import { CreateQuoteModal } from './CreateQuoteModal';
 import { RejectQuoteDialog } from './RejectQuoteDialog';
-import { QuoteMetrics } from './QuoteMetrics';
-import { SearchAndFilterPanel, SearchFilters, StatusOption, CountryOption } from './SearchAndFilterPanel';
+import { UnifiedAdminToolbar, SearchFilters, CountryOption } from './UnifiedAdminToolbar';
 import { useQuoteManagement } from '@/hooks/useQuoteManagement';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
+import { useAllCountries } from '@/hooks/useAllCountries';
 
 import { QuoteListHeader } from './QuoteListHeader';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, Plus, Search, BarChart3 } from 'lucide-react';
 import { H1, H2, Body, BodySmall } from '@/components/ui/typography';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -27,12 +36,34 @@ import {
 
 export const QuoteManagementPage = () => {
   const { getStatusConfig } = useStatusManagement();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: allCountries, isLoading: countriesLoading } = useAllCountries();
 
-  // New unified filter state
-  const [filters, setFilters] = useState<SearchFilters>({
-    searchText: '',
-    countries: []
-  });
+  // URL-based filter state management
+  const filters = useMemo<SearchFilters>(() => ({
+    searchText: searchParams.get('search') || '',
+    countries: searchParams.get('countries') ? searchParams.get('countries')!.split(',') : []
+  }), [searchParams]);
+
+  const updateFilters = (newFilters: SearchFilters) => {
+    const params = new URLSearchParams(searchParams);
+    
+    // Update search parameter
+    if (newFilters.searchText) {
+      params.set('search', newFilters.searchText);
+    } else {
+      params.delete('search');
+    }
+    
+    // Update countries parameter
+    if (newFilters.countries.length > 0) {
+      params.set('countries', newFilters.countries.join(','));
+    } else {
+      params.delete('countries');
+    }
+    
+    setSearchParams(params, { replace: true });
+  };
   
   // UI state
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
@@ -46,7 +77,7 @@ export const QuoteManagementPage = () => {
   };
 
   const handleResetFilters = () => {
-    setFilters({
+    updateFilters({
       searchText: '',
       countries: []
     });
@@ -74,6 +105,31 @@ export const QuoteManagementPage = () => {
     filters
   });
 
+
+  // Calculate country counts from quotes
+  const availableCountries: CountryOption[] = useMemo(() => {
+    if (!allCountries || !quotes) return [];
+    
+    // Count quotes per destination country
+    const countryCounts = quotes.reduce((acc, quote) => {
+      const country = quote.destination_country;
+      if (country) {
+        acc[country] = (acc[country] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Map countries from database with counts
+    return allCountries
+      .filter(country => countryCounts[country.code] > 0) // Only show countries with quotes
+      .map(country => ({
+        code: country.code,
+        name: country.name,
+        count: countryCounts[country.code] || 0
+      }))
+      .sort((a, b) => (b.count || 0) - (a.count || 0)); // Sort by count descending
+  }, [allCountries, quotes]);
+
   if (quotesLoading) {
     return (
       <div className="min-h-screen bg-gray-50/40">
@@ -85,7 +141,16 @@ export const QuoteManagementPage = () => {
             </div>
             <div className="h-4 w-96 bg-gray-200 rounded animate-pulse" />
           </div>
-          <QuoteMetrics quotes={[]} isLoading={true} />
+          <UnifiedAdminToolbar
+            quotes={[]}
+            filters={filters}
+            onFiltersChange={updateFilters}
+            onSearch={handleSearch}
+            onReset={handleResetFilters}
+            onCreateQuote={() => setIsCreateModalOpen(true)}
+            availableCountries={availableCountries}
+            isLoading={true}
+          />
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -191,6 +256,19 @@ export const QuoteManagementPage = () => {
                 <BarChart3 className="h-4 w-4 text-teal-600" />
               </div>
               <div>
+                {/* Breadcrumb Navigation */}
+                <Breadcrumb className="mb-2">
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Quotes</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+                
                 <H1 className="text-gray-900">Quote Management</H1>
                 <BodySmall className="text-gray-600">
                   Manage customer quotes and quote requests
@@ -207,27 +285,17 @@ export const QuoteManagementPage = () => {
           </div>
         </div>
 
-        {/* Metrics Dashboard */}
-        <QuoteMetrics quotes={quotes || []} isLoading={quotesLoading} />
-
-        {/* Main Content Card */}
-        {/* Search and Filter Panel */}
-        <div className="mb-6">
-          <SearchAndFilterPanel
-            filters={filters}
-            onFiltersChange={setFilters}
-            onSearch={handleSearch}
-            onReset={handleResetFilters}
-            availableCountries={[
-              { code: 'IN', name: 'India', flag: '🇮🇳', count: 0 },
-              { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 0 },
-              { code: 'US', name: 'United States', flag: '🇺🇸', count: 0 }
-            ]}
-            isLoading={quotesLoading}
-            resultsCount={quotes?.length}
-            className="w-full"
-          />
-        </div>
+        {/* Unified Admin Toolbar - Analytics + Search + Filters in One Line */}
+        <UnifiedAdminToolbar
+          quotes={quotes || []}
+          filters={filters}
+          onFiltersChange={updateFilters}
+          onSearch={handleSearch}
+          onReset={handleResetFilters}
+          onCreateQuote={() => setIsCreateModalOpen(true)}
+          availableCountries={availableCountries}
+          isLoading={quotesLoading}
+        />
 
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           {/* Card Header */}

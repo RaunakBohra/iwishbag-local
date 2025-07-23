@@ -7,7 +7,6 @@ import { UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
 import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 import { Tables, TablesInsert } from '@/integrations/supabase/types';
-import { getCountryCurrency } from '@/lib/currencyUtils';
 import { currencyService } from '@/services/CurrencyService';
 
 interface UseQuoteSubmissionProps {
@@ -144,7 +143,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       // Prepare quote data
       // Get the currency for the destination country
       const destinationCountry = shippingAddress?.countryCode || shippingAddress?.country;
-      const destinationCurrency = getCountryCurrency(destinationCountry || countryCode);
+      const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry || countryCode);
 
       // Debug logging
       console.log('Quote submission debug:', {
@@ -352,7 +351,7 @@ export const useQuoteSubmission = ({ form, selectedCountryCurrency }: UseQuoteSu
       destination_country: destinationCountry, // Shipping country (where we deliver to)
       user_id: user?.id || null, // Now uses anonymous auth instead of null
       currency: selectedCountryCurrency,
-      destination_currency: getCountryCurrency(
+      destination_currency: currencyService.getCurrencyForCountrySync(
         shippingAddress?.countryCode || shippingAddress?.country || countryCode,
       ),
       status: 'pending',

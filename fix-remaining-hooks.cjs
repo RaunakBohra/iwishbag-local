@@ -34,10 +34,6 @@ const fixes = [
     replacements: [{ from: 'final_total', to: 'final_total_usd' }],
   },
   {
-    file: 'src/hooks/usePaginatedQuoteManagement.ts',
-    replacements: [{ from: 'final_total', to: 'final_total_usd' }],
-  },
-  {
     file: 'src/hooks/useOptimizedQuoteCalculation.ts',
     replacements: [
       { from: 'final_total:', to: 'final_total_usd:' },

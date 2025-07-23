@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
-import { getCountryCurrency, formatAmountForDisplay } from '@/lib/currencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 import {
   Receipt,
   Percent,
@@ -267,9 +267,9 @@ export const QuoteBreakdownDetails = React.memo<QuoteBreakdownDetailsProps>(
                                 </div>
                               </div>
                               <span className="font-medium">
-                                {formatAmountForDisplay(
+                                {currencyService.formatAmount(
                                   (item.price_usd || item.item_price) * item.quantity,
-                                  getCountryCurrency(destinationCountry),
+                                  currencyService.getCurrencyForCountrySync(destinationCountry),
                                 )}
                               </span>
                             </div>

@@ -779,7 +779,6 @@ function QuoteDetailUnifiedContent({ isShareToken = false }: UnifiedQuoteDetailP
           <div className="flex items-center justify-center gap-4 mb-6">
             <StatusBadge status={quote.status} category="quote" />
             {quote.status === 'sent' && <QuoteExpirationTimer expiresAt={quote.expires_at} />}
-            {isAdmin && <ShareQuoteButton quote={quote} variant="button" size="sm" />}
             {/* Guest Currency Selector - Only for guest users */}
             {isGuestMode && !user && (
               <GuestCurrencySelector

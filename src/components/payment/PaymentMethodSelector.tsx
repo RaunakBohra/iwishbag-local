@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { PaymentGateway, PaymentMethodDisplay } from '@/types/payment';
+import { PaymentConfigurationPrompt } from './PaymentConfigurationPrompt';
 import { cn } from '@/lib/utils';
 
 interface PaymentMethodSelectorProps {
@@ -205,12 +206,17 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </RadioGroup>
 
       {availablePaymentMethods.length === 0 && (
-        <Alert className="border-gray-200 bg-gray-50">
-          <AlertTriangle className="h-4 w-4 text-gray-600" />
-          <AlertDescription className="text-gray-700">
-            No payment methods available for your location. Please contact support.
-          </AlertDescription>
-        </Alert>
+        <PaymentConfigurationPrompt 
+          currency={currency}
+          amount={amount}
+          onContactSupport={() => {
+            // Could integrate with support system or open contact modal
+            window.location.href = '/contact';
+          }}
+          onNavigateToSettings={() => {
+            window.location.href = '/admin/system-settings';
+          }}
+        />
       )}
 
       {/* QR Code payment instructions */}

@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from '../ui/dialog';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
-import { getCurrencySymbolFromCountry } from '../../lib/currencyUtils';
+import { currencyService } from '@/services/CurrencyService';
 
 interface RouteMarkup {
   id: number;
@@ -304,7 +304,7 @@ export function MarkupManager() {
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3 text-green-500" />
                             <span>
-                              Fixed: {getCurrencySymbolFromCountry(route.origin_country)}
+                              Fixed: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
                               {route.markup_fixed_amount}
                             </span>
                           </div>
@@ -319,7 +319,7 @@ export function MarkupManager() {
                           <div className="flex items-center gap-2">
                             <AlertCircle className="h-3 w-3 text-orange-500" />
                             <span>
-                              Priority: {getCurrencySymbolFromCountry(route.origin_country)}
+                              Priority: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
                               {route.priority_fee}
                             </span>
                           </div>
@@ -339,7 +339,7 @@ export function MarkupManager() {
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3 text-gray-500" />
                             <span>
-                              Base: {getCurrencySymbolFromCountry(route.origin_country)}
+                              Base: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
                               {route.base_shipping_cost}
                             </span>
                           </div>
@@ -348,7 +348,7 @@ export function MarkupManager() {
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3 text-gray-500" />
                             <span>
-                              Per kg: {getCurrencySymbolFromCountry(route.origin_country)}
+                              Per kg: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
                               {route.shipping_per_kg || route.cost_per_kg}
                             </span>
                           </div>
@@ -360,7 +360,7 @@ export function MarkupManager() {
                     <div className="mt-4 p-3 bg-teal-100 rounded-lg">
                       <p className="text-sm font-medium">Sample Calculation (100 USD, 1 kg):</p>
                       <p className="text-sm">
-                        Total Extra Cost: {getCurrencySymbolFromCountry(route.origin_country)}
+                        Total Extra Cost: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
                         {calculateTotalMarkup(route, 100, 1).toFixed(2)}
                       </p>
                     </div>
@@ -419,7 +419,7 @@ export function MarkupManager() {
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-3 w-3 text-green-500" />
                         <span>
-                          Fixed Fee: {getCurrencySymbolFromCountry(country.code)}
+                          Fixed Fee: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(country.code))}
                           {country.country_markup_fixed}
                         </span>
                       </div>
@@ -548,7 +548,7 @@ function RouteMarkupForm({
             placeholder="0.00"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Fixed amount in {getCurrencySymbolFromCountry(route.origin_country)}
+            Fixed amount in {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
           </p>
         </div>
       </div>
@@ -662,7 +662,7 @@ function CountryMarkupForm({
             placeholder="0.00"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Fixed fee in {getCurrencySymbolFromCountry(country.code)}
+            Fixed fee in {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(country.code))}
           </p>
         </div>
       </div>

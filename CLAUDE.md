@@ -833,3 +833,52 @@ pending → sent → approved → paid → ordered → shipped → completed
    - Get approval before extensive coding
    - Break down complex tasks into phases
    - Set clear milestones
+
+## Development Environment & Port Configuration
+- **Development Server**: Runs on `http://localhost:8082` (NOT the default Vite port 5173)  
+- **Local Development**: Use `npm run dev` or `npm run dev:local` for local Supabase
+- **Storybook**: Component development on port 6006 (`npm run storybook`)
+- **Supabase Local**: Edge Functions on `http://localhost:54321`
+- **Testing**: Vitest runs tests in watch mode by default (`npm run test`)
+
+## Critical File Patterns & Conventions
+- **Services**: Singleton pattern with caching (5-15 minute cache durations)
+- **Hooks**: Custom hooks in `/src/hooks/` with comprehensive test coverage
+- **Types**: TypeScript definitions in `/src/types/` with strict type safety
+- **Components**: Shadcn/ui base components in `/src/components/ui/`
+- **Database**: Supabase with RLS policies and Edge Functions in `/supabase/functions/`
+
+## Performance Monitoring & Error Tracking
+- **Sentry Integration**: Comprehensive error tracking and performance monitoring
+- **Search Operations**: Input validation and suspicious pattern detection
+- **Cart Operations**: Performance tracking with `trackCartOperation()`
+- **Payment Flows**: Enhanced monitoring with atomic operations
+- **Database Queries**: Optimized with 12 specialized indexes for search operations
+
+## Test Configuration (3-Layer Strategy)
+- **Unit Tests**: Vitest with coverage analysis (`npm run test:coverage`)
+- **Integration Tests**: Component + service interactions  
+- **E2E Tests**: Playwright for complete user journeys (`npm run e2e:ui`)
+- **Test Files**: Located in `__tests__` directories adjacent to source files
+- **Test Database**: Uses local Supabase instance for safe testing
+
+## Supabase Edge Functions Architecture
+- **Payment Webhooks**: Stripe, PayU, PayPal, Airwallex integrations
+- **Atomic Operations**: Database consistency with rollback capabilities
+- **Shared Utilities**: Auth, CORS, logging in `/supabase/functions/_shared/`
+- **Monitoring**: Payment health monitoring and webhook debugging functions
+- **Testing**: Comprehensive test suite in `/supabase/functions/__tests__/`
+
+## Critical Database Patterns
+- **RLS Policies**: Row Level Security with `is_admin()` and `auth.uid()` functions
+- **JSONB Storage**: Flexible data structures in `quotes.calculation_data`, `customer_data`
+- **Atomic Updates**: Service role operations for admin functions bypass RLS
+- **Caching**: Smart caching with 5-15 minute durations for performance
+- **Migrations**: Sequential migrations in `/supabase/migrations/` (NEVER run db:reset)
+
+## Important Development Notes
+- **Never use `npm run db:reset`** - This destroys all data
+- **Port Configuration**: App runs on 8082, not the default Vite port
+- **Service Workers**: Performance tracking and monitoring throughout
+- **Type Safety**: Strict TypeScript enforcement with Zod validation
+- **Error Boundaries**: Comprehensive error handling at component and service levels

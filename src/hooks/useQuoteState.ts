@@ -12,10 +12,8 @@ import { useCartStore, CartItem } from '@/stores/cartStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/integrations/supabase/types';
 import { useStatusManagement } from './useStatusManagement';
-
-type QuoteWithItems = Tables<'quotes'> & {
-  quote_items: Tables<'quote_items'>[];
-};
+import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
+import type { UnifiedQuote } from '@/types/unified-quote';
 
 export const useQuoteState = (quoteId: string) => {
   const queryClient = useQueryClient();
@@ -29,37 +27,31 @@ export const useQuoteState = (quoteId: string) => {
   const { isValidTransition } = useStatusManagement();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Helper function to convert quote to cart item
-  const convertQuoteToCartItem = (quote: QuoteWithItems): CartItem => {
-    const firstItem = quote.quote_items?.[0];
-    const quoteItems = quote.quote_items || [];
+  // Helper function to convert unified quote to cart item
+  const convertQuoteToCartItem = (quote: UnifiedQuote): CartItem => {
+    const firstItem = quote.items?.[0];
+    const quoteItems = quote.items || [];
 
     // Calculate total from quote items with proper null checks
     const totalFromItems = quoteItems.reduce((sum, item) => {
-      const itemPrice = item.item_price || 0;
+      const itemPrice = item.price_usd || 0;
       const itemQuantity = item.quantity || 1;
       return sum + itemPrice * itemQuantity;
     }, 0);
 
-    // FIXED: Use proper fallback chain for total price
-    let totalPrice = 0;
-    if (quote.final_total_usd && quote.final_total_usd > 0) {
-      totalPrice = quote.final_total_usd;
-    } else if (quote.final_total_usd_local && quote.final_total_usd_local > 0) {
-      totalPrice = quote.final_total_usd_local;
-    } else if (totalFromItems > 0) {
-      totalPrice = totalFromItems;
-    } else {
-      // If no price found, use the first item's price
-      totalPrice = firstItem?.item_price || 0;
-    }
+    // Use final_total_usd as the authoritative price (this comes from calculations)
+    const totalPrice = quote.final_total_usd || totalFromItems || 0;
 
-    const quantity = quote.quantity || firstItem?.quantity || 1;
-    const itemWeight = firstItem?.item_weight || quote.item_weight || 0;
+    // Calculate total quantity and weight from all items
+    const totalQuantity = quoteItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const totalWeight = quoteItems.reduce(
+      (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1), 
+      0
+    );
 
-    // Determine purchase country from the product URL or default to US
-    let purchaseCountry = 'US'; // Default
-    const productUrl = firstItem?.product_url || quote.product_url || '';
+    // Determine purchase country from the quote or product URL
+    let purchaseCountry = quote.origin_country || 'US';
+    const productUrl = firstItem?.url || '';
     if (productUrl.includes('amazon.in') || productUrl.includes('flipkart.com')) {
       purchaseCountry = 'IN';
     } else if (productUrl.includes('amazon.jp')) {
@@ -71,12 +63,12 @@ export const useQuoteState = (quoteId: string) => {
     const cartItem = {
       id: quote.id,
       quoteId: quote.id,
-      productName: firstItem?.product_name || quote.product_name || 'Unknown Product',
+      productName: firstItem?.name || 'Unknown Product',
       finalTotal: totalPrice,
-      quantity: quantity,
-      itemWeight: itemWeight,
-      imageUrl: firstItem?.image_url || quote.image_url,
-      deliveryDate: quote.delivery_date,
+      quantity: totalQuantity || 1,
+      itemWeight: totalWeight,
+      imageUrl: firstItem?.image_url,
+      deliveryDate: quote.operational_data?.shipping?.delivery_estimate,
       countryCode: quote.destination_country || 'US', // For backward compatibility
       purchaseCountryCode: purchaseCountry, // Where we buy from
       destinationCountryCode: quote.destination_country || 'US', // Where we deliver to
@@ -86,7 +78,7 @@ export const useQuoteState = (quoteId: string) => {
       updatedAt: new Date(quote.updated_at),
     };
 
-    // FIXED: Final safety check to ensure all numeric values are valid
+    // Final safety check to ensure all numeric values are valid
     return {
       ...cartItem,
       finalTotal: isNaN(cartItem.finalTotal) ? 0 : cartItem.finalTotal,
@@ -187,31 +179,14 @@ export const useQuoteState = (quoteId: string) => {
   const addToCart = async () => {
     setIsUpdating(true);
     try {
-      // Get quote with items
-      const { data: quote, error: fetchError } = await supabase
-        .from('quotes')
-        .select(
-          `
-          *,
-          quote_items (*),
-          shipping_routes!shipping_route_id (
-            origin_country,
-            destination_country
-          )
-        `,
-        )
-        .eq('id', quoteId)
-        .single();
-
-      if (fetchError) {
-        throw fetchError;
-      }
+      // Use UnifiedDataEngine to get quote with proper structure
+      const quote = await unifiedDataEngine.getQuote(quoteId);
 
       if (!quote) {
         throw new Error('Quote not found');
       }
 
-      // Convert quote to cart item
+      // Convert unified quote to cart item
       const cartItem = convertQuoteToCartItem(quote);
 
       // Set userId in cart store first (works for both anonymous and authenticated users)

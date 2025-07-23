@@ -20,13 +20,12 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    // Get the expired quote with all its items
+    // Get the expired quote with unified structure
     const { data: expiredQuote, error: fetchError } = await supabase
       .from('quotes')
       .select(
         `
         *,
-        quote_items(*),
         profiles:user_id(preferred_display_currency)
       `,
       )
@@ -36,41 +35,46 @@ serve(async (req) => {
     if (fetchError || !expiredQuote) {
       throw new Error('Expired quote not found');
     }
-    // Create new quote with same data but current prices
+    // Create new quote with unified structure data
     const newQuoteData = {
-      email: expiredQuote.email,
       user_id: expiredQuote.user_id,
-      country_code: expiredQuote.country_code,
       status: 'pending',
+      origin_country: expiredQuote.origin_country,
+      destination_country: expiredQuote.destination_country,
+      items: expiredQuote.items, // Copy the items JSONB array
+      base_total_usd: 0, // Reset for recalculation
+      final_total_usd: 0, // Reset for recalculation
+      calculation_data: {
+        breakdown: {
+          items_total: 0,
+          shipping: 0,
+          customs: 0,
+          taxes: 0,
+          fees: 0,
+          discount: 0,
+        },
+        exchange_rate: {
+          rate: 1,
+          source: 'unified_configuration',
+          confidence: 1,
+        },
+        smart_optimizations: [],
+      },
+      customer_data: expiredQuote.customer_data,
+      operational_data: {
+        ...expiredQuote.operational_data,
+        admin: {
+          ...expiredQuote.operational_data?.admin,
+          notes: `Re-requested from expired quote ${expiredQuote.display_id || expiredQuote.id}`,
+        },
+      },
       currency: expiredQuote.currency,
-      items_currency: expiredQuote.items_currency,
-      destination_currency:
-        expiredQuote.profiles?.preferred_display_currency || expiredQuote.destination_currency,
-      customs_percentage: expiredQuote.customs_percentage,
-      internal_notes: `Re-requested from expired quote ${expiredQuote.display_id || expiredQuote.id}`,
-      // Reset all calculated fields
-      item_price: null,
-      item_weight: null,
-      sub_total: 0,
-      domestic_shipping: 0,
-      international_shipping: null,
-      sales_tax_price: null,
-      vat: null,
-      customs_and_ecs: null,
-      handling_charge: null,
-      insurance_amount: null,
-      payment_gateway_fee: null,
-      discount: null,
-      final_total_usd: null,
-      final_total_local: null,
-      exchange_rate: 1,
       in_cart: false,
-      payment_method: null,
-      shipping_carrier: null,
-      shipping_delivery_days: null,
-      shipping_method: null,
-      shipping_route_id: null,
-      origin_country: null,
+      smart_suggestions: [],
+      weight_confidence: 0.5,
+      optimization_score: 0,
+      is_anonymous: expiredQuote.is_anonymous,
+      quote_source: expiredQuote.quote_source || 're-request',
     };
     // Insert new quote
     const { data: newQuote, error: insertError } = await supabase
@@ -81,24 +85,8 @@ serve(async (req) => {
     if (insertError) {
       throw insertError;
     }
-    // Copy quote items to new quote
-    if (expiredQuote.quote_items && expiredQuote.quote_items.length > 0) {
-      const newQuoteItems = expiredQuote.quote_items.map((item) => ({
-        quote_id: newQuote.id,
-        product_url: item.product_url,
-        product_name: item.product_name,
-        quantity: item.quantity,
-        options: item.options,
-        image_url: item.image_url,
-        item_currency: item.item_currency,
-        item_price: null,
-        item_weight: null, // Reset weight for recalculation
-      }));
-      const { error: itemsError } = await supabase.from('quote_items').insert(newQuoteItems);
-      if (itemsError) {
-        throw itemsError;
-      }
-    }
+    // Items are already copied as part of the unified quote structure
+    // No separate quote_items table needed - everything is in the items JSONB array
     // Send re-request confirmation email
     await sendReRequestEmail(supabase, newQuote, expiredQuote);
     return new Response(
@@ -134,21 +122,21 @@ async function sendReRequestEmail(supabase, newQuote, expiredQuote) {
   try {
     const { error } = await supabase.functions.invoke('send-email', {
       body: {
-        to: newQuote.email,
+        to: newQuote.customer_data?.info?.email || expiredQuote.customer_data?.info?.email,
         subject: 'New Quote Requested',
         template: 'quote-re-requested',
         data: {
           newQuoteId: newQuote.display_id || newQuote.id,
           expiredQuoteId: expiredQuote.display_id || expiredQuote.id,
-          productName: expiredQuote.product_name || 'your items',
-          email: newQuote.email,
+          productName: expiredQuote.items?.[0]?.name || 'your items',
+          email: newQuote.customer_data?.info?.email || expiredQuote.customer_data?.info?.email,
         },
       },
     });
     if (error) {
-      console.error(`Failed to send re-request email to ${newQuote.email}:`, error);
+      console.error(`Failed to send re-request email:`, error);
     }
   } catch (error) {
-    console.error(`Error sending re-request email to ${newQuote.email}:`, error);
+    console.error(`Error sending re-request email:`, error);
   }
 }

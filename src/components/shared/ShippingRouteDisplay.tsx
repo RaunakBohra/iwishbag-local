@@ -1,7 +1,10 @@
 import React from 'react';
 import { formatShippingRoute } from '@/lib/countryUtils';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { useUserRoles } from '@/hooks/useUserRoles';
+import { ArrowRight, MapPin, Settings, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface ShippingRouteDisplayProps {
@@ -12,6 +15,7 @@ interface ShippingRouteDisplayProps {
   className?: string;
   showIcon?: boolean;
   iconType?: 'arrow' | 'mapPin';
+  showConfigPrompt?: boolean; // New prop to show configuration prompt instead of dash
 }
 
 export function ShippingRouteDisplay({
@@ -22,11 +26,32 @@ export function ShippingRouteDisplay({
   className,
   showIcon = true,
   iconType = 'arrow',
+  showConfigPrompt = false,
 }: ShippingRouteDisplayProps) {
   const { data: countries = [] } = useAllCountries();
+  const { isAdmin } = useUserRoles();
 
   // Validate inputs - check for empty strings too
   if (!origin || !destination || origin.trim() === '' || destination.trim() === '') {
+    if (showConfigPrompt && isAdmin) {
+      // Show configuration prompt for admins
+      return (
+        <div className={cn('flex items-center space-x-2 text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1', className)}>
+          <AlertTriangle className="w-3 h-3" />
+          <span className="text-xs font-medium">Route not configured</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => window.location.href = '/admin/shipping-routes'}
+            className="h-5 px-2 text-xs text-orange-700 hover:text-orange-800 hover:bg-orange-100"
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            Setup
+          </Button>
+        </div>
+      );
+    }
+    // Default fallback for non-admins or when prompt is disabled
     return <span className={cn('text-gray-400', className)}>—</span>;
   }
 

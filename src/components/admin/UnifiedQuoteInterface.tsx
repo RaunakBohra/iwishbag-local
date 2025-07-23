@@ -79,11 +79,20 @@ import { SmartSuggestionCards } from './smart-components/SmartSuggestionCards';
 import { CompactCustomerInfo } from './smart-components/CompactCustomerInfo';
 import { CompactStatusManager } from './smart-components/CompactStatusManager';
 import { CompactShippingOptions } from './smart-components/CompactShippingOptions';
+import { ShippingConfigurationPrompt } from './smart-components/ShippingConfigurationPrompt';
 import { CompactPaymentManager } from './smart-components/CompactPaymentManager';
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { QuoteDetailForm } from './QuoteDetailForm';
 import { Form, FormField, FormItem, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -1428,6 +1437,25 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       }`}
       style={{ minHeight: '600px' }}
     >
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/admin/quotes">Quotes</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              {quote?.display_id || quote?.iwish_tracking_id || `Quote #${quote?.id?.substring(0, 8)}`}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Smart Header with Key Metrics - Enterprise Layout */}
       <div className="space-y-4">
         {/* Top Header Bar */}
@@ -2234,8 +2262,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* Shipping Options */}
-              {shippingOptions.length > 0 && (
+              {/* Shipping Options or Configuration Prompt */}
+              {shippingOptions.length > 0 ? (
                 <CompactShippingOptions
                   quote={liveQuote || quote}
                   shippingOptions={shippingOptions}
@@ -2247,6 +2275,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   editMode={isEditMode}
                   onSaveShippingOption={handleShippingOptionSelect}
                   isSaving={isCalculating}
+                />
+              ) : (
+                <ShippingConfigurationPrompt
+                  quote={liveQuote || quote}
+                  onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
                 />
               )}
 
@@ -2527,20 +2560,35 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* 5. Shipping Options - Only show in Edit Mode */}
-              {isEditMode && shippingOptions.length > 0 && (
-                <CompactShippingOptions
-                  quote={liveQuote || quote}
-                  shippingOptions={shippingOptions}
-                  recommendations={shippingRecommendations}
-                  onSelectOption={handleShippingOptionSelect}
-                  showAllOptions={false}
-                  onToggleShowAll={setShowAllShippingOptions}
-                  compact={true}
-                  editMode={isEditMode}
-                  onSaveShippingOption={handleShippingOptionSelect}
-                  isSaving={isCalculating}
-                />
+              {/* 5. Shipping Options or Configuration Prompt */}
+              {isEditMode ? (
+                shippingOptions.length > 0 ? (
+                  <CompactShippingOptions
+                    quote={liveQuote || quote}
+                    shippingOptions={shippingOptions}
+                    recommendations={shippingRecommendations}
+                    onSelectOption={handleShippingOptionSelect}
+                    showAllOptions={false}
+                    onToggleShowAll={setShowAllShippingOptions}
+                    compact={true}
+                    editMode={isEditMode}
+                    onSaveShippingOption={handleShippingOptionSelect}
+                    isSaving={isCalculating}
+                  />
+                ) : (
+                  <ShippingConfigurationPrompt
+                    quote={liveQuote || quote}
+                    onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                  />
+                )
+              ) : (
+                // Show configuration prompt in view mode only if no shipping options exist
+                shippingOptions.length === 0 && (
+                  <ShippingConfigurationPrompt
+                    quote={liveQuote || quote}
+                    onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                  />
+                )
               )}
 
               {/* 5.5. Admin Override Controls - Handling & Insurance */}
