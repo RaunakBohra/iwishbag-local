@@ -45,6 +45,7 @@ import {
   Smartphone,
   MessageCircle,
   Settings,
+  Tag,
 } from 'lucide-react';
 import {
   Select,
@@ -59,6 +60,8 @@ import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
+import { DualWeightSuggestions } from '@/components/admin/smart-weight-field/DualWeightSuggestions';
 import { normalizeShippingOptionId } from '@/utils/shippingOptionUtils';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 
@@ -85,11 +88,12 @@ import { CompactPaymentManager } from './smart-components/CompactPaymentManager'
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
-import HSNAutoComplete from './hsn-components/HSNAutoComplete';
-import CustomsCalculationPreview from './hsn-components/CustomsCalculationPreview';
-import HSNAdminHistory from './hsn-components/HSNAdminHistory';
+import { TaxMethodSelectionPanel } from './tax-method-selection/TaxMethodSelectionPanel';
+import { PerItemValuationSelector } from './tax-method-selection/PerItemValuationSelector';
+import { TaxHubContainer } from './tax-hub/TaxHubContainer';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
+import { SmartHSNSearch } from './hsn-components/SmartHSNSearch';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -149,7 +153,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [editingHSNItemId, setEditingHSNItemId] = useState<string | null>(null);
   const [hsnFormData, setHsnFormData] = useState<{[key: string]: { hsn_code: string; category: string }}>({});
   const [selectedHSNData, setSelectedHSNData] = useState<{[key: string]: any}>({});
-  const [hsnErrors, setHsnErrors] = useState<{[key: string]: string}>({});
+  const [hsnSearchStates, setHsnSearchStates] = useState<{[key: number]: { isOpen: boolean; productName: string }}>({});
+
+  // Tax method selection state
+  const [showTaxMethodPanel, setShowTaxMethodPanel] = useState(false);
+  const [showValuationSelector, setShowValuationSelector] = useState(false);
+  const [currentTaxMethod, setCurrentTaxMethod] = useState<string>('auto');
+  const [itemValuationMethods, setItemValuationMethods] = useState<Record<string, string>>({});
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -207,6 +217,54 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     loadQuoteData();
   }, [quoteId]);
 
+  // Ensure form is populated when quote becomes available (fixes refresh issue)
+  useEffect(() => {
+    console.log('🔄 DEBUG - Form population useEffect triggered:', {
+      hasQuote: !!quote,
+      isEditMode,
+      isLoading,
+      quoteId: quote?.id,
+      formItemsLength: form.watch('items')?.length,
+      quoteItemsLength: quote?.items?.length
+    });
+
+    if (quote && isEditMode && !isLoading) {
+      console.log('📝 Ensuring form is populated with quote data');
+      
+      // Check if form is actually populated
+      const formItems = form.watch('items');
+      const hasFormItems = formItems && formItems.length > 0;
+      const hasQuoteItems = quote.items && quote.items.length > 0;
+      
+      // Repopulate form if it's empty but quote has items (typical refresh issue)
+      if (!hasFormItems && hasQuoteItems) {
+        console.log('🚨 Form is empty but quote has items - repopulating form');
+        populateFormFromQuote(quote);
+      } else if (hasFormItems && hasQuoteItems && formItems.length !== quote.items.length) {
+        console.log('🔄 Form and quote have different item counts - repopulating form');
+        populateFormFromQuote(quote);
+      } else {
+        console.log('✅ Form appears to be properly populated');
+      }
+    }
+  }, [quote, isEditMode, isLoading, form]);
+
+  // Force form population on initial load in edit mode (additional safety)
+  useEffect(() => {
+    // Only run once when component is fully loaded and in edit mode
+    const timeoutId = setTimeout(() => {
+      if (quote && isEditMode && !isLoading) {
+        const formItems = form.watch('items');
+        if (!formItems || formItems.length === 0) {
+          console.log('⚠️ Timeout check: Form still empty after load - force populating');
+          populateFormFromQuote(quote);
+        }
+      }
+    }, 1000); // Give 1 second for everything to settle
+
+    return () => clearTimeout(timeoutId);
+  }, []); // Empty dependency array - only run once on mount
+
   const loadQuoteData = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
@@ -260,6 +318,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         
         setHsnFormData(initialHsnFormData);
         setSelectedHSNData(initialSelectedData);
+      }
+
+      // Initialize tax method selection state from quote operational data
+      setCurrentTaxMethod(quoteData.calculation_method_preference || 'auto');
+      
+      // Initialize per-item valuation methods from operational data
+      if (quoteData.operational_data?.item_valuation_preferences) {
+        setItemValuationMethods(quoteData.operational_data.item_valuation_preferences);
       }
 
       // Populate form with quote data
@@ -518,133 +584,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       duration: 2000,
     });
 
-    // Reset form when switching to view mode
-    if (!newEditMode && quote) {
-      populateFormFromQuote(liveQuote || quote);
+    // Reset form when switching modes to ensure proper synchronization
+    if (quote) {
+      if (!newEditMode) {
+        // Switching to view mode - populate form with latest data
+        console.log('🔄 Switching to view mode - repopulating form');
+        populateFormFromQuote(liveQuote || quote);
+      } else {
+        // Switching to edit mode - ensure form is populated for editing
+        console.log('✏️ Switching to edit mode - ensuring form is populated');
+        populateFormFromQuote(liveQuote || quote);
+      }
     }
   };
 
-  // HSN classification handlers with enhanced admin tracking
-  const handleHSNSelect = async (itemId: string, hsnData: any) => {
-    try {
-      const existingItem = quote?.items?.find(item => item.id === itemId);
-      const isNewAssignment = !existingItem?.hsn_code;
-      const isModification = existingItem?.hsn_code && existingItem.hsn_code !== hsnData.hsn_code;
-      
-      console.log(`🔒 [ADMIN-ACTION] HSN ${isNewAssignment ? 'assignment' : isModification ? 'modification' : 'update'}:`, {
-        itemId,
-        itemName: existingItem?.name,
-        from: existingItem?.hsn_code || 'none',
-        to: hsnData.hsn_code,
-        adminAction: 'manual_selection',
-        confidence: hsnData.confidence || 1.0,
-      });
-
-      setSelectedHSNData(prev => ({ ...prev, [itemId]: hsnData }));
-      setHsnFormData(prev => ({
-        ...prev,
-        [itemId]: {
-          hsn_code: hsnData.hsn_code,
-          category: hsnData.category
-        }
-      }));
-      
-      // Update item with enhanced metadata for admin tracking
-      await unifiedDataEngine.updateItem(quote!.id, itemId, {
-        hsn_code: hsnData.hsn_code,
-        category: hsnData.category,
-        // Add admin override metadata to smart_data
-        smart_data: {
-          ...existingItem?.smart_data,
-          admin_override_context: {
-            action_type: 'manual_selection',
-            confidence_score: hsnData.confidence || 1.0,
-            selection_method: 'autocomplete_search',
-            override_reason: isModification ? 'admin_correction' : 'manual_classification',
-            performed_at: new Date().toISOString(),
-          },
-        },
-      });
-      
-      // Refresh quote data
-      await loadQuoteData();
-      setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
-      
-      const actionType = isNewAssignment ? 'assigned' : isModification ? 'changed' : 'updated';
-      toast({
-        title: `HSN ${actionType}`,
-        description: `HSN code ${hsnData.hsn_code} ${actionType} for item${isModification ? ` (changed from ${existingItem?.hsn_code})` : ''}`,
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error('Error updating HSN:', error);
-      setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to update HSN classification' }));
-      
-      toast({
-        title: 'HSN Update Failed',
-        description: 'Unable to update HSN classification. Please try again.',
-        variant: 'destructive',
-        duration: 3000,
-      });
-    }
-  };
-
-  const handleHSNClear = async (itemId: string) => {
-    try {
-      const existingItem = quote?.items?.find(item => item.id === itemId);
-      const previousHsnCode = existingItem?.hsn_code;
-      const previousCategory = existingItem?.category;
-
-      console.log(`🔒 [ADMIN-ACTION] HSN clearing:`, {
-        itemId,
-        itemName: existingItem?.name,
-        clearingHsn: previousHsnCode,
-        clearingCategory: previousCategory,
-        adminAction: 'manual_clear',
-      });
-
-      setSelectedHSNData(prev => ({ ...prev, [itemId]: null }));
-      setHsnFormData(prev => ({ ...prev, [itemId]: { hsn_code: '', category: '' } }));
-      
-      // Update item to remove HSN data with admin tracking
-      await unifiedDataEngine.updateItem(quote!.id, itemId, {
-        hsn_code: '',
-        category: '',
-        // Add admin override metadata for clearing action
-        smart_data: {
-          ...existingItem?.smart_data,
-          admin_override_context: {
-            action_type: 'manual_clear',
-            previous_hsn_code: previousHsnCode,
-            previous_category: previousCategory,
-            selection_method: 'clear_button',
-            override_reason: 'admin_removal',
-            performed_at: new Date().toISOString(),
-          },
-        },
-      });
-      
-      // Refresh quote data
-      await loadQuoteData();
-      setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
-      
-      toast({
-        title: 'HSN Cleared',
-        description: `HSN classification removed from item${previousHsnCode ? ` (was ${previousHsnCode})` : ''}`,
-        duration: 2000,
-      });
-    } catch (error) {
-      console.error('Error clearing HSN:', error);
-      setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to clear HSN classification' }));
-      
-      toast({
-        title: 'HSN Clear Failed',
-        description: 'Unable to clear HSN classification. Please try again.',
-        variant: 'destructive',
-        duration: 3000,
-      });
-    }
-  };
 
   // Watch form values for live updates
   const formValues = useWatch({ control: form.control });
@@ -784,7 +737,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Smart weight estimation state
   const [weightEstimations, setWeightEstimations] = useState<{ [key: string]: any }>({});
+  const [hsnWeights, setHsnWeights] = useState<{ [key: string]: HSNWeightData | null }>({});
   const [isEstimating, setIsEstimating] = useState<{ [key: string]: boolean }>({});
+  const [isLoadingHSN, setIsLoadingHSN] = useState<{ [key: string]: boolean }>({});
   const [estimationTimeouts, setEstimationTimeouts] = useState<{ [key: string]: NodeJS.Timeout }>(
     {},
   );
@@ -830,6 +785,107 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     [scheduleCalculation, batchDOMUpdate],
   );
 
+  // Fetch HSN weight for an item
+  const fetchHSNWeight = useCallback(
+    async (itemIndex: number, hsnCode: string | undefined) => {
+      if (!hsnCode) {
+        setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
+        return;
+      }
+
+      setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: true }));
+      try {
+        const weight = await hsnWeightService.getHSNWeight(hsnCode);
+        setHsnWeights((prev) => ({ ...prev, [itemIndex]: weight }));
+        console.log(`📊 [Weight] HSN weight found for ${hsnCode}:`, weight);
+      } catch (error) {
+        console.error('Error fetching HSN weight:', error);
+        setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
+      } finally {
+        setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: false }));
+      }
+    },
+    [],
+  );
+
+  // Handle weight selection from dual suggestions
+  const handleWeightSelection = useCallback(
+    async (itemIndex: number, weight: number, source: 'hsn' | 'ml') => {
+      const items = form.getValues('items') || [];
+      items[itemIndex] = {
+        ...items[itemIndex],
+        item_weight: weight,
+      };
+      form.setValue('items', items);
+
+      // Record the selection for analytics
+      const item = items[itemIndex];
+      if (item.product_name) {
+        await smartWeightEstimator.recordWeightSelection(
+          item.product_name,
+          hsnWeights[itemIndex]?.average || null,
+          weightEstimations[itemIndex]?.estimated_weight || 0,
+          weight,
+          source,
+          item.product_url,
+          item.options, // category field is actually in options for this quote structure
+          item.hsn_code // Use the item's specific HSN code
+        );
+      }
+
+      toast({
+        title: "Weight Applied",
+        description: `Using ${source === 'hsn' ? 'HSN database' : 'AI estimated'} weight: ${weight} kg`,
+        duration: 2000,
+      });
+    },
+    [form, hsnWeights, weightEstimations, quote?.hsn_code, toast],
+  );
+
+  // Handle HSN assignment for items
+  const handleHSNAssignment = useCallback(async (itemIndex: number, hsnData: any) => {
+    try {
+      const items = form.getValues('items') || [];
+      if (items[itemIndex]) {
+        items[itemIndex] = {
+          ...items[itemIndex],
+          hsn_code: hsnData.hsn_code,
+          category: hsnData.category || hsnData.display_name,
+        };
+        
+        form.setValue('items', items);
+        
+        // Close the search dialog
+        setHsnSearchStates(prev => ({
+          ...prev,
+          [itemIndex]: { isOpen: false, productName: '' }
+        }));
+
+        // Trigger quote calculation update after HSN assignment
+        if (quote?.id) {
+          // The form values are already updated, let the form handle the quote update
+          scheduleCalculation(() => {
+            console.log('HSN assignment triggered quote recalculation');
+          });
+        }
+
+        toast({
+          title: "HSN Code Assigned",
+          description: `${hsnData.hsn_code} - ${hsnData.display_name}`,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to assign HSN code:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign HSN code. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  }, [form, setHsnSearchStates, quote?.id, scheduleCalculation, toast]);
+
   // Optimized function to add new item with batched updates
   const addNewItem = useCallback(() => {
     const currentItems = form.getValues('items') || [];
@@ -842,6 +898,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       quantity: 1,
       options: '',
       image_url: '',
+      hsn_code: '', // Include HSN code
     };
 
     batchDOMUpdate(() => {
@@ -1300,8 +1357,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           }, index * 200);
         }
       });
+      
+      // Also fetch HSN weights for items that have HSN codes
+      quote.items.forEach((item, index) => {
+        if (item.hsn_code) {
+          fetchHSNWeight(index, item.hsn_code);
+        }
+      });
     }
-  }, [isEditMode, quote?.id]); // Only trigger when edit mode changes or quote changes
+  }, [isEditMode, quote?.id, fetchHSNWeight]); // Only trigger when edit mode changes or quote changes
 
   // Smart metrics calculation (always uses live quote for consistency)
   const metrics = useMemo(() => {
@@ -1340,6 +1404,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Form population function
   const populateFormFromQuote = (quoteData: UnifiedQuote) => {
+    console.log('🎯 DEBUG - populateFormFromQuote called:', {
+      quoteId: quoteData.id,
+      itemsCount: quoteData.items?.length,
+      hasItems: !!quoteData.items,
+      items: quoteData.items,
+      isEditMode,
+      callStack: new Error().stack?.slice(0, 200) // Truncated stack trace
+    });
+    
     const calculationData = quoteData.calculation_data || {};
     const operationalData = quoteData.operational_data || {};
 
@@ -1385,6 +1458,54 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
     }
 
+    // Debug logging for form initialization with validation
+    const rawItems = quoteData.items || [];
+    const formItemsData = rawItems.map((item, index) => {
+      // Ensure all required fields have proper defaults
+      const formattedItem = {
+        id: item.id || `item-${Date.now()}-${index}`, // More unique ID generation
+        item_price: Number(item.price_usd) || 0,
+        item_weight: Number(item.weight_kg) || 0,
+        quantity: Number(item.quantity) || 1,
+        product_name: String(item.name || ''),
+        options: String(item.options || ''),
+        product_url: String(item.url || ''),
+        image_url: String(item.image || ''),
+        hsn_code: item.hsn_code || '', // Include HSN code
+      };
+      
+      // Validate critical fields
+      if (!formattedItem.product_name) {
+        console.warn(`⚠️ Item ${index} missing product name:`, item);
+      }
+      
+      return formattedItem;
+    });
+    
+    // Add default item if no items exist
+    if (formItemsData.length === 0) {
+      console.log('📦 No items found, adding default item for edit mode');
+      formItemsData.push({
+        id: `item-${Date.now()}-default`,
+        item_price: 0,
+        item_weight: 0,
+        quantity: 1,
+        product_name: '',
+        options: '',
+        product_url: '',
+        image_url: '',
+        hsn_code: '', // Include HSN code
+      });
+    }
+    
+    console.log('🏗️ DEBUG - Form Reset Called:', {
+      quoteDataItems: quoteData.items,
+      mappedFormItems: formItemsData,
+      isEditMode,
+      quoteId: quoteData.id,
+      itemsCount: formItemsData.length
+    });
+
     form.reset({
       id: quoteData.id,
       customs_percentage: smartCustomsPercentage,
@@ -1400,16 +1521,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       currency: quoteData.currency,
       destination_currency: quoteData.currency || 'USD',
       status: quoteData.status,
-      items: (quoteData.items || []).map((item, index) => ({
-        id: item.id || `item-${index}`,
-        item_price: item.price_usd || 0,
-        item_weight: item.weight_kg || 0,
-        quantity: item.quantity || 1,
-        product_name: item.name || '',
-        options: item.options || '',
-        product_url: item.url || '',
-        image_url: item.image || '',
-      })),
+      items: formItemsData,
+    });
+    
+    console.log('✅ DEBUG - Form Reset Complete:', {
+      formWatchItems: form.watch('items'),
+      formGetValuesItems: form.getValues('items'),
+      resetSuccess: 'Form has been reset with items data'
     });
   };
 
@@ -1638,6 +1756,81 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
     } finally {
       setIsCalculating(false);
+    }
+  };
+
+  // Tax method selection handlers
+  const handleTaxMethodChange = async (method: string, metadata?: any) => {
+    try {
+      setCurrentTaxMethod(method);
+      
+      // Update quote with new calculation method preference
+      if (quote?.id) {
+        await unifiedDataEngine.updateQuote(quote.id, {
+          calculation_method_preference: method,
+          operational_data: {
+            ...quote.operational_data,
+            tax_method_metadata: metadata
+          }
+        });
+        
+        // Trigger recalculation with new method
+        await calculateSmartFeatures({ ...quote, calculation_method_preference: method });
+        
+        toast({
+          title: "Tax Method Updated",
+          description: `Calculation method changed to ${method}. Recalculating taxes...`,
+        });
+      }
+    } catch (error) {
+      console.error('Tax method update error:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update tax calculation method.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleValuationMethodChange = async (itemId: string, method: string, amount?: number) => {
+    try {
+      setItemValuationMethods(prev => ({ ...prev, [itemId]: method }));
+      
+      // Update quote's operational data with per-item valuation preferences
+      if (quote?.id) {
+        const updatedOperationalData = {
+          ...quote.operational_data,
+          item_valuation_preferences: {
+            ...quote.operational_data?.item_valuation_preferences,
+            [itemId]: method
+          }
+        };
+        
+        if (amount && method === 'admin_override') {
+          updatedOperationalData.item_valuation_overrides = {
+            ...quote.operational_data?.item_valuation_overrides,
+            [itemId]: {
+              amount,
+              timestamp: new Date().toISOString(),
+              admin_id: 'current_admin' // Would be replaced with actual admin ID
+            }
+          };
+        }
+        
+        await unifiedDataEngine.updateQuote(quote.id, {
+          operational_data: updatedOperationalData
+        });
+        
+        // Trigger recalculation with new valuation method
+        await calculateSmartFeatures({ ...quote, operational_data: updatedOperationalData });
+      }
+    } catch (error) {
+      console.error('Valuation method update error:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update item valuation method.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1921,14 +2114,87 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       </div>
                     )}
                     <CardContent className="p-0">
-                      {form.watch('items')?.length === 0 && (
+                      {(() => {
+                        const watchedItems = form.watch('items');
+                        console.log('🔍 DEBUG - Edit Mode Rendering:', {
+                          isEditMode,
+                          isLoading,
+                          hasQuote: !!quote,
+                          watchedItemsLength: watchedItems?.length,
+                          watchedItems: watchedItems,
+                          quoteItemsLength: quote?.items?.length,
+                          quoteItems: quote?.items,
+                          formErrors: form.formState.errors
+                        });
+                        return null;
+                      })()}
+                      
+                      {/* Loading state - prevent premature rendering */}
+                      {isLoading && (
+                        <div className="p-8 text-center text-gray-500">
+                          <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                          <p className="text-sm">Loading quote data...</p>
+                        </div>
+                      )}
+                      
+                      {/* Quote not loaded yet */}
+                      {!isLoading && !quote && (
+                        <div className="p-8 text-center text-gray-500">
+                          <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm">Quote data not available</p>
+                          <p className="text-xs mt-1">Please refresh the page</p>
+                        </div>
+                      )}
+                      
+                      {/* No items */}
+                      {!isLoading && quote && form.watch('items')?.length === 0 && (
                         <div className="p-8 text-center text-gray-500">
                           <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                           <p className="text-sm">No products added yet</p>
                           <p className="text-xs mt-1">Add your first product to get started</p>
                         </div>
                       )}
-                      {form.watch('items')?.map((item, index) => {
+                      
+                      {/* Render items only when not loading and quote is available */}
+                      {!isLoading && quote && (() => {
+                        try {
+                          const items = form.watch('items');
+                          
+                          // Additional safety checks
+                          if (!Array.isArray(items)) {
+                            console.error('🚨 Form items is not an array:', items);
+                            return (
+                              <div className="p-8 text-center text-red-500">
+                                <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                                <p className="text-sm">Data structure error</p>
+                                <p className="text-xs mt-1">Form items is not properly formatted</p>
+                                <button 
+                                  className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                  onClick={() => window.location.reload()}
+                                >
+                                  Reload Page
+                                </button>
+                              </div>
+                            );
+                          }
+                          
+                          if (items.length === 0) {
+                            return null; // Handled by the "No items" section above
+                          }
+                          
+                          return items.map((item, index) => {
+                            try {
+                              // Validate item structure
+                              if (!item || typeof item !== 'object') {
+                                console.error(`🚨 Invalid item at index ${index}:`, item);
+                                return (
+                                  <div key={`error-${index}`} className="p-4 border-b border-red-200 bg-red-50">
+                                    <div className="text-red-600 text-sm">
+                                      ⚠️ Item {index + 1} has invalid data structure
+                                    </div>
+                                  </div>
+                                );
+                              }
                         const smartData = quote?.items[index]?.smart_data;
                         const weightConfidence = smartData?.weight_confidence || 0;
                         const category = smartData?.category_detected;
@@ -2067,6 +2333,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             e.target.value,
                                             items[index].product_url,
                                           );
+                                          // Also fetch HSN weight if item has HSN code
+                                          if (items[index].hsn_code) {
+                                            fetchHSNWeight(index, items[index].hsn_code);
+                                          }
                                         }, 800);
 
                                         setEstimationTimeouts((prev) => ({
@@ -2131,7 +2401,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   <div className="col-span-4">
                                     <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
                                       Weight
-                                      {isEstimating[index.toString()] && (
+                                      {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
                                         <div className="ml-2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                       )}
                                     </label>
@@ -2140,11 +2410,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                         type="number"
                                         step="0.001"
                                         min="0"
-                                        className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
-                                          weightEstimations[index.toString()]
-                                            ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500 pr-14'
-                                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                        }`}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         value={item.item_weight || ''}
                                         onChange={(e) => {
                                           const items = form.getValues('items') || [];
@@ -2159,27 +2425,119 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
                                         kg
                                       </span>
-
-                                      {/* AI Suggestion Button */}
-                                      {weightEstimations[index.toString()] && (
-                                        <button
-                                          type="button"
-                                          className="absolute right-8 top-1/2 -translate-y-1/2 px-1 py-0.5 text-xs bg-blue-100 text-blue-700 border border-blue-300 rounded hover:bg-blue-200 focus:outline-none"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            applyWeightSuggestion(
-                                              index,
-                                              weightEstimations[index.toString()].estimated_weight,
-                                            );
-                                          }}
-                                          title={`Apply AI suggestion: ${weightEstimations[index.toString()].estimated_weight} kg`}
-                                        >
-                                          Apply [
-                                          {weightEstimations[index.toString()].estimated_weight}]
-                                        </button>
-                                      )}
                                     </div>
+                                    
+                                    {/* Dual Weight Suggestions */}
+                                    {(hsnWeights[index.toString()] || weightEstimations[index.toString()]) && (
+                                      <div className="mt-2">
+                                        <DualWeightSuggestions
+                                          hsnWeight={hsnWeights[index.toString()] ? {
+                                            ...hsnWeights[index.toString()]!,
+                                            source: 'hsn' as const
+                                          } : undefined}
+                                          mlWeight={weightEstimations[index.toString()] ? {
+                                            estimated: weightEstimations[index.toString()].estimated_weight,
+                                            confidence: weightEstimations[index.toString()].confidence,
+                                            reasoning: weightEstimations[index.toString()].reasoning,
+                                            source: 'ml' as const
+                                          } : undefined}
+                                          currentWeight={item.item_weight || undefined}
+                                          onSelectWeight={(weight, source) => handleWeightSelection(index, weight, source)}
+                                          isLoading={isEstimating[index.toString()] || isLoadingHSN[index.toString()]}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* HSN Code Assignment Section */}
+                                  <div className="col-span-6">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center">
+                                      <Tag className="w-3 h-3 mr-1" />
+                                      HSN Classification
+                                      {!item.hsn_code && (
+                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                          Unclassified
+                                        </span>
+                                      )}
+                                    </label>
+                                    
+                                    {item.hsn_code ? (
+                                      <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center space-x-2">
+                                            <span className="font-mono font-bold text-green-700">{item.hsn_code}</span>
+                                            <span className="text-sm text-green-600">{item.category || 'General'}</span>
+                                          </div>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setHsnSearchStates(prev => ({
+                                              ...prev,
+                                              [index]: { isOpen: true, productName: item.product_name }
+                                            }))}
+                                            className="text-green-700 border-green-300 hover:bg-green-100"
+                                          >
+                                            <Tag className="w-3 h-3 mr-1" />
+                                            Change
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                                        <div className="flex items-center justify-between">
+                                          <div className="text-sm text-amber-700">
+                                            <div className="font-medium">HSN code not assigned</div>
+                                            <div className="text-xs">Tax calculations use fallback rates</div>
+                                          </div>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setHsnSearchStates(prev => ({
+                                              ...prev,
+                                              [index]: { isOpen: true, productName: item.product_name }
+                                            }))}
+                                            className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                                          >
+                                            <Tag className="w-3 h-3 mr-1" />
+                                            Assign HSN
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* HSN Search Dialog */}
+                                    {hsnSearchStates[index]?.isOpen && (
+                                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] m-4">
+                                          <div className="p-4 border-b">
+                                            <div className="flex items-center justify-between">
+                                              <h3 className="text-lg font-semibold">Assign HSN Code</h3>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setHsnSearchStates(prev => ({
+                                                  ...prev,
+                                                  [index]: { isOpen: false, productName: '' }
+                                                }))}
+                                              >
+                                                ×
+                                              </Button>
+                                            </div>
+                                          </div>
+                                          <div className="p-4">
+                                            <SmartHSNSearch
+                                              currentHSNCode={item.hsn_code}
+                                              productName={item.product_name}
+                                              onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                              placeholder="Search HSN code for this product..."
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
 
                                   <div className="col-span-2">
@@ -2206,41 +2564,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 </div>
                               </div>
 
-                              {/* Enhanced HSN Classification Interface - Edit Mode */}
-                              <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
-                                <div className="flex items-center space-x-2">
-                                  <Package className="w-4 h-4 text-purple-600" />
-                                  <span className="text-xs font-medium text-gray-700">HSN Classification</span>
-                                  <span className="text-xs text-blue-600">[EDIT MODE]</span>
-                                </div>
-                                
-                                {hsnErrors[quote.items[index]?.id] && (
-                                  <div className="p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded">
-                                    {hsnErrors[quote.items[index]?.id]}
-                                  </div>
-                                )}
-                                
-                                <HSNAutoComplete
-                                  value={quote.items[index]?.hsn_code || ''}
-                                  productName={item.product_name || quote.items[index]?.name || ''}
-                                  originCountry={currencyDisplay.originCountry}
-                                  onHSNSelect={(hsn) => handleHSNSelect(quote.items[index]?.id, hsn)}
-                                  onClear={() => handleHSNClear(quote.items[index]?.id)}
-                                  placeholder="Search HSN codes for this product..."
-                                />
-                                
-                                {quote.items[index]?.hsn_code && item.item_price && Number(item.item_price) > 0 && (
-                                  <CustomsCalculationPreview
-                                    productPrice={Number(item.item_price)}
-                                    quantity={item.quantity || 1}
-                                    hsnCode={quote.items[index]?.hsn_code}
-                                    category={quote.items[index]?.category || ''}
-                                    minimumValuationUSD={selectedHSNData[quote.items[index]?.id]?.minimum_valuation_usd}
-                                    originCountry={currencyDisplay.originCountry}
-                                    destinationCountry={currencyDisplay.destinationCountry}
-                                  />
-                                )}
-                              </div>
 
                               {/* Customer Notes - Professional Inline Style */}
                               {item.options && item.options.trim() && (
@@ -2303,7 +2626,45 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             </div>
                           </div>
                         );
-                      })}
+                            } catch (error) {
+                              console.error(`🚨 Error rendering item ${index}:`, error, item);
+                              return (
+                                <div key={`render-error-${index}`} className="p-4 border-b border-red-200 bg-red-50">
+                                  <div className="text-red-600 text-sm">
+                                    ⚠️ Error rendering item {index + 1}: {error instanceof Error ? error.message : 'Unknown error'}
+                                  </div>
+                                  <button 
+                                    className="mt-2 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                    onClick={() => {
+                                      console.log('Item causing error:', item);
+                                      const items = form.getValues('items') || [];
+                                      items.splice(index, 1);
+                                      form.setValue('items', items);
+                                    }}
+                                  >
+                                    Remove Item
+                                  </button>
+                                </div>
+                              );
+                            }
+                          });
+                        } catch (error) {
+                          console.error('🚨 Critical error in item rendering:', error);
+                          return (
+                            <div className="p-8 text-center text-red-500">
+                              <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                              <p className="text-sm">Critical rendering error</p>
+                              <p className="text-xs mt-1">{error instanceof Error ? error.message : 'Unknown error'}</p>
+                              <button 
+                                className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                onClick={() => window.location.reload()}
+                              >
+                                Reload Page
+                              </button>
+                            </div>
+                          );
+                        }
+                      })()}
                     </CardContent>
                   </Card>
 
@@ -2576,20 +2937,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* HSN Tax Breakdown - Show per-item tax calculations */}
-              <CompactHSNTaxBreakdown
+              {/* Tax Calculation Hub - Professional Hub and Spoke Interface */}
+              <TaxHubContainer
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
-                compact={true}
+                onMethodChange={handleTaxMethodChange}
+                onValuationChange={handleValuationMethodChange}
                 onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
                 onUpdateQuote={loadQuoteData}
-              />
-
-              {/* HSN Admin History - Show HSN modification tracking */}
-              <HSNAdminHistory
-                quote={liveQuote || quote}
-                key={`hsn-history-${(liveQuote || quote)?.operational_data?.admin_override_count || 0}-${(liveQuote || quote)?.updated_at}`}
-                className="mb-4"
+                compact={true}
+                editMode={isEditMode}
               />
 
               {/* Shipping Options or Configuration Prompt */}
@@ -2741,41 +3098,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   'origin',
                                 )}
                               </span>
-                            </div>
-                            {/* Enhanced HSN Classification Interface */}
-                            <div className="mt-2 space-y-3 border-t border-gray-100 pt-2">
-                              <div className="flex items-center space-x-2">
-                                <Package className="w-4 h-4 text-gray-500" />
-                                <span className="text-xs font-medium text-gray-700">HSN Classification</span>
-                                <span className="text-xs text-green-600">[MAIN INTERFACE]</span>
-                              </div>
-                              
-                              {hsnErrors[item.id] && (
-                                <div className="p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded">
-                                  {hsnErrors[item.id]}
-                                </div>
-                              )}
-                              
-                              <HSNAutoComplete
-                                value={item.hsn_code || ''}
-                                productName={item.name}
-                                originCountry={currencyDisplay.originCountry}
-                                onHSNSelect={(hsn) => handleHSNSelect(item.id, hsn)}
-                                onClear={() => handleHSNClear(item.id)}
-                                placeholder="Search HSN codes for this product..."
-                              />
-                              
-                              {item.hsn_code && item.price_usd && Number(item.price_usd) > 0 && (
-                                <CustomsCalculationPreview
-                                  productPrice={Number(item.price_usd)}
-                                  quantity={item.quantity}
-                                  hsnCode={item.hsn_code}
-                                  category={item.category || ''}
-                                  minimumValuationUSD={selectedHSNData[item.id]?.minimum_valuation_usd}
-                                  originCountry={currencyDisplay.originCountry}
-                                  destinationCountry={currencyDisplay.destinationCountry}
-                                />
-                              )}
                             </div>
                             {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (
