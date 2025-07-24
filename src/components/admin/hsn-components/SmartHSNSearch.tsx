@@ -266,6 +266,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
               </div>
             </div>
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={() => setIsOpen(true)}
@@ -280,6 +281,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
       {/* Search Trigger */}
       {!currentHSNData && (
         <Button
+          type="button"
           variant="outline"
           className={`w-full justify-start text-left font-normal ${getSizeClasses()}`}
           onClick={() => {
@@ -352,6 +354,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       <div className="grid grid-cols-2 gap-2">
                         {categoryGroups.slice(0, 6).map((group) => (
                           <Button
+                            type="button"
                             key={group.category}
                             variant="outline"
                             size="sm"
@@ -368,6 +371,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       </div>
                       {categoryGroups.length > 6 && (
                         <Button
+                          type="button"
                           variant="ghost" 
                           size="sm"
                           className="w-full text-blue-600 hover:text-blue-700"
@@ -386,6 +390,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                         <Tag className="mr-1 h-3 w-3" />
                         {selectedCategory}
                         <Button
+                          type="button"
                           variant="ghost"
                           size="sm"
                           className="ml-1 h-4 w-4 p-0"
@@ -459,17 +464,17 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                           {group.subcategories.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2">
                               {group.subcategories.slice(0, 4).map((subcat) => (
-                                <Badge
+                                <button
+                                  type="button"
                                   key={subcat.name}
-                                  variant="secondary"
-                                  className="cursor-pointer hover:bg-gray-200"
+                                  className="cursor-pointer hover:bg-gray-200 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleCategorySelect(group.category, subcat.name);
                                   }}
                                 >
                                   {subcat.name} ({subcat.count})
-                                </Badge>
+                                </button>
                               ))}
                               {group.subcategories.length > 4 && (
                                 <Badge variant="outline">

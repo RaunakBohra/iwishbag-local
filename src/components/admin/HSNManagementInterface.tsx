@@ -102,12 +102,23 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
     keywords: [],
     minimum_valuation_usd: undefined,
     requires_currency_conversion: false,
-    weight_data: {},
+    weight_data: {
+      typical_weights: {
+        per_unit: { min: 0, max: 0, average: 0 },
+        packaging: { additional_weight: 0 }
+      }
+    },
     tax_data: {
       typical_rates: {
         customs: { common: 0 },
         gst: { standard: 0 },
         vat: { common: 0 },
+        sales_tax: { state: 0, local: 0 },
+        pst: { provincial: 0 },
+        excise_tax: { federal: 0 },
+        import_duty: { standard: 0 },
+        service_tax: { standard: 0 },
+        cess: { additional: 0 },
       },
     },
     classification_data: {
@@ -281,12 +292,23 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
       keywords: [],
       minimum_valuation_usd: undefined,
       requires_currency_conversion: false,
-      weight_data: {},
+      weight_data: {
+        typical_weights: {
+          per_unit: { min: 0, max: 0, average: 0 },
+          packaging: { additional_weight: 0 }
+        }
+      },
       tax_data: {
         typical_rates: {
           customs: { common: 0 },
           gst: { standard: 0 },
           vat: { common: 0 },
+          sales_tax: { state: 0, local: 0 },
+          pst: { provincial: 0 },
+          excise_tax: { federal: 0 },
+          import_duty: { standard: 0 },
+          service_tax: { standard: 0 },
+          cess: { additional: 0 },
         },
       },
       classification_data: {
@@ -306,6 +328,10 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
     const activeRecords = hsnRecords.filter(r => r.is_active).length;
     const recordsWithMinValuation = hsnRecords.filter(r => r.minimum_valuation_usd).length;
     const recordsRequiringConversion = hsnRecords.filter(r => r.requires_currency_conversion).length;
+    const recordsWithWeightData = hsnRecords.filter(r => 
+      r.weight_data?.typical_weights?.per_unit?.average && 
+      r.weight_data.typical_weights.per_unit.average > 0
+    ).length;
     const categoryCounts = hsnRecords.reduce((acc, record) => {
       acc[record.category] = (acc[record.category] || 0) + 1;
       return acc;
@@ -316,6 +342,7 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
       activeRecords,
       recordsWithMinValuation,
       recordsRequiringConversion,
+      recordsWithWeightData,
       categoryCounts,
     };
   };
@@ -401,10 +428,10 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Scale className="w-5 h-5 text-purple-600" />
+              <Scale className="w-5 h-5 text-blue-600" />
               <div>
-                <p className="text-sm text-gray-600">Need Conversion</p>
-                <p className="text-2xl font-bold">{analytics.recordsRequiringConversion}</p>
+                <p className="text-sm text-gray-600">With Weight Data</p>
+                <p className="text-2xl font-bold">{analytics.recordsWithWeightData}</p>
               </div>
             </div>
           </CardContent>
@@ -468,6 +495,7 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
                       <TableHead>HSN Code</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Avg Weight</TableHead>
                       <TableHead>Min. Valuation</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
@@ -488,6 +516,16 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
                           <Badge variant="outline">
                             {record.category.charAt(0).toUpperCase() + record.category.slice(1)}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {record.weight_data?.typical_weights?.per_unit?.average ? (
+                            <div className="flex items-center space-x-1">
+                              <Scale className="w-3 h-3 text-blue-600" />
+                              <span>{record.weight_data.typical_weights.per_unit.average}kg</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">No data</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {record.minimum_valuation_usd ? (
@@ -631,8 +669,8 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
                     <Badge variant="secondary">{((analytics.recordsWithMinValuation / analytics.totalRecords) * 100).toFixed(1)}%</Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Need Conversion:</span>
-                    <Badge variant="outline">{((analytics.recordsRequiringConversion / analytics.totalRecords) * 100).toFixed(1)}%</Badge>
+                    <span className="text-sm">With Weight Data:</span>
+                    <Badge variant="outline">{((analytics.recordsWithWeightData / analytics.totalRecords) * 100).toFixed(1)}%</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -831,64 +869,364 @@ const HSNRecordForm: React.FC<HSNRecordFormProps> = ({
       {/* Tax Rates */}
       <div>
         <Label>Tax Rates (%)</Label>
-        <div className="grid grid-cols-3 gap-4 mt-2">
+        <div className="mt-2 space-y-4">
+          {/* Core Tax Types */}
           <div>
-            <Label htmlFor="customs_rate" className="text-xs">Customs</Label>
-            <Input
-              id="customs_rate"
-              type="number"
-              step="0.1"
-              value={formData.tax_data.typical_rates.customs.common}
-              onChange={(e) => setFormData({
-                ...formData,
-                tax_data: {
-                  ...formData.tax_data,
-                  typical_rates: {
-                    ...formData.tax_data.typical_rates,
-                    customs: { common: Number(e.target.value) },
-                  },
-                },
-              })}
-            />
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Core Taxes</Label>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="customs_rate" className="text-xs">Customs Duty</Label>
+                <Input
+                  id="customs_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="10.0"
+                  value={formData.tax_data.typical_rates.customs.common}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        customs: { common: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="import_duty_rate" className="text-xs">Import Duty</Label>
+                <Input
+                  id="import_duty_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="5.0"
+                  value={formData.tax_data.typical_rates.import_duty.standard}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        import_duty: { standard: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="excise_tax_rate" className="text-xs">Excise Tax</Label>
+                <Input
+                  id="excise_tax_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="3.0"
+                  value={formData.tax_data.typical_rates.excise_tax.federal}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        excise_tax: { federal: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Regional Tax Types */}
           <div>
-            <Label htmlFor="gst_rate" className="text-xs">GST</Label>
-            <Input
-              id="gst_rate"
-              type="number"
-              step="0.1"
-              value={formData.tax_data.typical_rates.gst.standard}
-              onChange={(e) => setFormData({
-                ...formData,
-                tax_data: {
-                  ...formData.tax_data,
-                  typical_rates: {
-                    ...formData.tax_data.typical_rates,
-                    gst: { standard: Number(e.target.value) },
-                  },
-                },
-              })}
-            />
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Regional Taxes</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="gst_rate" className="text-xs">GST (India)</Label>
+                <Input
+                  id="gst_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="18.0"
+                  value={formData.tax_data.typical_rates.gst.standard}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        gst: { standard: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="vat_rate" className="text-xs">VAT (Europe/Nepal)</Label>
+                <Input
+                  id="vat_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="13.0"
+                  value={formData.tax_data.typical_rates.vat.common}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        vat: { common: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+            </div>
           </div>
+
+          {/* US Tax Types */}
           <div>
-            <Label htmlFor="vat_rate" className="text-xs">VAT</Label>
-            <Input
-              id="vat_rate"
-              type="number"
-              step="0.1"
-              value={formData.tax_data.typical_rates.vat.common}
-              onChange={(e) => setFormData({
-                ...formData,
-                tax_data: {
-                  ...formData.tax_data,
-                  typical_rates: {
-                    ...formData.tax_data.typical_rates,
-                    vat: { common: Number(e.target.value) },
-                  },
-                },
-              })}
-            />
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">US Taxes</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="state_tax_rate" className="text-xs">State Sales Tax</Label>
+                <Input
+                  id="state_tax_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="6.5"
+                  value={formData.tax_data.typical_rates.sales_tax.state}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        sales_tax: { 
+                          ...formData.tax_data.typical_rates.sales_tax,
+                          state: Number(e.target.value) 
+                        },
+                      },
+                    },
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="local_tax_rate" className="text-xs">Local Sales Tax</Label>
+                <Input
+                  id="local_tax_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="2.5"
+                  value={formData.tax_data.typical_rates.sales_tax.local}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        sales_tax: { 
+                          ...formData.tax_data.typical_rates.sales_tax,
+                          local: Number(e.target.value) 
+                        },
+                      },
+                    },
+                  })}
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Additional Tax Types */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Additional Taxes</Label>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="pst_rate" className="text-xs">PST (Canada)</Label>
+                <Input
+                  id="pst_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="7.0"
+                  value={formData.tax_data.typical_rates.pst.provincial}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        pst: { provincial: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="service_tax_rate" className="text-xs">Service Tax</Label>
+                <Input
+                  id="service_tax_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="5.0"
+                  value={formData.tax_data.typical_rates.service_tax.standard}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        service_tax: { standard: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="cess_rate" className="text-xs">CESS (India)</Label>
+                <Input
+                  id="cess_rate"
+                  type="number"
+                  step="0.1"
+                  placeholder="1.0"
+                  value={formData.tax_data.typical_rates.cess.additional}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    tax_data: {
+                      ...formData.tax_data,
+                      typical_rates: {
+                        ...formData.tax_data.typical_rates,
+                        cess: { additional: Number(e.target.value) },
+                      },
+                    },
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          Enter tax rates as percentages. Only fill in rates applicable to your target markets. Leave others at 0.
+        </div>
+      </div>
+
+      {/* Weight Data */}
+      <div>
+        <Label>Typical Weight Information (kg)</Label>
+        <div className="grid grid-cols-2 gap-4 mt-2">
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="min_weight" className="text-xs">Minimum Weight</Label>
+              <Input
+                id="min_weight"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.05"
+                value={formData.weight_data.typical_weights?.per_unit?.min || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : 0;
+                  setFormData({
+                    ...formData,
+                    weight_data: {
+                      ...formData.weight_data,
+                      typical_weights: {
+                        ...formData.weight_data.typical_weights,
+                        per_unit: {
+                          ...formData.weight_data.typical_weights?.per_unit,
+                          min: value,
+                        },
+                      },
+                    },
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="max_weight" className="text-xs">Maximum Weight</Label>
+              <Input
+                id="max_weight"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="2.5"
+                value={formData.weight_data.typical_weights?.per_unit?.max || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : 0;
+                  setFormData({
+                    ...formData,
+                    weight_data: {
+                      ...formData.weight_data,
+                      typical_weights: {
+                        ...formData.weight_data.typical_weights,
+                        per_unit: {
+                          ...formData.weight_data.typical_weights?.per_unit,
+                          max: value,
+                        },
+                      },
+                    },
+                  });
+                }}
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="avg_weight" className="text-xs">Average Weight</Label>
+              <Input
+                id="avg_weight"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.5"
+                value={formData.weight_data.typical_weights?.per_unit?.average || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : 0;
+                  setFormData({
+                    ...formData,
+                    weight_data: {
+                      ...formData.weight_data,
+                      typical_weights: {
+                        ...formData.weight_data.typical_weights,
+                        per_unit: {
+                          ...formData.weight_data.typical_weights?.per_unit,
+                          average: value,
+                        },
+                      },
+                    },
+                  });
+                }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="packaging_weight" className="text-xs">Packaging Weight</Label>
+              <Input
+                id="packaging_weight"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.1"
+                value={formData.weight_data.typical_weights?.packaging?.additional_weight || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? Number(e.target.value) : 0;
+                  setFormData({
+                    ...formData,
+                    weight_data: {
+                      ...formData.weight_data,
+                      typical_weights: {
+                        ...formData.weight_data.typical_weights,
+                        packaging: {
+                          additional_weight: value,
+                        },
+                      },
+                    },
+                  });
+                }}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="mt-2 text-xs text-gray-500">
+          Weight data helps estimate shipping costs and validate customer entries. Leave empty if not applicable.
         </div>
       </div>
 

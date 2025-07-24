@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Zap,
   UserCog,
+  Calculator,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -125,6 +126,11 @@ const menuGroups = [
         title: 'Country Settings',
         url: '/admin/countries',
         icon: Globe,
+      },
+      {
+        title: 'HSN Management',
+        url: '/admin/hsn-management',
+        icon: Calculator,
       },
       {
         title: 'Customs Categories',

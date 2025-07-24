@@ -24,6 +24,17 @@ export interface QuoteItem {
     category_detected?: string;
     customs_suggestions: string[];
     optimization_hints: string[];
+    // Enhanced weight tracking
+    weight_source?: 'hsn' | 'ml' | 'manual';
+    weight_suggestions?: {
+      hsn_weight?: number;
+      hsn_min?: number;
+      hsn_max?: number;
+      hsn_packaging?: number;
+      ml_weight?: number;
+      hsn_confidence?: number;
+      ml_confidence?: number;
+    };
   };
 }
 

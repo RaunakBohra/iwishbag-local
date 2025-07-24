@@ -797,6 +797,78 @@ export class SmartWeightEstimator {
   }
 
   /**
+   * Record weight selection for analytics and ML improvement
+   * Tracks when admin chooses between HSN, ML, or manual weight entry
+   */
+  async recordWeightSelection(
+    productName: string,
+    hsnWeight: number | null,
+    mlWeight: number,
+    selectedWeight: number,
+    selectedSource: 'hsn' | 'ml' | 'manual',
+    url?: string,
+    category?: string,
+    hsnCode?: string
+  ): Promise<void> {
+    try {
+      // Determine if HSN was available
+      const hsnAvailable = hsnWeight !== null && hsnWeight > 0;
+      
+      // Calculate accuracy if ML weight was tested
+      const mlAccuracy = selectedSource === 'ml' || selectedSource === 'manual' 
+        ? (1 - Math.abs(mlWeight - selectedWeight) / selectedWeight) * 100 
+        : 0;
+
+      // Create extended training record
+      const trainingRecord = {
+        name: productName,
+        estimated_weight: mlWeight,
+        actual_weight: selectedWeight,
+        confidence: this.calculateConfidenceScore({ min: 0, max: 0, avg: mlWeight }, { name: productName }).confidence,
+        accuracy: Math.max(0, Math.min(100, mlAccuracy)),
+        url: url,
+        category: category,
+        brand: this.extractBrand(productName),
+        user_confirmed: true,
+        // Extended metadata for HSN tracking
+        metadata: {
+          hsn_code: hsnCode,
+          hsn_weight_available: hsnAvailable,
+          hsn_weight: hsnWeight,
+          selected_source: selectedSource,
+          weight_difference_from_hsn: hsnAvailable ? Math.abs((hsnWeight || 0) - selectedWeight) : null,
+          weight_difference_from_ml: Math.abs(mlWeight - selectedWeight),
+        }
+      };
+
+      // Save to training history
+      const { error } = await supabase
+        .from('ml_training_history')
+        .insert(trainingRecord);
+
+      if (error) {
+        console.error('Error saving weight selection:', error);
+      } else {
+        console.log(`📊 [Weight Selection] Recorded: ${selectedSource} selected for "${productName}"`);
+        
+        // Log analytics
+        if (hsnAvailable) {
+          const hsnAccuracy = (1 - Math.abs((hsnWeight || 0) - selectedWeight) / selectedWeight) * 100;
+          console.log(`📊 [Analytics] HSN accuracy: ${hsnAccuracy.toFixed(1)}%, ML accuracy: ${mlAccuracy.toFixed(1)}%`);
+        }
+      }
+
+      // If manual weight was selected, learn from it
+      if (selectedSource === 'manual' || (selectedSource === 'ml' && Math.abs(mlWeight - selectedWeight) > 0.1)) {
+        await this.learn(productName, selectedWeight, 0.8, url, category);
+      }
+
+    } catch (error) {
+      console.error('Error recording weight selection:', error);
+    }
+  }
+
+  /**
    * Update estimation accuracy metrics
    */
   private updateEstimationAccuracy(estimated: number, actual: number): void {

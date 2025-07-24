@@ -13,6 +13,7 @@ import PerItemTaxCalculator, {
   type ItemTaxBreakdown,
   type TaxCalculationContext,
 } from '@/services/PerItemTaxCalculator';
+import { unifiedTaxFallbackService } from '@/services/UnifiedTaxFallbackService';
 import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import { weightDetectionService } from '@/services/WeightDetectionService';
 import type {
@@ -30,6 +31,12 @@ export interface EnhancedCalculationInput {
     speed_priority: 'low' | 'medium' | 'high';
     cost_priority: 'low' | 'medium' | 'high';
     show_all_options: boolean;
+  };
+  // 2-tier tax system preferences
+  tax_calculation_preferences?: {
+    calculation_method_preference?: 'auto' | 'hsn_only' | 'legacy_fallback' | 'admin_choice';
+    valuation_method_preference?: 'auto' | 'actual_price' | 'minimum_valuation' | 'higher_of_both' | 'per_item_choice';
+    admin_id?: string; // For audit logging
   };
 }
 
@@ -152,8 +159,8 @@ export class SmartCalculationEngine {
         0,
       );
 
-      // 🆕 NEW: HSN-based per-item tax calculation
-      const hsnTaxResults = await this.calculateHSNBasedTaxes(input.quote);
+      // 🆕 ENHANCED: HSN-based per-item tax calculation with 2-tier method selection
+      const hsnTaxResults = await this.calculateHSNBasedTaxes(input.quote, input);
 
       // Get all available shipping options
       const shippingOptions = await this.calculateAllShippingOptions({
@@ -219,10 +226,14 @@ export class SmartCalculationEngine {
   }
 
   /**
-   * 🆕 NEW: HSN-based per-item tax calculation with automatic classification
-   * This integrates with PerItemTaxCalculator to provide accurate per-item taxes
+   * 🆕 ENHANCED: HSN-based per-item tax calculation with 2-tier method selection
+   * This integrates with PerItemTaxCalculator and UnifiedTaxFallbackService
+   * to provide accurate per-item taxes with admin preference support
    */
-  private async calculateHSNBasedTaxes(quote: UnifiedQuote): Promise<{
+  private async calculateHSNBasedTaxes(
+    quote: UnifiedQuote,
+    input?: EnhancedCalculationInput
+  ): Promise<{
     breakdown: ItemTaxBreakdown[];
     summary: {
       total_items: number;
@@ -241,7 +252,14 @@ export class SmartCalculationEngine {
     });
 
     try {
-      // Prepare tax calculation context
+      // Get effective tax method from database based on quote preferences
+      const { data: effectiveTaxMethod } = await supabase
+        .rpc('get_effective_tax_method', { quote_id_param: quote.id })
+        .single();
+
+      console.log('🏷️ [HSN] Effective tax method from database:', effectiveTaxMethod);
+
+      // Prepare enhanced tax calculation context with 2-tier preferences
       const context: TaxCalculationContext = {
         route: {
           id: 1, // Will be resolved from actual shipping route if needed
@@ -254,7 +272,26 @@ export class SmartCalculationEngine {
         admin_overrides: quote.operational_data?.admin_overrides || [],
         apply_exemptions: true,
         calculation_date: new Date(),
+        // 2-tier tax system preferences
+        calculation_method_preference: 
+          input?.tax_calculation_preferences?.calculation_method_preference ||
+          quote.calculation_method_preference ||
+          effectiveTaxMethod?.calculation_method ||
+          'auto',
+        valuation_method_preference:
+          input?.tax_calculation_preferences?.valuation_method_preference ||
+          quote.valuation_method_preference ||
+          effectiveTaxMethod?.valuation_method ||
+          'auto',
+        admin_id: input?.tax_calculation_preferences?.admin_id,
       };
+
+      console.log('🏷️ [HSN] Enhanced tax calculation context:', {
+        calculation_method: context.calculation_method_preference,
+        valuation_method: context.valuation_method_preference,
+        source: effectiveTaxMethod?.source || 'default',
+        confidence: effectiveTaxMethod?.confidence || 0.5,
+      });
 
       // Enhanced items with HSN classification and weight detection
       const enhancedItems = await Promise.all(
@@ -360,7 +397,21 @@ export class SmartCalculationEngine {
     } catch (error) {
       console.error('❌ [HSN] HSN-based tax calculation failed:', error);
 
-      // Return empty results on failure to prevent breaking the main calculation
+      // Fallback to unified tax calculation if HSN calculation fails
+      const fallbackMethod = input?.tax_calculation_preferences?.calculation_method_preference || 'auto';
+      if (fallbackMethod === 'legacy_fallback' || fallbackMethod === 'auto') {
+        console.log('🔄 [HSN] Attempting unified fallback tax calculation...');
+        
+        try {
+          const fallbackResults = await this.calculateUnifiedFallbackTaxes(quote, input);
+          console.log('✅ [HSN] Unified fallback calculation succeeded');
+          return fallbackResults;
+        } catch (fallbackError) {
+          console.error('❌ [HSN] Unified fallback calculation also failed:', fallbackError);
+        }
+      }
+
+      // Return empty results on complete failure to prevent breaking the main calculation
       return {
         breakdown: [],
         summary: {
@@ -372,6 +423,141 @@ export class SmartCalculationEngine {
           currency_conversions_applied: 0,
         },
       };
+    }
+  }
+
+  /**
+   * 🆕 NEW: Unified fallback tax calculation using UnifiedTaxFallbackService
+   * Used when HSN calculation fails or when legacy_fallback method is selected
+   */
+  private async calculateUnifiedFallbackTaxes(
+    quote: UnifiedQuote,
+    input?: EnhancedCalculationInput
+  ): Promise<{
+    breakdown: ItemTaxBreakdown[];
+    summary: {
+      total_items: number;
+      total_customs: number;
+      total_local_taxes: number;
+      total_all_taxes: number;
+      items_with_minimum_valuation: number;
+      currency_conversions_applied: number;
+    };
+  }> {
+    console.log('🔄 [FALLBACK] Starting unified fallback tax calculation:', {
+      quoteId: quote.id,
+      itemCount: quote.items.length,
+      originCountry: quote.origin_country,
+      destinationCountry: quote.destination_country,
+    });
+
+    try {
+      // Get unified tax data for this route
+      const unifiedTaxData = await unifiedTaxFallbackService.getUnifiedTaxData(
+        quote.origin_country,
+        quote.destination_country
+      );
+
+      console.log('🔄 [FALLBACK] Unified tax data retrieved:', {
+        dataSource: unifiedTaxData.data_source,
+        confidenceScore: unifiedTaxData.confidence_score,
+        customsPercent: unifiedTaxData.customs_percent,
+        vatPercent: unifiedTaxData.vat_percent,
+        fallbackReason: unifiedTaxData.fallback_reason,
+      });
+
+      // Calculate totals for traditional percentage-based calculation
+      const itemsTotal = quote.items.reduce(
+        (sum, item) => sum + item.price_usd * item.quantity,
+        0
+      );
+
+      // Apply unified tax rates to total value
+      const customsAmount = itemsTotal * (unifiedTaxData.customs_percent / 100);
+      const localTaxAmount = itemsTotal * (unifiedTaxData.vat_percent / 100);
+      const totalTaxes = customsAmount + localTaxAmount;
+
+      console.log('🔄 [FALLBACK] Tax calculations completed:', {
+        itemsTotal,
+        customsAmount,
+        localTaxAmount,
+        totalTaxes,
+        customsRate: unifiedTaxData.customs_percent,
+        localTaxRate: unifiedTaxData.vat_percent,
+      });
+
+      // Create simplified breakdown (since this is route-level, not per-item)
+      const breakdown: ItemTaxBreakdown[] = [{
+        item_id: 'unified_fallback',
+        hsn_code: 'FALLBACK',
+        category: 'unified_calculation',
+        item_name: `${quote.items.length} items (unified calculation)`,
+        
+        // Valuation details
+        original_price_origin_currency: itemsTotal,
+        taxable_amount_origin_currency: itemsTotal,
+        valuation_method: 'original_price',
+        
+        // Calculation options (simplified for fallback)
+        calculation_options: {
+          actual_price_calculation: {
+            basis_amount: itemsTotal,
+            customs_amount: customsAmount,
+            local_tax_amount: localTaxAmount,
+            total_tax: totalTaxes
+          },
+          selected_method: 'actual_price',
+          admin_can_override: true
+        },
+        
+        // Tax calculations
+        customs_calculation: {
+          rate_percentage: unifiedTaxData.customs_percent,
+          amount_origin_currency: customsAmount,
+          basis_amount: itemsTotal
+        },
+        
+        local_tax_calculation: {
+          tax_type: 'vat', // Unified system uses VAT as local tax
+          rate_percentage: unifiedTaxData.vat_percent,
+          amount_origin_currency: localTaxAmount,
+          basis_amount: itemsTotal
+        },
+        
+        // Totals
+        total_customs: customsAmount,
+        total_local_taxes: localTaxAmount,
+        total_taxes: totalTaxes,
+        
+        // Metadata
+        calculation_timestamp: new Date(),
+        admin_overrides_applied: [],
+        confidence_score: unifiedTaxData.confidence_score,
+        warnings: [
+          `Using ${unifiedTaxData.data_source} fallback calculation`,
+          unifiedTaxData.fallback_reason ? `Reason: ${unifiedTaxData.fallback_reason}` : '',
+        ].filter(Boolean)
+      }];
+
+      const summary = {
+        total_items: quote.items.length,
+        total_customs: customsAmount,
+        total_local_taxes: localTaxAmount,
+        total_all_taxes: totalTaxes,
+        items_with_minimum_valuation: 0, // Not applicable for unified fallback
+        currency_conversions_applied: 0, // Not applicable for unified fallback
+      };
+
+      console.log('✅ [FALLBACK] Unified fallback calculation completed successfully:', summary);
+
+      return {
+        breakdown,
+        summary,
+      };
+
+    } catch (error) {
+      console.error('❌ [FALLBACK] Unified fallback tax calculation failed:', error);
+      throw error; // Re-throw to be handled by the caller
     }
   }
 

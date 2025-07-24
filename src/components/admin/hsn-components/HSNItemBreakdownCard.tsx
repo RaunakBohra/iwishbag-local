@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -124,11 +125,18 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
           <div>
             <Label className="text-xs text-gray-600">HSN Code</Label>
             {isEditing ? (
-              <Input
-                value={editValues.hsnCode}
-                onChange={(e) => setEditValues((prev) => ({ ...prev, hsnCode: e.target.value }))}
-                placeholder="Enter HSN code"
-                className="h-8 text-sm"
+              <SmartHSNSearch
+                currentHSNCode={editValues.hsnCode}
+                productName={breakdown.itemName}
+                onHSNSelect={(hsn) => {
+                  setEditValues(prev => ({
+                    ...prev,
+                    hsnCode: hsn.hsn_code,
+                    category: hsn.category
+                  }));
+                }}
+                placeholder="Search HSN code..."
+                size="sm"
               />
             ) : (
               <div className="flex items-center gap-2 mt-1">

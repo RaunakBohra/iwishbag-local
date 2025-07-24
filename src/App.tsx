@@ -133,6 +133,7 @@ const DuplicateComponentsPreview = React.lazy(
   () => import('@/pages/admin/DuplicateComponentsPreview'),
 );
 const UserManagementPage = React.lazy(() => import('@/pages/admin/UserManagementPage'));
+const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -186,6 +187,14 @@ const router = createBrowserRouter([
             ),
           },
           { path: 'countries', element: <CountrySettings /> },
+          { 
+            path: 'hsn-management', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <HSNManagement />
+              </ErrorBoundary>
+            ),
+          },
           { path: 'customs', element: <CustomsCategories /> },
           { path: 'bank-accounts', element: <BankAccountSettings /> },
           { path: 'system-settings', element: <SystemSettings /> },

@@ -153,7 +153,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [editingHSNItemId, setEditingHSNItemId] = useState<string | null>(null);
   const [hsnFormData, setHsnFormData] = useState<{[key: string]: { hsn_code: string; category: string }}>({});
   const [selectedHSNData, setSelectedHSNData] = useState<{[key: string]: any}>({});
-  const [hsnSearchStates, setHsnSearchStates] = useState<{[key: number]: { isOpen: boolean; productName: string }}>({});
 
   // Tax method selection state
   const [showTaxMethodPanel, setShowTaxMethodPanel] = useState(false);
@@ -854,16 +853,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         };
         
         form.setValue('items', items);
-        
-        // Close the search dialog
-        setHsnSearchStates(prev => ({
-          ...prev,
-          [itemIndex]: { isOpen: false, productName: '' }
-        }));
 
         // Trigger quote calculation update after HSN assignment
         if (quote?.id) {
-          // The form values are already updated, let the form handle the quote update
           scheduleCalculation(() => {
             console.log('HSN assignment triggered quote recalculation');
           });
@@ -884,7 +876,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         duration: 3000,
       });
     }
-  }, [form, setHsnSearchStates, quote?.id, scheduleCalculation, toast]);
+  }, [form, quote?.id, scheduleCalculation, toast]);
 
   // Optimized function to add new item with batched updates
   const addNewItem = useCallback(() => {
@@ -2468,19 +2460,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             <span className="font-mono font-bold text-green-700">{item.hsn_code}</span>
                                             <span className="text-sm text-green-600">{item.category || 'General'}</span>
                                           </div>
-                                          <Button
-                                            type="button"
-                                            variant="outline"
+                                          <SmartHSNSearch
+                                            currentHSNCode={item.hsn_code}
+                                            productName={item.product_name}
+                                            onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                            placeholder="Search HSN code for this product..."
                                             size="sm"
-                                            onClick={() => setHsnSearchStates(prev => ({
-                                              ...prev,
-                                              [index]: { isOpen: true, productName: item.product_name }
-                                            }))}
-                                            className="text-green-700 border-green-300 hover:bg-green-100"
-                                          >
-                                            <Tag className="w-3 h-3 mr-1" />
-                                            Change
-                                          </Button>
+                                          />
                                         </div>
                                       </div>
                                     ) : (
@@ -2490,51 +2476,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             <div className="font-medium">HSN code not assigned</div>
                                             <div className="text-xs">Tax calculations use fallback rates</div>
                                           </div>
-                                          <Button
-                                            type="button"
-                                            variant="outline"
+                                          <SmartHSNSearch
+                                            currentHSNCode={undefined}
+                                            productName={item.product_name}
+                                            onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                            placeholder="Search HSN code for this product..."
                                             size="sm"
-                                            onClick={() => setHsnSearchStates(prev => ({
-                                              ...prev,
-                                              [index]: { isOpen: true, productName: item.product_name }
-                                            }))}
-                                            className="text-amber-700 border-amber-300 hover:bg-amber-100"
-                                          >
-                                            <Tag className="w-3 h-3 mr-1" />
-                                            Assign HSN
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* HSN Search Dialog */}
-                                    {hsnSearchStates[index]?.isOpen && (
-                                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                                        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] m-4">
-                                          <div className="p-4 border-b">
-                                            <div className="flex items-center justify-between">
-                                              <h3 className="text-lg font-semibold">Assign HSN Code</h3>
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setHsnSearchStates(prev => ({
-                                                  ...prev,
-                                                  [index]: { isOpen: false, productName: '' }
-                                                }))}
-                                              >
-                                                ×
-                                              </Button>
-                                            </div>
-                                          </div>
-                                          <div className="p-4">
-                                            <SmartHSNSearch
-                                              currentHSNCode={item.hsn_code}
-                                              productName={item.product_name}
-                                              onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
-                                              placeholder="Search HSN code for this product..."
-                                            />
-                                          </div>
+                                          />
                                         </div>
                                       </div>
                                     )}
