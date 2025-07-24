@@ -28,6 +28,7 @@ import {
   Save,
   X,
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { UnifiedQuote } from '@/types/unified-quote';
@@ -62,10 +63,49 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ hsn_code: '', category: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [isLookingUpHSN, setIsLookingUpHSN] = useState(false);
 
   // Get standardized currency display info
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const taxCalculator = PerItemTaxCalculator.getInstance();
+
+  // Auto-lookup HSN code and set correct category
+  const lookupHSNCode = async (hsnCode: string) => {
+    if (!hsnCode || !/^\d{2,8}$/.test(hsnCode)) {
+      return; // Skip invalid HSN codes
+    }
+
+    setIsLookingUpHSN(true);
+    setError(null);
+
+    try {
+      const { data: hsnRecord, error: hsnError } = await supabase
+        .from('hsn_master')
+        .select('hsn_code, category, description')
+        .eq('hsn_code', hsnCode)
+        .eq('is_active', true)
+        .single();
+
+      if (hsnError || !hsnRecord) {
+        setError(`HSN code ${hsnCode} not found in database`);
+        return;
+      }
+
+      // Automatically set the correct category
+      setEditForm(prev => ({
+        ...prev,
+        category: hsnRecord.category,
+      }));
+
+      console.log(`✅ [HSN-LOOKUP] Auto-set category for HSN ${hsnCode}: ${hsnRecord.category}`);
+
+    } catch (error) {
+      console.error('Error looking up HSN code:', error);
+      setError('Failed to lookup HSN code');
+    } finally {
+      setIsLookingUpHSN(false);
+    }
+  };
 
   // Calculate HSN tax breakdowns
   useEffect(() => {
@@ -276,7 +316,8 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       }
     } catch (error) {
       console.error('Error updating HSN:', error);
-      setError('Failed to update HSN classification');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update HSN classification';
+      setError(`HSN update failed: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -467,16 +508,25 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                               <div className="flex items-center space-x-2">
                                 <Input
                                   value={editForm.hsn_code}
-                                  onChange={(e) => setEditForm(prev => ({ ...prev, hsn_code: e.target.value }))}
+                                  onChange={(e) => {
+                                    const hsnCode = e.target.value;
+                                    setEditForm(prev => ({ ...prev, hsn_code: hsnCode }));
+                                    // Auto-lookup category when HSN code is entered
+                                    if (hsnCode.length >= 4) {
+                                      lookupHSNCode(hsnCode);
+                                    }
+                                  }}
                                   placeholder="HSN Code (e.g., 8517)"
                                   className="text-xs h-7 w-24"
+                                  disabled={isLookingUpHSN}
                                 />
                                 <Select
                                   value={editForm.category}
                                   onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
+                                  disabled={isLookingUpHSN}
                                 >
                                   <SelectTrigger className="text-xs h-7 w-32">
-                                    <SelectValue placeholder="Category" />
+                                    <SelectValue placeholder={isLookingUpHSN ? "Looking up..." : "Category"} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {categoryOptions.map((option) => (
@@ -487,6 +537,22 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                                   </SelectContent>
                                 </Select>
                               </div>
+                              
+                              {/* Error display */}
+                              {error && (
+                                <div className="text-xs text-red-600 mt-1">
+                                  {error}
+                                </div>
+                              )}
+                              
+                              {/* Lookup feedback */}
+                              {isLookingUpHSN && (
+                                <div className="text-xs text-blue-600 mt-1 flex items-center">
+                                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                  Looking up HSN category...
+                                </div>
+                              )}
+                              
                               <div className="flex items-center space-x-1">
                                 <Button
                                   size="sm"
