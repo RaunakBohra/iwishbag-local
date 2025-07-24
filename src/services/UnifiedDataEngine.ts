@@ -809,6 +809,13 @@ export class UnifiedDataEngine {
   }
 
   /**
+   * Public method to clear quote cache (useful for forcing refresh after updates)
+   */
+  public clearQuoteCache(quoteId: string): void {
+    this.clearCache(`quote_${quoteId}`);
+  }
+
+  /**
    * Bulk operations for efficiency
    */
   async bulkUpdateStatus(quoteIds: string[], status: string): Promise<boolean> {

@@ -156,7 +156,8 @@
       "Bash(npx playwright test:*)",
       "Bash(git clone:*)",
       "Bash(source:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(kill:*)"
     ],
     "deny": []
   }

@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -120,6 +121,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
+  const queryClient = useQueryClient();
 
   // Core state
   const quoteId = initialQuoteId || paramId;
@@ -308,6 +310,56 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         
         // Success! Break out of retry loop
         console.log(`✅ [LoadQuoteData] Successfully loaded quote on attempt ${attempt + 1}`);
+        
+        // Process the successfully loaded quote data
+        console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
+          oldStatus: quote?.status,
+          newStatus: quoteData.status,
+          quoteId: quoteData.id,
+        });
+        setQuote(quoteData);
+
+        // Initialize HSN state for existing items
+        if (quoteData.items) {
+          const initialHsnFormData: {[key: string]: { hsn_code: string; category: string }} = {};
+          const initialSelectedData: {[key: string]: any} = {};
+          
+          quoteData.items.forEach(item => {
+            if (item.hsn_code || item.category) {
+              initialHsnFormData[item.id] = {
+                hsn_code: item.hsn_code || '',
+                category: item.category || ''
+              };
+              
+              if (item.hsn_code && item.category) {
+                initialSelectedData[item.id] = {
+                  hsn_code: item.hsn_code,
+                  category: item.category,
+                  description: `${item.category} item`,
+                  minimum_valuation_usd: undefined // Will be loaded from database if needed
+                };
+              }
+            }
+          });
+          
+          setHsnFormData(initialHsnFormData);
+          setSelectedHSNData(initialSelectedData);
+        }
+
+        // Initialize tax method selection state from quote operational data
+        setCurrentTaxMethod(quoteData.calculation_method_preference || 'auto');
+        
+        // Initialize per-item valuation methods from operational data
+        if (quoteData.operational_data?.item_valuation_preferences) {
+          setItemValuationMethods(quoteData.operational_data.item_valuation_preferences);
+        }
+
+        // Populate form with quote data
+        populateFormFromQuote(quoteData);
+
+        // Calculate smart features
+        await calculateSmartFeatures(quoteData);
+        
         break;
         
       } catch (error) {
@@ -333,64 +385,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       } finally {
         setIsLoading(false);
       }
-    }
-
-      console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
-        oldStatus: quote?.status,
-        newStatus: quoteData.status,
-        quoteId: quoteData.id,
-      });
-      setQuote(quoteData);
-
-      // Initialize HSN state for existing items
-      if (quoteData.items) {
-        const initialHsnFormData: {[key: string]: { hsn_code: string; category: string }} = {};
-        const initialSelectedData: {[key: string]: any} = {};
-        
-        quoteData.items.forEach(item => {
-          if (item.hsn_code || item.category) {
-            initialHsnFormData[item.id] = {
-              hsn_code: item.hsn_code || '',
-              category: item.category || ''
-            };
-            
-            if (item.hsn_code && item.category) {
-              initialSelectedData[item.id] = {
-                hsn_code: item.hsn_code,
-                category: item.category,
-                description: `${item.category} item`,
-                minimum_valuation_usd: undefined // Will be loaded from database if needed
-              };
-            }
-          }
-        });
-        
-        setHsnFormData(initialHsnFormData);
-        setSelectedHSNData(initialSelectedData);
-      }
-
-      // Initialize tax method selection state from quote operational data
-      setCurrentTaxMethod(quoteData.calculation_method_preference || 'auto');
-      
-      // Initialize per-item valuation methods from operational data
-      if (quoteData.operational_data?.item_valuation_preferences) {
-        setItemValuationMethods(quoteData.operational_data.item_valuation_preferences);
-      }
-
-      // Populate form with quote data
-      populateFormFromQuote(quoteData);
-
-      // Calculate smart features
-      await calculateSmartFeatures(quoteData);
-    } catch (error) {
-      console.error('Error loading quote:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load quote data.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -917,9 +911,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           if (success) {
             // HSN database update successful
             
-            // 3. Trigger quote data refresh to update sidebar components
-            // This will cause the quote prop to be refreshed, syncing sidebar components
-            await loadQuoteData();
+            // 3. Clear UnifiedDataEngine cache first
+            unifiedDataEngine.clearQuoteCache(quote.id);
+            
+            // 4. Invalidate React Query cache to ensure fresh data
+            await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
+            await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
+            await queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            
+            // 5. Trigger quote data refresh to update sidebar components
+            await loadQuoteData(true); // Force refresh
             
             // Quote data refreshed for sidebar sync
           } else {
