@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { Progress } from '@/components/ui/progress';
 import {
   Tags,
@@ -27,15 +28,22 @@ import {
   Edit,
   Save,
   X,
+  Clock,
+  Plus,
+  Trash2,
+  BarChart3,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import type { UnifiedQuote } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 import PerItemTaxCalculator from '@/services/PerItemTaxCalculator';
 import type { ItemTaxBreakdown } from '@/services/PerItemTaxCalculator';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
+import { DualCalculationMethodSelector } from '@/components/admin/tax-method-selection/DualCalculationMethodSelector';
 
 interface CompactHSNTaxBreakdownProps {
   quote: UnifiedQuote;
@@ -59,28 +67,44 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [enhancedQuote, setEnhancedQuote] = useState<UnifiedQuote | null>(null);
   
-  // Edit state management
+  // Edit state management with item-specific error tracking
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ hsn_code: '', category: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [isLookingUpHSN, setIsLookingUpHSN] = useState(false);
+  const [itemErrors, setItemErrors] = useState<Record<string, string | null>>({});
+  
+  // Method selection state and handler
+  const handleMethodChange = async (method: string, metadata?: any) => {
+    console.log('🔄 [HSN] Tax calculation method changed:', { method, metadata, quoteId: quote.id });
+    
+    // Trigger recalculation with new method
+    if (onRecalculate) {
+      await onRecalculate();
+    }
+    
+    // Refresh the current calculation to reflect new method
+    await calculateItemTaxes();
+  };
 
   // Get standardized currency display info
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const taxCalculator = PerItemTaxCalculator.getInstance();
 
   // Auto-lookup HSN code and set correct category
-  const lookupHSNCode = async (hsnCode: string) => {
-    console.log(`🔍 [HSN-LOOKUP] Attempting lookup for: "${hsnCode}" (length: ${hsnCode.length})`);
+  const lookupHSNCode = async (hsnCode: string, itemId: string) => {
+    console.log(`🔍 [HSN-LOOKUP] Attempting lookup for item ${itemId}: "${hsnCode}" (length: ${hsnCode.length})`);
     
     if (!hsnCode || !/^\d{2,8}$/.test(hsnCode)) {
       console.log(`❌ [HSN-LOOKUP] Invalid HSN code format: "${hsnCode}"`);
+      // Clear any existing errors for invalid format
+      setItemErrors(prev => ({ ...prev, [itemId]: null }));
       return; // Skip invalid HSN codes
     }
 
     console.log(`🔄 [HSN-LOOKUP] Starting database lookup for HSN: ${hsnCode}`);
     setIsLookingUpHSN(true);
-    setError(null);
+    setItemErrors(prev => ({ ...prev, [itemId]: null })); // Clear any previous errors for this item
 
     try {
       const { data: hsnRecord, error: hsnError } = await supabase
@@ -95,11 +119,12 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       if (hsnError || !hsnRecord) {
         const errorMsg = `HSN code ${hsnCode} not found in database`;
         console.log(`❌ [HSN-LOOKUP] ${errorMsg}`);
-        setError(errorMsg);
+        setItemErrors(prev => ({ ...prev, [itemId]: errorMsg }));
         return;
       }
 
-      // Automatically set the correct category
+      // Clear error and automatically set the correct category
+      setItemErrors(prev => ({ ...prev, [itemId]: null })); // Ensure error is cleared on successful lookup
       setEditForm(prev => {
         console.log(`🔄 [HSN-LOOKUP] Updating form - old category: ${prev.category}, new category: ${hsnRecord.category}`);
         return {
@@ -112,7 +137,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
 
     } catch (error) {
       console.error('❌ [HSN-LOOKUP] Database error:', error);
-      setError('Failed to lookup HSN code');
+      setItemErrors(prev => ({ ...prev, [itemId]: 'Failed to lookup HSN code' }));
     } finally {
       setIsLookingUpHSN(false);
     }
@@ -287,15 +312,50 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
   const handleEditStart = (itemId: string, currentHsnCode: string, currentCategory: string) => {
     setEditingItemId(itemId);
     setEditForm({ hsn_code: currentHsnCode, category: currentCategory });
+    setItemErrors(prev => ({ ...prev, [itemId]: null })); // Clear any existing errors for this item when starting edit
   };
 
   const handleEditCancel = () => {
+    const currentItemId = editingItemId;
     setEditingItemId(null);
     setEditForm({ hsn_code: '', category: '' });
+    if (currentItemId) {
+      setItemErrors(prev => ({ ...prev, [currentItemId]: null })); // Clear errors for this item when cancelling edit
+    }
   };
 
   const handleEditSave = async (itemId: string) => {
     if (!editForm.hsn_code.trim()) return;
+    
+    // Prevent saving while lookup is in progress
+    if (isLookingUpHSN) {
+      console.log(`⏳ [HSN-SAVE] Cannot save while lookup is in progress`);
+      setItemErrors(prev => ({ ...prev, [itemId]: 'Please wait for HSN lookup to complete' }));
+      return;
+    }
+    
+    // Debug what's being saved
+    console.log(`💾 [HSN-SAVE] Starting save for item ${itemId}:`, {
+      hsn_code: editForm.hsn_code.trim(),
+      category: editForm.category,
+      isLookingUp: isLookingUpHSN,
+      currentError: itemErrors[itemId],
+    });
+    
+    // If category is empty but HSN code is provided, try auto-lookup one more time
+    if (editForm.hsn_code.trim() && !editForm.category) {
+      console.log(`🔄 [HSN-SAVE] No category provided, attempting final lookup...`);
+      await lookupHSNCode(editForm.hsn_code.trim(), itemId);
+      
+      // Wait a moment for the lookup to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if category was set
+      if (!editForm.category) {
+        setItemErrors(prev => ({ ...prev, [itemId]: 'Could not determine category for HSN code. Please select manually.' }));
+        return;
+      }
+    }
     
     setIsSaving(true);
     try {
@@ -306,7 +366,9 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       });
 
       if (success) {
-        // Refresh the tax calculations
+        console.log(`✅ [HSN-SAVE] Successfully saved HSN data for item ${itemId}`);
+        // Clear any errors for this item and exit edit mode
+        setItemErrors(prev => ({ ...prev, [itemId]: null }));
         setEditingItemId(null);
         
         // Force quote data refresh to ensure admin tracking is updated
@@ -315,20 +377,26 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
           onUpdateQuote();
         }
         
-        // Small delay to ensure data propagation
+        // Trigger immediate recalculation for real-time updates
+        if (onRecalculate) {
+          console.log('🧮 [HSN-UPDATE] Triggering immediate recalculation after HSN update');
+          onRecalculate();
+        }
+        
+        // Also refresh the local tax breakdown data
         setTimeout(() => {
-          if (onRecalculate) {
-            console.log('🧮 [HSN-UPDATE] Triggering recalculation after HSN update');
-            onRecalculate();
-          }
-        }, 100);
+          console.log('🔄 [HSN-UPDATE] Refreshing local tax breakdown data');
+          // This will trigger the useEffect to recalculate with updated quote data
+          setTaxBreakdowns([]);
+        }, 50);
       } else {
-        setError('Failed to update HSN classification');
+        console.log(`❌ [HSN-SAVE] Save failed for item ${itemId} - updateItem returned false`);
+        setItemErrors(prev => ({ ...prev, [itemId]: 'Failed to update HSN classification' }));
       }
     } catch (error) {
-      console.error('Error updating HSN:', error);
+      console.error(`❌ [HSN-SAVE] Error updating HSN for item ${itemId}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update HSN classification';
-      setError(`HSN update failed: ${errorMessage}`);
+      setItemErrors(prev => ({ ...prev, [itemId]: `HSN update failed: ${errorMessage}` }));
     } finally {
       setIsSaving(false);
     }
@@ -355,9 +423,15 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
             </AlertDescription>
           </Alert>
           <Button
+            type="button"
             variant="outline"
             size="sm"
-            onClick={() => window.location.reload()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setError(null);
+              if (onRecalculate) onRecalculate();
+            }}
             className="mt-2 text-xs"
           >
             <RefreshCw className="w-3 h-3 mr-1" />
@@ -367,6 +441,36 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       </Card>
     );
   }
+
+  // Timeline helper functions
+  const getActionIcon = (modificationType: string) => {
+    switch (modificationType) {
+      case 'assign':
+        return <Plus className="h-3 w-3 text-green-600" />;
+      case 'change':
+        return <Edit className="h-3 w-3 text-blue-600" />;
+      case 'clear':
+        return <Trash2 className="h-3 w-3 text-red-600" />;
+      default:
+        return <Edit className="h-3 w-3 text-gray-600" />;
+    }
+  };
+
+  const getActionColor = (modificationType: string) => {
+    switch (modificationType) {
+      case 'assign':
+        return 'bg-green-50 text-green-700 border-green-200';
+      case 'change':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'clear':
+        return 'bg-red-50 text-red-700 border-red-200';
+      default:
+        return 'bg-gray-50 text-gray-700 border-gray-200';
+    }
+  };
+
+  // Get timeline data
+  const history = unifiedDataEngine.getHSNAdminOverrideHistory(quote);
 
   return (
     <Card className="shadow-sm border-purple-200 bg-purple-50/20">
@@ -384,9 +488,14 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
               </Badge>
             )}
             <Button
+              type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
               className="h-6 w-6 p-0"
             >
               {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -454,12 +563,18 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
         {isExpanded && summary.itemsWithHSN > 0 && (
           <div className="mt-4 border-t border-purple-200 pt-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-8">
+              <TabsList className="grid w-full grid-cols-4 h-8">
                 <TabsTrigger value="summary" className="text-xs">
                   Summary
                 </TabsTrigger>
                 <TabsTrigger value="per-item" className="text-xs">
                   Per Item
+                </TabsTrigger>
+                <TabsTrigger value="method" className="text-xs">
+                  Method
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="text-xs">
+                  Timeline
                 </TabsTrigger>
               </TabsList>
 
@@ -502,10 +617,16 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
 
               <TabsContent value="per-item" className="mt-3">
                 <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {taxBreakdowns.map((breakdown, index) => (
+                  {taxBreakdowns.map((breakdown, index) => {
+                    const isUnclassified = !breakdown.hsn_code || breakdown.hsn_code.trim() === '';
+                    return (
                     <div
                       key={breakdown.item_id}
-                      className="border border-gray-200 rounded p-2 space-y-2"
+                      className={`border rounded p-2 space-y-2 ${
+                        isUnclassified 
+                          ? 'border-amber-300 bg-amber-50' 
+                          : 'border-gray-200'
+                      }`}
                     >
                       {/* Item Header */}
                       <div className="flex items-start justify-between">
@@ -513,30 +634,34 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                           <h4 className="text-xs font-medium text-gray-900 truncate">
                             {breakdown.item_name}
                           </h4>
+                          {isUnclassified && (
+                            <div className="flex items-center space-x-1 mt-1 p-1 bg-amber-100 rounded text-xs">
+                              <AlertTriangle className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                              <span className="text-amber-800 font-medium">
+                                HSN Code Required - Click Edit to Assign
+                              </span>
+                            </div>
+                          )}
                           {editingItemId === breakdown.item_id ? (
                             // Edit Mode
                             <div className="space-y-2 mt-2">
                               <div className="flex items-center space-x-2">
-                                <Input
-                                  value={editForm.hsn_code}
-                                  onChange={(e) => {
-                                    const hsnCode = e.target.value;
-                                    console.log(`🔤 [HSN-INPUT] User typed: "${hsnCode}" (length: ${hsnCode.length})`);
-                                    
-                                    setEditForm(prev => ({ ...prev, hsn_code: hsnCode }));
-                                    
-                                    // Auto-lookup category when HSN code is entered
-                                    if (hsnCode.length >= 4) {
-                                      console.log(`🚀 [HSN-INPUT] Triggering lookup for: ${hsnCode}`);
-                                      lookupHSNCode(hsnCode);
-                                    } else {
-                                      console.log(`⏭️ [HSN-INPUT] Skipping lookup - too short: ${hsnCode.length} chars`);
-                                    }
-                                  }}
-                                  placeholder="HSN Code (e.g., 8517)"
-                                  className="text-xs h-7 w-24"
-                                  disabled={isLookingUpHSN}
-                                />
+                                <div className="w-48">
+                                  <SmartHSNSearch
+                                    currentHSNCode={editForm.hsn_code}
+                                    productName={breakdown.item_name}
+                                    onHSNSelect={(hsn) => {
+                                      console.log(`🎯 [SMART-HSN] Selected: ${hsn.hsn_code} - ${hsn.display_name}`);
+                                      setEditForm(prev => ({
+                                        ...prev,
+                                        hsn_code: hsn.hsn_code,
+                                        category: hsn.category
+                                      }));
+                                    }}
+                                    placeholder="Search HSN by product name..."
+                                    size="sm"
+                                  />
+                                </div>
                                 <Select
                                   value={editForm.category}
                                   onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
@@ -556,9 +681,9 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                               </div>
                               
                               {/* Error display */}
-                              {error && (
+                              {itemErrors[breakdown.item_id] && (
                                 <div className="text-xs text-red-600 mt-1">
-                                  {error}
+                                  {itemErrors[breakdown.item_id]}
                                 </div>
                               )}
                               
@@ -572,18 +697,28 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                               
                               <div className="flex items-center space-x-1">
                                 <Button
+                                  type="button"
                                   size="sm"
-                                  onClick={() => handleEditSave(breakdown.item_id)}
-                                  disabled={isSaving || !editForm.hsn_code.trim()}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleEditSave(breakdown.item_id);
+                                  }}
+                                  disabled={isSaving || isLookingUpHSN || !editForm.hsn_code.trim()}
                                   className="h-6 px-2 text-xs"
                                 >
                                   <Save className="h-3 w-3 mr-1" />
-                                  {isSaving ? 'Saving...' : 'Save'}
+                                  {isSaving ? 'Saving...' : isLookingUpHSN ? 'Looking up...' : 'Save'}
                                 </Button>
                                 <Button
+                                  type="button"
                                   size="sm"
                                   variant="outline"
-                                  onClick={handleEditCancel}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleEditCancel();
+                                  }}
                                   className="h-6 px-2 text-xs"
                                 >
                                   <X className="h-3 w-3 mr-1" />
@@ -594,16 +729,28 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                           ) : (
                             // Display Mode
                             <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                HSN: {breakdown.hsn_code}
+                              <Badge 
+                                variant={isUnclassified ? "secondary" : "outline"} 
+                                className={`text-xs ${
+                                  isUnclassified 
+                                    ? 'bg-amber-200 text-amber-800 border-amber-300' 
+                                    : ''
+                                }`}
+                              >
+                                {isUnclassified ? 'HSN: Not Assigned' : `HSN: ${breakdown.hsn_code}`}
                               </Badge>
                               {getCategoryBadge(breakdown.category)}
                               {getValuationMethodBadge(breakdown.valuation_method)}
                               {getConfidenceBadge(breakdown.confidence_score)}
                               <Button
+                                type="button"
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleEditStart(breakdown.item_id, breakdown.hsn_code, breakdown.category)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEditStart(breakdown.item_id, breakdown.hsn_code, breakdown.category);
+                                }}
                                 className="h-5 w-5 p-0 hover:bg-gray-100"
                                 title="Edit HSN classification"
                               >
@@ -787,8 +934,94 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                         </div>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="method" className="mt-3">
+                <DualCalculationMethodSelector
+                  quoteId={quote.id}
+                  originCountry={quote.origin_country}
+                  destinationCountry={quote.destination_country}
+                  currentMethod={quote.calculation_method_preference || 'auto'}
+                  onMethodChange={handleMethodChange}
+                  adminId={quote.operational_data?.admin_overrides?.[0]?.admin_id}
+                  isLoading={isLoading || isCalculating}
+                  className="border-0 shadow-none bg-transparent p-0"
+                />
+              </TabsContent>
+
+              <TabsContent value="timeline" className="mt-3">
+                {history.summary.total_modifications === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No admin HSN modifications yet</p>
+                    <p className="text-xs mt-1">All HSN codes are from auto-classification or migration</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-2 bg-green-50 rounded-md border border-green-200">
+                        <div className="text-lg font-semibold text-green-700">{history.summary.assignments}</div>
+                        <div className="text-xs text-green-600">Assigned</div>
+                      </div>
+                      <div className="text-center p-2 bg-blue-50 rounded-md border border-blue-200">
+                        <div className="text-lg font-semibold text-blue-700">{history.summary.changes}</div>
+                        <div className="text-xs text-blue-600">Changed</div>
+                      </div>
+                      <div className="text-center p-2 bg-red-50 rounded-md border border-red-200">
+                        <div className="text-lg font-semibold text-red-700">{history.summary.clears}</div>
+                        <div className="text-xs text-red-600">Cleared</div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Recent Activity */}
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+                        Recent Activity
+                      </h4>
+                      <ScrollArea className="h-40">
+                        <div className="space-y-2">
+                          {history.recent_activity.map((activity, index) => (
+                            <div key={`${activity.timestamp}-${index}`} className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
+                              <div className={`p-1.5 rounded-full ${getActionColor(activity.modification_type)}`}>
+                                {getActionIcon(activity.modification_type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-foreground leading-tight">
+                                  {activity.action_description}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs py-0 px-1.5 h-4">
+                                    {activity.modification_type}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {activity.time_ago}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+
+                    {/* Metadata */}
+                    {history.summary.last_activity && (
+                      <>
+                        <Separator />
+                        <div className="text-xs text-muted-foreground">
+                          Last admin activity: {new Date(history.summary.last_activity).toLocaleString()}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -798,9 +1031,14 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
         {summary.itemsWithHSN > 0 && (
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-purple-200">
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              onClick={onRecalculate}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onRecalculate) onRecalculate();
+              }}
               disabled={isLoading || isCalculating}
               className="text-xs"
             >
@@ -825,9 +1063,14 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                 </span>
               </div>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
-                onClick={onUpdateQuote}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (onUpdateQuote) onUpdateQuote();
+                }}
                 className="h-6 text-xs text-blue-600 hover:text-blue-800"
               >
                 Auto-classify
