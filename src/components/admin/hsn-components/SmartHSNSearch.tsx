@@ -4,49 +4,31 @@
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Search,
   Grid3X3,
   Lightbulb,
-  Check,
   ChevronRight,
   Loader2,
   Tag,
-  TrendingUp,
   Star,
   Package,
-  AlertCircle,
   Info,
   Scale,
   CheckCircle,
 } from 'lucide-react';
-import { enhancedHSNSearchService, HSNSearchResult, HSNCategoryGroup } from '@/services/EnhancedHSNSearchService';
+import {
+  enhancedHSNSearchService,
+  HSNSearchResult,
+  HSNCategoryGroup,
+} from '@/services/EnhancedHSNSearchService';
 import { useToast } from '@/hooks/use-toast';
 
 interface SmartHSNSearchProps {
@@ -64,7 +46,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   onHSNSelect,
   className = '',
   placeholder = 'Search by product name, category, or HSN code...',
-  size = 'default'
+  size = 'default',
 }) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -76,7 +58,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   const [autoSuggestions, setAutoSuggestions] = useState<HSNSearchResult[]>([]);
   const [currentHSNData, setCurrentHSNData] = useState<HSNSearchResult | null>(null);
   const [activeTab, setActiveTab] = useState<'search' | 'categories' | 'suggestions'>('search');
-  
+
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,13 +66,16 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   useEffect(() => {
     loadInitialData();
     initializeLearningSystem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeLearningSystem = async () => {
     try {
       const result = await enhancedHSNSearchService.initializeContextualLearning();
       if (result.success) {
-        console.log(`HSN Learning initialized: ${result.learned} new mappings, ${result.updated} updated`);
+        console.log(
+          `HSN Learning initialized: ${result.learned} new mappings, ${result.updated} updated`,
+        );
       }
     } catch (error) {
       console.error('Failed to initialize HSN learning:', error);
@@ -115,9 +100,9 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
     try {
       const [categories, popular] = await Promise.all([
         enhancedHSNSearchService.getCategoryGroups(),
-        enhancedHSNSearchService.searchHSN({ limit: 8 })
+        enhancedHSNSearchService.searchHSN({ limit: 8 }),
       ]);
-      
+
       setCategoryGroups(categories);
       if (!currentHSNCode) {
         setSearchResults(popular);
@@ -129,17 +114,17 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const detectHSNFromProduct = async () => {
     if (!productName) return;
-    
+
     try {
       const result = await enhancedHSNSearchService.getEnhancedProductSuggestions(productName);
       setAutoSuggestions(result.suggestions);
-      
+
       // Store strategy stats for debugging/analytics
       console.log('HSN Detection Strategies:', result.strategies);
       if (result.learningStats) {
         console.log('Learning Stats:', result.learningStats);
       }
-      
+
       if (result.suggestions.length > 0 && activeTab !== 'search') {
         setActiveTab('suggestions');
       }
@@ -150,13 +135,13 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const loadCurrentHSNData = async () => {
     if (!currentHSNCode) return;
-    
+
     try {
-      const results = await enhancedHSNSearchService.searchHSN({ 
+      const results = await enhancedHSNSearchService.searchHSN({
         query: currentHSNCode,
-        limit: 1 
+        limit: 1,
       });
-      
+
       if (results.length > 0) {
         setCurrentHSNData(results[0]);
       }
@@ -178,16 +163,16 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
     try {
       const results = await enhancedHSNSearchService.searchHSN({
         query: query.trim(),
-        limit: 12
+        limit: 12,
       });
-      
+
       setSearchResults(results);
     } catch (error) {
       console.error('Search failed:', error);
       toast({
         title: 'Search failed',
         description: 'Failed to search HSN codes. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -196,12 +181,12 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const handleSearchInputChange = (value: string) => {
     setSearchQuery(value);
-    
+
     // Clear previous timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    
+
     // Debounce search
     searchTimeoutRef.current = setTimeout(() => {
       handleSearch(value);
@@ -211,14 +196,14 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   const handleCategorySelect = async (category: string, subcategory?: string) => {
     setIsLoading(true);
     setSelectedCategory(category);
-    
+
     try {
       const results = await enhancedHSNSearchService.searchHSN({
         category,
         subcategory,
-        limit: 15
+        limit: 15,
       });
-      
+
       setSearchResults(results);
       setActiveTab('search');
     } catch (error) {
@@ -229,16 +214,19 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   };
 
   const handleHSNSelect = (hsn: HSNSearchResult, event?: React.MouseEvent) => {
+    console.log('🎯 [HSN] handleHSNSelect called:', { hsn, hasEvent: !!event });
+
     // Prevent any form submission or navigation
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
+    console.log('🎯 [HSN] Calling onHSNSelect with:', hsn);
     onHSNSelect(hsn);
     setIsOpen(false);
     setSearchQuery('');
-    
+
     toast({
       title: 'HSN Code Selected',
       description: `${hsn.hsn_code} - ${hsn.display_name}`,
@@ -247,9 +235,12 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const getSizeClasses = () => {
     switch (size) {
-      case 'sm': return 'h-8 text-sm';
-      case 'lg': return 'h-12 text-lg';
-      default: return 'h-10';
+      case 'sm':
+        return 'h-8 text-sm';
+      case 'lg':
+        return 'h-12 text-lg';
+      default:
+        return 'h-10';
     }
   };
 
@@ -266,8 +257,8 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                   {currentHSNData.hsn_code} - {currentHSNData.display_name}
                 </div>
                 <div className="text-sm text-green-600">
-                  Category: {currentHSNData.category} • 
-                  Customs: {currentHSNData.tax_data.typical_rates.customs.common}%
+                  Category: {currentHSNData.category} • Customs:{' '}
+                  {currentHSNData.tax_data.typical_rates.customs.common}%
                 </div>
               </div>
             </div>
@@ -302,7 +293,22 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
       {/* Search Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] p-0" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent
+          className="max-w-4xl max-h-[80vh] p-0"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+          onKeyDown={(e) => {
+            // Prevent Enter key from submitting parent form
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          onClick={(e) => {
+            // Prevent clicks inside dialog from bubbling to form
+            e.stopPropagation();
+          }}
+        >
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center">
               <Search className="mr-2 h-5 w-5" />
@@ -311,7 +317,11 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
           </DialogHeader>
 
           <div className="px-6">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as any)}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="search" className="flex items-center">
                   <Search className="mr-1 h-4 w-4" />
@@ -343,6 +353,12 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       placeholder={placeholder}
                       value={searchQuery}
                       onChange={(e) => handleSearchInputChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }
+                      }}
                       className="pl-10"
                     />
                     {isLoading && (
@@ -378,7 +394,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       {categoryGroups.length > 6 && (
                         <Button
                           type="button"
-                          variant="ghost" 
+                          variant="ghost"
                           size="sm"
                           className="w-full text-blue-600 hover:text-blue-700"
                           onClick={() => setActiveTab('categories')}
@@ -422,7 +438,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                           showMatchReason={!!searchQuery}
                         />
                       ))}
-                      
+
                       {searchResults.length === 0 && !isLoading && (
                         <div className="text-center py-8 text-gray-500">
                           <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
@@ -440,23 +456,28 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 <ScrollArea className="h-80">
                   <div className="space-y-3">
                     {categoryGroups.map((group) => (
-                      <Card key={group.category} className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4" 
-                            style={{ borderLeftColor: group.color }}>
+                      <Card
+                        key={group.category}
+                        className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4"
+                        style={{ borderLeftColor: group.color }}
+                      >
                         <CardContent className="p-4">
-                          <div 
+                          <div
                             className="flex items-center justify-between"
                             onClick={() => handleCategorySelect(group.category)}
                           >
                             <div className="flex items-center space-x-4">
                               {/* Enhanced Icon with Background */}
-                              <div 
+                              <div
                                 className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-semibold text-xl shadow-sm"
                                 style={{ backgroundColor: group.color }}
                               >
                                 {group.icon}
                               </div>
                               <div>
-                                <div className="font-semibold text-gray-900 text-lg">{group.display_name}</div>
+                                <div className="font-semibold text-gray-900 text-lg">
+                                  {group.display_name}
+                                </div>
                                 <div className="text-sm text-gray-600 flex items-center">
                                   <Package className="h-3 w-3 mr-1" />
                                   {group.count} HSN code{group.count > 1 ? 's' : ''} available
@@ -465,7 +486,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                             </div>
                             <ChevronRight className="h-6 w-6 text-gray-400 hover:text-blue-500 transition-colors" />
                           </div>
-                          
+
                           {/* Subcategories */}
                           {group.subcategories.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -524,13 +545,15 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                           showMatchReason={true}
                         />
                       ))}
-                      
+
                       {autoSuggestions.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           <Lightbulb className="mx-auto h-12 w-12 mb-4 opacity-50" />
                           <p>No suggestions available</p>
                           <p className="text-sm">
-                            {productName ? 'Try using the search or category tabs' : 'Enter a product name to get AI suggestions'}
+                            {productName
+                              ? 'Try using the search or category tabs'
+                              : 'Enter a product name to get AI suggestions'}
                           </p>
                         </div>
                       )}
@@ -558,33 +581,49 @@ const HSNResultCard: React.FC<HSNResultCardProps> = ({
   hsn,
   onSelect,
   showConfidence = false,
-  showMatchReason = false
+  showMatchReason = false,
 }) => {
   const handleCardClick = (e: React.MouseEvent) => {
+    console.log('🎯 [HSN] Card clicked:', { hsnCode: hsn.hsn_code, hsnName: hsn.display_name });
     e.preventDefault();
     e.stopPropagation();
+
+    // Call onSelect with the HSN data
+    console.log('🎯 [HSN] Calling onSelect from card');
     onSelect(hsn, e);
   };
 
   return (
-    <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4 hover:bg-blue-50/30" 
-          style={{ borderLeftColor: hsn.color }}>
-      <CardContent className="p-4" onClick={handleCardClick}>
+    <Card
+      className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4 hover:bg-blue-50/30"
+      style={{ borderLeftColor: hsn.color }}
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCardClick(e as any);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
             {/* Enhanced Icon with Background */}
-            <div 
+            <div
               className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-lg shadow-sm"
               style={{ backgroundColor: hsn.color }}
             >
               {hsn.icon}
             </div>
-            
+
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
                 <span className="font-mono font-bold text-blue-700 text-lg">{hsn.hsn_code}</span>
                 {showConfidence && (
-                  <Badge 
+                  <Badge
                     variant={hsn.confidence >= 0.8 ? 'default' : 'secondary'}
                     className="text-xs"
                   >
@@ -592,30 +631,38 @@ const HSNResultCard: React.FC<HSNResultCardProps> = ({
                   </Badge>
                 )}
                 {hsn.search_priority <= 2 && (
-                  <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200"
+                  >
                     <Star className="h-3 w-3 mr-1" />
                     Popular
                   </Badge>
                 )}
               </div>
-              
+
               <div className="font-semibold text-gray-900 mb-1 text-base">{hsn.display_name}</div>
               <div className="text-sm text-gray-600 mb-3 line-clamp-2">{hsn.description}</div>
-              
+
               {/* Enhanced Info Section */}
               <div className="flex items-center flex-wrap gap-3 text-xs">
                 <div className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-md">
                   <Scale className="h-3 w-3 text-gray-500" />
-                  <span className="font-medium">Customs: {hsn.tax_data.typical_rates.customs.common}%</span>
+                  <span className="font-medium">
+                    Customs: {hsn.tax_data.typical_rates.customs.common}%
+                  </span>
                 </div>
-                
+
                 <div className="flex items-center space-x-1 bg-blue-100 px-2 py-1 rounded-md">
                   <Package className="h-3 w-3 text-blue-500" />
                   <span className="font-medium text-blue-700">{hsn.category}</span>
                 </div>
-                
+
                 {showMatchReason && (
-                  <Badge variant="outline" className="text-xs py-1 bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="text-xs py-1 bg-green-50 text-green-700 border-green-200"
+                  >
                     <CheckCircle className="h-3 w-3 mr-1" />
                     {hsn.match_reason}
                   </Badge>
@@ -632,7 +679,7 @@ const HSNResultCard: React.FC<HSNResultCardProps> = ({
               )}
             </div>
           </div>
-          
+
           {/* Action Arrow */}
           <div className="flex flex-center">
             <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />

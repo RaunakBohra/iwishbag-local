@@ -316,6 +316,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           oldStatus: quote?.status,
           newStatus: quoteData.status,
           quoteId: quoteData.id,
+          oldItems: quote?.items?.map(i => ({ id: i.id, hsn: i.hsn_code, category: i.category })),
+          newItems: quoteData.items?.map(i => ({ id: i.id, hsn: i.hsn_code, category: i.category }))
         });
         setQuote(quoteData);
 
@@ -922,7 +924,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             // 5. Trigger quote data refresh to update sidebar components
             await loadQuoteData(true); // Force refresh
             
-            // 6. Fetch HSN weight for the updated item
+            // 6. Update liveQuote to trigger re-renders
+            if (isEditMode && quote) {
+              const updatedQuote = await unifiedDataEngine.getQuote(quote.id, true);
+              if (updatedQuote) {
+                setLiveQuote(updatedQuote);
+                console.log('✅ [HSN] LiveQuote updated with new HSN data');
+              }
+            }
+            
+            // 7. Fetch HSN weight for the updated item
             if (hsnData.hsn_code) {
               await fetchHSNWeight(itemIndex, hsnData.hsn_code);
             }
@@ -2215,7 +2226,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             {/* Left Column - Primary Edit Form (2/3 width) */}
             <div className="md:col-span-2 space-y-4">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
+                <form 
+                  onSubmit={form.handleSubmit(onFormSubmit)} 
+                  onKeyDown={(e) => {
+                    // Prevent Enter key from submitting form unless it's in a textarea
+                    if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'TEXTAREA') {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="space-y-6"
+                >
                   {/* Products Section - Clean and Simple */}
                   <Card className="shadow-sm border-gray-200">
                     {/* Show "Add More" link when products exist */}
@@ -3023,6 +3043,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
               {/* HSN Tax Breakdown - Item-level tax transparency */}
               <CompactHSNTaxBreakdown
+                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
                 compact={true}
@@ -3078,6 +3099,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
               {/* HSN Tax Breakdown - Item-level tax transparency */}
               <CompactHSNTaxBreakdown
+                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
                 compact={true}
@@ -3233,6 +3255,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
               {/* HSN Tax Breakdown - Item-level tax transparency */}
               <CompactHSNTaxBreakdown
+                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
                 compact={true}
