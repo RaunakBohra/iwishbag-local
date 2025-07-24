@@ -88,6 +88,7 @@ import { CompactPaymentManager } from './smart-components/CompactPaymentManager'
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
+import { TaxCalculationSidebar } from './smart-components/TaxCalculationSidebar';
 import { TaxMethodSelectionPanel } from './tax-method-selection/TaxMethodSelectionPanel';
 import { PerItemValuationSelector } from './tax-method-selection/PerItemValuationSelector';
 import { TaxHubContainer } from './tax-hub/TaxHubContainer';
@@ -846,6 +847,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     try {
       const items = form.getValues('items') || [];
       if (items[itemIndex]) {
+        // 1. Update form state immediately (for UI responsiveness)
         items[itemIndex] = {
           ...items[itemIndex],
           hsn_code: hsnData.hsn_code,
@@ -854,10 +856,38 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         
         form.setValue('items', items);
 
-        // Trigger quote calculation update after HSN assignment
+        // 2. Persist to database immediately for sidebar synchronization
+        if (quote?.id && items[itemIndex].id) {
+          console.log(`🏷️ [HSN] Persisting HSN assignment to database:`, {
+            quoteId: quote.id,
+            itemId: items[itemIndex].id,
+            hsnCode: hsnData.hsn_code,
+            category: hsnData.category || hsnData.display_name
+          });
+
+          const success = await unifiedDataEngine.updateItem(quote.id, items[itemIndex].id, {
+            hsn_code: hsnData.hsn_code,
+            category: hsnData.category || hsnData.display_name,
+          });
+
+          if (success) {
+            console.log(`✅ [HSN] Database update successful for item ${items[itemIndex].id}`);
+            
+            // 3. Trigger quote data refresh to update sidebar components
+            // This will cause the quote prop to be refreshed, syncing sidebar components
+            await loadQuoteData();
+            
+            console.log(`🔄 [HSN] Quote data refreshed for sidebar synchronization`);
+          } else {
+            console.error(`❌ [HSN] Database update failed for item ${items[itemIndex].id}`);
+            throw new Error('Database update failed');
+          }
+        }
+
+        // 4. Trigger quote calculation update after HSN assignment
         if (quote?.id) {
           scheduleCalculation(() => {
-            console.log('HSN assignment triggered quote recalculation');
+            console.log('🧮 [HSN] HSN assignment triggered quote recalculation');
           });
         }
 
@@ -876,7 +906,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         duration: 3000,
       });
     }
-  }, [form, quote?.id, scheduleCalculation, toast]);
+  }, [form, quote?.id, scheduleCalculation, toast, loadQuoteData]);
 
   // Optimized function to add new item with batched updates
   const addNewItem = useCallback(() => {
@@ -2885,16 +2915,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* Tax Calculation Hub - Professional Hub and Spoke Interface */}
-              <TaxHubContainer
+              {/* Tax Calculation Sidebar - Comprehensive Tax Information */}
+              <TaxCalculationSidebar
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
-                onMethodChange={handleTaxMethodChange}
-                onValuationChange={handleValuationMethodChange}
                 onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
                 onUpdateQuote={loadQuoteData}
-                compact={true}
-                editMode={isEditMode}
               />
 
               {/* Shipping Options or Configuration Prompt */}
@@ -2935,7 +2961,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 />
               )}
 
-              {/* Live Cost Breakdown */}
+              {/* Tax Calculation Sidebar - HSN Transparency */}
+              <TaxCalculationSidebar
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* Live Cost Breakdown - Essential Financial Summary */}
               <CompactCalculationBreakdown
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
@@ -3073,7 +3107,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 </CardContent>
               </Card>
 
-              {/* Cost Breakdown - Clean Professional Style */}
+              {/* Tax Calculation Sidebar - HSN Transparency */}
+              <TaxCalculationSidebar
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* Cost Breakdown - Professional Financial Summary */}
               <CompactCalculationBreakdown
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
