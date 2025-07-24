@@ -259,10 +259,18 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     }
   };
 
-  // Industry-Standard Edit Mode Interface
+  // Industry-Standard Edit Mode Interface - ISOLATED FROM FORMS
   if (editMode) {
     return (
-      <div className={`space-y-4 ${className}`}>
+      <form 
+        onSubmit={(e) => {
+          console.log('🚫 [Isolated Form] Submit prevented');
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }}
+        className={`space-y-4 ${className}`}
+      >
         {/* Primary Tax Method Selector - Always Visible */}
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader className="pb-3">
@@ -288,9 +296,15 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                       : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
+                  console.log('🚫 [Button] HSN-Based clicked, preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
-                  !isChangingMethod && handleTaxMethodChange('hsn_based', e);
+                  if (!isChangingMethod) {
+                    console.log('✅ [Button] HSN-Based calling handleTaxMethodChange');
+                    handleTaxMethodChange('hsn_based', e);
+                  } else {
+                    console.log('⏳ [Button] HSN-Based blocked - method change in progress');
+                  }
                 }}
                 disabled={isChangingMethod}
               >
@@ -340,9 +354,15 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                       : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
+                  console.log('🚫 [Button] Country Settings clicked, preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
-                  !isChangingMethod && handleTaxMethodChange('country_settings', e);
+                  if (!isChangingMethod) {
+                    console.log('✅ [Button] Country Settings calling handleTaxMethodChange');
+                    handleTaxMethodChange('country_settings', e);
+                  } else {
+                    console.log('⏳ [Button] Country Settings blocked - method change in progress');
+                  }
                 }}
                 disabled={isChangingMethod}
               >
@@ -387,9 +407,15 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                       : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
+                  console.log('🚫 [Button] Auto/Smart clicked, preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
-                  !isChangingMethod && handleTaxMethodChange('auto', e);
+                  if (!isChangingMethod) {
+                    console.log('✅ [Button] Auto/Smart calling handleTaxMethodChange');
+                    handleTaxMethodChange('auto', e);
+                  } else {
+                    console.log('⏳ [Button] Auto/Smart blocked - method change in progress');
+                  }
                 }}
                 disabled={isChangingMethod}
               >
@@ -533,7 +559,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             )}
           </CardContent>
         </Card>
-      </div>
+      </form>
     );
   }
 
