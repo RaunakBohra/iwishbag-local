@@ -330,15 +330,21 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               </button>
 
               {/* Country Settings Method */}
-              <div 
-                className={`p-3 rounded-lg border transition-all ${
+              <button
+                type="button"
+                className={`w-full p-3 rounded-lg border transition-all text-left ${
                   isChangingMethod 
                     ? 'cursor-not-allowed opacity-50 border-gray-200' 
                     : taxAnalytics.calculationMethod === 'country_settings' 
                       ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200 cursor-pointer' 
                       : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
                 }`}
-                onClick={(e) => !isChangingMethod && handleTaxMethodChange('country_settings', e)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  !isChangingMethod && handleTaxMethodChange('country_settings', e);
+                }}
+                disabled={isChangingMethod}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -368,18 +374,24 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                     <div className="text-xs text-gray-500">uniform</div>
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Auto/Smart Method */}
-              <div 
-                className={`p-3 rounded-lg border transition-all ${
+              <button
+                type="button"
+                className={`w-full p-3 rounded-lg border transition-all text-left ${
                   isChangingMethod 
                     ? 'cursor-not-allowed opacity-50 border-gray-200' 
                     : taxAnalytics.calculationMethod === 'auto' 
                       ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200 cursor-pointer' 
                       : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
                 }`}
-                onClick={(e) => !isChangingMethod && handleTaxMethodChange('auto', e)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  !isChangingMethod && handleTaxMethodChange('auto', e);
+                }}
+                disabled={isChangingMethod}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -412,7 +424,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                     <div className="text-xs text-gray-500">intelligent</div>
                   </div>
                 </div>
-              </div>
+              </button>
             </div>
 
             {/* Current Status & Quick Actions */}
