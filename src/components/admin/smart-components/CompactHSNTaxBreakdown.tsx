@@ -257,8 +257,20 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       if (success) {
         // Refresh the tax calculations
         setEditingItemId(null);
-        if (onRecalculate) onRecalculate();
-        if (onUpdateQuote) onUpdateQuote();
+        
+        // Force quote data refresh to ensure admin tracking is updated
+        if (onUpdateQuote) {
+          console.log('🔄 [HSN-UPDATE] Triggering quote data refresh after HSN modification');
+          onUpdateQuote();
+        }
+        
+        // Small delay to ensure data propagation
+        setTimeout(() => {
+          if (onRecalculate) {
+            console.log('🧮 [HSN-UPDATE] Triggering recalculation after HSN update');
+            onRecalculate();
+          }
+        }, 100);
       } else {
         setError('Failed to update HSN classification');
       }

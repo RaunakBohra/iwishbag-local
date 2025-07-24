@@ -544,15 +544,66 @@ export class UnifiedDataEngine {
         0,
       );
 
-      // Update operational_data to track HSN modifications
+      // Enhanced operational_data tracking for HSN modifications
       const operationalUpdates: any = {};
-      if (updates.hsn_code || updates.category) {
+      if (updates.hsn_code !== undefined || updates.category !== undefined) {
+        const previousHsnCode = existingItem.hsn_code;
+        const previousCategory = existingItem.category;
+        const newHsnCode = updates.hsn_code ?? existingItem.hsn_code;
+        const newCategory = updates.category ?? existingItem.category;
+        
+        // Determine the type of HSN modification
+        let modificationType = 'update';
+        if (!previousHsnCode && newHsnCode) {
+          modificationType = 'assign';
+        } else if (previousHsnCode && !newHsnCode) {
+          modificationType = 'clear';
+        } else if (previousHsnCode !== newHsnCode) {
+          modificationType = 'change';
+        }
+        
+        // Create detailed admin override log entry
+        const overrideLogEntry = {
+          timestamp: new Date().toISOString(),
+          item_id: itemId,
+          item_name: existingItem.name,
+          modification_type: modificationType,
+          previous_hsn_code: previousHsnCode || null,
+          new_hsn_code: newHsnCode || null,
+          previous_category: previousCategory || null,
+          new_category: newCategory || null,
+          admin_source: 'unified_quote_interface',
+          validation_passed: true,
+        };
+        
+        // Update operational data with enhanced tracking
+        const existingOverrides = quote.operational_data?.admin_hsn_overrides || [];
         operationalUpdates.operational_data = {
           ...quote.operational_data,
           last_hsn_modification: new Date().toISOString(),
           hsn_items_count: updatedItems.filter(item => item.hsn_code).length,
           admin_override_count: (quote.operational_data?.admin_override_count || 0) + 1,
+          // Enhanced admin override tracking
+          admin_hsn_overrides: [...existingOverrides, overrideLogEntry].slice(-50), // Keep last 50 modifications
+          last_admin_override: overrideLogEntry,
+          admin_modification_summary: {
+            total_modifications: (quote.operational_data?.admin_modification_summary?.total_modifications || 0) + 1,
+            assignments: (quote.operational_data?.admin_modification_summary?.assignments || 0) + (modificationType === 'assign' ? 1 : 0),
+            changes: (quote.operational_data?.admin_modification_summary?.changes || 0) + (modificationType === 'change' ? 1 : 0),
+            clears: (quote.operational_data?.admin_modification_summary?.clears || 0) + (modificationType === 'clear' ? 1 : 0),
+            last_activity: new Date().toISOString(),
+          },
         };
+
+        // Log the admin override for debugging
+        console.log(`🔒 [ADMIN-OVERRIDE] HSN modification logged:`, {
+          quoteId,
+          itemId,
+          modificationType,
+          from: `${previousHsnCode}/${previousCategory}`,
+          to: `${newHsnCode}/${newCategory}`,
+          overrideCount: operationalUpdates.operational_data.admin_override_count,
+        });
       }
 
       const success = await this.updateQuote(quoteId, {
@@ -1158,6 +1209,83 @@ export class UnifiedDataEngine {
       console.error('❌ [HSN] Quote enhancement failed:', error);
       return quote; // Return original quote on failure
     }
+  }
+
+  /**
+   * Get HSN admin override history for a quote
+   */
+  getHSNAdminOverrideHistory(quote: UnifiedQuote): {
+    overrides: Array<any>;
+    summary: {
+      total_modifications: number;
+      assignments: number;
+      changes: number;
+      clears: number;
+      last_activity: string | null;
+    };
+    recent_activity: Array<any>;
+  } {
+    const operationalData = quote.operational_data || {};
+    const overrides = operationalData.admin_hsn_overrides || [];
+    const summary = operationalData.admin_modification_summary || {
+      total_modifications: 0,
+      assignments: 0,
+      changes: 0,
+      clears: 0,
+      last_activity: null,
+    };
+
+    // Get recent activity (last 10 modifications)
+    const recentActivity = overrides
+      .slice(-10)
+      .reverse()
+      .map(override => ({
+        ...override,
+        time_ago: this.getTimeAgo(override.timestamp),
+        action_description: this.getOverrideActionDescription(override),
+      }));
+
+    return {
+      overrides,
+      summary,
+      recent_activity: recentActivity,
+    };
+  }
+
+  /**
+   * Generate human-readable description for HSN override action
+   */
+  private getOverrideActionDescription(override: any): string {
+    const { modification_type, item_name, previous_hsn_code, new_hsn_code } = override;
+    
+    switch (modification_type) {
+      case 'assign':
+        return `Assigned HSN ${new_hsn_code} to "${item_name}"`;
+      case 'change':
+        return `Changed "${item_name}" from HSN ${previous_hsn_code} to ${new_hsn_code}`;
+      case 'clear':
+        return `Removed HSN ${previous_hsn_code} from "${item_name}"`;
+      default:
+        return `Updated HSN for "${item_name}"`;
+    }
+  }
+
+  /**
+   * Calculate time ago from timestamp
+   */
+  private getTimeAgo(timestamp: string): string {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return past.toLocaleDateString();
   }
 
   /**

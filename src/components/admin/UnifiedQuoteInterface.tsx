@@ -87,6 +87,7 @@ import { CompactCalculationBreakdown } from './smart-components/CompactCalculati
 import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
 import HSNAutoComplete from './hsn-components/HSNAutoComplete';
 import CustomsCalculationPreview from './hsn-components/CustomsCalculationPreview';
+import HSNAdminHistory from './hsn-components/HSNAdminHistory';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import {
@@ -523,9 +524,22 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
-  // HSN classification handlers
+  // HSN classification handlers with enhanced admin tracking
   const handleHSNSelect = async (itemId: string, hsnData: any) => {
     try {
+      const existingItem = quote?.items?.find(item => item.id === itemId);
+      const isNewAssignment = !existingItem?.hsn_code;
+      const isModification = existingItem?.hsn_code && existingItem.hsn_code !== hsnData.hsn_code;
+      
+      console.log(`🔒 [ADMIN-ACTION] HSN ${isNewAssignment ? 'assignment' : isModification ? 'modification' : 'update'}:`, {
+        itemId,
+        itemName: existingItem?.name,
+        from: existingItem?.hsn_code || 'none',
+        to: hsnData.hsn_code,
+        adminAction: 'manual_selection',
+        confidence: hsnData.confidence || 1.0,
+      });
+
       setSelectedHSNData(prev => ({ ...prev, [itemId]: hsnData }));
       setHsnFormData(prev => ({
         ...prev,
@@ -535,10 +549,79 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         }
       }));
       
-      // Update item directly
+      // Update item with enhanced metadata for admin tracking
       await unifiedDataEngine.updateItem(quote!.id, itemId, {
         hsn_code: hsnData.hsn_code,
-        category: hsnData.category
+        category: hsnData.category,
+        // Add admin override metadata to smart_data
+        smart_data: {
+          ...existingItem?.smart_data,
+          admin_override_context: {
+            action_type: 'manual_selection',
+            confidence_score: hsnData.confidence || 1.0,
+            selection_method: 'autocomplete_search',
+            override_reason: isModification ? 'admin_correction' : 'manual_classification',
+            performed_at: new Date().toISOString(),
+          },
+        },
+      });
+      
+      // Refresh quote data
+      await loadQuoteData();
+      setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
+      
+      const actionType = isNewAssignment ? 'assigned' : isModification ? 'changed' : 'updated';
+      toast({
+        title: `HSN ${actionType}`,
+        description: `HSN code ${hsnData.hsn_code} ${actionType} for item${isModification ? ` (changed from ${existingItem?.hsn_code})` : ''}`,
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error updating HSN:', error);
+      setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to update HSN classification' }));
+      
+      toast({
+        title: 'HSN Update Failed',
+        description: 'Unable to update HSN classification. Please try again.',
+        variant: 'destructive',
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleHSNClear = async (itemId: string) => {
+    try {
+      const existingItem = quote?.items?.find(item => item.id === itemId);
+      const previousHsnCode = existingItem?.hsn_code;
+      const previousCategory = existingItem?.category;
+
+      console.log(`🔒 [ADMIN-ACTION] HSN clearing:`, {
+        itemId,
+        itemName: existingItem?.name,
+        clearingHsn: previousHsnCode,
+        clearingCategory: previousCategory,
+        adminAction: 'manual_clear',
+      });
+
+      setSelectedHSNData(prev => ({ ...prev, [itemId]: null }));
+      setHsnFormData(prev => ({ ...prev, [itemId]: { hsn_code: '', category: '' } }));
+      
+      // Update item to remove HSN data with admin tracking
+      await unifiedDataEngine.updateItem(quote!.id, itemId, {
+        hsn_code: '',
+        category: '',
+        // Add admin override metadata for clearing action
+        smart_data: {
+          ...existingItem?.smart_data,
+          admin_override_context: {
+            action_type: 'manual_clear',
+            previous_hsn_code: previousHsnCode,
+            previous_category: previousCategory,
+            selection_method: 'clear_button',
+            override_reason: 'admin_removal',
+            performed_at: new Date().toISOString(),
+          },
+        },
       });
       
       // Refresh quote data
@@ -546,33 +629,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
       
       toast({
-        title: 'HSN Updated',
-        description: `HSN code ${hsnData.hsn_code} applied to item`,
+        title: 'HSN Cleared',
+        description: `HSN classification removed from item${previousHsnCode ? ` (was ${previousHsnCode})` : ''}`,
         duration: 2000,
       });
     } catch (error) {
-      console.error('Error updating HSN:', error);
-      setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to update HSN classification' }));
-    }
-  };
-
-  const handleHSNClear = async (itemId: string) => {
-    try {
-      setSelectedHSNData(prev => ({ ...prev, [itemId]: null }));
-      setHsnFormData(prev => ({ ...prev, [itemId]: { hsn_code: '', category: '' } }));
-      
-      // Update item to remove HSN data
-      await unifiedDataEngine.updateItem(quote!.id, itemId, {
-        hsn_code: '',
-        category: ''
-      });
-      
-      // Refresh quote data
-      await loadQuoteData();
-      setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
-    } catch (error) {
       console.error('Error clearing HSN:', error);
       setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to clear HSN classification' }));
+      
+      toast({
+        title: 'HSN Clear Failed',
+        description: 'Unable to clear HSN classification. Please try again.',
+        variant: 'destructive',
+        duration: 3000,
+      });
     }
   };
 
@@ -2513,6 +2583,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
                 onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
                 onUpdateQuote={loadQuoteData}
+              />
+
+              {/* HSN Admin History - Show HSN modification tracking */}
+              <HSNAdminHistory
+                quote={liveQuote || quote}
+                key={`hsn-history-${(liveQuote || quote)?.operational_data?.admin_override_count || 0}-${(liveQuote || quote)?.updated_at}`}
+                className="mb-4"
               />
 
               {/* Shipping Options or Configuration Prompt */}
