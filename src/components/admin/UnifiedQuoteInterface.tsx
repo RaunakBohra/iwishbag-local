@@ -258,26 +258,82 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     return () => clearTimeout(timeoutId);
   }, []); // Empty dependency array - only run once on mount
 
-  const loadQuoteData = async (forceRefresh = false) => {
-    try {
-      setIsLoading(true);
-
-      // Add small delay if forcing refresh to allow database update to propagate
-      if (forceRefresh) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      const quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
-
-      if (!quoteData) {
+  const loadQuoteData = async (forceRefresh = false, skipNavigationOnError = false) => {
+    const maxRetries = 3;
+    let attempt = 0;
+    let quoteData = null;
+    
+    while (attempt < maxRetries) {
+      try {
+        setIsLoading(true);
+        console.log(`🔄 [LoadQuoteData] Attempt ${attempt + 1}/${maxRetries} for quote ${quoteId}`, { forceRefresh, skipNavigationOnError });
+        
+        // Add small delay for retry attempts and force refresh
+        if (forceRefresh || attempt > 0) {
+          const delay = attempt > 0 ? 200 * attempt : 100; // Exponential backoff
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        
+        quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
+        
+        if (!quoteData) {
+          console.warn(`⚠️ [LoadQuoteData] Quote not found on attempt ${attempt + 1}, quote ID: ${quoteId}`);
+          
+          // If this is not the last attempt, continue retrying
+          if (attempt < maxRetries - 1) {
+            attempt++;
+            continue;
+          }
+          
+          // Last attempt failed - only navigate if not skipped (e.g., not during tax method changes)
+          if (!skipNavigationOnError) {
+            console.error(`❌ [LoadQuoteData] Quote not found after ${maxRetries} attempts, navigating away`);
+            toast({
+              title: 'Quote not found',
+              description: 'The requested quote could not be found after multiple attempts.',
+              variant: 'destructive',
+            });
+            navigate('/admin/quotes');
+            return;
+          } else {
+            console.warn(`⚠️ [LoadQuoteData] Quote not found but navigation skipped (tax method change context)`);
+            toast({
+              title: 'Temporary Error',
+              description: 'Quote data temporarily unavailable. Please try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+        
+        // Success! Break out of retry loop
+        console.log(`✅ [LoadQuoteData] Successfully loaded quote on attempt ${attempt + 1}`);
+        break;
+        
+      } catch (error) {
+        console.error(`❌ [LoadQuoteData] Error on attempt ${attempt + 1}:`, error);
+        
+        // If this is not the last attempt, continue retrying
+        if (attempt < maxRetries - 1) {
+          attempt++;
+          continue;
+        }
+        
+        // Last attempt failed with error
         toast({
-          title: 'Quote not found',
-          description: 'The requested quote could not be found.',
+          title: 'Loading Error',
+          description: 'Failed to load quote data. Please refresh the page.',
           variant: 'destructive',
         });
-        navigate('/admin/quotes');
+        
+        if (!skipNavigationOnError) {
+          navigate('/admin/quotes');
+        }
         return;
+      } finally {
+        setIsLoading(false);
       }
+    }
 
       console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
         oldStatus: quote?.status,
@@ -1769,14 +1825,35 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
-  // Tax method selection handlers
+  // Tax method selection handlers with optimistic updates
   const handleTaxMethodChange = async (method: string, metadata?: any) => {
     try {
       console.log(`🎯 [Tax Method] Changing method from ${quote?.calculation_method_preference || 'auto'} to ${method}`);
       
+      // 1. OPTIMISTIC UPDATE: Update UI immediately for instant feedback
       setCurrentTaxMethod(method);
       
-      // Update quote with new calculation method preference
+      // Create optimistic quote update for immediate UI feedback
+      if (quote) {
+        const optimisticQuote = {
+          ...quote,
+          calculation_method_preference: method,
+          operational_data: {
+            ...quote.operational_data,
+            tax_method_metadata: metadata
+          }
+        };
+        setQuote(optimisticQuote);
+        console.log(`✅ [Tax Method] Optimistic update applied for instant feedback`);
+      }
+      
+      // Show immediate feedback toast
+      toast({
+        title: "Tax Method Updated", 
+        description: `Calculation method changed to ${method}. Recalculating taxes...`,
+      });
+      
+      // 2. BACKGROUND SYNC: Update database without blocking UI
       if (quote?.id) {
         const updateSuccess = await unifiedDataEngine.updateQuote(quote.id, {
           calculation_method_preference: method,
@@ -1789,28 +1866,38 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         if (updateSuccess) {
           console.log(`✅ [Tax Method] Database updated successfully with method: ${method}`);
           
-          // CRITICAL: Refresh quote data to update all components with new method
-          await loadQuoteData();
-          console.log(`🔄 [Tax Method] Quote data refreshed after method change`);
+          // 3. BACKGROUND REFRESH: Sync with database (non-blocking)
+          // Skip navigation on error to prevent page refresh during tax method changes
+          try {
+            await loadQuoteData(true, true); // forceRefresh=true, skipNavigationOnError=true
+            console.log(`🔄 [Tax Method] Quote data synced from database`);
+          } catch (syncError) {
+            console.warn(`⚠️ [Tax Method] Database sync failed, but UI already updated:`, syncError);
+            // Don't throw error - optimistic update already applied
+          }
           
-          // Trigger recalculation with refreshed quote data
+          // 4. TRIGGER RECALCULATION: With current quote state
           scheduleCalculation(() => {
             console.log(`🧮 [Tax Method] Recalculation triggered with new method: ${method}`);
           });
           
-          toast({
-            title: "Tax Method Updated",
-            description: `Calculation method changed to ${method}. Recalculating taxes...`,
-          });
         } else {
-          throw new Error('Database update failed');
+          throw new Error('Database update failed - reverting optimistic update');
         }
       }
     } catch (error) {
       console.error('Tax method update error:', error);
+      
+      // ROLLBACK: Revert optimistic update on error
+      if (quote) {
+        setCurrentTaxMethod(quote.calculation_method_preference || 'auto');
+        setQuote(quote); // Revert to original quote state
+        console.log(`🔄 [Tax Method] Rolled back optimistic update due to error`);
+      }
+      
       toast({
         title: "Update Failed",
-        description: "Failed to update tax calculation method.",
+        description: "Failed to update tax calculation method. Changes reverted.",
         variant: "destructive"
       });
     }
