@@ -71,10 +71,14 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
 
   // Auto-lookup HSN code and set correct category
   const lookupHSNCode = async (hsnCode: string) => {
+    console.log(`🔍 [HSN-LOOKUP] Attempting lookup for: "${hsnCode}" (length: ${hsnCode.length})`);
+    
     if (!hsnCode || !/^\d{2,8}$/.test(hsnCode)) {
+      console.log(`❌ [HSN-LOOKUP] Invalid HSN code format: "${hsnCode}"`);
       return; // Skip invalid HSN codes
     }
 
+    console.log(`🔄 [HSN-LOOKUP] Starting database lookup for HSN: ${hsnCode}`);
     setIsLookingUpHSN(true);
     setError(null);
 
@@ -86,21 +90,28 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
         .eq('is_active', true)
         .single();
 
+      console.log(`📊 [HSN-LOOKUP] Database result:`, { hsnRecord, hsnError });
+
       if (hsnError || !hsnRecord) {
-        setError(`HSN code ${hsnCode} not found in database`);
+        const errorMsg = `HSN code ${hsnCode} not found in database`;
+        console.log(`❌ [HSN-LOOKUP] ${errorMsg}`);
+        setError(errorMsg);
         return;
       }
 
       // Automatically set the correct category
-      setEditForm(prev => ({
-        ...prev,
-        category: hsnRecord.category,
-      }));
+      setEditForm(prev => {
+        console.log(`🔄 [HSN-LOOKUP] Updating form - old category: ${prev.category}, new category: ${hsnRecord.category}`);
+        return {
+          ...prev,
+          category: hsnRecord.category,
+        };
+      });
 
       console.log(`✅ [HSN-LOOKUP] Auto-set category for HSN ${hsnCode}: ${hsnRecord.category}`);
 
     } catch (error) {
-      console.error('Error looking up HSN code:', error);
+      console.error('❌ [HSN-LOOKUP] Database error:', error);
       setError('Failed to lookup HSN code');
     } finally {
       setIsLookingUpHSN(false);
@@ -510,10 +521,16 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                                   value={editForm.hsn_code}
                                   onChange={(e) => {
                                     const hsnCode = e.target.value;
+                                    console.log(`🔤 [HSN-INPUT] User typed: "${hsnCode}" (length: ${hsnCode.length})`);
+                                    
                                     setEditForm(prev => ({ ...prev, hsn_code: hsnCode }));
+                                    
                                     // Auto-lookup category when HSN code is entered
                                     if (hsnCode.length >= 4) {
+                                      console.log(`🚀 [HSN-INPUT] Triggering lookup for: ${hsnCode}`);
                                       lookupHSNCode(hsnCode);
+                                    } else {
+                                      console.log(`⏭️ [HSN-INPUT] Skipping lookup - too short: ${hsnCode.length} chars`);
                                     }
                                   }}
                                   placeholder="HSN Code (e.g., 8517)"

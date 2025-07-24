@@ -3,13 +3,14 @@
  * This handles cases where the trigger didn't create a role
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useEnsureUserRole = () => {
   const { user } = useAuth();
+  const [hasAttemptedCreate, setHasAttemptedCreate] = useState(false);
 
   // Check if user has a role
   const { data: userRole, isLoading } = useQuery({
@@ -56,19 +57,31 @@ export const useEnsureUserRole = () => {
     },
     onSuccess: () => {
       console.log('✅ User role created successfully');
+      setHasAttemptedCreate(true);
     },
-    onError: (error) => {
-      console.error('❌ Failed to create user role:', error);
+    onError: (error: any) => {
+      // Only log error if it's not a duplicate key constraint (user role already exists)
+      if (error?.code !== '23505') {
+        console.error('❌ Failed to create user role:', error);
+      } else {
+        console.debug('ℹ️ User role already exists, ignoring duplicate constraint error');
+      }
+      setHasAttemptedCreate(true);
     },
   });
 
-  // Auto-create role if user exists but has no role
+  // Auto-create role if user exists but has no role (only attempt once)
   useEffect(() => {
-    if (user?.id && !isLoading && !userRole && !createRoleMutation.isPending) {
+    if (user?.id && !isLoading && !userRole && !createRoleMutation.isPending && !hasAttemptedCreate) {
       console.log('Creating missing user role for:', user.id);
       createRoleMutation.mutate();
     }
-  }, [user?.id, userRole, isLoading, createRoleMutation]);
+  }, [user?.id, userRole, isLoading, createRoleMutation, hasAttemptedCreate]);
+
+  // Reset attempt flag when user changes
+  useEffect(() => {
+    setHasAttemptedCreate(false);
+  }, [user?.id]);
 
   return {
     userRole,
