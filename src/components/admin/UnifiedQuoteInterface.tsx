@@ -922,6 +922,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             // 5. Trigger quote data refresh to update sidebar components
             await loadQuoteData(true); // Force refresh
             
+            // 6. Fetch HSN weight for the updated item
+            if (hsnData.hsn_code) {
+              await fetchHSNWeight(itemIndex, hsnData.hsn_code);
+            }
+            
             // Quote data refreshed for sidebar sync
           } else {
             console.error(`❌ [HSN] Database update failed for item ${items[itemIndex].id}`);
@@ -3016,6 +3021,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 onValuationChange={handleValuationMethodChange}
               />
 
+              {/* HSN Tax Breakdown - Item-level tax transparency */}
+              <CompactHSNTaxBreakdown
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
               {/* Shipping Options or Configuration Prompt */}
               {shippingOptions.length > 0 ? (
                 <CompactShippingOptions
@@ -3058,6 +3072,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               <TaxCalculationSidebar
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* HSN Tax Breakdown - Item-level tax transparency */}
+              <CompactHSNTaxBreakdown
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
                 onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
                 onUpdateQuote={loadQuoteData}
               />
@@ -3204,6 +3227,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               <TaxCalculationSidebar
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* HSN Tax Breakdown - Item-level tax transparency */}
+              <CompactHSNTaxBreakdown
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
                 onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
                 onUpdateQuote={loadQuoteData}
               />

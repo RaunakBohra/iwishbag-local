@@ -226,12 +226,20 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
   const methodStatus = getCalculationMethodStatus();
 
-  // Handle tax method change with proper event handling
+  // Handle tax method change with bulletproof form submission prevention
   const handleTaxMethodChange = async (newMethod: string, event?: React.MouseEvent) => {
-    // CRITICAL: Prevent page refresh and event bubbling
+    // CRITICAL: Prevent page refresh and event bubbling with all safeguards
     if (event) {
       event.preventDefault();
       event.stopPropagation();
+      event.stopImmediatePropagation();
+      
+      // Extra safeguard: if this event is somehow connected to a form, prevent submission
+      const target = event.target as HTMLElement;
+      const form = target.closest('form');
+      if (form) {
+        console.log('🚫 [TaxMethodChange] Preventing form submission from event chain');
+      }
     }
     
     console.log(`🎯 [TaxSidebar] Method change requested: ${newMethod}`);
@@ -291,12 +299,19 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                   console.log('🚫 [Button] HSN-Based clicked, preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  // Prevent any form submission
+                  if (e.currentTarget.form) {
+                    console.log('🚫 [Button] Preventing form submission');
+                    return false;
+                  }
                   if (!isChangingMethod) {
                     console.log('✅ [Button] HSN-Based calling handleTaxMethodChange');
                     handleTaxMethodChange('hsn_based', e);
                   } else {
                     console.log('⏳ [Button] HSN-Based blocked - method change in progress');
                   }
+                  return false; // Explicitly prevent form submission
                 }}
                 disabled={isChangingMethod}
               >
@@ -349,12 +364,19 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                   console.log('🚫 [Button] Country Settings clicked, preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  // Prevent any form submission
+                  if (e.currentTarget.form) {
+                    console.log('🚫 [Button] Preventing form submission');
+                    return false;
+                  }
                   if (!isChangingMethod) {
                     console.log('✅ [Button] Country Settings calling handleTaxMethodChange');
                     handleTaxMethodChange('country_settings', e);
                   } else {
                     console.log('⏳ [Button] Country Settings blocked - method change in progress');
                   }
+                  return false; // Explicitly prevent form submission
                 }}
                 disabled={isChangingMethod}
               >
@@ -402,12 +424,19 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                   console.log('🚫 [Button] Auto/Smart clicked, preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  // Prevent any form submission
+                  if (e.currentTarget.form) {
+                    console.log('🚫 [Button] Preventing form submission');
+                    return false;
+                  }
                   if (!isChangingMethod) {
                     console.log('✅ [Button] Auto/Smart calling handleTaxMethodChange');
                     handleTaxMethodChange('auto', e);
                   } else {
                     console.log('⏳ [Button] Auto/Smart blocked - method change in progress');
                   }
+                  return false; // Explicitly prevent form submission
                 }}
                 disabled={isChangingMethod}
               >
