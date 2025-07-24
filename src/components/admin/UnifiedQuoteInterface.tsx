@@ -1409,16 +1409,31 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           },
         },
         items:
-          data.items?.map((item) => ({
-            id: item.id,
-            name: item.product_name || '',
-            price_usd: Number(item.item_price) || 0,
-            weight_kg: Number(item.item_weight) || 0,
-            quantity: Number(item.quantity) || 1,
-            url: item.product_url || '',
-            image: item.image_url || '',
-            options: item.options || '',
-          })) || [],
+          data.items?.map((item) => {
+            // Find existing item to preserve HSN data and other fields
+            const existingItem = quote?.items?.find(existing => existing.id === item.id);
+            
+            return {
+              id: item.id,
+              name: item.product_name || '',
+              price_usd: Number(item.item_price) || 0,
+              weight_kg: Number(item.item_weight) || 0,
+              quantity: Number(item.quantity) || 1,
+              url: item.product_url || '',
+              image: item.image_url || '',
+              options: item.options || '',
+              // 🏷️ PRESERVE HSN DATA from existing item or migration
+              hsn_code: item.hsn_code || existingItem?.hsn_code || '',
+              category: item.category || existingItem?.category || '',
+              tax_rate: item.tax_rate || existingItem?.tax_rate || 0,
+              minimum_valuation_usd: item.minimum_valuation_usd || existingItem?.minimum_valuation_usd || 0,
+              description: item.description || existingItem?.description || '',
+              // Preserve other smart_data and metadata
+              smart_data: existingItem?.smart_data || {},
+              hsn_data: existingItem?.hsn_data,
+              minimum_valuation_conversion: existingItem?.minimum_valuation_conversion,
+            };
+          }) || [],
       });
 
       console.log('✅ [SAVE] Update success:', success);
