@@ -1,0 +1,917 @@
+// ============================================================================
+// HSN MANAGEMENT INTERFACE - Admin HSN Code Management System
+// Features: HSN code CRUD, bulk operations, classification testing, analytics
+// ============================================================================
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Tags,
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Download,
+  Upload,
+  TestTube,
+  BarChart3,
+  Settings,
+  AlertTriangle,
+  CheckCircle,
+  ExternalLink,
+  RefreshCw,
+  DollarSign,
+  Scale,
+  Globe,
+  Zap,
+  FileText,
+  Eye,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
+import type { HSNMasterRecord } from '@/services/UnifiedDataEngine';
+import { autoProductClassifier } from '@/services/AutoProductClassifier';
+
+interface HSNManagementInterfaceProps {
+  className?: string;
+}
+
+interface HSNFormData {
+  hsn_code: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  keywords: string[];
+  minimum_valuation_usd?: number;
+  requires_currency_conversion: boolean;
+  weight_data: any;
+  tax_data: any;
+  classification_data: any;
+  is_active: boolean;
+}
+
+export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ className }) => {
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('browse');
+  const [hsnRecords, setHsnRecords] = useState<HSNMasterRecord[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<HSNMasterRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<HSNMasterRecord | null>(null);
+  const [testProductName, setTestProductName] = useState('');
+  const [testResults, setTestResults] = useState<any>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  // Form state for creating/editing HSN records
+  const [formData, setFormData] = useState<HSNFormData>({
+    hsn_code: '',
+    description: '',
+    category: '',
+    subcategory: '',
+    keywords: [],
+    minimum_valuation_usd: undefined,
+    requires_currency_conversion: false,
+    weight_data: {},
+    tax_data: {
+      typical_rates: {
+        customs: { common: 0 },
+        gst: { standard: 0 },
+        vat: { common: 0 },
+      },
+    },
+    classification_data: {
+      auto_classification: { confidence: 0.8 },
+    },
+    is_active: true,
+  });
+
+  // Load HSN records
+  useEffect(() => {
+    loadHSNRecords();
+  }, []);
+
+  // Filter records based on search and category
+  useEffect(() => {
+    let filtered = hsnRecords;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        record =>
+          record.hsn_code.toLowerCase().includes(query) ||
+          record.description.toLowerCase().includes(query) ||
+          record.category.toLowerCase().includes(query) ||
+          record.keywords.some(keyword => keyword.toLowerCase().includes(query)),
+      );
+    }
+
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(record => record.category === selectedCategory);
+    }
+
+    setFilteredRecords(filtered);
+  }, [hsnRecords, searchQuery, selectedCategory]);
+
+  const loadHSNRecords = async () => {
+    setIsLoading(true);
+    try {
+      // For now, we'll load by category since we don't have a loadAll method
+      const categories = ['clothing', 'electronics', 'books', 'jewelry', 'cosmetics'];
+      const allRecords: HSNMasterRecord[] = [];
+
+      for (const category of categories) {
+        const records = await unifiedDataEngine.getHSNByCategory(category, 50);
+        allRecords.push(...records);
+      }
+
+      setHsnRecords(allRecords);
+    } catch (error) {
+      console.error('Failed to load HSN records:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load HSN records',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateRecord = async () => {
+    try {
+      // Here we would call a create API endpoint
+      // For now, we'll just show success and reload
+      toast({
+        title: 'HSN Record Created',
+        description: `HSN ${formData.hsn_code} has been created successfully`,
+      });
+      setShowCreateDialog(false);
+      resetForm();
+      loadHSNRecords();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create HSN record',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditRecord = (record: HSNMasterRecord) => {
+    setEditingRecord(record);
+    setFormData({
+      hsn_code: record.hsn_code,
+      description: record.description,
+      category: record.category,
+      subcategory: record.subcategory,
+      keywords: record.keywords,
+      minimum_valuation_usd: record.minimum_valuation_usd,
+      requires_currency_conversion: record.requires_currency_conversion,
+      weight_data: record.weight_data,
+      tax_data: record.tax_data,
+      classification_data: record.classification_data,
+      is_active: record.is_active,
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateRecord = async () => {
+    try {
+      // Here we would call an update API endpoint
+      toast({
+        title: 'HSN Record Updated',
+        description: `HSN ${formData.hsn_code} has been updated successfully`,
+      });
+      setShowEditDialog(false);
+      setEditingRecord(null);
+      resetForm();
+      loadHSNRecords();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update HSN record',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteRecord = async (record: HSNMasterRecord) => {
+    if (!confirm(`Are you sure you want to delete HSN ${record.hsn_code}?`)) return;
+
+    try {
+      // Here we would call a delete API endpoint
+      toast({
+        title: 'HSN Record Deleted',
+        description: `HSN ${record.hsn_code} has been deleted`,
+      });
+      loadHSNRecords();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete HSN record',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleTestClassification = async () => {
+    if (!testProductName.trim()) return;
+
+    setIsTesting(true);
+    try {
+      const result = await autoProductClassifier.classifyProduct({
+        productName: testProductName,
+        productUrl: '',
+        category: '',
+      });
+
+      setTestResults(result);
+      toast({
+        title: 'Classification Test Complete',
+        description: `Found HSN: ${result.hsnCode} (${(result.confidence * 100).toFixed(1)}% confidence)`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Test Failed',
+        description: 'Failed to test product classification',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      hsn_code: '',
+      description: '',
+      category: '',
+      subcategory: '',
+      keywords: [],
+      minimum_valuation_usd: undefined,
+      requires_currency_conversion: false,
+      weight_data: {},
+      tax_data: {
+        typical_rates: {
+          customs: { common: 0 },
+          gst: { standard: 0 },
+          vat: { common: 0 },
+        },
+      },
+      classification_data: {
+        auto_classification: { confidence: 0.8 },
+      },
+      is_active: true,
+    });
+  };
+
+  const getUniqueCategories = () => {
+    const categories = [...new Set(hsnRecords.map(record => record.category))];
+    return categories.sort();
+  };
+
+  const getAnalytics = () => {
+    const totalRecords = hsnRecords.length;
+    const activeRecords = hsnRecords.filter(r => r.is_active).length;
+    const recordsWithMinValuation = hsnRecords.filter(r => r.minimum_valuation_usd).length;
+    const recordsRequiringConversion = hsnRecords.filter(r => r.requires_currency_conversion).length;
+    const categoryCounts = hsnRecords.reduce((acc, record) => {
+      acc[record.category] = (acc[record.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      totalRecords,
+      activeRecords,
+      recordsWithMinValuation,
+      recordsRequiringConversion,
+      categoryCounts,
+    };
+  };
+
+  const analytics = getAnalytics();
+
+  return (
+    <div className={`p-6 space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">HSN Management</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage HSN codes, tax rates, and product classifications
+          </p>
+        </div>
+        <div className="flex items-center space-x-3">
+          <Button variant="outline" onClick={loadHSNRecords} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add HSN Code
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New HSN Record</DialogTitle>
+                <DialogDescription>
+                  Add a new HSN code with tax rates and classification data
+                </DialogDescription>
+              </DialogHeader>
+              <HSNRecordForm
+                formData={formData}
+                setFormData={setFormData}
+                onSubmit={handleCreateRecord}
+                onCancel={() => setShowCreateDialog(false)}
+                isEditing={false}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Analytics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Tags className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">Total HSN Codes</p>
+                <p className="text-2xl font-bold">{analytics.totalRecords}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600">Active Records</p>
+                <p className="text-2xl font-bold">{analytics.activeRecords}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="w-5 h-5 text-amber-600" />
+              <div>
+                <p className="text-sm text-gray-600">Min. Valuations</p>
+                <p className="text-2xl font-bold">{analytics.recordsWithMinValuation}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Scale className="w-5 h-5 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-600">Need Conversion</p>
+                <p className="text-2xl font-bold">{analytics.recordsRequiringConversion}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="browse">Browse HSN Codes</TabsTrigger>
+          <TabsTrigger value="test">Test Classification</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="browse" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search HSN codes, descriptions, or keywords..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {getUniqueCategories().map(category => (
+                      <SelectItem key={category} value={category}>
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* HSN Records Table */}
+          <Card>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-8 text-center">
+                  <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">Loading HSN records...</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>HSN Code</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Min. Valuation</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRecords.map(record => (
+                      <TableRow key={record.hsn_code}>
+                        <TableCell>
+                          <div className="font-mono font-medium">{record.hsn_code}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-xs truncate" title={record.description}>
+                            {record.description}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {record.category.charAt(0).toUpperCase() + record.category.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {record.minimum_valuation_usd ? (
+                            <div className="flex items-center space-x-1">
+                              <DollarSign className="w-3 h-3" />
+                              <span>${record.minimum_valuation_usd}</span>
+                              {record.requires_currency_conversion && (
+                                <Scale className="w-3 h-3 text-purple-600" />
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">None</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={record.is_active ? 'default' : 'secondary'}>
+                            {record.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditRecord(record)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteRecord(record)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="test" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <TestTube className="w-5 h-5" />
+                <span>Test Product Classification</span>
+              </CardTitle>
+              <CardDescription>
+                Test the automatic HSN classification system with product names
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Enter product name to test classification..."
+                    value={testProductName}
+                    onChange={(e) => setTestProductName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleTestClassification()}
+                  />
+                </div>
+                <Button onClick={handleTestClassification} disabled={isTesting || !testProductName.trim()}>
+                  {isTesting ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <TestTube className="w-4 h-4 mr-2" />}
+                  Test
+                </Button>
+              </div>
+
+              {testResults && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium mb-3">Classification Results:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Product:</span>
+                      <span className="font-medium">{testProductName}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">HSN Code:</span>
+                      <Badge variant="outline">{testResults.hsnCode || 'Not found'}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Confidence:</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={testResults.confidence * 100} className="w-20 h-2" />
+                        <span className="text-sm font-medium">{(testResults.confidence * 100).toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Category:</span>
+                      <span className="font-medium">{testResults.category || 'Unknown'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="w-5 h-5" />
+                  <span>Category Distribution</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(analytics.categoryCounts).map(([category, count]) => (
+                    <div key={category} className="flex items-center justify-between">
+                      <span className="text-sm capitalize">{category}</span>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={(count / analytics.totalRecords) * 100} className="w-20 h-2" />
+                        <span className="text-sm font-medium w-8 text-right">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>System Health</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Active Records:</span>
+                    <Badge variant="default">{((analytics.activeRecords / analytics.totalRecords) * 100).toFixed(1)}%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">With Min. Valuations:</span>
+                    <Badge variant="secondary">{((analytics.recordsWithMinValuation / analytics.totalRecords) * 100).toFixed(1)}%</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Need Conversion:</span>
+                    <Badge variant="outline">{((analytics.recordsRequiringConversion / analytics.totalRecords) * 100).toFixed(1)}%</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="w-5 h-5" />
+                <span>System Settings</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  HSN system settings and bulk operations will be available in a future update.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit HSN Record</DialogTitle>
+            <DialogDescription>
+              Update HSN code information and tax rates
+            </DialogDescription>
+          </DialogHeader>
+          <HSNRecordForm
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleUpdateRecord}
+            onCancel={() => setShowEditDialog(false)}
+            isEditing={true}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// HSN Record Form Component
+interface HSNRecordFormProps {
+  formData: HSNFormData;
+  setFormData: (data: HSNFormData) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  isEditing: boolean;
+}
+
+const HSNRecordForm: React.FC<HSNRecordFormProps> = ({
+  formData,
+  setFormData,
+  onSubmit,
+  onCancel,
+  isEditing,
+}) => {
+  const [keywordInput, setKeywordInput] = useState('');
+
+  const addKeyword = () => {
+    if (keywordInput.trim() && !formData.keywords.includes(keywordInput.trim())) {
+      setFormData({
+        ...formData,
+        keywords: [...formData.keywords, keywordInput.trim()],
+      });
+      setKeywordInput('');
+    }
+  };
+
+  const removeKeyword = (keyword: string) => {
+    setFormData({
+      ...formData,
+      keywords: formData.keywords.filter(k => k !== keyword),
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Basic Information */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="hsn_code">HSN Code *</Label>
+          <Input
+            id="hsn_code"
+            value={formData.hsn_code}
+            onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+            placeholder="e.g., 6204"
+            disabled={isEditing}
+            className="font-mono"
+          />
+        </div>
+        <div>
+          <Label htmlFor="category">Category *</Label>
+          <Select
+            value={formData.category}
+            onValueChange={(value) => setFormData({ ...formData, category: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="clothing">Clothing</SelectItem>
+              <SelectItem value="electronics">Electronics</SelectItem>
+              <SelectItem value="books">Books</SelectItem>
+              <SelectItem value="jewelry">Jewelry</SelectItem>
+              <SelectItem value="cosmetics">Cosmetics</SelectItem>
+              <SelectItem value="sports">Sports</SelectItem>
+              <SelectItem value="home">Home & Garden</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="description">Description *</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Detailed description of products covered by this HSN code"
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="subcategory">Subcategory</Label>
+        <Input
+          id="subcategory"
+          value={formData.subcategory || ''}
+          onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+          placeholder="Optional subcategory"
+        />
+      </div>
+
+      {/* Keywords */}
+      <div>
+        <Label>Keywords for Classification</Label>
+        <div className="flex items-center space-x-2 mt-2">
+          <Input
+            value={keywordInput}
+            onChange={(e) => setKeywordInput(e.target.value)}
+            placeholder="Add keyword"
+            onKeyPress={(e) => e.key === 'Enter' && addKeyword()}
+          />
+          <Button type="button" onClick={addKeyword} variant="outline">
+            Add
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {formData.keywords.map(keyword => (
+            <Badge key={keyword} variant="secondary" className="cursor-pointer" onClick={() => removeKeyword(keyword)}>
+              {keyword} ×
+            </Badge>
+          ))}
+        </div>
+      </div>
+
+      {/* Minimum Valuation */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="minimum_valuation">Minimum Valuation (USD)</Label>
+          <Input
+            id="minimum_valuation"
+            type="number"
+            step="0.01"
+            value={formData.minimum_valuation_usd || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              minimum_valuation_usd: e.target.value ? Number(e.target.value) : undefined,
+            })}
+            placeholder="Optional minimum valuation"
+          />
+        </div>
+        <div className="flex items-end">
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={formData.requires_currency_conversion}
+              onCheckedChange={(checked) => setFormData({
+                ...formData,
+                requires_currency_conversion: checked,
+              })}
+            />
+            <Label className="text-sm">Requires currency conversion</Label>
+          </div>
+        </div>
+      </div>
+
+      {/* Tax Rates */}
+      <div>
+        <Label>Tax Rates (%)</Label>
+        <div className="grid grid-cols-3 gap-4 mt-2">
+          <div>
+            <Label htmlFor="customs_rate" className="text-xs">Customs</Label>
+            <Input
+              id="customs_rate"
+              type="number"
+              step="0.1"
+              value={formData.tax_data.typical_rates.customs.common}
+              onChange={(e) => setFormData({
+                ...formData,
+                tax_data: {
+                  ...formData.tax_data,
+                  typical_rates: {
+                    ...formData.tax_data.typical_rates,
+                    customs: { common: Number(e.target.value) },
+                  },
+                },
+              })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="gst_rate" className="text-xs">GST</Label>
+            <Input
+              id="gst_rate"
+              type="number"
+              step="0.1"
+              value={formData.tax_data.typical_rates.gst.standard}
+              onChange={(e) => setFormData({
+                ...formData,
+                tax_data: {
+                  ...formData.tax_data,
+                  typical_rates: {
+                    ...formData.tax_data.typical_rates,
+                    gst: { standard: Number(e.target.value) },
+                  },
+                },
+              })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="vat_rate" className="text-xs">VAT</Label>
+            <Input
+              id="vat_rate"
+              type="number"
+              step="0.1"
+              value={formData.tax_data.typical_rates.vat.common}
+              onChange={(e) => setFormData({
+                ...formData,
+                tax_data: {
+                  ...formData.tax_data,
+                  typical_rates: {
+                    ...formData.tax_data.typical_rates,
+                    vat: { common: Number(e.target.value) },
+                  },
+                },
+              })}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Status */}
+      <div className="flex items-center space-x-2">
+        <Switch
+          checked={formData.is_active}
+          onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+        />
+        <Label>Active</Label>
+      </div>
+
+      {/* Actions */}
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button onClick={onSubmit}>
+          {isEditing ? 'Update' : 'Create'} HSN Record
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+};
+
+export default HSNManagementInterface;

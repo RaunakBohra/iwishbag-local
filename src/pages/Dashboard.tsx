@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Package,
@@ -14,22 +14,170 @@ import {
   ArrowRight,
   Sparkles,
   Ticket,
+  DollarSign,
+  Truck,
 } from 'lucide-react';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useUserTickets } from '@/hooks/useTickets';
 import { useUnreadMessagesCount } from '@/hooks/useUnreadMessagesCount';
+import { useDashboardTrends } from '@/hooks/useDashboardTrends';
+import { useUserOnboarding } from '@/hooks/useUserOnboarding';
+import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
+import { notificationService } from '@/services/NotificationService';
+import { NOTIFICATION_TYPES } from '@/types/NotificationTypes';
 import { DashboardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { EnhancedMetricCard } from '@/components/dashboard/EnhancedMetricCard';
+import { ActivityTimeline, ActivityItem } from '@/components/dashboard/ActivityTimeline';
+import { WelcomeOnboarding } from '@/components/dashboard/WelcomeOnboarding';
+import { RecommendedProducts } from '@/components/dashboard/RecommendedProducts';
+import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { H1, H2, BodySmall, StatNumber, StatLabel } from '@/components/ui/typography';
 import { cn } from '@/lib/design-system';
+import { HSNQuickTest } from '@/components/dev/HSNQuickTest';
 
 const Dashboard = () => {
   const { user, quotes, orders, isLoading, isError } = useDashboardState();
   const { data: tickets = [] } = useUserTickets(user?.id);
   const { unreadCount: unreadMessages, isLoading: isLoadingMessages } = useUnreadMessagesCount();
+  const { trends, isLoading: trendsLoading } = useDashboardTrends();
+  const { shouldShowOnboarding, isNewUser } = useUserOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
+
+  // Track dashboard visits and create sample notifications for testing
+  useEffect(() => {
+    if (!user?.id) return;
+
+    userActivityService.trackActivity(ACTIVITY_TYPES.DASHBOARD_VIEW, {
+      is_new_user: isNewUser,
+      has_quotes: (quotes || []).length > 0,
+      has_orders: (orders || []).length > 0,
+      has_tickets: tickets.length > 0,
+    });
+
+    // Create sample notifications for testing (only in development)
+    if (import.meta.env.DEV) {
+      createSampleNotifications();
+    }
+  }, [isNewUser, quotes, orders, tickets, user?.id]);
+
+  // Function to create sample notifications for testing
+  const createSampleNotifications = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Welcome notification for new users
+      if (isNewUser) {
+        await notificationService.createNotification(
+          user.id,
+          NOTIFICATION_TYPES.WELCOME_NEW_USER,
+          "Welcome to iwishBag! Start by creating your first quote request to shop globally.",
+          {
+            action_url: '/quote',
+            action_label: 'Request Quote',
+            title: 'Welcome to iwishBag!',
+            subtitle: 'Your global shopping journey starts here'
+          },
+          { skipDuplicates: true }
+        );
+      }
+
+      // Pending quote notifications
+      const pendingQuotes = quotes?.filter(q => q.status === 'pending') || [];
+      if (pendingQuotes.length > 0) {
+        await notificationService.createNotification(
+          user.id,
+          NOTIFICATION_TYPES.QUOTE_PENDING_REVIEW,
+          `You have ${pendingQuotes.length} quote${pendingQuotes.length > 1 ? 's' : ''} under review. We'll send you an updated quote within 24-48 hours.`,
+          {
+            quote_id: pendingQuotes[0].id,
+            action_url: '/dashboard/quotes',
+            action_label: 'View Quotes',
+            title: 'Quotes Under Review'
+          },
+          { skipDuplicates: true }
+        );
+      }
+
+      // Approved quote notifications (high priority)
+      const approvedQuotes = quotes?.filter(q => q.status === 'approved') || [];
+      if (approvedQuotes.length > 0) {
+        for (const quote of approvedQuotes.slice(0, 3)) { // Limit to 3 to avoid spam
+          await notificationService.createNotification(
+            user.id,
+            NOTIFICATION_TYPES.QUOTE_APPROVED,
+            `Great news! Your quote for "${quote.product_name || 'Product'}" has been approved and is ready for checkout.`,
+            {
+              quote_id: quote.id,
+              action_url: `/checkout/${quote.id}`,
+              action_label: 'Checkout Now',
+              title: 'Quote Approved!',
+              subtitle: `Total: $${quote.final_total_usd?.toFixed(2) || '0.00'}`
+            },
+            { skipDuplicates: true }
+          );
+        }
+      }
+
+      // Sample system notification
+      await notificationService.createNotification(
+        user.id,
+        NOTIFICATION_TYPES.FEATURE_ANNOUNCEMENT,
+        "New Feature: Track your orders in real-time with our enhanced tracking system!",
+        {
+          action_url: '/dashboard/orders',
+          action_label: 'View Orders',
+          title: 'New Tracking Feature',
+          subtitle: 'Enhanced order tracking now available'
+        },
+        { skipDuplicates: true }
+      );
+
+      // Profile completion reminder
+      if (!user.user_metadata?.full_name) {
+        await notificationService.createNotification(
+          user.id,
+          NOTIFICATION_TYPES.PROFILE_INCOMPLETE,
+          "Complete your profile to get personalized recommendations and faster checkout.",
+          {
+            action_url: '/profile',
+            action_label: 'Complete Profile',
+            title: 'Complete Your Profile'
+          },
+          { skipDuplicates: true }
+        );
+      }
+
+      // Orders in progress notifications
+      const inProgressOrders = orders?.filter(o => 
+        o.status === 'ordered' || o.status === 'shipped'
+      ) || [];
+      
+      if (inProgressOrders.length > 0) {
+        const shippedOrders = inProgressOrders.filter(o => o.status === 'shipped');
+        if (shippedOrders.length > 0) {
+          await notificationService.createNotification(
+            user.id,
+            NOTIFICATION_TYPES.ORDER_SHIPPED_UPDATE,
+            `Good news! ${shippedOrders.length} of your orders ${shippedOrders.length > 1 ? 'are' : 'is'} now shipped and on the way to you.`,
+            {
+              order_id: shippedOrders[0].id,
+              action_url: '/dashboard/orders',
+              action_label: 'Track Orders',
+              title: 'Orders Shipped!'
+            },
+            { skipDuplicates: true }
+          );
+        }
+      }
+
+    } catch (error) {
+      console.error('Error creating sample notifications:', error);
+    }
+  };
 
   // Metrics
   const activeQuotes =
@@ -43,23 +191,53 @@ const Dashboard = () => {
   const openTickets =
     tickets?.filter((t) => t.status === 'open' || t.status === 'in_progress').length || 0;
 
-  // Recent activity (quotes and orders, most recent 5)
-  const recentActivity = [
+  // Enhanced recent activity with rich content
+  const recentActivity: ActivityItem[] = [
     ...(quotes?.slice(0, 3).map((q) => ({
-      type: 'quote',
-      text: `Quote ${q.display_id || `#${q.id.slice(0, 8)}`} - ${q.status}`,
-      link: `/dashboard/quotes/${q.id}`,
-      icon: <Package className="h-4 w-4 text-teal-600" />,
+      id: q.id,
+      type: 'quote' as const,
+      title: q.product_name || `Quote ${q.display_id || `#${q.id.slice(0, 8)}`}`,
+      description: `Quote request ${q.status === 'approved' ? 'approved and ready for checkout' : `is ${q.status}`}`,
       date: q.created_at,
       status: q.status,
+      link: `/dashboard/quotes/${q.id}`,
+      amount: q.final_total_usd,
+      image: q.product_image,
+      actions: q.status === 'approved' ? [
+        {
+          label: 'Checkout',
+          onClick: () => window.location.href = `/checkout/${q.id}`,
+          variant: 'default' as const
+        },
+        {
+          label: 'View Details',
+          onClick: () => window.location.href = `/dashboard/quotes/${q.id}`,
+          variant: 'outline' as const
+        }
+      ] : q.status === 'sent' ? [
+        {
+          label: 'Review Quote',
+          onClick: () => window.location.href = `/dashboard/quotes/${q.id}`,
+          variant: 'default' as const
+        }
+      ] : undefined,
     })) || []),
     ...(orders?.slice(0, 2).map((o) => ({
-      type: 'order',
-      text: `Order ${o.display_id || `#${o.id.slice(0, 8)}`} - ${o.status}`,
-      link: `/dashboard/orders/${o.id}`,
-      icon: <ShoppingCart className="h-4 w-4 text-green-600" />,
+      id: o.id,
+      type: 'order' as const,
+      title: o.product_name || `Order ${o.display_id || `#${o.id.slice(0, 8)}`}`,
+      description: `Order ${o.status === 'completed' ? 'delivered successfully' : o.status === 'shipped' ? 'is on its way' : `is ${o.status}`}`,
       date: o.created_at,
       status: o.status,
+      link: `/dashboard/orders/${o.id}`,
+      amount: o.final_total_usd,
+      actions: o.status === 'shipped' ? [
+        {
+          label: 'Track Package',
+          onClick: () => window.location.href = `/track/${o.iwish_tracking_id || o.id}`,
+          variant: 'default' as const
+        }
+      ] : undefined,
     })) || []),
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -105,6 +283,10 @@ const Dashboard = () => {
       color: 'from-teal-500 to-teal-600',
       bgColor: 'from-blue-50 to-blue-100',
       link: '/dashboard/quotes',
+      trend: trends.activeQuotes,
+      insight: trends.activeQuotes.direction === 'up' ? 'You\'re requesting more quotes recently!' : 
+               trends.activeQuotes.direction === 'down' ? 'Fewer active quotes than usual' : 
+               'Steady quote activity',
     },
     {
       value: approvedQuotes,
@@ -113,6 +295,10 @@ const Dashboard = () => {
       color: 'from-emerald-500 to-emerald-600',
       bgColor: 'from-emerald-50 to-emerald-100',
       link: '/dashboard/quotes',
+      trend: trends.approvedQuotes,
+      insight: trends.approvedQuotes.direction === 'up' ? 'More quotes getting approved!' :
+               trends.approvedQuotes.direction === 'down' ? 'Consider reviewing quote requirements' :
+               'Consistent approval rate',
     },
     {
       value: ordersInProgress,
@@ -121,6 +307,9 @@ const Dashboard = () => {
       color: 'from-orange-500 to-orange-600',
       bgColor: 'from-purple-50 to-purple-100',
       link: '/dashboard/orders',
+      trend: trends.ordersInProgress,
+      insight: trends.ordersInProgress.direction === 'up' ? 'More orders in the pipeline!' :
+               'Orders moving through fulfillment',
     },
     {
       value: deliveredOrders,
@@ -129,6 +318,9 @@ const Dashboard = () => {
       color: 'from-green-500 to-green-600',
       bgColor: 'from-green-50 to-green-100',
       link: '/dashboard/orders',
+      trend: trends.deliveredOrders,
+      insight: trends.deliveredOrders.direction === 'up' ? 'Great! More deliveries completed' :
+               'Steady delivery rate',
     },
     {
       value: openTickets,
@@ -137,6 +329,10 @@ const Dashboard = () => {
       color: 'from-purple-500 to-purple-600',
       bgColor: 'from-purple-50 to-purple-100',
       link: '/support/my-tickets',
+      trend: trends.openTickets,
+      insight: trends.openTickets.direction === 'down' ? 'Fewer support issues - great!' :
+               trends.openTickets.direction === 'up' ? 'We\'re here to help with any issues' :
+               'Normal support activity',
     },
   ];
 
@@ -146,8 +342,17 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="container py-8 sm:py-12">
-        {/* Welcome Header */}
+      <div className="container px-4 sm:px-6 py-6 sm:py-8 lg:py-12">
+        {/* Welcome & Onboarding for New Users */}
+        {showOnboarding && (
+          <WelcomeOnboarding
+            userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer'}
+            onDismiss={() => setShowOnboarding(false)}
+            showDismiss={true}
+          />
+        )}
+
+        {/* Welcome Header - Enhanced for returning users */}
         <AnimatedSection animation="fadeInDown">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
@@ -156,40 +361,35 @@ const Dashboard = () => {
               </div>
               <div>
                 <H1 className="text-2xl sm:text-3xl">
-                  Welcome back,{' '}
+                  {isNewUser ? 'Welcome' : 'Welcome back'},{' '}
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer'}!
                 </H1>
                 <BodySmall className="text-gray-600">
-                  Here's what's happening with your international shopping.
+                  {isNewUser 
+                    ? 'Ready to start your global shopping journey?' 
+                    : 'Here\'s what\'s happening with your international shopping.'
+                  }
                 </BodySmall>
               </div>
             </div>
           </div>
         </AnimatedSection>
 
-        {/* Metric Cards - Clickable */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
+        {/* Enhanced Metric Cards with Trends */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
           {metricCards.map((metric, index) => (
-            <AnimatedSection key={index} animation="zoomIn" delay={index * 100}>
-              <Link to={metric.link}>
-                <Card
-                  className={cn(
-                    'relative overflow-hidden group hover:shadow-md transition-all duration-200 cursor-pointer',
-                    'bg-white border border-gray-200',
-                  )}
-                >
-                  <CardContent className="relative p-6">
-                    <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-4">
-                      <metric.icon className="w-6 h-6 text-teal-600" />
-                    </div>
-                    <StatNumber className="mb-1">
-                      <AnimatedCounter end={metric.value} />
-                    </StatNumber>
-                    <StatLabel>{metric.label}</StatLabel>
-                  </CardContent>
-                </Card>
-              </Link>
-            </AnimatedSection>
+            <EnhancedMetricCard
+              key={index}
+              value={metric.value}
+              label={metric.label}
+              icon={metric.icon}
+              color={metric.color}
+              bgColor={metric.bgColor}
+              link={metric.link}
+              trend={trendsLoading ? undefined : metric.trend}
+              insight={metric.insight}
+              delay={index * 100}
+            />
           ))}
         </div>
 
@@ -201,25 +401,25 @@ const Dashboard = () => {
               Quick Actions
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {quickActions.map((action, index) => (
                 <AnimatedSection key={index} animation="fadeInUp" delay={500 + index * 100}>
                   <Link to={action.to}>
-                    <Card className="group hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden">
-                      <CardContent className="p-6">
-                        <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-4">
-                          {React.cloneElement(action.icon, { className: 'w-5 h-5 text-teal-600' })}
+                    <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden transform hover:-translate-y-1">
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-teal-100 transition-colors">
+                          {React.cloneElement(action.icon, { className: 'w-4 h-4 sm:w-5 sm:h-5 text-teal-600' })}
                         </div>
-                        <H2 className="text-lg font-semibold mb-1">{action.label}</H2>
-                        <BodySmall className="text-gray-600">
+                        <H2 className="text-sm sm:text-lg font-semibold mb-1 leading-tight">{action.label}</H2>
+                        <BodySmall className="text-gray-600 text-xs sm:text-sm leading-tight hidden sm:block">
                           {action.label === 'Request Quote' && 'Start a new quote request'}
                           {action.label === 'View All Quotes' && 'Manage your quote requests'}
                           {action.label === 'My Orders' && 'Track your shipments'}
                           {action.label === 'Get Help' && 'Get support with your orders'}
                         </BodySmall>
-                        <div className="mt-4 flex items-center text-teal-600 group-hover:translate-x-1 transition-transform">
-                          <span className="text-sm font-medium">Go</span>
-                          <ArrowRight className="w-4 h-4 ml-1" />
+                        <div className="mt-2 sm:mt-4 flex items-center text-teal-600 group-hover:translate-x-1 transition-transform">
+                          <span className="text-xs sm:text-sm font-medium">Go</span>
+                          <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
                         </div>
                       </CardContent>
                     </Card>
@@ -230,54 +430,33 @@ const Dashboard = () => {
           </div>
         </AnimatedSection>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Recent Activity */}
+        {/* Smart Recommendations */}
+        <AnimatedSection animation="fadeInUp" delay={600}>
+          <div className="mb-8">
+            <RecommendedProducts maxItems={4} />
+          </div>
+        </AnimatedSection>
+
+        {/* Notification Center */}
+        <AnimatedSection animation="fadeInUp" delay={700}>
+          <div className="mb-8">
+            <NotificationCenter 
+              maxHeight="300px"
+              defaultView="unread"
+              compact={false}
+            />
+          </div>
+        </AnimatedSection>
+
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
+          {/* Enhanced Recent Activity Timeline */}
           <AnimatedSection animation="fadeInLeft" delay={800}>
-            <Card className="h-full hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-teal-600" />
-                    Recent Activity
-                  </CardTitle>
-                  <Link
-                    to="/dashboard/quotes"
-                    className="text-teal-600 hover:text-teal-700 hover:underline text-sm font-medium"
-                  >
-                    View All
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {recentActivity.length === 0 && (
-                    <li className="text-gray-500 text-sm py-4 text-center">
-                      <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      No recent activity yet.
-                    </li>
-                  )}
-                  {recentActivity.map((item, idx) => (
-                    <li key={idx} className="group">
-                      <Link
-                        to={item.link}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex-shrink-0">{item.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-teal-600 transition-colors">
-                            {item.text}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(item.date).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            <ActivityTimeline
+              activities={recentActivity}
+              maxItems={5}
+              showViewAll={true}
+              viewAllLink="/dashboard/quotes"
+            />
           </AnimatedSection>
 
           {/* Support/Contact Info */}
@@ -313,6 +492,13 @@ const Dashboard = () => {
             </Card>
           </AnimatedSection>
         </div>
+
+        {/* HSN System Test - Development Only */}
+        {import.meta.env.DEV && (
+          <AnimatedSection animation="fadeInUp" delay={900}>
+            <HSNQuickTest className="mt-8" />
+          </AnimatedSection>
+        )}
 
         {/* Bottom CTA */}
         <AnimatedSection animation="fadeInUp" delay={1000}>

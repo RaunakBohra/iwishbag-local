@@ -72,7 +72,7 @@ export class HSNSecurityManager {
   private encryptionKey: string;
 
   private constructor() {
-    this.encryptionKey = process.env.HSN_ENCRYPTION_KEY || 'default-dev-key';
+    this.encryptionKey = import.meta.env.VITE_HSN_ENCRYPTION_KEY || 'default-dev-key';
     this.initializeRolePermissions();
     this.initializeAPIKeys();
   }
@@ -149,14 +149,14 @@ export class HSNSecurityManager {
     ];
 
     for (const config of apiConfigs) {
-      const apiKey = process.env[config.envKey];
+      const apiKey = import.meta.env[`VITE_${config.envKey}`];
       if (apiKey) {
         this.apiKeys.set(config.name, {
           name: config.name,
           key: this.encryptAPIKey(apiKey),
           provider: config.provider,
           encrypted: true,
-          environment: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+          environment: import.meta.env.VITE_NODE_ENV === 'production' ? 'production' : 'development',
           rateLimits: config.rateLimits,
           isActive: true,
         });
@@ -356,12 +356,14 @@ export class HSNSecurityManager {
   // Encryption helpers (simple implementation for development)
   private encryptAPIKey(key: string): string {
     // In production, use proper encryption (AES-256, etc.)
-    return Buffer.from(key).toString('base64');
+    // Using browser-compatible base64 encoding
+    return btoa(key);
   }
 
   private decryptAPIKey(encryptedKey: string): string {
     // In production, use proper decryption
-    return Buffer.from(encryptedKey, 'base64').toString('utf-8');
+    // Using browser-compatible base64 decoding
+    return atob(encryptedKey);
   }
 
   // Security Context Creation
@@ -408,11 +410,11 @@ export const hsnSecurity = HSNSecurityManager.getInstance();
 
 // Utility functions
 export const withPermissionCheck = (permission: HSNPermission) => {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
     const method = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
-      const context = this.securityContext || hsnSecurity.createSecurityContext();
+      const context = (this as any).securityContext || hsnSecurity.createSecurityContext();
       hsnSecurity.checkPermission(context, permission);
       return method.apply(this, args);
     };
@@ -420,11 +422,11 @@ export const withPermissionCheck = (permission: HSNPermission) => {
 };
 
 export const requireRole = (requiredRole: UserRole) => {
-  return function (target: any, propertyName: string, descriptor: PropertyDescriptor) {
+  return function (_target: any, _propertyName: string, descriptor: PropertyDescriptor) {
     const method = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
-      const context = this.securityContext || hsnSecurity.createSecurityContext();
+      const context = (this as any).securityContext || hsnSecurity.createSecurityContext();
 
       if (context.userRole !== requiredRole && requiredRole !== UserRole.CUSTOMER) {
         throw new HSNSystemError(

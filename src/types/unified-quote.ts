@@ -13,6 +13,11 @@ export interface QuoteItem {
   quantity: number;
   price_usd: number;
   weight_kg: number;
+  
+  // HSN Classification Fields
+  hsn_code?: string;
+  category?: string;
+  
   smart_data: {
     weight_confidence: number; // 0-1 scale
     price_confidence: number; // 0-1 scale
@@ -287,6 +292,10 @@ export interface QuoteItemInput {
   quantity: number;
   price_usd: number;
   weight_kg: number;
+  
+  // HSN Classification Fields (optional for input)
+  hsn_code?: string;
+  category?: string;
 }
 
 export interface QuoteCalculationInput {

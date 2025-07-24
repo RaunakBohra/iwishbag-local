@@ -44,18 +44,38 @@ interface HSNData {
   classification_data: any;
 }
 
-interface ItemTaxBreakdown {
+export interface ItemTaxBreakdown {
   item_id: string;
   hsn_code: string;
+  category: string;
   item_name: string;
 
   // Valuation details (critical for minimum valuation logic)
   original_price_origin_currency: number;
   minimum_valuation_conversion?: MinimumValuationConversion;
   taxable_amount_origin_currency: number;
-  valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both';
+  valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both' | 'admin_override';
 
-  // Tax calculations
+  // Enhanced: Both calculation options for admin choice
+  calculation_options: {
+    actual_price_calculation: {
+      basis_amount: number;
+      customs_amount: number;
+      local_tax_amount: number;
+      total_tax: number;
+    };
+    minimum_valuation_calculation?: {
+      basis_amount: number;
+      customs_amount: number;
+      local_tax_amount: number;
+      total_tax: number;
+      currency_conversion_details: string; // e.g., "$10 USD → ₹830 INR"
+    };
+    selected_method: 'actual_price' | 'minimum_valuation' | 'manual_override';
+    admin_can_override: boolean;
+  };
+
+  // Tax calculations (based on selected method)
   customs_calculation: {
     rate_percentage: number;
     amount_origin_currency: number;
@@ -104,57 +124,79 @@ class PerItemTaxCalculator {
   }
 
   /**
-   * CORE METHOD: Calculate taxes for a single item with currency conversion
-   * This implements the critical minimum valuation logic
+   * ENHANCED CORE METHOD: Calculate taxes with both valuation options for admin choice
+   * Provides transparency and admin override capabilities
    */
   async calculateItemTax(
     item: QuoteItem,
     context: TaxCalculationContext,
-  ): Promise<ItemTaxBreakdown> {
+  ): Promise<ItemTaxBreakdown | null> {
     try {
-      // Get HSN data for the item
-      const hsnData = await this.getHSNData(item.hsn_code || '');
-      if (!hsnData) {
-        throw new Error(`HSN code not found: ${item.hsn_code}`);
+      // Skip items without HSN codes
+      if (!item.hsn_code || item.hsn_code.trim() === '') {
+        console.log(`⚠️ [HSN] Skipping item ${item.name} - no HSN code assigned`);
+        return null; // Return null for items without HSN codes
       }
 
-      // Determine taxable amount with currency conversion
-      const valuationResult = await this.determineValuationAmount(
-        item,
-        hsnData,
-        context.route.origin_country,
-      );
+      // Get HSN data for the item
+      const hsnData = await this.getHSNData(item.hsn_code);
+      if (!hsnData) {
+        console.warn(`⚠️ [HSN] HSN code not found in database: ${item.hsn_code} for item: ${item.name}`);
+        return null; // Return null if HSN data not found
+      }
 
       // Get tax rates (with admin overrides)
       const taxRates = await this.getTaxRates(hsnData, context);
 
-      // Calculate customs
+      // Calculate both valuation options
+      const valuationOptions = await this.calculateBothValuationOptions(
+        item,
+        hsnData,
+        context.route.origin_country,
+        taxRates,
+      );
+
+      // Use the auto-selected amount for the main calculations (backward compatibility)
+      const selectedAmount = valuationOptions.auto_selected_amount;
+
+      // Calculate customs and local taxes based on selected amount
       const customsCalculation = this.calculateCustoms(
-        valuationResult.taxable_amount_origin_currency,
+        selectedAmount,
         taxRates.customs_rate,
         context,
       );
 
-      // Calculate local taxes (GST/VAT/Sales Tax)
       const localTaxCalculation = await this.calculateLocalTaxes(
-        valuationResult.taxable_amount_origin_currency,
+        selectedAmount,
         taxRates,
         context,
       );
 
-      // Build comprehensive breakdown
+      // Build enhanced calculation options object
+      const calculation_options = {
+        actual_price_calculation: valuationOptions.actual_price_calculation,
+        minimum_valuation_calculation: valuationOptions.minimum_valuation_calculation,
+        selected_method: valuationOptions.selected_method,
+        admin_can_override: true, // Always allow admin override
+      };
+
+      // Build comprehensive breakdown with both legacy and enhanced fields
       const breakdown: ItemTaxBreakdown = {
         item_id: item.id,
         hsn_code: hsnData.hsn_code,
+        category: hsnData.category,
         item_name: item.name,
 
-        // Valuation details
+        // Valuation details (legacy fields for backward compatibility)
         original_price_origin_currency: item.price_origin_currency,
-        minimum_valuation_conversion: valuationResult.minimum_valuation_conversion,
-        taxable_amount_origin_currency: valuationResult.taxable_amount_origin_currency,
-        valuation_method: valuationResult.valuation_method,
+        minimum_valuation_conversion: valuationOptions.minimum_valuation_conversion,
+        taxable_amount_origin_currency: selectedAmount,
+        valuation_method: valuationOptions.valuation_method,
 
-        // Tax calculations
+        // Enhanced: Both calculation options for admin choice
+        calculation_options,
+
+        // Tax calculations (based on auto-selected method)
         customs_calculation: customsCalculation,
         local_tax_calculation: localTaxCalculation,
 
@@ -168,7 +210,15 @@ class PerItemTaxCalculator {
         calculation_timestamp: new Date(),
         admin_overrides_applied: context.admin_overrides || [],
         confidence_score: this.calculateConfidenceScore(hsnData, item),
-        warnings: this.generateWarnings(valuationResult, taxRates, item),
+        warnings: this.generateWarnings(
+          {
+            taxable_amount_origin_currency: selectedAmount,
+            valuation_method: valuationOptions.valuation_method,
+            minimum_valuation_conversion: valuationOptions.minimum_valuation_conversion,
+          },
+          taxRates,
+          item,
+        ),
       };
 
       return breakdown;
@@ -186,55 +236,110 @@ class PerItemTaxCalculator {
     context: TaxCalculationContext,
   ): Promise<ItemTaxBreakdown[]> {
     const promises = items.map((item) => this.calculateItemTax(item, context));
-    return Promise.all(promises);
+    const results = await Promise.all(promises);
+    
+    // Filter out null results (items without HSN codes)
+    const validBreakdowns = results.filter((breakdown): breakdown is ItemTaxBreakdown => breakdown !== null);
+    
+    console.log(`✅ [HSN] Calculated taxes for ${validBreakdowns.length}/${items.length} items with HSN codes`);
+    
+    return validBreakdowns;
   }
 
   /**
-   * CRITICAL METHOD: Determine valuation amount with currency conversion
-   * This handles the core requirement of minimum valuation conversion
+   * ENHANCED METHOD: Calculate both actual price and minimum valuation options
+   * Returns both calculations for admin choice, maintains currency uniformity
    */
-  private async determineValuationAmount(
+  private async calculateBothValuationOptions(
     item: QuoteItem,
     hsnData: HSNData,
     originCountry: string,
+    taxRates: any,
   ): Promise<{
-    taxable_amount_origin_currency: number;
-    valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both';
+    actual_price_calculation: {
+      basis_amount: number;
+      customs_amount: number;
+      local_tax_amount: number;
+      total_tax: number;
+    };
+    minimum_valuation_calculation?: {
+      basis_amount: number;
+      customs_amount: number;
+      local_tax_amount: number;
+      total_tax: number;
+      currency_conversion_details: string;
+    };
+    selected_method: 'actual_price' | 'minimum_valuation';
     minimum_valuation_conversion?: MinimumValuationConversion;
+    auto_selected_amount: number;
+    valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both';
   }> {
-    // If no minimum valuation required, use original price
+    const originalPrice = item.price_origin_currency;
+    
+    // Calculate actual price taxes
+    const actualPriceCustoms = (originalPrice * taxRates.customs_rate) / 100;
+    const actualPriceLocalTax = (originalPrice * (taxRates.gst_rate || taxRates.vat_rate || 0)) / 100;
+    
+    const actual_price_calculation = {
+      basis_amount: originalPrice,
+      customs_amount: Math.round(actualPriceCustoms * 100) / 100,
+      local_tax_amount: Math.round(actualPriceLocalTax * 100) / 100,
+      total_tax: Math.round((actualPriceCustoms + actualPriceLocalTax) * 100) / 100,
+    };
+
+    // If no minimum valuation required, return only actual price calculation
     if (!hsnData.minimum_valuation_usd || !hsnData.requires_currency_conversion) {
       return {
-        taxable_amount_origin_currency: item.price_origin_currency,
+        actual_price_calculation,
+        selected_method: 'actual_price',
+        auto_selected_amount: originalPrice,
         valuation_method: 'original_price',
       };
     }
 
-    // Convert minimum valuation from USD to origin country currency
+    // Convert minimum valuation from USD to origin country currency (maintains uniformity)
     const minimumValuationConversion = await this.currencyService.convertMinimumValuation(
       hsnData.minimum_valuation_usd,
       originCountry,
     );
 
-    // Compare original price with converted minimum valuation
-    const originalPrice = item.price_origin_currency;
     const minimumAmount = minimumValuationConversion.convertedAmount;
+    
+    // Calculate minimum valuation taxes
+    const minimumValuationCustoms = (minimumAmount * taxRates.customs_rate) / 100;
+    const minimumValuationLocalTax = (minimumAmount * (taxRates.gst_rate || taxRates.vat_rate || 0)) / 100;
+
+    const minimum_valuation_calculation = {
+      basis_amount: minimumAmount,
+      customs_amount: Math.round(minimumValuationCustoms * 100) / 100,
+      local_tax_amount: Math.round(minimumValuationLocalTax * 100) / 100,
+      total_tax: Math.round((minimumValuationCustoms + minimumValuationLocalTax) * 100) / 100,
+      currency_conversion_details: `$${hsnData.minimum_valuation_usd} USD → ${minimumAmount} ${minimumValuationConversion.originCurrency}`,
+    };
+
+    // Determine which method to auto-select (higher amount)
+    let selected_method: 'actual_price' | 'minimum_valuation';
+    let auto_selected_amount: number;
+    let valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both';
 
     if (originalPrice >= minimumAmount) {
-      // Original price is higher - use original price
-      return {
-        taxable_amount_origin_currency: originalPrice,
-        valuation_method: 'higher_of_both',
-        minimum_valuation_conversion: minimumValuationConversion,
-      };
+      selected_method = 'actual_price';
+      auto_selected_amount = originalPrice;
+      valuation_method = 'higher_of_both';
     } else {
-      // Minimum valuation is higher - use converted minimum
-      return {
-        taxable_amount_origin_currency: minimumAmount,
-        valuation_method: 'minimum_valuation',
-        minimum_valuation_conversion: minimumValuationConversion,
-      };
+      selected_method = 'minimum_valuation';
+      auto_selected_amount = minimumAmount;
+      valuation_method = 'minimum_valuation';
     }
+
+    return {
+      actual_price_calculation,
+      minimum_valuation_calculation,
+      selected_method,
+      minimum_valuation_conversion: minimumValuationConversion,
+      auto_selected_amount,
+      valuation_method,
+    };
   }
 
   /**

@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import HSNAutoComplete from '@/components/admin/hsn-components/HSNAutoComplete';
+import CustomsCalculationPreview from '@/components/admin/hsn-components/CustomsCalculationPreview';
 
 interface SmartItemsManagerProps {
   quote: UnifiedQuote;
@@ -440,9 +442,25 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
     price_usd: item.price_usd,
     weight_kg: item.weight_kg,
     options: item.options || '',
+    hsn_code: item.hsn_code || '',
+    category: item.category || '',
   });
   const [weightEstimation, setWeightEstimation] = useState<any>(null);
   const [isEstimating, setIsEstimating] = useState(false);
+  const [selectedHSN, setSelectedHSN] = useState<any>(null);
+  const [hsnError, setHsnError] = useState<string | null>(null);
+
+  // Initialize selectedHSN if item already has HSN data
+  useEffect(() => {
+    if (item.hsn_code && item.category) {
+      setSelectedHSN({
+        hsn_code: item.hsn_code,
+        category: item.category,
+        description: `${item.category} item`, // Simplified description
+        minimum_valuation_usd: undefined, // Will be loaded from database if needed
+      });
+    }
+  }, [item.hsn_code, item.category]);
 
   // Auto-estimate weight when name changes
   useEffect(() => {
@@ -492,6 +510,8 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
       price_usd: editForm.price_usd,
       weight_kg: editForm.weight_kg,
       options: editForm.options,
+      hsn_code: editForm.hsn_code,
+      category: editForm.category,
     };
 
     onSave(updatedItem);
@@ -499,7 +519,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
 
   return (
     <Dialog open={true} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Item</DialogTitle>
         </DialogHeader>
@@ -596,6 +616,61 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
             )}
           </div>
 
+          {/* HSN Classification Section */}
+          <div className="space-y-3 border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center">
+              <Package className="w-4 h-4 mr-2" />
+              HSN Classification & Customs Preview
+              <span className="ml-2 text-xs text-green-600">[EDIT DIALOG]</span>
+            </h3>
+            
+            {hsnError && (
+              <div className="p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+                HSN Error: {hsnError}
+              </div>
+            )}
+            
+            <HSNAutoComplete
+              value={editForm.hsn_code}
+              productName={editForm.name}
+              originCountry={currencyDisplay.originCountry}
+              onHSNSelect={(hsn) => {
+                try {
+                  setSelectedHSN(hsn);
+                  setEditForm(prev => ({
+                    ...prev,
+                    hsn_code: hsn.hsn_code,
+                    category: hsn.category
+                  }));
+                  setHsnError(null);
+                } catch (error) {
+                  console.error('HSN select error:', error);
+                  setHsnError('Failed to select HSN classification');
+                }
+              }}
+              onClear={() => {
+                setSelectedHSN(null);
+                setEditForm(prev => ({
+                  ...prev,
+                  hsn_code: '',
+                  category: ''
+                }));
+              }}
+            />
+            
+            {editForm.hsn_code && editForm.price_usd > 0 && (
+              <CustomsCalculationPreview
+                productPrice={editForm.price_usd}
+                quantity={editForm.quantity}
+                hsnCode={editForm.hsn_code}
+                category={editForm.category}
+                minimumValuationUSD={selectedHSN?.minimum_valuation_usd}
+                originCountry={currencyDisplay.originCountry}
+                destinationCountry={currencyDisplay.destinationCountry}
+              />
+            )}
+          </div>
+
           <div>
             <Label htmlFor="options">Options/Notes</Label>
             <Input
@@ -633,9 +708,13 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
     weight_kg: 0,
     options: '',
     url: '',
+    hsn_code: '',
+    category: '',
   });
   const [weightEstimation, setWeightEstimation] = useState<any>(null);
   const [isEstimating, setIsEstimating] = useState(false);
+  const [selectedHSN, setSelectedHSN] = useState<any>(null);
+  const [hsnError, setHsnError] = useState<string | null>(null);
 
   // Auto-estimate weight when name changes
   useEffect(() => {
@@ -686,6 +765,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
       weight_kg: addForm.weight_kg,
       options: addForm.options,
       url: addForm.url,
+      hsn_code: addForm.hsn_code,
+      category: addForm.category,
     };
 
     onSave(newItem);
@@ -695,7 +776,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
 
   return (
     <Dialog open={true} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Item</DialogTitle>
         </DialogHeader>
@@ -807,6 +888,61 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                   </div>
                 )}
               </div>
+            )}
+          </div>
+
+          {/* HSN Classification Section */}
+          <div className="space-y-3 border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center">
+              <Package className="w-4 h-4 mr-2" />
+              HSN Classification & Customs Preview
+              <span className="ml-2 text-xs text-blue-600">[ADD DIALOG]</span>
+            </h3>
+            
+            {hsnError && (
+              <div className="p-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded">
+                HSN Error: {hsnError}
+              </div>
+            )}
+            
+            <HSNAutoComplete
+              value={addForm.hsn_code}
+              productName={addForm.name}
+              originCountry={currencyDisplay.originCountry}
+              onHSNSelect={(hsn) => {
+                try {
+                  setSelectedHSN(hsn);
+                  setAddForm(prev => ({
+                    ...prev,
+                    hsn_code: hsn.hsn_code,
+                    category: hsn.category
+                  }));
+                  setHsnError(null);
+                } catch (error) {
+                  console.error('HSN select error:', error);
+                  setHsnError('Failed to select HSN classification');
+                }
+              }}
+              onClear={() => {
+                setSelectedHSN(null);
+                setAddForm(prev => ({
+                  ...prev,
+                  hsn_code: '',
+                  category: ''
+                }));
+              }}
+            />
+            
+            {addForm.hsn_code && addForm.price_usd > 0 && (
+              <CustomsCalculationPreview
+                productPrice={addForm.price_usd}
+                quantity={addForm.quantity}
+                hsnCode={addForm.hsn_code}
+                category={addForm.category}
+                minimumValuationUSD={selectedHSN?.minimum_valuation_usd}
+                originCountry={currencyDisplay.originCountry}
+                destinationCountry={currencyDisplay.destinationCountry}
+              />
             )}
           </div>
 

@@ -85,6 +85,8 @@ import { CompactPaymentManager } from './smart-components/CompactPaymentManager'
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
+import HSNAutoComplete from './hsn-components/HSNAutoComplete';
+import CustomsCalculationPreview from './hsn-components/CustomsCalculationPreview';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import {
@@ -141,6 +143,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [productToDelete, setProductToDelete] = useState<{ index: number; name: string } | null>(
     null,
   );
+
+  // HSN interface state
+  const [editingHSNItemId, setEditingHSNItemId] = useState<string | null>(null);
+  const [hsnFormData, setHsnFormData] = useState<{[key: string]: { hsn_code: string; category: string }}>({});
+  const [selectedHSNData, setSelectedHSNData] = useState<{[key: string]: any}>({});
+  const [hsnErrors, setHsnErrors] = useState<{[key: string]: string}>({});
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -225,6 +233,33 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         quoteId: quoteData.id,
       });
       setQuote(quoteData);
+
+      // Initialize HSN state for existing items
+      if (quoteData.items) {
+        const initialHsnFormData: {[key: string]: { hsn_code: string; category: string }} = {};
+        const initialSelectedData: {[key: string]: any} = {};
+        
+        quoteData.items.forEach(item => {
+          if (item.hsn_code || item.category) {
+            initialHsnFormData[item.id] = {
+              hsn_code: item.hsn_code || '',
+              category: item.category || ''
+            };
+            
+            if (item.hsn_code && item.category) {
+              initialSelectedData[item.id] = {
+                hsn_code: item.hsn_code,
+                category: item.category,
+                description: `${item.category} item`,
+                minimum_valuation_usd: undefined // Will be loaded from database if needed
+              };
+            }
+          }
+        });
+        
+        setHsnFormData(initialHsnFormData);
+        setSelectedHSNData(initialSelectedData);
+      }
 
       // Populate form with quote data
       populateFormFromQuote(quoteData);
@@ -485,6 +520,59 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // Reset form when switching to view mode
     if (!newEditMode && quote) {
       populateFormFromQuote(liveQuote || quote);
+    }
+  };
+
+  // HSN classification handlers
+  const handleHSNSelect = async (itemId: string, hsnData: any) => {
+    try {
+      setSelectedHSNData(prev => ({ ...prev, [itemId]: hsnData }));
+      setHsnFormData(prev => ({
+        ...prev,
+        [itemId]: {
+          hsn_code: hsnData.hsn_code,
+          category: hsnData.category
+        }
+      }));
+      
+      // Update item directly
+      await unifiedDataEngine.updateItem(quote!.id, itemId, {
+        hsn_code: hsnData.hsn_code,
+        category: hsnData.category
+      });
+      
+      // Refresh quote data
+      await loadQuoteData();
+      setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
+      
+      toast({
+        title: 'HSN Updated',
+        description: `HSN code ${hsnData.hsn_code} applied to item`,
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error('Error updating HSN:', error);
+      setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to update HSN classification' }));
+    }
+  };
+
+  const handleHSNClear = async (itemId: string) => {
+    try {
+      setSelectedHSNData(prev => ({ ...prev, [itemId]: null }));
+      setHsnFormData(prev => ({ ...prev, [itemId]: { hsn_code: '', category: '' } }));
+      
+      // Update item to remove HSN data
+      await unifiedDataEngine.updateItem(quote!.id, itemId, {
+        hsn_code: '',
+        category: ''
+      });
+      
+      // Refresh quote data
+      await loadQuoteData();
+      setHsnErrors(prev => ({ ...prev, [itemId]: '' }));
+    } catch (error) {
+      console.error('Error clearing HSN:', error);
+      setHsnErrors(prev => ({ ...prev, [itemId]: 'Failed to clear HSN classification' }));
     }
   };
 
@@ -2033,6 +2121,42 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 </div>
                               </div>
 
+                              {/* Enhanced HSN Classification Interface - Edit Mode */}
+                              <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
+                                <div className="flex items-center space-x-2">
+                                  <Package className="w-4 h-4 text-purple-600" />
+                                  <span className="text-xs font-medium text-gray-700">HSN Classification</span>
+                                  <span className="text-xs text-blue-600">[EDIT MODE]</span>
+                                </div>
+                                
+                                {hsnErrors[quote.items[index]?.id] && (
+                                  <div className="p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded">
+                                    {hsnErrors[quote.items[index]?.id]}
+                                  </div>
+                                )}
+                                
+                                <HSNAutoComplete
+                                  value={quote.items[index]?.hsn_code || ''}
+                                  productName={item.product_name || quote.items[index]?.name || ''}
+                                  originCountry={currencyDisplay.originCountry}
+                                  onHSNSelect={(hsn) => handleHSNSelect(quote.items[index]?.id, hsn)}
+                                  onClear={() => handleHSNClear(quote.items[index]?.id)}
+                                  placeholder="Search HSN codes for this product..."
+                                />
+                                
+                                {quote.items[index]?.hsn_code && item.item_price && Number(item.item_price) > 0 && (
+                                  <CustomsCalculationPreview
+                                    productPrice={Number(item.item_price)}
+                                    quantity={item.quantity || 1}
+                                    hsnCode={quote.items[index]?.hsn_code}
+                                    category={quote.items[index]?.category || ''}
+                                    minimumValuationUSD={selectedHSNData[quote.items[index]?.id]?.minimum_valuation_usd}
+                                    originCountry={currencyDisplay.originCountry}
+                                    destinationCountry={currencyDisplay.destinationCountry}
+                                  />
+                                )}
+                              </div>
+
                               {/* Customer Notes - Professional Inline Style */}
                               {item.options && item.options.trim() && (
                                 <div className="mt-2 px-3 py-2 bg-gray-50 border-l-4 border-gray-300 rounded-r-md">
@@ -2525,6 +2649,41 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   'origin',
                                 )}
                               </span>
+                            </div>
+                            {/* Enhanced HSN Classification Interface */}
+                            <div className="mt-2 space-y-3 border-t border-gray-100 pt-2">
+                              <div className="flex items-center space-x-2">
+                                <Package className="w-4 h-4 text-gray-500" />
+                                <span className="text-xs font-medium text-gray-700">HSN Classification</span>
+                                <span className="text-xs text-green-600">[MAIN INTERFACE]</span>
+                              </div>
+                              
+                              {hsnErrors[item.id] && (
+                                <div className="p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded">
+                                  {hsnErrors[item.id]}
+                                </div>
+                              )}
+                              
+                              <HSNAutoComplete
+                                value={item.hsn_code || ''}
+                                productName={item.name}
+                                originCountry={currencyDisplay.originCountry}
+                                onHSNSelect={(hsn) => handleHSNSelect(item.id, hsn)}
+                                onClear={() => handleHSNClear(item.id)}
+                                placeholder="Search HSN codes for this product..."
+                              />
+                              
+                              {item.hsn_code && item.price_usd && Number(item.price_usd) > 0 && (
+                                <CustomsCalculationPreview
+                                  productPrice={Number(item.price_usd)}
+                                  quantity={item.quantity}
+                                  hsnCode={item.hsn_code}
+                                  category={item.category || ''}
+                                  minimumValuationUSD={selectedHSNData[item.id]?.minimum_valuation_usd}
+                                  originCountry={currencyDisplay.originCountry}
+                                  destinationCountry={currencyDisplay.destinationCountry}
+                                />
+                              )}
                             </div>
                             {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (

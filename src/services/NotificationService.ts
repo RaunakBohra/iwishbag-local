@@ -1,809 +1,505 @@
-// ============================================================================
-// NOTIFICATION SERVICE - Unified notification system for messaging
-// Handles email notifications, real-time alerts, and admin notifications
-// ============================================================================
+// =============================================
+// Notification Service
+// =============================================
+// Comprehensive service for managing the iwishBag proactive notification system.
+// Handles creation, retrieval, updates, and cleanup of user notifications.
+// Created: 2025-07-24
+// =============================================
 
 import { supabase } from '@/integrations/supabase/client';
-import { UnifiedQuote } from '@/types/unified-quote';
-import { TicketWithDetails, TicketStatus } from '@/types/ticket';
+import {
+  NotificationType,
+  NotificationPriority,
+  getNotificationConfig,
+  calculateExpiryDate,
+  NOTIFICATION_PRIORITY,
+} from '@/types/NotificationTypes';
 
-export interface Message {
-  id: string;
+// Notification data interface for database storage
+export interface NotificationData {
+  // Core context data
   quote_id?: string;
-  sender_id: string;
-  sender_name?: string;
-  sender_email?: string;
-  recipient_id?: string;
-  content: string;
-  message_type: string;
-  thread_type?: string;
-  priority?: string;
-  attachment_url?: string;
-  attachment_file_name?: string;
+  order_id?: string;
+  ticket_id?: string;
+  message_id?: string;
+
+  // Action URLs and references
+  action_url?: string;
+  action_label?: string;
+  reference_id?: string;
+
+  // Rich content data
+  title?: string;
+  subtitle?: string;
+  image_url?: string;
+
+  // Tracking and analytics
+  source?: string;
+  campaign_id?: string;
+
+  // Custom fields for extensibility
+  [key: string]: any;
+}
+
+// Notification database record interface
+export interface NotificationRecord {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  message: string;
+  data: NotificationData;
+  priority: NotificationPriority;
+  is_read: boolean;
+  is_dismissed: boolean;
+  requires_action: boolean;
+  allow_dismiss: boolean;
   created_at: string;
+  updated_at: string;
+  expires_at: string | null;
+  read_at: string | null;
+  dismissed_at: string | null;
 }
 
-export interface EmailNotificationData {
-  to: string[];
-  cc?: string[];
-  subject: string;
-  templateName: string;
-  variables: Record<string, string>;
-  priority?: 'low' | 'normal' | 'high' | 'urgent';
+// Service configuration
+interface NotificationServiceConfig {
+  maxNotificationsPerUser: number;
+  defaultBatchSize: number;
+  cleanupIntervalHours: number;
+  enableAnalytics: boolean;
 }
 
-export class NotificationService {
-  private static instance: NotificationService;
+const DEFAULT_CONFIG: NotificationServiceConfig = {
+  maxNotificationsPerUser: 100,
+  defaultBatchSize: 20,
+  cleanupIntervalHours: 24,
+  enableAnalytics: true,
+};
 
-  static getInstance(): NotificationService {
-    if (!NotificationService.instance) {
-      NotificationService.instance = new NotificationService();
-    }
-    return NotificationService.instance;
+class NotificationService {
+  private config: NotificationServiceConfig;
+  private initialized: boolean = false;
+
+  constructor(config: Partial<NotificationServiceConfig> = {}) {
+    this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**
-   * Notify admin when customer sends a new message
+   * Initialize the notification service
    */
-  async notifyAdminNewMessage(quote: UnifiedQuote, message: Message): Promise<void> {
+  private async initialize(): Promise<void> {
+    if (this.initialized) return;
+
     try {
-      // Get admin users
-      const adminEmails = await this.getAdminEmails();
-      if (!adminEmails.length) {
-        console.warn('⚠️ No admin emails found for notification');
-        return;
-      }
-
-      // Prepare email data
-      const emailData: EmailNotificationData = {
-        to: adminEmails,
-        subject: `New customer message for quote #${quote.display_id || quote.id}`,
-        templateName: 'Admin Quote Message Notification',
-        variables: {
-          quote_id: quote.display_id || quote.id,
-          customer_name: this.getCustomerName(quote),
-          customer_email: this.getCustomerEmail(quote),
-          message_content: message.content,
-          admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`,
-          sender_name: message.sender_name || 'Customer',
-        },
-        priority: (message.priority as any) || 'normal',
-      };
-
-      await this.sendEmailNotification(emailData);
-
-      // Create internal admin notification message
-      await this.createInternalNotification({
-        quote_id: quote.id,
-        message_type: 'admin_notification',
-        thread_type: 'internal',
-        priority: message.priority || 'normal',
-        subject: `New customer message - Quote #${quote.display_id || quote.id}`,
-        content: `Customer ${this.getCustomerName(quote)} sent: "${message.content.substring(0, 100)}${message.content.length > 100 ? '...' : ''}"`,
-        sender_id: message.sender_id,
-      });
-
-      console.log('✅ Admin notification sent for new customer message');
+      // Perform any initialization tasks
+      // Could include setting up real-time subscriptions, cleanup tasks, etc.
+      this.initialized = true;
     } catch (error) {
-      console.error('❌ Failed to notify admin of new message:', error);
-    }
-  }
-
-  /**
-   * Notify customer when admin replies to their message
-   */
-  async notifyCustomerReply(quote: UnifiedQuote, message: Message): Promise<void> {
-    try {
-      const customerEmail = this.getCustomerEmail(quote);
-      if (!customerEmail || customerEmail === 'No email provided') {
-        console.warn('⚠️ No customer email available for notification');
-        return;
-      }
-
-      const emailData: EmailNotificationData = {
-        to: [customerEmail],
-        subject: `New message about your quote #${quote.display_id || quote.id}`,
-        templateName: 'Quote Discussion New Message',
-        variables: {
-          quote_id: quote.display_id || quote.id,
-          customer_name: this.getCustomerName(quote),
-          sender_name: message.sender_name || 'iwishBag Team',
-          message_content: message.content,
-          quote_url: `${window.location.origin}/quotes/${quote.id}`,
-        },
-        priority: (message.priority as any) || 'normal',
-      };
-
-      await this.sendEmailNotification(emailData);
-      console.log('✅ Customer notification sent for admin reply');
-    } catch (error) {
-      console.error('❌ Failed to notify customer of reply:', error);
-    }
-  }
-
-  /**
-   * Notify admin when payment proof is uploaded
-   */
-  async notifyPaymentProofUploaded(quote: UnifiedQuote, message: Message): Promise<void> {
-    try {
-      const adminEmails = await this.getAdminEmails();
-      if (!adminEmails.length) {
-        console.warn('⚠️ No admin emails found for payment proof notification');
-        return;
-      }
-
-      const emailData: EmailNotificationData = {
-        to: adminEmails,
-        subject: `Payment proof submitted for quote #${quote.display_id || quote.id}`,
-        templateName: 'Payment Proof Submitted',
-        variables: {
-          quote_id: quote.display_id || quote.id,
-          customer_name: this.getCustomerName(quote),
-          customer_email: this.getCustomerEmail(quote),
-          message_content: message.content,
-          attachment_name: message.attachment_file_name || 'Payment proof',
-          admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`,
-        },
-        priority: 'high',
-      };
-
-      await this.sendEmailNotification(emailData);
-
-      // Create high-priority internal notification
-      await this.createInternalNotification({
-        quote_id: quote.id,
-        message_type: 'payment_proof',
-        thread_type: 'internal',
-        priority: 'high',
-        subject: `Payment proof submitted - Quote #${quote.display_id || quote.id}`,
-        content: `Customer ${this.getCustomerName(quote)} submitted payment proof. Requires verification.`,
-        sender_id: message.sender_id,
-      });
-
-      console.log('✅ Admin notification sent for payment proof upload');
-    } catch (error) {
-      console.error('❌ Failed to notify admin of payment proof:', error);
-    }
-  }
-
-  /**
-   * Send quote status update notification
-   */
-  async notifyQuoteStatusUpdate(
-    quote: UnifiedQuote,
-    oldStatus: string,
-    newStatus: string,
-  ): Promise<void> {
-    try {
-      const customerEmail = this.getCustomerEmail(quote);
-      if (!customerEmail || customerEmail === 'No email provided') {
-        console.warn('⚠️ No customer email for status update notification');
-        return;
-      }
-
-      // Use existing email notification system
-      const { useEmailNotifications } = await import('@/hooks/useEmailNotifications');
-      const emailService = useEmailNotifications();
-
-      await emailService.sendStatusEmail(quote.id, newStatus);
-      console.log(`✅ Status update notification sent: ${oldStatus} → ${newStatus}`);
-    } catch (error) {
-      console.error('❌ Failed to send status update notification:', error);
-    }
-  }
-
-  /**
-   * Send ticket email notification
-   */
-  async sendTicketEmailNotification(
-    ticket: TicketWithDetails,
-    eventType: 'created' | 'status_updated' | 'reply_added' | 'sla_breach',
-    additionalData?: {
-      oldStatus?: TicketStatus;
-      newStatus?: TicketStatus;
-      replyMessage?: string;
-      slaType?: 'response' | 'resolution';
-    },
-  ): Promise<void> {
-    try {
-      const customerEmail = ticket.user_profile?.email;
-      if (!customerEmail) {
-        console.warn('⚠️ No customer email available for ticket notification');
-        return;
-      }
-
-      const { subject, htmlContent, textContent } = this.generateTicketEmailContent(
-        ticket,
-        eventType,
-        additionalData,
-      );
-
-      await this.sendEmail({
-        to: customerEmail,
-        subject,
-        html: htmlContent,
-        text: textContent,
-      });
-
-      console.log(`✅ Ticket email notification sent: ${eventType} for ticket ${ticket.id}`);
-    } catch (error) {
-      console.error('❌ Failed to send ticket email notification:', error);
+      console.error('Failed to initialize NotificationService:', error);
       throw error;
     }
   }
 
   /**
-   * Generate email content for ticket notifications
+   * Create a new notification for a user
    */
-  private generateTicketEmailContent(
-    ticket: TicketWithDetails,
-    eventType: 'created' | 'status_updated' | 'reply_added' | 'sla_breach',
-    additionalData?: any,
-  ): { subject: string; htmlContent: string; textContent: string } {
-    const customerName = ticket.user_profile?.full_name || 'Customer';
-    const ticketId = ticket.id.slice(0, 8);
-    const quoteInfo = ticket.quote
-      ? `Order #${ticket.quote.iwish_tracking_id || ticket.quote.id.slice(0, 8)}`
-      : 'General Inquiry';
+  async createNotification(
+    userId: string,
+    type: NotificationType,
+    message: string,
+    data: NotificationData = {},
+    options: {
+      priority?: NotificationPriority;
+      expiryHours?: number;
+      skipDuplicates?: boolean;
+    } = {},
+  ): Promise<NotificationRecord | null> {
+    try {
+      await this.initialize();
 
-    switch (eventType) {
-      case 'created':
-        return {
-          subject: `Support Ticket Created - iwishBag Help Request #${ticketId}`,
-          htmlContent: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center;">
-                <h1 style="margin: 0; font-size: 28px;">📋 Support Ticket Created</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">We've received your help request</p>
-              </div>
-              
-              <div style="padding: 30px; background: #f8f9fa;">
-                <h2 style="color: #333; margin-top: 0;">Hello ${customerName},</h2>
-                
-                <p>Thank you for contacting iwishBag support. We've successfully created your help request and our team will respond shortly.</p>
-                
-                <div style="background: white; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                  <h3 style="margin-top: 0; color: #667eea;">📋 Ticket Details</h3>
-                  <p><strong>Ticket ID:</strong> #${ticketId}</p>
-                  <p><strong>Subject:</strong> ${ticket.subject}</p>
-                  <p><strong>Category:</strong> ${ticket.category}</p>
-                  <p><strong>Priority:</strong> ${ticket.priority}</p>
-                  <p><strong>Related to:</strong> ${quoteInfo}</p>
-                </div>
-                
-                <div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <p style="margin: 0; color: #1976d2;">💡 <strong>What happens next?</strong></p>
-                  <p style="margin: 5px 0 0 0; color: #1976d2;">Our support team will review your request and respond within our service level agreement timeframes.</p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets" 
-                     style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">View My Tickets</a>
-                </div>
-              </div>
-              
-              <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p>iwishBag Support Team | support@iwishbag.com</p>
-                <p style="margin: 5px 0 0 0; opacity: 0.7;">This is an automated message. Please do not reply directly to this email.</p>
-              </div>
-            </div>
-          `,
-          textContent: `Support Ticket Created - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nThank you for contacting iwishBag support. We've successfully created your help request and our team will respond shortly.\n\nTicket Details:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Category: ${ticket.category}\n- Priority: ${ticket.priority}\n- Related to: ${quoteInfo}\n\nWhat happens next?\nOur support team will review your request and respond within our service level agreement timeframes.\n\nView your tickets: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team\nsupport@iwishbag.com`,
-        };
+      const config = getNotificationConfig(type);
+      const priority = options.priority || config.priority;
+      const expiresAt = calculateExpiryDate(type, options.expiryHours);
 
-      case 'status_updated':
-        const oldStatus = additionalData?.oldStatus || 'unknown';
-        const newStatus = additionalData?.newStatus || ticket.status;
-        return {
-          subject: `Ticket Status Updated - iwishBag Help Request #${ticketId}`,
-          htmlContent: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); color: white; padding: 30px; text-align: center;">
-                <h1 style="margin: 0; font-size: 28px;">🔄 Status Updated</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Your ticket status has been updated</p>
-              </div>
-              
-              <div style="padding: 30px; background: #f8f9fa;">
-                <h2 style="color: #333; margin-top: 0;">Hello ${customerName},</h2>
-                
-                <p>The status of your support ticket has been updated.</p>
-                
-                <div style="background: white; border-left: 4px solid #4caf50; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                  <h3 style="margin-top: 0; color: #4caf50;">📋 Status Change</h3>
-                  <p><strong>Ticket ID:</strong> #${ticketId}</p>
-                  <p><strong>Subject:</strong> ${ticket.subject}</p>
-                  <p><strong>Previous Status:</strong> ${oldStatus}</p>
-                  <p><strong>Current Status:</strong> <span style="color: #4caf50; font-weight: bold;">${newStatus}</span></p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets" 
-                     style="background: #4caf50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">View Ticket Details</a>
-                </div>
-              </div>
-              
-              <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p>iwishBag Support Team | support@iwishbag.com</p>
-              </div>
-            </div>
-          `,
-          textContent: `Ticket Status Updated - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nThe status of your support ticket has been updated.\n\nStatus Change:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Previous Status: ${oldStatus}\n- Current Status: ${newStatus}\n\nView ticket: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`,
-        };
+      // Check for duplicates if requested
+      if (options.skipDuplicates) {
+        const { data: existing } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('type', type)
+          .eq('is_dismissed', false)
+          .gte('expires_at', new Date().toISOString())
+          .limit(1);
 
-      case 'reply_added':
-        const replyMessage = additionalData?.replyMessage || 'New reply available';
-        return {
-          subject: `New Reply - iwishBag Help Request #${ticketId}`,
-          htmlContent: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); color: white; padding: 30px; text-align: center;">
-                <h1 style="margin: 0; font-size: 28px;">💬 New Reply</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">Our team has responded to your ticket</p>
-              </div>
-              
-              <div style="padding: 30px; background: #f8f9fa;">
-                <h2 style="color: #333; margin-top: 0;">Hello ${customerName},</h2>
-                
-                <p>Our support team has added a new reply to your ticket.</p>
-                
-                <div style="background: white; border-left: 4px solid #2196f3; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                  <h3 style="margin-top: 0; color: #2196f3;">💬 New Message</h3>
-                  <p><strong>Ticket ID:</strong> #${ticketId}</p>
-                  <p><strong>Subject:</strong> ${ticket.subject}</p>
-                  <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 15px;">
-                    <p style="margin: 0; font-style: italic;">${replyMessage.length > 200 ? replyMessage.substring(0, 200) + '...' : replyMessage}</p>
-                  </div>
-                </div>
-                
-                <div style="background: #fff3e0; border: 1px solid #ff9800; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <p style="margin: 0; color: #f57c00;">⚡ <strong>Action Required:</strong></p>
-                  <p style="margin: 5px 0 0 0; color: #f57c00;">Please log in to view the full message and continue the conversation.</p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets" 
-                     style="background: #2196f3; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Read Full Message</a>
-                </div>
-              </div>
-              
-              <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p>iwishBag Support Team | support@iwishbag.com</p>
-              </div>
-            </div>
-          `,
-          textContent: `New Reply - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nOur support team has added a new reply to your ticket.\n\nNew Message:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Message Preview: ${replyMessage.length > 200 ? replyMessage.substring(0, 200) + '...' : replyMessage}\n\nPlease log in to view the full message: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`,
-        };
+        if (existing && existing.length > 0) {
+          console.log(`Skipping duplicate notification: ${type} for user ${userId}`);
+          return null;
+        }
+      }
 
-      case 'sla_breach':
-        const slaType = additionalData?.slaType || 'response';
-        return {
-          subject: `Service Level Alert - iwishBag Help Request #${ticketId}`,
-          htmlContent: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: linear-gradient(135deg, #ff5722 0%, #d32f2f 100%); color: white; padding: 30px; text-align: center;">
-                <h1 style="margin: 0; font-size: 28px;">⚠️ Service Level Alert</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9;">We're working to resolve your request</p>
-              </div>
-              
-              <div style="padding: 30px; background: #f8f9fa;">
-                <h2 style="color: #333; margin-top: 0;">Hello ${customerName},</h2>
-                
-                <p>We want to keep you informed about your support ticket. While we strive to meet our service level commitments, your ${slaType} is taking longer than expected.</p>
-                
-                <div style="background: white; border-left: 4px solid #ff5722; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                  <h3 style="margin-top: 0; color: #ff5722;">⚠️ Status Update</h3>
-                  <p><strong>Ticket ID:</strong> #${ticketId}</p>
-                  <p><strong>Subject:</strong> ${ticket.subject}</p>
-                  <p><strong>SLA Type:</strong> ${slaType} time</p>
-                  <p><strong>Current Priority:</strong> ${ticket.priority}</p>
-                </div>
-                
-                <div style="background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <p style="margin: 0; color: #2e7d32;">🔧 <strong>We're on it!</strong></p>
-                  <p style="margin: 5px 0 0 0; color: #2e7d32;">Our team is actively working on your request and you will receive an update soon.</p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets" 
-                     style="background: #ff5722; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Check Ticket Status</a>
-                </div>
-              </div>
-              
-              <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-                <p>iwishBag Support Team | support@iwishbag.com</p>
-                <p style="margin: 5px 0 0 0; opacity: 0.7;">We appreciate your patience as we work to resolve your request.</p>
-              </div>
-            </div>
-          `,
-          textContent: `Service Level Alert - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nWe want to keep you informed about your support ticket. While we strive to meet our service level commitments, your ${slaType} is taking longer than expected.\n\nStatus Update:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- SLA Type: ${slaType} time\n- Current Priority: ${ticket.priority}\n\nWe're on it! Our team is actively working on your request and you will receive an update soon.\n\nCheck status: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`,
-        };
+      // Create notification record
+      const { data: notification, error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          type,
+          message,
+          data,
+          priority,
+          is_read: false,
+          is_dismissed: false,
+          requires_action: config.requiresAction || false,
+          allow_dismiss: config.allowDismiss !== false,
+          expires_at: config.defaultExpiryHours ? expiresAt.toISOString() : null,
+        })
+        .select()
+        .single();
 
-      default:
-        return {
-          subject: `Ticket Update - iwishBag Help Request #${ticketId}`,
-          htmlContent: `<p>Hello ${customerName}, your ticket #${ticketId} has been updated.</p>`,
-          textContent: `Hello ${customerName}, your ticket #${ticketId} has been updated.`,
-        };
+      if (error) {
+        console.error('Failed to create notification:', error);
+        throw error;
+      }
+
+      // Analytics tracking
+      if (this.config.enableAnalytics) {
+        await this.trackNotificationEvent('created', notification);
+      }
+
+      // Cleanup old notifications if user exceeds limit
+      await this.cleanupUserNotifications(userId);
+
+      return notification;
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      throw error;
     }
   }
 
   /**
-   * Send email notification using template
+   * Get notifications for a user
    */
-  private async sendEmailNotification(data: EmailNotificationData): Promise<void> {
+  async getUserNotifications(
+    userId: string,
+    options: {
+      unreadOnly?: boolean;
+      limit?: number;
+      offset?: number;
+      includeExpired?: boolean;
+    } = {},
+  ): Promise<NotificationRecord[]> {
     try {
-      console.log('📧 Sending email notification via Resend API:', {
-        to: data.to,
-        subject: data.subject,
-        template: data.templateName,
-      });
+      await this.initialize();
 
-      // Generate HTML content from template
-      const htmlContent = this.generateEmailTemplate(data.templateName, data.variables);
+      let query = supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-      // Send to each recipient
-      const emailPromises = data.to.map(async (email) => {
-        const { error } = await supabase.functions.invoke('send-email', {
-          body: {
-            to: email,
-            subject: data.subject,
-            html: htmlContent,
-            from: 'iwishBag Support <support@iwishbag.com>', // Use your verified domain
-          },
+      // Filter by read status
+      if (options.unreadOnly) {
+        query = query.eq('is_read', false).eq('is_dismissed', false);
+      }
+
+      // Filter out expired notifications unless explicitly requested
+      if (!options.includeExpired) {
+        query = query.or('expires_at.is.null,expires_at.gte.' + new Date().toISOString());
+      }
+
+      // Pagination
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+      if (options.offset) {
+        query = query.range(
+          options.offset,
+          options.offset + (options.limit || this.config.defaultBatchSize) - 1,
+        );
+      }
+
+      const { data: notifications, error } = await query;
+
+      if (error) {
+        console.error('Failed to fetch notifications:', error);
+        throw error;
+      }
+
+      return notifications || [];
+    } catch (error) {
+      console.error('Error fetching user notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark notification as read
+   */
+  async markAsRead(notificationId: string, userId?: string): Promise<boolean> {
+    try {
+      await this.initialize();
+
+      let query = supabase
+        .from('notifications')
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', notificationId);
+
+      // Add user filter for security
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.select().single();
+
+      if (error) {
+        console.error('Failed to mark notification as read:', error);
+        return false;
+      }
+
+      // Analytics tracking
+      if (this.config.enableAnalytics && data) {
+        await this.trackNotificationEvent('read', data);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark notification as dismissed
+   */
+  async dismiss(notificationId: string, userId?: string): Promise<boolean> {
+    try {
+      await this.initialize();
+
+      let query = supabase
+        .from('notifications')
+        .update({
+          is_dismissed: true,
+          dismissed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', notificationId);
+
+      // Add user filter for security
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.select().single();
+
+      if (error) {
+        console.error('Failed to dismiss notification:', error);
+        return false;
+      }
+
+      // Analytics tracking
+      if (this.config.enableAnalytics && data) {
+        await this.trackNotificationEvent('dismissed', data);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error dismissing notification:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllAsRead(userId: string): Promise<number> {
+    try {
+      await this.initialize();
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({
+          is_read: true,
+          read_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+        .select('id');
+
+      if (error) {
+        console.error('Failed to mark all notifications as read:', error);
+        return 0;
+      }
+
+      const count = data?.length || 0;
+
+      // Analytics tracking
+      if (this.config.enableAnalytics && count > 0) {
+        await this.trackNotificationEvent('bulk_read', { user_id: userId, count });
+      }
+
+      return count;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get unread notification count for a user
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    try {
+      await this.initialize();
+
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+        .eq('is_dismissed', false)
+        .or('expires_at.is.null,expires_at.gte.' + new Date().toISOString());
+
+      if (error) {
+        console.error('Failed to get unread count:', error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Clean up expired and excess notifications for a user
+   */
+  private async cleanupUserNotifications(userId: string): Promise<void> {
+    try {
+      // Remove expired notifications
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .lt('expires_at', new Date().toISOString());
+
+      // Remove excess notifications (keep only the most recent ones)
+      const { data: allNotifications } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (allNotifications && allNotifications.length > this.config.maxNotificationsPerUser) {
+        const toDelete = allNotifications.slice(this.config.maxNotificationsPerUser);
+        const idsToDelete = toDelete.map((n) => n.id);
+
+        await supabase.from('notifications').delete().in('id', idsToDelete);
+      }
+    } catch (error) {
+      console.error('Error cleaning up user notifications:', error);
+    }
+  }
+
+  /**
+   * Track notification events for analytics
+   */
+  private async trackNotificationEvent(event: string, notification: any): Promise<void> {
+    try {
+      // This could integrate with your analytics service
+      // For now, we'll just log to console in development
+      if (import.meta.env.DEV) {
+        console.log(`Notification ${event}:`, {
+          type: notification.type,
+          userId: notification.user_id,
+          notificationId: notification.id,
+          timestamp: new Date().toISOString(),
         });
+      }
+
+      // Future: Send to analytics service like Mixpanel, Amplitude, etc.
+    } catch (error) {
+      console.error('Error tracking notification event:', error);
+    }
+  }
+
+  /**
+   * Bulk create notifications (useful for system-wide announcements)
+   */
+  async createBulkNotifications(
+    userIds: string[],
+    type: NotificationType,
+    message: string,
+    data: NotificationData = {},
+    options: {
+      priority?: NotificationPriority;
+      expiryHours?: number;
+      batchSize?: number;
+    } = {},
+  ): Promise<number> {
+    try {
+      await this.initialize();
+
+      const config = getNotificationConfig(type);
+      const priority = options.priority || config.priority;
+      const expiresAt = calculateExpiryDate(type, options.expiryHours);
+      const batchSize = options.batchSize || 50;
+
+      let totalCreated = 0;
+
+      // Process in batches to avoid overwhelming the database
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize);
+
+        const notifications = batch.map((userId) => ({
+          user_id: userId,
+          type,
+          message,
+          data,
+          priority,
+          is_read: false,
+          is_dismissed: false,
+          requires_action: config.requiresAction || false,
+          allow_dismiss: config.allowDismiss !== false,
+          expires_at: config.defaultExpiryHours ? expiresAt.toISOString() : null,
+        }));
+
+        const { data, error } = await supabase
+          .from('notifications')
+          .insert(notifications)
+          .select('id');
 
         if (error) {
-          console.error(`❌ Failed to send email to ${email}:`, error);
-          throw new Error(`Failed to send email to ${email}: ${error.message}`);
+          console.error(`Failed to create notification batch ${i / batchSize + 1}:`, error);
+          continue;
         }
 
-        console.log(`✅ Email sent successfully to ${email}`);
-      });
+        totalCreated += data?.length || 0;
+      }
 
-      await Promise.all(emailPromises);
-      console.log('✅ All email notifications sent successfully');
+      // Analytics tracking
+      if (this.config.enableAnalytics) {
+        await this.trackNotificationEvent('bulk_created', {
+          type,
+          count: totalCreated,
+          total_users: userIds.length,
+        });
+      }
+
+      return totalCreated;
     } catch (error) {
-      console.error('❌ Failed to send email notification:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send email using direct method (for ticket notifications)
-   */
-  private async sendEmail(data: {
-    to: string;
-    subject: string;
-    html: string;
-    text: string;
-  }): Promise<void> {
-    try {
-      console.log('📧 Sending ticket email via Resend API:', {
-        to: data.to,
-        subject: data.subject,
-      });
-
-      const { error } = await supabase.functions.invoke('send-email', {
-        body: {
-          to: data.to,
-          subject: data.subject,
-          html: data.html,
-          from: 'iwishBag Support <support@iwishbag.com>', // Use your verified domain
-        },
-      });
-
-      if (error) {
-        console.error('❌ Failed to send ticket email:', error);
-        throw new Error(`Failed to send ticket email: ${error.message}`);
-      }
-
-      console.log('✅ Ticket email sent successfully via Resend API');
-    } catch (error) {
-      console.error('❌ Failed to send ticket email:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate HTML email content from template
-   */
-  private generateEmailTemplate(templateName: string, variables: Record<string, string>): string {
-    const baseStyle = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
-        <div style="background: linear-gradient(135deg, #0f766e 0%, #06b6d4 100%); color: white; padding: 30px; text-align: center;">
-          <h1 style="margin: 0; font-size: 28px;">iwishBag</h1>
-          <p style="margin: 10px 0 0 0; opacity: 0.9;">Global Shopping Made Simple</p>
-        </div>
-        <div style="padding: 30px; background: white;">
-          {{CONTENT}}
-        </div>
-        <div style="background: #333; color: white; padding: 20px; text-align: center; font-size: 12px;">
-          <p>iwishBag Support Team | support@iwishbag.com</p>
-          <p>Need help? Visit our <a href="https://iwishbag.com/support" style="color: #0f766e;">Support Center</a></p>
-        </div>
-      </div>
-    `;
-
-    let content = '';
-
-    switch (templateName) {
-      case 'New Customer Message Notification':
-        content = `
-          <h2 style="color: #333; margin-top: 0;">New Customer Message</h2>
-          <div style="background: #fff3e0; border: 1px solid #ff9800; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Quote:</strong> #${variables.quote_id}</p>
-            <p style="margin: 5px 0 0 0;"><strong>Customer:</strong> ${variables.customer_name}</p>
-            <p style="margin: 5px 0 0 0;"><strong>From:</strong> ${variables.sender_email}</p>
-          </div>
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0; font-weight: bold;">Message:</p>
-            <p style="margin: 10px 0 0 0;">${variables.message_content}</p>
-          </div>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${variables.quote_url}" style="background: #0f766e; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">View Quote & Reply</a>
-          </div>
-        `;
-        break;
-
-      case 'Quote Discussion New Message':
-        content = `
-          <h2 style="color: #333; margin-top: 0;">Hello ${variables.customer_name},</h2>
-          <p>You have a new message about your quote #${variables.quote_id}.</p>
-          <div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0; font-weight: bold;">From: ${variables.sender_name}</p>
-            <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 10px;">
-              <p style="margin: 0;">${variables.message_content}</p>
-            </div>
-          </div>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${variables.quote_url}" style="background: #2196f3; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">View Full Conversation</a>
-          </div>
-          <p>Thank you for choosing iwishBag!</p>
-        `;
-        break;
-
-      case 'Payment Proof Upload Notification':
-        content = `
-          <h2 style="color: #333; margin-top: 0;">Payment Proof Uploaded</h2>
-          <div style="background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Quote:</strong> #${variables.quote_id}</p>
-            <p style="margin: 5px 0 0 0;"><strong>Customer:</strong> ${variables.customer_name}</p>
-            <p style="margin: 5px 0 0 0;"><strong>Status:</strong> Requires verification</p>
-          </div>
-          <div style="background: #fff3e0; border: 1px solid #ff9800; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0; color: #f57c00;">⚡ <strong>Action Required:</strong></p>
-            <p style="margin: 5px 0 0 0; color: #f57c00;">Please verify the payment proof and update the quote status.</p>
-          </div>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${variables.quote_url}" style="background: #4caf50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Payment</a>
-          </div>
-        `;
-        break;
-
-      default:
-        content = `
-          <h2 style="color: #333; margin-top: 0;">iwishBag Notification</h2>
-          <p>You have a new notification from iwishBag.</p>
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            ${Object.entries(variables)
-              .map(
-                ([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`,
-              )
-              .join('')}
-          </div>
-        `;
-    }
-
-    return baseStyle.replace('{{CONTENT}}', content);
-  }
-
-  /**
-   * Create internal admin notification message
-   */
-  private async createInternalNotification(data: {
-    quote_id: string;
-    message_type: string;
-    thread_type: string;
-    priority: string;
-    subject: string;
-    content: string;
-    sender_id: string;
-  }): Promise<void> {
-    try {
-      const { error } = await supabase.from('messages').insert({
-        quote_id: data.quote_id,
-        sender_id: data.sender_id,
-        subject: data.subject,
-        content: data.content,
-        message_type: data.message_type,
-        thread_type: data.thread_type,
-        priority: data.priority,
-        is_internal: true,
-        sender_name: 'System',
-        sender_email: 'system@iwishbag.com',
-      });
-
-      if (error) {
-        console.error('❌ Failed to create internal notification:', error);
-      }
-    } catch (error) {
-      console.error('❌ Error creating internal notification:', error);
-    }
-  }
-
-  /**
-   * Get admin email addresses
-   */
-  private async getAdminEmails(): Promise<string[]> {
-    try {
-      // Get admin user IDs
-      const { data: adminRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (rolesError || !adminRoles) {
-        console.error('❌ Failed to fetch admin roles:', rolesError);
-        return [];
-      }
-
-      if (adminRoles.length === 0) {
-        console.warn('⚠️ No admin roles found');
-        return [];
-      }
-
-      const adminUserIds = adminRoles.map((role) => role.user_id);
-
-      // Get emails from auth.users table using RPC function
-      const { data: adminEmails, error: emailsError } = await supabase.rpc('get_admin_emails', {
-        admin_user_ids: adminUserIds,
-      });
-
-      if (emailsError) {
-        console.error('❌ Failed to fetch admin emails via RPC:', emailsError);
-        // Fallback: return a default admin email
-        return ['admin@iwishbag.com'];
-      }
-
-      return adminEmails || ['admin@iwishbag.com'];
-    } catch (error) {
-      console.error('❌ Error fetching admin emails:', error);
-      return ['admin@iwishbag.com'];
-    }
-  }
-
-  /**
-   * Get customer name from quote data
-   */
-  private getCustomerName(quote: UnifiedQuote): string {
-    return quote.customer_data?.info?.name || 'Customer';
-  }
-
-  /**
-   * Get customer email from quote data
-   */
-  private getCustomerEmail(quote: UnifiedQuote): string {
-    return quote.customer_data?.info?.email || 'No email provided';
-  }
-
-  /**
-   * Notify admin of high-value quote approval (lightweight BI alert)
-   * Only sends for quotes over $1000 USD
-   */
-  async notifyHighValueQuoteApproval(quote: UnifiedQuote): Promise<void> {
-    try {
-      const quoteValue = quote.final_total_usd || 0;
-      const threshold = 1000; // $1000 USD threshold
-
-      if (quoteValue < threshold) {
-        return; // Skip notification for lower value quotes
-      }
-
-      const adminEmails = await this.getAdminEmails();
-      if (!adminEmails.length) {
-        console.warn('⚠️ No admin emails found for high-value quote notification');
-        return;
-      }
-
-      const emailData: EmailNotificationData = {
-        to: adminEmails,
-        subject: `🎯 High-Value Quote Approved - $${quoteValue.toFixed(2)} USD`,
-        templateName: 'High Value Quote Alert',
-        variables: {
-          quote_id: quote.display_id || quote.id,
-          customer_name: this.getCustomerName(quote),
-          customer_email: this.getCustomerEmail(quote),
-          quote_value: `$${quoteValue.toFixed(2)} USD`,
-          admin_quote_url: `${window.location.origin}/admin/quotes/${quote.id}`,
-        },
-        priority: 'high',
-      };
-
-      await this.sendEmailNotification(emailData);
-
-      // Create internal high-priority notification
-      await this.createInternalNotification({
-        quote_id: quote.id,
-        message_type: 'high_value_approval',
-        thread_type: 'internal',
-        priority: 'high',
-        subject: `High-value quote approved - $${quoteValue.toFixed(2)}`,
-        content: `Customer ${this.getCustomerName(quote)} approved a high-value quote worth $${quoteValue.toFixed(2)} USD. Immediate attention recommended.`,
-        sender_id: 'system',
-      });
-
-      console.log(`✅ High-value quote notification sent: $${quoteValue.toFixed(2)} USD`);
-    } catch (error) {
-      console.error('❌ Failed to send high-value quote notification:', error);
-    }
-  }
-
-  /**
-   * Get unread message count for a user
-   */
-  async getUnreadMessageCount(userId: string, quoteId?: string): Promise<number> {
-    try {
-      const { data, error } = await supabase.rpc('get_unread_message_count', {
-        p_quote_id: quoteId || null,
-        p_user_id: userId,
-      });
-
-      if (error) {
-        console.error('❌ Failed to get unread count:', error);
-        return 0;
-      }
-
-      return data || 0;
-    } catch (error) {
-      console.error('❌ Error getting unread count:', error);
+      console.error('Error creating bulk notifications:', error);
       return 0;
     }
-  }
-
-  /**
-   * Mark messages as read
-   */
-  async markMessagesAsRead(messageIds: string[]): Promise<number> {
-    try {
-      const { data, error } = await supabase.rpc('mark_messages_as_read', {
-        p_message_ids: messageIds,
-      });
-
-      if (error) {
-        console.error('❌ Failed to mark messages as read:', error);
-        return 0;
-      }
-
-      return data || 0;
-    } catch (error) {
-      console.error('❌ Error marking messages as read:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Subscribe to real-time message updates for a quote
-   */
-  subscribeToQuoteMessages(quoteId: string, callback: (payload: any) => void) {
-    const channel = supabase
-      .channel(`quote_messages_${quoteId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `quote_id=eq.${quoteId}`,
-        },
-        callback,
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }
 }
 
 // Export singleton instance
-export const notificationService = NotificationService.getInstance();
+export const notificationService = new NotificationService();
+
+// Export types and interfaces
+export type { NotificationRecord, NotificationData, NotificationServiceConfig };

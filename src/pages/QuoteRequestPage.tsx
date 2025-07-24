@@ -29,7 +29,7 @@
 // The flow minimizes friction while providing necessary feedback and review opportunities.
 // =========================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProductInfoStep from '@/components/quote/ProductInfoStep';
 import SimplifiedContactStep from '@/components/quote/SimplifiedContactStep';
 import ProductSummary from '@/components/quote/ProductSummary';
@@ -40,6 +40,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
 import { currencyService } from '@/services/CurrencyService';
+import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
+import { notificationService } from '@/services/NotificationService';
+import { NOTIFICATION_TYPES } from '@/types/NotificationTypes';
 
 const steps = ['Product Info', 'Contact & Submit'];
 
@@ -75,6 +78,15 @@ export default function QuoteRequestPage() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
+
+  // Track quote creation start on component mount
+  useEffect(() => {
+    userActivityService.trackActivity(ACTIVITY_TYPES.QUOTE_CREATE_START, {
+      page_url: window.location.href,
+      user_type: user ? 'registered' : 'anonymous',
+      step: 'product_info',
+    });
+  }, []);
 
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
@@ -343,6 +355,37 @@ export default function QuoteRequestPage() {
               console.error('❌ Profile update failed:', updateError);
             }
           }
+        }
+      }
+
+      // Track successful quote submission
+      await userActivityService.trackActivity(ACTIVITY_TYPES.QUOTE_CREATE_COMPLETE, {
+        quote_type: quoteType,
+        products_count: products.length,
+        destination_country: destinationCountry,
+        total_value: products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0),
+        user_type: user ? 'registered' : 'anonymous',
+        email_provided: !!emailToUse,
+      });
+
+      // Create notification for quote submission (for registered users)
+      if (user?.id && !user.is_anonymous) {
+        try {
+          await notificationService.createNotification(
+            user.id,
+            NOTIFICATION_TYPES.QUOTE_PENDING_REVIEW,
+            `Your quote request for ${products.length} item${products.length > 1 ? 's' : ''} has been submitted successfully. We'll review it and send you a detailed quote within 24-48 hours.`,
+            {
+              action_url: '/dashboard/quotes',
+              action_label: 'View Quotes',
+              title: 'Quote Request Submitted',
+              subtitle: `${products.length} item${products.length > 1 ? 's' : ''} • ${destinationCountry}`,
+              product_count: products.length,
+              destination_country: destinationCountry,
+            }
+          );
+        } catch (error) {
+          console.error('Error creating quote submission notification:', error);
         }
       }
 

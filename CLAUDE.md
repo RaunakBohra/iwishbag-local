@@ -9,7 +9,57 @@ This is an e-commerce platform for international shopping from Amazon, Flipkart,
 
 user side pages and admin side pages are different, be careful while making changes in quotes orders pages and others as well because we need to know if i want changes in user side or admin side.
 
-###NEVER RESET THE DB !! donot use supabase db reset --local or cloud
+### NEVER RESET THE DB !! donot use supabase db reset --local or cloud
+
+## Database Reset Recovery - CRITICAL SECTION
+**IF a database reset accidentally happens, immediately run this recovery process:**
+
+### 1. **Apply All Migrations**
+```bash
+# Apply all migrations in order
+supabase db push --include-all
+```
+
+### 2. **Run Essential Functions Script**
+```bash
+# Execute the essential functions script via psql or Supabase SQL Editor
+psql -h localhost -p 54322 -d postgres -U postgres -f src/scripts/ensure-database-functions.sql
+```
+
+### 3. **Verify Critical Functions**
+Execute in Supabase SQL Editor to verify:
+```sql
+-- Test core authentication functions
+SELECT is_admin() as admin_check;
+SELECT is_authenticated() as auth_check;
+SELECT has_role('admin') as has_admin_role;
+
+-- Test RPC functions that were causing 404 errors
+SELECT * FROM get_user_permissions_new(auth.uid());
+SELECT * FROM get_user_roles_new(auth.uid());
+
+-- Test tracking system
+SELECT generate_iwish_tracking_id() as sample_tracking_id;
+```
+
+### 4. **Essential RPC Functions List**
+These functions MUST exist for the system to work:
+- `is_admin()` - Critical for RLS policies
+- `is_authenticated()` - Auth state checking
+- `has_role(TEXT)` - Role-based access control
+- `get_user_permissions_new(UUID)` - Admin permission checking
+- `get_user_roles_new(UUID)` - User role management
+- `generate_iwish_tracking_id()` - Tracking system
+- `update_updated_at_column()` - Timestamp triggers
+
+### 5. **Migration Files to Check**
+- `20250724091000_create_missing_rpc_functions.sql` - Contains the missing RPC functions
+- `20250724090000_create_user_activity_analytics.sql` - User activity tracking system
+- `20250724084700_create_hsn_tax_system.sql` - HSN classification system
+
+### 6. **Recovery Script Location**
+- **Primary**: Migration file will auto-apply
+- **Backup**: Manual script at `src/scripts/ensure-database-functions.sql`
 
 ## Key Technologies
 - **Frontend**: React 18, TypeScript 5, Vite, Tailwind CSS, Shadcn UI
