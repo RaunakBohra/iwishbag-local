@@ -200,12 +200,7 @@ class HSNDataMigrationService {
   }): Promise<UnifiedQuote[]> {
     const { data: quotes, error } = await supabase
       .from('quotes')
-      .select(
-        `
-        *,
-        items:quote_items(*)
-      `,
-      )
+      .select('*')
       .gte('created_at', dateRange.start)
       .lte('created_at', dateRange.end)
       .or(
@@ -442,7 +437,7 @@ class HSNDataMigrationService {
     const newTax = await this.calculateNewTax(item, hsnCode, quote);
 
     // 3. Update database
-    await this.updateItemWithHSN(item.id, hsnCode, method, confidence);
+    await this.updateItemWithHSN(quote.id, item.id, hsnCode, method, confidence);
 
     // 4. Validate result
     const validation = this.validateMigrationResult(item, hsnCode, originalTax, newTax);
@@ -541,48 +536,102 @@ class HSNDataMigrationService {
   }
 
   /**
-   * Update item with HSN data
+   * Update item with HSN classification using JSONB structure
    */
   private async updateItemWithHSN(
+    quoteId: string,
     itemId: string,
     hsnCode: string,
     method: string,
     confidence: number,
   ): Promise<void> {
-    const { error } = await supabase
-      .from('quote_items')
-      .update({
-        hsn_code: hsnCode,
-        operational_data: {
-          hsn_classification_method: method,
-          hsn_classification_confidence: confidence,
-          hsn_migration_date: new Date().toISOString(),
-        },
-      })
-      .eq('id', itemId);
+    try {
+      // Get current quote data
+      const quote = await unifiedDataEngine.getQuote(quoteId);
+      if (!quote) {
+        throw new Error(`Quote ${quoteId} not found`);
+      }
 
-    if (error) {
-      throw new Error(`Failed to update item ${itemId}: ${error.message}`);
+      // Find and update the specific item in the JSONB array
+      const updatedItems = quote.items.map((item) => {
+        if (item.id === itemId) {
+          return {
+            ...item,
+            hsn_code: hsnCode,
+            // Enhance smart_data with HSN classification info
+            smart_data: {
+              ...item.smart_data,
+              hsn_classification_method: method,
+              hsn_classification_confidence: confidence,
+              hsn_migration_date: new Date().toISOString(),
+            },
+          };
+        }
+        return item;
+      });
+
+      // Check if item was found and updated
+      const wasUpdated = updatedItems.some(item => 
+        item.id === itemId && item.hsn_code === hsnCode
+      );
+      
+      if (!wasUpdated) {
+        throw new Error(`Item ${itemId} not found in quote ${quoteId}`);
+      }
+
+      // Update the quote with the new items array using UnifiedDataEngine
+      const success = await unifiedDataEngine.updateQuote(quoteId, {
+        items: updatedItems,
+        // Update operational_data to mark HSN processing
+        operational_data: {
+          ...quote.operational_data,
+          hsn_items_processed: (quote.operational_data?.hsn_items_processed || 0) + 1,
+          last_hsn_update: new Date().toISOString(),
+        },
+      });
+
+      if (!success) {
+        throw new Error(`Failed to update quote ${quoteId} with HSN data for item ${itemId}`);
+      }
+
+      console.log(`✅ Successfully updated item ${itemId} with HSN code ${hsnCode} (confidence: ${confidence})`);
+    } catch (error) {
+      console.error(`❌ Error updating item ${itemId} with HSN:`, error);
+      throw error;
     }
   }
 
   /**
-   * Mark quote as HSN migrated
+   * Mark quote as HSN migrated using UnifiedDataEngine
    */
   private async markQuoteAsHSNMigrated(quoteId: string): Promise<void> {
-    const { error } = await supabase
-      .from('quotes')
-      .update({
+    try {
+      const quote = await unifiedDataEngine.getQuote(quoteId);
+      if (!quote) {
+        throw new Error(`Quote ${quoteId} not found`);
+      }
+
+      // Update operational_data using proper JSONB structure
+      const success = await unifiedDataEngine.updateQuote(quoteId, {
         operational_data: {
+          ...quote.operational_data,
           hsn_tax_calculation: true,
           hsn_migration_date: new Date().toISOString(),
           calculation_method: 'per_item_hsn',
+          hsn_migration_completed: true,
+          hsn_items_total: quote.items.length,
+          hsn_items_classified: quote.items.filter(item => item.hsn_code).length,
         },
-      })
-      .eq('id', quoteId);
+      });
 
-    if (error) {
-      throw new Error(`Failed to mark quote ${quoteId} as HSN migrated: ${error.message}`);
+      if (!success) {
+        throw new Error(`Failed to mark quote ${quoteId} as HSN migrated`);
+      }
+
+      console.log(`✅ Quote ${quoteId} successfully marked as HSN migrated`);
+    } catch (error) {
+      console.error(`❌ Error marking quote ${quoteId} as HSN migrated:`, error);
+      throw error;
     }
   }
 
@@ -736,38 +785,30 @@ class HSNDataMigrationService {
   }
 
   /**
-   * Restore quote from rollback snapshot
+   * Restore quote from rollback snapshot using JSONB structure
    */
   private async restoreQuoteFromSnapshot(quoteId: string, snapshot: any): Promise<void> {
     const originalQuote = snapshot.quote as UnifiedQuote;
 
-    // Restore quote operational data
-    const { error: quoteError } = await supabase
-      .from('quotes')
-      .update({
+    try {
+      // Restore complete quote using UnifiedDataEngine
+      const success = await unifiedDataEngine.updateQuote(quoteId, {
+        items: originalQuote.items || [],
         operational_data: originalQuote.operational_data || {},
-      })
-      .eq('id', quoteId);
+        calculation_data: originalQuote.calculation_data || {},
+        // Restore other critical fields if needed
+        base_total_usd: originalQuote.base_total_usd,
+        final_total_usd: originalQuote.final_total_usd,
+      });
 
-    if (quoteError) {
-      throw new Error(`Failed to restore quote ${quoteId}: ${quoteError.message}`);
-    }
-
-    // Restore items
-    if (originalQuote.items) {
-      for (const item of originalQuote.items) {
-        const { error: itemError } = await supabase
-          .from('quote_items')
-          .update({
-            hsn_code: item.hsn_code,
-            operational_data: item.operational_data || {},
-          })
-          .eq('id', item.id);
-
-        if (itemError) {
-          throw new Error(`Failed to restore item ${item.id}: ${itemError.message}`);
-        }
+      if (!success) {
+        throw new Error(`Failed to restore quote ${quoteId} from snapshot`);
       }
+
+      console.log(`✅ Successfully restored quote ${quoteId} from snapshot (${originalQuote.items?.length || 0} items)`);
+    } catch (error) {
+      console.error(`❌ Error restoring quote ${quoteId} from snapshot:`, error);
+      throw error;
     }
   }
 

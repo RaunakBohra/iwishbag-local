@@ -984,6 +984,203 @@ class HSNDataValidationService {
   }
 
   /**
+   * JSONB Structure Validation for Migration Integrity
+   */
+  private async validateJSONBItemsStructure(options: ValidationOptions): Promise<ValidationResult> {
+    const quotes = await this.getQuotesInDateRange(options.date_range);
+    let structureIssues = 0;
+    let totalQuotes = quotes.length;
+    const issues: string[] = [];
+
+    for (const quote of quotes) {
+      try {
+        // Validate items array structure
+        if (!Array.isArray(quote.items)) {
+          structureIssues++;
+          issues.push(`Quote ${quote.id}: items is not an array`);
+          continue;
+        }
+
+        // Validate each item structure
+        for (const item of quote.items) {
+          if (!item.id || typeof item.id !== 'string') {
+            structureIssues++;
+            issues.push(`Quote ${quote.id}: item missing valid id`);
+          }
+
+          if (!item.name || typeof item.name !== 'string') {
+            structureIssues++;
+            issues.push(`Quote ${quote.id}: item ${item.id} missing name`);
+          }
+
+          if (typeof item.price_usd !== 'number' || item.price_usd < 0) {
+            structureIssues++;
+            issues.push(`Quote ${quote.id}: item ${item.id} has invalid price_usd`);
+          }
+
+          if (typeof item.quantity !== 'number' || item.quantity < 1) {
+            structureIssues++;
+            issues.push(`Quote ${quote.id}: item ${item.id} has invalid quantity`);
+          }
+
+          // HSN-specific validations
+          if (item.hsn_code) {
+            if (typeof item.hsn_code !== 'string' || !/^\d{2,8}$/.test(item.hsn_code)) {
+              structureIssues++;
+              issues.push(`Quote ${quote.id}: item ${item.id} has invalid HSN code format`);
+            }
+
+            if (!item.category) {
+              structureIssues++;
+              issues.push(`Quote ${quote.id}: item ${item.id} has HSN code but missing category`);
+            }
+          }
+
+          // smart_data structure validation
+          if (item.smart_data && typeof item.smart_data !== 'object') {
+            structureIssues++;
+            issues.push(`Quote ${quote.id}: item ${item.id} has invalid smart_data structure`);
+          }
+        }
+      } catch (error) {
+        structureIssues++;
+        issues.push(`Quote ${quote.id}: error validating structure - ${error}`);
+      }
+    }
+
+    return {
+      rule_id: 'jsonb_001',
+      passed: structureIssues === 0,
+      severity: 'critical' as const,
+      message: structureIssues === 0 
+        ? `All ${totalQuotes} quotes have valid JSONB items structure`
+        : `Found ${structureIssues} JSONB structure issues in ${totalQuotes} quotes`,
+      details: { 
+        total_quotes: totalQuotes,
+        structure_issues: structureIssues,
+        sample_issues: issues.slice(0, 10) // First 10 issues for debugging
+      },
+      suggested_fix: structureIssues > 0 
+        ? 'Run HSN migration service to fix JSONB structure inconsistencies'
+        : undefined,
+      data_context: { affected_records: structureIssues },
+    };
+  }
+
+  private async validateMigrationCompleteness(options: ValidationOptions): Promise<ValidationResult> {
+    const quotes = await this.getQuotesInDateRange(options.date_range);
+    let incompleteCount = 0;
+    let totalQuotes = quotes.length;
+    const incompleteQuotes: string[] = [];
+
+    for (const quote of quotes) {
+      const isHSNMigrationComplete = quote.operational_data?.hsn_migration_completed;
+      const hasHSNItems = quote.items?.some(item => item.hsn_code);
+      const hasCalculationMethod = quote.operational_data?.calculation_method === 'per_item_hsn';
+
+      // Quote should be migrated if it has items but isn't marked as migrated
+      if (quote.items?.length > 0 && (!isHSNMigrationComplete || !hasCalculationMethod)) {
+        incompleteCount++;
+        incompleteQuotes.push(`${quote.id} (${hasHSNItems ? 'partial HSN' : 'no HSN'})`);
+      }
+    }
+
+    return {
+      rule_id: 'migration_001',
+      passed: incompleteCount === 0,
+      severity: 'high' as const,
+      message: incompleteCount === 0
+        ? `All ${totalQuotes} quotes have completed HSN migration`
+        : `${incompleteCount} of ${totalQuotes} quotes have incomplete HSN migration`,
+      details: {
+        total_quotes: totalQuotes,
+        incomplete_migrations: incompleteCount,
+        incomplete_quote_ids: incompleteQuotes.slice(0, 20) // First 20 for debugging
+      },
+      suggested_fix: incompleteCount > 0
+        ? 'Run HSN migration service for incomplete quotes'
+        : undefined,
+      data_context: { affected_records: incompleteCount },
+    };
+  }
+
+  private async validateHSNDataConsistency(options: ValidationOptions): Promise<ValidationResult> {
+    const quotes = await this.getQuotesInDateRange(options.date_range);
+    let inconsistencyCount = 0;
+    const inconsistencies: string[] = [];
+
+    for (const quote of quotes) {
+      if (!quote.items || quote.items.length === 0) continue;
+
+      for (const item of quote.items) {
+        if (!item.hsn_code) continue;
+
+        try {
+          // Check if HSN code exists in master database
+          const { data: hsnRecord, error } = await supabase
+            .from('hsn_master')
+            .select('hsn_code, category, description')
+            .eq('hsn_code', item.hsn_code)
+            .eq('is_active', true)
+            .single();
+
+          if (error || !hsnRecord) {
+            inconsistencyCount++;
+            inconsistencies.push(`Quote ${quote.id}: item ${item.id} has invalid HSN code ${item.hsn_code}`);
+          } else if (item.category && hsnRecord.category !== item.category) {
+            inconsistencyCount++;
+            inconsistencies.push(`Quote ${quote.id}: item ${item.id} category mismatch - has '${item.category}' but HSN ${item.hsn_code} requires '${hsnRecord.category}'`);
+          }
+        } catch (error) {
+          inconsistencyCount++;
+          inconsistencies.push(`Quote ${quote.id}: error validating HSN ${item.hsn_code} - ${error}`);
+        }
+      }
+    }
+
+    return {
+      rule_id: 'hsn_004',
+      passed: inconsistencyCount === 0,
+      severity: 'high' as const,
+      message: inconsistencyCount === 0
+        ? 'All HSN codes are consistent with master database'
+        : `Found ${inconsistencyCount} HSN data inconsistencies`,
+      details: {
+        inconsistency_count: inconsistencyCount,
+        sample_inconsistencies: inconsistencies.slice(0, 10)
+      },
+      suggested_fix: inconsistencyCount > 0
+        ? 'Update items with correct HSN codes and categories from master database'
+        : undefined,
+      data_context: { affected_records: inconsistencyCount },
+    };
+  }
+
+  /**
+   * Run comprehensive migration validation
+   */
+  async validateMigrationIntegrity(options: Partial<ValidationOptions> = {}): Promise<ValidationReport> {
+    const fullOptions = { ...this.defaultOptions, ...options };
+    
+    console.log('🔍 Starting HSN migration integrity validation...');
+    
+    const results: ValidationResult[] = [];
+    
+    // Run JSONB-specific validations
+    results.push(await this.validateJSONBItemsStructure(fullOptions));
+    results.push(await this.validateMigrationCompleteness(fullOptions));
+    results.push(await this.validateHSNDataConsistency(fullOptions));
+    
+    // Create validation report
+    const report = this.generateValidationReport(results, 'migration_integrity');
+    this.validationHistory.push(report);
+    
+    console.log(`✅ Migration validation complete. Score: ${report.overall_score}%`);
+    
+    return report;
+  }
+
+  /**
    * Public methods
    */
   getValidationHistory(): ValidationReport[] {

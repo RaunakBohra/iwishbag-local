@@ -495,22 +495,134 @@ export class UnifiedDataEngine {
   }
 
   async updateItem(quoteId: string, itemId: string, updates: Partial<QuoteItem>): Promise<boolean> {
-    const quote = await this.getQuote(quoteId);
-    if (!quote) return false;
+    try {
+      const quote = await this.getQuote(quoteId);
+      if (!quote) {
+        console.error(`Quote ${quoteId} not found for item update`);
+        return false;
+      }
 
-    const updatedItems = quote.items.map((item) =>
-      item.id === itemId ? { ...item, ...updates } : item,
-    );
+      // Find the item to update
+      const existingItem = quote.items.find(item => item.id === itemId);
+      if (!existingItem) {
+        console.error(`Item ${itemId} not found in quote ${quoteId}`);
+        return false;
+      }
 
-    const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price_usd * item.quantity,
-      0,
-    );
+      // Validate HSN fields if they're being updated
+      if (updates.hsn_code !== undefined || updates.category !== undefined) {
+        const validationResult = await this.validateHSNFields(updates, existingItem);
+        if (!validationResult.isValid) {
+          console.error(`HSN validation failed for item ${itemId}:`, validationResult.errors);
+          throw new Error(`HSN validation failed: ${validationResult.errors.join(', ')}`);
+        }
+      }
 
-    return this.updateQuote(quoteId, {
-      items: updatedItems,
-      base_total_usd: newBaseTotal,
-    });
+      // Apply updates with proper smart_data handling
+      const updatedItems = quote.items.map((item) => {
+        if (item.id === itemId) {
+          const updatedItem = { ...item, ...updates };
+          
+          // Enhanced smart_data handling for HSN updates
+          if (updates.hsn_code || updates.category) {
+            updatedItem.smart_data = {
+              ...item.smart_data,
+              hsn_last_updated: new Date().toISOString(),
+              hsn_update_source: 'admin_interface',
+              hsn_validation_status: 'validated',
+            };
+          }
+          
+          return updatedItem;
+        }
+        return item;
+      });
+
+      // Recalculate totals
+      const newBaseTotal = updatedItems.reduce(
+        (sum, item) => sum + item.price_usd * item.quantity,
+        0,
+      );
+
+      // Update operational_data to track HSN modifications
+      const operationalUpdates: any = {};
+      if (updates.hsn_code || updates.category) {
+        operationalUpdates.operational_data = {
+          ...quote.operational_data,
+          last_hsn_modification: new Date().toISOString(),
+          hsn_items_count: updatedItems.filter(item => item.hsn_code).length,
+          admin_override_count: (quote.operational_data?.admin_override_count || 0) + 1,
+        };
+      }
+
+      const success = await this.updateQuote(quoteId, {
+        items: updatedItems,
+        base_total_usd: newBaseTotal,
+        ...operationalUpdates,
+      });
+
+      if (success && (updates.hsn_code || updates.category)) {
+        console.log(`✅ Item ${itemId} updated with HSN data: ${updates.hsn_code || 'category only'}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error(`Error updating item ${itemId} in quote ${quoteId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Validate HSN fields for data integrity
+   */
+  private async validateHSNFields(
+    updates: Partial<QuoteItem>, 
+    existingItem: QuoteItem
+  ): Promise<{ isValid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+    const hsnCode = updates.hsn_code ?? existingItem.hsn_code;
+    const category = updates.category ?? existingItem.category;
+
+    // HSN code format validation
+    if (hsnCode && !/^\d{2,8}$/.test(hsnCode)) {
+      errors.push('HSN code must be 2-8 digits only');
+    }
+
+    // Category validation
+    const validCategories = ['electronics', 'clothing', 'books', 'toys', 'accessories', 'home_garden'];
+    if (category && !validCategories.includes(category)) {
+      errors.push(`Category must be one of: ${validCategories.join(', ')}`);
+    }
+
+    // Consistency validation - both HSN and category should be provided together
+    if ((hsnCode && !category) || (!hsnCode && category)) {
+      errors.push('HSN code and category must be provided together');
+    }
+
+    // Database validation - check if HSN code exists in hsn_master
+    if (hsnCode && category) {
+      try {
+        const { data: hsnRecord, error } = await supabase
+          .from('hsn_master')
+          .select('hsn_code, category')
+          .eq('hsn_code', hsnCode)
+          .eq('is_active', true)
+          .single();
+
+        if (error || !hsnRecord) {
+          errors.push(`HSN code ${hsnCode} not found in HSN master database`);
+        } else if (hsnRecord.category !== category) {
+          errors.push(`Category mismatch: HSN ${hsnCode} should be category '${hsnRecord.category}', not '${category}'`);
+        }
+      } catch (error) {
+        errors.push('Failed to validate HSN code against database');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
   }
 
   async removeItem(quoteId: string, itemId: string): Promise<boolean> {
