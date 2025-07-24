@@ -2919,8 +2919,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               <TaxCalculationSidebar
                 quote={liveQuote || quote}
                 isCalculating={isCalculating}
+                editMode={isEditMode}
                 onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
                 onUpdateQuote={loadQuoteData}
+                onMethodChange={handleTaxMethodChange}
+                onValuationChange={handleValuationMethodChange}
               />
 
               {/* Shipping Options or Configuration Prompt */}

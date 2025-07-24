@@ -45,6 +45,9 @@ interface TaxCalculationSidebarProps {
   isCalculating?: boolean;
   onRecalculate?: () => void;
   onUpdateQuote?: () => void;
+  editMode?: boolean;
+  onMethodChange?: (method: string, metadata?: any) => void;
+  onValuationChange?: (itemId: string, method: string, amount?: number) => void;
   className?: string;
 }
 
@@ -53,6 +56,9 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
   isCalculating = false,
   onRecalculate,
   onUpdateQuote,
+  editMode = false,
+  onMethodChange,
+  onValuationChange,
   className = '',
 }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -217,6 +223,267 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
   const methodStatus = getCalculationMethodStatus();
 
+  // Handle tax method change
+  const handleTaxMethodChange = async (newMethod: string) => {
+    if (onMethodChange) {
+      await onMethodChange(newMethod);
+    }
+  };
+
+  // Industry-Standard Edit Mode Interface
+  if (editMode) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        {/* Primary Tax Method Selector - Always Visible */}
+        <Card className="border-indigo-200 bg-indigo-50/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center text-base">
+              <Settings className="w-4 h-4 mr-2 text-indigo-600" />
+              Tax Calculation Method
+              {isLoading && <RefreshCw className="w-3 h-3 ml-2 animate-spin" />}
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="pt-0 space-y-4">
+            {/* Method Selection Cards */}
+            <div className="space-y-3">
+              {/* HSN-Based Method */}
+              <div 
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  taxAnalytics.calculationMethod === 'hsn_based' 
+                    ? 'border-green-300 bg-green-50 ring-2 ring-green-200' 
+                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50'
+                }`}
+                onClick={() => handleTaxMethodChange('hsn_based')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      taxAnalytics.calculationMethod === 'hsn_based'
+                        ? 'border-green-600 bg-green-600'
+                        : 'border-gray-300'
+                    }`}>
+                      {taxAnalytics.calculationMethod === 'hsn_based' && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Tags className="w-4 h-4 text-green-600" />
+                        <span className="font-medium text-gray-900">HSN-Based</span>
+                        {taxAnalytics.hsnSourcedTaxes > 0 && (
+                          <Badge variant="default" className="text-xs bg-green-600">
+                            Recommended
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Uses precise HSN master data for accurate tax calculations
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-green-700">
+                      {taxAnalytics.hsnSourcedTaxes} items
+                    </div>
+                    <div className="text-xs text-gray-500">classified</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Country Settings Method */}
+              <div 
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  taxAnalytics.calculationMethod === 'country_settings' 
+                    ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200' 
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                }`}
+                onClick={() => handleTaxMethodChange('country_settings')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      taxAnalytics.calculationMethod === 'country_settings'
+                        ? 'border-blue-600 bg-blue-600'
+                        : 'border-gray-300'
+                    }`}>
+                      {taxAnalytics.calculationMethod === 'country_settings' && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Globe className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-gray-900">Country Settings</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Uses {taxAnalytics.destinationCountry} default tax rates for all items
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-blue-700">
+                      All items
+                    </div>
+                    <div className="text-xs text-gray-500">uniform</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Auto/Smart Method */}
+              <div 
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  taxAnalytics.calculationMethod === 'auto' 
+                    ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200' 
+                    : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                }`}
+                onClick={() => handleTaxMethodChange('auto')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      taxAnalytics.calculationMethod === 'auto'
+                        ? 'border-purple-600 bg-purple-600'
+                        : 'border-gray-300'
+                    }`}>
+                      {taxAnalytics.calculationMethod === 'auto' && (
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Calculator className="w-4 h-4 text-purple-600" />
+                        <span className="font-medium text-gray-900">Auto/Smart</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Default
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Best method per item: HSN when available, country defaults otherwise
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-purple-700">
+                      Mixed
+                    </div>
+                    <div className="text-xs text-gray-500">intelligent</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Status & Quick Actions */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium">
+                  {methodStatus.method} Active
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onRecalculate}
+                  disabled={isLoading || isCalculating}
+                  className="text-xs h-7"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Recalculate
+                </Button>
+              </div>
+            </div>
+
+            {/* HSN Classification Progress */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">HSN Classification Progress</span>
+                <span className="font-medium">
+                  {taxAnalytics.itemsWithHSN}/{taxAnalytics.totalItems} items
+                </span>
+              </div>
+              <Progress value={taxAnalytics.classificationProgress} className="h-2" />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {taxAnalytics.classificationProgress.toFixed(0)}% complete
+                </span>
+                {taxAnalytics.itemsWithoutHSN > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onUpdateQuote}
+                    className="text-xs h-6 text-blue-600 hover:text-blue-800"
+                  >
+                    <Zap className="w-3 h-3 mr-1" />
+                    Auto-classify {taxAnalytics.itemsWithoutHSN} items
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Tax Impact Summary */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+                <div className="text-lg font-semibold text-red-700">
+                  {currencyDisplay.formatSingleAmount(taxAnalytics.totalCustoms, 'origin')}
+                </div>
+                <div className="text-xs text-red-600">Customs Duty</div>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-lg font-semibold text-blue-700">
+                  {currencyDisplay.formatSingleAmount(taxAnalytics.totalLocalTaxes, 'origin')}
+                </div>
+                <div className="text-xs text-blue-600">{taxAnalytics.primaryTaxType}</div>
+              </div>
+            </div>
+
+            {/* Warning for Missing HSN Classifications */}
+            {taxAnalytics.itemsWithoutHSN > 0 && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>{taxAnalytics.itemsWithoutHSN} items</strong> need HSN classification for optimal tax accuracy. 
+                  <Button 
+                    variant="link" 
+                    className="h-auto p-0 ml-1 text-amber-700 hover:text-amber-900"
+                    onClick={onUpdateQuote}
+                  >
+                    Auto-classify now →
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Advanced Controls Toggle */}
+            {isExpanded && (
+              <div className="border-t border-gray-200 pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDetailedView(!showDetailedView)}
+                  className="w-full text-xs justify-between"
+                >
+                  <span>Advanced Controls</span>
+                  {showDetailedView ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </Button>
+                
+                {showDetailedView && (
+                  <div className="mt-3 space-y-3">
+                    <div className="text-xs text-gray-600">
+                      Advanced per-item controls and bulk operations will be available here.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // View Mode Interface (existing implementation)  
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Main Tax Status Card */}
