@@ -259,18 +259,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     }
   };
 
-  // Industry-Standard Edit Mode Interface - ISOLATED FROM FORMS
+  // Industry-Standard Edit Mode Interface - NO NESTED FORMS
   if (editMode) {
     return (
-      <form 
-        onSubmit={(e) => {
-          console.log('🚫 [Isolated Form] Submit prevented');
-          e.preventDefault();
-          e.stopPropagation();
-          return false;
-        }}
-        className={`space-y-4 ${className}`}
-      >
+      <div className={`space-y-4 ${className}`}>
         {/* Primary Tax Method Selector - Always Visible */}
         <Card className="border-indigo-200 bg-indigo-50/30">
           <CardHeader className="pb-3">
@@ -559,7 +551,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             )}
           </CardContent>
         </Card>
-      </form>
+      </div>
     );
   }
 

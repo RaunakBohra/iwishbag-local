@@ -228,7 +228,13 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
     }
   };
 
-  const handleHSNSelect = (hsn: HSNSearchResult) => {
+  const handleHSNSelect = (hsn: HSNSearchResult, event?: React.MouseEvent) => {
+    // Prevent any form submission or navigation
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     onHSNSelect(hsn);
     setIsOpen(false);
     setSearchQuery('');
@@ -296,7 +302,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
       {/* Search Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] p-0">
+        <DialogContent className="max-w-4xl max-h-[80vh] p-0" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center">
               <Search className="mr-2 h-5 w-5" />
@@ -412,7 +418,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                         <HSNResultCard
                           key={hsn.hsn_code}
                           hsn={hsn}
-                          onSelect={handleHSNSelect}
+                          onSelect={(hsn, event) => handleHSNSelect(hsn, event)}
                           showMatchReason={!!searchQuery}
                         />
                       ))}
@@ -513,7 +519,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                         <HSNResultCard
                           key={hsn.hsn_code}
                           hsn={hsn}
-                          onSelect={handleHSNSelect}
+                          onSelect={(hsn, event) => handleHSNSelect(hsn, event)}
                           showConfidence={true}
                           showMatchReason={true}
                         />
@@ -543,7 +549,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 // HSN Result Card Component
 interface HSNResultCardProps {
   hsn: HSNSearchResult;
-  onSelect: (hsn: HSNSearchResult) => void;
+  onSelect: (hsn: HSNSearchResult, event?: React.MouseEvent) => void;
   showConfidence?: boolean;
   showMatchReason?: boolean;
 }
@@ -554,10 +560,16 @@ const HSNResultCard: React.FC<HSNResultCardProps> = ({
   showConfidence = false,
   showMatchReason = false
 }) => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect(hsn, e);
+  };
+
   return (
     <Card className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4 hover:bg-blue-50/30" 
           style={{ borderLeftColor: hsn.color }}>
-      <CardContent className="p-4" onClick={() => onSelect(hsn)}>
+      <CardContent className="p-4" onClick={handleCardClick}>
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
             {/* Enhanced Icon with Background */}
