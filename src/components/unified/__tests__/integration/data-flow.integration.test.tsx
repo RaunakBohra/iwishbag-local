@@ -27,16 +27,17 @@ vi.mock('@/hooks/useAdminRole', () => ({
 }));
 
 // Mock React Query with manual cache control
-const createMockQueryClient = () => new QueryClient({
-  defaultOptions: {
-    queries: { 
-      retry: false,
-      staleTime: 0, // Always consider data stale for testing
-      cacheTime: 1000 * 60 * 5, // 5 minutes cache
+const createMockQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        staleTime: 0, // Always consider data stale for testing
+        cacheTime: 1000 * 60 * 5, // 5 minutes cache
+      },
+      mutations: { retry: false },
     },
-    mutations: { retry: false },
-  },
-});
+  });
 
 // Mock performance API
 Object.defineProperty(window, 'performance', {
@@ -60,16 +61,16 @@ const baseQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 299.99,
   item_price: 249.99,
-  sales_tax_price: 20.00,
-  merchant_shipping_price: 15.00,
-  international_shipping: 25.00,
-  customs_and_ecs: 12.50,
-  domestic_shipping: 7.50,
-  handling_charge: 5.00,
-  insurance_amount: 2.50,
+  sales_tax_price: 20.0,
+  merchant_shipping_price: 15.0,
+  international_shipping: 25.0,
+  customs_and_ecs: 12.5,
+  domestic_shipping: 7.5,
+  handling_charge: 5.0,
+  insurance_amount: 2.5,
   payment_gateway_fee: 3.75,
-  vat: 0.00,
-  discount: 10.00,
+  vat: 0.0,
+  discount: 10.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -77,43 +78,43 @@ const baseQuote: UnifiedQuote = {
     info: {
       name: 'Alice Johnson',
       email: 'alice@example.com',
-      phone: '+9876543210'
-    }
+      phone: '+9876543210',
+    },
   },
   shipping_address: {
-    formatted: '456 Tech Plaza, Mumbai, Maharashtra 400001, India'
+    formatted: '456 Tech Plaza, Mumbai, Maharashtra 400001, India',
   },
-  items: [{
-    id: 'item-dataflow',
-    name: 'Wireless Headphones',
-    description: 'Premium noise-cancelling headphones',
-    quantity: 1,
-    price: 249.99,
-    product_url: 'https://amazon.com/wireless-headphones',
-    image_url: 'https://example.com/headphones.jpg'
-  }],
+  items: [
+    {
+      id: 'item-dataflow',
+      name: 'Wireless Headphones',
+      description: 'Premium noise-cancelling headphones',
+      quantity: 1,
+      price: 249.99,
+      product_url: 'https://amazon.com/wireless-headphones',
+      image_url: 'https://example.com/headphones.jpg',
+    },
+  ],
   notes: 'Please ensure original packaging',
   admin_notes: 'High-value customer',
   priority: 'medium',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers and cache control
 const renderWithProviders = (component: React.ReactNode, queryClient?: QueryClient) => {
   const client = queryClient || createMockQueryClient();
-  
+
   return {
     ...render(
       <QueryClientProvider client={client}>
         <BrowserRouter>
-          <QuoteThemeProvider>
-            {component}
-          </QuoteThemeProvider>
+          <QuoteThemeProvider>{component}</QuoteThemeProvider>
         </BrowserRouter>
-      </QueryClientProvider>
+      </QueryClientProvider>,
     ),
-    queryClient: client
+    queryClient: client,
   };
 };
 
@@ -134,19 +135,19 @@ describe('Unified Components Data Flow Integration Tests', () => {
     mockDataOperations = {
       fetchQuotes: vi.fn().mockResolvedValue({
         data: [baseQuote],
-        total: 1
+        total: 1,
       }),
       updateQuote: vi.fn().mockResolvedValue({
         success: true,
-        quote: baseQuote
+        quote: baseQuote,
       }),
       deleteQuote: vi.fn().mockResolvedValue({
-        success: true
+        success: true,
       }),
       bulkUpdateQuotes: vi.fn().mockResolvedValue({
         success: true,
-        updated: 1
-      })
+        updated: 1,
+      }),
     };
   });
 
@@ -166,33 +167,22 @@ describe('Unified Components Data Flow Integration Tests', () => {
       const mockOnAction = vi.fn().mockImplementation(async (action, quote) => {
         // Simulate successful status update
         const updatedQuote = { ...quote, status: 'sent' };
-        
+
         // Update cache to simulate real API behavior
         queryClient.setQueryData(['quotes', quote.id], updatedQuote);
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
-        
+
         return { success: true, quote: updatedQuote };
       });
 
       // Render multiple components that depend on the same data
       const { rerender } = renderWithProviders(
         <div>
-          <UnifiedQuoteCard
-            quote={baseQuote}
-            viewMode="admin"
-            onAction={mockOnAction}
-          />
-          <UnifiedQuoteBreakdown
-            quote={baseQuote}
-            viewMode="admin"
-          />
-          <UnifiedQuoteActions
-            quote={baseQuote}
-            viewMode="admin"
-            onAction={mockOnAction}
-          />
+          <UnifiedQuoteCard quote={baseQuote} viewMode="admin" onAction={mockOnAction} />
+          <UnifiedQuoteBreakdown quote={baseQuote} viewMode="admin" />
+          <UnifiedQuoteActions quote={baseQuote} viewMode="admin" onAction={mockOnAction} />
         </div>,
-        queryClient
+        queryClient,
       );
 
       // Verify initial state
@@ -218,15 +208,8 @@ describe('Unified Components Data Flow Integration Tests', () => {
           <BrowserRouter>
             <QuoteThemeProvider>
               <div>
-                <UnifiedQuoteCard
-                  quote={updatedQuote}
-                  viewMode="admin"
-                  onAction={mockOnAction}
-                />
-                <UnifiedQuoteBreakdown
-                  quote={updatedQuote}
-                  viewMode="admin"
-                />
+                <UnifiedQuoteCard quote={updatedQuote} viewMode="admin" onAction={mockOnAction} />
+                <UnifiedQuoteBreakdown quote={updatedQuote} viewMode="admin" />
                 <UnifiedQuoteActions
                   quote={updatedQuote}
                   viewMode="admin"
@@ -235,7 +218,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
               </div>
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // All components should now show updated status
@@ -251,11 +234,11 @@ describe('Unified Components Data Flow Integration Tests', () => {
       const quotes = [
         { ...baseQuote, id: 'quote-1', display_id: 'QT-001' },
         { ...baseQuote, id: 'quote-2', display_id: 'QT-002' },
-        { ...baseQuote, id: 'quote-3', display_id: 'QT-003' }
+        { ...baseQuote, id: 'quote-3', display_id: 'QT-003' },
       ];
 
       queryClient.setQueryData(['quotes'], quotes);
-      queries.forEach(quote => {
+      queries.forEach((quote) => {
         queryClient.setQueryData(['quotes', quote.id], quote);
       });
 
@@ -265,10 +248,10 @@ describe('Unified Components Data Flow Integration Tests', () => {
           queryClient.removeQueries({ queryKey: ['quotes', quote.id] });
           // Invalidate list cache
           queryClient.invalidateQueries({ queryKey: ['quotes'] });
-          
-          const updatedQuotes = quotes.filter(q => q.id !== quote.id);
+
+          const updatedQuotes = quotes.filter((q) => q.id !== quote.id);
           queryClient.setQueryData(['quotes'], updatedQuotes);
-          
+
           return { success: true };
         }
         return { success: true };
@@ -282,13 +265,9 @@ describe('Unified Components Data Flow Integration Tests', () => {
             onItemAction={mockOnAction}
             enableSelection={true}
           />
-          <UnifiedQuoteCard
-            quote={quotes[0]}
-            viewMode="admin"
-            onAction={mockOnAction}
-          />
+          <UnifiedQuoteCard quote={quotes[0]} viewMode="admin" onAction={mockOnAction} />
         </div>,
-        queryClient
+        queryClient,
       );
 
       // Should show all 3 quotes initially
@@ -319,7 +298,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
       const quotes = [
         { ...baseQuote, id: 'sel-1', display_id: 'QT-S01' },
         { ...baseQuote, id: 'sel-2', display_id: 'QT-S02' },
-        { ...baseQuote, id: 'sel-3', display_id: 'QT-S03' }
+        { ...baseQuote, id: 'sel-3', display_id: 'QT-S03' },
       ];
 
       // Create a parent component that manages selection state
@@ -335,7 +314,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
           if (selected) {
             setSelectedIds([...selectedIds, id]);
           } else {
-            setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+            setSelectedIds(selectedIds.filter((selectedId) => selectedId !== id));
           }
         };
 
@@ -348,7 +327,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
               selectedIds={selectedIds}
               onSelectionChange={handleSelectionChange}
             />
-            {quotes.map(quote => (
+            {quotes.map((quote) => (
               <UnifiedQuoteCard
                 key={quote.id}
                 quote={quote}
@@ -357,9 +336,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
                 onSelect={handleCardSelect}
               />
             ))}
-            <div data-testid="selection-summary">
-              Selected: {selectedIds.length}
-            </div>
+            <div data-testid="selection-summary">Selected: {selectedIds.length}</div>
           </div>
         );
       };
@@ -380,7 +357,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
 
       // Individual cards should reflect selection
       const checkboxes = screen.getAllByRole('checkbox');
-      checkboxes.forEach(checkbox => {
+      checkboxes.forEach((checkbox) => {
         expect(checkbox).toBeChecked();
       });
 
@@ -403,8 +380,8 @@ describe('Unified Components Data Flow Integration Tests', () => {
 
         const handleQuoteUpdate = async (action: string, updatedQuote: any) => {
           // Simulate different update scenarios
-          let newQuote = { ...updatedQuote };
-          
+          const newQuote = { ...updatedQuote };
+
           switch (action) {
             case 'updatePriority':
               newQuote.priority = 'high';
@@ -414,15 +391,15 @@ describe('Unified Components Data Flow Integration Tests', () => {
               break;
             case 'recalculate':
               newQuote.final_total_usd = 399.99;
-              newQuote.handling_charge = 15.00;
+              newQuote.handling_charge = 15.0;
               break;
           }
 
           setQuote(newQuote);
-          
+
           // Update cache to simulate real-world behavior
           queryClient.setQueryData(['quotes', quoteId], newQuote);
-          
+
           return { success: true, quote: newQuote };
         };
 
@@ -443,11 +420,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
                 expect(amount).toBe(quote.final_total_usd);
               }}
             />
-            <UnifiedQuoteActions
-              quote={quote}
-              viewMode="admin"
-              onAction={handleQuoteUpdate}
-            />
+            <UnifiedQuoteActions quote={quote} viewMode="admin" onAction={handleQuoteUpdate} />
             <div data-testid="quote-total">${quote.final_total_usd}</div>
             <div data-testid="quote-priority">{quote.priority}</div>
             <div data-testid="admin-notes">{quote.admin_notes || 'No notes'}</div>
@@ -498,7 +471,8 @@ describe('Unified Components Data Flow Integration Tests', () => {
       // Set initial quote in cache
       queryClient.setQueryData(['quotes', 'rollback-test'], baseQuote);
 
-      const mockFailingAction = vi.fn()
+      const mockFailingAction = vi
+        .fn()
         .mockResolvedValueOnce({ success: true }) // First call succeeds
         .mockRejectedValueOnce(new Error('Network error')); // Second call fails
 
@@ -508,11 +482,11 @@ describe('Unified Components Data Flow Integration Tests', () => {
 
         const handleOptimisticUpdate = async (action: string, targetQuote: any) => {
           setIsUpdating(true);
-          
+
           // Optimistic update
           const optimisticQuote = { ...targetQuote, status: 'sent' };
           setQuote(optimisticQuote);
-          
+
           try {
             const result = await mockFailingAction(action, targetQuote);
             // Success - keep optimistic update
@@ -528,11 +502,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
 
         return (
           <div>
-            <UnifiedQuoteCard
-              quote={quote}
-              viewMode="admin"
-              onAction={handleOptimisticUpdate}
-            />
+            <UnifiedQuoteCard quote={quote} viewMode="admin" onAction={handleOptimisticUpdate} />
             <UnifiedQuoteActions
               quote={quote}
               viewMode="admin"
@@ -588,7 +558,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
   describe('Real-time Data Synchronization', () => {
     it('should handle real-time updates from external sources', async () => {
       const queryClient = createMockQueryClient();
-      
+
       // Simulate real-time update mechanism (like WebSocket)
       const simulateRealtimeUpdate = (updatedQuote: UnifiedQuote) => {
         // Update cache as if data came from external source
@@ -614,15 +584,8 @@ describe('Unified Components Data Flow Integration Tests', () => {
 
         return (
           <div>
-            <UnifiedQuoteCard
-              quote={quote}
-              viewMode="admin"
-            />
-            <UnifiedQuoteBreakdown
-              quote={quote}
-              viewMode="admin"
-              enableRealTimeUpdates={true}
-            />
+            <UnifiedQuoteCard quote={quote} viewMode="admin" />
+            <UnifiedQuoteBreakdown quote={quote} viewMode="admin" enableRealTimeUpdates={true} />
             <div data-testid="last-updated">{quote.updated_at || 'Never'}</div>
           </div>
         );
@@ -639,7 +602,7 @@ describe('Unified Components Data Flow Integration Tests', () => {
         ...baseQuote,
         status: 'approved',
         updated_at: '2024-01-15T11:00:00Z',
-        final_total_usd: 349.99
+        final_total_usd: 349.99,
       };
 
       act(() => {
@@ -658,12 +621,12 @@ describe('Unified Components Data Flow Integration Tests', () => {
   describe('Error Boundary Integration', () => {
     it('should handle component errors without breaking entire data flow', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
+
       // Create a quote that will cause an error in one component
       const corruptedQuote = {
         ...baseQuote,
         final_total_usd: null, // This will cause breakdown component to error
-        items: null // This will cause card component issues
+        items: null, // This will cause card component issues
       } as any;
 
       const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -715,22 +678,22 @@ describe('Unified Components Data Flow Integration Tests', () => {
   describe('Memory Management and Cleanup', () => {
     it('should properly cleanup resources and prevent memory leaks', async () => {
       const queryClient = createMockQueryClient();
-      
+
       // Track query cache size
       const getQueryCacheSize = () => queryClient.getQueryCache().getAll().length;
-      
+
       const initialCacheSize = getQueryCacheSize();
 
       const MemoryTestComponent = ({ quotes }: { quotes: UnifiedQuote[] }) => {
         React.useEffect(() => {
           // Simulate heavy data operations
-          quotes.forEach(quote => {
+          quotes.forEach((quote) => {
             queryClient.setQueryData(['quotes', quote.id], quote);
           });
 
           return () => {
             // Cleanup - remove specific queries on unmount
-            quotes.forEach(quote => {
+            quotes.forEach((quote) => {
               queryClient.removeQueries({ queryKey: ['quotes', quote.id] });
             });
           };
@@ -750,12 +713,12 @@ describe('Unified Components Data Flow Integration Tests', () => {
       const largeQuoteSet = Array.from({ length: 100 }, (_, i) => ({
         ...baseQuote,
         id: `memory-test-${i}`,
-        display_id: `QT-MEM${i.toString().padStart(3, '0')}`
+        display_id: `QT-MEM${i.toString().padStart(3, '0')}`,
       }));
 
       const { unmount } = renderWithProviders(
         <MemoryTestComponent quotes={largeQuoteSet} />,
-        queryClient
+        queryClient,
       );
 
       // Cache should contain our test data

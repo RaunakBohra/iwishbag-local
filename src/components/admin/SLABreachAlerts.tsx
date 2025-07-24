@@ -4,16 +4,16 @@
  */
 
 import { useState } from 'react';
-import { 
-  AlertTriangle, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  AlertTriangle,
+  Clock,
+  AlertCircle,
+  CheckCircle,
   Bell,
   X,
   Eye,
   Send,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -85,7 +85,11 @@ export const CriticalBreachAlert = () => {
         )}
         <div className="mt-2">
           <SLABreachDialog>
-            <Button variant="outline" size="sm" className="text-red-800 border-red-300 hover:bg-red-100">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-800 border-red-300 hover:bg-red-100"
+            >
               <Eye className="h-4 w-4 mr-2" />
               View All Breaches
             </Button>
@@ -125,11 +129,13 @@ export const BreachStatsCards = () => {
           onClick={() => breachDetection.mutate()}
           disabled={breachDetection.isPending}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${breachDetection.isPending ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${breachDetection.isPending ? 'animate-spin' : ''}`}
+          />
           {breachDetection.isPending ? 'Checking...' : 'Check Now'}
         </Button>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className={stats.total_unacknowledged > 0 ? 'border-red-200 bg-red-50' : ''}>
           <CardContent className="pt-6">
@@ -190,23 +196,20 @@ export const SLABreachDialog = ({ children }: { children: React.ReactNode }) => 
   const { data: breaches = [], isLoading } = useUnacknowledgedBreaches();
   const acknowledgeMutation = useAcknowledgeBreach();
   const sendNotificationsMutation = useSendBreachNotifications();
-  const {
-    getBreachTypeLabel,
-    getSeverityIcon,
-    getBadgeVariant,
-    formatTimeAgo,
-  } = useSLABreachUtils();
+  const { getBreachTypeLabel, getSeverityIcon, getBadgeVariant, formatTimeAgo } =
+    useSLABreachUtils();
 
   const handleAcknowledge = (notificationId: string) => {
     acknowledgeMutation.mutate(notificationId);
   };
 
   const handleSendNotifications = () => {
-    const unsentBreaches = breaches.filter(b => 
-      b.breach_type.includes('breach') && // Only send for actual breaches, not warnings
-      !b.acknowledged_at
+    const unsentBreaches = breaches.filter(
+      (b) =>
+        b.breach_type.includes('breach') && // Only send for actual breaches, not warnings
+        !b.acknowledged_at,
     );
-    
+
     if (unsentBreaches.length > 0) {
       sendNotificationsMutation.mutate(unsentBreaches);
     }
@@ -214,9 +217,7 @@ export const SLABreachDialog = ({ children }: { children: React.ReactNode }) => 
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
@@ -269,19 +270,13 @@ export const SLABreachDialog = ({ children }: { children: React.ReactNode }) => 
                   <TableRow key={breach.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium text-sm">
-                          {breach.ticket_subject}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          #{breach.ticket_id.slice(0, 8)}
-                        </div>
+                        <div className="font-medium text-sm">{breach.ticket_subject}</div>
+                        <div className="text-xs text-gray-500">#{breach.ticket_id.slice(0, 8)}</div>
                       </div>
                     </TableCell>
 
                     <TableCell>
-                      <Badge variant="outline">
-                        {getBreachTypeLabel(breach.breach_type)}
-                      </Badge>
+                      <Badge variant="outline">{getBreachTypeLabel(breach.breach_type)}</Badge>
                     </TableCell>
 
                     <TableCell>
@@ -290,9 +285,7 @@ export const SLABreachDialog = ({ children }: { children: React.ReactNode }) => 
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-sm">
-                      {breach.customer_email}
-                    </TableCell>
+                    <TableCell className="text-sm">{breach.customer_email}</TableCell>
 
                     <TableCell className="text-sm">
                       {breach.assigned_to_name || 'Unassigned'}

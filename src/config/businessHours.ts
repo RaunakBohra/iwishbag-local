@@ -7,7 +7,7 @@ export interface BusinessDay {
   day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
   isWorkingDay: boolean;
   startTime: string; // 24-hour format: "09:00"
-  endTime: string;   // 24-hour format: "17:00"
+  endTime: string; // 24-hour format: "17:00"
 }
 
 export interface BusinessHours {
@@ -27,44 +27,44 @@ export const defaultBusinessHours: BusinessHours = {
       day: 'monday',
       isWorkingDay: true,
       startTime: '10:00',
-      endTime: '17:00'
+      endTime: '17:00',
     },
     {
       day: 'tuesday',
       isWorkingDay: true,
       startTime: '10:00',
-      endTime: '17:00'
+      endTime: '17:00',
     },
     {
       day: 'wednesday',
       isWorkingDay: true,
       startTime: '10:00',
-      endTime: '17:00'
+      endTime: '17:00',
     },
     {
       day: 'thursday',
       isWorkingDay: true,
       startTime: '10:00',
-      endTime: '17:00'
+      endTime: '17:00',
     },
     {
       day: 'friday',
       isWorkingDay: true,
       startTime: '10:00',
-      endTime: '17:00'
+      endTime: '17:00',
     },
     {
       day: 'saturday',
       isWorkingDay: false,
       startTime: '00:00',
-      endTime: '00:00'
+      endTime: '00:00',
     },
     {
       day: 'sunday',
       isWorkingDay: false,
       startTime: '00:00',
-      endTime: '00:00'
-    }
+      endTime: '00:00',
+    },
   ],
   holidays: [
     // Indian National Holidays 2025
@@ -73,7 +73,7 @@ export const defaultBusinessHours: BusinessHours = {
     '2025-10-02', // Gandhi Jayanti
     '2025-12-25', // Christmas
     // Add more holidays as needed
-  ]
+  ],
 };
 
 /**
@@ -100,7 +100,7 @@ export class BusinessHoursService {
   isBusinessHours(date: Date): boolean {
     // Convert to business timezone
     const businessTime = this.toBusinessTimezone(date);
-    
+
     // Check if it's a holiday
     if (this.isHoliday(businessTime)) {
       return false;
@@ -108,8 +108,8 @@ export class BusinessHoursService {
 
     // Get day configuration
     const dayName = this.getDayName(businessTime);
-    const dayConfig = this.config.days.find(d => d.day === dayName);
-    
+    const dayConfig = this.config.days.find((d) => d.day === dayName);
+
     if (!dayConfig || !dayConfig.isWorkingDay) {
       return false;
     }
@@ -123,32 +123,32 @@ export class BusinessHoursService {
    * Get next business hours start time
    */
   getNextBusinessHoursStart(fromDate: Date = new Date()): Date {
-    let checkDate = new Date(fromDate);
-    
+    const checkDate = new Date(fromDate);
+
     // Try next 14 days to find next business hours
     for (let i = 0; i < 14; i++) {
       if (i > 0) {
         checkDate.setDate(checkDate.getDate() + 1);
       }
-      
+
       const dayName = this.getDayName(checkDate);
-      const dayConfig = this.config.days.find(d => d.day === dayName);
-      
+      const dayConfig = this.config.days.find((d) => d.day === dayName);
+
       if (dayConfig?.isWorkingDay && !this.isHoliday(checkDate)) {
         // Set to start of business hours for this day
         const [hours, minutes] = dayConfig.startTime.split(':').map(Number);
         const businessStart = new Date(checkDate);
         businessStart.setHours(hours, minutes, 0, 0);
-        
+
         // If it's today and we're already past start time, continue to next day
         if (i === 0 && this.toBusinessTimezone(fromDate) > businessStart) {
           continue;
         }
-        
+
         return businessStart;
       }
     }
-    
+
     // Fallback: return tomorrow 9 AM if no business hours found
     const tomorrow = new Date(fromDate);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -161,15 +161,15 @@ export class BusinessHoursService {
    */
   getBusinessHoursBetween(startDate: Date, endDate: Date): number {
     let businessHours = 0;
-    let currentDate = new Date(startDate);
-    
+    const currentDate = new Date(startDate);
+
     while (currentDate < endDate) {
       if (this.isBusinessHours(currentDate)) {
         businessHours++;
       }
       currentDate.setHours(currentDate.getHours() + 1);
     }
-    
+
     return businessHours;
   }
 
@@ -190,7 +190,7 @@ export class BusinessHoursService {
    * Private helper methods
    */
   private toBusinessTimezone(date: Date): Date {
-    return new Date(date.toLocaleString("en-US", { timeZone: this.config.timezone }));
+    return new Date(date.toLocaleString('en-US', { timeZone: this.config.timezone }));
   }
 
   private getDayName(date: Date): BusinessDay['day'] {
@@ -214,7 +214,7 @@ export class BusinessHoursService {
       month: 'long',
       day: 'numeric',
       hour: 'numeric',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 }

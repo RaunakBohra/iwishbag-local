@@ -8,7 +8,8 @@ const meta: Meta<typeof StatusBadge> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'StatusBadge displays quote and order statuses with appropriate colors, icons, and tooltips.',
+        component:
+          'StatusBadge displays quote and order statuses with appropriate colors, icons, and tooltips.',
       },
     },
   },
@@ -18,7 +19,7 @@ const meta: Meta<typeof StatusBadge> = {
       control: 'select',
       options: [
         'pending',
-        'sent', 
+        'sent',
         'approved',
         'paid',
         'ordered',
@@ -26,7 +27,7 @@ const meta: Meta<typeof StatusBadge> = {
         'completed',
         'rejected',
         'expired',
-        'cancelled'
+        'cancelled',
       ],
       description: 'Status value to display',
     },
@@ -85,7 +86,7 @@ export const QuoteExpired: Story = {
   },
 };
 
-// Order Status Stories  
+// Order Status Stories
 export const OrderPaid: Story = {
   args: {
     status: 'paid',

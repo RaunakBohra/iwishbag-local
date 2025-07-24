@@ -84,6 +84,7 @@ import { ShippingConfigurationPrompt } from './smart-components/ShippingConfigur
 import { CompactPaymentManager } from './smart-components/CompactPaymentManager';
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
+import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import {
@@ -115,7 +116,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Core state
   const quoteId = initialQuoteId || paramId;
   const [quote, setQuote] = useState<UnifiedQuote | null>(null);
-  
+
   // Get standardized currency display
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const [isLoading, setIsLoading] = useState(true);
@@ -186,7 +187,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Status transitions for auto-progression
   const { handleQuoteSent } = useStatusTransitions();
-
 
   // Load quote data
   useEffect(() => {
@@ -337,17 +337,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         id: selectedOption.id,
         name: selectedOption.name,
         carrier: selectedOption.carrier,
-        cost_usd: selectedOption.cost_usd
+        cost_usd: selectedOption.cost_usd,
       },
       breakdownUpdate: {
         oldShipping: quote.calculation_data?.breakdown?.shipping,
         newShipping: selectedOption.cost_usd,
-        shippingChange: selectedOption.cost_usd - (quote.calculation_data?.breakdown?.shipping || 0)
+        shippingChange:
+          selectedOption.cost_usd - (quote.calculation_data?.breakdown?.shipping || 0),
       },
       operationalDataUpdate: {
         originalSelectedOption: quote.operational_data?.shipping?.selected_option,
-        newSelectedOption: optimisticQuote.operational_data.shipping.selected_option
-      }
+        newSelectedOption: optimisticQuote.operational_data.shipping.selected_option,
+      },
     });
 
     // Set optimistic state immediately (no page refresh)
@@ -391,7 +392,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       } else {
         console.log('✅ [DEBUG] Database update successful!');
-        
+
         // Trigger recalculation to update handling charges and other dependent values
         console.log('🔄 [DEBUG] Triggering recalculation after shipping option change...');
         try {
@@ -403,23 +404,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               show_all_options: false,
             },
           });
-          
+
           if (calculationResult.success) {
             console.log('✅ [DEBUG] Recalculation successful:', {
-              handlingCharge: calculationResult.updated_quote.calculation_data.breakdown.handling_charge,
-              finalTotal: calculationResult.updated_quote.final_total_usd
+              handlingCharge:
+                calculationResult.updated_quote.calculation_data.breakdown.handling_charge,
+              finalTotal: calculationResult.updated_quote.final_total_usd,
             });
-            
+
             // Update both quote state and live quote with recalculated values
             setQuote(calculationResult.updated_quote);
             if (isEditMode) {
               setLiveQuote(calculationResult.updated_quote);
             }
-            
+
             // Update form with recalculated values
-            form.setValue('handling_charge', calculationResult.updated_quote.calculation_data.breakdown.handling_charge || 0);
+            form.setValue(
+              'handling_charge',
+              calculationResult.updated_quote.calculation_data.breakdown.handling_charge || 0,
+            );
             form.setValue('final_total_usd', calculationResult.updated_quote.final_total_usd || 0);
-            
           } else {
             console.warn('⚠️ [DEBUG] Recalculation failed:', calculationResult.error);
           }
@@ -556,14 +560,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             } else if (formValues.selected_shipping_option && result.shipping_options.length > 0) {
               // ✅ SIMPLE FIX: Update international shipping cost for existing selection when route changes
               const currentlySelected = result.shipping_options.find(
-                opt => opt.id === formValues.selected_shipping_option
+                (opt) => opt.id === formValues.selected_shipping_option,
               );
               if (currentlySelected) {
-                console.log('🔄 [DEBUG] Updating international shipping cost for existing selection:', {
-                  optionId: currentlySelected.id,
-                  oldCost: formValues.international_shipping,
-                  newCost: currentlySelected.cost_usd,
-                });
+                console.log(
+                  '🔄 [DEBUG] Updating international shipping cost for existing selection:',
+                  {
+                    optionId: currentlySelected.id,
+                    oldCost: formValues.international_shipping,
+                    newCost: currentlySelected.cost_usd,
+                  },
+                );
                 form.setValue('international_shipping', currentlySelected.cost_usd);
               }
             }
@@ -1185,9 +1192,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // ✅ AUTO-APPLY: Check for handling charge defaults when no existing value
     const existingHandling = operationalData.handling_charge || 0;
     let handlingChargeValue = existingHandling;
-    
+
     // Auto-apply default handling charge if no existing value and backend config available
-    if (existingHandling === 0 && calculationData.handlingDefault && calculationData.handlingDefault > 0) {
+    if (
+      existingHandling === 0 &&
+      calculationData.handlingDefault &&
+      calculationData.handlingDefault > 0
+    ) {
       handlingChargeValue = calculationData.handlingDefault;
       console.log('🎯 [DEBUG] Auto-applying default handling charge in form:', {
         quoteId: quoteData.id,
@@ -1200,9 +1211,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // ✅ AUTO-APPLY: Check for insurance defaults when no existing value
     const existingInsurance = operationalData.insurance_amount || 0;
     let insuranceAmountValue = existingInsurance;
-    
+
     // Auto-apply default insurance if no existing value and backend config available
-    if (existingInsurance === 0 && calculationData.insuranceDefault && calculationData.insuranceDefault > 0) {
+    if (
+      existingInsurance === 0 &&
+      calculationData.insuranceDefault &&
+      calculationData.insuranceDefault > 0
+    ) {
       insuranceAmountValue = calculationData.insuranceDefault;
       console.log('🛡️ [DEBUG] Auto-applying default insurance amount in form:', {
         quoteId: quoteData.id,
@@ -1322,15 +1337,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
       if (success) {
         setLastSaveTime(new Date());
-        
+
         // 🚀 AUTO-STATUS PROGRESSION: pending → sent
         // Check if quote calculations were saved and status should auto-progress
         const currentStatus = quote?.status;
-        const hasCalculationData = data.items && data.items.length > 0 && 
-          (Number(data.international_shipping) > 0 || 
-           Number(data.customs_percentage) > 0 || 
-           Number(data.sales_tax_price) > 0);
-        
+        const hasCalculationData =
+          data.items &&
+          data.items.length > 0 &&
+          (Number(data.international_shipping) > 0 ||
+            Number(data.customs_percentage) > 0 ||
+            Number(data.sales_tax_price) > 0);
+
         console.log('🔄 [AUTO-STATUS] Checking auto-progression conditions:', {
           currentStatus,
           hasCalculationData,
@@ -1338,7 +1355,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           items: data.items?.length || 0,
           internationalShipping: Number(data.international_shipping) || 0,
           customsPercentage: Number(data.customs_percentage) || 0,
-          salesTax: Number(data.sales_tax_price) || 0
+          salesTax: Number(data.sales_tax_price) || 0,
         });
 
         // Auto-progress from 'pending' to 'sent' when calculations are saved
@@ -1346,10 +1363,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           try {
             console.log('✅ [AUTO-STATUS] Triggering auto-progression: pending → sent');
             await handleQuoteSent(quoteId, currentStatus);
-            
+
             toast({
               title: 'Quote updated and sent',
-              description: 'Quote has been calculated and automatically marked as sent. You can continue editing.',
+              description:
+                'Quote has been calculated and automatically marked as sent. You can continue editing.',
             });
           } catch (statusError) {
             console.error('❌ [AUTO-STATUS] Failed to auto-progress status:', statusError);
@@ -1362,14 +1380,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         } else {
           // Normal update without status change
           console.log('ℹ️ [AUTO-STATUS] No auto-progression needed:', {
-            reason: currentStatus !== 'pending' ? 'Status not pending' : 'No calculation data'
+            reason: currentStatus !== 'pending' ? 'Status not pending' : 'No calculation data',
           });
           toast({
             title: 'Quote updated',
             description: 'Quote has been successfully updated. You can continue editing.',
           });
         }
-        
+
         // Removed setIsEditMode(false) - keep user in edit mode for continued editing
         await loadQuoteData(); // Reload to get fresh data
       } else {
@@ -1498,7 +1516,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              {quote?.display_id || quote?.iwish_tracking_id || `Quote #${quote?.id?.substring(0, 8)}`}
+              {quote?.display_id ||
+                quote?.iwish_tracking_id ||
+                `Quote #${quote?.id?.substring(0, 8)}`}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -1637,7 +1657,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="flex items-center space-x-8">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {currencyDisplay.formatSingleAmount(liveQuote?.final_total_usd || quote.final_total_usd, 'origin')}
+                  {currencyDisplay.formatSingleAmount(
+                    liveQuote?.final_total_usd || quote.final_total_usd,
+                    'origin',
+                  )}
                 </div>
                 <div className="text-xs text-gray-600 font-medium">Total Quote Value</div>
                 {lastSaveTime && (
@@ -1796,13 +1819,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   <div className="text-right">
                                     <div className="text-lg font-bold text-green-600">
                                       {currencyDisplay.formatSingleAmount(
-                                        Number(item.item_price) * Number(item.quantity), 
-                                        'origin'
+                                        Number(item.item_price) * Number(item.quantity),
+                                        'origin',
                                       )}
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      {currencyDisplay.formatSingleAmount(Number(item.item_price || 0), 'origin')} ×{' '}
-                                      {item.quantity || 1}
+                                      {currencyDisplay.formatSingleAmount(
+                                        Number(item.item_price || 0),
+                                        'origin',
+                                      )}{' '}
+                                      × {item.quantity || 1}
                                     </div>
                                   </div>
                                   <div className="flex space-x-1">
@@ -2099,7 +2125,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                     // Wait for shipping options to be loaded
                     if (!shippingOptions || shippingOptions.length === 0) {
-                      console.log('🔧 [DEBUG] Shipping options not loaded yet, showing form without defaults');
+                      console.log(
+                        '🔧 [DEBUG] Shipping options not loaded yet, showing form without defaults',
+                      );
                       // Show form without defaults while waiting for shipping options
                       return (
                         <QuoteDetailForm
@@ -2129,13 +2157,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                     const selectedOptionId = liveQuote.operational_data?.shipping?.selected_option;
                     const normalizedId = normalizeShippingOptionId(selectedOptionId);
-                    const selectedOption = shippingOptions.find(opt => opt.id === normalizedId);
-                    
+                    const selectedOption = shippingOptions.find((opt) => opt.id === normalizedId);
+
                     console.log('🔧 [DEBUG] Shipping option matching:', {
                       originalId: selectedOptionId,
                       normalizedId,
                       foundOption: selectedOption?.id,
-                      availableOptions: shippingOptions.map(opt => opt.id),
+                      availableOptions: shippingOptions.map((opt) => opt.id),
                       shippingOptionsCount: shippingOptions.length,
                       firstOptionSample: shippingOptions[0],
                     });
@@ -2143,75 +2171,93 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     // Additional debug for the exact matching logic
                     console.log('🔧 [DEBUG] Detailed matching attempt:', {
                       searchingFor: normalizedId,
-                      matches: shippingOptions.map(opt => ({
+                      matches: shippingOptions.map((opt) => ({
                         id: opt.id,
                         matches: opt.id === normalizedId,
                         hasHandling: !!opt.handling_charge,
-                        hasInsurance: !!opt.insurance_options
-                      }))
+                        hasInsurance: !!opt.insurance_options,
+                      })),
                     });
 
                     // If no selected option found, try to create a fallback from the shipping route
                     let fallbackOption = null;
                     if (!selectedOption && normalizedId) {
-                      console.log('🔧 [DEBUG] Attempting to create fallback option for:', normalizedId);
-                      
+                      console.log(
+                        '🔧 [DEBUG] Attempting to create fallback option for:',
+                        normalizedId,
+                      );
+
                       // Try to create a basic option structure for calculation
                       fallbackOption = {
                         id: normalizedId,
-                        carrier: normalizedId.includes('dhl') ? 'DHL' : normalizedId.includes('fedex') ? 'FedEx' : 'Unknown',
+                        carrier: normalizedId.includes('dhl')
+                          ? 'DHL'
+                          : normalizedId.includes('fedex')
+                            ? 'FedEx'
+                            : 'Unknown',
                         name: normalizedId.replace('_', ' ').toUpperCase(),
                         cost_usd: 0,
                         // Add handling_charge config for all shipping options (fallback if DB fails)
-                        handling_charge: 
-                          normalizedId === 'dhl_standard' ? {
-                            base_fee: 5,
-                            percentage_of_value: 2,
-                            min_fee: 3,
-                            max_fee: 50
-                          } : 
-                          normalizedId === 'dhl_express' ? {
-                            base_fee: 8,
-                            percentage_of_value: 2.5,
-                            min_fee: 5,
-                            max_fee: 80
-                          } : 
-                          normalizedId === 'fedex_standard' ? {
-                            base_fee: 6,
-                            percentage_of_value: 1.8,
-                            min_fee: 4,
-                            max_fee: 60
-                          } : undefined,
+                        handling_charge:
+                          normalizedId === 'dhl_standard'
+                            ? {
+                                base_fee: 5,
+                                percentage_of_value: 2,
+                                min_fee: 3,
+                                max_fee: 50,
+                              }
+                            : normalizedId === 'dhl_express'
+                              ? {
+                                  base_fee: 8,
+                                  percentage_of_value: 2.5,
+                                  min_fee: 5,
+                                  max_fee: 80,
+                                }
+                              : normalizedId === 'fedex_standard'
+                                ? {
+                                    base_fee: 6,
+                                    percentage_of_value: 1.8,
+                                    min_fee: 4,
+                                    max_fee: 60,
+                                  }
+                                : undefined,
                         // Add insurance_options config for all shipping options (fallback if DB fails)
-                        insurance_options: 
-                          normalizedId === 'dhl_standard' ? {
-                            coverage_percentage: 1.5,
-                            max_coverage: 5000,
-                            min_fee: 2,
-                            available: true,
-                            default_enabled: false
-                          } : 
-                          normalizedId === 'dhl_express' ? {
-                            coverage_percentage: 1.5,
-                            max_coverage: 10000,
-                            min_fee: 3,
-                            available: true,
-                            default_enabled: false
-                          } : 
-                          normalizedId === 'fedex_standard' ? {
-                            coverage_percentage: 1.2,
-                            max_coverage: 7500,
-                            min_fee: 2.5,
-                            available: true,
-                            default_enabled: false
-                          } : undefined
+                        insurance_options:
+                          normalizedId === 'dhl_standard'
+                            ? {
+                                coverage_percentage: 1.5,
+                                max_coverage: 5000,
+                                min_fee: 2,
+                                available: true,
+                                default_enabled: false,
+                              }
+                            : normalizedId === 'dhl_express'
+                              ? {
+                                  coverage_percentage: 1.5,
+                                  max_coverage: 10000,
+                                  min_fee: 3,
+                                  available: true,
+                                  default_enabled: false,
+                                }
+                              : normalizedId === 'fedex_standard'
+                                ? {
+                                    coverage_percentage: 1.2,
+                                    max_coverage: 7500,
+                                    min_fee: 2.5,
+                                    available: true,
+                                    default_enabled: false,
+                                  }
+                                : undefined,
                       };
-                      
+
                       console.log('🔧 [DEBUG] Created fallback option:', fallbackOption);
                     }
 
                     const optionToUse = selectedOption || fallbackOption;
-                    const calculationData = calculationDefaultsService.getCalculationData(liveQuote, optionToUse);
+                    const calculationData = calculationDefaultsService.getCalculationData(
+                      liveQuote,
+                      optionToUse,
+                    );
 
                     // Debug: Check current breakdown structure
                     console.log('🔧 [DEBUG] Current breakdown structure:', {
@@ -2314,12 +2360,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 editMode={isEditMode}
               />
 
-
               {/* Status Management - Outside form to prevent submission conflicts */}
               <CompactStatusManager
                 quote={liveQuote || quote}
                 onStatusUpdate={loadQuoteData}
                 compact={true}
+              />
+
+              {/* HSN Tax Breakdown - Show per-item tax calculations */}
+              <CompactHSNTaxBreakdown
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
               />
 
               {/* Shipping Options or Configuration Prompt */}
@@ -2339,7 +2393,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               ) : (
                 <ShippingConfigurationPrompt
                   quote={liveQuote || quote}
-                  onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                  onNavigateToSettings={() => (window.location.href = '/admin/shipping-routes')}
                 />
               )}
 
@@ -2464,7 +2518,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Weight: {item.weight_kg} kg each</span>
                               <span>•</span>
-                              <span>Unit Price: {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}</span>
+                              <span>
+                                Unit Price:{' '}
+                                {currencyDisplay.formatSingleAmount(
+                                  Number(item.price_usd || 0),
+                                  'origin',
+                                )}
+                              </span>
                             </div>
                             {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (
@@ -2479,7 +2539,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
-                            {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0) * item.quantity, 'origin')}
+                            {currencyDisplay.formatSingleAmount(
+                              Number(item.price_usd || 0) * item.quantity,
+                              'origin',
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">Total</div>
                         </div>
@@ -2507,7 +2570,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 editMode={isEditMode}
               />
 
-
               {/* 2. Quote Summary - Second Priority (order overview) */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/30">
                 <CardContent className="p-4">
@@ -2518,7 +2580,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Value</span>
                       <span className="text-xl font-bold text-blue-600">
-                        {currencyDisplay.formatSingleAmount(liveQuote?.final_total_usd || quote.final_total_usd, 'origin')}
+                        {currencyDisplay.formatSingleAmount(
+                          liveQuote?.final_total_usd || quote.final_total_usd,
+                          'origin',
+                        )}
                       </span>
                     </div>
 
@@ -2549,10 +2614,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   {!isEditMode && (
                     <div className="mt-4 pt-3 border-t border-blue-200">
                       {(() => {
-                        const selectedShippingOptionId = quote.operational_data?.shipping?.selected_option;
-                        const selectedShippingOption = shippingOptions.find(opt => opt.id === selectedShippingOptionId);
-                        const shippingCost = liveQuote?.calculation_data?.breakdown?.shipping || quote.calculation_data?.breakdown?.shipping || 0;
-                        
+                        const selectedShippingOptionId =
+                          quote.operational_data?.shipping?.selected_option;
+                        const selectedShippingOption = shippingOptions.find(
+                          (opt) => opt.id === selectedShippingOptionId,
+                        );
+                        const shippingCost =
+                          liveQuote?.calculation_data?.breakdown?.shipping ||
+                          quote.calculation_data?.breakdown?.shipping ||
+                          0;
+
                         if (selectedShippingOption) {
                           return (
                             <div className="flex items-center justify-between">
@@ -2562,7 +2633,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   {selectedShippingOption.carrier} {selectedShippingOption.name}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {selectedShippingOption.days} • {currencyDisplay.formatSingleAmount(shippingCost, 'origin')}
+                                  {selectedShippingOption.days} •{' '}
+                                  {currencyDisplay.formatSingleAmount(shippingCost, 'origin')}
                                 </div>
                               </div>
                             </div>
@@ -2638,7 +2710,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 ) : (
                   <ShippingConfigurationPrompt
                     quote={liveQuote || quote}
-                    onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                    onNavigateToSettings={() => (window.location.href = '/admin/shipping-routes')}
                   />
                 )
               ) : (
@@ -2646,7 +2718,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 shippingOptions.length === 0 && (
                   <ShippingConfigurationPrompt
                     quote={liveQuote || quote}
-                    onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                    onNavigateToSettings={() => (window.location.href = '/admin/shipping-routes')}
                   />
                 )
               )}
@@ -2654,91 +2726,95 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* 5.5. Admin Override Controls - Handling & Insurance */}
               {isEditMode && (
                 <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-sm">
-                    <Settings className="w-4 h-4 text-orange-600" />
-                    <span>Admin Overrides</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Handling Charge Override */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-700">
-                      Handling Charge Override
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Auto-calculated"
-                          value={form.watch('handling_charge') || ''}
-                          onChange={(e) => {
-                            form.setValue('handling_charge', Number(e.target.value));
-                            scheduleCalculation();
-                          }}
-                          className="text-xs"
-                        />
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center space-x-2 text-sm">
+                      <Settings className="w-4 h-4 text-orange-600" />
+                      <span>Admin Overrides</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Handling Charge Override */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-700">
+                        Handling Charge Override
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Auto-calculated"
+                            value={form.watch('handling_charge') || ''}
+                            onChange={(e) => {
+                              form.setValue('handling_charge', Number(e.target.value));
+                              scheduleCalculation();
+                            }}
+                            className="text-xs"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Auto:{' '}
+                          {currencyDisplay.formatSingleAmount(
+                            liveQuote?.operational_data?.calculated_handling || 0,
+                            'origin',
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Auto: {currencyDisplay.formatSingleAmount(
-                          liveQuote?.operational_data?.calculated_handling || 0,
-                          'origin'
-                        )}
-                      </div>
+                      <p className="text-xs text-gray-500">
+                        Override carrier handling charge calculation
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Override carrier handling charge calculation
-                    </p>
-                  </div>
 
-                  {/* Insurance Override */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-700">
-                      Insurance Override
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Auto-calculated"
-                          value={form.watch('insurance_amount') || ''}
-                          onChange={(e) => {
-                            form.setValue('insurance_amount', Number(e.target.value));
-                            scheduleCalculation();
-                          }}
-                          className="text-xs"
-                        />
+                    {/* Insurance Override */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-700">
+                        Insurance Override
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Auto-calculated"
+                            value={form.watch('insurance_amount') || ''}
+                            onChange={(e) => {
+                              form.setValue('insurance_amount', Number(e.target.value));
+                              scheduleCalculation();
+                            }}
+                            className="text-xs"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Auto:{' '}
+                          {currencyDisplay.formatSingleAmount(
+                            liveQuote?.operational_data?.calculated_insurance || 0,
+                            'origin',
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Auto: {currencyDisplay.formatSingleAmount(
-                          liveQuote?.operational_data?.calculated_insurance || 0,
-                          'origin'
-                        )}
-                      </div>
+                      <p className="text-xs text-gray-500">Override customer insurance selection</p>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Override customer insurance selection
-                    </p>
-                  </div>
 
-                  {/* Customer Preferences Info */}
-                  <div className="pt-2 border-t border-gray-200 space-y-1">
-                    <h4 className="text-xs font-medium text-gray-700">Customer Preferences:</h4>
-                    <div className="text-xs text-gray-600 space-y-1">
-                      <div>Insurance Opted: {
-                        liveQuote?.customer_data?.preferences?.insurance_opted_in ? 
-                        <span className="text-green-600">Yes</span> : 
-                        <span className="text-red-600">No</span>
-                      }</div>
-                      <div>Selected Carrier: {
-                        liveQuote?.operational_data?.shipping?.selected_option || 'Auto'
-                      }</div>
+                    {/* Customer Preferences Info */}
+                    <div className="pt-2 border-t border-gray-200 space-y-1">
+                      <h4 className="text-xs font-medium text-gray-700">Customer Preferences:</h4>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>
+                          Insurance Opted:{' '}
+                          {liveQuote?.customer_data?.preferences?.insurance_opted_in ? (
+                            <span className="text-green-600">Yes</span>
+                          ) : (
+                            <span className="text-red-600">No</span>
+                          )}
+                        </div>
+                        <div>
+                          Selected Carrier:{' '}
+                          {liveQuote?.operational_data?.shipping?.selected_option || 'Auto'}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               )}
 
               {/* 6. Payment Management - Sixth Priority (conditional) */}

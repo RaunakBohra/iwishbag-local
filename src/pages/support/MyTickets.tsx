@@ -36,15 +36,15 @@ const StatusIcon = ({ status }: { status: string }) => {
   }
 };
 
-const TicketCard = ({ 
-  ticket, 
-  onTicketClick 
-}: { 
+const TicketCard = ({
+  ticket,
+  onTicketClick,
+}: {
   ticket: TicketWithDetails;
   onTicketClick: (ticketId: string) => void;
 }) => {
   return (
-    <Card 
+    <Card
       className="hover:shadow-md transition-shadow cursor-pointer"
       onClick={() => onTicketClick(ticket.id)}
     >
@@ -80,7 +80,7 @@ const TicketCard = ({
                 </span>
                 <span className="text-xs text-gray-400">to {ticket.quote.destination_country}</span>
                 {ticket.quote.status && (
-                  <Badge 
+                  <Badge
                     variant={ticket.quote.status === 'delivered' ? 'default' : 'outline'}
                     className="text-xs"
                   >
@@ -178,14 +178,11 @@ export default function MyTicketsPage() {
 
   // If a ticket is selected, show the detail view
   if (selectedTicketId) {
-    const selectedTicket = tickets.find(t => t.id === selectedTicketId);
+    const selectedTicket = tickets.find((t) => t.id === selectedTicketId);
     if (selectedTicket) {
       return (
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <TicketDetailView 
-            ticketId={selectedTicket.id} 
-            onBack={handleBackToList}
-          />
+          <TicketDetailView ticketId={selectedTicket.id} onBack={handleBackToList} />
         </div>
       );
     }
@@ -207,33 +204,34 @@ export default function MyTicketsPage() {
       </div>
 
       {/* Business Hours Status */}
-      <div className={`mb-6 p-4 rounded-lg border ${
-        businessHoursService.isCurrentlyBusinessHours()
-        ? 'bg-green-50 border-green-200' 
-        : 'bg-orange-50 border-orange-200'
-      }`}>
+      <div
+        className={`mb-6 p-4 rounded-lg border ${
+          businessHoursService.isCurrentlyBusinessHours()
+            ? 'bg-green-50 border-green-200'
+            : 'bg-orange-50 border-orange-200'
+        }`}
+      >
         <div className="flex items-center gap-2 mb-2">
-          <Clock className={`w-4 h-4 ${
-            businessHoursService.isCurrentlyBusinessHours() 
-            ? 'text-green-600' 
-            : 'text-orange-600'
-          }`} />
-          <span className={`font-medium text-sm ${
-            businessHoursService.isCurrentlyBusinessHours() 
-            ? 'text-green-900' 
-            : 'text-orange-900'
-          }`}>
-            {businessHoursService.isCurrentlyBusinessHours() 
-            ? '🟢 Support team is online' 
-            : '🔴 Support team is offline'
-            }
+          <Clock
+            className={`w-4 h-4 ${
+              businessHoursService.isCurrentlyBusinessHours() ? 'text-green-600' : 'text-orange-600'
+            }`}
+          />
+          <span
+            className={`font-medium text-sm ${
+              businessHoursService.isCurrentlyBusinessHours() ? 'text-green-900' : 'text-orange-900'
+            }`}
+          >
+            {businessHoursService.isCurrentlyBusinessHours()
+              ? '🟢 Support team is online'
+              : '🔴 Support team is offline'}
           </span>
         </div>
-        <p className={`text-xs ${
-          businessHoursService.isCurrentlyBusinessHours() 
-          ? 'text-green-700' 
-          : 'text-orange-700'
-        }`}>
+        <p
+          className={`text-xs ${
+            businessHoursService.isCurrentlyBusinessHours() ? 'text-green-700' : 'text-orange-700'
+          }`}
+        >
           {businessHoursService.getAutoResponseMessage()}
         </p>
       </div>

@@ -36,13 +36,18 @@ export function ShippingRouteDisplay({
     if (showConfigPrompt && isAdmin) {
       // Show configuration prompt for admins
       return (
-        <div className={cn('flex items-center space-x-2 text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1', className)}>
+        <div
+          className={cn(
+            'flex items-center space-x-2 text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1',
+            className,
+          )}
+        >
           <AlertTriangle className="w-3 h-3" />
           <span className="text-xs font-medium">Route not configured</span>
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => window.location.href = '/admin/shipping-routes'}
+            onClick={() => (window.location.href = '/admin/shipping-routes')}
             className="h-5 px-2 text-xs text-orange-700 hover:text-orange-800 hover:bg-orange-100"
           >
             <Settings className="w-3 h-3 mr-1" />

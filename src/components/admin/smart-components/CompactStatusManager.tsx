@@ -400,7 +400,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
               <span>Status Management</span>
             </h4>
           </div>
-          
+
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {/* Current Status Badge */}
@@ -434,8 +434,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                       smartAction.actionType === 'cart'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
                         : smartAction.actionType === 'refresh'
-                        ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                        : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                          ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                          : 'border-blue-300 text-blue-700 hover:bg-blue-50'
                     }`}
                   >
                     {smartAction.icon}
@@ -461,7 +461,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
                       {allowedTransitions
-                        .filter(status => status !== smartAction?.action)
+                        .filter((status) => status !== smartAction?.action)
                         .map((nextStatus) => (
                           <DropdownMenuItem
                             key={nextStatus}
@@ -536,8 +536,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                       smartAction.actionType === 'cart'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
                         : smartAction.actionType === 'refresh'
-                        ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                        : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                          ? 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                          : 'border-blue-300 text-blue-700 hover:bg-blue-50'
                     }`}
                   >
                     <Zap className="w-3 h-3" />
@@ -562,7 +562,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       {allowedTransitions
-                        .filter(status => status !== smartAction?.action)
+                        .filter((status) => status !== smartAction?.action)
                         .map((nextStatus) => (
                           <DropdownMenuItem
                             key={nextStatus}

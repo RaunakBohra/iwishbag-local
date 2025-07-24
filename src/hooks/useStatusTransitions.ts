@@ -198,7 +198,7 @@ export const useStatusTransitions = () => {
       // Extract email and product name from JSONB fields
       const customerEmail = quote?.customer_data?.info?.email;
       const productName = quote?.items?.[0]?.name || 'Product';
-      
+
       if (!quote || !customerEmail) {
         console.log('No email found for quote, skipping notification');
         return;

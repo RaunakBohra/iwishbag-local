@@ -199,12 +199,9 @@ export const useSLAMonitoring = () => {
     try {
       // Update breach flags first
       await updateSLAMutation.mutateAsync();
-      
+
       // Then refresh data
-      await Promise.all([
-        refetchSummary(),
-        refetchBreached(),
-      ]);
+      await Promise.all([refetchSummary(), refetchBreached()]);
     } catch (error) {
       console.error('Error refreshing SLA data:', error);
     }

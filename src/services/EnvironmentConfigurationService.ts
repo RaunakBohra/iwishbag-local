@@ -1,6 +1,6 @@
 /**
  * Environment Configuration Service
- * 
+ *
  * Centralized service for checking critical environment variables and configuration
  * that are required for different features to function properly.
  */
@@ -20,12 +20,15 @@ export interface ConfigurationStatus {
   checks: EnvironmentCheck[];
   missingRequired: EnvironmentCheck[];
   missingOptional: EnvironmentCheck[];
-  categories: Record<string, { healthy: number; total: number; status: 'healthy' | 'partial' | 'critical' }>;
+  categories: Record<
+    string,
+    { healthy: number; total: number; status: 'healthy' | 'partial' | 'critical' }
+  >;
 }
 
 class EnvironmentConfigurationService {
   private static instance: EnvironmentConfigurationService;
-  
+
   // Define all critical environment variables
   private readonly environmentChecks: Omit<EnvironmentCheck, 'present' | 'hasValue'>[] = [
     // Database & Core
@@ -34,14 +37,14 @@ class EnvironmentConfigurationService {
       name: 'Supabase URL',
       description: 'Database connection URL - Critical for all functionality',
       required: true,
-      category: 'database'
+      category: 'database',
     },
     {
       key: 'VITE_SUPABASE_ANON_KEY',
       name: 'Supabase Anonymous Key',
       description: 'Database authentication key - Critical for all functionality',
       required: true,
-      category: 'database'
+      category: 'database',
     },
 
     // Payment Gateways
@@ -50,21 +53,21 @@ class EnvironmentConfigurationService {
       name: 'Stripe Publishable Key',
       description: 'Required for international credit card payments via Stripe',
       required: false,
-      category: 'payment'
+      category: 'payment',
     },
     {
       key: 'VITE_PAYU_MERCHANT_KEY',
       name: 'PayU Merchant Key',
       description: 'Required for payments in India via PayU',
       required: false,
-      category: 'payment'
+      category: 'payment',
     },
     {
       key: 'VITE_PAYU_SALT',
       name: 'PayU Salt',
       description: 'Security salt for PayU payment hash generation',
       required: false,
-      category: 'payment'
+      category: 'payment',
     },
 
     // Email Services
@@ -73,21 +76,21 @@ class EnvironmentConfigurationService {
       name: 'EmailJS Service ID',
       description: 'Required for sending customer notifications and support emails',
       required: false,
-      category: 'email'
+      category: 'email',
     },
     {
       key: 'VITE_EMAILJS_TEMPLATE_ID',
       name: 'EmailJS Template ID',
       description: 'Email template configuration for customer communications',
       required: false,
-      category: 'email'
+      category: 'email',
     },
     {
       key: 'VITE_EMAILJS_USER_ID',
       name: 'EmailJS User ID',
       description: 'EmailJS account identifier for email service',
       required: false,
-      category: 'email'
+      category: 'email',
     },
 
     // Storage & CDN
@@ -96,14 +99,14 @@ class EnvironmentConfigurationService {
       name: 'Cloudinary Cloud Name',
       description: 'Required for image upload and storage functionality',
       required: false,
-      category: 'storage'
+      category: 'storage',
     },
     {
       key: 'VITE_CLOUDINARY_UPLOAD_PRESET',
       name: 'Cloudinary Upload Preset',
       description: 'Configuration for image upload settings',
       required: false,
-      category: 'storage'
+      category: 'storage',
     },
 
     // Security
@@ -112,7 +115,7 @@ class EnvironmentConfigurationService {
       name: 'Turnstile Site Key',
       description: 'Cloudflare Turnstile for bot protection and security',
       required: false,
-      category: 'security'
+      category: 'security',
     },
 
     // API Keys
@@ -121,8 +124,8 @@ class EnvironmentConfigurationService {
       name: 'Exchange Rate API Key',
       description: 'Required for automatic currency conversion rates',
       required: false,
-      category: 'api'
-    }
+      category: 'api',
+    },
   ];
 
   public static getInstance(): EnvironmentConfigurationService {
@@ -136,26 +139,31 @@ class EnvironmentConfigurationService {
    * Check all environment variables and return comprehensive status
    */
   public checkConfiguration(): ConfigurationStatus {
-    const checks: EnvironmentCheck[] = this.environmentChecks.map(check => {
+    const checks: EnvironmentCheck[] = this.environmentChecks.map((check) => {
       const value = import.meta.env[check.key];
       return {
         ...check,
         present: value !== undefined,
-        hasValue: value !== undefined && value !== null && value !== ''
+        hasValue: value !== undefined && value !== null && value !== '',
       };
     });
 
-    const missingRequired = checks.filter(check => check.required && !check.hasValue);
-    const missingOptional = checks.filter(check => !check.required && !check.hasValue);
+    const missingRequired = checks.filter((check) => check.required && !check.hasValue);
+    const missingOptional = checks.filter((check) => !check.required && !check.hasValue);
 
     // Calculate category status
-    const categories: Record<string, { healthy: number; total: number; status: 'healthy' | 'partial' | 'critical' }> = {};
-    
+    const categories: Record<
+      string,
+      { healthy: number; total: number; status: 'healthy' | 'partial' | 'critical' }
+    > = {};
+
     for (const category of ['payment', 'email', 'storage', 'api', 'security', 'database']) {
-      const categoryChecks = checks.filter(check => check.category === category);
-      const healthyCount = categoryChecks.filter(check => check.hasValue).length;
-      const requiredMissing = categoryChecks.filter(check => check.required && !check.hasValue).length;
-      
+      const categoryChecks = checks.filter((check) => check.category === category);
+      const healthyCount = categoryChecks.filter((check) => check.hasValue).length;
+      const requiredMissing = categoryChecks.filter(
+        (check) => check.required && !check.hasValue,
+      ).length;
+
       let status: 'healthy' | 'partial' | 'critical' = 'healthy';
       if (requiredMissing > 0) {
         status = 'critical';
@@ -166,7 +174,7 @@ class EnvironmentConfigurationService {
       categories[category] = {
         healthy: healthyCount,
         total: categoryChecks.length,
-        status
+        status,
       };
     }
 
@@ -183,7 +191,7 @@ class EnvironmentConfigurationService {
       checks,
       missingRequired,
       missingOptional,
-      categories
+      categories,
     };
   }
 
@@ -192,28 +200,28 @@ class EnvironmentConfigurationService {
    */
   public isFeatureConfigured(feature: 'payments' | 'email' | 'storage' | 'security'): boolean {
     const status = this.checkConfiguration();
-    
+
     switch (feature) {
       case 'payments':
         // At least one payment gateway should be configured
-        const paymentChecks = status.checks.filter(check => check.category === 'payment');
-        return paymentChecks.some(check => check.hasValue);
-      
+        const paymentChecks = status.checks.filter((check) => check.category === 'payment');
+        return paymentChecks.some((check) => check.hasValue);
+
       case 'email':
         // All EmailJS variables should be present
-        const emailChecks = status.checks.filter(check => check.category === 'email');
-        return emailChecks.every(check => check.hasValue);
-      
+        const emailChecks = status.checks.filter((check) => check.category === 'email');
+        return emailChecks.every((check) => check.hasValue);
+
       case 'storage':
         // Cloudinary should be configured for file uploads
-        const storageChecks = status.checks.filter(check => check.category === 'storage');
-        return storageChecks.every(check => check.hasValue);
-      
+        const storageChecks = status.checks.filter((check) => check.category === 'storage');
+        return storageChecks.every((check) => check.hasValue);
+
       case 'security':
         // Security features are optional but should be configured in production
-        const securityChecks = status.checks.filter(check => check.category === 'security');
-        return securityChecks.some(check => check.hasValue);
-      
+        const securityChecks = status.checks.filter((check) => check.category === 'security');
+        return securityChecks.some((check) => check.hasValue);
+
       default:
         return false;
     }
@@ -225,11 +233,11 @@ class EnvironmentConfigurationService {
   public getMissingConfiguration(category?: string): EnvironmentCheck[] {
     const status = this.checkConfiguration();
     let missing = [...status.missingRequired, ...status.missingOptional];
-    
+
     if (category) {
-      missing = missing.filter(check => check.category === category);
+      missing = missing.filter((check) => check.category === category);
     }
-    
+
     return missing;
   }
 
@@ -239,13 +247,12 @@ class EnvironmentConfigurationService {
   public generateConfigurationInstructions(missing: EnvironmentCheck[]): string {
     if (missing.length === 0) return 'All required configuration is present.';
 
-    const instructions = missing.map(check => {
+    const instructions = missing.map((check) => {
       return `${check.key}=${check.key.includes('KEY') || check.key.includes('SECRET') ? 'your-api-key-here' : 'your-value-here'}`;
     });
 
     return `Add these environment variables to your .env file:\n\n${instructions.join('\n')}`;
   }
-
 
   /**
    * Check if application is ready for production
@@ -256,7 +263,9 @@ class EnvironmentConfigurationService {
 
     // Critical: Database must be configured
     if (status.missingRequired.length > 0) {
-      blockers.push(`Missing required configuration: ${status.missingRequired.map(c => c.name).join(', ')}`);
+      blockers.push(
+        `Missing required configuration: ${status.missingRequired.map((c) => c.name).join(', ')}`,
+      );
     }
 
     // Critical: At least one payment method should be configured
@@ -269,10 +278,9 @@ class EnvironmentConfigurationService {
       blockers.push('Email service not configured - automated customer notifications disabled');
     }
 
-
     return {
       ready: blockers.length === 0,
-      blockers
+      blockers,
     };
   }
 }

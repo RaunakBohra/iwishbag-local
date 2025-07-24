@@ -105,13 +105,26 @@ export const useEmailNotifications = () => {
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, template, data, from }: EmailNotificationOptions) => {
       // Determine email type for settings check
-      let emailType: 'quote_notification' | 'order_notification' | 'ticket_notification' | undefined;
+      let emailType:
+        | 'quote_notification'
+        | 'order_notification'
+        | 'ticket_notification'
+        | undefined;
 
       if (['quote_sent', 'quote_approved', 'quote_rejected'].includes(template)) {
         emailType = 'quote_notification';
       } else if (['order_shipped', 'order_delivered'].includes(template)) {
         emailType = 'order_notification';
-      } else if (['ticket_created', 'ticket_status_update', 'ticket_reply', 'ticket_closed', 'admin_new_ticket', 'admin_new_reply'].includes(template)) {
+      } else if (
+        [
+          'ticket_created',
+          'ticket_status_update',
+          'ticket_reply',
+          'ticket_closed',
+          'admin_new_ticket',
+          'admin_new_reply',
+        ].includes(template)
+      ) {
         emailType = 'ticket_notification';
       }
 
@@ -140,28 +153,52 @@ export const useEmailNotifications = () => {
           subject = 'subject' in data ? `Contact Form: ${data.subject}` : 'Contact Form';
           break;
         case 'ticket_created':
-          subject = 'ticketSubject' in data ? `New Support Ticket: ${data.ticketSubject}` : 'New Support Ticket Created';
+          subject =
+            'ticketSubject' in data
+              ? `New Support Ticket: ${data.ticketSubject}`
+              : 'New Support Ticket Created';
           break;
         case 'ticket_status_update':
-          subject = 'ticketSubject' in data ? `Ticket Update: ${data.ticketSubject}` : 'Support Ticket Update';
+          subject =
+            'ticketSubject' in data
+              ? `Ticket Update: ${data.ticketSubject}`
+              : 'Support Ticket Update';
           break;
         case 'ticket_reply':
-          subject = 'ticketSubject' in data ? `New Reply: ${data.ticketSubject}` : 'New Support Ticket Reply';
+          subject =
+            'ticketSubject' in data
+              ? `New Reply: ${data.ticketSubject}`
+              : 'New Support Ticket Reply';
           break;
         case 'ticket_closed':
-          subject = 'ticketSubject' in data ? `Ticket Closed: ${data.ticketSubject}` : 'Support Ticket Closed';
+          subject =
+            'ticketSubject' in data
+              ? `Ticket Closed: ${data.ticketSubject}`
+              : 'Support Ticket Closed';
           break;
         case 'admin_new_ticket':
-          subject = 'ticketSubject' in data ? `[ADMIN] New Ticket: ${data.ticketSubject}` : '[ADMIN] New Support Ticket';
+          subject =
+            'ticketSubject' in data
+              ? `[ADMIN] New Ticket: ${data.ticketSubject}`
+              : '[ADMIN] New Support Ticket';
           break;
         case 'admin_new_reply':
-          subject = 'ticketSubject' in data ? `[ADMIN] New Reply: ${data.ticketSubject}` : '[ADMIN] New Ticket Reply';
+          subject =
+            'ticketSubject' in data
+              ? `[ADMIN] New Reply: ${data.ticketSubject}`
+              : '[ADMIN] New Ticket Reply';
           break;
         case 'quote_verification_email':
-          subject = 'quoteId' in data ? `Verify Your Quote Approval - Quote #${data.quoteId}` : 'Verify Your Quote Approval';
+          subject =
+            'quoteId' in data
+              ? `Verify Your Quote Approval - Quote #${data.quoteId}`
+              : 'Verify Your Quote Approval';
           break;
         case 'quote_verification_success':
-          subject = 'quoteId' in data ? `Quote Approved Successfully - Quote #${data.quoteId}` : 'Quote Approved Successfully';
+          subject =
+            'quoteId' in data
+              ? `Quote Approved Successfully - Quote #${data.quoteId}`
+              : 'Quote Approved Successfully';
           break;
         default: {
           const quoteId = 'quoteId' in data ? data.quoteId : 'N/A';
@@ -211,13 +248,22 @@ export const useEmailNotifications = () => {
   // Helper function to generate email HTML
   const generateEmailHtml = (template: EmailTemplate, data: EmailData) => {
     const customerName = 'customerName' in data ? data.customerName : 'Customer';
-    
+
     // Determine header title based on template type
     let headerTitle = 'Quote Update';
-    if (['ticket_created', 'ticket_status_update', 'ticket_reply', 'ticket_closed', 'admin_new_ticket', 'admin_new_reply'].includes(template)) {
+    if (
+      [
+        'ticket_created',
+        'ticket_status_update',
+        'ticket_reply',
+        'ticket_closed',
+        'admin_new_ticket',
+        'admin_new_reply',
+      ].includes(template)
+    ) {
       headerTitle = 'Support Ticket Update';
     }
-    
+
     const baseHtml = `
       <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -398,12 +444,16 @@ export const useEmailNotifications = () => {
               <p><strong>Ticket ID:</strong> #${data.ticketId.slice(0, 8)}</p>
               <p><strong>Subject:</strong> ${data.ticketSubject || 'Support Request'}</p>
             </div>
-            ${data.replyMessage ? `
+            ${
+              data.replyMessage
+                ? `
             <div style="background-color: #e0f2fe; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
               <p style="margin: 0;"><strong>Reply:</strong></p>
               <p style="margin: 10px 0 0 0;">${data.replyMessage}</p>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
             <p>You can reply to this message by logging into your account and visiting the support section.</p>
           `;
         }
@@ -454,12 +504,16 @@ export const useEmailNotifications = () => {
               <p><strong>Customer:</strong> ${data.customerName || 'Unknown'}</p>
               ${data.assignedTo ? `<p><strong>Assigned to:</strong> ${data.assignedTo}</p>` : ''}
             </div>
-            ${data.replyMessage ? `
+            ${
+              data.replyMessage
+                ? `
             <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
               <p style="margin: 0;"><strong>Customer's Reply:</strong></p>
               <p style="margin: 10px 0 0 0;">${data.replyMessage}</p>
             </div>
-            ` : ''}
+            `
+                : ''
+            }
             <div style="text-align: center; margin: 30px 0;">
               <a href="${window.location.origin}/admin/support" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View and Respond</a>
             </div>

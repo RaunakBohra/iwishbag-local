@@ -1,9 +1,9 @@
 /**
  * Delivery Formatting Utilities
- * 
+ *
  * Smart utilities for parsing and displaying enhanced delivery day strings
  * that include both day counts and actual dates.
- * 
+ *
  * Handles formats like:
  * - Simple: "7-10"
  * - Enhanced: "7-10 days (Jul 25th-Aug 1st)"
@@ -37,7 +37,10 @@ export function parseDeliveryDays(daysString: string): ParsedDeliveryDays {
   const hasDateInfo = !!dateRange;
 
   // Clean the string to extract just the numeric parts
-  const cleanString = daysString.replace(/\s*\(.*?\)\s*/, '').replace(/\s*days?\s*/gi, '').trim();
+  const cleanString = daysString
+    .replace(/\s*\(.*?\)\s*/, '')
+    .replace(/\s*days?\s*/gi, '')
+    .trim();
 
   // Parse day ranges
   let minDays = 0;
@@ -45,7 +48,7 @@ export function parseDeliveryDays(daysString: string): ParsedDeliveryDays {
 
   if (cleanString.includes('-')) {
     // Range format: "7-10"
-    const parts = cleanString.split('-').map(p => parseInt(p.trim()));
+    const parts = cleanString.split('-').map((p) => parseInt(p.trim()));
     minDays = parts[0] || 0;
     maxDays = parts[1] || minDays;
   } else {
@@ -68,22 +71,25 @@ export function parseDeliveryDays(daysString: string): ParsedDeliveryDays {
  */
 export function formatDeliveryDays(
   daysString: string,
-  context: 'compact' | 'detailed' | 'admin' | 'customer' = 'detailed'
+  context: 'compact' | 'detailed' | 'admin' | 'customer' = 'detailed',
 ): string {
   const parsed = parseDeliveryDays(daysString);
-  
+
   if (parsed.minDays === 0 && parsed.maxDays === 0) {
     return 'TBD';
   }
 
-  const dayText = parsed.minDays === parsed.maxDays 
-    ? `${parsed.minDays} day${parsed.minDays === 1 ? '' : 's'}`
-    : `${parsed.minDays}-${parsed.maxDays} days`;
+  const dayText =
+    parsed.minDays === parsed.maxDays
+      ? `${parsed.minDays} day${parsed.minDays === 1 ? '' : 's'}`
+      : `${parsed.minDays}-${parsed.maxDays} days`;
 
   switch (context) {
     case 'compact':
       // Ultra-short format for tight spaces
-      return parsed.minDays === parsed.maxDays ? `${parsed.minDays}d` : `${parsed.minDays}-${parsed.maxDays}d`;
+      return parsed.minDays === parsed.maxDays
+        ? `${parsed.minDays}d`
+        : `${parsed.minDays}-${parsed.maxDays}d`;
 
     case 'customer':
       // Customer-friendly with dates when available
@@ -151,7 +157,7 @@ export function isEconomyDelivery(daysString: string): boolean {
  */
 export function getDeliverySpeedCategory(daysString: string): 'express' | 'standard' | 'economy' {
   const parsed = parseDeliveryDays(daysString);
-  
+
   if (parsed.minDays <= 3) return 'express';
   if (parsed.minDays <= 7) return 'standard';
   return 'economy';
@@ -162,15 +168,16 @@ export function getDeliverySpeedCategory(daysString: string): 'express' | 'stand
  */
 export function formatDeliveryDaysTableCell(daysString: string): string {
   const parsed = parseDeliveryDays(daysString);
-  
+
   if (parsed.minDays === 0 && parsed.maxDays === 0) {
     return 'TBD';
   }
-  
-  const dayText = parsed.minDays === parsed.maxDays 
-    ? `${parsed.minDays} day${parsed.minDays === 1 ? '' : 's'}`
-    : `${parsed.minDays}-${parsed.maxDays} days`;
-    
+
+  const dayText =
+    parsed.minDays === parsed.maxDays
+      ? `${parsed.minDays} day${parsed.minDays === 1 ? '' : 's'}`
+      : `${parsed.minDays}-${parsed.maxDays} days`;
+
   return dayText;
 }
 
@@ -187,12 +194,12 @@ export function getDateRangeFromDeliveryDays(daysString: string): string | null 
  */
 export function extractDayCountString(daysString: string): string {
   const parsed = parseDeliveryDays(daysString);
-  
+
   if (parsed.minDays === 0 && parsed.maxDays === 0) {
     return '0';
   }
-  
-  return parsed.minDays === parsed.maxDays 
+
+  return parsed.minDays === parsed.maxDays
     ? parsed.minDays.toString()
     : `${parsed.minDays}-${parsed.maxDays}`;
 }

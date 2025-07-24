@@ -40,13 +40,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // User has existing session (authenticated or anonymous)
             setSession(session);
             setUser(session.user);
-            
+
             // Log authentication context for debugging
-            logger.debug('Session found', { 
-              userId: session.user.id, 
-              isAnonymous: session.user.is_anonymous,
-              email: session.user.email 
-            }, 'Auth');
+            logger.debug(
+              'Session found',
+              {
+                userId: session.user.id,
+                isAnonymous: session.user.is_anonymous,
+                email: session.user.email,
+              },
+              'Auth',
+            );
           } else {
             // No session exists, create anonymous session only for non-admin routes
             const isAdminRoute = window.location.pathname.startsWith('/admin');

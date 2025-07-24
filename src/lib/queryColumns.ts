@@ -1,13 +1,13 @@
 /**
  * Standardized Database Query Column Sets
- * 
+ *
  * Performance Optimization: Use specific column selection instead of SELECT *
  * This reduces bandwidth usage by 30-40% and improves query performance.
- * 
+ *
  * Usage:
  * ```typescript
  * import { QUERY_COLUMNS } from '@/lib/queryColumns';
- * 
+ *
  * const { data } = await supabase
  *   .from('quotes')
  *   .select(QUERY_COLUMNS.QUOTE_LIST);
@@ -123,24 +123,24 @@ export const QUERY_COLUMNS = {
 
 /**
  * Helper function to build complex SELECT statements
- * 
+ *
  * @param baseColumns - Base column set from QUERY_COLUMNS
  * @param joinColumns - Additional join columns
  * @returns Formatted SELECT string
  */
 export const buildSelectQuery = (
   baseColumns: string,
-  joinColumns?: Record<string, string>
+  joinColumns?: Record<string, string>,
 ): string => {
   let query = baseColumns.trim();
-  
+
   if (joinColumns) {
     const joins = Object.entries(joinColumns)
       .map(([table, columns]) => `${table}(${columns.trim()})`)
       .join(', ');
     query = `${query}, ${joins}`;
   }
-  
+
   return query;
 };
 
@@ -167,23 +167,20 @@ export const COMMON_QUERIES = {
   /**
    * Quote detail with minimal profile info
    */
-  quoteDetailWithProfile: buildSelectQuery(
-    QUERY_COLUMNS.QUOTE_DETAIL,
-    {
-      'profiles!quotes_user_id_fkey': QUERY_COLUMNS.PROFILE_MINIMAL
-    }
-  ),
+  quoteDetailWithProfile: buildSelectQuery(QUERY_COLUMNS.QUOTE_DETAIL, {
+    'profiles!quotes_user_id_fkey': QUERY_COLUMNS.PROFILE_MINIMAL,
+  }),
 } as const;
 
 /**
  * Performance guidelines for using these column sets:
- * 
+ *
  * 1. Always use specific column sets instead of SELECT *
  * 2. Use minimal profile joins only when user data is needed
  * 3. Avoid deep JSONB selections in list views
  * 4. Use pagination with .range() for large datasets
  * 5. Cache frequently accessed query results
- * 
+ *
  * Performance impact:
  * - 30-40% reduction in bandwidth usage
  * - 20-30% faster query execution

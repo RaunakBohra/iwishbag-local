@@ -45,8 +45,8 @@ export const useQuoteState = (quoteId: string) => {
     // Calculate total quantity and weight from all items
     const totalQuantity = quoteItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
     const totalWeight = quoteItems.reduce(
-      (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1), 
-      0
+      (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1),
+      0,
     );
 
     // Determine purchase country from the quote or product URL

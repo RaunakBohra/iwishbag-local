@@ -18,6 +18,7 @@ import {
   Ticket,
   MessageSquare,
   Zap,
+  UserCog,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -64,6 +65,11 @@ const menuGroups = [
         title: 'Customer Management',
         url: '/admin/customers',
         icon: UserCheck,
+      },
+      {
+        title: 'User & Role Management',
+        url: '/admin/users',
+        icon: UserCog,
       },
       {
         title: 'Messages',

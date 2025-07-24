@@ -22,7 +22,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Select,
@@ -103,10 +110,10 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   const { data: isAdmin } = useAdminRole();
 
   const { data: ticket, isLoading: ticketLoading } = useTicketDetail(ticketId);
-  
+
   const { data: replies = [], isLoading: repliesLoading } = useTicketReplies(ticketId);
   const { data: hasCompletedSurvey = false } = useHasCompletedSurvey(ticketId);
-  
+
   const createReplyMutation = useCreateReply();
   const updateStatusMutation = useUpdateTicketStatus();
   const updateTicketMutation = useUpdateTicket();
@@ -135,7 +142,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
 
   // Helper function to get status description
   const getStatusDescription = (status: TicketStatus) => {
-    return isAdmin ? TICKET_STATUS_DESCRIPTIONS[status].admin : TICKET_STATUS_DESCRIPTIONS[status].customer;
+    return isAdmin
+      ? TICKET_STATUS_DESCRIPTIONS[status].admin
+      : TICKET_STATUS_DESCRIPTIONS[status].customer;
   };
 
   const handleStatusChange = (status: TicketStatus) => {
@@ -143,29 +152,35 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   };
 
   const handlePriorityChange = (priority: TicketPriority) => {
-    updateTicketMutation.mutate({ 
-      ticketId, 
-      updateData: { priority } 
+    updateTicketMutation.mutate({
+      ticketId,
+      updateData: { priority },
     });
   };
 
   const handleAssignmentChange = (assignedTo: string) => {
     const assigned_to = assignedTo === 'unassigned' ? null : assignedTo;
-    updateTicketMutation.mutate({ 
-      ticketId, 
-      updateData: { assigned_to } 
+    updateTicketMutation.mutate({
+      ticketId,
+      updateData: { assigned_to },
     });
   };
 
   const handleTemplateSelect = (template: any) => {
     // Replace template variables with actual values
     let message = template.body_template;
-    
+
     if (ticket) {
       message = message
-        .replace(/\{\{customer_name\}\}/g, ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer')
+        .replace(
+          /\{\{customer_name\}\}/g,
+          ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer',
+        )
         .replace(/\{\{ticket_id\}\}/g, ticket.id.slice(0, 8))
-        .replace(/\{\{order_id\}\}/g, ticket.quote?.iwish_tracking_id || ticket.quote?.id?.slice(0, 8) || 'N/A')
+        .replace(
+          /\{\{order_id\}\}/g,
+          ticket.quote?.iwish_tracking_id || ticket.quote?.id?.slice(0, 8) || 'N/A',
+        )
         .replace(/\{\{tracking_id\}\}/g, ticket.quote?.iwish_tracking_id || 'N/A')
         .replace(/\{\{status\}\}/g, ticket.status);
     }
@@ -207,10 +222,11 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   };
 
   // Show survey for non-admin users when ticket is resolved and survey not completed
-  const shouldShowSurvey = ticket && 
-    !isAdmin && 
-    ticket.user_id === user?.id && 
-    ticket.status === 'resolved' && 
+  const shouldShowSurvey =
+    ticket &&
+    !isAdmin &&
+    ticket.user_id === user?.id &&
+    ticket.status === 'resolved' &&
     !hasCompletedSurvey &&
     !showSurvey;
 
@@ -303,7 +319,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(isAdmin ? ADMIN_TICKET_STATUS_LABELS : CUSTOMER_TICKET_STATUS_LABELS).map(([status, label]) => (
+              {Object.entries(
+                isAdmin ? ADMIN_TICKET_STATUS_LABELS : CUSTOMER_TICKET_STATUS_LABELS,
+              ).map(([status, label]) => (
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
                     <StatusIcon status={status} />
@@ -415,13 +433,10 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               <CardContent>
                 {isAdmin && showTemplates && (
                   <div className="mb-4 p-4 border rounded-lg bg-gray-50">
-                    <ReplyTemplatesManager 
-                      mode="select" 
-                      onTemplateSelect={handleTemplateSelect}
-                    />
+                    <ReplyTemplatesManager mode="select" onTemplateSelect={handleTemplateSelect} />
                   </div>
                 )}
-                
+
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitReply)} className="space-y-4">
                     <FormField
@@ -449,10 +464,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
+                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel className="flex items-center gap-2 text-sm font-medium">
@@ -460,7 +472,8 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                                 Internal Note
                               </FormLabel>
                               <p className="text-xs text-gray-600">
-                                Only visible to support team members - customers won't see this message
+                                Only visible to support team members - customers won't see this
+                                message
                               </p>
                             </div>
                           </FormItem>
@@ -475,7 +488,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                           <span>This will be an internal note</span>
                         </div>
                       )}
-                      
+
                       <div className="flex gap-2 ml-auto">
                         <Button type="submit" disabled={isSubmitting}>
                           {form.watch('is_internal') ? (
@@ -483,12 +496,11 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                           ) : (
                             <Send className="mr-2 h-4 w-4" />
                           )}
-                          {isSubmitting 
-                            ? 'Sending...' 
-                            : form.watch('is_internal') 
-                              ? 'Add Internal Note' 
-                              : 'Send Reply'
-                          }
+                          {isSubmitting
+                            ? 'Sending...'
+                            : form.watch('is_internal')
+                              ? 'Add Internal Note'
+                              : 'Send Reply'}
                         </Button>
                       </div>
                     </div>
@@ -542,9 +554,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                   <StatusIcon status={ticket.status} />
                   {getStatusLabel(ticket.status)}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {getStatusDescription(ticket.status)}
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{getStatusDescription(ticket.status)}</p>
               </div>
 
               <Separator />
@@ -561,7 +571,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                     >
                       <SelectTrigger className="w-full mt-1">
                         <SelectValue>
-                          <div className={`inline-block px-2 py-1 rounded-md text-sm ${TICKET_PRIORITY_COLORS[ticket.priority]}`}>
+                          <div
+                            className={`inline-block px-2 py-1 rounded-md text-sm ${TICKET_PRIORITY_COLORS[ticket.priority]}`}
+                          >
                             {TICKET_PRIORITY_LABELS[ticket.priority]}
                           </div>
                         </SelectValue>
@@ -569,7 +581,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                       <SelectContent>
                         {Object.entries(TICKET_PRIORITY_LABELS).map(([priority, label]) => (
                           <SelectItem key={priority} value={priority}>
-                            <div className={`px-2 py-1 rounded-md text-sm ${TICKET_PRIORITY_COLORS[priority as TicketPriority]}`}>
+                            <div
+                              className={`px-2 py-1 rounded-md text-sm ${TICKET_PRIORITY_COLORS[priority as TicketPriority]}`}
+                            >
                               {label}
                             </div>
                           </SelectItem>
@@ -599,9 +613,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                     >
                       <SelectTrigger className="w-full mt-1">
                         <SelectValue>
-                          {ticket.assigned_to_profile?.full_name || 
-                           ticket.assigned_to_profile?.email || 
-                           'Unassigned'}
+                          {ticket.assigned_to_profile?.full_name ||
+                            ticket.assigned_to_profile?.email ||
+                            'Unassigned'}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -609,16 +623,17 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                           <span className="text-gray-500">Unassigned</span>
                         </SelectItem>
                         {adminUsers
-                          .filter(user => user.role === 'admin' || user.role === 'moderator')
-                          .map(adminUser => (
+                          .filter((user) => user.role === 'admin' || user.role === 'moderator')
+                          .map((adminUser) => (
                             <SelectItem key={adminUser.id} value={adminUser.id}>
                               <div className="flex flex-col">
                                 <span>{adminUser.full_name || adminUser.email}</span>
-                                <span className="text-xs text-gray-500 capitalize">{adminUser.role}</span>
+                                <span className="text-xs text-gray-500 capitalize">
+                                  {adminUser.role}
+                                </span>
                               </div>
                             </SelectItem>
-                          ))
-                        }
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -654,8 +669,18 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
                     >
                       View Full Details
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
                       </svg>
                     </a>
                   )}
@@ -673,7 +698,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Status</label>
                     <div className="flex items-center gap-2">
-                      <Badge 
+                      <Badge
                         variant={ticket.quote.status === 'delivered' ? 'default' : 'secondary'}
                         className="text-xs"
                       >
@@ -761,12 +786,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
           )}
 
           {/* Internal Notes Panel (Admin Only) */}
-          {isAdmin && (
-            <InternalNotesPanel 
-              replies={replies} 
-              isLoading={repliesLoading}
-            />
-          )}
+          {isAdmin && <InternalNotesPanel replies={replies} isLoading={repliesLoading} />}
         </div>
       </div>
     </div>

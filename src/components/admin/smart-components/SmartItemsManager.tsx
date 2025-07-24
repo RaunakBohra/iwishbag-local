@@ -41,7 +41,7 @@ interface SmartItemsManagerProps {
 
 export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onUpdateQuote }) => {
   const { toast } = useToast();
-  
+
   // Get standardized currency display
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const [editingItem, setEditingItem] = useState<string | null>(null);
@@ -205,8 +205,12 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                       <div className="font-medium">{item.quantity}</div>
                     </div>
                     <div>
-                      <span className="text-gray-600">Price ({currencyDisplay.originCurrency}):</span>
-                      <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}</div>
+                      <span className="text-gray-600">
+                        Price ({currencyDisplay.originCurrency}):
+                      </span>
+                      <div className="font-medium">
+                        {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}
+                      </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Weight:</span>
@@ -222,7 +226,10 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                     <div>
                       <span className="text-gray-600">Total:</span>
                       <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0) * item.quantity, 'origin')}
+                        {currencyDisplay.formatSingleAmount(
+                          Number(item.price_usd || 0) * item.quantity,
+                          'origin',
+                        )}
                       </div>
                     </div>
                   </div>
@@ -403,7 +410,11 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
 
       {/* Add Item Dialog */}
       {isAddingItem && (
-        <AddItemDialog onSave={handleAddItem} onCancel={() => setIsAddingItem(false)} currencyDisplay={currencyDisplay} />
+        <AddItemDialog
+          onSave={handleAddItem}
+          onCancel={() => setIsAddingItem(false)}
+          currencyDisplay={currencyDisplay}
+        />
       )}
     </div>
   );
@@ -417,7 +428,12 @@ interface EditItemDialogProps {
   currencyDisplay: any;
 }
 
-const EditItemDialog: React.FC<EditItemDialogProps> = ({ item, onSave, onCancel, currencyDisplay }) => {
+const EditItemDialog: React.FC<EditItemDialogProps> = ({
+  item,
+  onSave,
+  onCancel,
+  currencyDisplay,
+}) => {
   const [editForm, setEditForm] = useState({
     name: item.name,
     quantity: item.quantity,

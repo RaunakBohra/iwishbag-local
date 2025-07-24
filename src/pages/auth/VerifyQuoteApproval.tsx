@@ -1,6 +1,6 @@
 /**
  * VerifyQuoteApproval - Email verification page for quote approvals
- * 
+ *
  * Features:
  * - Verify email tokens from quote approval links
  * - Redirect to quote detail page after successful verification
@@ -54,8 +54,9 @@ export default function VerifyQuoteApproval() {
       setIsVerifying(true);
 
       // Call the database function to verify the token
-      const { data: quoteId, error } = await supabase
-        .rpc('verify_quote_email', { p_verification_token: verificationToken });
+      const { data: quoteId, error } = await supabase.rpc('verify_quote_email', {
+        p_verification_token: verificationToken,
+      });
 
       if (error) {
         console.error('Token verification error:', error);
@@ -69,7 +70,8 @@ export default function VerifyQuoteApproval() {
       if (!quoteId) {
         setResult({
           success: false,
-          message: 'This verification link has expired or is invalid. Please request a new quote approval link.',
+          message:
+            'This verification link has expired or is invalid. Please request a new quote approval link.',
         });
         return;
       }
@@ -91,24 +93,20 @@ export default function VerifyQuoteApproval() {
       }
 
       // Log successful verification
-      await auditLogService.logAction(
-        quoteId,
-        'email_verified',
-        {
-          details: { 
-            verification_token: verificationToken,
-            customer_email: quote.customer_email,
-            verified_at: new Date().toISOString()
-          }
-        }
-      );
+      await auditLogService.logAction(quoteId, 'email_verified', {
+        details: {
+          verification_token: verificationToken,
+          customer_email: quote.customer_email,
+          verified_at: new Date().toISOString(),
+        },
+      });
 
       // Approve the quote after email verification (simple flow)
       const { error: approvalError } = await supabase
         .from('quotes')
         .update({
           status: 'approved',
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
         })
         .eq('id', quoteId);
 
@@ -124,7 +122,7 @@ export default function VerifyQuoteApproval() {
           .select('*')
           .eq('id', quoteId)
           .single();
-          
+
         if (fullQuote) {
           await notificationService.notifyHighValueQuoteApproval(fullQuote);
         }
@@ -150,7 +148,6 @@ export default function VerifyQuoteApproval() {
         quoteId: quote.id,
         customerEmail: quote.customer_email,
       });
-
     } catch (error) {
       console.error('Verification process error:', error);
       setResult({
@@ -192,9 +189,7 @@ export default function VerifyQuoteApproval() {
             <CardTitle className="text-xl">Verifying Email</CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <p className="text-gray-600">
-              Please wait while we verify your email address...
-            </p>
+            <p className="text-gray-600">Please wait while we verify your email address...</p>
           </CardContent>
         </Card>
       </div>
@@ -205,11 +200,11 @@ export default function VerifyQuoteApproval() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-            result?.success 
-              ? 'bg-green-100' 
-              : 'bg-red-100'
-          }`}>
+          <div
+            className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+              result?.success ? 'bg-green-100' : 'bg-red-100'
+            }`}
+          >
             {result?.success ? (
               <CheckCircle className="h-8 w-8 text-green-600" />
             ) : (
@@ -221,25 +216,23 @@ export default function VerifyQuoteApproval() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert className={result?.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-            <AlertDescription>
-              {result?.message}
-            </AlertDescription>
+          <Alert
+            className={
+              result?.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+            }
+          >
+            <AlertDescription>{result?.message}</AlertDescription>
           </Alert>
 
           {result?.success ? (
             <div className="space-y-4">
               <div className="text-center text-sm text-gray-600">
-                <Mail className="h-5 w-5 mx-auto mb-2 text-gray-400" />
-                A confirmation email has been sent to your email address.
+                <Mail className="h-5 w-5 mx-auto mb-2 text-gray-400" />A confirmation email has been
+                sent to your email address.
               </div>
-              
+
               <div className="flex flex-col gap-3">
-                <Button 
-                  onClick={handleProceedToQuote} 
-                  className="w-full"
-                  disabled={isSending}
-                >
+                <Button onClick={handleProceedToQuote} className="w-full" disabled={isSending}>
                   {isSending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -249,12 +242,8 @@ export default function VerifyQuoteApproval() {
                     'Proceed to Quote'
                   )}
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/')}
-                  className="w-full"
-                >
+
+                <Button variant="outline" onClick={() => navigate('/')} className="w-full">
                   Return to Home
                 </Button>
               </div>
@@ -269,32 +258,21 @@ export default function VerifyQuoteApproval() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex flex-col gap-3">
-                <Button 
-                  onClick={handleRequestNewLink}
-                  variant="default"
-                  className="w-full"
-                >
+                <Button onClick={handleRequestNewLink} variant="default" className="w-full">
                   Request New Link
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/')}
-                  className="w-full"
-                >
+
+                <Button variant="outline" onClick={() => navigate('/')} className="w-full">
                   Return to Home
                 </Button>
               </div>
-              
+
               <div className="text-center">
                 <p className="text-xs text-gray-500">
                   Need help? Contact our support team at{' '}
-                  <a 
-                    href="mailto:support@iwishbag.com" 
-                    className="text-blue-600 hover:underline"
-                  >
+                  <a href="mailto:support@iwishbag.com" className="text-blue-600 hover:underline">
                     support@iwishbag.com
                   </a>
                 </p>

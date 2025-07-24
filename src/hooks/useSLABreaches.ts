@@ -99,7 +99,7 @@ export const useAcknowledgeBreach = () => {
     onSuccess: (success) => {
       // Invalidate breach queries
       queryClient.invalidateQueries({ queryKey: ['sla-breaches'] });
-      
+
       if (success) {
         toast({
           title: 'Acknowledged',
@@ -132,12 +132,12 @@ export const useSendBreachNotifications = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (notifications: BreachNotification[]) => 
+    mutationFn: (notifications: BreachNotification[]) =>
       slaBreachService.sendBreachNotifications(notifications),
     onSuccess: (sentCount) => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['sla-breaches'] });
-      
+
       toast({
         title: 'Notifications Sent',
         description: `${sentCount} breach notification(s) sent successfully`,
@@ -189,13 +189,13 @@ export const useSLABreachUtils = () => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    
+
     const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) return `${diffInHours}h ago`;
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d ago`;
   };
@@ -219,7 +219,7 @@ export const useSLABreachUtils = () => {
  */
 export const useBreachMonitoring = (enabled: boolean = true) => {
   const breachDetection = useBreachDetection();
-  
+
   // Auto-run breach detection every 5 minutes
   useQuery({
     queryKey: ['breach-monitoring'],

@@ -193,8 +193,7 @@ export function useUnifiedConfig() {
   });
 
   const updateSystemConfigMutation = useMutation({
-    mutationFn: (config: Partial<SystemConfig>) =>
-      unifiedConfigService.setSystemConfig(config),
+    mutationFn: (config: Partial<SystemConfig>) => unifiedConfigService.setSystemConfig(config),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.system });
       queryClient.invalidateQueries({ queryKey: ['config', 'feature'] });
@@ -231,33 +230,33 @@ export function useUnifiedConfig() {
     useAllCountries,
     useSupportedCountries,
     useSupportedCurrencies,
-    
+
     // Calculation Configurations
     useCalculationDefaults,
-    
+
     // System Configurations
     useSystemConfig,
     useFeatureFlag,
     useMaintenanceMode,
-    
+
     // Template Configurations
     useTemplates,
     useTemplate,
-    
+
     // Gateway Configurations
     usePaymentGateways,
     useGatewayConfig,
-    
+
     // Mutations
     updateCountryConfig: updateCountryConfigMutation.mutateAsync,
     updateCalculationDefaults: updateCalculationDefaultsMutation.mutateAsync,
     updateSystemConfig: updateSystemConfigMutation.mutateAsync,
-    
+
     // Loading states
     isUpdatingCountryConfig: updateCountryConfigMutation.isPending,
     isUpdatingCalculationDefaults: updateCalculationDefaultsMutation.isPending,
     isUpdatingSystemConfig: updateSystemConfigMutation.isPending,
-    
+
     // Utility functions
     refreshConfigurations,
     getMinimumPaymentAmount,
@@ -273,10 +272,10 @@ export function useUnifiedConfig() {
  */
 export function useCountryConfiguration(countryCode: string) {
   const config = useUnifiedConfig();
-  
+
   const countryQuery = config.useCountryConfig(countryCode);
   const gatewaysQuery = config.usePaymentGateways(countryCode);
-  
+
   return {
     country: countryQuery.data,
     gateways: gatewaysQuery.data || [],
@@ -291,28 +290,33 @@ export function useCountryConfiguration(countryCode: string) {
  */
 export function useAdminConfiguration() {
   const config = useUnifiedConfig();
-  
+
   const countriesQuery = config.useAllCountries();
   const systemQuery = config.useSystemConfig();
   const calculationQuery = config.useCalculationDefaults();
   const templatesQuery = config.useTemplates();
-  
+
   return {
     countries: countriesQuery.data || {},
     system: systemQuery.data,
     calculations: calculationQuery.data,
     templates: templatesQuery.data || [],
-    
-    isLoading: countriesQuery.isLoading || systemQuery.isLoading || 
-               calculationQuery.isLoading || templatesQuery.isLoading,
-    
+
+    isLoading:
+      countriesQuery.isLoading ||
+      systemQuery.isLoading ||
+      calculationQuery.isLoading ||
+      templatesQuery.isLoading,
+
     updateCountryConfig: config.updateCountryConfig,
     updateSystemConfig: config.updateSystemConfig,
     updateCalculationDefaults: config.updateCalculationDefaults,
-    
-    isUpdating: config.isUpdatingCountryConfig || config.isUpdatingSystemConfig || 
-                config.isUpdatingCalculationDefaults,
-    
+
+    isUpdating:
+      config.isUpdatingCountryConfig ||
+      config.isUpdatingSystemConfig ||
+      config.isUpdatingCalculationDefaults,
+
     refresh: config.refreshConfigurations,
   };
 }
@@ -322,24 +326,25 @@ export function useAdminConfiguration() {
  */
 export function usePaymentConfiguration(countryCode?: string, currency?: string) {
   const config = useUnifiedConfig();
-  
+
   const gatewaysQuery = config.usePaymentGateways(countryCode);
-  
-  const availableGateways = gatewaysQuery.data?.filter(gateway => 
-    !currency || gateway.supported_currencies.includes(currency)
-  ) || [];
-  
+
+  const availableGateways =
+    gatewaysQuery.data?.filter(
+      (gateway) => !currency || gateway.supported_currencies.includes(currency),
+    ) || [];
+
   return {
     gateways: availableGateways,
     isLoading: gatewaysQuery.isLoading,
     isError: gatewaysQuery.isError,
-    
+
     // Helper functions
-    getGatewayForCurrency: (targetCurrency: string) => 
-      availableGateways.find(g => g.supported_currencies.includes(targetCurrency)),
-    
-    isGatewaySupported: (gatewayName: string) => 
-      availableGateways.some(g => g.gateway_name === gatewayName),
+    getGatewayForCurrency: (targetCurrency: string) =>
+      availableGateways.find((g) => g.supported_currencies.includes(targetCurrency)),
+
+    isGatewaySupported: (gatewayName: string) =>
+      availableGateways.some((g) => g.gateway_name === gatewayName),
   };
 }
 
@@ -349,14 +354,14 @@ export function usePaymentConfiguration(countryCode?: string, currency?: string)
 export function useFeatureFlags() {
   const config = useUnifiedConfig();
   const systemQuery = config.useSystemConfig();
-  
+
   const featureFlags = systemQuery.data?.feature_flags || {};
-  
+
   return {
     flags: featureFlags,
     isEnabled: (feature: string) => featureFlags[feature] || false,
     isLoading: systemQuery.isLoading,
-    
+
     // Common feature checks
     isAdvancedCalculatorEnabled: featureFlags.advanced_calculator || false,
     isMLWeightPredictionEnabled: featureFlags.ml_weight_prediction || false,

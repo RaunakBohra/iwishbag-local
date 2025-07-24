@@ -70,7 +70,7 @@ class CurrencyService {
     try {
       // Get all countries from unified configuration
       const allCountries = await unifiedConfigService.getAllCountries();
-      
+
       if (!allCountries || Object.keys(allCountries).length === 0) {
         console.warn('No countries found in unified config, using fallback currencies');
         return this.getFallbackCurrencies();
@@ -81,7 +81,7 @@ class CurrencyService {
 
       Object.values(allCountries).forEach((countryConfig) => {
         if (!countryConfig.currency) return;
-        
+
         const existing = currencyMap.get(countryConfig.currency);
         const currency: Currency = {
           code: countryConfig.currency,
@@ -95,10 +95,7 @@ class CurrencyService {
         };
 
         // Keep the one with more complete data (prefer non-null values)
-        if (
-          !existing ||
-          (countryConfig.minimum_payment_amount && !existing.min_payment_amount)
-        ) {
+        if (!existing || (countryConfig.minimum_payment_amount && !existing.min_payment_amount)) {
           currencyMap.set(countryConfig.currency, currency);
         }
       });
@@ -145,7 +142,7 @@ class CurrencyService {
     try {
       // Get all countries from unified configuration
       const allCountries = await unifiedConfigService.getAllCountries();
-      
+
       if (!allCountries || Object.keys(allCountries).length === 0) {
         console.warn('No countries found in unified config, using fallback mapping');
         return this.getFallbackCountryCurrencyMap();
@@ -290,7 +287,7 @@ class CurrencyService {
     try {
       // Try to find a country that uses this currency
       const allCountries = await unifiedConfigService.getAllCountries();
-      
+
       for (const [countryCode, countryConfig] of Object.entries(allCountries)) {
         if (countryConfig.currency === currencyCode) {
           // Use the same fallback logic for consistency
@@ -386,7 +383,7 @@ class CurrencyService {
     try {
       // Get all countries from unified configuration
       const allCountries = await unifiedConfigService.getAllCountries();
-      
+
       // Find the first country that uses this currency
       for (const [countryCode, countryConfig] of Object.entries(allCountries)) {
         if (countryConfig.currency === currencyCode) {
@@ -448,7 +445,7 @@ class CurrencyService {
     try {
       // Get all countries from unified configuration
       const allCountries = await unifiedConfigService.getAllCountries();
-      
+
       // Find a country that uses this currency and has minimum payment amount
       for (const [countryCode, countryConfig] of Object.entries(allCountries)) {
         if (countryConfig.currency === currencyCode && countryConfig.minimum_payment_amount) {
@@ -613,23 +610,27 @@ class CurrencyService {
       ]);
 
       if (!originConfig || !destConfig) {
-        console.warn(`[CurrencyService] Missing country config for ${originCountry} or ${destinationCountry}, using fallback rate`);
+        console.warn(
+          `[CurrencyService] Missing country config for ${originCountry} or ${destinationCountry}, using fallback rate`,
+        );
         // Fallback to default exchange rate (1.0 for same currency, or common rates)
         if (originCountry === destinationCountry) {
           return 1.0;
         }
         // Common fallback rates for missing configurations
         const fallbackRates: Record<string, number> = {
-          'DE_NP': 134.5, // EUR to NPR approximate
-          'NP_DE': 0.0074, // NPR to EUR approximate  
-          'IN_NP': 1.6, // INR to NPR approximate
-          'NP_IN': 0.625, // NPR to INR approximate
-          'US_NP': 134.5, // USD to NPR approximate
-          'NP_US': 0.0074, // NPR to USD approximate
+          DE_NP: 134.5, // EUR to NPR approximate
+          NP_DE: 0.0074, // NPR to EUR approximate
+          IN_NP: 1.6, // INR to NPR approximate
+          NP_IN: 0.625, // NPR to INR approximate
+          US_NP: 134.5, // USD to NPR approximate
+          NP_US: 0.0074, // NPR to USD approximate
         };
         const fallbackKey = `${originCountry}_${destinationCountry}`;
         const fallbackRate = fallbackRates[fallbackKey] || 1.0;
-        console.warn(`[CurrencyService] Using fallback rate ${originCountry}→${destinationCountry}: ${fallbackRate}`);
+        console.warn(
+          `[CurrencyService] Using fallback rate ${originCountry}→${destinationCountry}: ${fallbackRate}`,
+        );
         return fallbackRate;
       }
 

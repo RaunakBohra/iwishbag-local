@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   ArrowLeft,
   Share2,
   Download,
@@ -19,7 +19,7 @@ import {
   User,
   Package,
   MapPin,
-  Calendar
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -65,7 +65,7 @@ const useDeviceDetection = () => {
       const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isIOSStandalone = (window.navigator as any).standalone === true;
-      
+
       setIsStandalone(isStandaloneMode || (isIOS && isIOSStandalone));
     };
 
@@ -77,7 +77,7 @@ const useDeviceDetection = () => {
 
     checkDevice();
     checkPWA();
-    
+
     window.addEventListener('resize', checkDevice);
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
 
@@ -93,7 +93,7 @@ const useDeviceDetection = () => {
     const result = await installPrompt.prompt();
     console.log('Install prompt result:', result);
     setInstallPrompt(null);
-    
+
     return result.outcome === 'accepted';
   }, [installPrompt]);
 
@@ -103,7 +103,7 @@ const useDeviceDetection = () => {
     installPrompt: installPrompt ? promptInstall : null,
     isMobile: deviceType === 'mobile',
     isTablet: deviceType === 'tablet',
-    isDesktop: deviceType === 'desktop'
+    isDesktop: deviceType === 'desktop',
   };
 };
 
@@ -112,29 +112,29 @@ const usePagePerformance = (pageName: string) => {
   const [metrics, setMetrics] = useState({
     loadTime: 0,
     renderTime: 0,
-    interactionTime: 0
+    interactionTime: 0,
   });
 
   useEffect(() => {
     const startTime = performance.now();
-    
+
     // Measure initial render
     const observer = new PerformanceObserver((list) => {
       const entries = list.getEntries();
-      
+
       entries.forEach((entry) => {
         if (entry.entryType === 'navigation') {
           const navEntry = entry as PerformanceNavigationTiming;
-          setMetrics(prev => ({
+          setMetrics((prev) => ({
             ...prev,
-            loadTime: navEntry.loadEventEnd - navEntry.navigationStart
+            loadTime: navEntry.loadEventEnd - navEntry.navigationStart,
           }));
         }
-        
+
         if (entry.entryType === 'measure' && entry.name === 'component-render') {
-          setMetrics(prev => ({
+          setMetrics((prev) => ({
             ...prev,
-            renderTime: entry.duration
+            renderTime: entry.duration,
           }));
         }
       });
@@ -149,10 +149,10 @@ const usePagePerformance = (pageName: string) => {
       performance.mark('component-render-start');
       performance.mark('component-render-end');
       performance.measure('component-render', 'component-render-start', 'component-render-end');
-      
-      setMetrics(prev => ({
+
+      setMetrics((prev) => ({
         ...prev,
-        renderTime
+        renderTime,
       }));
     }, 0);
 
@@ -162,7 +162,7 @@ const usePagePerformance = (pageName: string) => {
         page_name: pageName,
         load_time: metrics.loadTime,
         render_time: metrics.renderTime,
-        device_type: window.innerWidth < 768 ? 'mobile' : 'desktop'
+        device_type: window.innerWidth < 768 ? 'mobile' : 'desktop',
       });
     }
 
@@ -184,11 +184,11 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
   const { data: isAdmin } = useAdminRole();
   const { trackConversion } = useColorVariantTesting();
   const { colors } = useQuoteTheme();
-  
+
   // Device and performance detection
   const device = useDeviceDetection();
   const performance = usePagePerformance(`unified-quote-${mode}`);
-  
+
   // State management
   const [isEditing, setIsEditing] = useState(mode === 'edit' || mode === 'create');
   const [showBreakdown, setShowBreakdown] = useState(!device.isMobile);
@@ -202,37 +202,43 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
   }, [isAdmin, user]);
 
   // Fetch quote data
-  const { 
-    data: quote, 
-    isLoading, 
+  const {
+    data: quote,
+    isLoading,
     error,
-    refetch 
+    refetch,
   } = useQuery({
     queryKey: ['quote', quoteId],
     queryFn: async () => {
       if (!quoteId || mode === 'create') return null;
-      
+
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           *,
           items:quote_items(*),
           profiles:profiles(preferred_display_currency)
-        `)
+        `,
+        )
         .eq('id', quoteId)
         .single();
 
       if (error) throw error;
       return data as UnifiedQuote;
     },
-    enabled: !!quoteId && mode !== 'create'
+    enabled: !!quoteId && mode !== 'create',
   });
 
   // Quote action mutation
   const quoteActionMutation = useMutation({
-    mutationFn: async ({ action, quote: quoteData, optimistic }: { 
-      action: string; 
-      quote: UnifiedQuote; 
+    mutationFn: async ({
+      action,
+      quote: quoteData,
+      optimistic,
+    }: {
+      action: string;
+      quote: UnifiedQuote;
       optimistic?: boolean;
     }) => {
       // Handle different actions
@@ -244,7 +250,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
             .eq('id', quoteData.id);
           if (approveError) throw approveError;
           break;
-          
+
         case 'reject':
           const { error: rejectError } = await supabase
             .from('quotes')
@@ -252,16 +258,16 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
             .eq('id', quoteData.id);
           if (rejectError) throw rejectError;
           break;
-          
+
         case 'add-to-cart':
           // Add to cart logic here
           trackConversion('quote_added_to_cart', quoteData.final_total_usd);
           break;
-          
+
         case 'edit':
           setIsEditing(true);
           break;
-          
+
         case 'delete':
           const { error: deleteError } = await supabase
             .from('quotes')
@@ -270,11 +276,11 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
           if (deleteError) throw deleteError;
           navigate(viewMode === 'admin' ? '/admin/quotes' : '/dashboard/quotes');
           break;
-          
+
         default:
           console.warn(`Unhandled action: ${action}`);
       }
-      
+
       return { action, success: true };
     },
     onSuccess: (result) => {
@@ -285,79 +291,78 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
     onError: (error) => {
       console.error('Quote action failed:', error);
       toast.error('Action failed. Please try again.');
-    }
+    },
   });
 
   // Form submission handler
-  const handleFormSubmit = useCallback(async (formData: any, files?: File[]) => {
-    try {
-      if (mode === 'create') {
-        // Create new quote
-        const { data: newQuote, error } = await supabase
-          .from('quotes')
-          .insert({
-            user_id: user?.id,
-            customer_data: {
-              info: {
-                name: formData.customerName,
-                email: formData.customerEmail,
-                phone: formData.customerPhone
-              }
-            },
-            destination_country: formData.destinationCountry,
-            shipping_address: { formatted: formData.shippingAddress },
-            notes: formData.specialInstructions,
-            status: 'pending'
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        // Add items
-        if (newQuote) {
-          const { error: itemError } = await supabase
-            .from('quote_items')
+  const handleFormSubmit = useCallback(
+    async (formData: any, files?: File[]) => {
+      try {
+        if (mode === 'create') {
+          // Create new quote
+          const { data: newQuote, error } = await supabase
+            .from('quotes')
             .insert({
+              user_id: user?.id,
+              customer_data: {
+                info: {
+                  name: formData.customerName,
+                  email: formData.customerEmail,
+                  phone: formData.customerPhone,
+                },
+              },
+              destination_country: formData.destinationCountry,
+              shipping_address: { formatted: formData.shippingAddress },
+              notes: formData.specialInstructions,
+              status: 'pending',
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          // Add items
+          if (newQuote) {
+            const { error: itemError } = await supabase.from('quote_items').insert({
               quote_id: newQuote.id,
               name: formData.productName,
               product_url: formData.productUrl,
               quantity: formData.quantity,
-              price: formData.estimatedPrice
+              price: formData.estimatedPrice,
             });
 
-          if (itemError) throw itemError;
+            if (itemError) throw itemError;
+          }
+
+          toast.success('Quote request submitted successfully!');
+          navigate(`/quote/${newQuote.id}`);
+        } else {
+          // Update existing quote
+          const { error } = await supabase
+            .from('quotes')
+            .update({
+              notes: formData.specialInstructions,
+              admin_notes: formData.adminNotes,
+              priority: formData.priority,
+            })
+            .eq('id', quoteId);
+
+          if (error) throw error;
+
+          toast.success('Quote updated successfully!');
+          setIsEditing(false);
+          refetch();
         }
 
-        toast.success('Quote request submitted successfully!');
-        navigate(`/quote/${newQuote.id}`);
-        
-      } else {
-        // Update existing quote
-        const { error } = await supabase
-          .from('quotes')
-          .update({
-            notes: formData.specialInstructions,
-            admin_notes: formData.adminNotes,
-            priority: formData.priority
-          })
-          .eq('id', quoteId);
-
-        if (error) throw error;
-
-        toast.success('Quote updated successfully!');
-        setIsEditing(false);
-        refetch();
+        trackConversion('quote_form_submitted', 1);
+      } catch (error) {
+        console.error('Form submission error:', error);
+        toast.error('Failed to save quote. Please try again.');
+        throw error;
       }
-      
-      trackConversion('quote_form_submitted', 1);
-      
-    } catch (error) {
-      console.error('Form submission error:', error);
-      toast.error('Failed to save quote. Please try again.');
-      throw error;
-    }
-  }, [mode, user?.id, quoteId, navigate, refetch, trackConversion]);
+    },
+    [mode, user?.id, quoteId, navigate, refetch, trackConversion],
+  );
 
   // Loading state
   if (isLoading) {
@@ -386,9 +391,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
               <Button onClick={() => refetch()} variant="outline">
                 Try Again
               </Button>
-              <Button onClick={() => navigate(-1)}>
-                Go Back
-              </Button>
+              <Button onClick={() => navigate(-1)}>Go Back</Button>
             </div>
           </CardContent>
         </Card>
@@ -412,7 +415,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
               <ArrowLeft className="h-4 w-4" />
               Back
             </Button>
-            
+
             <div className="flex items-center gap-2">
               {mode === 'view' && quote && (
                 <>
@@ -426,7 +429,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
               )}
             </div>
           </div>
-          
+
           {/* PWA install prompt */}
           {device.installPrompt && !device.isStandalone && (
             <div className="mt-2 p-2 bg-blue-50 rounded-lg">
@@ -476,11 +479,9 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
                   className="w-full p-4 text-left flex items-center justify-between"
                 >
                   <span className="font-medium">Price Breakdown</span>
-                  <Badge variant="outline">
-                    ${quote.final_total_usd?.toFixed(2)}
-                  </Badge>
+                  <Badge variant="outline">${quote.final_total_usd?.toFixed(2)}</Badge>
                 </button>
-                
+
                 {showBreakdown && (
                   <div className="border-t">
                     <UnifiedQuoteBreakdown
@@ -500,7 +501,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
                   viewMode={viewMode}
                   layout="vertical"
                   size="lg"
-                  onAction={(action, quote, optimistic) => 
+                  onAction={(action, quote, optimistic) =>
                     quoteActionMutation.mutate({ action, quote, optimistic })
                   }
                   className="w-full"
@@ -529,17 +530,17 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Button>
-              
+
               <div className="flex items-center gap-3">
                 <Package className="h-5 w-5 text-gray-400" />
                 <h1 className="text-lg font-semibold">
-                  {mode === 'create' ? 'New Quote Request' :
-                   mode === 'edit' ? 'Edit Quote' :
-                   quote?.display_id || `Quote #${quoteId?.slice(0, 8)}`}
+                  {mode === 'create'
+                    ? 'New Quote Request'
+                    : mode === 'edit'
+                      ? 'Edit Quote'
+                      : quote?.display_id || `Quote #${quoteId?.slice(0, 8)}`}
                 </h1>
-                {quote && (
-                  <Badge variant="outline">{quote.status}</Badge>
-                )}
+                {quote && <Badge variant="outline">{quote.status}</Badge>}
               </div>
             </div>
 
@@ -558,17 +559,14 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
                     <Download className="h-4 w-4 mr-2" />
                     Export
                   </Button>
-                  
+
                   <Button variant="outline" size="sm">
                     <Share2 className="h-4 w-4 mr-2" />
                     Share
                   </Button>
-                  
+
                   {viewMode === 'admin' && (
-                    <Button
-                      onClick={() => setIsEditing(true)}
-                      size="sm"
-                    >
+                    <Button onClick={() => setIsEditing(true)} size="sm">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
@@ -596,18 +594,14 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-6">
-              <UnifiedQuoteCard
-                quote={quote}
-                viewMode={viewMode}
-                layout="detail"
-              />
+              <UnifiedQuoteCard quote={quote} viewMode={viewMode} layout="detail" />
 
               <UnifiedQuoteActions
                 quote={quote}
                 viewMode={viewMode}
                 layout="horizontal"
                 size="md"
-                onAction={(action, quote, optimistic) => 
+                onAction={(action, quote, optimistic) =>
                   quoteActionMutation.mutate({ action, quote, optimistic })
                 }
               />
@@ -625,23 +619,23 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
               <Card>
                 <CardContent className="p-4 space-y-3">
                   <h3 className="font-medium text-gray-900">Quote Details</h3>
-                  
+
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
                       <span>Created {new Date(quote.created_at).toLocaleDateString()}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-gray-400" />
                       <span>Customer: {quote.customer_data?.info?.name || 'Unknown'}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-gray-400" />
                       <span>Destination: {quote.destination_country}</span>
                     </div>
-                    
+
                     {quote.expires_at && (
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-400" />

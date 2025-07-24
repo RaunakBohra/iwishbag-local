@@ -8,7 +8,8 @@ const meta: Meta<typeof DualCurrencyDisplay> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'DualCurrencyDisplay shows amounts in both origin and destination currencies with exchange rate information, status indicators, and conversion details. Core component for iwishBag\'s international pricing system.',
+        component:
+          "DualCurrencyDisplay shows amounts in both origin and destination currencies with exchange rate information, status indicators, and conversion details. Core component for iwishBag's international pricing system.",
       },
     },
   },
@@ -24,7 +25,7 @@ const meta: Meta<typeof DualCurrencyDisplay> = {
       description: 'Origin country code (where we buy from)',
     },
     destinationCountry: {
-      control: 'select', 
+      control: 'select',
       options: ['IN', 'NP', 'US', 'UK', 'AU', 'CA'],
       description: 'Destination country code (where we deliver to)',
     },
@@ -55,7 +56,7 @@ const meta: Meta<typeof DualCurrencyDisplay> = {
     },
   },
   args: {
-    amount: 150.00,
+    amount: 150.0,
     originCountry: 'US',
     destinationCountry: 'IN',
     exchangeRate: 83.12,
@@ -83,7 +84,7 @@ export const HighValue: Story = {
 
 export const LowValue: Story = {
   args: {
-    amount: 12.50,
+    amount: 12.5,
     originCountry: 'US',
     destinationCountry: 'NP',
     exchangeRate: 134.25,
@@ -122,7 +123,7 @@ export const CountrySettings: Story = {
 export const FallbackRate: Story = {
   args: {
     exchangeRateSource: 'fallback',
-    exchangeRate: 80.00,
+    exchangeRate: 80.0,
     warning: 'Using fallback exchange rate - may not be current',
   },
   parameters: {
@@ -229,7 +230,7 @@ export const CustomClassName: Story = {
 // Different Country Combinations
 export const USToNepal: Story = {
   args: {
-    amount: 100.00,
+    amount: 100.0,
     originCountry: 'US',
     destinationCountry: 'NP',
     exchangeRate: 134.25,
@@ -247,7 +248,7 @@ export const JapanToIndia: Story = {
 
 export const UKToAustralia: Story = {
   args: {
-    amount: 75.50,
+    amount: 75.5,
     originCountry: 'UK',
     destinationCountry: 'AU',
     exchangeRate: 1.96,
@@ -262,7 +263,7 @@ export const ComparisonView: Story = {
       <div className="space-y-2">
         <div className="flex items-center gap-4">
           <span className="w-20 text-sm">Route:</span>
-          <DualCurrencyDisplay 
+          <DualCurrencyDisplay
             amount={150}
             originCountry="US"
             destinationCountry="IN"
@@ -272,7 +273,7 @@ export const ComparisonView: Story = {
         </div>
         <div className="flex items-center gap-4">
           <span className="w-20 text-sm">Country:</span>
-          <DualCurrencyDisplay 
+          <DualCurrencyDisplay
             amount={150}
             originCountry="US"
             destinationCountry="IN"
@@ -282,11 +283,11 @@ export const ComparisonView: Story = {
         </div>
         <div className="flex items-center gap-4">
           <span className="w-20 text-sm">Fallback:</span>
-          <DualCurrencyDisplay 
+          <DualCurrencyDisplay
             amount={150}
             originCountry="US"
             destinationCountry="IN"
-            exchangeRate={80.00}
+            exchangeRate={80.0}
             exchangeRateSource="fallback"
             warning="Outdated rate"
           />
@@ -309,13 +310,13 @@ export const SimpleDualCurrencyStory: Story = {
     <div className="space-y-4">
       <h3 className="font-semibold">SimpleDualCurrency Component</h3>
       <div className="space-y-2">
-        <SimpleDualCurrency 
+        <SimpleDualCurrency
           amount={99.99}
           originCountry="US"
           destinationCountry="IN"
           exchangeRate={83.12}
         />
-        <SimpleDualCurrency 
+        <SimpleDualCurrency
           amount={2500}
           originCountry="JP"
           destinationCountry="NP"

@@ -6,7 +6,6 @@ import { currencyService } from '@/services/CurrencyService';
 // SIMPLIFIED: Remove all wrapper functions around CurrencyService
 // All currency operations should go through hooks or CurrencyService directly
 
-
 // Exchange rate interface
 export interface ExchangeRateResult {
   rate: number;
@@ -164,14 +163,16 @@ export function convertCurrency(
 // SIMPLIFIED: Basic country code normalization only
 export const normalizeCountryForCurrency = (country: string): string => {
   if (!country) return 'US';
-  
+
   // If it's already a 2-character code, return uppercase
   if (country.length === 2) {
     return country.toUpperCase();
   }
-  
+
   // For longer strings, use database-driven country lookup instead of hardcoded mapping
-  console.warn(`Long country name in currency operation: ${country}, defaulting to US. Use country code instead.`);
+  console.warn(
+    `Long country name in currency operation: ${country}, defaulting to US. Use country code instead.`,
+  );
   return 'US';
 };
 

@@ -59,23 +59,25 @@ class TicketService {
    */
   private transformToLegacyTicketWithDetails(supportRecord: any): TicketWithDetails {
     const baseTicket = this.transformToLegacyTicket(supportRecord);
-    
+
     return {
       ...baseTicket,
       user_profile: null, // Would need to fetch separately if needed
       assigned_to_profile: null, // Would need to fetch separately if needed
-      quote: supportRecord.quote ? {
-        id: supportRecord.quote.id,
-        display_id: supportRecord.quote.display_id,
-        destination_country: supportRecord.quote.destination_country,
-        status: supportRecord.quote.status,
-        final_total_usd: supportRecord.quote.final_total_usd,
-        iwish_tracking_id: supportRecord.quote.iwish_tracking_id,
-        tracking_status: supportRecord.quote.tracking_status,
-        estimated_delivery_date: supportRecord.quote.estimated_delivery_date,
-        items: supportRecord.quote.items,
-        customer_data: supportRecord.quote.customer_data,
-      } : null,
+      quote: supportRecord.quote
+        ? {
+            id: supportRecord.quote.id,
+            display_id: supportRecord.quote.display_id,
+            destination_country: supportRecord.quote.destination_country,
+            status: supportRecord.quote.status,
+            final_total_usd: supportRecord.quote.final_total_usd,
+            iwish_tracking_id: supportRecord.quote.iwish_tracking_id,
+            tracking_status: supportRecord.quote.tracking_status,
+            estimated_delivery_date: supportRecord.quote.estimated_delivery_date,
+            items: supportRecord.quote.items,
+            customer_data: supportRecord.quote.customer_data,
+          }
+        : null,
     };
   }
 
@@ -86,22 +88,22 @@ class TicketService {
   async autoCloseResolvedTickets(): Promise<{ closedCount: number; message: string }> {
     try {
       console.log('🤖 Starting auto-close process for inactive tickets...');
-      
+
       // Find resolved tickets older than 7 days with no recent activity
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
+
       // Find pending tickets older than 5 days (customer hasn't responded)
       const fiveDaysAgo = new Date();
       fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-      
+
       // Get resolved tickets for auto-closure
       const resolvedTickets = await unifiedSupportEngine.getTickets({
         status: ['resolved'],
         date_range: {
           start: '1970-01-01T00:00:00Z', // Beginning of time
-          end: sevenDaysAgo.toISOString()
-        }
+          end: sevenDaysAgo.toISOString(),
+        },
       });
 
       // Get pending tickets for auto-closure
@@ -109,8 +111,8 @@ class TicketService {
         status: ['pending'],
         date_range: {
           start: '1970-01-01T00:00:00Z', // Beginning of time
-          end: fiveDaysAgo.toISOString()
-        }
+          end: fiveDaysAgo.toISOString(),
+        },
       });
 
       let closedCount = 0;
@@ -120,9 +122,9 @@ class TicketService {
       if (resolvedTickets && resolvedTickets.length > 0) {
         for (const ticket of resolvedTickets) {
           const success = await unifiedSupportEngine.updateTicketStatus(
-            ticket.id, 
-            'closed', 
-            'Auto-closed after 7 days of inactivity'
+            ticket.id,
+            'closed',
+            'Auto-closed after 7 days of inactivity',
           );
           if (success) closedCount++;
         }
@@ -133,9 +135,9 @@ class TicketService {
       if (pendingTickets && pendingTickets.length > 0) {
         for (const ticket of pendingTickets) {
           const success = await unifiedSupportEngine.updateTicketStatus(
-            ticket.id, 
-            'closed', 
-            'Auto-closed after 5 days waiting for customer response'
+            ticket.id,
+            'closed',
+            'Auto-closed after 5 days waiting for customer response',
           );
           if (success) closedCount++;
         }
@@ -149,11 +151,10 @@ class TicketService {
 
       const finalMessage = messages.join('; ');
       console.log(`✅ Auto-closed ${closedCount} tickets: ${finalMessage}`);
-      return { 
-        closedCount, 
-        message: `Successfully auto-closed ${closedCount} tickets: ${finalMessage}` 
+      return {
+        closedCount,
+        message: `Successfully auto-closed ${closedCount} tickets: ${finalMessage}`,
       };
-
     } catch (error) {
       console.error('❌ Auto-close process failed:', error);
       throw error;
@@ -334,7 +335,9 @@ class TicketService {
       }
 
       // Transform to legacy format (simplified - would need additional queries for full details)
-      const tickets = supportRecords.map(record => this.transformToLegacyTicketWithDetails(record));
+      const tickets = supportRecords.map((record) =>
+        this.transformToLegacyTicketWithDetails(record),
+      );
 
       console.log(`✅ Fetched ${tickets.length} tickets via unified engine`);
       return tickets;
@@ -363,14 +366,16 @@ class TicketService {
       }
 
       // Transform to legacy format (simplified - would need additional queries for full details)
-      let tickets = supportRecords.map(record => this.transformToLegacyTicketWithDetails(record));
+      const tickets = supportRecords.map((record) =>
+        this.transformToLegacyTicketWithDetails(record),
+      );
 
       // Apply sorting if specified (simple implementation)
       if (sort) {
         tickets.sort((a, b) => {
           const aValue = a[sort.field as keyof TicketWithDetails] as any;
           const bValue = b[sort.field as keyof TicketWithDetails] as any;
-          
+
           if (sort.direction === 'asc') {
             return aValue > bValue ? 1 : -1;
           } else {
@@ -482,7 +487,7 @@ class TicketService {
         replyData.ticket_id,
         'reply',
         { message: replyData.message },
-        replyData.is_internal || false
+        replyData.is_internal || false,
       );
 
       if (!interaction) {
@@ -520,9 +525,9 @@ class TicketService {
 
       // Use unified support engine to update ticket status
       const success = await unifiedSupportEngine.updateTicketStatus(
-        ticketId, 
-        status, 
-        'Status updated via legacy TicketService'
+        ticketId,
+        status,
+        'Status updated via legacy TicketService',
       );
 
       if (success) {
@@ -548,9 +553,9 @@ class TicketService {
 
       // Use unified support engine to assign ticket
       const success = await unifiedSupportEngine.assignTicket(
-        ticketId, 
-        adminUserId || '', 
-        'Ticket assigned via legacy TicketService'
+        ticketId,
+        adminUserId || '',
+        'Ticket assigned via legacy TicketService',
       );
 
       if (success) {
@@ -607,7 +612,9 @@ class TicketService {
   /**
    * Submit customer satisfaction survey
    */
-  async submitSatisfactionSurvey(surveyData: import('@/types/ticket').CreateSurveyData): Promise<string | null> {
+  async submitSatisfactionSurvey(
+    surveyData: import('@/types/ticket').CreateSurveyData,
+  ): Promise<string | null> {
     try {
       console.log('📊 Submitting satisfaction survey:', surveyData);
 
@@ -632,10 +639,10 @@ class TicketService {
       }
 
       console.log('✅ Satisfaction survey submitted successfully:', data.id);
-      
+
       // Update ticket metadata to indicate survey was completed
       await this.updateTicketSurveyStatus(surveyData.ticket_id, true);
-      
+
       this.clearCache();
       return data.id;
     } catch (error) {
@@ -647,7 +654,9 @@ class TicketService {
   /**
    * Get satisfaction survey for a ticket
    */
-  async getSatisfactionSurvey(ticketId: string): Promise<import('@/types/ticket').CustomerSatisfactionSurvey | null> {
+  async getSatisfactionSurvey(
+    ticketId: string,
+  ): Promise<import('@/types/ticket').CustomerSatisfactionSurvey | null> {
     try {
       const cacheKey = `survey_${ticketId}`;
       if (this.cache.has(cacheKey)) {
@@ -693,7 +702,10 @@ class TicketService {
   /**
    * Update ticket metadata to track survey completion
    */
-  private async updateTicketSurveyStatus(ticketId: string, surveyCompleted: boolean): Promise<void> {
+  private async updateTicketSurveyStatus(
+    ticketId: string,
+    surveyCompleted: boolean,
+  ): Promise<void> {
     try {
       // Use unified support engine to update ticket metadata
       const ticket = await unifiedSupportEngine.getTicketById(ticketId);
@@ -707,15 +719,15 @@ class TicketService {
         metadata: {
           ...ticket.ticket_data.metadata,
           survey_completed: surveyCompleted,
-          survey_completed_at: surveyCompleted ? new Date().toISOString() : null
-        }
+          survey_completed_at: surveyCompleted ? new Date().toISOString() : null,
+        },
       };
 
       const { error } = await supabase
         .from('support_system')
-        .update({ 
+        .update({
           ticket_data: updatedTicketData,
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString(),
         })
         .eq('id', ticketId);
 
@@ -747,9 +759,7 @@ class TicketService {
     try {
       console.log('📈 Fetching survey statistics with filters:', filters);
 
-      let query = supabase
-        .from('customer_satisfaction_surveys')
-        .select('*');
+      let query = supabase.from('customer_satisfaction_surveys').select('*');
 
       // Apply date filters if provided
       if (filters?.dateRange) {
@@ -773,23 +783,29 @@ class TicketService {
           averageResponseTimeRating: 0,
           averageResolutionRating: 0,
           recommendationPercentage: 0,
-          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         };
       }
 
       const totalSurveys = data.length;
       const averageRating = data.reduce((sum, survey) => sum + survey.rating, 0) / totalSurveys;
-      const averageExperienceRating = data.reduce((sum, survey) => sum + survey.experience_rating, 0) / totalSurveys;
-      const averageResponseTimeRating = data.reduce((sum, survey) => sum + survey.response_time_rating, 0) / totalSurveys;
-      const averageResolutionRating = data.reduce((sum, survey) => sum + survey.resolution_rating, 0) / totalSurveys;
-      const recommendationCount = data.filter(survey => survey.would_recommend).length;
+      const averageExperienceRating =
+        data.reduce((sum, survey) => sum + survey.experience_rating, 0) / totalSurveys;
+      const averageResponseTimeRating =
+        data.reduce((sum, survey) => sum + survey.response_time_rating, 0) / totalSurveys;
+      const averageResolutionRating =
+        data.reduce((sum, survey) => sum + survey.resolution_rating, 0) / totalSurveys;
+      const recommendationCount = data.filter((survey) => survey.would_recommend).length;
       const recommendationPercentage = (recommendationCount / totalSurveys) * 100;
 
       // Rating distribution
-      const ratingDistribution = data.reduce((dist, survey) => {
-        dist[survey.rating] = (dist[survey.rating] || 0) + 1;
-        return dist;
-      }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+      const ratingDistribution = data.reduce(
+        (dist, survey) => {
+          dist[survey.rating] = (dist[survey.rating] || 0) + 1;
+          return dist;
+        },
+        { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      );
 
       const statistics = {
         totalSurveys,
@@ -798,7 +814,7 @@ class TicketService {
         averageResponseTimeRating: Math.round(averageResponseTimeRating * 100) / 100,
         averageResolutionRating: Math.round(averageResolutionRating * 100) / 100,
         recommendationPercentage: Math.round(recommendationPercentage * 100) / 100,
-        ratingDistribution
+        ratingDistribution,
       };
 
       console.log('✅ Survey statistics calculated:', statistics);

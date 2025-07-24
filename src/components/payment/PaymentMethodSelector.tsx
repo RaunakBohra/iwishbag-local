@@ -206,7 +206,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </RadioGroup>
 
       {availablePaymentMethods.length === 0 && (
-        <PaymentConfigurationPrompt 
+        <PaymentConfigurationPrompt
           currency={currency}
           amount={amount}
           onContactSupport={() => {

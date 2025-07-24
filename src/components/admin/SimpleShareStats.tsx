@@ -9,7 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Users, CheckCircle, Mail } from 'lucide-react';
 
 export const SimpleShareStats: React.FC = () => {
-  const { data: stats, isLoading, error } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['simple-share-stats'],
     queryFn: async () => {
       try {
@@ -22,12 +26,12 @@ export const SimpleShareStats: React.FC = () => {
         if (error) throw error;
 
         const totalShared = data?.length || 0;
-        const approved = data?.filter(q => q.status === 'approved').length || 0;
-        
+        const approved = data?.filter((q) => q.status === 'approved').length || 0;
+
         return {
           totalShared,
           approved,
-          approvalRate: totalShared > 0 ? Math.round((approved / totalShared) * 100) : 0
+          approvalRate: totalShared > 0 ? Math.round((approved / totalShared) * 100) : 0,
         };
       } catch (err) {
         console.error('Stats query error:', err);
@@ -65,7 +69,7 @@ export const SimpleShareStats: React.FC = () => {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Quote Share Statistics</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

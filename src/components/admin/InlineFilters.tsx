@@ -9,11 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   TICKET_STATUS_LABELS,
   TICKET_PRIORITY_LABELS,
@@ -50,8 +46,11 @@ export const InlineFilters = ({
 }: InlineFiltersProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const hasActiveFilters = statusFilter !== 'all' || priorityFilter !== 'all' || categoryFilter !== 'all' || searchInput;
-  const activeFilterCount = [statusFilter, priorityFilter, categoryFilter].filter(f => f !== 'all').length;
+  const hasActiveFilters =
+    statusFilter !== 'all' || priorityFilter !== 'all' || categoryFilter !== 'all' || searchInput;
+  const activeFilterCount = [statusFilter, priorityFilter, categoryFilter].filter(
+    (f) => f !== 'all',
+  ).length;
 
   const clearAllFilters = () => {
     onSearchChange('');
@@ -109,18 +108,13 @@ export const InlineFilters = ({
               <div className="flex items-center justify-between">
                 <h4 className="font-medium">Additional Filters</h4>
                 {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllFilters}
-                    className="text-xs"
-                  >
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs">
                     <X className="h-3 w-3 mr-1" />
                     Clear All
                   </Button>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-1 gap-3">
                 {/* Priority Filter */}
                 <div>
@@ -167,7 +161,9 @@ export const InlineFilters = ({
           {filteredCount === totalTickets ? (
             <span>{totalTickets} tickets</span>
           ) : (
-            <span>{filteredCount} of {totalTickets} tickets</span>
+            <span>
+              {filteredCount} of {totalTickets} tickets
+            </span>
           )}
         </div>
       </div>

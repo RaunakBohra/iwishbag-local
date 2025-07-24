@@ -198,30 +198,35 @@ export const CUSTOMER_TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
 };
 
 // Status descriptions for tooltips and help text
-export const TICKET_STATUS_DESCRIPTIONS: Record<TicketStatus, {
-  customer: string;
-  admin: string;
-}> = {
+export const TICKET_STATUS_DESCRIPTIONS: Record<
+  TicketStatus,
+  {
+    customer: string;
+    admin: string;
+  }
+> = {
   open: {
     customer: 'Your ticket has been received and will be reviewed by our support team.',
-    admin: 'New ticket that needs attention from support team.'
+    admin: 'New ticket that needs attention from support team.',
   },
   in_progress: {
     customer: 'Our support team is actively working on your issue.',
-    admin: 'Ticket is currently being worked on by a support agent.'
+    admin: 'Ticket is currently being worked on by a support agent.',
   },
   pending: {
-    customer: 'We need more information from you. Please check your messages and reply to continue.',
-    admin: 'Waiting for customer to provide additional information or response.'
+    customer:
+      'We need more information from you. Please check your messages and reply to continue.',
+    admin: 'Waiting for customer to provide additional information or response.',
   },
   resolved: {
-    customer: 'Your issue has been resolved. The ticket will automatically close in a few days if no further action is needed.',
-    admin: 'Issue has been resolved. Will auto-close after 7 days unless customer responds.'
+    customer:
+      'Your issue has been resolved. The ticket will automatically close in a few days if no further action is needed.',
+    admin: 'Issue has been resolved. Will auto-close after 7 days unless customer responds.',
   },
   closed: {
     customer: 'This ticket has been closed. Create a new ticket if you need further assistance.',
-    admin: 'Ticket is closed and archived.'
-  }
+    admin: 'Ticket is closed and archived.',
+  },
 };
 
 export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {

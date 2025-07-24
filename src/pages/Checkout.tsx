@@ -2048,7 +2048,9 @@ export default function Checkout() {
                                     <p className="font-medium text-green-900">
                                       {customerData.name}
                                       {customerData.isGuest && (
-                                        <Badge variant="secondary" className="ml-2 text-xs">Guest</Badge>
+                                        <Badge variant="secondary" className="ml-2 text-xs">
+                                          Guest
+                                        </Badge>
                                       )}
                                     </p>
                                     {customerData.email && (
@@ -2753,8 +2755,7 @@ export default function Checkout() {
                       </>
                     ) : (
                       <>
-                        Place Order -{' '}
-                        <CheckoutTotal items={selectedCartItems} />
+                        Place Order - <CheckoutTotal items={selectedCartItems} />
                       </>
                     )}
                   </Button>

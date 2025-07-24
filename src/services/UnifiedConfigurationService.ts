@@ -149,8 +149,8 @@ class UnifiedConfigurationService {
   private clearCache(pattern?: string): void {
     if (pattern) {
       Array.from(this.cache.keys())
-        .filter(key => key.includes(pattern))
-        .forEach(key => this.cache.delete(key));
+        .filter((key) => key.includes(pattern))
+        .forEach((key) => this.cache.delete(key));
     } else {
       this.cache.clear();
     }
@@ -195,11 +195,10 @@ class UnifiedConfigurationService {
 
       const result = data as T;
       this.setCache(cacheKey, result);
-      
+
       console.log(`✅ Config fetched: ${category}${key ? `:${key}` : ''}`);
       transaction.setStatus('ok');
       return result;
-
     } catch (error) {
       console.error('❌ Exception in getConfig:', error);
       Sentry.captureException(error);
@@ -217,7 +216,7 @@ class UnifiedConfigurationService {
     category: ConfigCategory,
     key: string,
     configData: any,
-    metadata?: any
+    metadata?: any,
   ): Promise<string | null> {
     try {
       console.log(`⚙️ Setting config: ${category}:${key}`);
@@ -237,10 +236,9 @@ class UnifiedConfigurationService {
 
       // Clear cache for this category
       this.clearCache(category);
-      
+
       console.log(`✅ Config set: ${category}:${key} -> ${data}`);
       return data;
-
     } catch (error) {
       console.error('❌ Exception in setConfig:', error);
       Sentry.captureException(error);
@@ -273,7 +271,6 @@ class UnifiedConfigurationService {
       const config = data as CountryConfig;
       this.setCache(cacheKey, config);
       return config;
-
     } catch (error) {
       console.error(`❌ Error getting country config for ${countryCode}:`, error);
       Sentry.captureException(error);
@@ -285,7 +282,7 @@ class UnifiedConfigurationService {
    * Get all countries
    */
   async getAllCountries(): Promise<Record<string, CountryConfig>> {
-    return await this.getConfig<Record<string, CountryConfig>>('country') || {};
+    return (await this.getConfig<Record<string, CountryConfig>>('country')) || {};
   }
 
   /**
@@ -346,7 +343,6 @@ class UnifiedConfigurationService {
       const config = data as CalculationConfig;
       this.setCache(cacheKey, config);
       return config;
-
     } catch (error) {
       console.error('❌ Error getting calculation defaults:', error);
       Sentry.captureException(error);
@@ -416,7 +412,6 @@ class UnifiedConfigurationService {
       const templates = (data || []).map((item: any) => item.template) as TemplateConfig[];
       this.setCache(cacheKey, templates);
       return templates;
-
     } catch (error) {
       console.error('❌ Error getting templates:', error);
       Sentry.captureException(error);
@@ -456,7 +451,6 @@ class UnifiedConfigurationService {
       const gateways = (data || []).map((item: any) => item.config) as GatewayConfig[];
       this.setCache(cacheKey, gateways);
       return gateways;
-
     } catch (error) {
       console.error('❌ Error getting gateways:', error);
       Sentry.captureException(error);
@@ -495,7 +489,7 @@ class UnifiedConfigurationService {
     try {
       const config = await this.getCountryConfig(countryCode);
       const symbol = config?.symbol || '$';
-      
+
       // Basic formatting - could be enhanced with locale-specific formatting
       return `${symbol}${amount.toFixed(2)}`;
     } catch (error) {
@@ -507,11 +501,7 @@ class UnifiedConfigurationService {
   /**
    * Convert amount between currencies
    */
-  async convertCurrency(
-    amount: number,
-    fromCountry: string,
-    toCountry: string
-  ): Promise<number> {
+  async convertCurrency(amount: number, fromCountry: string, toCountry: string): Promise<number> {
     try {
       const [fromConfig, toConfig] = await Promise.all([
         this.getCountryConfig(fromCountry),
@@ -539,11 +529,13 @@ class UnifiedConfigurationService {
    */
   async getBusinessHours(countryCode: string): Promise<any> {
     const config = await this.getCountryConfig(countryCode);
-    return config?.business_hours || {
-      timezone: 'UTC',
-      weekdays: '09:00-17:00',
-      weekend: false,
-    };
+    return (
+      config?.business_hours || {
+        timezone: 'UTC',
+        weekdays: '09:00-17:00',
+        weekend: false,
+      }
+    );
   }
 
   /**
@@ -584,7 +576,8 @@ class UnifiedConfigurationService {
 
       case 'gateway':
         if (!data.gateway_name) errors.push('Gateway name is required');
-        if (typeof data.is_active !== 'boolean') errors.push('Gateway active status must be boolean');
+        if (typeof data.is_active !== 'boolean')
+          errors.push('Gateway active status must be boolean');
         break;
 
       default:

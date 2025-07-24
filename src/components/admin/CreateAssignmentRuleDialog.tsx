@@ -8,12 +8,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -40,10 +35,7 @@ import {
   useEligibleUsers,
   useAutoAssignmentUtils,
 } from '@/hooks/useAutoAssignment';
-import {
-  TICKET_PRIORITY_LABELS,
-  TICKET_CATEGORY_LABELS,
-} from '@/types/ticket';
+import { TICKET_PRIORITY_LABELS, TICKET_CATEGORY_LABELS } from '@/types/ticket';
 
 // Form schema
 const assignmentRuleSchema = z.object({
@@ -63,10 +55,10 @@ interface CreateAssignmentRuleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const CreateAssignmentRuleDialog = ({ 
-  children, 
-  open, 
-  onOpenChange 
+export const CreateAssignmentRuleDialog = ({
+  children,
+  open,
+  onOpenChange,
 }: CreateAssignmentRuleDialogProps) => {
   const [testTicket, setTestTicket] = useState({ priority: 'medium', category: 'general' });
 
@@ -122,8 +114,12 @@ export const CreateAssignmentRuleDialog = ({
   // Test if current form would match test ticket
   const testCurrentRule = () => {
     const formData = form.getValues();
-    const priorityMatch = !formData.priority_criteria?.length || formData.priority_criteria.includes(testTicket.priority);
-    const categoryMatch = !formData.category_criteria?.length || formData.category_criteria.includes(testTicket.category);
+    const priorityMatch =
+      !formData.priority_criteria?.length ||
+      formData.priority_criteria.includes(testTicket.priority);
+    const categoryMatch =
+      !formData.category_criteria?.length ||
+      formData.category_criteria.includes(testTicket.category);
     return priorityMatch && categoryMatch;
   };
 
@@ -147,9 +143,7 @@ export const CreateAssignmentRuleDialog = ({
                   <FormControl>
                     <Input placeholder="e.g., High Priority Support Team" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    A descriptive name for this assignment rule
-                  </FormDescription>
+                  <FormDescription>A descriptive name for this assignment rule</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -226,14 +220,12 @@ export const CreateAssignmentRuleDialog = ({
                                     return checked
                                       ? field.onChange([...(field.value || []), priority])
                                       : field.onChange(
-                                          field.value?.filter((value) => value !== priority)
+                                          field.value?.filter((value) => value !== priority),
                                         );
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal">
-                                {label}
-                              </FormLabel>
+                              <FormLabel className="font-normal">{label}</FormLabel>
                             </FormItem>
                           );
                         }}
@@ -274,14 +266,12 @@ export const CreateAssignmentRuleDialog = ({
                                     return checked
                                       ? field.onChange([...(field.value || []), category])
                                       : field.onChange(
-                                          field.value?.filter((value) => value !== category)
+                                          field.value?.filter((value) => value !== category),
                                         );
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal">
-                                {label}
-                              </FormLabel>
+                              <FormLabel className="font-normal">{label}</FormLabel>
                             </FormItem>
                           );
                         }}
@@ -322,7 +312,7 @@ export const CreateAssignmentRuleDialog = ({
                                     return checked
                                       ? field.onChange([...(field.value || []), user.id])
                                       : field.onChange(
-                                          field.value?.filter((value) => value !== user.id)
+                                          field.value?.filter((value) => value !== user.id),
                                         );
                                   }}
                                 />
@@ -360,10 +350,7 @@ export const CreateAssignmentRuleDialog = ({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -379,7 +366,12 @@ export const CreateAssignmentRuleDialog = ({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium">Test Priority</label>
-                      <Select value={testTicket.priority} onValueChange={(priority) => setTestTicket(prev => ({ ...prev, priority }))}>
+                      <Select
+                        value={testTicket.priority}
+                        onValueChange={(priority) =>
+                          setTestTicket((prev) => ({ ...prev, priority }))
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -394,7 +386,12 @@ export const CreateAssignmentRuleDialog = ({
                     </div>
                     <div>
                       <label className="text-sm font-medium">Test Category</label>
-                      <Select value={testTicket.category} onValueChange={(category) => setTestTicket(prev => ({ ...prev, category }))}>
+                      <Select
+                        value={testTicket.category}
+                        onValueChange={(category) =>
+                          setTestTicket((prev) => ({ ...prev, category }))
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -408,11 +405,11 @@ export const CreateAssignmentRuleDialog = ({
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <span className="text-sm">This rule would:</span>
-                    <Badge variant={testCurrentRule() ? "default" : "secondary"}>
-                      {testCurrentRule() ? "✅ Match" : "❌ Not Match"}
+                    <Badge variant={testCurrentRule() ? 'default' : 'secondary'}>
+                      {testCurrentRule() ? '✅ Match' : '❌ Not Match'}
                     </Badge>
                     <span className="text-sm">this test ticket</span>
                   </div>
@@ -422,17 +419,10 @@ export const CreateAssignmentRuleDialog = ({
 
             {/* Submit Button */}
             <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending}
-              >
+              <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Creating...' : 'Create Rule'}
               </Button>
             </div>

@@ -32,11 +32,7 @@ class PriceFormatter {
    * Format price for single currency display
    */
   async formatPrice(amount: number, options: PriceFormatOptions): Promise<PriceResult> {
-    const {
-      destinationCountry,
-      userPreferredCurrency,
-      exchangeRate
-    } = options;
+    const { destinationCountry, userPreferredCurrency, exchangeRate } = options;
 
     try {
       // Determine target currency
@@ -68,7 +64,7 @@ class PriceFormatter {
       return {
         formatted,
         currency: targetCurrency,
-        amount: convertedAmount
+        amount: convertedAmount,
       };
     } catch (error) {
       console.error('[PriceFormatter] formatPrice error:', error);
@@ -77,7 +73,7 @@ class PriceFormatter {
       return {
         formatted: `${symbol}${amount.toFixed(2)}`,
         currency: 'USD',
-        amount
+        amount,
       };
     }
   }
@@ -86,11 +82,7 @@ class PriceFormatter {
    * Format price for dual currency display (admin view)
    */
   async formatDualPrice(amount: number, options: PriceFormatOptions): Promise<DualPriceResult> {
-    const {
-      originCountry,
-      destinationCountry,
-      exchangeRate
-    } = options;
+    const { originCountry, destinationCountry, exchangeRate } = options;
 
     if (!destinationCountry) {
       throw new Error('Destination country required for dual price formatting');
@@ -114,7 +106,7 @@ class PriceFormatter {
       // Convert and format in destination currency
       let destinationAmount = amount;
       let destinationFormatted = originFormatted;
-      
+
       if (rate && rate !== 1) {
         destinationAmount = amount * rate;
         // Round to whole numbers for most Asian currencies
@@ -132,14 +124,17 @@ class PriceFormatter {
         origin: {
           formatted: originFormatted,
           currency: originCurrency,
-          amount
+          amount,
         },
         destination: {
           formatted: destinationFormatted,
           currency: destinationCurrency,
-          amount: destinationAmount
+          amount: destinationAmount,
         },
-        display: originCurrency === destinationCurrency ? originFormatted : `${originFormatted}/${destinationFormatted}`
+        display:
+          originCurrency === destinationCurrency
+            ? originFormatted
+            : `${originFormatted}/${destinationFormatted}`,
       };
     } catch (error) {
       console.error('[PriceFormatter] formatDualPrice error:', error);
@@ -148,7 +143,7 @@ class PriceFormatter {
       return {
         origin: singleResult,
         destination: singleResult,
-        display: singleResult.formatted
+        display: singleResult.formatted,
       };
     }
   }

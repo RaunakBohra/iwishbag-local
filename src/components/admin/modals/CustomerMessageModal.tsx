@@ -50,7 +50,11 @@ interface CustomerMessageModalProps {
 const MESSAGE_TYPES = [
   { value: 'note', label: 'Internal Note', description: 'Private note visible only to admins' },
   { value: 'message', label: 'Customer Message', description: 'Direct message to the customer' },
-  { value: 'ticket', label: 'Support Ticket', description: 'Create a support ticket for this customer' },
+  {
+    value: 'ticket',
+    label: 'Support Ticket',
+    description: 'Create a support ticket for this customer',
+  },
 ];
 
 const PRIORITY_OPTIONS = [
@@ -90,22 +94,21 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
   const createMessageMutation = useMutation({
     mutationFn: async (data: MessageFormData) => {
       setIsSubmitting(true);
-      
+
       if (data.type === 'note') {
         // Update customer internal notes
         const currentNotes = customer.internal_notes || '';
         const timestamp = new Date().toLocaleString();
         const newNote = `[${timestamp}] ${data.title}: ${data.content}`;
         const updatedNotes = currentNotes ? `${currentNotes}\n\n${newNote}` : newNote;
-        
+
         const { error } = await supabase
           .from('profiles')
           .update({ internal_notes: updatedNotes })
           .eq('id', customer.id);
-          
+
         if (error) throw error;
         return { type: 'note', title: data.title };
-        
       } else if (data.type === 'ticket') {
         // Create support ticket (simplified - you might have a tickets table)
         const ticketData = {
@@ -118,11 +121,10 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
           created_at: new Date().toISOString(),
           created_by: 'admin', // You'd get this from current user context
         };
-        
+
         // For now, we'll just simulate ticket creation
         console.log('Support ticket would be created:', ticketData);
         return { type: 'ticket', title: data.title };
-        
       } else if (data.type === 'message') {
         // Send message to customer (you'd integrate with your messaging system)
         const messageData = {
@@ -134,7 +136,7 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
           sent_at: new Date().toISOString(),
           sent_by: 'admin',
         };
-        
+
         console.log('Customer message would be sent:', messageData);
         return { type: 'message', title: data.title };
       }
@@ -143,7 +145,7 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
       setIsSubmitting(false);
       if (result) {
         queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
-        
+
         let successMessage = '';
         switch (result.type) {
           case 'note':
@@ -156,7 +158,7 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
             successMessage = 'Support ticket created successfully';
             break;
         }
-        
+
         toast({
           title: 'Success',
           description: successMessage,
@@ -184,8 +186,8 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
     onOpenChange(false);
   };
 
-  const selectedMessageType = MESSAGE_TYPES.find(type => type.value === messageType);
-  const selectedPriority = PRIORITY_OPTIONS.find(p => p.value === priority);
+  const selectedMessageType = MESSAGE_TYPES.find((type) => type.value === messageType);
+  const selectedPriority = PRIORITY_OPTIONS.find((p) => p.value === priority);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -223,7 +225,7 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MESSAGE_TYPES.map(type => (
+                {MESSAGE_TYPES.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     <div className="flex flex-col">
                       <span className="font-medium">{type.label}</span>
@@ -247,7 +249,7 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PRIORITY_OPTIONS.map(option => (
+                  {PRIORITY_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center space-x-2">
                         <Badge className={option.color} variant="secondary">
@@ -264,21 +266,25 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
           {/* Title/Subject */}
           <div className="space-y-2">
             <Label htmlFor="title">
-              {messageType === 'note' ? 'Note Title' : 
-               messageType === 'ticket' ? 'Ticket Subject' : 'Message Subject'} *
+              {messageType === 'note'
+                ? 'Note Title'
+                : messageType === 'ticket'
+                  ? 'Ticket Subject'
+                  : 'Message Subject'}{' '}
+              *
             </Label>
             <Input
               id="title"
               placeholder={
-                messageType === 'note' ? 'Brief description of the note' :
-                messageType === 'ticket' ? 'Describe the issue or request' :
-                'Email subject line'
+                messageType === 'note'
+                  ? 'Brief description of the note'
+                  : messageType === 'ticket'
+                    ? 'Describe the issue or request'
+                    : 'Email subject line'
               }
               {...register('title')}
             />
-            {errors.title && (
-              <p className="text-sm text-red-600">{errors.title.message}</p>
-            )}
+            {errors.title && <p className="text-sm text-red-600">{errors.title.message}</p>}
           </div>
 
           {/* Content */}
@@ -286,23 +292,27 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
             <Label htmlFor="content" className="flex items-center space-x-2">
               <FileText className="h-4 w-4" />
               <span>
-                {messageType === 'note' ? 'Note Content' :
-                 messageType === 'ticket' ? 'Ticket Description' : 'Message Content'} *
+                {messageType === 'note'
+                  ? 'Note Content'
+                  : messageType === 'ticket'
+                    ? 'Ticket Description'
+                    : 'Message Content'}{' '}
+                *
               </span>
             </Label>
             <Textarea
               id="content"
               placeholder={
-                messageType === 'note' ? 'Internal note content (visible only to admins)' :
-                messageType === 'ticket' ? 'Detailed description of the issue or request' :
-                'Your message to the customer'
+                messageType === 'note'
+                  ? 'Internal note content (visible only to admins)'
+                  : messageType === 'ticket'
+                    ? 'Detailed description of the issue or request'
+                    : 'Your message to the customer'
               }
               className="min-h-[120px]"
               {...register('content')}
             />
-            {errors.content && (
-              <p className="text-sm text-red-600">{errors.content.message}</p>
-            )}
+            {errors.content && <p className="text-sm text-red-600">{errors.content.message}</p>}
           </div>
 
           {/* Warning for customer-facing actions */}
@@ -315,10 +325,9 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
                     {messageType === 'message' ? 'Customer Notification' : 'Ticket Creation'}
                   </p>
                   <p>
-                    {messageType === 'message' 
+                    {messageType === 'message'
                       ? 'This message will be sent directly to the customer.'
-                      : 'This will create a support ticket and may notify the customer.'
-                    }
+                      : 'This will create a support ticket and may notify the customer.'}
                   </p>
                 </div>
               </div>
@@ -327,12 +336,7 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
         </form>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
@@ -343,11 +347,13 @@ export const CustomerMessageModal: React.FC<CustomerMessageModalProps> = ({
             {messageType === 'note' && <FileText className="h-4 w-4 mr-2" />}
             {messageType === 'message' && <Send className="h-4 w-4 mr-2" />}
             {messageType === 'ticket' && <Ticket className="h-4 w-4 mr-2" />}
-            {isSubmitting 
-              ? 'Processing...' 
-              : messageType === 'note' ? 'Save Note' :
-                messageType === 'ticket' ? 'Create Ticket' : 'Send Message'
-            }
+            {isSubmitting
+              ? 'Processing...'
+              : messageType === 'note'
+                ? 'Save Note'
+                : messageType === 'ticket'
+                  ? 'Create Ticket'
+                  : 'Send Message'}
           </Button>
         </DialogFooter>
       </DialogContent>

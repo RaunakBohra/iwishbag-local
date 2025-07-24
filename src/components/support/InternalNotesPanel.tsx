@@ -18,7 +18,7 @@ export const InternalNotesPanel: React.FC<InternalNotesPanelProps> = ({
   isLoading = false,
 }) => {
   // Filter to only show internal notes
-  const internalNotes = replies.filter(reply => reply.is_internal);
+  const internalNotes = replies.filter((reply) => reply.is_internal);
 
   if (isLoading) {
     return (
@@ -61,9 +61,7 @@ export const InternalNotesPanel: React.FC<InternalNotesPanelProps> = ({
             {internalNotes.length} {internalNotes.length === 1 ? 'note' : 'notes'}
           </Badge>
         </div>
-        <p className="text-sm text-gray-600">
-          Private notes visible only to support team members
-        </p>
+        <p className="text-sm text-gray-600">Private notes visible only to support team members</p>
       </CardHeader>
 
       <CardContent className="p-0">
@@ -114,9 +112,7 @@ export const InternalNotesPanel: React.FC<InternalNotesPanelProps> = ({
                   </div>
 
                   {/* Separator (except for last item) */}
-                  {index < internalNotes.length - 1 && (
-                    <Separator className="my-4" />
-                  )}
+                  {index < internalNotes.length - 1 && <Separator className="my-4" />}
                 </div>
               ))}
             </div>

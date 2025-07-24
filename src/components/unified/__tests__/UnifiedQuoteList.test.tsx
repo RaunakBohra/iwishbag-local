@@ -16,11 +16,11 @@ vi.mock('react-window', () => ({
       return children({
         index,
         style: { height: 120, top: index * 120 },
-        data: itemData
+        data: itemData,
       });
     });
     return <div data-testid="virtual-list">{items}</div>;
-  })
+  }),
 }));
 
 // Mock dependencies
@@ -58,7 +58,7 @@ const generateMockQuote = (id: string, overrides = {}): UnifiedQuote => ({
   created_at: '2024-01-15T10:00:00Z',
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 159.99,
-  item_price: 120.00,
+  item_price: 120.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -66,8 +66,8 @@ const generateMockQuote = (id: string, overrides = {}): UnifiedQuote => ({
     info: {
       name: 'John Doe',
       email: 'john@example.com',
-      phone: '+1234567890'
-    }
+      phone: '+1234567890',
+    },
   },
   items: [
     {
@@ -75,33 +75,31 @@ const generateMockQuote = (id: string, overrides = {}): UnifiedQuote => ({
       name: `Test Product ${id}`,
       description: 'A great test product',
       quantity: 2,
-      price: 60.00,
+      price: 60.0,
       product_url: `https://amazon.com/test-product-${id}`,
-      image_url: 'https://example.com/image.jpg'
-    }
+      image_url: 'https://example.com/image.jpg',
+    },
   ],
-  ...overrides
+  ...overrides,
 });
 
-const mockQuotes = Array.from({ length: 50 }, (_, i) => 
+const mockQuotes = Array.from({ length: 50 }, (_, i) =>
   generateMockQuote(`quote-${i}`, {
     status: ['pending', 'sent', 'approved', 'paid', 'rejected'][i % 5],
     destination_country: ['IN', 'NP', 'US', 'UK'][i % 4],
-    final_total_usd: 100 + (i * 10),
+    final_total_usd: 100 + i * 10,
     customer_data: {
       info: {
         name: `Customer ${i}`,
         email: `customer${i}@example.com`,
-        phone: `+123456789${i}`
-      }
-    }
-  })
+        phone: `+123456789${i}`,
+      },
+    },
+  }),
 );
 
 // Helper function to render component with providers
-const renderUnifiedQuoteList = (
-  props: Partial<Parameters<typeof UnifiedQuoteList>[0]> = {}
-) => {
+const renderUnifiedQuoteList = (props: Partial<Parameters<typeof UnifiedQuoteList>[0]> = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -124,7 +122,7 @@ const renderUnifiedQuoteList = (
           <UnifiedQuoteList {...defaultProps} />
         </QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -160,9 +158,9 @@ describe('UnifiedQuoteList', () => {
     });
 
     it('should show error state', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         error: 'Failed to load quotes',
-        quotes: []
+        quotes: [],
       });
 
       expect(screen.getByText('Error Loading Quotes')).toBeInTheDocument();
@@ -180,18 +178,18 @@ describe('UnifiedQuoteList', () => {
 
   describe('Virtual Scrolling', () => {
     it('should use virtual scrolling when enabled', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         quotes: mockQuotes, // All 50 quotes
-        enableVirtualScrolling: true
+        enableVirtualScrolling: true,
       });
 
       expect(screen.getByTestId('virtual-list')).toBeInTheDocument();
     });
 
     it('should render regular list when virtual scrolling disabled', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableVirtualScrolling: false,
-        quotes: mockQuotes.slice(0, 5)
+        quotes: mockQuotes.slice(0, 5),
       });
 
       expect(screen.queryByTestId('virtual-list')).not.toBeInTheDocument();
@@ -200,13 +198,11 @@ describe('UnifiedQuoteList', () => {
     });
 
     it('should handle large datasets efficiently', () => {
-      const largeDataset = Array.from({ length: 1000 }, (_, i) => 
-        generateMockQuote(`large-${i}`)
-      );
+      const largeDataset = Array.from({ length: 1000 }, (_, i) => generateMockQuote(`large-${i}`));
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         quotes: largeDataset,
-        enableVirtualScrolling: true
+        enableVirtualScrolling: true,
       });
 
       // Should only render visible items (mocked to 10)
@@ -225,26 +221,29 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnSearch = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSearch: true,
-        onSearch: mockOnSearch
+        onSearch: mockOnSearch,
       });
 
       const searchInput = screen.getByPlaceholderText('Search quotes...');
       await user.type(searchInput, 'customer0');
 
       // Should call search callback with debounced value
-      await waitFor(() => {
-        expect(mockOnSearch).toHaveBeenCalledWith('customer0');
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(mockOnSearch).toHaveBeenCalledWith('customer0');
+        },
+        { timeout: 1000 },
+      );
     });
 
     it('should show clear search button when search has value', async () => {
       const user = userEvent.setup();
-      
-      renderUnifiedQuoteList({ 
+
+      renderUnifiedQuoteList({
         enableSearch: true,
-        quotes: [] // Empty results to show clear button
+        quotes: [], // Empty results to show clear button
       });
 
       const searchInput = screen.getByPlaceholderText('Search quotes...');
@@ -257,13 +256,13 @@ describe('UnifiedQuoteList', () => {
 
     it('should perform fuzzy search with typos', async () => {
       const user = userEvent.setup();
-      
-      renderUnifiedQuoteList({ 
+
+      renderUnifiedQuoteList({
         quotes: [
-          generateMockQuote('fuzzy-1', { 
-            customer_data: { info: { name: 'John Smith' } }
-          })
-        ]
+          generateMockQuote('fuzzy-1', {
+            customer_data: { info: { name: 'John Smith' } },
+          }),
+        ],
       });
 
       const searchInput = screen.getByPlaceholderText('Search quotes...');
@@ -289,9 +288,9 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnSort = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSorting: true,
-        onSort: mockOnSort
+        onSort: mockOnSort,
       });
 
       const amountButton = screen.getByText('Amount');
@@ -299,7 +298,7 @@ describe('UnifiedQuoteList', () => {
 
       expect(mockOnSort).toHaveBeenCalledWith({
         field: 'final_total_usd',
-        direction: 'asc'
+        direction: 'asc',
       });
     });
 
@@ -307,25 +306,25 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnSort = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSorting: true,
-        onSort: mockOnSort
+        onSort: mockOnSort,
       });
 
       const dateButton = screen.getByText('Date');
-      
+
       // First click - ascending
       await user.click(dateButton);
       expect(mockOnSort).toHaveBeenCalledWith({
         field: 'created_at',
-        direction: 'asc'
+        direction: 'asc',
       });
 
       // Second click - descending
       await user.click(dateButton);
       expect(mockOnSort).toHaveBeenCalledWith({
         field: 'created_at',
-        direction: 'desc'
+        direction: 'desc',
       });
     });
 
@@ -354,9 +353,9 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnFilter = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableFilters: true,
-        onFilter: mockOnFilter
+        onFilter: mockOnFilter,
       });
 
       const filterButton = screen.getByRole('button', { name: /filter/i });
@@ -369,9 +368,9 @@ describe('UnifiedQuoteList', () => {
 
   describe('Selection', () => {
     it('should show selection controls when enabled', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSelection: true,
-        viewMode: 'admin'
+        viewMode: 'admin',
       });
 
       expect(screen.getByText('Select All')).toBeInTheDocument();
@@ -381,26 +380,26 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnSelectionChange = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSelection: true,
         viewMode: 'admin',
-        onSelectionChange: mockOnSelectionChange
+        onSelectionChange: mockOnSelectionChange,
       });
 
       const selectAllButton = screen.getByText('Select All');
       await user.click(selectAllButton);
 
       expect(mockOnSelectionChange).toHaveBeenCalledWith(
-        expect.arrayContaining(['quote-0', 'quote-1']) // All quote IDs
+        expect.arrayContaining(['quote-0', 'quote-1']), // All quote IDs
       );
     });
 
     it('should show bulk actions when items selected', async () => {
       const user = userEvent.setup();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSelection: true,
-        viewMode: 'admin'
+        viewMode: 'admin',
       });
 
       const selectAllButton = screen.getByText('Select All');
@@ -415,9 +414,9 @@ describe('UnifiedQuoteList', () => {
     it('should show selection count', async () => {
       const user = userEvent.setup();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSelection: true,
-        viewMode: 'admin'
+        viewMode: 'admin',
       });
 
       const selectAllButton = screen.getByText('Select All');
@@ -433,24 +432,24 @@ describe('UnifiedQuoteList', () => {
     it('should use cached results when available', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSmartCaching: true,
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       // Should log cache statistics in development
       expect(consoleSpy).toHaveBeenCalledWith(
         expect.stringContaining('Quote processing took'),
-        expect.any(String)
+        expect.any(String),
       );
 
       consoleSpy.mockRestore();
     });
 
     it('should show cache hit rate in detailed mode', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSmartCaching: true,
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       // Should show cache statistics badge
@@ -461,9 +460,9 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnItemAction = vi.fn();
 
-      const { rerender } = renderUnifiedQuoteList({ 
+      const { rerender } = renderUnifiedQuoteList({
         enableSmartCaching: true,
-        onItemAction: mockOnItemAction
+        onItemAction: mockOnItemAction,
       });
 
       // Simulate quote action that would invalidate cache
@@ -471,15 +470,15 @@ describe('UnifiedQuoteList', () => {
       mockOnItemAction('approve', firstQuote);
 
       // Re-render with updated data
-      const updatedQuotes = mockQuotes.map(q => 
-        q.id === firstQuote.id ? { ...q, status: 'approved' } : q
+      const updatedQuotes = mockQuotes.map((q) =>
+        q.id === firstQuote.id ? { ...q, status: 'approved' } : q,
       );
 
       rerender(
         <QueryClientProvider client={new QueryClient()}>
           <BrowserRouter>
             <QuoteThemeProvider>
-              <UnifiedQuoteList 
+              <UnifiedQuoteList
                 quotes={updatedQuotes.slice(0, 10)}
                 viewMode="customer"
                 layout="list"
@@ -488,7 +487,7 @@ describe('UnifiedQuoteList', () => {
               />
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       // Cache should be invalidated and data refreshed
@@ -500,15 +499,15 @@ describe('UnifiedQuoteList', () => {
     it('should log performance metrics in detailed mode', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         performanceMode: 'detailed',
-        quotes: mockQuotes
+        quotes: mockQuotes,
       });
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('UnifiedQuoteList Performance:'),
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -519,9 +518,9 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         enableSearch: true,
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       const searchInput = screen.getByPlaceholderText('Search quotes...');
@@ -530,7 +529,7 @@ describe('UnifiedQuoteList', () => {
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('Search took'),
-          expect.stringContaining('ms')
+          expect.stringContaining('ms'),
         );
       });
 
@@ -560,9 +559,9 @@ describe('UnifiedQuoteList', () => {
 
   describe('Pagination and Load More', () => {
     it('should show load more button when hasNextPage is true', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         hasNextPage: true,
-        totalCount: 100
+        totalCount: 100,
       });
 
       expect(screen.getByText('Load More Quotes')).toBeInTheDocument();
@@ -572,9 +571,9 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnLoadMore = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         hasNextPage: true,
-        onLoadMore: mockOnLoadMore
+        onLoadMore: mockOnLoadMore,
       });
 
       const loadMoreButton = screen.getByText('Load More Quotes');
@@ -584,9 +583,9 @@ describe('UnifiedQuoteList', () => {
     });
 
     it('should show loading state on load more button', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         hasNextPage: true,
-        loading: true
+        loading: true,
       });
 
       const loadMoreButton = screen.getByText('Load More Quotes');
@@ -594,9 +593,9 @@ describe('UnifiedQuoteList', () => {
     });
 
     it('should show total count when provided', () => {
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         quotes: mockQuotes.slice(0, 10),
-        totalCount: 50
+        totalCount: 50,
       });
 
       expect(screen.getByText('10 of 50')).toBeInTheDocument();
@@ -608,9 +607,9 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnItemAction = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         onItemAction: mockOnItemAction,
-        quotes: [generateMockQuote('actionable', { status: 'sent' })]
+        quotes: [generateMockQuote('actionable', { status: 'sent' })],
       });
 
       // This would depend on the UnifiedQuoteCard implementation
@@ -660,7 +659,7 @@ describe('UnifiedQuoteList', () => {
       renderUnifiedQuoteList({ enableSearch: true });
 
       const searchInput = screen.getByPlaceholderText('Search quotes...');
-      
+
       // Should be focusable
       await user.tab();
       expect(searchInput).toHaveFocus();
@@ -679,10 +678,10 @@ describe('UnifiedQuoteList', () => {
       const user = userEvent.setup();
       const mockOnRefresh = vi.fn();
 
-      renderUnifiedQuoteList({ 
+      renderUnifiedQuoteList({
         error: 'Network error',
         quotes: [],
-        onRefresh: mockOnRefresh
+        onRefresh: mockOnRefresh,
       });
 
       const retryButton = screen.getByText('Try Again');
@@ -692,9 +691,9 @@ describe('UnifiedQuoteList', () => {
     });
 
     it('should clear errors on successful data load', () => {
-      const { rerender } = renderUnifiedQuoteList({ 
+      const { rerender } = renderUnifiedQuoteList({
         error: 'Network error',
-        quotes: []
+        quotes: [],
       });
 
       expect(screen.getByText('Error Loading Quotes')).toBeInTheDocument();
@@ -704,7 +703,7 @@ describe('UnifiedQuoteList', () => {
         <QueryClientProvider client={new QueryClient()}>
           <BrowserRouter>
             <QuoteThemeProvider>
-              <UnifiedQuoteList 
+              <UnifiedQuoteList
                 quotes={mockQuotes.slice(0, 5)}
                 viewMode="customer"
                 layout="list"
@@ -712,7 +711,7 @@ describe('UnifiedQuoteList', () => {
               />
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       expect(screen.queryByText('Error Loading Quotes')).not.toBeInTheDocument();

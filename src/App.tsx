@@ -132,10 +132,14 @@ const TestEmail = React.lazy(() => import('@/pages/TestEmail'));
 const PaymentManagementPageNew = React.lazy(() => import('@/pages/admin/PaymentManagementPage'));
 const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
 const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
-const DuplicateComponentsPreview = React.lazy(() => import('@/pages/admin/DuplicateComponentsPreview'));
+const DuplicateComponentsPreview = React.lazy(
+  () => import('@/pages/admin/DuplicateComponentsPreview'),
+);
+const UserManagementPage = React.lazy(() => import('@/pages/admin/UserManagementPage'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
+import { PermissionsProvider } from '@/contexts/PermissionsContext';
 
 // Import test utilities in development
 if (import.meta.env.DEV) {
@@ -172,6 +176,7 @@ const router = createBrowserRouter([
           },
           { path: 'customers', element: <EnhancedCustomerManagementPage /> },
           { path: 'customers/:customerId', element: <CustomerProfile /> },
+          { path: 'users', element: <UserManagementPage /> },
           { path: 'support-tickets', element: <SupportTicketsPage /> },
           { path: 'auto-assignment', element: <AutoAssignmentPage /> },
           // { path: 'templates', element: <QuoteTemplatesPage /> }, // Component not found - commented out
@@ -449,17 +454,19 @@ function App() {
       <QueryProvider>
         <AuthProvider>
           <UserRoleEnsurer />
-          <AccessibilityProvider>
-            <StatusConfigProvider>
-              <HelmetProvider>
-                <Suspense fallback={null}>
-                  <RouterProvider router={router} />
-                </Suspense>
-                <PhoneCollectionProvider />
-                <Toaster />
-              </HelmetProvider>
-            </StatusConfigProvider>
-          </AccessibilityProvider>
+          <PermissionsProvider>
+            <AccessibilityProvider>
+              <StatusConfigProvider>
+                <HelmetProvider>
+                  <Suspense fallback={null}>
+                    <RouterProvider router={router} />
+                  </Suspense>
+                  <PhoneCollectionProvider />
+                  <Toaster />
+                </HelmetProvider>
+              </StatusConfigProvider>
+            </AccessibilityProvider>
+          </PermissionsProvider>
         </AuthProvider>
       </QueryProvider>
     </ErrorBoundary>

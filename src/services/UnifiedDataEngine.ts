@@ -4,6 +4,8 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
+import CurrencyConversionService from '@/services/CurrencyConversionService';
+import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import type {
   UnifiedQuote,
   UnifiedQuoteRow,
@@ -16,6 +18,21 @@ import type {
   QuoteCalculationResult,
 } from '@/types/unified-quote';
 
+// HSN Master Record interface
+export interface HSNMasterRecord {
+  hsn_code: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  keywords: string[];
+  minimum_valuation_usd?: number;
+  requires_currency_conversion: boolean;
+  weight_data: any;
+  tax_data: any;
+  classification_data: any;
+  is_active: boolean;
+}
+
 /**
  * Unified Data Engine - Single source of truth for all quote operations
  * Handles JSONB data transformation, validation, and smart operations
@@ -24,8 +41,11 @@ export class UnifiedDataEngine {
   private static instance: UnifiedDataEngine;
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private currencyService: CurrencyConversionService;
 
-  private constructor() {}
+  private constructor() {
+    this.currencyService = CurrencyConversionService.getInstance();
+  }
 
   static getInstance(): UnifiedDataEngine {
     if (!UnifiedDataEngine.instance) {
@@ -703,6 +723,345 @@ export class UnifiedDataEngine {
       status_breakdown: statusBreakdown,
       top_destinations: topDestinations,
     };
+  }
+
+  /**
+   * 🆕 NEW: HSN System Integration Methods
+   */
+
+  /**
+   * Get HSN record by code with caching
+   */
+  async getHSNRecord(hsnCode: string): Promise<HSNMasterRecord | null> {
+    const cacheKey = `hsn_${hsnCode}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('hsn_master')
+        .select('*')
+        .eq('hsn_code', hsnCode)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        console.warn(`HSN code ${hsnCode} not found in database`);
+        return null;
+      }
+
+      const record: HSNMasterRecord = {
+        hsn_code: data.hsn_code,
+        description: data.description,
+        category: data.category,
+        subcategory: data.subcategory,
+        keywords: data.keywords || [],
+        minimum_valuation_usd: data.minimum_valuation_usd,
+        requires_currency_conversion: data.requires_currency_conversion,
+        weight_data: data.weight_data || {},
+        tax_data: data.tax_data || {},
+        classification_data: data.classification_data || {},
+        is_active: data.is_active,
+      };
+
+      this.setCache(cacheKey, record);
+      return record;
+    } catch (error) {
+      console.error('Error fetching HSN record:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Search HSN records by keywords for classification
+   */
+  async searchHSNByKeywords(
+    keywords: string[],
+    category?: string,
+    limit: number = 10,
+  ): Promise<HSNMasterRecord[]> {
+    const cacheKey = `hsn_search_${keywords.join('_')}_${category || 'all'}_${limit}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      let query = supabase.from('hsn_master').select('*').eq('is_active', true);
+
+      // Add category filter if specified
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      // Use text search on keywords array
+      if (keywords.length > 0) {
+        const keywordQuery = keywords.map((k) => `"${k}"`).join(' | ');
+        query = query.textSearch('keywords', keywordQuery);
+      }
+
+      const { data, error } = await query.limit(limit);
+
+      if (error) {
+        console.error('Error searching HSN records:', error);
+        return [];
+      }
+
+      const records: HSNMasterRecord[] = (data || []).map((item) => ({
+        hsn_code: item.hsn_code,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        keywords: item.keywords || [],
+        minimum_valuation_usd: item.minimum_valuation_usd,
+        requires_currency_conversion: item.requires_currency_conversion,
+        weight_data: item.weight_data || {},
+        tax_data: item.tax_data || {},
+        classification_data: item.classification_data || {},
+        is_active: item.is_active,
+      }));
+
+      this.setCache(cacheKey, records);
+      return records;
+    } catch (error) {
+      console.error('Error searching HSN records:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get HSN records by category
+   */
+  async getHSNByCategory(category: string, limit: number = 20): Promise<HSNMasterRecord[]> {
+    const cacheKey = `hsn_category_${category}_${limit}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('hsn_master')
+        .select('*')
+        .eq('category', category)
+        .eq('is_active', true)
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching HSN records by category:', error);
+        return [];
+      }
+
+      const records: HSNMasterRecord[] = (data || []).map((item) => ({
+        hsn_code: item.hsn_code,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        keywords: item.keywords || [],
+        minimum_valuation_usd: item.minimum_valuation_usd,
+        requires_currency_conversion: item.requires_currency_conversion,
+        weight_data: item.weight_data || {},
+        tax_data: item.tax_data || {},
+        classification_data: item.classification_data || {},
+        is_active: item.is_active,
+      }));
+
+      this.setCache(cacheKey, records);
+      return records;
+    } catch (error) {
+      console.error('Error fetching HSN records by category:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🆕 NEW: Currency Conversion Integration Methods
+   */
+
+  /**
+   * Convert minimum valuation for quote items
+   */
+  async convertMinimumValuationsForQuote(quote: UnifiedQuote): Promise<{
+    conversions: Array<{
+      itemId: string;
+      itemName: string;
+      usdAmount: number;
+      convertedAmount: number;
+      originCurrency: string;
+      exchangeRate: number;
+    }>;
+    totalConversions: number;
+    failedConversions: number;
+  }> {
+    const conversions: Array<{
+      itemId: string;
+      itemName: string;
+      usdAmount: number;
+      convertedAmount: number;
+      originCurrency: string;
+      exchangeRate: number;
+    }> = [];
+
+    let totalConversions = 0;
+    let failedConversions = 0;
+
+    for (const item of quote.items) {
+      if (!item.hsn_code) continue;
+
+      try {
+        // Get HSN record to check if minimum valuation exists
+        const hsnRecord = await this.getHSNRecord(item.hsn_code);
+        if (
+          !hsnRecord ||
+          !hsnRecord.minimum_valuation_usd ||
+          !hsnRecord.requires_currency_conversion
+        ) {
+          continue;
+        }
+
+        // Convert minimum valuation
+        const conversion = await this.currencyService.convertMinimumValuation(
+          hsnRecord.minimum_valuation_usd,
+          quote.origin_country,
+        );
+
+        conversions.push({
+          itemId: item.id,
+          itemName: item.name,
+          usdAmount: hsnRecord.minimum_valuation_usd,
+          convertedAmount: conversion.convertedAmount,
+          originCurrency: conversion.originCurrency,
+          exchangeRate: conversion.exchangeRate,
+        });
+
+        totalConversions++;
+      } catch (error) {
+        console.error(`Failed to convert minimum valuation for item ${item.name}:`, error);
+        failedConversions++;
+      }
+    }
+
+    return {
+      conversions,
+      totalConversions,
+      failedConversions,
+    };
+  }
+
+  /**
+   * Enhance quote items with HSN classification and currency conversion data
+   */
+  async enhanceQuoteWithHSNData(quote: UnifiedQuote): Promise<UnifiedQuote> {
+    console.log('🏷️ [HSN] Enhancing quote with HSN data:', quote.id);
+
+    try {
+      const enhancedItems = await Promise.all(
+        quote.items.map(async (item) => {
+          const enhancedItem = { ...item };
+
+          // Auto-classify HSN code if missing
+          if (!item.hsn_code) {
+            try {
+              const classificationResult = await autoProductClassifier.classifyProduct({
+                productName: item.name,
+                productUrl: item.url,
+                category: item.category,
+              });
+
+              if (classificationResult.hsnCode && classificationResult.confidence > 0.6) {
+                enhancedItem.hsn_code = classificationResult.hsnCode;
+                console.log(
+                  `✅ [HSN] Auto-classified ${item.name} as HSN ${classificationResult.hsnCode}`,
+                );
+              }
+            } catch (error) {
+              console.error(`❌ [HSN] Classification failed for ${item.name}:`, error);
+            }
+          }
+
+          // Add HSN metadata if HSN code is available
+          if (enhancedItem.hsn_code) {
+            const hsnRecord = await this.getHSNRecord(enhancedItem.hsn_code);
+            if (hsnRecord) {
+              enhancedItem.hsn_data = {
+                description: hsnRecord.description,
+                category: hsnRecord.category,
+                subcategory: hsnRecord.subcategory,
+                minimum_valuation_usd: hsnRecord.minimum_valuation_usd,
+                requires_currency_conversion: hsnRecord.requires_currency_conversion,
+                typical_weight_kg: hsnRecord.weight_data?.typical_weights?.per_unit?.average,
+              };
+
+              // Add currency conversion data if applicable
+              if (hsnRecord.minimum_valuation_usd && hsnRecord.requires_currency_conversion) {
+                try {
+                  const conversion = await this.currencyService.convertMinimumValuation(
+                    hsnRecord.minimum_valuation_usd,
+                    quote.origin_country,
+                  );
+
+                  enhancedItem.minimum_valuation_conversion = {
+                    usd_amount: conversion.usdAmount,
+                    converted_amount: conversion.convertedAmount,
+                    origin_currency: conversion.originCurrency,
+                    exchange_rate: conversion.exchangeRate,
+                    valuation_method:
+                      item.price_usd >= conversion.convertedAmount
+                        ? 'actual_price'
+                        : 'minimum_valuation',
+                  };
+                } catch (error) {
+                  console.error(`❌ [CURRENCY] Conversion failed for ${item.name}:`, error);
+                }
+              }
+            }
+          }
+
+          return enhancedItem;
+        }),
+      );
+
+      const enhancedQuote: UnifiedQuote = {
+        ...quote,
+        items: enhancedItems,
+        operational_data: {
+          ...quote.operational_data,
+          hsn_enhancement: {
+            enhanced_at: new Date().toISOString(),
+            items_with_hsn: enhancedItems.filter((item) => item.hsn_code).length,
+            items_with_conversion: enhancedItems.filter((item) => item.minimum_valuation_conversion)
+              .length,
+            auto_classified_items: enhancedItems.filter(
+              (item) => item.hsn_code && !quote.items.find((orig) => orig.id === item.id)?.hsn_code,
+            ).length,
+          },
+        },
+      };
+
+      console.log('✅ [HSN] Quote enhancement completed:', {
+        quoteId: quote.id,
+        itemsWithHSN: enhancedItems.filter((item) => item.hsn_code).length,
+        itemsWithConversion: enhancedItems.filter((item) => item.minimum_valuation_conversion)
+          .length,
+      });
+
+      return enhancedQuote;
+    } catch (error) {
+      console.error('❌ [HSN] Quote enhancement failed:', error);
+      return quote; // Return original quote on failure
+    }
+  }
+
+  /**
+   * Clear HSN-related cache entries
+   */
+  clearHSNCache(): void {
+    const keysToDelete: string[] = [];
+
+    for (const [key] of this.cache) {
+      if (key.startsWith('hsn_')) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach((key) => this.cache.delete(key));
+    console.log(`🧹 Cleared ${keysToDelete.length} HSN cache entries`);
   }
 }
 

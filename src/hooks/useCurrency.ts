@@ -88,7 +88,11 @@ export function useCurrency(
     // Helper function for business-critical operations requiring exact exchange rates
     getExactExchangeRate: useCallback(async (originCountry: string, destinationCountry: string) => {
       try {
-        const rate = await unifiedConfigService.convertCurrency(1, originCountry, destinationCountry);
+        const rate = await unifiedConfigService.convertCurrency(
+          1,
+          originCountry,
+          destinationCountry,
+        );
         return rate;
       } catch (error) {
         console.error('Failed to get exact exchange rate:', error);

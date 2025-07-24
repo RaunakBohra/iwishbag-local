@@ -76,10 +76,12 @@ export const useCustomerManagementFixed = () => {
         let usersWithEmails: any[] = [];
 
         try {
-          const { data: authData, error: authError } =
-            await supabase.functions.invoke('get-users-with-emails', {
-              method: 'GET'
-            });
+          const { data: authData, error: authError } = await supabase.functions.invoke(
+            'get-users-with-emails',
+            {
+              method: 'GET',
+            },
+          );
 
           if (authError) {
             console.warn('[CustomerManagement] Edge function error, falling back:', authError);

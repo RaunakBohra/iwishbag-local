@@ -203,7 +203,7 @@ export class NotificationService {
       newStatus?: TicketStatus;
       replyMessage?: string;
       slaType?: 'response' | 'resolution';
-    }
+    },
   ): Promise<void> {
     try {
       const customerEmail = ticket.user_profile?.email;
@@ -215,14 +215,14 @@ export class NotificationService {
       const { subject, htmlContent, textContent } = this.generateTicketEmailContent(
         ticket,
         eventType,
-        additionalData
+        additionalData,
       );
 
       await this.sendEmail({
         to: customerEmail,
         subject,
         html: htmlContent,
-        text: textContent
+        text: textContent,
       });
 
       console.log(`✅ Ticket email notification sent: ${eventType} for ticket ${ticket.id}`);
@@ -238,7 +238,7 @@ export class NotificationService {
   private generateTicketEmailContent(
     ticket: TicketWithDetails,
     eventType: 'created' | 'status_updated' | 'reply_added' | 'sla_breach',
-    additionalData?: any
+    additionalData?: any,
   ): { subject: string; htmlContent: string; textContent: string } {
     const customerName = ticket.user_profile?.full_name || 'Customer';
     const ticketId = ticket.id.slice(0, 8);
@@ -288,7 +288,7 @@ export class NotificationService {
               </div>
             </div>
           `,
-          textContent: `Support Ticket Created - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nThank you for contacting iwishBag support. We've successfully created your help request and our team will respond shortly.\n\nTicket Details:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Category: ${ticket.category}\n- Priority: ${ticket.priority}\n- Related to: ${quoteInfo}\n\nWhat happens next?\nOur support team will review your request and respond within our service level agreement timeframes.\n\nView your tickets: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team\nsupport@iwishbag.com`
+          textContent: `Support Ticket Created - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nThank you for contacting iwishBag support. We've successfully created your help request and our team will respond shortly.\n\nTicket Details:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Category: ${ticket.category}\n- Priority: ${ticket.priority}\n- Related to: ${quoteInfo}\n\nWhat happens next?\nOur support team will review your request and respond within our service level agreement timeframes.\n\nView your tickets: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team\nsupport@iwishbag.com`,
         };
 
       case 'status_updated':
@@ -327,7 +327,7 @@ export class NotificationService {
               </div>
             </div>
           `,
-          textContent: `Ticket Status Updated - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nThe status of your support ticket has been updated.\n\nStatus Change:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Previous Status: ${oldStatus}\n- Current Status: ${newStatus}\n\nView ticket: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`
+          textContent: `Ticket Status Updated - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nThe status of your support ticket has been updated.\n\nStatus Change:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Previous Status: ${oldStatus}\n- Current Status: ${newStatus}\n\nView ticket: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`,
         };
 
       case 'reply_added':
@@ -371,7 +371,7 @@ export class NotificationService {
               </div>
             </div>
           `,
-          textContent: `New Reply - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nOur support team has added a new reply to your ticket.\n\nNew Message:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Message Preview: ${replyMessage.length > 200 ? replyMessage.substring(0, 200) + '...' : replyMessage}\n\nPlease log in to view the full message: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`
+          textContent: `New Reply - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nOur support team has added a new reply to your ticket.\n\nNew Message:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- Message Preview: ${replyMessage.length > 200 ? replyMessage.substring(0, 200) + '...' : replyMessage}\n\nPlease log in to view the full message: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`,
         };
 
       case 'sla_breach':
@@ -415,14 +415,14 @@ export class NotificationService {
               </div>
             </div>
           `,
-          textContent: `Service Level Alert - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nWe want to keep you informed about your support ticket. While we strive to meet our service level commitments, your ${slaType} is taking longer than expected.\n\nStatus Update:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- SLA Type: ${slaType} time\n- Current Priority: ${ticket.priority}\n\nWe're on it! Our team is actively working on your request and you will receive an update soon.\n\nCheck status: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`
+          textContent: `Service Level Alert - iwishBag Help Request #${ticketId}\n\nHello ${customerName},\n\nWe want to keep you informed about your support ticket. While we strive to meet our service level commitments, your ${slaType} is taking longer than expected.\n\nStatus Update:\n- Ticket ID: #${ticketId}\n- Subject: ${ticket.subject}\n- SLA Type: ${slaType} time\n- Current Priority: ${ticket.priority}\n\nWe're on it! Our team is actively working on your request and you will receive an update soon.\n\nCheck status: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.iwishbag.com'}/support/tickets\n\niwishBag Support Team`,
         };
 
       default:
         return {
           subject: `Ticket Update - iwishBag Help Request #${ticketId}`,
           htmlContent: `<p>Hello ${customerName}, your ticket #${ticketId} has been updated.</p>`,
-          textContent: `Hello ${customerName}, your ticket #${ticketId} has been updated.`
+          textContent: `Hello ${customerName}, your ticket #${ticketId} has been updated.`,
         };
     }
   }
@@ -440,7 +440,7 @@ export class NotificationService {
 
       // Generate HTML content from template
       const htmlContent = this.generateEmailTemplate(data.templateName, data.variables);
-      
+
       // Send to each recipient
       const emailPromises = data.to.map(async (email) => {
         const { error } = await supabase.functions.invoke('send-email', {
@@ -525,7 +525,7 @@ export class NotificationService {
     `;
 
     let content = '';
-    
+
     switch (templateName) {
       case 'New Customer Message Notification':
         content = `
@@ -585,9 +585,11 @@ export class NotificationService {
           <h2 style="color: #333; margin-top: 0;">iwishBag Notification</h2>
           <p>You have a new notification from iwishBag.</p>
           <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            ${Object.entries(variables).map(([key, value]) => 
-              `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`
-            ).join('')}
+            ${Object.entries(variables)
+              .map(
+                ([key, value]) => `<p style="margin: 5px 0;"><strong>${key}:</strong> ${value}</p>`,
+              )
+              .join('')}
           </div>
         `;
     }

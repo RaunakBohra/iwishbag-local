@@ -6,7 +6,7 @@ import { businessHoursService } from '@/config/businessHours';
 const Footer = () => {
   // Business hours status
   const isBusinessHours = businessHoursService.isCurrentlyBusinessHours();
-  
+
   // Default footer settings
   const homePageSettings = {
     website_logo_url:
@@ -86,17 +86,17 @@ const Footer = () => {
             >
               Get Help
             </Link>
-            
+
             {/* Business Hours Status */}
             <div className="flex items-center gap-1 text-xs">
-              <Clock className={`w-3 h-3 ${isBusinessHours ? 'text-green-600' : 'text-orange-600'}`} />
+              <Clock
+                className={`w-3 h-3 ${isBusinessHours ? 'text-green-600' : 'text-orange-600'}`}
+              />
               <span className={isBusinessHours ? 'text-green-600' : 'text-orange-600'}>
                 {isBusinessHours ? 'Support Online' : 'Support Offline'}
               </span>
             </div>
-            <div className="text-xs text-gray-500 text-center">
-              Mon-Fri 10AM-5PM IST
-            </div>
+            <div className="text-xs text-gray-500 text-center">Mon-Fri 10AM-5PM IST</div>
           </div>
           {/* Legal */}
           <div className="flex flex-col items-center min-w-[80px]">

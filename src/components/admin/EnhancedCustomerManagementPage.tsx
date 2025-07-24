@@ -19,18 +19,20 @@ import { useToast } from '@/hooks/use-toast';
 export const EnhancedCustomerManagementPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   // Modal states
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [bulkTagOpen, setBulkTagOpen] = useState(false);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const [customerMessageOpen, setCustomerMessageOpen] = useState(false);
   const [editCustomerOpen, setEditCustomerOpen] = useState(false);
-  
+
   // Modal data
   const [selectedCustomersForBulk, setSelectedCustomersForBulk] = useState<Customer[]>([]);
   const [selectedCustomersForEmail, setSelectedCustomersForEmail] = useState<Customer[]>([]);
-  const [selectedCustomerForMessage, setSelectedCustomerForMessage] = useState<Customer | null>(null);
+  const [selectedCustomerForMessage, setSelectedCustomerForMessage] = useState<Customer | null>(
+    null,
+  );
   const [selectedCustomerForEdit, setSelectedCustomerForEdit] = useState<Customer | null>(null);
 
   const { customers, isLoading, updateCodMutation, updateNotesMutation, updateProfileMutation } =
@@ -84,7 +86,7 @@ export const EnhancedCustomerManagementPage = () => {
   // Export functionality
   const exportCustomers = () => {
     if (!customers) return;
-    
+
     const csvContent =
       'data:text/csv;charset=utf-8,' +
       'ID,Name,Email,Location,Join Date,Total Spent,Orders,Avg Order Value,Status\n' +
@@ -120,21 +122,21 @@ export const EnhancedCustomerManagementPage = () => {
   };
 
   const handleBulkEmail = (customerIds: string[]) => {
-    const selectedCustomers = customers?.filter(c => customerIds.includes(c.id)) || [];
+    const selectedCustomers = customers?.filter((c) => customerIds.includes(c.id)) || [];
     setSelectedCustomersForEmail(selectedCustomers);
     setSendEmailOpen(true);
   };
 
   const handleBulkTag = (customerIds: string[]) => {
-    const selectedCustomers = customers?.filter(c => customerIds.includes(c.id)) || [];
+    const selectedCustomers = customers?.filter((c) => customerIds.includes(c.id)) || [];
     setSelectedCustomersForBulk(selectedCustomers);
     setBulkTagOpen(true);
   };
 
   const handleBulkExport = (customerIds: string[]) => {
-    const selectedCustomers = customers?.filter(c => customerIds.includes(c.id)) || [];
+    const selectedCustomers = customers?.filter((c) => customerIds.includes(c.id)) || [];
     if (selectedCustomers.length === 0) return;
-    
+
     const csvContent =
       'data:text/csv;charset=utf-8,' +
       'ID,Name,Email,Location,Join Date,Total Spent,Orders,Avg Order Value,Status\n' +
@@ -165,7 +167,7 @@ export const EnhancedCustomerManagementPage = () => {
   };
 
   const handleEditCustomer = (customerId: string) => {
-    const customer = customers?.find(c => c.id === customerId);
+    const customer = customers?.find((c) => c.id === customerId);
     if (customer) {
       setSelectedCustomerForEdit(customer);
       setEditCustomerOpen(true);
@@ -173,7 +175,7 @@ export const EnhancedCustomerManagementPage = () => {
   };
 
   const handleSendEmail = (customerId: string, email: string) => {
-    const customer = customers?.find(c => c.id === customerId);
+    const customer = customers?.find((c) => c.id === customerId);
     if (customer) {
       setSelectedCustomersForEmail([customer]);
       setSendEmailOpen(true);
@@ -181,7 +183,7 @@ export const EnhancedCustomerManagementPage = () => {
   };
 
   const handleViewMessages = (customerId: string) => {
-    const customer = customers?.find(c => c.id === customerId);
+    const customer = customers?.find((c) => c.id === customerId);
     if (customer) {
       setSelectedCustomerForMessage(customer);
       setCustomerMessageOpen(true);
@@ -225,9 +227,7 @@ export const EnhancedCustomerManagementPage = () => {
           isLoading={isLoading}
           onUpdateCod={handleUpdateCod}
           onUpdateNotes={updateNotesMutation.mutate}
-          onUpdateName={(userId, name) =>
-            updateProfileMutation.mutate({ userId, fullName: name })
-          }
+          onUpdateName={(userId, name) => updateProfileMutation.mutate({ userId, fullName: name })}
           isUpdating={
             updateCodMutation.isPending ||
             updateNotesMutation.isPending ||
@@ -243,26 +243,23 @@ export const EnhancedCustomerManagementPage = () => {
           onViewMessages={handleViewMessages}
           onViewOrders={handleViewOrders}
         />
-        
+
         {/* Modals */}
-        <AddCustomerModal
-          open={addCustomerOpen}
-          onOpenChange={setAddCustomerOpen}
-        />
-        
+        <AddCustomerModal open={addCustomerOpen} onOpenChange={setAddCustomerOpen} />
+
         <BulkTagModal
           open={bulkTagOpen}
           onOpenChange={setBulkTagOpen}
           selectedCustomers={selectedCustomersForBulk}
         />
-        
+
         <SendEmailModal
           open={sendEmailOpen}
           onOpenChange={setSendEmailOpen}
           recipients={selectedCustomersForEmail}
           isBulk={selectedCustomersForEmail.length > 1}
         />
-        
+
         {selectedCustomerForMessage && (
           <CustomerMessageModal
             open={customerMessageOpen}
@@ -270,7 +267,7 @@ export const EnhancedCustomerManagementPage = () => {
             customer={selectedCustomerForMessage}
           />
         )}
-        
+
         {selectedCustomerForEdit && (
           <EditCustomerModal
             open={editCustomerOpen}

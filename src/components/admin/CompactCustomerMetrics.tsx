@@ -87,12 +87,15 @@ export const CompactCustomerMetrics: React.FC<CompactCustomerMetricsProps> = ({
   const newThisMonth = customers?.filter((c) => new Date(c.created_at) >= monthAgo)?.length || 0;
 
   // Revenue and order metrics
-  const totalRevenue = customerAnalytics?.reduce((sum, analytics) => sum + analytics.totalSpent, 0) || 0;
-  const totalOrders = customerAnalytics?.reduce((sum, analytics) => sum + analytics.orderCount, 0) || 0;
+  const totalRevenue =
+    customerAnalytics?.reduce((sum, analytics) => sum + analytics.totalSpent, 0) || 0;
+  const totalOrders =
+    customerAnalytics?.reduce((sum, analytics) => sum + analytics.orderCount, 0) || 0;
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
   // Customer health (simplified calculation)
-  const healthyCustomers = customerAnalytics?.filter(a => a.totalSpent > 100 && a.orderCount > 1)?.length || 0;
+  const healthyCustomers =
+    customerAnalytics?.filter((a) => a.totalSpent > 100 && a.orderCount > 1)?.length || 0;
   const healthPercentage = totalCustomers > 0 ? (healthyCustomers / totalCustomers) * 100 : 0;
 
   const metrics: MetricItem[] = [
@@ -136,7 +139,8 @@ export const CompactCustomerMetrics: React.FC<CompactCustomerMetricsProps> = ({
       id: 'active-customers',
       label: 'Active',
       value: `${activeCustomers}`,
-      change: totalCustomers > 0 ? `${((activeCustomers / totalCustomers) * 100).toFixed(0)}%` : '0%',
+      change:
+        totalCustomers > 0 ? `${((activeCustomers / totalCustomers) * 100).toFixed(0)}%` : '0%',
       trend: activeCustomers > totalCustomers * 0.6 ? 'up' : 'neutral',
       color: 'text-green-700',
       icon: UserCheck,
@@ -200,29 +204,33 @@ export const CompactCustomerMetrics: React.FC<CompactCustomerMetricsProps> = ({
             >
               {/* Icon & Trend Indicator */}
               <div className="flex items-center justify-between mb-3">
-                <div className={cn("p-1.5 rounded-md bg-gray-100 group-hover:bg-white transition-colors", metric.color)}>
+                <div
+                  className={cn(
+                    'p-1.5 rounded-md bg-gray-100 group-hover:bg-white transition-colors',
+                    metric.color,
+                  )}
+                >
                   <Icon className="w-4 h-4" />
                 </div>
-                <div className={cn("flex items-center space-x-1 text-xs font-medium px-2 py-1 rounded-full", getTrendColor(metric.trend))}>
+                <div
+                  className={cn(
+                    'flex items-center space-x-1 text-xs font-medium px-2 py-1 rounded-full',
+                    getTrendColor(metric.trend),
+                  )}
+                >
                   {getTrendIcon(metric.trend)}
                 </div>
               </div>
 
               {/* Value */}
               <div className="mb-2">
-                <div className={cn("text-2xl font-bold", metric.color)}>
-                  {metric.value}
-                </div>
+                <div className={cn('text-2xl font-bold', metric.color)}>{metric.value}</div>
               </div>
 
               {/* Label & Change */}
               <div className="space-y-1">
-                <div className="text-sm font-medium text-gray-700">
-                  {metric.label}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {metric.change}
-                </div>
+                <div className="text-sm font-medium text-gray-700">{metric.label}</div>
+                <div className="text-xs text-gray-500">{metric.change}</div>
               </div>
             </div>
           );

@@ -60,7 +60,7 @@ export const NewMessageForm = ({
   const attachmentInputRef = useRef<HTMLInputElement>(null);
 
   // Filter out current user from recipient options to prevent self-messaging
-  const availableRecipients = users.filter(user => user.id !== currentUser?.id);
+  const availableRecipients = users.filter((user) => user.id !== currentUser?.id);
 
   // Update content when initialContent changes (for templates)
   useEffect(() => {
@@ -79,15 +79,15 @@ export const NewMessageForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    
+
     // Better validation for admin users
     if (isAdmin && !recipientId) {
       console.error('Admin must select a recipient');
       return;
     }
-    
+
     // Ensure recipientId is properly null or a valid string
-    const validRecipientId = isAdmin ? (recipientId || null) : null;
+    const validRecipientId = isAdmin ? recipientId || null : null;
 
     sendMessageMutation.mutate(
       {
@@ -131,7 +131,8 @@ export const NewMessageForm = ({
                 className="w-full justify-between font-normal"
               >
                 {recipientId
-                  ? availableRecipients.find((user) => user.id === recipientId)?.email || 'Selected user'
+                  ? availableRecipients.find((user) => user.id === recipientId)?.email ||
+                    'Selected user'
                   : 'Select a user to message'}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>

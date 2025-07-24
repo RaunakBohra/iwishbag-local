@@ -10,16 +10,14 @@ interface QuoteDetailUnifiedProps {
 
 const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = false }) => {
   const navigate = useNavigate();
-  
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow-lg text-center">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-4">
-          System Under Maintenance
-        </h1>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-4">System Under Maintenance</h1>
         <p className="text-gray-600 mb-6">
-          The quote detail system is being upgraded to a more efficient unified interface. 
-          This will be available soon with improved performance and features.
+          The quote detail system is being upgraded to a more efficient unified interface. This will
+          be available soon with improved performance and features.
         </p>
         <Button
           onClick={() => navigate(isShareToken ? '/' : '/dashboard')}

@@ -12,7 +12,7 @@ vi.mock('../../../services/CurrencyService', () => ({
     getCurrencyForCountrySync: vi.fn((countryCode) => {
       const currencies = {
         US: 'USD',
-        IN: 'INR', 
+        IN: 'INR',
         NP: 'NPR',
         GB: 'GBP',
         EU: 'EUR',

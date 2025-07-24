@@ -8,8 +8,9 @@
  * Uses K/M suffixes for space efficiency
  */
 export const formatCurrencyCompact = (amount: number, currency = 'USD'): string => {
-  const symbol = currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'NPR' ? 'रू' : currency;
-  
+  const symbol =
+    currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'NPR' ? 'रू' : currency;
+
   if (amount >= 1000000) {
     return `${symbol}${(amount / 1000000).toFixed(1)}M`;
   } else if (amount >= 1000) {
@@ -23,7 +24,8 @@ export const formatCurrencyCompact = (amount: number, currency = 'USD'): string 
  * Full precision for detailed views
  */
 export const formatCurrencyAdmin = (amount: number, currency = 'USD'): string => {
-  const symbol = currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'NPR' ? 'रू' : currency;
+  const symbol =
+    currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'NPR' ? 'रू' : currency;
   return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
@@ -41,7 +43,7 @@ export const formatPercentageAdmin = (value: number, decimals = 1): string => {
  */
 export const formatChangePercentage = (
   current: number,
-  previous: number
+  previous: number,
 ): { change: string; type: 'positive' | 'negative' | 'neutral' } => {
   if (previous === 0) return { change: 'N/A', type: 'neutral' };
 

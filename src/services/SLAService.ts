@@ -93,7 +93,7 @@ export class SLAService {
   async getSLAPolicy(priority: string): Promise<SLAPolicy | null> {
     try {
       const policies = await this.getSLAPolicies();
-      return policies.find(p => p.priority === priority) || null;
+      return policies.find((p) => p.priority === priority) || null;
     } catch (error) {
       console.error('❌ Error getting SLA policy for priority:', priority, error);
       return null;
@@ -168,7 +168,7 @@ export class SLAService {
         is_breached: !isMet,
         time_remaining: 0,
         percentage_used: 100,
-        status: isMet ? 'met' as const : 'breached' as const,
+        status: isMet ? ('met' as const) : ('breached' as const),
       };
     }
 
@@ -179,7 +179,7 @@ export class SLAService {
     const percentageUsed = Math.min(100, Math.max(0, (elapsedTime / totalTime) * 100));
 
     let status: 'safe' | 'warning' | 'critical' | 'breached';
-    
+
     if (isBreach || timeRemaining <= 0) {
       status = 'breached';
     } else if (percentageUsed >= 90) {
@@ -256,7 +256,7 @@ export class SLAService {
   }> {
     try {
       const { data, error } = await supabase.rpc('get_sla_summary');
-      
+
       if (error) {
         console.error('❌ Error getting SLA summary:', error);
         return this.getDefaultSLASummary();
@@ -275,7 +275,7 @@ export class SLAService {
   async updateSLABreachFlags(): Promise<number> {
     try {
       const { data, error } = await supabase.rpc('update_sla_breach_flags');
-      
+
       if (error) {
         console.error('❌ Error updating SLA breach flags:', error);
         return 0;
@@ -295,7 +295,8 @@ export class SLAService {
     try {
       const { data, error } = await supabase
         .from('support_tickets')
-        .select(`
+        .select(
+          `
           id,
           subject,
           priority,
@@ -306,8 +307,11 @@ export class SLAService {
           first_response_at,
           resolved_at,
           sla_breach_flags
-        `)
-        .or('sla_breach_flags->>response_breach.eq.true,sla_breach_flags->>resolution_breach.eq.true')
+        `,
+        )
+        .or(
+          'sla_breach_flags->>response_breach.eq.true,sla_breach_flags->>resolution_breach.eq.true',
+        )
         .order('created_at', { ascending: false });
 
       if (error) {

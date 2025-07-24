@@ -104,7 +104,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
     error: ticketError,
   } = useQuery({
     queryKey: QUERY_KEYS.ticket(selectedTicket || ''),
-    queryFn: () => selectedTicket ? unifiedSupportEngine.getTicketById(selectedTicket) : null,
+    queryFn: () => (selectedTicket ? unifiedSupportEngine.getTicketById(selectedTicket) : null),
     enabled: !!selectedTicket,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
@@ -112,12 +112,10 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
   /**
    * Get ticket interactions
    */
-  const {
-    data: interactions = [],
-    isLoading: interactionsLoading,
-  } = useQuery({
+  const { data: interactions = [], isLoading: interactionsLoading } = useQuery({
     queryKey: QUERY_KEYS.interactions(selectedTicket || ''),
-    queryFn: () => selectedTicket ? unifiedSupportEngine.getTicketInteractions(selectedTicket) : [],
+    queryFn: () =>
+      selectedTicket ? unifiedSupportEngine.getTicketInteractions(selectedTicket) : [],
     enabled: !!selectedTicket,
     staleTime: 1 * 60 * 1000, // 1 minute
   });
@@ -125,10 +123,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
   /**
    * Get support statistics (admin only)
    */
-  const {
-    data: stats,
-    isLoading: statsLoading,
-  } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: QUERY_KEYS.stats,
     queryFn: () => unifiedSupportEngine.getTicketStats(),
     enabled: isAdmin,
@@ -144,8 +139,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
    * Create new ticket
    */
   const createTicketMutation = useMutation({
-    mutationFn: (ticketData: CreateTicketData) => 
-      unifiedSupportEngine.createTicket(ticketData),
+    mutationFn: (ticketData: CreateTicketData) => unifiedSupportEngine.createTicket(ticketData),
     onSuccess: (newTicket) => {
       if (newTicket) {
         queryClient.invalidateQueries({ queryKey: ['support', 'tickets'] });
@@ -249,7 +243,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
     async (ticketData: CreateTicketData) => {
       return createTicketMutation.mutateAsync(ticketData);
     },
-    [createTicketMutation]
+    [createTicketMutation],
   );
 
   /**
@@ -259,7 +253,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
     async (ticketId: string, status: TicketStatus, reason?: string) => {
       return updateStatusMutation.mutateAsync({ ticketId, status, reason });
     },
-    [updateStatusMutation]
+    [updateStatusMutation],
   );
 
   /**
@@ -274,7 +268,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
         isInternal,
       });
     },
-    [addInteractionMutation]
+    [addInteractionMutation],
   );
 
   /**
@@ -289,7 +283,7 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
         isInternal: true,
       });
     },
-    [addInteractionMutation]
+    [addInteractionMutation],
   );
 
   /**
@@ -299,33 +293,39 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
     async (ticketId: string, assigneeId: string, reason?: string) => {
       return assignTicketMutation.mutateAsync({ ticketId, assigneeId, reason });
     },
-    [assignTicketMutation]
+    [assignTicketMutation],
   );
 
   /**
    * Get tickets with interactions count
    */
-  const ticketsWithInteractions: TicketWithInteractions[] = tickets.map(ticket => ({
+  const ticketsWithInteractions: TicketWithInteractions[] = tickets.map((ticket) => ({
     ...ticket,
-    interactionCount: interactions.filter(i => i.support_id === ticket.id).length,
+    interactionCount: interactions.filter((i) => i.support_id === ticket.id).length,
     lastInteraction: interactions
-      .filter(i => i.support_id === ticket.id)
+      .filter((i) => i.support_id === ticket.id)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0],
   }));
 
   /**
    * Filter tickets by status
    */
-  const getTicketsByStatus = useCallback((status: TicketStatus) => {
-    return tickets.filter(ticket => ticket.ticket_data?.status === status);
-  }, [tickets]);
+  const getTicketsByStatus = useCallback(
+    (status: TicketStatus) => {
+      return tickets.filter((ticket) => ticket.ticket_data?.status === status);
+    },
+    [tickets],
+  );
 
   /**
    * Filter tickets by priority
    */
-  const getTicketsByPriority = useCallback((priority: TicketPriority) => {
-    return tickets.filter(ticket => ticket.ticket_data?.priority === priority);
-  }, [tickets]);
+  const getTicketsByPriority = useCallback(
+    (priority: TicketPriority) => {
+      return tickets.filter((ticket) => ticket.ticket_data?.priority === priority);
+    },
+    [tickets],
+  );
 
   /**
    * Get urgent tickets
@@ -335,12 +335,12 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
   /**
    * Get unassigned tickets
    */
-  const unassignedTickets = tickets.filter(ticket => !ticket.ticket_data?.assigned_to);
+  const unassignedTickets = tickets.filter((ticket) => !ticket.ticket_data?.assigned_to);
 
   /**
    * Get overdue tickets (simplified logic)
    */
-  const overdueTickets = tickets.filter(ticket => {
+  const overdueTickets = tickets.filter((ticket) => {
     if (!ticket.sla_data) return false;
     return ticket.sla_data.response_sla?.is_breached || ticket.sla_data.resolution_sla?.is_breached;
   });
@@ -350,24 +350,33 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
   // ============================================================================
 
   const updateFilters = useCallback((newFilters: Partial<TicketFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
 
   const clearFilters = useCallback(() => {
     setFilters({});
   }, []);
 
-  const applyStatusFilter = useCallback((status: TicketStatus[]) => {
-    updateFilters({ status });
-  }, [updateFilters]);
+  const applyStatusFilter = useCallback(
+    (status: TicketStatus[]) => {
+      updateFilters({ status });
+    },
+    [updateFilters],
+  );
 
-  const applyPriorityFilter = useCallback((priority: TicketPriority[]) => {
-    updateFilters({ priority });
-  }, [updateFilters]);
+  const applyPriorityFilter = useCallback(
+    (priority: TicketPriority[]) => {
+      updateFilters({ priority });
+    },
+    [updateFilters],
+  );
 
-  const applyCategoryFilter = useCallback((category: TicketCategory[]) => {
-    updateFilters({ category });
-  }, [updateFilters]);
+  const applyCategoryFilter = useCallback(
+    (category: TicketCategory[]) => {
+      updateFilters({ category });
+    },
+    [updateFilters],
+  );
 
   // ============================================================================
   // Utility Functions
@@ -447,8 +456,8 @@ export function useUnifiedSupport(props: UseUnifiedSupportProps = {}) {
  * Hook for customer support (user-specific tickets)
  */
 export function useCustomerSupport(userId: string) {
-  return useUnifiedSupport({ 
-    userId, 
+  return useUnifiedSupport({
+    userId,
     isAdmin: false,
     autoRefresh: true,
     refreshInterval: 60000, // 1 minute
@@ -459,7 +468,7 @@ export function useCustomerSupport(userId: string) {
  * Hook for admin support dashboard
  */
 export function useAdminSupport() {
-  return useUnifiedSupport({ 
+  return useUnifiedSupport({
     isAdmin: true,
     autoRefresh: true,
     refreshInterval: 30000, // 30 seconds
@@ -470,11 +479,11 @@ export function useAdminSupport() {
  * Hook for support statistics only
  */
 export function useSupportStats() {
-  const { stats, statsLoading, refreshData } = useUnifiedSupport({ 
+  const { stats, statsLoading, refreshData } = useUnifiedSupport({
     isAdmin: true,
     autoRefresh: true,
   });
-  
+
   return {
     stats,
     isLoading: statsLoading,
@@ -487,7 +496,7 @@ export function useSupportStats() {
  */
 export function useTicketDetails(ticketId: string) {
   const support = useUnifiedSupport({ autoRefresh: false });
-  
+
   useEffect(() => {
     support.selectTicket(ticketId);
   }, [ticketId, support]);

@@ -52,11 +52,11 @@ const mockExistingQuote: UnifiedQuote = {
     info: {
       name: 'John Doe',
       email: 'john@example.com',
-      phone: '+1234567890'
-    }
+      phone: '+1234567890',
+    },
   },
   shipping_address: {
-    formatted: '123 Test St, Mumbai, Maharashtra 400001, India'
+    formatted: '123 Test St, Mumbai, Maharashtra 400001, India',
   },
   items: [
     {
@@ -64,18 +64,16 @@ const mockExistingQuote: UnifiedQuote = {
       name: 'Test Product',
       description: 'A great test product',
       quantity: 2,
-      price: 60.00,
+      price: 60.0,
       product_url: 'https://amazon.com/test-product',
-      image_url: 'https://example.com/image.jpg'
-    }
+      image_url: 'https://example.com/image.jpg',
+    },
   ],
-  notes: 'Test special instructions'
+  notes: 'Test special instructions',
 };
 
 // Helper function to render component with providers
-const renderUnifiedQuoteForm = (
-  props: Partial<Parameters<typeof UnifiedQuoteForm>[0]> = {}
-) => {
+const renderUnifiedQuoteForm = (props: Partial<Parameters<typeof UnifiedQuoteForm>[0]> = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -97,7 +95,7 @@ const renderUnifiedQuoteForm = (
           <UnifiedQuoteForm {...defaultProps} />
         </QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -122,9 +120,9 @@ describe('UnifiedQuoteForm', () => {
     });
 
     it('should show different title for edit mode', () => {
-      renderUnifiedQuoteForm({ 
+      renderUnifiedQuoteForm({
         mode: 'edit',
-        existingQuote: mockExistingQuote
+        existingQuote: mockExistingQuote,
       });
 
       expect(screen.getByText('Update Quote')).toBeInTheDocument();
@@ -132,9 +130,9 @@ describe('UnifiedQuoteForm', () => {
     });
 
     it('should pre-populate fields in edit mode', () => {
-      renderUnifiedQuoteForm({ 
+      renderUnifiedQuoteForm({
         mode: 'edit',
-        existingQuote: mockExistingQuote
+        existingQuote: mockExistingQuote,
       });
 
       expect(screen.getByDisplayValue('https://amazon.com/test-product')).toBeInTheDocument();
@@ -238,8 +236,8 @@ describe('UnifiedQuoteForm', () => {
       const user = userEvent.setup();
       renderUnifiedQuoteForm({ enableFileUpload: true });
 
-      const dangerousFile = new File(['malicious code'], 'virus.exe', { 
-        type: 'application/octet-stream' 
+      const dangerousFile = new File(['malicious code'], 'virus.exe', {
+        type: 'application/octet-stream',
       });
 
       const fileInput = screen.getByLabelText(/select files/i).closest('input[type="file"]');
@@ -254,8 +252,8 @@ describe('UnifiedQuoteForm', () => {
       const user = userEvent.setup();
       renderUnifiedQuoteForm({ enableFileUpload: true });
 
-      const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.pdf', { 
-        type: 'application/pdf' 
+      const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.pdf', {
+        type: 'application/pdf',
       });
       Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 }); // 11MB
 
@@ -271,8 +269,9 @@ describe('UnifiedQuoteForm', () => {
       const user = userEvent.setup();
       renderUnifiedQuoteForm({ enableFileUpload: true });
 
-      const files = Array.from({ length: 6 }, (_, i) => 
-        new File([`content ${i}`], `file${i}.pdf`, { type: 'application/pdf' })
+      const files = Array.from(
+        { length: 6 },
+        (_, i) => new File([`content ${i}`], `file${i}.pdf`, { type: 'application/pdf' }),
       );
 
       const fileInput = screen.getByLabelText(/select files/i).closest('input[type="file"]');
@@ -308,23 +307,26 @@ describe('UnifiedQuoteForm', () => {
         validateUrl: vi.fn().mockResolvedValue({
           valid: true,
           productName: 'Auto-filled Product Name',
-          price: 25.99
-        })
+          price: 25.99,
+        }),
       };
 
       renderUnifiedQuoteForm({
-        serverValidation: mockServerValidation
+        serverValidation: mockServerValidation,
       });
 
       const urlInput = screen.getByLabelText(/product url/i);
       await user.type(urlInput, 'https://amazon.com/valid-product');
 
       // Wait for debounced server validation
-      await waitFor(() => {
-        expect(mockServerValidation.validateUrl).toHaveBeenCalledWith(
-          'https://amazon.com/valid-product'
-        );
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockServerValidation.validateUrl).toHaveBeenCalledWith(
+            'https://amazon.com/valid-product',
+          );
+        },
+        { timeout: 2000 },
+      );
 
       // Should auto-fill product name and price
       await waitFor(() => {
@@ -338,20 +340,23 @@ describe('UnifiedQuoteForm', () => {
       const mockServerValidation = {
         validateUrl: vi.fn().mockResolvedValue({
           valid: false,
-          error: 'Product not found'
-        })
+          error: 'Product not found',
+        }),
       };
 
       renderUnifiedQuoteForm({
-        serverValidation: mockServerValidation
+        serverValidation: mockServerValidation,
       });
 
       const urlInput = screen.getByLabelText(/product url/i);
       await user.type(urlInput, 'https://amazon.com/invalid-product');
 
-      await waitFor(() => {
-        expect(screen.getByText('Product not found')).toBeInTheDocument();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText('Product not found')).toBeInTheDocument();
+        },
+        { timeout: 2000 },
+      );
     });
 
     it('should check for duplicate quotes', async () => {
@@ -359,20 +364,23 @@ describe('UnifiedQuoteForm', () => {
       const mockServerValidation = {
         checkDuplicate: vi.fn().mockResolvedValue({
           isDuplicate: true,
-          existingQuoteId: 'existing-quote-123'
-        })
+          existingQuoteId: 'existing-quote-123',
+        }),
       };
 
       renderUnifiedQuoteForm({
-        serverValidation: mockServerValidation
+        serverValidation: mockServerValidation,
       });
 
       const urlInput = screen.getByLabelText(/product url/i);
       await user.type(urlInput, 'https://amazon.com/duplicate-product');
 
-      await waitFor(() => {
-        expect(mockServerValidation.checkDuplicate).toHaveBeenCalled();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(mockServerValidation.checkDuplicate).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
     });
   });
 
@@ -430,11 +438,11 @@ describe('UnifiedQuoteForm', () => {
     });
 
     it('should show admin fields in admin edit mode', () => {
-      renderUnifiedQuoteForm({ 
+      renderUnifiedQuoteForm({
         mode: 'edit',
         viewMode: 'admin',
         existingQuote: mockExistingQuote,
-        enableAdvancedFields: true
+        enableAdvancedFields: true,
       });
 
       // Should have admin fields toggle
@@ -443,11 +451,11 @@ describe('UnifiedQuoteForm', () => {
 
     it('should expand admin fields when toggled', async () => {
       const user = userEvent.setup();
-      renderUnifiedQuoteForm({ 
+      renderUnifiedQuoteForm({
         mode: 'edit',
         viewMode: 'admin',
         existingQuote: mockExistingQuote,
-        enableAdvancedFields: true
+        enableAdvancedFields: true,
       });
 
       const toggleButton = screen.getByText(/show admin fields/i);
@@ -509,9 +517,9 @@ describe('UnifiedQuoteForm', () => {
             productUrl: 'https://amazon.com/product',
             productName: 'Test Product',
             quantity: 2,
-            destinationCountry: 'IN'
+            destinationCountry: 'IN',
           }),
-          [] // files
+          [], // files
         );
       });
     });
@@ -520,9 +528,9 @@ describe('UnifiedQuoteForm', () => {
       const user = userEvent.setup();
       const mockOnSubmit = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteForm({ 
+      renderUnifiedQuoteForm({
         onSubmit: mockOnSubmit,
-        enableFileUpload: true
+        enableFileUpload: true,
       });
 
       // Upload file
@@ -539,10 +547,7 @@ describe('UnifiedQuoteForm', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(
-          expect.any(Object),
-          [mockFile]
-        );
+        expect(mockOnSubmit).toHaveBeenCalledWith(expect.any(Object), [mockFile]);
       });
     });
 
@@ -567,9 +572,9 @@ describe('UnifiedQuoteForm', () => {
 
     it('should show loading state during submission', async () => {
       const user = userEvent.setup();
-      const mockOnSubmit = vi.fn().mockImplementation(() => 
-        new Promise(resolve => setTimeout(resolve, 1000))
-      );
+      const mockOnSubmit = vi
+        .fn()
+        .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
 
       renderUnifiedQuoteForm({ onSubmit: mockOnSubmit });
 
@@ -596,7 +601,7 @@ describe('UnifiedQuoteForm', () => {
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('UnifiedQuoteForm Performance:'),
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -607,7 +612,7 @@ describe('UnifiedQuoteForm', () => {
       const { container } = renderUnifiedQuoteForm({
         enableFileUpload: true,
         enableAdvancedFields: true,
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       // Should have complex form with multiple sections
@@ -620,7 +625,7 @@ describe('UnifiedQuoteForm', () => {
       renderUnifiedQuoteForm();
 
       const inputs = screen.getAllByRole('textbox');
-      inputs.forEach(input => {
+      inputs.forEach((input) => {
         expect(input).toHaveAccessibleName();
       });
     });
@@ -634,7 +639,7 @@ describe('UnifiedQuoteForm', () => {
 
       await waitFor(() => {
         const errorMessages = screen.getAllByText(/this field is required/i);
-        errorMessages.forEach(error => {
+        errorMessages.forEach((error) => {
           expect(error).toHaveAttribute('role', 'alert');
         });
       });

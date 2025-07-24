@@ -102,10 +102,17 @@ export const DeliveryOptionsDisplay = ({
                     <DollarSign className="h-3 w-3" />
                     {(() => {
                       // Format dual currency inline using CurrencyService
-                      const formatDualCurrency = (amount: number, originCountry: string, destinationCountry: string, exchangeRate?: number) => {
-                        const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
-                        const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
-                        
+                      const formatDualCurrency = (
+                        amount: number,
+                        originCountry: string,
+                        destinationCountry: string,
+                        exchangeRate?: number,
+                      ) => {
+                        const originCurrency =
+                          currencyService.getCurrencyForCountrySync(originCountry);
+                        const destinationCurrency =
+                          currencyService.getCurrencyForCountrySync(destinationCountry);
+
                         const originSymbol = currencyService.getCurrencySymbol(originCurrency);
                         const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
@@ -117,9 +124,10 @@ export const DeliveryOptionsDisplay = ({
                           } else {
                             convertedAmount = Math.round(convertedAmount * 100) / 100;
                           }
-                          const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
+                          const destinationSymbol =
+                            currencyService.getCurrencySymbol(destinationCurrency);
                           const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
-                          
+
                           return {
                             origin: originFormatted,
                             destination: destinationFormatted,

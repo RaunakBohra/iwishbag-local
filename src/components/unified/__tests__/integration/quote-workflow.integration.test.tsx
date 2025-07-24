@@ -38,9 +38,9 @@ vi.mock('@/hooks/useCart', () => ({
 // Mock payment operations
 vi.mock('@/hooks/usePayment', () => ({
   usePayment: () => ({
-    initiatePayment: vi.fn().mockResolvedValue({ 
-      success: true, 
-      paymentUrl: 'https://payment.example.com' 
+    initiatePayment: vi.fn().mockResolvedValue({
+      success: true,
+      paymentUrl: 'https://payment.example.com',
     }),
   }),
 }));
@@ -50,11 +50,11 @@ const mockServerValidation = {
   validateUrl: vi.fn().mockResolvedValue({
     valid: true,
     productName: 'MacBook Pro 16"',
-    price: 2499.99
+    price: 2499.99,
   }),
   checkDuplicate: vi.fn().mockResolvedValue({
-    isDuplicate: false
-  })
+    isDuplicate: false,
+  }),
 };
 
 // Mock performance API
@@ -85,7 +85,7 @@ const guestQuoteData = {
   customerName: 'John Doe',
   customerEmail: 'john@example.com',
   customerPhone: '+1234567890',
-  notes: 'Need this urgently for work'
+  notes: 'Need this urgently for work',
 };
 
 const mockWorkflowQuote: UnifiedQuote = {
@@ -102,11 +102,11 @@ const mockWorkflowQuote: UnifiedQuote = {
   international_shipping: 49.99,
   customs_and_ecs: 124.99,
   domestic_shipping: 15.99,
-  handling_charge: 10.00,
-  insurance_amount: 25.00,
-  payment_gateway_fee: 35.00,
-  vat: 0.00,
-  discount: 0.00,
+  handling_charge: 10.0,
+  insurance_amount: 25.0,
+  payment_gateway_fee: 35.0,
+  vat: 0.0,
+  discount: 0.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -114,26 +114,28 @@ const mockWorkflowQuote: UnifiedQuote = {
     info: {
       name: 'John Doe',
       email: 'john@example.com',
-      phone: '+1234567890'
-    }
+      phone: '+1234567890',
+    },
   },
   shipping_address: {
-    formatted: '123 Business Park, Bangalore, Karnataka 560001, India'
+    formatted: '123 Business Park, Bangalore, Karnataka 560001, India',
   },
-  items: [{
-    id: 'item-workflow',
-    name: 'MacBook Pro 16"',
-    description: 'Latest MacBook Pro with M3 chip',
-    quantity: 1,
-    price: 2499.99,
-    product_url: 'https://amazon.com/macbook-pro-16',
-    image_url: 'https://example.com/macbook.jpg'
-  }],
+  items: [
+    {
+      id: 'item-workflow',
+      name: 'MacBook Pro 16"',
+      description: 'Latest MacBook Pro with M3 chip',
+      quantity: 1,
+      price: 2499.99,
+      product_url: 'https://amazon.com/macbook-pro-16',
+      image_url: 'https://example.com/macbook.jpg',
+    },
+  ],
   notes: 'Need this urgently for work',
   admin_notes: '',
   priority: 'high',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
@@ -148,11 +150,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -173,18 +173,18 @@ describe('Complete Quote Workflow Integration Tests', () => {
 
     // Mock quote operations that would normally come from API
     mockQuoteOperations = {
-      createQuote: vi.fn().mockResolvedValue({ 
-        success: true, 
-        quote: { ...mockWorkflowQuote, status: 'pending' } 
+      createQuote: vi.fn().mockResolvedValue({
+        success: true,
+        quote: { ...mockWorkflowQuote, status: 'pending' },
       }),
       updateQuoteStatus: vi.fn().mockResolvedValue({ success: true }),
       sendQuote: vi.fn().mockResolvedValue({ success: true }),
       approveQuote: vi.fn().mockResolvedValue({ success: true }),
       addToCart: vi.fn().mockResolvedValue({ success: true }),
-      processPayment: vi.fn().mockResolvedValue({ 
-        success: true, 
-        paymentUrl: 'https://payment.example.com' 
-      })
+      processPayment: vi.fn().mockResolvedValue({
+        success: true,
+        paymentUrl: 'https://payment.example.com',
+      }),
     };
   });
 
@@ -196,7 +196,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
   describe('Phase 1: Guest User Quote Creation', () => {
     it('should allow guest user to create a complete quote request', async () => {
       const user = userEvent.setup();
-      
+
       renderWithProviders(
         <UnifiedQuoteForm
           mode="create"
@@ -204,21 +204,27 @@ describe('Complete Quote Workflow Integration Tests', () => {
           onSubmit={mockQuoteOperations.createQuote}
           serverValidation={mockServerValidation}
           enableFileUpload={true}
-        />
+        />,
       );
 
       // Fill out the form with complete guest data
       await user.type(screen.getByLabelText(/product url/i), guestQuoteData.productUrl);
-      
+
       // Wait for server validation to populate fields
-      await waitFor(() => {
-        expect(screen.getByDisplayValue('MacBook Pro 16"')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('2499.99')).toBeInTheDocument();
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(screen.getByDisplayValue('MacBook Pro 16"')).toBeInTheDocument();
+          expect(screen.getByDisplayValue('2499.99')).toBeInTheDocument();
+        },
+        { timeout: 2000 },
+      );
 
       await user.type(screen.getByLabelText(/quantity/i), guestQuoteData.quantity.toString());
-      await user.selectOptions(screen.getByLabelText(/destination country/i), guestQuoteData.destinationCountry);
-      
+      await user.selectOptions(
+        screen.getByLabelText(/destination country/i),
+        guestQuoteData.destinationCountry,
+      );
+
       // Guest-specific fields
       await user.type(screen.getByLabelText(/your name/i), guestQuoteData.customerName);
       await user.type(screen.getByLabelText(/email address/i), guestQuoteData.customerEmail);
@@ -238,9 +244,9 @@ describe('Complete Quote Workflow Integration Tests', () => {
             customerName: guestQuoteData.customerName,
             customerEmail: guestQuoteData.customerEmail,
             customerPhone: guestQuoteData.customerPhone,
-            notes: guestQuoteData.notes
+            notes: guestQuoteData.notes,
           }),
-          [] // No files uploaded
+          [], // No files uploaded
         );
       });
 
@@ -249,20 +255,20 @@ describe('Complete Quote Workflow Integration Tests', () => {
         source: 'guest_form',
         destination_country: 'IN',
         estimated_value: expect.any(Number),
-        user_type: 'guest'
+        user_type: 'guest',
       });
     });
 
     it('should validate guest data thoroughly before submission', async () => {
       const user = userEvent.setup();
-      
+
       renderWithProviders(
         <UnifiedQuoteForm
           mode="create"
           viewMode="guest"
           onSubmit={mockQuoteOperations.createQuote}
           enableRealTimeValidation={true}
-        />
+        />,
       );
 
       // Try to submit without required guest fields
@@ -295,7 +301,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
           viewMode="admin"
           layout="detail"
           onAction={mockOnAction}
-        />
+        />,
       );
 
       // Admin should see quote details
@@ -306,14 +312,15 @@ describe('Complete Quote Workflow Integration Tests', () => {
 
       // Admin can edit quote details
       expect(screen.getByText('Edit Quote')).toBeInTheDocument();
-      
+
       // Admin processes and sends quote
       const sendButton = screen.getByText('Send Quote');
       await user.click(sendButton);
 
       await waitFor(() => {
-        expect(mockOnAction).toHaveBeenCalledWith('send', 
-          expect.objectContaining({ id: 'workflow-quote-id' })
+        expect(mockOnAction).toHaveBeenCalledWith(
+          'send',
+          expect.objectContaining({ id: 'workflow-quote-id' }),
         );
       });
 
@@ -321,7 +328,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
       expect(window.gtag).toHaveBeenCalledWith('event', 'admin_quote_action', {
         action: 'send',
         quote_id: 'workflow-quote-id',
-        quote_value: expect.any(Number)
+        quote_value: expect.any(Number),
       });
     });
 
@@ -331,14 +338,14 @@ describe('Complete Quote Workflow Integration Tests', () => {
           quote={mockWorkflowQuote}
           viewMode="admin"
           performanceMode="detailed"
-        />
+        />,
       );
 
       // Admin should see detailed breakdown with precise amounts
       expect(screen.getByText('Quote Breakdown')).toBeInTheDocument();
       expect(screen.getByText('$2,499.9900')).toBeInTheDocument(); // Item cost with admin precision
-      expect(screen.getByText('$199.9900')).toBeInTheDocument();   // Sales tax
-      expect(screen.getByText('$2,799.99')).toBeInTheDocument();   // Final total
+      expect(screen.getByText('$199.9900')).toBeInTheDocument(); // Sales tax
+      expect(screen.getByText('$2,799.99')).toBeInTheDocument(); // Final total
 
       // Should show all line items
       expect(screen.getByText('Item Cost')).toBeInTheDocument();
@@ -366,7 +373,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
           viewMode="customer"
           layout="detail"
           onAction={mockOnAction}
-        />
+        />,
       );
 
       // Customer should see quote ready for approval
@@ -383,8 +390,9 @@ describe('Complete Quote Workflow Integration Tests', () => {
       await user.click(approveButton);
 
       await waitFor(() => {
-        expect(mockOnAction).toHaveBeenCalledWith('approve', 
-          expect.objectContaining({ status: 'sent' })
+        expect(mockOnAction).toHaveBeenCalledWith(
+          'approve',
+          expect.objectContaining({ status: 'sent' }),
         );
       });
 
@@ -394,17 +402,13 @@ describe('Complete Quote Workflow Integration Tests', () => {
         variant: 'control',
         action: 'quote_approved',
         value: undefined,
-        user_id: expect.any(String)
+        user_id: expect.any(String),
       });
     });
 
     it('should show customer-friendly breakdown without admin details', async () => {
       renderWithProviders(
-        <UnifiedQuoteBreakdown
-          quote={mockWorkflowQuote}
-          viewMode="customer"
-          showSavings={false}
-        />
+        <UnifiedQuoteBreakdown quote={mockWorkflowQuote} viewMode="customer" showSavings={false} />,
       );
 
       // Customer should see simplified breakdown
@@ -435,7 +439,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
           viewMode="customer"
           layout="detail"
           onAction={mockOnAction}
-        />
+        />,
       );
 
       // Should show add to cart option
@@ -446,8 +450,9 @@ describe('Complete Quote Workflow Integration Tests', () => {
       await user.click(addToCartButton);
 
       await waitFor(() => {
-        expect(mockOnAction).toHaveBeenCalledWith('addToCart', 
-          expect.objectContaining({ status: 'approved' })
+        expect(mockOnAction).toHaveBeenCalledWith(
+          'addToCart',
+          expect.objectContaining({ status: 'approved' }),
         );
       });
 
@@ -455,13 +460,15 @@ describe('Complete Quote Workflow Integration Tests', () => {
       expect(window.gtag).toHaveBeenCalledWith('event', 'add_to_cart', {
         currency: 'USD',
         value: 2799.99,
-        items: [{
-          item_id: 'workflow-quote-id',
-          item_name: 'MacBook Pro 16"',
-          category: 'Electronics',
-          quantity: 1,
-          price: 2799.99
-        }]
+        items: [
+          {
+            item_id: 'workflow-quote-id',
+            item_name: 'MacBook Pro 16"',
+            category: 'Electronics',
+            quantity: 1,
+            price: 2799.99,
+          },
+        ],
       });
     });
 
@@ -481,7 +488,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
           viewMode="customer"
           layout="detail"
           onAction={mockOnAction}
-        />
+        />,
       );
 
       expect(screen.getByText('Proceed to Payment')).toBeInTheDocument();
@@ -490,8 +497,9 @@ describe('Complete Quote Workflow Integration Tests', () => {
       await user.click(paymentButton);
 
       await waitFor(() => {
-        expect(mockOnAction).toHaveBeenCalledWith('proceedToPayment', 
-          expect.objectContaining({ in_cart: true })
+        expect(mockOnAction).toHaveBeenCalledWith(
+          'proceedToPayment',
+          expect.objectContaining({ in_cart: true }),
         );
       });
 
@@ -499,35 +507,33 @@ describe('Complete Quote Workflow Integration Tests', () => {
       expect(window.gtag).toHaveBeenCalledWith('event', 'begin_checkout', {
         currency: 'USD',
         value: 2799.99,
-        items: [{
-          item_id: 'workflow-quote-id',
-          item_name: 'MacBook Pro 16"',
-          category: 'Electronics',
-          quantity: 1,
-          price: 2799.99
-        }]
+        items: [
+          {
+            item_id: 'workflow-quote-id',
+            item_name: 'MacBook Pro 16"',
+            category: 'Electronics',
+            quantity: 1,
+            price: 2799.99,
+          },
+        ],
       });
     });
   });
 
   describe('Phase 5: View Mode Switching Integration', () => {
     it('should maintain data consistency across view mode switches', async () => {
-      let currentViewMode: 'guest' | 'customer' | 'admin' = 'guest';
-      
+      const currentViewMode: 'guest' | 'customer' | 'admin' = 'guest';
+
       const TestViewSwitcher = () => {
         const [viewMode, setViewMode] = React.useState<'guest' | 'customer' | 'admin'>('guest');
-        
+
         return (
           <div>
             <button onClick={() => setViewMode('guest')}>Guest View</button>
             <button onClick={() => setViewMode('customer')}>Customer View</button>
             <button onClick={() => setViewMode('admin')}>Admin View</button>
-            
-            <UnifiedQuoteCard
-              quote={mockWorkflowQuote}
-              viewMode={viewMode}
-              layout="detail"
-            />
+
+            <UnifiedQuoteCard quote={mockWorkflowQuote} viewMode={viewMode} layout="detail" />
           </div>
         );
       };
@@ -565,7 +571,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
           mode="create"
           viewMode="guest"
           onSubmit={mockQuoteOperations.createQuote}
-        />
+        />,
       );
 
       // Fill minimal form data
@@ -581,7 +587,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
         test_name: 'quote_form_layout',
         variant: 'control',
         action: 'form_submitted',
-        value: 1
+        value: 1,
       });
 
       // Test approval tracking
@@ -590,7 +596,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
           quote={{ ...mockWorkflowQuote, status: 'sent' }}
           viewMode="customer"
           onAction={vi.fn()}
-        />
+        />,
       );
 
       const approveButton = screen.getByText('Approve Quote');
@@ -602,7 +608,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
         variant: 'control',
         action: 'action_approve',
         value: 1,
-        user_id: 'test-user-id'
+        user_id: 'test-user-id',
       });
     });
   });
@@ -613,13 +619,9 @@ describe('Complete Quote Workflow Integration Tests', () => {
 
       // Test form submission error
       const failingCreateQuote = vi.fn().mockRejectedValue(new Error('Server error'));
-      
+
       renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={failingCreateQuote}
-        />
+        <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={failingCreateQuote} />,
       );
 
       // Fill form and submit
@@ -636,13 +638,13 @@ describe('Complete Quote Workflow Integration Tests', () => {
 
       // Test action error handling
       const failingAction = vi.fn().mockRejectedValue(new Error('Action failed'));
-      
+
       renderWithProviders(
         <UnifiedQuoteActions
           quote={{ ...mockWorkflowQuote, status: 'sent' }}
           viewMode="customer"
           onAction={failingAction}
-        />
+        />,
       );
 
       const approveButton = screen.getByText('Approve Quote');
@@ -662,7 +664,7 @@ describe('Complete Quote Workflow Integration Tests', () => {
       const quotes = Array.from({ length: 20 }, (_, i) => ({
         ...mockWorkflowQuote,
         id: `quote-${i}`,
-        display_id: `QT-${i.toString().padStart(3, '0')}`
+        display_id: `QT-${i.toString().padStart(3, '0')}`,
       }));
 
       renderWithProviders(
@@ -679,18 +681,18 @@ describe('Complete Quote Workflow Integration Tests', () => {
             viewMode="admin"
             performanceMode="detailed"
           />
-        </div>
+        </div>,
       );
 
       await waitFor(() => {
         // Should log performance metrics for both components
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('UnifiedQuoteList Performance:'),
-          expect.any(Object)
+          expect.any(Object),
         );
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('UnifiedQuoteBreakdown Performance:'),
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 

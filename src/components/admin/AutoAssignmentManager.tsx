@@ -4,18 +4,18 @@
  */
 
 import { useState } from 'react';
-import { 
-  Settings, 
-  Plus, 
-  ToggleLeft, 
-  ToggleRight, 
+import {
+  Settings,
+  Plus,
+  ToggleLeft,
+  ToggleRight,
   Trash2,
   Edit,
   Users,
   Target,
   TrendingUp,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,14 +82,17 @@ export const AutoAssignmentManager = () => {
   const { data: stats } = useAssignmentStats();
   const toggleRuleMutation = useToggleAssignmentRule();
   const deleteRuleMutation = useDeleteAssignmentRule();
-  const { getAssignmentMethodIcon, getAssignmentMethodLabel, formatCriteria } = useAutoAssignmentUtils();
+  const { getAssignmentMethodIcon, getAssignmentMethodLabel, formatCriteria } =
+    useAutoAssignmentUtils();
 
   const handleToggleRule = (id: string, isActive: boolean) => {
     toggleRuleMutation.mutate({ id, isActive });
   };
 
   const handleDeleteRule = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete the rule "${name}"? This action cannot be undone.`)) {
+    if (
+      confirm(`Are you sure you want to delete the rule "${name}"? This action cannot be undone.`)
+    ) {
       deleteRuleMutation.mutate(id);
     }
   };
@@ -108,10 +111,7 @@ export const AutoAssignmentManager = () => {
           </p>
         </div>
 
-        <CreateAssignmentRuleDialog 
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-        >
+        <CreateAssignmentRuleDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             New Rule
@@ -158,9 +158,9 @@ export const AutoAssignmentManager = () => {
             title="Unassigned Tickets"
             value={stats.unassigned_tickets}
             icon={AlertCircle}
-            color={stats.unassigned_tickets > 0 ? "text-red-600" : "text-gray-600"}
-            bgColor={stats.unassigned_tickets > 0 ? "bg-red-50" : "bg-gray-50"}
-            borderColor={stats.unassigned_tickets > 0 ? "border-red-200" : "border-gray-200"}
+            color={stats.unassigned_tickets > 0 ? 'text-red-600' : 'text-gray-600'}
+            bgColor={stats.unassigned_tickets > 0 ? 'bg-red-50' : 'bg-gray-50'}
+            borderColor={stats.unassigned_tickets > 0 ? 'border-red-200' : 'border-gray-200'}
           />
         </div>
       )}
@@ -184,7 +184,7 @@ export const AutoAssignmentManager = () => {
               <p className="text-gray-600 mb-4">
                 Create your first assignment rule to automatically assign tickets to team members.
               </p>
-              <CreateAssignmentRuleDialog 
+              <CreateAssignmentRuleDialog
                 open={createDialogOpen}
                 onOpenChange={setCreateDialogOpen}
               >
@@ -212,21 +212,19 @@ export const AutoAssignmentManager = () => {
                 <TableBody>
                   {rules.map((rule) => (
                     <TableRow key={rule.id}>
-                      <TableCell className="font-medium">
-                        {rule.name}
-                      </TableCell>
+                      <TableCell className="font-medium">{rule.name}</TableCell>
 
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span>{getAssignmentMethodIcon(rule.assignment_method)}</span>
-                          <span className="text-sm">{getAssignmentMethodLabel(rule.assignment_method)}</span>
+                          <span className="text-sm">
+                            {getAssignmentMethodLabel(rule.assignment_method)}
+                          </span>
                         </div>
                       </TableCell>
 
                       <TableCell>
-                        <div className="text-sm text-gray-600">
-                          {formatCriteria(rule.criteria)}
-                        </div>
+                        <div className="text-sm text-gray-600">{formatCriteria(rule.criteria)}</div>
                       </TableCell>
 
                       <TableCell>
@@ -249,7 +247,7 @@ export const AutoAssignmentManager = () => {
                             onCheckedChange={(isActive) => handleToggleRule(rule.id, isActive)}
                             disabled={toggleRuleMutation.isPending}
                           />
-                          <Badge variant={rule.is_active ? "default" : "secondary"}>
+                          <Badge variant={rule.is_active ? 'default' : 'secondary'}>
                             {rule.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </div>

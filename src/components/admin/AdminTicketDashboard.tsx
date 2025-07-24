@@ -3,12 +3,7 @@ import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { CompactStatsBar } from '@/components/admin/CompactStatsBar';
 import { InlineFilters } from '@/components/admin/InlineFilters';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import {
-  TicketIcon,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-} from 'lucide-react';
+import { TicketIcon, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -49,7 +44,6 @@ import { useSLAStatus, useSLAUtils } from '@/hooks/useSLA';
 import { useManualAssignTicket } from '@/hooks/useAutoAssignment';
 import { formatDistanceToNow } from 'date-fns';
 
-
 const StatusIcon = ({ status }: { status: string }) => {
   const iconClass = 'h-4 w-4';
   switch (status) {
@@ -87,7 +81,6 @@ const TicketRow = ({
     const assigned_to = assignedTo === 'unassigned' ? null : assignedTo;
     assignTicketMutation.mutate({ ticketId: ticket.id, adminUserId: assigned_to });
   };
-
 
   return (
     <TableRow className="cursor-pointer hover:bg-gray-50" onClick={() => onTicketClick(ticket.id)}>
@@ -146,7 +139,6 @@ const TicketRow = ({
         </Select>
       </TableCell>
 
-
       <TableCell onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-1">
           <Select
@@ -157,9 +149,9 @@ const TicketRow = ({
             <SelectTrigger className="w-[120px]">
               <SelectValue>
                 <span className={ticket.assigned_to ? 'text-gray-900' : 'text-gray-500'}>
-                  {ticket.assigned_to_profile?.full_name || 
-                   ticket.assigned_to_profile?.email || 
-                   'Unassigned'}
+                  {ticket.assigned_to_profile?.full_name ||
+                    ticket.assigned_to_profile?.email ||
+                    'Unassigned'}
                 </span>
               </SelectValue>
             </SelectTrigger>
@@ -168,16 +160,17 @@ const TicketRow = ({
                 <span className="text-gray-500">Unassigned</span>
               </SelectItem>
               {adminUsers
-                .filter(user => user.role === 'admin' || user.role === 'moderator')
-                .map(adminUser => (
+                .filter((user) => user.role === 'admin' || user.role === 'moderator')
+                .map((adminUser) => (
                   <SelectItem key={adminUser.id} value={adminUser.id}>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">{adminUser.full_name || adminUser.email}</span>
+                      <span className="text-sm font-medium">
+                        {adminUser.full_name || adminUser.email}
+                      </span>
                       <span className="text-xs text-gray-500 capitalize">{adminUser.role}</span>
                     </div>
                   </SelectItem>
-                ))
-              }
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -201,13 +194,18 @@ const TicketRow = ({
             >
               {ticket.quote.iwish_tracking_id || `Quote ${ticket.quote.id.slice(0, 8)}...`}
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
               </svg>
             </a>
             <div className="flex items-center gap-2">
               <span className="text-gray-500">{ticket.quote.destination_country}</span>
               {ticket.quote.status && (
-                <Badge 
+                <Badge
                   variant={ticket.quote.status === 'delivered' ? 'default' : 'secondary'}
                   className="text-xs"
                 >
@@ -235,7 +233,7 @@ export const AdminTicketDashboard = () => {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | 'all'>('all');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  
+
   const { users: adminUsers = [] } = useUserRoles();
 
   // Simple filters conversion
@@ -254,11 +252,12 @@ export const AdminTicketDashboard = () => {
   const filteredTickets = useMemo(() => {
     if (!searchInput) return tickets;
     const searchLower = searchInput.toLowerCase();
-    return tickets.filter((ticket) =>
-      ticket.subject.toLowerCase().includes(searchLower) ||
-      ticket.description.toLowerCase().includes(searchLower) ||
-      ticket.user_profile?.email?.toLowerCase().includes(searchLower) ||
-      ticket.user_profile?.full_name?.toLowerCase().includes(searchLower)
+    return tickets.filter(
+      (ticket) =>
+        ticket.subject.toLowerCase().includes(searchLower) ||
+        ticket.description.toLowerCase().includes(searchLower) ||
+        ticket.user_profile?.email?.toLowerCase().includes(searchLower) ||
+        ticket.user_profile?.full_name?.toLowerCase().includes(searchLower),
     );
   }, [tickets, searchInput]);
 
@@ -335,10 +334,10 @@ export const AdminTicketDashboard = () => {
               </TableHeader>
               <TableBody>
                 {filteredTickets.map((ticket) => (
-                  <TicketRow 
-                    key={ticket.id} 
-                    ticket={ticket} 
-                    onTicketClick={handleTicketClick} 
+                  <TicketRow
+                    key={ticket.id}
+                    ticket={ticket}
+                    onTicketClick={handleTicketClick}
                     adminUsers={adminUsers}
                   />
                 ))}

@@ -26,7 +26,9 @@ export interface AdminCurrencyDisplay {
  * Hook for consistent admin quote currency display
  * Follows CLAUDE.md dual currency standard: "USD / Customer Currency"
  */
-export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): AdminCurrencyDisplay => {
+export const useAdminQuoteCurrency = (
+  quote: UnifiedQuote | null | undefined,
+): AdminCurrencyDisplay => {
   return useMemo(() => {
     // Default fallback values
     if (!quote) {
@@ -36,13 +38,13 @@ export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): A
         originCountry: 'US',
         destinationCountry: 'US',
         exchangeRate: 1,
-        formatDualAmount: (amount: number) => ({ 
-          origin: `$${amount.toFixed(2)}`, 
-          destination: `$${amount.toFixed(2)}`, 
-          short: `$${amount.toFixed(2)}` 
+        formatDualAmount: (amount: number) => ({
+          origin: `$${amount.toFixed(2)}`,
+          destination: `$${amount.toFixed(2)}`,
+          short: `$${amount.toFixed(2)}`,
         }),
         formatSingleAmount: (amount: number) => `$${amount.toFixed(2)}`,
-        currencySymbols: { origin: '$', destination: '$' }
+        currencySymbols: { origin: '$', destination: '$' },
       };
     }
 
@@ -55,9 +57,7 @@ export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): A
     const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
 
     // Get exchange rate from quote data
-    const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 
-                        quote.exchange_rate || 
-                        1;
+    const exchangeRate = quote.calculation_data?.exchange_rate?.rate || quote.exchange_rate || 1;
 
     // Get currency symbols
     const originSymbol = currencyService.getCurrencySymbolSync(originCurrency);
@@ -96,7 +96,10 @@ export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): A
     };
 
     // Format single amount in specified currency
-    const formatSingleAmount = (amount: number, currency: 'origin' | 'destination' = 'destination') => {
+    const formatSingleAmount = (
+      amount: number,
+      currency: 'origin' | 'destination' = 'destination',
+    ) => {
       if (currency === 'origin') {
         return currencyService.formatAmount(amount, originCurrency);
       } else {
@@ -115,14 +118,14 @@ export const useAdminQuoteCurrency = (quote: UnifiedQuote | null | undefined): A
       formatSingleAmount,
       currencySymbols: {
         origin: originSymbol,
-        destination: destinationSymbol
-      }
+        destination: destinationSymbol,
+      },
     };
   }, [
     quote?.origin_country,
     quote?.destination_country,
     quote?.calculation_data?.exchange_rate?.rate,
-    quote?.exchange_rate
+    quote?.exchange_rate,
   ]);
 };
 

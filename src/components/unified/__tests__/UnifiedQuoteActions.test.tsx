@@ -48,15 +48,15 @@ const mockQuote: UnifiedQuote = {
   created_at: '2024-01-15T10:00:00Z',
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 159.99,
-  item_price: 120.00,
+  item_price: 120.0,
   destination_country: 'IN',
   origin_country: 'US',
   customer_data: {
     info: {
       name: 'John Doe',
       email: 'john@example.com',
-      phone: '+1234567890'
-    }
+      phone: '+1234567890',
+    },
   },
   items: [
     {
@@ -64,16 +64,16 @@ const mockQuote: UnifiedQuote = {
       name: 'Test Product',
       description: 'A great test product',
       quantity: 2,
-      price: 60.00,
+      price: 60.0,
       product_url: 'https://amazon.com/test-product',
-      image_url: 'https://example.com/image.jpg'
-    }
-  ]
+      image_url: 'https://example.com/image.jpg',
+    },
+  ],
 };
 
 // Helper function to render component with providers
 const renderUnifiedQuoteActions = (
-  props: Partial<Parameters<typeof UnifiedQuoteActions>[0]> = {}
+  props: Partial<Parameters<typeof UnifiedQuoteActions>[0]> = {},
 ) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -98,7 +98,7 @@ const renderUnifiedQuoteActions = (
           <UnifiedQuoteActions {...defaultProps} />
         </QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -123,9 +123,9 @@ describe('UnifiedQuoteActions', () => {
 
     it('should show appropriate actions based on quote status', () => {
       // Test 'sent' status
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       expect(screen.getByText('Approve Quote')).toBeInTheDocument();
@@ -133,18 +133,18 @@ describe('UnifiedQuoteActions', () => {
     });
 
     it('should show add to cart for approved quotes', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'approved' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       expect(screen.getByText('Add to Cart')).toBeInTheDocument();
     });
 
     it('should show track order for paid quotes', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'paid' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       expect(screen.getByText('Track Order')).toBeInTheDocument();
@@ -153,9 +153,9 @@ describe('UnifiedQuoteActions', () => {
 
   describe('View Mode Adaptations', () => {
     it('should show admin-specific actions in admin view', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         viewMode: 'admin',
-        quote: { ...mockQuote, status: 'pending' }
+        quote: { ...mockQuote, status: 'pending' },
       });
 
       expect(screen.getByText('Edit Quote')).toBeInTheDocument();
@@ -165,9 +165,9 @@ describe('UnifiedQuoteActions', () => {
     });
 
     it('should show customer actions in customer view', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         viewMode: 'customer',
-        quote: { ...mockQuote, status: 'sent' }
+        quote: { ...mockQuote, status: 'sent' },
       });
 
       expect(screen.getByText('Approve Quote')).toBeInTheDocument();
@@ -176,9 +176,9 @@ describe('UnifiedQuoteActions', () => {
     });
 
     it('should show limited actions in guest view', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         viewMode: 'guest',
-        quote: { ...mockQuote, status: 'sent' }
+        quote: { ...mockQuote, status: 'sent' },
       });
 
       expect(screen.getByText('View Details')).toBeInTheDocument();
@@ -192,11 +192,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableRateLimiting: true
+        enableRateLimiting: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -218,11 +218,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableRateLimiting: true
+        enableRateLimiting: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -243,11 +243,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableRateLimiting: true
+        enableRateLimiting: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -270,15 +270,15 @@ describe('UnifiedQuoteActions', () => {
   describe('Optimistic Updates', () => {
     it('should show loading state during optimistic updates', async () => {
       const user = userEvent.setup();
-      const mockOnAction = vi.fn().mockImplementation(() => 
-        new Promise(resolve => setTimeout(resolve, 1000))
-      );
+      const mockOnAction = vi
+        .fn()
+        .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableOptimisticUpdates: true
+        enableOptimisticUpdates: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -294,23 +294,19 @@ describe('UnifiedQuoteActions', () => {
       const mockOnAction = vi.fn().mockRejectedValue(new Error('Action failed'));
       const mockOnActionError = vi.fn();
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
         onActionError: mockOnActionError,
-        enableOptimisticUpdates: true
+        enableOptimisticUpdates: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
       await user.click(approveButton);
 
       await waitFor(() => {
-        expect(mockOnActionError).toHaveBeenCalledWith(
-          'approve',
-          mockQuote,
-          expect.any(Error)
-        );
+        expect(mockOnActionError).toHaveBeenCalledWith('approve', mockQuote, expect.any(Error));
       });
 
       // Should show error state
@@ -322,23 +318,19 @@ describe('UnifiedQuoteActions', () => {
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
       const mockOnActionComplete = vi.fn();
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
         onActionComplete: mockOnActionComplete,
-        enableOptimisticUpdates: true
+        enableOptimisticUpdates: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
       await user.click(approveButton);
 
       await waitFor(() => {
-        expect(mockOnActionComplete).toHaveBeenCalledWith(
-          'approve',
-          mockQuote,
-          { success: true }
-        );
+        expect(mockOnActionComplete).toHaveBeenCalledWith('approve', mockQuote, { success: true });
       });
     });
   });
@@ -348,10 +340,10 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -371,11 +363,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -389,7 +381,7 @@ describe('UnifiedQuoteActions', () => {
           rate_limited: false,
           optimistic: true,
           user_type: 'customer',
-          component_id: mockQuote.id
+          component_id: mockQuote.id,
         });
       });
     });
@@ -417,10 +409,10 @@ describe('UnifiedQuoteActions', () => {
 
   describe('Action Prioritization', () => {
     it('should show primary actions first', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
-        maxActions: 2
+        maxActions: 2,
       });
 
       // Should show primary actions (approve/reject) first
@@ -429,9 +421,9 @@ describe('UnifiedQuoteActions', () => {
     });
 
     it('should limit number of actions displayed', () => {
-      const { container } = renderUnifiedQuoteActions({ 
+      const { container } = renderUnifiedQuoteActions({
         viewMode: 'admin',
-        maxActions: 3
+        maxActions: 3,
       });
 
       const buttons = container.querySelectorAll('button');
@@ -444,18 +436,16 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'pending' },
         viewMode: 'admin',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const deleteButton = screen.getByText('Delete');
       await user.click(deleteButton);
 
-      expect(window.confirm).toHaveBeenCalledWith(
-        'Are you sure you want to delete?'
-      );
+      expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete?');
     });
 
     it('should cancel action if confirmation is declined', async () => {
@@ -463,10 +453,10 @@ describe('UnifiedQuoteActions', () => {
       const mockOnAction = vi.fn();
       vi.mocked(window.confirm).mockReturnValue(false);
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'pending' },
         viewMode: 'admin',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const deleteButton = screen.getByText('Delete');
@@ -481,11 +471,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockResolvedValue({ success: true });
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableHotkeys: true
+        enableHotkeys: true,
       });
 
       // Should respond to 'A' key for approve
@@ -498,11 +488,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn();
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableHotkeys: false
+        enableHotkeys: false,
       });
 
       await user.keyboard('a');
@@ -514,11 +504,11 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn();
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         onAction: mockOnAction,
-        enableHotkeys: true
+        enableHotkeys: true,
       });
 
       await user.keyboard('{Control>}a{/Control}');
@@ -529,24 +519,24 @@ describe('UnifiedQuoteActions', () => {
 
   describe('Action Button States', () => {
     it('should disable actions when quote status does not allow them', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'completed' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const buttons = screen.queryAllByRole('button');
-      const actionButtons = buttons.filter(button => 
-        button.textContent?.includes('Approve') || 
-        button.textContent?.includes('Add to Cart')
+      const actionButtons = buttons.filter(
+        (button) =>
+          button.textContent?.includes('Approve') || button.textContent?.includes('Add to Cart'),
       );
 
       expect(actionButtons).toHaveLength(0);
     });
 
     it('should show appropriate button variants', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -563,10 +553,10 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -581,10 +571,10 @@ describe('UnifiedQuoteActions', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn().mockRejectedValue(new Error('Network error'));
 
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const approveButton = screen.getByText('Approve Quote');
@@ -603,72 +593,70 @@ describe('UnifiedQuoteActions', () => {
 
   describe('Accessibility', () => {
     it('should have proper ARIA labels and roles', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const buttons = screen.getAllByRole('button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button).toHaveAttribute('type');
       });
     });
 
     it('should support keyboard navigation', async () => {
       const user = userEvent.setup();
-      
-      renderUnifiedQuoteActions({ 
+
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const approveButton = screen.getByText('Approve Quote');
-      
+
       // Should be focusable
       await user.tab();
       expect(approveButton).toHaveFocus();
     });
 
     it('should show tooltips with hotkey information', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
         size: 'lg',
-        enableHotkeys: true
+        enableHotkeys: true,
       });
 
       const approveButton = screen.getByText('Approve Quote');
-      expect(approveButton).toHaveAttribute('title', 
-        expect.stringContaining('(A)')
-      );
+      expect(approveButton).toHaveAttribute('title', expect.stringContaining('(A)'));
     });
   });
 
   describe('Theme Integration', () => {
     it('should apply psychology-driven colors for customer actions', () => {
-      renderUnifiedQuoteActions({ 
+      renderUnifiedQuoteActions({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const approveButton = screen.getByText('Approve Quote');
-      
+
       // Should have conversion-optimized styling
       expect(approveButton.closest('button')).toHaveStyle({
-        backgroundColor: expect.any(String)
+        backgroundColor: expect.any(String),
       });
     });
 
     it('should apply professional styling for admin actions', () => {
-      renderUnifiedQuoteActions({ 
-        viewMode: 'admin'
+      renderUnifiedQuoteActions({
+        viewMode: 'admin',
       });
 
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
-      
+
       // Should have professional styling
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         expect(button).toHaveClass(/quote-actions/);
       });
     });
