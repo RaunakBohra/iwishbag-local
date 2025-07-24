@@ -67,6 +67,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
   const [taxBreakdowns, setTaxBreakdowns] = useState<ItemTaxBreakdown[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isChangingMethod, setIsChangingMethod] = useState(false);
 
   // Get standardized currency display info
   const currencyDisplay = useAdminQuoteCurrency(quote);
@@ -143,6 +144,8 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     // Tax Calculation Method Analysis
     const calculationMethod = quote.calculation_method_preference || 'auto';
     const isUsingHSNMethod = calculationMethod === 'hsn_based' || (calculationMethod === 'auto' && itemsWithHSN > 0);
+    
+    console.log(`📊 [TaxAnalytics] Current method: ${calculationMethod}, Quote ID: ${quote.id}, Items: ${totalItems}, HSN: ${itemsWithHSN}`);
     
     // Tax Breakdown Analysis
     let totalCustoms = 0;
@@ -225,8 +228,28 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
   // Handle tax method change
   const handleTaxMethodChange = async (newMethod: string) => {
+    console.log(`🎯 [TaxSidebar] Method change requested: ${newMethod}`);
+    
     if (onMethodChange) {
-      await onMethodChange(newMethod);
+      try {
+        setIsChangingMethod(true);
+        await onMethodChange(newMethod);
+        console.log(`✅ [TaxSidebar] Method change completed: ${newMethod}`);
+        
+        // Force recalculation after method change
+        if (onRecalculate) {
+          setTimeout(() => {
+            console.log(`🔄 [TaxSidebar] Triggering recalculation after method change`);
+            onRecalculate();
+            setIsChangingMethod(false);
+          }, 1000); // Delay to ensure quote data is updated and recalculation completes
+        } else {
+          setIsChangingMethod(false);
+        }
+      } catch (error) {
+        console.error(`❌ [TaxSidebar] Method change failed:`, error);
+        setIsChangingMethod(false);
+      }
     }
   };
 
@@ -240,7 +263,8 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             <CardTitle className="flex items-center text-base">
               <Settings className="w-4 h-4 mr-2 text-indigo-600" />
               Tax Calculation Method
-              {isLoading && <RefreshCw className="w-3 h-3 ml-2 animate-spin" />}
+              {(isLoading || isChangingMethod) && <RefreshCw className="w-3 h-3 ml-2 animate-spin" />}
+              {isChangingMethod && <span className="ml-2 text-xs text-blue-600">Updating...</span>}
             </CardTitle>
           </CardHeader>
 
@@ -249,12 +273,14 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             <div className="space-y-3">
               {/* HSN-Based Method */}
               <div 
-                className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                  taxAnalytics.calculationMethod === 'hsn_based' 
-                    ? 'border-green-300 bg-green-50 ring-2 ring-green-200' 
-                    : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50'
+                className={`p-3 rounded-lg border transition-all ${
+                  isChangingMethod 
+                    ? 'cursor-not-allowed opacity-50 border-gray-200' 
+                    : taxAnalytics.calculationMethod === 'hsn_based' 
+                      ? 'border-green-300 bg-green-50 ring-2 ring-green-200 cursor-pointer' 
+                      : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50 cursor-pointer'
                 }`}
-                onClick={() => handleTaxMethodChange('hsn_based')}
+                onClick={() => !isChangingMethod && handleTaxMethodChange('hsn_based')}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -293,12 +319,14 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
               {/* Country Settings Method */}
               <div 
-                className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                  taxAnalytics.calculationMethod === 'country_settings' 
-                    ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200' 
-                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                className={`p-3 rounded-lg border transition-all ${
+                  isChangingMethod 
+                    ? 'cursor-not-allowed opacity-50 border-gray-200' 
+                    : taxAnalytics.calculationMethod === 'country_settings' 
+                      ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200 cursor-pointer' 
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
                 }`}
-                onClick={() => handleTaxMethodChange('country_settings')}
+                onClick={() => !isChangingMethod && handleTaxMethodChange('country_settings')}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -332,12 +360,14 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
               {/* Auto/Smart Method */}
               <div 
-                className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                  taxAnalytics.calculationMethod === 'auto' 
-                    ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200' 
-                    : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                className={`p-3 rounded-lg border transition-all ${
+                  isChangingMethod 
+                    ? 'cursor-not-allowed opacity-50 border-gray-200' 
+                    : taxAnalytics.calculationMethod === 'auto' 
+                      ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200 cursor-pointer' 
+                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
                 }`}
-                onClick={() => handleTaxMethodChange('auto')}
+                onClick={() => !isChangingMethod && handleTaxMethodChange('auto')}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

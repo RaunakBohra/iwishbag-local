@@ -899,11 +899,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       }
     } catch (error) {
       console.error('Failed to assign HSN code:', error);
+      
+      // Enhanced error logging for debugging
+      console.error('🔍 [HSN Debug] Assignment failure details:', {
+        itemIndex,
+        hsnData: {
+          hsn_code: hsnData?.hsn_code,
+          category: hsnData?.category,
+          display_name: hsnData?.display_name,
+        },
+        quoteId: quote?.id,
+        itemId: items[itemIndex]?.id,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
+
       toast({
         title: "Error",
-        description: "Failed to assign HSN code. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to assign HSN code. Please try again.",
         variant: "destructive",
-        duration: 3000,
+        duration: 5000,
       });
     }
   }, [form, quote?.id, scheduleCalculation, toast, loadQuoteData]);
@@ -1784,25 +1799,39 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Tax method selection handlers
   const handleTaxMethodChange = async (method: string, metadata?: any) => {
     try {
+      console.log(`🎯 [Tax Method] Changing method from ${quote?.calculation_method_preference || 'auto'} to ${method}`);
+      
       setCurrentTaxMethod(method);
       
       // Update quote with new calculation method preference
       if (quote?.id) {
-        await unifiedDataEngine.updateQuote(quote.id, {
+        const updateSuccess = await unifiedDataEngine.updateQuote(quote.id, {
           calculation_method_preference: method,
           operational_data: {
             ...quote.operational_data,
             tax_method_metadata: metadata
           }
         });
-        
-        // Trigger recalculation with new method
-        await calculateSmartFeatures({ ...quote, calculation_method_preference: method });
-        
-        toast({
-          title: "Tax Method Updated",
-          description: `Calculation method changed to ${method}. Recalculating taxes...`,
-        });
+
+        if (updateSuccess) {
+          console.log(`✅ [Tax Method] Database updated successfully with method: ${method}`);
+          
+          // CRITICAL: Refresh quote data to update all components with new method
+          await loadQuoteData();
+          console.log(`🔄 [Tax Method] Quote data refreshed after method change`);
+          
+          // Trigger recalculation with refreshed quote data
+          scheduleCalculation(() => {
+            console.log(`🧮 [Tax Method] Recalculation triggered with new method: ${method}`);
+          });
+          
+          toast({
+            title: "Tax Method Updated",
+            description: `Calculation method changed to ${method}. Recalculating taxes...`,
+          });
+        } else {
+          throw new Error('Database update failed');
+        }
       }
     } catch (error) {
       console.error('Tax method update error:', error);
