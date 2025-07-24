@@ -160,8 +160,8 @@ export const useCustomerManagementFixed = () => {
         throw error;
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 seconds for fresh customer data
+    refetchOnWindowFocus: true, // ✅ Refetch when user returns to tab
   });
 
   const updateCodMutation = useMutation({

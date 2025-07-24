@@ -78,10 +78,11 @@ const UnifiedQuotePage: React.FC<UnifiedQuotePageProps> = ({ mode = 'view' }) =>
       return data as UnifiedQuote;
     },
     enabled: !!quoteId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - quote data is relatively stable
-    gcTime: 15 * 60 * 1000, // 15 minutes - keep in cache longer
-    refetchOnWindowFocus: false, // Don't refetch on window focus for better UX
-    refetchOnMount: false, // Use cached data if available and not stale
+    staleTime: 30 * 1000, // 30 seconds - fresh data for real-time updates
+    gcTime: 5 * 60 * 1000, // 5 minutes - reasonable cache retention
+    refetchOnWindowFocus: true, // ✅ Refetch when user returns to tab
+    refetchOnMount: true, // ✅ Refetch when component remounts
+    refetchInterval: 60 * 1000, // ✅ Background refresh every minute
     retry: 2, // Retry failed requests twice
   });
 

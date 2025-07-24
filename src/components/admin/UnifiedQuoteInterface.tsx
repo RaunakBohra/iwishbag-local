@@ -55,6 +55,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
@@ -112,14 +113,52 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: allCountries } = useAllCountries();
+  const queryClient = useQueryClient();
 
   // Core state
   const quoteId = initialQuoteId || paramId;
-  const [quote, setQuote] = useState<UnifiedQuote | null>(null);
+  
+  // ✅ MIGRATED TO REACT QUERY: Replace local state with cached query
+  const {
+    data: quote,
+    isLoading: isLoadingQuote,
+    error: quoteError,
+    refetch: refetchQuote,
+  } = useQuery({
+    queryKey: ['admin-quote', quoteId],
+    queryFn: async () => {
+      if (!quoteId) throw new Error('No quote ID provided');
+      const quoteData = await unifiedDataEngine.getQuote(quoteId, true);
+      if (!quoteData) throw new Error('Quote not found');
+      return quoteData;
+    },
+    enabled: !!quoteId,
+    staleTime: 30 * 1000, // 30 seconds - fresh admin data
+    refetchOnWindowFocus: true, // ✅ Refetch when admin returns to tab
+    refetchOnMount: true, // ✅ Always refetch when component mounts
+    refetchInterval: 45 * 1000, // ✅ Background refresh every 45 seconds
+    retry: 2,
+    onSuccess: (quoteData) => {
+      // Populate form with fresh quote data
+      if (quoteData && form) {
+        populateFormFromQuote(quoteData);
+      }
+    },
+    onError: (error) => {
+      console.error('Error loading quote:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load quote data.',
+        variant: 'destructive',
+      });
+    },
+  });
   
   // Get standardized currency display
   const currencyDisplay = useAdminQuoteCurrency(quote);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Use React Query loading state instead of local state
+  const isLoading = isLoadingQuote;
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Smart features state
@@ -190,60 +229,29 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const { handleQuoteSent } = useStatusTransitions();
 
 
-  // Load quote data
+  // ✅ Calculate smart features when quote data changes
   useEffect(() => {
-    if (!quoteId) {
-      setIsLoading(false);
-      return;
+    if (quote && !isLoading) {
+      calculateSmartFeatures(quote);
     }
+  }, [quote, isLoading]);
 
-    loadQuoteData();
-  }, [quoteId]);
+  // ✅ CROSS-COMPONENT SYNC: Function to invalidate both admin and user caches
+  const invalidateQuoteCaches = useCallback(async () => {
+    // Invalidate admin cache
+    queryClient.invalidateQueries({ queryKey: ['admin-quote', quoteId] });
+    // ✅ CRITICAL: Also invalidate user cache so changes show immediately
+    queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
+    // Invalidate related queries
+    queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
+  }, [queryClient, quoteId]);
 
-  const loadQuoteData = async (forceRefresh = false) => {
-    try {
-      setIsLoading(true);
-
-      // Add small delay if forcing refresh to allow database update to propagate
-      if (forceRefresh) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      const quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
-
-      if (!quoteData) {
-        toast({
-          title: 'Quote not found',
-          description: 'The requested quote could not be found.',
-          variant: 'destructive',
-        });
-        navigate('/admin/quotes');
-        return;
-      }
-
-      console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
-        oldStatus: quote?.status,
-        newStatus: quoteData.status,
-        quoteId: quoteData.id,
-      });
-      setQuote(quoteData);
-
-      // Populate form with quote data
-      populateFormFromQuote(quoteData);
-
-      // Calculate smart features
-      await calculateSmartFeatures(quoteData);
-    } catch (error) {
-      console.error('Error loading quote:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load quote data.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ✅ ENHANCED CALLBACK: Combines refetch with cache invalidation
+  const handleQuoteUpdate = useCallback(async () => {
+    await refetchQuote();
+    await invalidateQuoteCaches();
+  }, [refetchQuote, invalidateQuoteCaches]);
 
   // ✅ HELPER: Create enhanced quote with current form values
   const createEnhancedQuote = (baseQuote?: UnifiedQuote): UnifiedQuote | null => {
@@ -1629,7 +1637,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         
         // ✅ FIX: Trigger recalculation after save to update breakdown with new sales tax
         console.log('🔄 [SAVE-FIX] Triggering recalculation after save to update breakdown');
-        await loadQuoteData(); // Reload to get fresh data first
+        await refetchQuote(); // ✅ React Query refetch instead of loadQuoteData
+        await invalidateQuoteCaches(); // ✅ CRITICAL: Sync with user cache
         
         // Then trigger calculation with new data to update the breakdown display
         await calculateSmartFeatures();
@@ -1691,7 +1700,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           description: 'All changes have been saved successfully.',
           duration: 3000,
         });
-        await loadQuoteData(); // Reload to get fresh data
+        await refetchQuote(); // ✅ React Query refetch instead of loadQuoteData
+        await invalidateQuoteCaches(); // ✅ CRITICAL: Sync with user cache
       } else {
         toast({
           title: 'Save failed',
@@ -2587,7 +2597,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* Customer Information */}
               <CompactCustomerInfo
                 quote={liveQuote || quote}
-                onUpdateQuote={loadQuoteData}
+                onUpdateQuote={handleQuoteUpdate}
                 compact={true}
                 editMode={isEditMode}
               />
@@ -2596,7 +2606,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* Status Management - Outside form to prevent submission conflicts */}
               <CompactStatusManager
                 quote={liveQuote || quote}
-                onStatusUpdate={loadQuoteData}
+                onStatusUpdate={handleQuoteUpdate}
                 compact={true}
               />
 
@@ -2633,7 +2643,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               ].includes(quote.status) && (
                 <CompactPaymentManager
                   quote={liveQuote || quote}
-                  onPaymentUpdate={loadQuoteData}
+                  onPaymentUpdate={handleQuoteUpdate}
                   compact={true}
                 />
               )}
@@ -2795,7 +2805,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* 1. Customer Information - First Priority (customer context) */}
               <CompactCustomerInfo
                 quote={liveQuote || quote}
-                onUpdateQuote={loadQuoteData}
+                onUpdateQuote={handleQuoteUpdate}
                 compact={true}
                 editMode={isEditMode}
               />
@@ -2902,14 +2912,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* 3. Status Management - Third Priority (actionable) */}
               <CompactStatusManager
                 quote={liveQuote || quote}
-                onStatusUpdate={loadQuoteData}
+                onStatusUpdate={handleQuoteUpdate}
                 compact={true}
               />
 
               {/* 4. iwishBag Tracking Management - Fourth Priority (tracking) */}
               <CompactShippingManager
                 quote={liveQuote || quote}
-                onUpdateQuote={loadQuoteData}
+                onUpdateQuote={handleQuoteUpdate}
                 compact={true}
               />
 
@@ -3046,7 +3056,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               ].includes(quote.status) && (
                 <CompactPaymentManager
                   quote={liveQuote || quote}
-                  onPaymentUpdate={loadQuoteData}
+                  onPaymentUpdate={handleQuoteUpdate}
                   compact={true}
                 />
               )}
