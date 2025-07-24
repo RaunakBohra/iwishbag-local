@@ -45,7 +45,7 @@ class HSNWeightService {
     }
 
     try {
-      console.log(`🔍 [HSN Weight] Fetching weight data for HSN: ${hsnCode}`);
+      // Fetching HSN weight data
       
       const { data: hsnRecord, error } = await supabase
         .from('hsn_master')
@@ -55,7 +55,7 @@ class HSNWeightService {
         .single();
 
       if (error || !hsnRecord) {
-        console.log(`❌ [HSN Weight] No data found for HSN: ${hsnCode}`);
+        // No HSN weight data found
         this.setCache(hsnCode, null);
         return null;
       }
@@ -65,7 +65,7 @@ class HSNWeightService {
       const packagingData = hsnRecord.weight_data?.typical_weights?.packaging;
 
       if (!weightData || !weightData.average) {
-        console.log(`⚠️ [HSN Weight] No weight data in HSN record: ${hsnCode}`);
+        // HSN record has no weight data
         this.setCache(hsnCode, null);
         return null;
       }
@@ -79,7 +79,7 @@ class HSNWeightService {
         confidence: 0.95 // High confidence for HSN data
       };
 
-      console.log(`✅ [HSN Weight] Found weight data for HSN ${hsnCode}:`, result);
+      // HSN weight data found
       this.setCache(hsnCode, result);
       return result;
 

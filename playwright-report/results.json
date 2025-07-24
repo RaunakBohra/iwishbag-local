@@ -11,7 +11,7 @@
     "grepInvert": null,
     "maxFailures": 0,
     "metadata": {
-      "actualWorkers": 3
+      "actualWorkers": 1
     },
     "preserveOutput": "always",
     "reporter": [
@@ -43,7 +43,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 3
+          "actualWorkers": 1
         },
         "id": "chromium",
         "name": "chromium",
@@ -59,7 +59,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 3
+          "actualWorkers": 1
         },
         "id": "firefox",
         "name": "firefox",
@@ -75,7 +75,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 3
+          "actualWorkers": 1
         },
         "id": "webkit",
         "name": "webkit",
@@ -91,7 +91,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 3
+          "actualWorkers": 1
         },
         "id": "Mobile Chrome",
         "name": "Mobile Chrome",
@@ -107,7 +107,7 @@
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
-          "actualWorkers": 3
+          "actualWorkers": 1
         },
         "id": "Mobile Safari",
         "name": "Mobile Safari",
@@ -126,28 +126,28 @@
     "workers": 6,
     "webServer": {
       "command": "npm run dev",
-      "url": "http://localhost:8081",
+      "url": "http://localhost:8080",
       "reuseExistingServer": true,
       "timeout": 120000
     }
   },
   "suites": [
     {
-      "title": "setup-test.spec.ts",
-      "file": "setup-test.spec.ts",
+      "title": "hsn-investigation.spec.ts",
+      "file": "hsn-investigation.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Setup Verification",
-          "file": "setup-test.spec.ts",
-          "line": 7,
+          "title": "HSN Category Assignment Investigation",
+          "file": "hsn-investigation.spec.ts",
+          "line": 4,
           "column": 6,
           "specs": [
             {
-              "title": "should load iwishBag homepage successfully",
-              "ok": true,
+              "title": "investigate HSN category assignment issue",
+              "ok": false,
               "tags": [],
               "tests": [
                 {
@@ -160,109 +160,96 @@
                     {
                       "workerIndex": 0,
                       "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2305,
-                      "errors": [],
+                      "status": "failed",
+                      "duration": 8714,
+                      "error": {
+                        "message": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByLabel(/email/i)\u001b[22m\n",
+                        "stack": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByLabel(/email/i)\u001b[22m\n\n    at login (/Users/raunakbohra/Desktop/global-wishlist-hub/e2e/helpers/auth.ts:38:35)\n    at /Users/raunakbohra/Desktop/global-wishlist-hub/e2e/hsn-investigation.spec.ts:14:5",
+                        "location": {
+                          "file": "/Users/raunakbohra/Desktop/global-wishlist-hub/e2e/helpers/auth.ts",
+                          "column": 35,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[90m   at \u001b[39mhelpers/auth.ts:38\n\n  36 |   \n  37 |   // Fill login form\n> 38 |   await page.getByLabel(/email/i).fill(user.email);\n     |                                   ^\n  39 |   await page.getByLabel(/password/i).fill(user.password);\n  40 |   \n  41 |   // Submit form"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/raunakbohra/Desktop/global-wishlist-hub/e2e/helpers/auth.ts",
+                            "column": 35,
+                            "line": 38
+                          },
+                          "message": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByLabel(/email/i)\u001b[22m\n\n\n   at helpers/auth.ts:38\n\n  36 |   \n  37 |   // Fill login form\n> 38 |   await page.getByLabel(/email/i).fill(user.email);\n     |                                   ^\n  39 |   await page.getByLabel(/password/i).fill(user.password);\n  40 |   \n  41 |   // Submit form\n    at login (/Users/raunakbohra/Desktop/global-wishlist-hub/e2e/helpers/auth.ts:38:35)\n    at /Users/raunakbohra/Desktop/global-wishlist-hub/e2e/hsn-investigation.spec.ts:14:5"
+                        }
+                      ],
                       "stdout": [
                         {
-                          "text": "✅ Homepage loaded successfully\n"
+                          "text": "[LOG] ⚙️ UnifiedConfigurationService initialized\n"
                         },
                         {
-                          "text": "📄 Page title: iWishBag Shop Internationally\n"
+                          "text": "[ERROR] Failed to load resource: the server responded with a status of 404 (Not Found)\n"
                         },
                         {
-                          "text": "🌐 Page URL: http://localhost:8081/\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-07-21T17:45:05.149Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "5918730189d9b3281a6a-5c0c558e1caa2c67c934",
-              "file": "setup-test.spec.ts",
-              "line": 8,
-              "column": 3
-            },
-            {
-              "title": "should have functional navigation",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 1,
-                      "parallelIndex": 1,
-                      "status": "passed",
-                      "duration": 1584,
-                      "errors": [],
-                      "stdout": [
+                          "text": "[LOG] 2025-07-24T17:40:57.857Z DEBUG[Auth]: Auth state changed {event: INITIAL_SESSION, userId: undefined, isAnonymous: undefined}\n"
+                        },
                         {
-                          "text": "ℹ️ No standard navigation found - this might be expected for your design\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2025-07-21T17:45:05.141Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "5918730189d9b3281a6a-854453e35c061fcdb548",
-              "file": "setup-test.spec.ts",
-              "line": 28,
-              "column": 3
-            },
-            {
-              "title": "should handle 404 errors gracefully",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 2,
-                      "parallelIndex": 2,
-                      "status": "passed",
-                      "duration": 1575,
-                      "errors": [],
-                      "stdout": [
+                          "text": "[LOG] 2025-07-24T17:40:57.906Z DEBUG[Auth]: Auth state changed {event: SIGNED_IN, userId: 79050c19-bd31-4b7d-a83b-573878e4b3f7, isAnonymous: true}\n"
+                        },
                         {
-                          "text": "📊 404 test status: 200\n"
+                          "text": "[LOG] 2025-07-24T17:40:57.906Z DEBUG[Auth]: Anonymous user signed in {userId: 79050c19-bd31-4b7d-a83b-573878e4b3f7}\n"
+                        },
+                        {
+                          "text": "[LOG] 🔄 Loading status settings from database...\n"
+                        },
+                        {
+                          "text": "[LOG] 🔍 [useAdminRole] Checking admin role for user: {user: Object}\n"
+                        },
+                        {
+                          "text": "[LOG] 🔄 Setting cart storage key for user: 79050c19-bd31-4b7d-a83b-573878e4b3f7\n"
+                        },
+                        {
+                          "text": "[ERROR] 404 Error: User attempted to access non-existent route: /login\n"
+                        },
+                        {
+                          "text": "[LOG] Fetching users with roles for local development...\n"
+                        },
+                        {
+                          "text": "[LOG] ✅ Loaded quote statuses from database: [pending, sent, approved, rejected, expired, calculated]\n"
+                        },
+                        {
+                          "text": "[LOG] ✅ Loaded order statuses from database: [processing, paid, ordered, shipped, completed, cancelled, payment_pending]\n"
+                        },
+                        {
+                          "text": "[LOG] 🔍 [useAdminRole] RPC call results: {hasError: false, errorMessage: undefined, data: false, isAdmin: false}\n"
+                        },
+                        {
+                          "text": "[LOG] Users with roles fetched: 1 users\n"
                         }
                       ],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2025-07-21T17:45:05.148Z",
+                      "startTime": "2025-07-24T17:40:56.262Z",
                       "annotations": [],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/Users/raunakbohra/Desktop/global-wishlist-hub/test-results/hsn-investigation-HSN-Cate-38a3a-N-category-assignment-issue-chromium/video.webm"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/raunakbohra/Desktop/global-wishlist-hub/e2e/helpers/auth.ts",
+                        "column": 35,
+                        "line": 38
+                      }
                     }
                   ],
-                  "status": "expected"
+                  "status": "unexpected"
                 }
               ],
-              "id": "5918730189d9b3281a6a-d10bebeedb4ca01763a3",
-              "file": "setup-test.spec.ts",
-              "line": 42,
+              "id": "34bb7dbbcde9fb225a30-e4de3cd3fce7693168ad",
+              "file": "hsn-investigation.spec.ts",
+              "line": 5,
               "column": 3
             }
           ]
@@ -272,11 +259,11 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2025-07-21T17:45:04.722Z",
-    "duration": 4263.584,
-    "expected": 3,
+    "startTime": "2025-07-24T17:40:55.877Z",
+    "duration": 9973.101999999999,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }

@@ -144,7 +144,19 @@
       "Bash(git worktree:*)",
       "Bash(claude mcp add:*)",
       "Bash(claude mcp:*)",
-      "WebFetch(domain:experienceleague.adobe.com)"
+      "WebFetch(domain:experienceleague.adobe.com)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh repo list:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh api:*)",
+      "Bash(pg_isready:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(git clone:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)"
     ],
     "deny": []
   }

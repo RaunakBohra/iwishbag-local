@@ -226,8 +226,14 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
   const methodStatus = getCalculationMethodStatus();
 
-  // Handle tax method change
-  const handleTaxMethodChange = async (newMethod: string) => {
+  // Handle tax method change with proper event handling
+  const handleTaxMethodChange = async (newMethod: string, event?: React.MouseEvent) => {
+    // CRITICAL: Prevent page refresh and event bubbling
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     console.log(`🎯 [TaxSidebar] Method change requested: ${newMethod}`);
     
     if (onMethodChange) {
@@ -272,15 +278,21 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             {/* Method Selection Cards */}
             <div className="space-y-3">
               {/* HSN-Based Method */}
-              <div 
-                className={`p-3 rounded-lg border transition-all ${
+              <button
+                type="button"
+                className={`w-full p-3 rounded-lg border transition-all text-left ${
                   isChangingMethod 
                     ? 'cursor-not-allowed opacity-50 border-gray-200' 
                     : taxAnalytics.calculationMethod === 'hsn_based' 
                       ? 'border-green-300 bg-green-50 ring-2 ring-green-200 cursor-pointer' 
                       : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50 cursor-pointer'
                 }`}
-                onClick={() => !isChangingMethod && handleTaxMethodChange('hsn_based')}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  !isChangingMethod && handleTaxMethodChange('hsn_based', e);
+                }}
+                disabled={isChangingMethod}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -315,7 +327,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                     <div className="text-xs text-gray-500">classified</div>
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Country Settings Method */}
               <div 
@@ -326,7 +338,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                       ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200 cursor-pointer' 
                       : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
                 }`}
-                onClick={() => !isChangingMethod && handleTaxMethodChange('country_settings')}
+                onClick={(e) => !isChangingMethod && handleTaxMethodChange('country_settings', e)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -367,7 +379,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                       ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200 cursor-pointer' 
                       : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
                 }`}
-                onClick={() => !isChangingMethod && handleTaxMethodChange('auto')}
+                onClick={(e) => !isChangingMethod && handleTaxMethodChange('auto', e)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

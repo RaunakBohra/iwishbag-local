@@ -219,17 +219,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Ensure form is populated when quote becomes available (fixes refresh issue)
   useEffect(() => {
-    console.log('🔄 DEBUG - Form population useEffect triggered:', {
-      hasQuote: !!quote,
-      isEditMode,
-      isLoading,
-      quoteId: quote?.id,
-      formItemsLength: form.watch('items')?.length,
-      quoteItemsLength: quote?.items?.length
-    });
+    // Form population monitoring
 
     if (quote && isEditMode && !isLoading) {
-      console.log('📝 Ensuring form is populated with quote data');
+      // Ensuring form population
       
       // Check if form is actually populated
       const formItems = form.watch('items');
@@ -238,13 +231,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       
       // Repopulate form if it's empty but quote has items (typical refresh issue)
       if (!hasFormItems && hasQuoteItems) {
-        console.log('🚨 Form is empty but quote has items - repopulating form');
+        // Form empty - repopulating
         populateFormFromQuote(quote);
       } else if (hasFormItems && hasQuoteItems && formItems.length !== quote.items.length) {
-        console.log('🔄 Form and quote have different item counts - repopulating form');
+        // Item count mismatch - repopulating
         populateFormFromQuote(quote);
       } else {
-        console.log('✅ Form appears to be properly populated');
+        // Form properly populated
       }
     }
   }, [quote, isEditMode, isLoading, form]);
@@ -256,7 +249,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       if (quote && isEditMode && !isLoading) {
         const formItems = form.watch('items');
         if (!formItems || formItems.length === 0) {
-          console.log('⚠️ Timeout check: Form still empty after load - force populating');
+          // Timeout check - force populating
           populateFormFromQuote(quote);
         }
       }
@@ -858,12 +851,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
         // 2. Persist to database immediately for sidebar synchronization
         if (quote?.id && items[itemIndex].id) {
-          console.log(`🏷️ [HSN] Persisting HSN assignment to database:`, {
-            quoteId: quote.id,
-            itemId: items[itemIndex].id,
-            hsnCode: hsnData.hsn_code,
-            category: hsnData.category || hsnData.display_name
-          });
+          // Persisting HSN assignment to database
 
           const success = await unifiedDataEngine.updateItem(quote.id, items[itemIndex].id, {
             hsn_code: hsnData.hsn_code,
@@ -871,13 +859,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           });
 
           if (success) {
-            console.log(`✅ [HSN] Database update successful for item ${items[itemIndex].id}`);
+            // HSN database update successful
             
             // 3. Trigger quote data refresh to update sidebar components
             // This will cause the quote prop to be refreshed, syncing sidebar components
             await loadQuoteData();
             
-            console.log(`🔄 [HSN] Quote data refreshed for sidebar synchronization`);
+            // Quote data refreshed for sidebar sync
           } else {
             console.error(`❌ [HSN] Database update failed for item ${items[itemIndex].id}`);
             throw new Error('Database update failed');
@@ -887,7 +875,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         // 4. Trigger quote calculation update after HSN assignment
         if (quote?.id) {
           scheduleCalculation(() => {
-            console.log('🧮 [HSN] HSN assignment triggered quote recalculation');
+            // HSN assignment triggered recalculation
           });
         }
 
@@ -1441,14 +1429,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Form population function
   const populateFormFromQuote = (quoteData: UnifiedQuote) => {
-    console.log('🎯 DEBUG - populateFormFromQuote called:', {
-      quoteId: quoteData.id,
-      itemsCount: quoteData.items?.length,
-      hasItems: !!quoteData.items,
-      items: quoteData.items,
-      isEditMode,
-      callStack: new Error().stack?.slice(0, 200) // Truncated stack trace
-    });
+    // Populating form from quote data
     
     const calculationData = quoteData.calculation_data || {};
     const operationalData = quoteData.operational_data || {};
@@ -1509,6 +1490,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         product_url: String(item.url || ''),
         image_url: String(item.image || ''),
         hsn_code: item.hsn_code || '', // Include HSN code
+        category: item.category || '', // Include category
       };
       
       // Validate critical fields
@@ -1532,16 +1514,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         product_url: '',
         image_url: '',
         hsn_code: '', // Include HSN code
+        category: '', // Include category
       });
     }
     
-    console.log('🏗️ DEBUG - Form Reset Called:', {
-      quoteDataItems: quoteData.items,
-      mappedFormItems: formItemsData,
-      isEditMode,
-      quoteId: quoteData.id,
-      itemsCount: formItemsData.length
-    });
+    // Form reset called
 
     form.reset({
       id: quoteData.id,
@@ -1561,11 +1538,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       items: formItemsData,
     });
     
-    console.log('✅ DEBUG - Form Reset Complete:', {
-      formWatchItems: form.watch('items'),
-      formGetValuesItems: form.getValues('items'),
-      resetSuccess: 'Form has been reset with items data'
-    });
+    // Form reset complete
   };
 
   // Form save handler

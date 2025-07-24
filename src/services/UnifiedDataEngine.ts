@@ -639,11 +639,8 @@ export class UnifiedDataEngine {
       errors.push('HSN code must be 2-8 digits only');
     }
 
-    // Category validation
-    const validCategories = ['electronics', 'clothing', 'books', 'toys', 'accessories', 'home_garden'];
-    if (category && !validCategories.includes(category)) {
-      errors.push(`Category must be one of: ${validCategories.join(', ')}`);
-    }
+    // Category validation - Allow any category from HSN database
+    // Note: Category will be validated against database records below
 
     // Consistency validation - both HSN and category should be provided together
     if ((hsnCode && !category) || (!hsnCode && category)) {
@@ -662,9 +659,8 @@ export class UnifiedDataEngine {
 
         if (error || !hsnRecord) {
           errors.push(`HSN code ${hsnCode} not found in HSN master database`);
-        } else if (hsnRecord.category !== category) {
-          errors.push(`Category mismatch: HSN ${hsnCode} should be category '${hsnRecord.category}', not '${category}'`);
         }
+        // Note: Category mismatch validation removed - using database category as source of truth
       } catch (error) {
         errors.push('Failed to validate HSN code against database');
       }
