@@ -11,7 +11,7 @@ import {
   ArrowRight,
   Globe,
   Smartphone,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -31,7 +31,7 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
   onNavigateToSettings,
 }) => {
   const { isAdmin } = useUserRoles();
-  
+
   const handleConfigureClick = () => {
     if (onNavigateToSettings) {
       onNavigateToSettings();
@@ -49,16 +49,17 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
     <Card className="shadow-sm border-orange-200 bg-orange-50/20 overflow-hidden">
       {/* Configuration Prompt Indicator */}
       <div className="bg-gradient-to-r from-orange-500 to-red-500 h-1 w-full" />
-      
+
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             <CreditCard className="w-4 h-4 text-gray-600" />
-            <span className="font-medium text-gray-900 text-sm">
-              Payment Methods
-            </span>
-            <Badge variant="outline" className="text-xs h-5 px-2 bg-orange-100 text-orange-700 border-orange-300">
+            <span className="font-medium text-gray-900 text-sm">Payment Methods</span>
+            <Badge
+              variant="outline"
+              className="text-xs h-5 px-2 bg-orange-100 text-orange-700 border-orange-300"
+            >
               {isUserFacing ? 'Unavailable' : 'Setup Required'}
             </Badge>
           </div>
@@ -73,16 +74,17 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
               <>
                 <div className="font-medium mb-1">No payment methods available</div>
                 <div className="text-sm">
-                  Payment processing is currently unavailable for {currency} {amount}. 
-                  Please contact our support team for assistance with your payment.
+                  Payment processing is currently unavailable for {currency} {amount}. Please
+                  contact our support team for assistance with your payment.
                 </div>
               </>
             ) : (
               <>
                 <div className="font-medium mb-1">Payment gateways not configured</div>
                 <div className="text-sm">
-                  No payment methods are available for <span className="font-medium">{currency}</span> payments. 
-                  Configure payment gateways in System Settings to enable checkout functionality.
+                  No payment methods are available for{' '}
+                  <span className="font-medium">{currency}</span> payments. Configure payment
+                  gateways in System Settings to enable checkout functionality.
                 </div>
               </>
             )}
@@ -95,10 +97,8 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
             <div className="flex items-start space-x-3">
               <Settings className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-medium text-orange-900 text-sm mb-2">
-                  Quick Setup Required
-                </h3>
-                
+                <h3 className="font-medium text-orange-900 text-sm mb-2">Quick Setup Required</h3>
+
                 {/* Setup Steps */}
                 <div className="space-y-2 text-xs text-orange-800">
                   <div className="flex items-center space-x-2">
@@ -121,7 +121,9 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
 
                 {/* Suggested Payment Methods */}
                 <div className="mt-3">
-                  <div className="text-xs font-medium text-orange-700 mb-2">Suggested for {currency}:</div>
+                  <div className="text-xs font-medium text-orange-700 mb-2">
+                    Suggested for {currency}:
+                  </div>
                   <div className="flex items-center space-x-3 text-xs">
                     {currency === 'USD' && (
                       <>
@@ -175,15 +177,15 @@ export const PaymentConfigurationPrompt: React.FC<PaymentConfigurationPromptProp
               <span>Configure payment methods to enable customer checkout.</span>
             )}
           </div>
-          
+
           <Button
             size="sm"
             onClick={handleConfigureClick}
             className={cn(
-              "h-8 px-3 text-xs",
-              isUserFacing 
-                ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                : "bg-orange-600 hover:bg-orange-700 text-white"
+              'h-8 px-3 text-xs',
+              isUserFacing
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-orange-600 hover:bg-orange-700 text-white',
             )}
           >
             {isUserFacing ? (

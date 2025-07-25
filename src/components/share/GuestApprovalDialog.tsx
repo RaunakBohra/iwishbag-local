@@ -173,11 +173,13 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
       }
 
       // Step 1: Initiate email verification (this updates quote with verification token)
-      const { data: verificationToken, error: verificationError } = await supabase
-        .rpc('initiate_quote_email_verification', {
+      const { data: verificationToken, error: verificationError } = await supabase.rpc(
+        'initiate_quote_email_verification',
+        {
           p_quote_id: quoteId,
-          p_email: guestEmail
-        });
+          p_email: guestEmail,
+        },
+      );
 
       if (verificationError) throw verificationError;
 
@@ -195,7 +197,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
 
       // Step 3: Send verification email
       const verificationLink = `${window.location.origin}/auth/verify-quote?token=${verificationToken}&redirect=${encodeURIComponent(window.location.pathname)}`;
-      
+
       await sendQuoteVerificationEmail({
         to: guestEmail,
         quoteId: quoteId.substring(0, 8), // Use first 8 chars for display
@@ -205,17 +207,13 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
       });
 
       // Step 4: Log the verification initiation
-      await auditLogService.logAction(
-        quoteId,
-        'email_verification_sent',
-        {
-          details: {
-            customer_email: guestEmail,
-            customer_name: guestName,
-            verification_initiated_at: new Date().toISOString()
-          }
-        }
-      );
+      await auditLogService.logAction(quoteId, 'email_verification_sent', {
+        details: {
+          customer_email: guestEmail,
+          customer_name: guestName,
+          verification_initiated_at: new Date().toISOString(),
+        },
+      });
 
       // Record rate limit usage
       rateLimitService.recordShareLinkGeneration('anonymous-user');
@@ -228,7 +226,6 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
       // Close the dialog
       if (onClose) onClose();
       if (onOpenChange) onOpenChange(false);
-
     } catch (error) {
       console.error('Error sending verification email:', error);
       toast({
@@ -328,7 +325,7 @@ export const GuestApprovalDialog: React.FC<GuestApprovalDialogProps> = ({
           <DialogDescription>
             {action === 'approve'
               ? currentView === 'options'
-                ? 'Enter your email and name. We\'ll send you a verification link to complete your quote approval.'
+                ? "Enter your email and name. We'll send you a verification link to complete your quote approval."
                 : currentView === 'signin'
                   ? 'Sign in to your account to continue with this quote.'
                   : 'Create an account to continue with this quote.'

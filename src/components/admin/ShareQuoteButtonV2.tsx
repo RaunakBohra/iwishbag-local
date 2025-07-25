@@ -21,18 +21,18 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Share2, 
-  Copy, 
-  Clock, 
-  ExternalLink, 
-  Check, 
-  ChevronDown, 
+import {
+  Share2,
+  Copy,
+  Clock,
+  ExternalLink,
+  Check,
+  ChevronDown,
   ChevronUp,
   AlertCircle,
   DollarSign,
   User,
-  Calendar
+  Calendar,
 } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
@@ -64,22 +64,21 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
   const linkInputRef = useRef<HTMLInputElement>(null);
 
   // Check if there's an existing valid share link
-  const hasExistingShareLink = 
-    quote.share_token && 
-    quote.expires_at && 
-    new Date(quote.expires_at) > new Date();
+  const hasExistingShareLink =
+    quote.share_token && quote.expires_at && new Date(quote.expires_at) > new Date();
 
   // Calculate time until expiry
   const getExpiryInfo = () => {
     if (!quote.expires_at) return null;
-    
+
     const expiryDate = new Date(quote.expires_at);
     const now = new Date();
     const hoursUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60));
-    
+
     if (hoursUntilExpiry <= 0) return { status: 'expired', text: 'Expired' };
-    if (hoursUntilExpiry <= 24) return { status: 'warning', text: `Expires in ${hoursUntilExpiry}h` };
-    
+    if (hoursUntilExpiry <= 24)
+      return { status: 'warning', text: `Expires in ${hoursUntilExpiry}h` };
+
     const daysUntilExpiry = Math.ceil(hoursUntilExpiry / 24);
     return { status: 'active', text: `Expires in ${daysUntilExpiry}d` };
   };
@@ -109,7 +108,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
 
   const generateShareLink = async () => {
     setShareState('generating');
-    
+
     try {
       const shareToken = generateShareToken();
       const expiresAt = new Date();
@@ -142,7 +141,6 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
         title: 'Share Link Generated!',
         description: 'Your quote share link is ready to use.',
       });
-
     } catch (error) {
       console.error('Error generating share link:', error);
       setShareState('error');
@@ -158,7 +156,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
     try {
       await navigator.clipboard.writeText(shareLink);
       setCopySuccess(true);
-      
+
       // Reset success state after 2 seconds
       setTimeout(() => setCopySuccess(false), 2000);
 
@@ -181,7 +179,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
 
   const handleUpdateExpiry = async () => {
     setShareState('generating');
-    
+
     try {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseFloat(expiresInDays));
@@ -198,7 +196,6 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
         title: 'Expiry Updated!',
         description: `Share link expiry extended to ${expiresInDays === '0.000694' ? '1 minute' : expiresInDays + ' days'}.`,
       });
-
     } catch (error) {
       console.error('Error updating expiry:', error);
       setShareState('error');
@@ -227,8 +224,8 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
             setIsOpen(true);
           }}
           className={cn(
-            "h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary transition-colors",
-            className
+            'h-7 w-7 rounded-md hover:bg-primary/10 hover:text-primary transition-colors',
+            className,
           )}
           aria-label="Share Quote"
         >
@@ -238,11 +235,11 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
     }
 
     return (
-      <Button 
-        size={size} 
-        variant="outline" 
-        onClick={() => setIsOpen(true)} 
-        className={cn("gap-2", className)}
+      <Button
+        size={size}
+        variant="outline"
+        onClick={() => setIsOpen(true)}
+        className={cn('gap-2', className)}
       >
         <Share2 className="h-4 w-4" />
         Share Quote
@@ -266,8 +263,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
             <div className="flex items-center gap-4 text-sm text-gray-600">
               {quote.final_total_usd && (
                 <div className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  ${quote.final_total_usd.toFixed(2)}
+                  <DollarSign className="h-3 w-3" />${quote.final_total_usd.toFixed(2)}
                 </div>
               )}
               {quote.email && (
@@ -299,7 +295,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                 Generate a secure link to share this quote
               </p>
             </div>
-            
+
             <div className="space-y-3">
               <div>
                 <Label htmlFor="expiry">Link Expires In</Label>
@@ -317,10 +313,10 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
-              <Button 
-                onClick={generateShareLink} 
-                className="w-full min-h-[44px]" 
+
+              <Button
+                onClick={generateShareLink}
+                className="w-full min-h-[44px]"
                 size="lg"
                 aria-describedby="generate-help-text"
               >
@@ -328,7 +324,8 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                 Generate Share Link
               </Button>
               <p id="generate-help-text" className="sr-only">
-                This will create a secure link that expires in {expiresInDays === '0.000694' ? '1 minute' : expiresInDays + ' days'}
+                This will create a secure link that expires in{' '}
+                {expiresInDays === '0.000694' ? '1 minute' : expiresInDays + ' days'}
               </p>
             </div>
           </div>
@@ -346,9 +343,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
               <div className="flex-1">
                 <h4 className="font-medium text-green-900">Active Share Link</h4>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-green-700">
-                    {expiryInfo?.text}
-                  </span>
+                  <span className="text-sm text-green-700">{expiryInfo?.text}</span>
                   {expiryInfo?.status === 'warning' && (
                     <AlertCircle className="h-3 w-3 text-orange-500" />
                   )}
@@ -360,20 +355,20 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
               <div>
                 <Label>Share Link</Label>
                 <div className="flex gap-2 mt-1">
-                  <Input 
+                  <Input
                     ref={linkInputRef}
-                    value={shareLink} 
-                    readOnly 
-                    className="flex-1 font-mono text-sm" 
+                    value={shareLink}
+                    readOnly
+                    className="flex-1 font-mono text-sm"
                     onClick={(e) => e.currentTarget.select()}
                   />
                   <Button
                     size="icon"
-                    variant={copySuccess ? "default" : "outline"}
+                    variant={copySuccess ? 'default' : 'outline'}
                     onClick={copyToClipboard}
                     className={cn(
-                      "transition-all duration-200",
-                      copySuccess && "bg-green-600 hover:bg-green-700"
+                      'transition-all duration-200',
+                      copySuccess && 'bg-green-600 hover:bg-green-700',
                     )}
                   >
                     {copySuccess ? (
@@ -382,22 +377,20 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                       <Copy className="h-4 w-4" />
                     )}
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={openInNewTab}
-                  >
+                  <Button size="icon" variant="outline" onClick={openInNewTab}>
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <Button 
-                  onClick={copyToClipboard} 
-                  className="flex-1 min-h-[44px]" 
+                <Button
+                  onClick={copyToClipboard}
+                  className="flex-1 min-h-[44px]"
                   size="lg"
-                  aria-label={copySuccess ? "Link copied to clipboard" : "Copy share link to clipboard"}
+                  aria-label={
+                    copySuccess ? 'Link copied to clipboard' : 'Copy share link to clipboard'
+                  }
                 >
                   {copySuccess ? (
                     <>
@@ -411,8 +404,8 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                     </>
                   )}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShareState('initial')}
                   className="min-h-[44px]"
                   aria-label="Generate a new share link"
@@ -432,29 +425,27 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                 <Check className="h-6 w-6 text-green-600" />
               </div>
               <h3 className="font-semibold text-lg text-gray-900">Link Generated!</h3>
-              <p className="text-gray-600 text-sm mt-1">
-                Your quote share link is ready to use
-              </p>
+              <p className="text-gray-600 text-sm mt-1">Your quote share link is ready to use</p>
             </div>
 
             <div className="space-y-3">
               <div>
                 <Label>Share Link</Label>
                 <div className="flex gap-2 mt-1">
-                  <Input 
+                  <Input
                     ref={linkInputRef}
-                    value={shareLink} 
-                    readOnly 
-                    className="flex-1 font-mono text-sm bg-green-50 border-green-200" 
+                    value={shareLink}
+                    readOnly
+                    className="flex-1 font-mono text-sm bg-green-50 border-green-200"
                     onClick={(e) => e.currentTarget.select()}
                   />
                   <Button
                     size="icon"
-                    variant={copySuccess ? "default" : "outline"}
+                    variant={copySuccess ? 'default' : 'outline'}
                     onClick={copyToClipboard}
                     className={cn(
-                      "transition-all duration-200",
-                      copySuccess && "bg-green-600 hover:bg-green-700"
+                      'transition-all duration-200',
+                      copySuccess && 'bg-green-600 hover:bg-green-700',
                     )}
                   >
                     {copySuccess ? (
@@ -463,21 +454,17 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                       <Copy className="h-4 w-4" />
                     )}
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={openInNewTab}
-                  >
+                  <Button size="icon" variant="outline" onClick={openInNewTab}>
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              <Button 
-                onClick={copyToClipboard} 
-                className="w-full min-h-[44px]" 
+              <Button
+                onClick={copyToClipboard}
+                className="w-full min-h-[44px]"
                 size="lg"
-                aria-label={copySuccess ? "Link copied successfully" : "Copy generated share link"}
+                aria-label={copySuccess ? 'Link copied successfully' : 'Copy generated share link'}
               >
                 {copySuccess ? (
                   <>
@@ -516,14 +503,12 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                 <AlertCircle className="h-6 w-6 text-red-600" />
               </div>
               <h3 className="font-semibold text-lg text-gray-900">Generation Failed</h3>
-              <p className="text-gray-600 text-sm mt-1">
-                Something went wrong. Please try again.
-              </p>
+              <p className="text-gray-600 text-sm mt-1">Something went wrong. Please try again.</p>
             </div>
-            
-            <Button 
-              onClick={() => setShareState('initial')} 
-              className="w-full min-h-[44px]" 
+
+            <Button
+              onClick={() => setShareState('initial')}
+              className="w-full min-h-[44px]"
               variant="outline"
               aria-label="Try generating share link again"
             >
@@ -542,11 +527,7 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
       <CollapsibleTrigger asChild>
         <Button variant="ghost" className="w-full justify-between p-2 h-auto">
           <span className="text-sm font-medium">Advanced Options</span>
-          {isAdvancedOpen ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
+          {isAdvancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent className="space-y-3 pt-3">
@@ -567,9 +548,9 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
                 </SelectContent>
               </Select>
             </div>
-            <Button 
-              onClick={handleUpdateExpiry} 
-              variant="outline" 
+            <Button
+              onClick={handleUpdateExpiry}
+              variant="outline"
               className="w-full"
               disabled={shareState === 'generating'}
             >
@@ -587,14 +568,17 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
       {renderTriggerButton()}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent 
-          className="max-w-lg sm:max-w-lg w-[95vw] sm:w-full max-h-[85vh] overflow-y-auto" 
+        <DialogContent
+          className="max-w-lg sm:max-w-lg w-[95vw] sm:w-full max-h-[85vh] overflow-y-auto"
           onEscapeKeyDown={handleClose}
           aria-labelledby="share-quote-title"
           aria-describedby="share-quote-description"
         >
           <DialogHeader>
-            <DialogTitle id="share-quote-title" className="flex items-center gap-2 text-lg sm:text-xl">
+            <DialogTitle
+              id="share-quote-title"
+              className="flex items-center gap-2 text-lg sm:text-xl"
+            >
               <Share2 className="h-5 w-5 text-teal-600" />
               Share Quote
             </DialogTitle>
@@ -610,8 +594,8 @@ export const ShareQuoteButtonV2: React.FC<ShareQuoteButtonV2Props> = ({
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleClose}
               className="min-h-[44px] px-6"
               aria-label="Close share quote dialog"

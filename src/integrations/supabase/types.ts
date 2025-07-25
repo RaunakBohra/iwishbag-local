@@ -7,33 +7,50 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          extensions?: Json
-          variables?: Json
-          query?: string
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      admin_overrides: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          justification: string | null
+          override_data: Json
+          override_type: string
+          scope: string
+          scope_identifier: string | null
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          justification?: string | null
+          override_data?: Json
+          override_type: string
+          scope: string
+          scope_identifier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          justification?: string | null
+          override_data?: Json
+          override_type?: string
+          scope?: string
+          scope_identifier?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       authenticated_checkout_sessions: {
         Row: {
           created_at: string | null
@@ -1431,6 +1448,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hsn_master: {
+        Row: {
+          category: string
+          classification_data: Json | null
+          created_at: string
+          description: string
+          hsn_code: string
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          minimum_valuation_usd: number | null
+          requires_currency_conversion: boolean | null
+          subcategory: string | null
+          tax_data: Json | null
+          updated_at: string
+          weight_data: Json | null
+        }
+        Insert: {
+          category: string
+          classification_data?: Json | null
+          created_at?: string
+          description: string
+          hsn_code: string
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          minimum_valuation_usd?: number | null
+          requires_currency_conversion?: boolean | null
+          subcategory?: string | null
+          tax_data?: Json | null
+          updated_at?: string
+          weight_data?: Json | null
+        }
+        Update: {
+          category?: string
+          classification_data?: Json | null
+          created_at?: string
+          description?: string
+          hsn_code?: string
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          minimum_valuation_usd?: number | null
+          requires_currency_conversion?: boolean | null
+          subcategory?: string | null
+          tax_data?: Json | null
+          updated_at?: string
+          weight_data?: Json | null
+        }
+        Relationships: []
+      }
       manual_analysis_tasks: {
         Row: {
           assigned_to: string | null
@@ -2742,6 +2810,7 @@ export type Database = {
           preferred_display_currency: string | null
           preferred_payment_gateway: string | null
           referral_code: string | null
+          ticket_notifications: Json | null
           total_orders: number | null
           total_spent: number | null
           updated_at: string
@@ -2758,6 +2827,7 @@ export type Database = {
           preferred_display_currency?: string | null
           preferred_payment_gateway?: string | null
           referral_code?: string | null
+          ticket_notifications?: Json | null
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
@@ -2774,6 +2844,7 @@ export type Database = {
           preferred_display_currency?: string | null
           preferred_payment_gateway?: string | null
           referral_code?: string | null
+          ticket_notifications?: Json | null
           total_orders?: number | null
           total_spent?: number | null
           updated_at?: string
@@ -2960,8 +3031,9 @@ export type Database = {
       quotes: {
         Row: {
           admin_notes: string | null
+          auto_classification_data: Json | null
+          base_total_usd: number
           calculation_data: Json | null
-          costprice_total_usd: number
           created_at: string
           currency: string
           customer_data: Json | null
@@ -2976,6 +3048,7 @@ export type Database = {
           in_cart: boolean | null
           internal_notes: string | null
           is_anonymous: boolean | null
+          item_level_calculations: Json | null
           items: Json
           iwish_tracking_id: string | null
           last_viewed_at: string | null
@@ -3000,8 +3073,9 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          auto_classification_data?: Json | null
+          base_total_usd?: number
           calculation_data?: Json | null
-          costprice_total_usd?: number
           created_at?: string
           currency?: string
           customer_data?: Json | null
@@ -3016,6 +3090,7 @@ export type Database = {
           in_cart?: boolean | null
           internal_notes?: string | null
           is_anonymous?: boolean | null
+          item_level_calculations?: Json | null
           items?: Json
           iwish_tracking_id?: string | null
           last_viewed_at?: string | null
@@ -3040,8 +3115,9 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          auto_classification_data?: Json | null
+          base_total_usd?: number
           calculation_data?: Json | null
-          costprice_total_usd?: number
           created_at?: string
           currency?: string
           customer_data?: Json | null
@@ -3056,6 +3132,7 @@ export type Database = {
           in_cart?: boolean | null
           internal_notes?: string | null
           is_anonymous?: boolean | null
+          item_level_calculations?: Json | null
           items?: Json
           iwish_tracking_id?: string | null
           last_viewed_at?: string | null
@@ -3453,6 +3530,60 @@ export type Database = {
         }
         Relationships: []
       }
+      reply_templates: {
+        Row: {
+          body_template: string
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          subject_template: string | null
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          body_template: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject_template?: string | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          body_template?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject_template?: string | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reply_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_with_phone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_customs_tiers: {
         Row: {
           created_at: string | null
@@ -3553,11 +3684,11 @@ export type Database = {
       }
       shipping_routes: {
         Row: {
+          api_configuration: Json | null
           base_shipping_cost: number
           cost_percentage: number | null
           created_at: string | null
           customs_clearance_days: number | null
-          customs_percentage: number | null
           delivery_options: Json | null
           destination_country: string
           exchange_rate: number | null
@@ -3569,17 +3700,18 @@ export type Database = {
           requires_documentation: boolean | null
           restricted_items: string[] | null
           shipping_per_kg: number
+          tax_configuration: Json | null
           updated_at: string | null
-          vat_percentage: number | null
+          weight_configuration: Json | null
           weight_tiers: Json | null
           weight_unit: string
         }
         Insert: {
+          api_configuration?: Json | null
           base_shipping_cost: number
           cost_percentage?: number | null
           created_at?: string | null
           customs_clearance_days?: number | null
-          customs_percentage?: number | null
           delivery_options?: Json | null
           destination_country: string
           exchange_rate?: number | null
@@ -3591,17 +3723,18 @@ export type Database = {
           requires_documentation?: boolean | null
           restricted_items?: string[] | null
           shipping_per_kg?: number
+          tax_configuration?: Json | null
           updated_at?: string | null
-          vat_percentage?: number | null
+          weight_configuration?: Json | null
           weight_tiers?: Json | null
           weight_unit?: string
         }
         Update: {
+          api_configuration?: Json | null
           base_shipping_cost?: number
           cost_percentage?: number | null
           created_at?: string | null
           customs_clearance_days?: number | null
-          customs_percentage?: number | null
           delivery_options?: Json | null
           destination_country?: string
           exchange_rate?: number | null
@@ -3613,8 +3746,9 @@ export type Database = {
           requires_documentation?: boolean | null
           restricted_items?: string[] | null
           shipping_per_kg?: number
+          tax_configuration?: Json | null
           updated_at?: string | null
-          vat_percentage?: number | null
+          weight_configuration?: Json | null
           weight_tiers?: Json | null
           weight_unit?: string
         }
@@ -3806,6 +3940,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      unified_configuration: {
+        Row: {
+          config_data: Json
+          config_key: string
+          config_type: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          version: number | null
+        }
+        Insert: {
+          config_data?: Json
+          config_key: string
+          config_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          version?: number | null
+        }
+        Update: {
+          config_data?: Json
+          config_key?: string
+          config_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          version?: number | null
+        }
+        Relationships: []
       }
       user_addresses: {
         Row: {
@@ -4114,8 +4281,8 @@ export type Database = {
     Functions: {
       apply_credit_note: {
         Args: {
-          p_credit_note_id: string
           p_amount?: number
+          p_credit_note_id: string
           p_quote_id: string
         }
         Returns: Json
@@ -4123,8 +4290,8 @@ export type Database = {
       approve_refund_request: {
         Args: {
           p_notes?: string
-          p_refund_request_id: string
           p_approved_amount?: number
+          p_refund_request_id: string
         }
         Returns: Json
       }
@@ -4170,55 +4337,59 @@ export type Database = {
       }
       confirm_payment_from_proof: {
         Args: {
-          p_quote_id: string
           p_amount_paid: number
           p_payment_status: string
+          p_quote_id: string
         }
+        Returns: Json
+      }
+      convert_minimum_valuation_usd_to_origin: {
+        Args: { usd_amount: number; origin_country: string }
         Returns: Json
       }
       create_credit_note: {
         Args: {
-          p_auto_approve?: boolean
-          p_customer_id: string
-          p_amount: number
-          p_currency: string
-          p_reason: string
-          p_description?: string
-          p_quote_id?: string
           p_refund_request_id?: string
           p_valid_days?: number
           p_minimum_order_value?: number
+          p_auto_approve?: boolean
+          p_reason: string
+          p_currency: string
+          p_amount: number
+          p_customer_id: string
+          p_description?: string
+          p_quote_id?: string
         }
         Returns: Json
       }
       create_payment_with_ledger_entry: {
         Args: {
-          p_payment_method: string
-          p_currency: string
           p_amount: number
           p_quote_id: string
-          p_message_id?: string
-          p_user_id?: string
-          p_notes?: string
-          p_gateway_transaction_id?: string
-          p_gateway_code?: string
-          p_reference_number?: string
+          p_currency: string
+          p_payment_method: string
           p_payment_type?: string
+          p_reference_number?: string
+          p_gateway_code?: string
+          p_gateway_transaction_id?: string
+          p_notes?: string
+          p_user_id?: string
+          p_message_id?: string
         }
         Returns: Json
       }
       create_refund_request: {
         Args: {
-          p_reason_description: string
-          p_internal_notes?: string
-          p_refund_method?: string
-          p_payment_ids?: string[]
-          p_quote_id: string
-          p_refund_type: string
-          p_amount: number
-          p_currency: string
           p_reason_code: string
           p_customer_notes?: string
+          p_payment_ids?: string[]
+          p_refund_method?: string
+          p_currency: string
+          p_reason_description: string
+          p_quote_id: string
+          p_internal_notes?: string
+          p_refund_type: string
+          p_amount: number
         }
         Returns: Json
       }
@@ -4231,7 +4402,7 @@ export type Database = {
         Returns: boolean
       }
       ensure_user_profile_with_oauth: {
-        Args: { _user_id: string; _user_metadata?: Json }
+        Args: { _user_metadata?: Json; _user_id: string }
         Returns: boolean
       }
       expire_quotes: {
@@ -4244,13 +4415,13 @@ export type Database = {
       }
       force_update_payment: {
         Args: {
-          new_amount_paid: number
-          new_payment_status: string
           p_quote_id: string
-          payment_currency?: string
+          new_payment_status: string
+          payment_method?: string
           reference_number?: string
           notes?: string
-          payment_method?: string
+          payment_currency?: string
+          new_amount_paid: number
         }
         Returns: Json
       }
@@ -4277,12 +4448,12 @@ export type Database = {
       get_active_payment_link_for_quote: {
         Args: { quote_uuid: string }
         Returns: {
-          expires_at: string
-          status: string
-          api_version: string
-          payment_url: string
           id: string
           link_code: string
+          payment_url: string
+          api_version: string
+          status: string
+          expires_at: string
         }[]
       }
       get_admin_emails: {
@@ -4292,10 +4463,10 @@ export type Database = {
       get_all_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
-          source: string
-          full_name: string
-          email: string
           user_id: string
+          email: string
+          full_name: string
+          source: string
         }[]
       }
       get_available_credit_notes: {
@@ -4344,19 +4515,19 @@ export type Database = {
       get_currency_conversion_metrics: {
         Args: { end_date?: string; start_date?: string }
         Returns: {
-          currency_pair: string
-          conversion_count: number
           average_variance: number
+          conversion_count: number
+          currency_pair: string
           max_variance: number
           accuracy_score: number
         }[]
       }
       get_currency_mismatches: {
-        Args: { end_date?: string; start_date?: string }
+        Args: { start_date?: string; end_date?: string }
         Returns: {
+          quote_currency: string
           quote_id: string
           order_display_id: string
-          quote_currency: string
           payment_currency: string
           quote_amount: number
           payment_amount: number
@@ -4368,7 +4539,6 @@ export type Database = {
       get_currency_statistics: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
-          currency: string
           total_payments: number
           total_refunds: number
           net_amount: number
@@ -4377,23 +4547,29 @@ export type Database = {
           average_payment: number
           last_payment_date: string
           unique_customers: number
+          currency: string
         }[]
       }
       get_exchange_rate_health: {
         Args: Record<PropertyKey, never>
         Returns: {
-          currency: string
-          current_rate: number
+          age_minutes: number
           last_updated: string
           is_stale: boolean
           is_fallback: boolean
-          age_minutes: number
+          currency: string
+          current_rate: number
         }[]
+      }
+      get_hsn_with_currency_conversion: {
+        Args: { hsn_code_param: string; origin_country_param?: string }
+        Returns: Json
       }
       get_orders_with_payment_proofs: {
         Args: { status_filter?: string; limit_count?: number }
         Returns: {
           customer_email: string
+          payment_method: string
           verified_at: string
           submitted_at: string
           attachment_url: string
@@ -4408,7 +4584,6 @@ export type Database = {
           final_total: number
           final_currency: string
           payment_status: string
-          payment_method: string
         }[]
       }
       get_payment_history: {
@@ -4419,10 +4594,10 @@ export type Database = {
           p_end_date?: string
         }
         Returns: {
-          quote_id: string
-          payment_id: string
-          order_display_id: string
           payment_date: string
+          payment_id: string
+          quote_id: string
+          order_display_id: string
           payment_type: string
           payment_method: string
           gateway_name: string
@@ -4448,31 +4623,31 @@ export type Database = {
           slug: string
           excerpt: string
           featured_image_url: string
-          views_count: number
           published_at: string
           reading_time_minutes: number
           category_name: string
+          views_count: number
         }[]
       }
       get_quote_message_thread: {
         Args: { p_quote_id: string }
         Returns: {
-          attachment_url: string
-          message_type: string
-          thread_type: string
-          is_read: boolean
-          priority: string
-          attachment_file_name: string
+          sender_name: string
           id: string
           sender_id: string
-          is_internal: boolean
-          admin_notes: string
-          verification_status: string
-          created_at: string
-          read_at: string
-          sender_name: string
           sender_email: string
           content: string
+          message_type: string
+          thread_type: string
+          priority: string
+          attachment_url: string
+          attachment_file_name: string
+          is_read: boolean
+          read_at: string
+          created_at: string
+          verification_status: string
+          admin_notes: string
+          is_internal: boolean
         }[]
       }
       get_related_posts: {
@@ -4497,9 +4672,9 @@ export type Database = {
           p_price?: number
         }
         Returns: {
-          delivery_days: string
           cost: number
           method: string
+          delivery_days: string
           carrier: string
         }[]
       }
@@ -4507,18 +4682,30 @@ export type Database = {
         Args: { quote_row: Database["public"]["Tables"]["quotes"]["Row"] }
         Returns: Json
       }
+      get_sla_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          resolution_sla_breached: number
+          avg_resolution_time_hours: number
+          total_tickets: number
+          response_sla_met: number
+          response_sla_breached: number
+          resolution_sla_met: number
+          avg_response_time_hours: number
+        }[]
+      }
       get_suspicious_payment_amounts: {
         Args: { start_date?: string; end_date?: string; tolerance?: number }
         Returns: {
-          suspicion_level: string
+          quote_amount: number
           quote_id: string
           order_display_id: string
-          quote_amount: number
-          quote_currency: string
-          payment_amount: number
-          payment_currency: string
-          amount_difference: number
+          suspicion_level: string
           created_at: string
+          amount_difference: number
+          payment_currency: string
+          payment_amount: number
+          quote_currency: string
         }[]
       }
       get_timeline: {
@@ -4529,8 +4716,8 @@ export type Database = {
         Args: { transaction_id: string }
         Returns: {
           can_refund: boolean
-          refundable_amount: number
           reason: string
+          refundable_amount: number
         }[]
       }
       get_unread_message_count: {
@@ -4569,8 +4756,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }
@@ -4600,12 +4787,12 @@ export type Database = {
       }
       log_share_action: {
         Args: {
-          p_action: string
+          p_details?: Json
           p_quote_id: string
           p_user_id: string
+          p_action: string
           p_ip_address?: unknown
           p_user_agent?: string
-          p_details?: Json
         }
         Returns: string
       }
@@ -4620,11 +4807,11 @@ export type Database = {
       process_payment_webhook_atomic: {
         Args: {
           p_payment_status: string
+          p_quote_ids: string[]
           p_payment_data: Json
           p_guest_session_token?: string
           p_guest_session_data?: Json
           p_create_order?: boolean
-          p_quote_ids: string[]
         }
         Returns: {
           success: boolean
@@ -4638,80 +4825,92 @@ export type Database = {
       }
       process_refund_atomic: {
         Args: {
-          p_quote_id: string
-          p_refund_amount: number
           p_refund_data: Json
-          p_gateway_response: Json
+          p_refund_amount: number
           p_processed_by: string
+          p_gateway_response: Json
+          p_quote_id: string
         }
         Returns: {
-          payment_transaction_updated: boolean
           success: boolean
-          refund_id: string
+          payment_transaction_updated: boolean
           quote_updated: boolean
           ledger_entry_id: string
           error_message: string
+          refund_id: string
         }[]
       }
       process_refund_item: {
         Args: {
-          p_gateway_response?: Json
-          p_refund_item_id: string
           p_gateway_refund_id: string
+          p_gateway_response?: Json
           p_status?: string
+          p_refund_item_id: string
         }
         Returns: Json
       }
       record_payment_with_ledger_and_triggers: {
         Args: {
+          p_amount: number
+          p_quote_id: string
           p_currency: string
           p_payment_method: string
           p_transaction_reference: string
-          p_recorded_by?: string
           p_notes?: string
+          p_recorded_by?: string
           p_payment_date?: string
-          p_quote_id: string
-          p_amount: number
         }
         Returns: Json
       }
       record_paypal_payment_to_ledger: {
         Args: {
-          p_order_id: string
+          p_capture_id?: string
           p_payer_email?: string
-          p_quote_id: string
           p_transaction_id: string
           p_amount: number
+          p_quote_id: string
           p_currency: string
-          p_capture_id?: string
+          p_order_id: string
         }
         Returns: Json
       }
       reverse_financial_transaction: {
-        Args: { p_transaction_id: string; p_reason: string; p_user_id: string }
+        Args: { p_user_id: string; p_reason: string; p_transaction_id: string }
         Returns: Json
       }
       start_reconciliation_session: {
         Args: {
+          p_payment_method: string
           p_gateway_code?: string
           p_statement_date?: string
           p_statement_start_date?: string
           p_statement_end_date?: string
-          p_payment_method: string
         }
         Returns: Json
       }
       test_payment_update_direct: {
         Args: {
           new_amount_paid: number
-          new_payment_status: string
           quote_id: string
+          new_payment_status: string
         }
         Returns: Json
+      }
+      update_notification_preferences: {
+        Args: { user_id: string; preferences: Json }
+        Returns: boolean
       }
       update_quote_view_tracking: {
         Args: { p_duration_seconds?: number; p_quote_id: string }
         Returns: undefined
+      }
+      user_wants_notification: {
+        Args: { user_id: string; notification_type: string }
+        Returns: boolean
+      }
+      validate_message_attachment_path: {
+        Args: { file_path: string }
+        Returns: boolean
       }
       verify_quote_email: {
         Args: { p_verification_token: string }
@@ -4835,9 +5034,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["admin", "user", "moderator"],

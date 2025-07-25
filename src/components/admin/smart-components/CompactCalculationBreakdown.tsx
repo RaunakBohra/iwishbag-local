@@ -50,53 +50,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     }
   }, [activeTab]);
 
-  const breakdown = React.useMemo(() => {
-    console.log('🔄 [CompactCalculationBreakdown] Breakdown data changed:', {
-      quoteId: quote.id,
-      newBreakdown: quote.calculation_data?.breakdown,
-      hasMerchantShipping: !!quote.calculation_data?.breakdown?.merchant_shipping,
-      merchantShippingAmount: quote.calculation_data?.breakdown?.merchant_shipping,
-      hasInternationalShipping: !!quote.calculation_data?.breakdown?.shipping,
-      internationalShippingAmount: quote.calculation_data?.breakdown?.shipping,
-      timestamp: new Date().toISOString(),
-      debugTypesWorking: 'TypeScript interfaces now include merchant_shipping fields! 🎉'
-    });
-    return quote.calculation_data?.breakdown || {};
-  }, [
-    quote.calculation_data?.breakdown?.merchant_shipping,
-    quote.calculation_data?.breakdown?.shipping,
-    quote.calculation_data?.breakdown?.items_total,
-    quote.calculation_data?.breakdown?.customs,
-    quote.calculation_data?.breakdown?.handling,
-    quote.calculation_data?.breakdown?.insurance,
-    quote.calculation_data?.breakdown?.fees,
-    quote.final_total_usd
-  ]);
-  
+  const breakdown = quote.calculation_data?.breakdown || {};
   const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
-
-  // Force re-render when shipping costs change
-  React.useEffect(() => {
-    console.log('🚢 [CompactCalculationBreakdown] Shipping costs changed:', {
-      quoteId: quote.id,
-      merchantShipping: breakdown.merchant_shipping,
-      internationalShipping: breakdown.shipping,
-      timestamp: new Date().toISOString()
-    });
-  }, [breakdown.merchant_shipping, breakdown.shipping, quote.id]);
-
-  // 🔍 DEBUG: Log breakdown data to trace destination_tax issue
-  console.log('🔍 [CompactCalculationBreakdown] DEBUG:', {
-    quoteId: quote.id,
-    hasCalculationData: !!quote.calculation_data,
-    hasBreakdown: !!quote.calculation_data?.breakdown,
-    breakdown: breakdown,
-    destination_tax: breakdown.destination_tax,
-    destination_tax_type: typeof breakdown.destination_tax,
-    destination_tax_number: Number(breakdown.destination_tax),
-    destination_tax_condition: !!(breakdown.destination_tax && Number(breakdown.destination_tax) > 0),
-  });
 
   // Calculate percentages for insights
   const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
@@ -114,7 +70,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   };
 
   const getTotalValue = () => {
-    return quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
   };
 
   // ✅ FIXED: Show actual calculated shipping cost instead of estimates
@@ -127,11 +83,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     // Return simplified display info based on actual data
     const totalWeight = getTotalWeight();
     const totalShipping = breakdown.shipping || 0;
-    
+
     return {
       totalCost: totalShipping,
       weight: totalWeight,
-      note: 'Based on route configuration and selected carrier'
+      note: 'Based on route configuration and selected carrier',
     };
   };
 
@@ -139,22 +95,17 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   // Key cost components for compact view
   const totalFees = (breakdown.fees || 0) + (breakdown.handling || 0) + (breakdown.insurance || 0);
-  
-  // ✅ TRANSPARENT TAX MODEL: Include both purchase tax and destination tax
-  const totalTaxes = (breakdown.purchase_tax || 0) + (breakdown.destination_tax || 0) + 
-                     // Fallback to legacy taxes field if new fields don't exist
-                     (!breakdown.purchase_tax && !breakdown.destination_tax ? (breakdown.taxes || 0) : 0);
-  
+
+  // Debug logging removed - handling and insurance properly hidden when 0
+
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
-    { label: 'Merchant Shipping', amount: breakdown.merchant_shipping || 0, color: 'text-teal-600' },
-    { label: 'International Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
+    { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
-    { label: 'Taxes', amount: totalTaxes, color: 'text-orange-600' },
     { label: 'Fees', amount: totalFees, color: 'text-gray-600' },
   ];
-  
-  const keyComponents = allComponents.filter(component => component.amount > 0);
+
+  const keyComponents = allComponents.filter((component) => component.amount > 0);
 
   // Compact header view
   const CompactHeader = () => (
@@ -171,7 +122,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           )}
         </div>
         <div className="flex items-center space-x-1">
-          <span className="text-lg font-bold text-blue-600">{currencyDisplay.formatSingleAmount(totalCost, 'origin')}</span>
+          <span className="text-lg font-bold text-blue-600">
+            {currencyDisplay.formatSingleAmount(totalCost, 'origin')}
+          </span>
           <Button
             variant="ghost"
             size="sm"
@@ -184,16 +137,21 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       </div>
 
       {/* Compact Cost Grid */}
-      <div className={`grid gap-2 text-xs ${keyComponents.length <= 2 ? 'grid-cols-2' : keyComponents.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+      <div
+        className={`grid gap-2 text-xs ${keyComponents.length <= 2 ? 'grid-cols-2' : keyComponents.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}
+      >
         {keyComponents.map((component, index) => (
           <div key={index} className="text-center">
-            <div className={`font-semibold ${component.color}`}>{currencyDisplay.formatSingleAmount(component.amount, 'origin')}</div>
+            <div className={`font-semibold ${component.color}`}>
+              {currencyDisplay.formatSingleAmount(component.amount, 'origin')}
+            </div>
             <div className="text-gray-500 text-xs">{component.label}</div>
-            <div className="text-gray-400 text-xs">{currencyDisplay.formatSingleAmount(component.amount, 'destination')}</div>
+            <div className="text-gray-400 text-xs">
+              {currencyDisplay.formatSingleAmount(component.amount, 'destination')}
+            </div>
           </div>
         ))}
       </div>
-
     </div>
   );
 
@@ -223,33 +181,19 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 </Badge>
               </div>
               <div className="text-right">
-                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'origin')}</div>
+                <div className="font-medium">
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'origin')}
+                </div>
                 <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'destination')}
+                  {currencyDisplay.formatSingleAmount(
+                    Number(breakdown.items_total || 0),
+                    'destination',
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Merchant Shipping */}
-            {!!(breakdown.merchant_shipping && Number(breakdown.merchant_shipping) > 0) && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <ExternalLink className="w-4 h-4 text-teal-600" />
-                  <span className="text-gray-700">Merchant Shipping</span>
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    To Hub
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.merchant_shipping || 0), 'origin')}</div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.merchant_shipping || 0), 'destination')}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* International Shipping - Enhanced with Detailed Breakdown */}
+            {/* Shipping - Enhanced with Detailed Breakdown */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
@@ -262,9 +206,14 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}</div>
+                  <div className="font-medium">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}
+                  </div>
                   <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'destination')}
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.shipping || 0),
+                      'destination',
+                    )}
                   </div>
                 </div>
               </div>
@@ -284,69 +233,33 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 )}
               </div>
               <div className="text-right">
-                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'origin')}</div>
+                <div className="font-medium">
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'origin')}
+                </div>
                 <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'destination')}
+                  {currencyDisplay.formatSingleAmount(
+                    Number(breakdown.customs || 0),
+                    'destination',
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Purchase Tax (Transparent Tax Model) */}
-            {!!(breakdown.purchase_tax && Number(breakdown.purchase_tax) > 0) && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <Calculator className="w-4 h-4 text-orange-600" />
-                  <span className="text-gray-700">Purchase Tax</span>
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    Origin
-                  </Badge>
+            {/* Taxes & VAT */}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <Calculator className="w-4 h-4 text-orange-600" />
+                <span className="text-gray-700">Taxes & VAT</span>
+              </div>
+              <div className="text-right">
+                <div className="font-medium">
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}
                 </div>
-                <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.purchase_tax || 0), 'origin')}</div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.purchase_tax || 0), 'destination')}
-                  </div>
+                <div className="text-xs text-gray-500">
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'destination')}
                 </div>
               </div>
-            )}
-
-            {/* Destination Tax (VAT/GST) - New Transparent Model */}
-            {!!(breakdown.destination_tax && Number(breakdown.destination_tax) > 0) && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <Calculator className="w-4 h-4 text-purple-600" />
-                  <span className="text-gray-700">Destination Tax (VAT)</span>
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    Local
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax || 0), 'origin')}</div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax || 0), 'destination')}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Legacy Taxes (Backward Compatibility) - Only show if new fields don't exist */}
-            {!!(breakdown.taxes && Number(breakdown.taxes) > 0 && !breakdown.purchase_tax && !breakdown.destination_tax) && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <Calculator className="w-4 h-4 text-orange-600" />
-                  <span className="text-gray-700">Taxes & VAT</span>
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    Legacy
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}</div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'destination')}
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* Payment Gateway Fee */}
             <div className="flex items-center justify-between text-sm">
@@ -355,7 +268,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <span className="text-gray-700">Payment Gateway Fee</span>
               </div>
               <div className="text-right">
-                <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'origin')}</div>
+                <div className="font-medium">
+                  {currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'origin')}
+                </div>
                 <div className="text-xs text-gray-500">
                   {currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'destination')}
                 </div>
@@ -370,9 +285,14 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   <span className="text-gray-700">Handling Charge</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'origin')}</div>
+                  <div className="font-medium">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'origin')}
+                  </div>
                   <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'destination')}
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.handling || 0),
+                      'destination',
+                    )}
                   </div>
                 </div>
               </div>
@@ -386,9 +306,14 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   <span className="text-gray-700">Package Protection</span>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">{currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'origin')}</div>
+                  <div className="font-medium">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'origin')}
+                  </div>
                   <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'destination')}
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.insurance || 0),
+                      'destination',
+                    )}
                   </div>
                 </div>
               </div>
@@ -406,7 +331,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     -{currencyDisplay.formatSingleAmount(Number(breakdown.discount || 0), 'origin')}
                   </div>
                   <div className="text-xs text-gray-500">
-                    -{currencyDisplay.formatSingleAmount(Number(breakdown.discount || 0), 'destination')}
+                    -
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.discount || 0),
+                      'destination',
+                    )}
                   </div>
                 </div>
               </div>
@@ -417,7 +346,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="flex items-center justify-between text-lg font-semibold">
                 <span className="text-gray-900">Final Total</span>
                 <div className="text-right">
-                  <div className="text-blue-600">{currencyDisplay.formatSingleAmount(totalCost, 'origin')}</div>
+                  <div className="text-blue-600">
+                    {currencyDisplay.formatSingleAmount(totalCost, 'origin')}
+                  </div>
                   {isDualCurrency && (
                     <div className="text-sm text-gray-500 font-normal">
                       ≈ {currencyDisplay.formatSingleAmount(totalCost)}

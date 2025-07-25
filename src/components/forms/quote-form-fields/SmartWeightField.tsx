@@ -1,6 +1,6 @@
 // ============================================================================
 // SMART WEIGHT FIELD - ML-Powered Weight Input with Auto-Suggestions
-// Features: Real-time ML estimation, confidence indicators, learning system
+// Features: Real-time ML estimation, HSN weight data, dual suggestions
 // ============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -19,9 +19,13 @@ import {
   Lightbulb,
   Target,
   TrendingUp,
+  RefreshCw,
 } from 'lucide-react';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
+import { DualWeightSuggestions } from '@/components/admin/smart-weight-field/DualWeightSuggestions';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface EstimationResult {
   estimated_weight: number;
@@ -34,13 +38,25 @@ interface SmartWeightFieldProps {
   control: Control<FieldValues>;
   index: number;
   setValue: UseFormSetValue<FieldValues>;
+  hsnCode?: string;
+  onWeightSourceSelected?: (source: 'hsn' | 'ml' | 'manual') => void;
 }
 
-export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, index, setValue }) => {
-  const [estimation, setEstimation] = useState<EstimationResult | null>(null);
+export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ 
+  control, 
+  index, 
+  setValue, 
+  hsnCode,
+  onWeightSourceSelected 
+}) => {
+  const { toast } = useToast();
+  const [mlEstimation, setMlEstimation] = useState<EstimationResult | null>(null);
+  const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
+  const [isLoadingHSN, setIsLoadingHSN] = useState(false);
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [hasUserInput, setHasUserInput] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<'hsn' | 'ml' | 'manual' | null>(null);
 
   // Watch relevant fields for auto-estimation
   const productName = useWatch({
@@ -58,23 +74,47 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, ind
     name: `items.${index}.weight`,
   });
 
-  // Debounced estimation function
-  const estimateWeight = useCallback(async (name: string, url?: string) => {
+  // Fetch HSN weight when HSN code changes
+  useEffect(() => {
+    const fetchHSNWeight = async () => {
+      if (!hsnCode) {
+        setHsnWeight(null);
+        return;
+      }
+
+      setIsLoadingHSN(true);
+      try {
+        const weight = await hsnWeightService.getHSNWeight(hsnCode);
+        setHsnWeight(weight);
+        if (weight) {
+          console.log(`📊 [Weight] HSN weight found for ${hsnCode}:`, weight);
+        }
+      } catch (error) {
+        console.error('Error fetching HSN weight:', error);
+        setHsnWeight(null);
+      } finally {
+        setIsLoadingHSN(false);
+      }
+    };
+
+    fetchHSNWeight();
+  }, [hsnCode]);
+
+  // Debounced ML estimation function
+  const estimateMLWeight = useCallback(async (name: string, url?: string) => {
     if (!name?.trim() && !url?.trim()) {
-      setEstimation(null);
-      setShowSuggestion(false);
+      setMlEstimation(null);
       return;
     }
 
     setIsEstimating(true);
     try {
       const result = await smartWeightEstimator.estimateWeight(name || '', url || undefined);
-      setEstimation(result);
-      setShowSuggestion(true);
+      setMlEstimation(result);
+      console.log(`🤖 [Weight] ML estimation for "${name}":`, result);
     } catch (error) {
       console.error('Weight estimation error:', error);
-      setEstimation(null);
-      setShowSuggestion(false);
+      setMlEstimation(null);
     } finally {
       setIsEstimating(false);
     }
@@ -84,30 +124,49 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, ind
   useEffect(() => {
     if (!hasUserInput && (productName || productUrl)) {
       const timeoutId = setTimeout(() => {
-        estimateWeight(productName, productUrl);
+        estimateMLWeight(productName, productUrl);
       }, 800); // Debounce for 800ms
 
       return () => clearTimeout(timeoutId);
     }
-  }, [productName, productUrl, estimateWeight, hasUserInput]);
+  }, [productName, productUrl, estimateMLWeight, hasUserInput]);
 
-  const handleApplySuggestion = () => {
-    if (estimation) {
-      setValue(`items.${index}.weight`, estimation.estimated_weight.toString());
-      setHasUserInput(true);
-      setShowSuggestion(false);
+  const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
+    setValue(`items.${index}.weight`, weight.toString());
+    setHasUserInput(true);
+    setSelectedSource(source);
+    onWeightSourceSelected?.(source);
+    
+    toast({
+      title: "Weight Applied",
+      description: `Using ${source === 'hsn' ? 'HSN database' : 'AI estimated'} weight: ${weight} kg`,
+    });
+
+    // Record the selection for analytics
+    if (productName) {
+      await smartWeightEstimator.recordWeightSelection(
+        productName,
+        hsnWeight?.average || null,
+        mlEstimation?.estimated_weight || 0,
+        weight,
+        source,
+        productUrl,
+        undefined, // category - could be passed if available
+        hsnCode
+      );
     }
   };
 
   const handleManualInput = (value: string) => {
     setHasUserInput(!!value);
     if (value) {
-      setShowSuggestion(false);
+      setSelectedSource('manual');
+      onWeightSourceSelected?.('manual');
     }
   };
 
   const handleLearnFromCorrection = async () => {
-    if (estimation && currentWeight && productName) {
+    if (mlEstimation && currentWeight && productName) {
       const actualWeight = parseFloat(currentWeight);
       if (!isNaN(actualWeight)) {
         try {
@@ -117,7 +176,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, ind
             productUrl || undefined,
             {
               userConfirmed: true,
-              originalEstimate: estimation.estimated_weight,
+              originalEstimate: mlEstimation.estimated_weight,
             },
           );
           console.log('✅ ML learning completed from user correction');
@@ -140,17 +199,18 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, ind
     return Target;
   };
 
-  // Calculate difference between estimation and user input
+  // Calculate difference between ML estimation and user input
   const weightDifference =
-    estimation && currentWeight
-      ? Math.abs(parseFloat(currentWeight) - estimation.estimated_weight)
+    mlEstimation && currentWeight
+      ? Math.abs(parseFloat(currentWeight) - mlEstimation.estimated_weight)
       : 0;
 
   const showLearningPrompt =
-    estimation &&
+    mlEstimation &&
     currentWeight &&
     weightDifference > 0.1 && // Significant difference
-    parseFloat(currentWeight) > 0;
+    parseFloat(currentWeight) > 0 &&
+    selectedSource !== 'hsn'; // Don't show if HSN was selected
 
   return (
     <FormField
@@ -164,10 +224,12 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, ind
             <Badge variant="outline" className="text-xs">
               Optional
             </Badge>
-            {isEstimating && (
+            {(isEstimating || isLoadingHSN) && (
               <div className="flex items-center space-x-1">
-                <Brain className="h-3 w-3 animate-pulse text-blue-500" />
-                <span className="text-xs text-blue-600">AI thinking...</span>
+                <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
+                <span className="text-xs text-blue-600">
+                  {isLoadingHSN ? 'Loading HSN...' : 'AI thinking...'}
+                </span>
               </div>
             )}
           </FormLabel>
@@ -188,78 +250,23 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ control, ind
                 className="text-right"
               />
 
-              {/* ML Suggestion Card */}
-              {showSuggestion && estimation && !hasUserInput && (
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardContent className="p-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Brain className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-800">
-                            AI Suggestion: {estimation.estimated_weight} kg
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {React.createElement(getConfidenceIcon(estimation.confidence), {
-                            className: 'h-3 w-3',
-                          })}
-                          <Badge
-                            className={cn('text-xs', getConfidenceColor(estimation.confidence))}
-                          >
-                            {(estimation.confidence * 100).toFixed(0)}% confidence
-                          </Badge>
-                        </div>
-                      </div>
-
-                      {/* Reasoning */}
-                      {estimation.reasoning.length > 0 && (
-                        <div className="text-xs text-blue-600">
-                          <div className="font-medium mb-1">Reasoning:</div>
-                          <ul className="space-y-0.5">
-                            {estimation.reasoning.slice(0, 2).map((reason, idx) => (
-                              <li key={idx} className="flex items-start space-x-1">
-                                <span>•</span>
-                                <span>{reason}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Suggestions */}
-                      {estimation.suggestions.length > 0 && (
-                        <div className="text-xs text-blue-600">
-                          <div className="flex items-center space-x-1 mb-1">
-                            <Lightbulb className="h-3 w-3" />
-                            <span className="font-medium">Tips:</span>
-                          </div>
-                          <div>{estimation.suggestions[0]}</div>
-                        </div>
-                      )}
-
-                      <div className="flex space-x-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={handleApplySuggestion}
-                          className="flex-1"
-                        >
-                          <Zap className="h-3 w-3 mr-1" />
-                          Use Suggestion
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowSuggestion(false)}
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              {/* Dual Weight Suggestions */}
+              {!hasUserInput && (hsnWeight || mlEstimation) && (
+                <DualWeightSuggestions
+                  hsnWeight={hsnWeight ? {
+                    ...hsnWeight,
+                    source: 'hsn' as const
+                  } : undefined}
+                  mlWeight={mlEstimation ? {
+                    estimated: mlEstimation.estimated_weight,
+                    confidence: mlEstimation.confidence,
+                    reasoning: mlEstimation.reasoning,
+                    source: 'ml' as const
+                  } : undefined}
+                  currentWeight={currentWeight ? parseFloat(currentWeight) : undefined}
+                  onSelectWeight={handleSelectWeight}
+                  isLoading={isEstimating || isLoadingHSN}
+                />
               )}
 
               {/* Learning Prompt */}

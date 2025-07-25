@@ -30,10 +30,15 @@ export function DualCurrencyDisplay({
   showEstimateIndicator = true,
 }: DualCurrencyDisplayProps) {
   // Format dual currency inline using CurrencyService
-  const formatDualCurrency = (amount: number, originCountry: string, destinationCountry: string, exchangeRate?: number) => {
+  const formatDualCurrency = (
+    amount: number,
+    originCountry: string,
+    destinationCountry: string,
+    exchangeRate?: number,
+  ) => {
     const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
     const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
-    
+
     const originSymbol = currencyService.getCurrencySymbol(originCurrency);
     const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
@@ -47,7 +52,7 @@ export function DualCurrencyDisplay({
       }
       const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
       const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
-      
+
       return {
         origin: originFormatted,
         destination: destinationFormatted,
@@ -62,7 +67,12 @@ export function DualCurrencyDisplay({
     };
   };
 
-  const { origin, destination, short } = formatDualCurrency(amount || 0, originCountry, destinationCountry, exchangeRate);
+  const { origin, destination, short } = formatDualCurrency(
+    amount || 0,
+    originCountry,
+    destinationCountry,
+    exchangeRate,
+  );
 
   const isSameCurrency = origin === destination;
   const hasWarning = warning || exchangeRateSource === 'fallback';
@@ -126,8 +136,14 @@ export function DualCurrencyDisplay({
         <div>Destination: {destination}</div>
         {exchangeRate && exchangeRate !== 1 && (
           <div>
-            Rate: 1 {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(originCountry))} = {exchangeRate}{' '}
-            {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(destinationCountry))}
+            Rate: 1{' '}
+            {currencyService.getCurrencySymbol(
+              currencyService.getCurrencyForCountrySync(originCountry),
+            )}{' '}
+            = {exchangeRate}{' '}
+            {currencyService.getCurrencySymbol(
+              currencyService.getCurrencyForCountrySync(destinationCountry),
+            )}
           </div>
         )}
         <div className="flex items-center gap-1 flex-wrap">Source: {getStatusBadge()}</div>
@@ -204,10 +220,15 @@ export function SimpleDualCurrency({
   className = '',
 }: SimpleDualCurrencyProps) {
   // Format dual currency inline using CurrencyService
-  const formatDualCurrency = (amount: number, originCountry: string, destinationCountry: string, exchangeRate?: number) => {
+  const formatDualCurrency = (
+    amount: number,
+    originCountry: string,
+    destinationCountry: string,
+    exchangeRate?: number,
+  ) => {
     const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
     const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
-    
+
     const originSymbol = currencyService.getCurrencySymbol(originCurrency);
     const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
@@ -221,7 +242,7 @@ export function SimpleDualCurrency({
       }
       const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
       const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
-      
+
       return `${originFormatted}/${destinationFormatted}`;
     }
 
@@ -246,7 +267,9 @@ export function CurrencyInputLabel({
   required = false,
   className = '',
 }: CurrencyInputLabelProps) {
-  const symbol = currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(countryCode));
+  const symbol = currencyService.getCurrencySymbol(
+    currencyService.getCurrencyForCountrySync(countryCode),
+  );
 
   return (
     <label className={`block text-sm font-medium text-gray-700 ${className}`}>

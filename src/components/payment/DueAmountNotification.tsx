@@ -144,7 +144,7 @@ export function DueAmountNotification({
                   const name = quote?.shipping_address?.name || quote?.user?.full_name || '';
                   const email = quote?.shipping_address?.email || quote?.user?.email || '';
                   const phone = quote?.shipping_address?.phone || quote?.user?.phone || '';
-                  
+
                   return {
                     name: name || (email ? 'Guest Customer' : 'Customer'),
                     email,

@@ -123,19 +123,20 @@ export const ContactTicketForm = ({ onSuccess, className }: ContactTicketFormPro
   return (
     <div className={className}>
       {/* Business Hours Notice */}
-      <div className={`mb-4 p-3 rounded-lg border text-sm ${isCurrentlyBusinessHours 
-        ? 'bg-green-50 border-green-200 text-green-800' 
-        : 'bg-orange-50 border-orange-200 text-orange-800'
-      }`}>
+      <div
+        className={`mb-4 p-3 rounded-lg border text-sm ${
+          isCurrentlyBusinessHours
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : 'bg-orange-50 border-orange-200 text-orange-800'
+        }`}
+      >
         <div className="flex items-center gap-2 mb-1">
           <Clock className="w-4 h-4" />
           <span className="font-medium">
             {isCurrentlyBusinessHours ? 'Support team is online' : 'Support team is offline'}
           </span>
         </div>
-        <p className="text-xs opacity-90">
-          {responseMessage}
-        </p>
+        <p className="text-xs opacity-90">{responseMessage}</p>
       </div>
 
       <Form {...form}>

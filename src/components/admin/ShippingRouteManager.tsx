@@ -288,8 +288,10 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         {formData.originCountry && (
           <div className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">
             <strong>Currency:</strong> All costs below should be entered in{' '}
-            {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(formData.originCountry))} ({formData.originCountry}{' '}
-            currency)
+            {currencyService.getCurrencySymbol(
+              currencyService.getCurrencyForCountrySync(formData.originCountry),
+            )}{' '}
+            ({formData.originCountry} currency)
           </div>
         )}
         <div className="grid grid-cols-5 gap-4">
@@ -365,8 +367,14 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
             />
             {formData.originCountry && formData.destinationCountry && (
               <div className="text-xs text-gray-500 mt-1">
-                1 {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(formData.originCountry))} = {formData.exchangeRate}{' '}
-                {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(formData.destinationCountry))}
+                1{' '}
+                {currencyService.getCurrencySymbol(
+                  currencyService.getCurrencyForCountrySync(formData.originCountry),
+                )}{' '}
+                = {formData.exchangeRate}{' '}
+                {currencyService.getCurrencySymbol(
+                  currencyService.getCurrencyForCountrySync(formData.destinationCountry),
+                )}
                 {formData.exchangeRate !== 1 && (
                   <span className="ml-2 text-green-600 font-medium">✓ Auto-calculated</span>
                 )}
@@ -553,7 +561,9 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         onUpdateDeliveryOptions={(options) =>
           setFormData((prev) => ({ ...prev, deliveryOptions: options }))
         }
-        currencySymbol={currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(formData.originCountry))}
+        currencySymbol={currencyService.getCurrencySymbol(
+          currencyService.getCurrencyForCountrySync(formData.originCountry),
+        )}
       />
 
       <div className="grid grid-cols-2 gap-4">
@@ -661,7 +671,9 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
                 className="w-24"
               />
               <span className="text-xs text-gray-500">
-                {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(formData.originCountry || 'US'))}
+                {currencyService.getCurrencySymbol(
+                  currencyService.getCurrencyForCountrySync(formData.originCountry || 'US'),
+                )}
               </span>
             </div>
             <Button
@@ -883,17 +895,27 @@ export function ShippingRouteManager() {
                         </Badge>
                       </CardTitle>
                       <CardDescription>
-                        Base: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
+                        Base:{' '}
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(route.origin_country),
+                        )}
                         {route.base_shipping_cost} +{' '}
-                        {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(route.origin_country),
+                        )}
                         {route.shipping_per_kg || route.cost_per_kg || 0}/
                         {route.weight_unit || 'kg'}
                         {route.cost_percentage > 0 && ` + ${route.cost_percentage}% of price`}
                         {route.exchange_rate && route.exchange_rate !== 1 && (
                           <span className="text-xs text-teal-600 block mt-1">
-                            Rate: 1 {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))} ={' '}
-                            {route.exchange_rate}{' '}
-                            {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.destination_country))}
+                            Rate: 1{' '}
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(route.origin_country),
+                            )}{' '}
+                            = {route.exchange_rate}{' '}
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(route.destination_country),
+                            )}
                           </span>
                         )}
                       </CardDescription>
@@ -934,7 +956,9 @@ export function ShippingRouteManager() {
                             <li key={index}>
                               {tier.min}-{tier.max || '∞'}
                               {route.weight_unit || 'kg'}:{' '}
-                              {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(route.origin_country))}
+                              {currencyService.getCurrencySymbol(
+                                currencyService.getCurrencyForCountrySync(route.origin_country),
+                              )}
                               {tier.cost}
                             </li>
                           ),
@@ -1046,7 +1070,10 @@ export function ShippingRouteManager() {
                       <div className="mt-1 space-y-1">
                         {country.payment_gateway_fixed_fee > 0 && (
                           <div>
-                            Fixed Fee: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(country.code))}
+                            Fixed Fee:{' '}
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(country.code),
+                            )}
                             {country.payment_gateway_fixed_fee}
                           </div>
                         )}
@@ -1067,7 +1094,10 @@ export function ShippingRouteManager() {
                         )}
                         {country.country_markup_fixed > 0 && (
                           <div>
-                            Fixed Markup: {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(country.code))}
+                            Fixed Markup:{' '}
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(country.code),
+                            )}
                             {country.country_markup_fixed}
                           </div>
                         )}

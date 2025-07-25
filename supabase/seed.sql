@@ -1,69 +1,17 @@
--- Seed data for development and testing
+-- Seed data for development and testing with HSN system support
 
--- Create storage buckets first (before cleaning tables)
--- This ensures buckets exist after every database reset
-
--- Create quote-requests bucket for file uploads
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'quote-requests',
-  'quote-requests', 
-  false,  -- Private bucket for security
-  10485760,  -- 10MB limit per file
-  ARRAY[
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-    'application/pdf', 'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain', 'text/csv'
-  ]
-)
-ON CONFLICT (id) DO UPDATE SET
-  public = false,
-  file_size_limit = 10485760,
-  allowed_mime_types = ARRAY[
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-    'application/pdf', 'application/msword', 
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/plain', 'text/csv'
-  ];
-
--- Create RLS policies for quote-requests bucket
--- Clean up any existing policies first
-DROP POLICY IF EXISTS "quote_requests_upload_policy" ON storage.objects;
-DROP POLICY IF EXISTS "quote_requests_select_policy" ON storage.objects;
-DROP POLICY IF EXISTS "quote_requests_delete_policy" ON storage.objects;
-
--- Create secure RLS policies: only uploader and admin can access files
-CREATE POLICY "quote_requests_upload_policy" ON storage.objects
-  FOR INSERT WITH CHECK (bucket_id = 'quote-requests');
-
-CREATE POLICY "quote_requests_select_policy" ON storage.objects
-  FOR SELECT USING (
-    bucket_id = 'quote-requests' AND (
-      owner = auth.uid() OR  -- File owner can see their files
-      is_admin()  -- Admin can see all files
-    )
-  );
-
-CREATE POLICY "quote_requests_delete_policy" ON storage.objects
-  FOR DELETE USING (
-    bucket_id = 'quote-requests' AND (
-      owner = auth.uid() OR  -- File owner can delete their files
-      is_admin()  -- Admin can delete all files
-    )
-  );
-
--- Clean tables before seeding
+-- Clean tables before seeding (HSN-aware)
 DELETE FROM system_settings;
 DELETE FROM email_templates;
 DELETE FROM payment_gateways;
 DELETE FROM bank_account_details;
 DELETE FROM country_settings;
 DELETE FROM shipping_routes;
+
+-- Clean HSN system tables (if they exist)
+DELETE FROM admin_overrides WHERE true;
+DELETE FROM unified_configuration WHERE true;
+DELETE FROM hsn_master WHERE true;
 
 -- Insert test countries
 INSERT INTO country_settings (code, name, currency, rate_from_usd, sales_tax, vat, min_shipping, additional_shipping, additional_weight, weight_unit, volumetric_divisor, payment_gateway_fixed_fee, payment_gateway_percent_fee, purchase_allowed, shipping_allowed, payment_gateway, priority_thresholds) VALUES
@@ -948,4 +896,702 @@ EXCEPTION
   WHEN OTHERS THEN
     RAISE NOTICE '⚠️ Error during automatic schema repair: %', SQLERRM;
     RAISE NOTICE '💡 You may need to run: ./fix-database-schema.sh local';
+END $$;
+
+-- ============================================================================
+-- PERMISSIONS SYSTEM SEED DATA
+-- Comprehensive permissions, roles, and role mappings for the new permissions system
+-- This data will persist through database resets
+-- ============================================================================
+
+-- Clean existing permissions data before seeding (safe because of foreign key constraints)
+DELETE FROM role_permissions;
+DELETE FROM permissions;
+DELETE FROM roles;
+
+-- Seed permissions table with comprehensive permissions
+INSERT INTO permissions (name, description) VALUES
+    ('quote:create', 'Create new quotes'),
+    ('quote:edit', 'Edit existing quotes'),
+    ('quote:delete', 'Delete quotes'),
+    ('quote:view', 'View quotes'),
+    ('quote:approve', 'Approve quotes'),
+    ('quote:reject', 'Reject quotes'),
+    ('quote:calculate', 'Calculate quote pricing'),
+    ('quote:share', 'Share quotes with customers'),
+    ('user:assign_role', 'Assign roles to users'),
+    ('user:view', 'View user information'),
+    ('user:edit', 'Edit user information'),
+    ('user:delete', 'Delete users'),
+    ('admin:dashboard', 'Access admin dashboard'),
+    ('admin:settings', 'Manage system settings'),
+    ('admin:reports', 'View system reports'),
+    ('payment:view', 'View payment information'),
+    ('payment:process', 'Process payments'),
+    ('payment:refund', 'Process refunds'),
+    ('payment:verify', 'Verify payment proofs'),
+    ('order:view', 'View orders'),
+    ('order:edit', 'Edit orders'),
+    ('order:fulfill', 'Fulfill orders'),
+    ('order:cancel', 'Cancel orders'),
+    ('customer:view', 'View customer information'),
+    ('customer:edit', 'Edit customer information'),
+    ('customer:create', 'Create customer profiles'),
+    ('customer:delete', 'Delete customer profiles'),
+    ('support:view', 'View support tickets'),
+    ('support:respond', 'Respond to support tickets'),
+    ('support:assign', 'Assign support tickets'),
+    ('support:create', 'Create support tickets'),
+    ('support:delete', 'Delete support tickets'),
+    ('messaging:view', 'View messages'),
+    ('messaging:send', 'Send messages'),
+    ('messaging:admin_broadcast', 'Send admin broadcast messages'),
+    ('shipping:view', 'View shipping information'),
+    ('shipping:edit', 'Edit shipping routes and rates'),
+    ('shipping:track', 'Track shipments'),
+    ('country:view', 'View country settings'),
+    ('country:edit', 'Edit country settings'),
+    ('system:backup', 'Create system backups'),
+    ('system:maintenance', 'Perform system maintenance'),
+    ('system:monitoring', 'Monitor system health'),
+    ('email:view', 'View email templates'),
+    ('email:edit', 'Edit email templates'),
+    ('email:send', 'Send emails'),
+    ('customs:view', 'View customs categories'),
+    ('customs:edit', 'Edit customs categories'),
+    ('bank:view', 'View bank account details'),
+    ('bank:edit', 'Edit bank account details'),
+    ('ml:view', 'View ML weight estimator'),
+    ('ml:train', 'Train ML models'),
+    ('blog:view', 'View blog posts'),
+    ('blog:create', 'Create blog posts'),
+    ('blog:edit', 'Edit blog posts'),
+    ('blog:delete', 'Delete blog posts'),
+    ('analytics:view', 'View analytics dashboard'),
+    ('analytics:export', 'Export analytics data')
+ON CONFLICT (name) DO NOTHING;
+
+-- Seed roles table with comprehensive role structure
+INSERT INTO roles (name, description) VALUES
+    ('Admin', 'Full system administrator with all permissions'),
+    ('Quote Manager', 'Manages quotes and customer interactions'),
+    ('Finance Manager', 'Handles payments and financial operations'),
+    ('Customer Support', 'Provides customer support and assistance'),
+    ('Fulfillment Manager', 'Manages order fulfillment and shipping'),
+    ('Marketing Manager', 'Manages blog content and marketing materials'),
+    ('System Analyst', 'Views analytics and system reports'),
+    ('User', 'Basic user with minimal permissions')
+ON CONFLICT (name) DO NOTHING;
+
+-- Assign ALL permissions to Admin role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Admin'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to Quote Manager role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Quote Manager'
+AND p.name IN (
+    'quote:create', 'quote:edit', 'quote:view', 'quote:approve', 'quote:reject', 'quote:calculate', 'quote:share',
+    'customer:view', 'customer:edit', 'customer:create',
+    'order:view', 'order:edit',
+    'support:view', 'support:respond', 'support:create',
+    'messaging:view', 'messaging:send',
+    'shipping:view', 'country:view', 'customs:view'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to Finance Manager role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Finance Manager'
+AND p.name IN (
+    'payment:view', 'payment:process', 'payment:refund', 'payment:verify',
+    'quote:view', 'order:view',
+    'customer:view',
+    'bank:view', 'bank:edit',
+    'analytics:view', 'analytics:export'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to Customer Support role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Customer Support'
+AND p.name IN (
+    'support:view', 'support:respond', 'support:assign', 'support:create',
+    'customer:view', 'customer:edit', 'customer:create',
+    'quote:view', 'order:view',
+    'messaging:view', 'messaging:send',
+    'shipping:view', 'shipping:track'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to Fulfillment Manager role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Fulfillment Manager'
+AND p.name IN (
+    'order:view', 'order:edit', 'order:fulfill', 'order:cancel',
+    'quote:view', 'customer:view',
+    'shipping:view', 'shipping:edit', 'shipping:track',
+    'messaging:view', 'messaging:send'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to Marketing Manager role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'Marketing Manager'
+AND p.name IN (
+    'blog:view', 'blog:create', 'blog:edit', 'blog:delete',
+    'email:view', 'email:edit', 'email:send',
+    'customer:view', 'analytics:view',
+    'messaging:view', 'messaging:send', 'messaging:admin_broadcast'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to System Analyst role
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'System Analyst'
+AND p.name IN (
+    'analytics:view', 'analytics:export',
+    'system:monitoring',
+    'quote:view', 'order:view', 'customer:view',
+    'payment:view', 'shipping:view'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- Assign permissions to User role (basic permissions)
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT 
+    r.id as role_id,
+    p.id as permission_id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'User'
+AND p.name IN (
+    'quote:create', 'quote:view',
+    'messaging:view', 'messaging:send',
+    'support:create', 'support:view'
+)
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- ============================================================================
+-- HSN SYSTEM COMPREHENSIVE SEED DATA
+-- Enhanced seed data for HSN-based per-item tax calculation system
+-- ============================================================================
+
+DO $$
+BEGIN
+  -- Only populate HSN data if tables exist (they might not in fresh installs)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'hsn_master') THEN
+    
+    RAISE NOTICE '🏷️ Populating HSN Master Database with comprehensive product classifications...';
+    
+    -- Electronics HSN codes with currency conversion support
+    INSERT INTO hsn_master (hsn_code, description, category, subcategory, keywords, minimum_valuation_usd, requires_currency_conversion, weight_data, tax_data, classification_data) VALUES
+    
+    -- Mobile Phones and Communication Devices
+    ('8517', 'Mobile phones and smartphones', 'electronics', 'communication_devices', 
+     ARRAY['mobile', 'phone', 'iphone', 'samsung', 'smartphone', 'cellular', 'android'],
+     50.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.120, "max": 0.250, "average": 0.180}}, "packaging": {"additional_weight": 0.05}, "dimensional_weight": {"length": 15, "width": 8, "height": 2}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 15, "max": 25, "common": 20}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["iphone", "samsung", "mobile", "smartphone", "android", "ios"], "confidence": 0.95}, "ml_features": ["screen_size", "storage", "brand"]}'::jsonb),
+    
+    -- Computers and Laptops
+    ('8471', 'Computers, laptops and notebooks', 'electronics', 'computers',
+     ARRAY['laptop', 'computer', 'macbook', 'dell', 'hp', 'asus', 'notebook', 'pc'],
+     100.00, true,
+     '{"typical_weights": {"per_unit": {"min": 1.000, "max": 3.500, "average": 1.800}}, "packaging": {"additional_weight": 0.30}, "dimensional_weight": {"length": 35, "width": 25, "height": 5}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 10, "max": 20, "common": 15}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["laptop", "macbook", "computer", "notebook", "gaming"], "confidence": 0.92}, "ml_features": ["ram", "storage", "processor"]}'::jsonb),
+    
+    -- Tablets and iPads
+    ('8471', 'Tablets and iPads', 'electronics', 'tablets',
+     ARRAY['tablet', 'ipad', 'android tablet', 'surface', 'kindle'],
+     75.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.300, "max": 0.800, "average": 0.500}}, "packaging": {"additional_weight": 0.08}, "dimensional_weight": {"length": 25, "width": 18, "height": 1}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 15, "max": 20, "common": 18}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["tablet", "ipad", "surface", "kindle"], "confidence": 0.90}, "ml_features": ["screen_size", "storage"]}'::jsonb),
+    
+    -- Clothing HSN codes (Critical for Nepal minimum valuation example)
+    ('6109', 'T-shirts, tank tops and similar garments', 'clothing', 'tops',
+     ARRAY['tshirt', 't-shirt', 'shirt', 'tee', 'polo', 'tank top', 'vest'],
+     5.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.100, "max": 0.300, "average": 0.180}}, "packaging": {"additional_weight": 0.02}, "dimensional_weight": {"folded": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 10, "max": 15, "common": 12}, "gst": {"standard": 12}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["tshirt", "t-shirt", "shirt", "polo", "cotton"], "confidence": 0.88}, "ml_features": ["material", "size", "brand"]}'::jsonb),
+    
+    -- Kurtas and Dresses (Nepal minimum valuation example: $10 USD)
+    ('6204', 'Kurtas, dresses and similar womens garments', 'clothing', 'dresses',
+     ARRAY['dress', 'kurti', 'kurta', 'gown', 'frock', 'ethnic wear', 'traditional'],
+     10.00, true, -- Critical: Nepal kurta minimum valuation
+     '{"typical_weights": {"per_unit": {"min": 0.200, "max": 0.600, "average": 0.350}}, "packaging": {"additional_weight": 0.03}, "dimensional_weight": {"folded": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 10, "max": 15, "common": 12}, "gst": {"standard": 12}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["dress", "kurti", "kurta", "gown", "ethnic"], "confidence": 0.85}, "ml_features": ["material", "style", "length"]}'::jsonb),
+    
+    -- Jeans and Trousers
+    ('6203', 'Jeans, trousers and pants', 'clothing', 'bottoms',
+     ARRAY['jeans', 'pants', 'trousers', 'denim', 'chinos', 'cargo'],
+     15.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.400, "max": 0.800, "average": 0.600}}, "packaging": {"additional_weight": 0.05}, "dimensional_weight": {"folded": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 12, "max": 18, "common": 15}, "gst": {"standard": 12}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["jeans", "pants", "trousers", "denim"], "confidence": 0.90}, "ml_features": ["material", "size", "fit"]}'::jsonb),
+    
+    -- Books (Tax-exempt in most countries)
+    ('4901', 'Books, novels and printed educational materials', 'books', 'educational',
+     ARRAY['book', 'novel', 'textbook', 'manual', 'guide', 'fiction', 'non-fiction'],
+     NULL, false, -- No minimum valuation for books
+     '{"typical_weights": {"per_unit": {"min": 0.100, "max": 1.500, "average": 0.400}}, "packaging": {"additional_weight": 0.05}, "dimensional_weight": {"standard_book": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 0, "max": 5, "common": 0}, "gst": {"standard": 0}, "vat": {"common": 0}}, "exemptions": ["educational", "religious"]}'::jsonb,
+     '{"auto_classification": {"keywords": ["book", "novel", "textbook", "manual", "isbn"], "confidence": 0.95}, "ml_features": ["isbn", "pages", "publisher"]}'::jsonb),
+    
+    -- Jewelry and Accessories
+    ('7113', 'Jewelry, rings, necklaces and precious accessories', 'accessories', 'jewelry',
+     ARRAY['jewelry', 'ring', 'necklace', 'bracelet', 'earring', 'pendant', 'chain'],
+     25.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.005, "max": 0.150, "average": 0.040}}, "packaging": {"additional_weight": 0.01, "protective": true}, "dimensional_weight": {"small_items": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 15, "max": 25, "common": 20}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["jewelry", "ring", "necklace", "gold", "silver"], "confidence": 0.82}, "ml_features": ["material", "weight", "precious_metal"]}'::jsonb),
+    
+    -- Watches
+    ('9102', 'Wrist watches and smart watches', 'accessories', 'watches',
+     ARRAY['watch', 'smartwatch', 'fitness tracker', 'apple watch', 'rolex', 'timepiece'],
+     40.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.030, "max": 0.200, "average": 0.080}}, "packaging": {"additional_weight": 0.05, "protective": true}, "dimensional_weight": {"watch_box": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 18, "max": 25, "common": 22}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["watch", "smartwatch", "fitness", "tracker"], "confidence": 0.88}, "ml_features": ["brand", "smart_features", "material"]}'::jsonb),
+    
+    -- Home and Garden
+    ('9403', 'Furniture and home decor items', 'home_garden', 'furniture',
+     ARRAY['furniture', 'chair', 'table', 'sofa', 'decor', 'lamp', 'cushion'],
+     30.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.500, "max": 25.000, "average": 5.000}}, "packaging": {"additional_weight": 1.00, "fragile": true}, "dimensional_weight": {"varies_greatly": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 12, "max": 20, "common": 16}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["furniture", "chair", "table", "sofa", "decor"], "confidence": 0.78}, "ml_features": ["material", "size", "type"]}'::jsonb),
+    
+    -- Sports and Fitness
+    ('9506', 'Sports equipment and fitness gear', 'sports', 'equipment',
+     ARRAY['sports', 'fitness', 'gym', 'equipment', 'ball', 'racket', 'weights'],
+     20.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.050, "max": 10.000, "average": 1.500}}, "packaging": {"additional_weight": 0.20}, "dimensional_weight": {"sports_equipment": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 10, "max": 18, "common": 14}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["sports", "fitness", "gym", "ball", "equipment"], "confidence": 0.80}, "ml_features": ["sport_type", "material", "brand"]}'::jsonb),
+    
+    -- Toys and Games
+    ('9503', 'Toys, games and recreational items', 'toys', 'recreational',
+     ARRAY['toy', 'game', 'puzzle', 'doll', 'action figure', 'board game', 'lego'],
+     8.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.020, "max": 2.000, "average": 0.300}}, "packaging": {"additional_weight": 0.10, "colorful": true}, "dimensional_weight": {"toy_packaging": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 8, "max": 15, "common": 12}, "gst": {"standard": 12}, "vat": {"common": 13}}, "exemptions": ["educational_toys"]}'::jsonb,
+     '{"auto_classification": {"keywords": ["toy", "game", "puzzle", "lego", "children"], "confidence": 0.85}, "ml_features": ["age_group", "material", "educational"]}'::jsonb),
+    
+    -- Beauty and Personal Care
+    ('3304', 'Beauty products and cosmetics', 'beauty', 'cosmetics',
+     ARRAY['cosmetics', 'makeup', 'skincare', 'perfume', 'lipstick', 'foundation'],
+     12.00, true,
+     '{"typical_weights": {"per_unit": {"min": 0.010, "max": 0.500, "average": 0.100}}, "packaging": {"additional_weight": 0.05, "fragile": true}, "dimensional_weight": {"cosmetic_packaging": true}}'::jsonb,
+     '{"typical_rates": {"customs": {"min": 15, "max": 25, "common": 20}, "gst": {"standard": 18}, "vat": {"common": 13}}, "exemptions": []}'::jsonb,
+     '{"auto_classification": {"keywords": ["cosmetics", "makeup", "skincare", "beauty"], "confidence": 0.83}, "ml_features": ["brand", "type", "ingredients"]}'::jsonb)
+    
+    ON CONFLICT (hsn_code) DO UPDATE SET
+      description = EXCLUDED.description,
+      category = EXCLUDED.category,
+      subcategory = EXCLUDED.subcategory,
+      keywords = EXCLUDED.keywords,
+      minimum_valuation_usd = EXCLUDED.minimum_valuation_usd,
+      requires_currency_conversion = EXCLUDED.requires_currency_conversion,
+      weight_data = EXCLUDED.weight_data,
+      tax_data = EXCLUDED.tax_data,
+      classification_data = EXCLUDED.classification_data,
+      updated_at = NOW();
+    
+    RAISE NOTICE '✅ HSN Master data populated with % comprehensive product classifications', 
+      (SELECT COUNT(*) FROM hsn_master);
+    
+    -- Populate Unified Configuration for Countries
+    RAISE NOTICE '🌍 Populating unified country configurations with HSN support...';
+    
+    INSERT INTO unified_configuration (config_type, config_key, config_data) VALUES
+    -- India - GST system with HSN integration
+    ('country', 'IN', '{
+      "name": "India",
+      "currency": "INR",
+      "tax_system": "GST",
+      "default_gst_rate": 18,
+      "customs_rates": {
+        "electronics": 20,
+        "clothing": 12,
+        "books": 0,
+        "accessories": 18,
+        "home_garden": 15,
+        "sports": 14,
+        "toys": 12,
+        "beauty": 20
+      },
+      "minimum_valuations": {
+        "applies_currency_conversion": true,
+        "rounding_method": "up",
+        "enforcement": "strict"
+      },
+      "hsn_system": {
+        "mandatory": true,
+        "government_api": true,
+        "auto_classification": true
+      },
+      "api_endpoints": {
+        "gst_lookup": "https://api.gst.gov.in/taxpayerapi/search/hsnsac",
+        "customs_rate": "https://www.cbic.gov.in/htdocs-cbec/customs/cs-act/formatted-htmls/cs-tariff2017-v2"
+      },
+      "special_rules": {
+        "de_minimis": 0,
+        "duty_free_allowance": 0
+      }
+    }'::jsonb),
+    
+    -- Nepal - VAT system with critical minimum valuations
+    ('country', 'NP', '{
+      "name": "Nepal",
+      "currency": "NPR",
+      "tax_system": "VAT",
+      "default_vat_rate": 13,
+      "customs_rates": {
+        "electronics": 15,
+        "clothing": 12,
+        "books": 0,
+        "accessories": 15,
+        "home_garden": 12,
+        "sports": 10,
+        "toys": 8,
+        "beauty": 18
+      },
+      "minimum_valuations": {
+        "clothing": {"value": 10, "currency": "USD", "examples": ["kurta", "dress"]},
+        "electronics": {"value": 50, "currency": "USD", "examples": ["mobile", "laptop"]},
+        "accessories": {"value": 25, "currency": "USD", "examples": ["jewelry", "watch"]},
+        "home_garden": {"value": 30, "currency": "USD"},
+        "beauty": {"value": 12, "currency": "USD"},
+        "applies_currency_conversion": true,
+        "enforcement": "strict",
+        "rounding_method": "up"
+      },
+      "currency_conversion": {
+        "enabled": true,
+        "source": "country_settings.rate_from_usd",
+        "cache_duration": 3600,
+        "fallback_rate": 133.0
+      },
+      "hsn_system": {
+        "mandatory": false,
+        "government_api": false,
+        "auto_classification": true,
+        "local_database": true
+      },
+      "special_rules": {
+        "de_minimis": 200,
+        "duty_free_allowance": 1500,
+        "personal_use_exemption": 5000
+      }
+    }'::jsonb),
+    
+    -- USA - Sales tax system
+    ('country', 'US', '{
+      "name": "United States",
+      "currency": "USD", 
+      "tax_system": "SALES_TAX",
+      "default_sales_tax_rate": 8.88,
+      "state_variations": true,
+      "category_overrides": {
+        "electronics": 5.0,
+        "books": 0.0,
+        "clothing": 6.0,
+        "accessories": 7.5,
+        "home_garden": 8.0,
+        "sports": 6.5,
+        "toys": 5.5,
+        "beauty": 8.25
+      },
+      "minimum_valuations": {
+        "applies_currency_conversion": false,
+        "enforcement": "none"
+      },
+      "hsn_system": {
+        "mandatory": false,
+        "government_api": true,
+        "auto_classification": true,
+        "api_provider": "taxjar"
+      },
+      "api_endpoints": {
+        "taxjar": "https://api.taxjar.com/v2",
+        "sales_tax_lookup": "https://api.taxjar.com/v2/rates"
+      },
+      "special_rules": {
+        "de_minimis": 800,
+        "state_nexus": true
+      }
+    }'::jsonb),
+    
+    -- China - VAT system
+    ('country', 'CN', '{
+      "name": "China",
+      "currency": "CNY",
+      "tax_system": "VAT",
+      "default_vat_rate": 13,
+      "customs_rates": {
+        "electronics": 10,
+        "clothing": 15,
+        "books": 0,
+        "accessories": 12,
+        "home_garden": 8,
+        "sports": 12,
+        "toys": 10,
+        "beauty": 15
+      },
+      "minimum_valuations": {
+        "applies_currency_conversion": true,
+        "enforcement": "moderate"
+      },
+      "hsn_system": {
+        "mandatory": true,
+        "government_api": false,
+        "auto_classification": true,
+        "local_database": true
+      },
+      "special_rules": {
+        "de_minimis": 50,
+        "personal_postal_limit": 1000
+      }
+    }'::jsonb),
+    
+    -- United Kingdom
+    ('country', 'GB', '{
+      "name": "United Kingdom",
+      "currency": "GBP",
+      "tax_system": "VAT",
+      "default_vat_rate": 20,
+      "customs_rates": {
+        "electronics": 0,
+        "clothing": 12,
+        "books": 0,
+        "accessories": 4.5,
+        "home_garden": 6.5,
+        "sports": 4.7,
+        "toys": 4.2,
+        "beauty": 6.5
+      },
+      "minimum_valuations": {
+        "applies_currency_conversion": true,
+        "enforcement": "strict"
+      },
+      "hsn_system": {
+        "mandatory": true,
+        "government_api": true,
+        "auto_classification": true,
+        "uk_trade_tariff": true
+      },
+      "special_rules": {
+        "de_minimis": 15,
+        "low_value_consignment": 135,
+        "vat_threshold": 15
+      }
+    }'::jsonb)
+    
+    ON CONFLICT (config_type, config_key) DO UPDATE SET
+      config_data = EXCLUDED.config_data,
+      version = unified_configuration.version + 1,
+      updated_at = NOW();
+    
+    RAISE NOTICE '✅ Country configurations populated with HSN support';
+    
+    -- Populate Admin Overrides for Testing
+    RAISE NOTICE '⚙️ Setting up admin overrides for testing...';
+    
+    INSERT INTO admin_overrides (override_type, scope, scope_identifier, override_data, justification) VALUES
+    
+    -- Electronics promotion with minimum valuation consideration
+    ('tax_rate', 'category', 'electronics', '{
+      "original_rate": 20,
+      "override_rate": 15,
+      "tax_type": "customs",
+      "reason": "electronics_promotion_2025",
+      "applies_to_minimum_valuation": true,
+      "valid_from": "2025-01-01",
+      "valid_until": "2025-03-31"
+    }'::jsonb, 'Special electronics promotion for Q1 2025 - reduces customs duty and applies to minimum valuation calculations'),
+    
+    -- Nepal clothing minimum valuation override
+    ('minimum_valuation', 'route', 'CN-NP', '{
+      "category": "clothing",
+      "original_minimum_usd": 10.00,
+      "override_minimum_usd": 7.50,
+      "reason": "nepal_clothing_relief",
+      "currency_conversion_required": true,
+      "applies_to_hsn_codes": ["6109", "6204", "6203"]
+    }'::jsonb, 'Temporary relief for Nepal clothing imports - reduced minimum valuation for traditional wear'),
+    
+    -- HSN code override for specific product
+    ('hsn_code', 'product', 'iphone_15_pro', '{
+      "original_hsn_code": "8517",
+      "override_hsn_code": "8517",
+      "custom_tax_rate": 18,
+      "custom_minimum_valuation_usd": 800.00,
+      "reason": "premium_device_classification",
+      "product_patterns": ["iphone 15 pro", "iphone15pro"]
+    }'::jsonb, 'Special classification for premium iPhone models with higher minimum valuations'),
+    
+    -- Weight detection override for bulky items
+    ('weight', 'category', 'home_garden', '{
+      "override_dimensional_weight": true,
+      "dimensional_divisor": 3000,
+      "reason": "bulky_furniture_adjustment",
+      "apply_to_subcategories": ["furniture", "large_decor"]
+    }'::jsonb, 'Adjusted dimensional weight calculation for bulky furniture items'),
+    
+    -- Tax exemption for educational materials
+    ('exemption', 'global', 'educational_books', '{
+      "applies_to_hsn_codes": ["4901"],
+      "exemption_type": "full_tax_exemption",
+      "conditions": ["educational", "textbook", "academic"],
+      "keyword_triggers": ["textbook", "education", "learning", "academic"],
+      "reason": "educational_exemption"
+    }'::jsonb, 'Full tax exemption for educational books and materials')
+    
+    ON CONFLICT DO NOTHING;
+    
+    RAISE NOTICE '✅ Admin overrides configured for testing scenarios';
+    
+    -- Currency Conversion Testing Data
+    RAISE NOTICE '💱 Setting up currency conversion test configurations...';
+    
+    INSERT INTO unified_configuration (config_type, config_key, config_data) VALUES
+    ('currency_conversion', 'test_scenarios', '{
+      "nepal_kurta_example": {
+        "description": "Nepal kurta minimum valuation conversion",
+        "usd_amount": 10.00,
+        "nepal_rate": 133.0,
+        "expected_npr": 1330,
+        "hsn_code": "6204",
+        "test_case": "minimum_valuation_enforcement"
+      },
+      "electronics_high_value": {
+        "description": "Electronics minimum valuation conversion",
+        "usd_amount": 50.00,
+        "nepal_rate": 133.0,
+        "expected_npr": 6650,
+        "hsn_code": "8517",
+        "test_case": "electronics_minimum"
+      },
+      "jewelry_mid_range": {
+        "description": "Jewelry minimum valuation conversion",
+        "usd_amount": 25.00,
+        "nepal_rate": 133.0,
+        "expected_npr": 3325,
+        "hsn_code": "7113",
+        "test_case": "accessories_minimum"
+      }
+    }'::jsonb),
+    
+    ('api_settings', 'government_endpoints', '{
+      "india_gst": {
+        "enabled": true,
+        "base_url": "https://api.gst.gov.in",
+        "endpoints": {
+          "hsn_lookup": "/taxpayerapi/search/hsnsac",
+          "rate_lookup": "/taxpayerapi/search/rate"
+        },
+        "cache_duration": 86400,
+        "fallback_enabled": true
+      },
+      "nepal_customs": {
+        "enabled": false,
+        "note": "No official API available - using local database",
+        "fallback_enabled": true
+      },
+      "us_taxjar": {
+        "enabled": true,
+        "base_url": "https://api.taxjar.com/v2",
+        "endpoints": {
+          "rates": "/rates",
+          "categories": "/categories"
+        },
+        "cache_duration": 3600,
+        "fallback_enabled": true
+      }
+    }'::jsonb)
+    
+    ON CONFLICT (config_type, config_key) DO UPDATE SET
+      config_data = EXCLUDED.config_data,
+      updated_at = NOW();
+    
+    RAISE NOTICE '✅ Currency conversion and API configurations set up';
+    
+    -- Final Summary
+    DECLARE
+      hsn_count INTEGER;
+      config_count INTEGER;
+      override_count INTEGER;
+    BEGIN
+      SELECT COUNT(*) INTO hsn_count FROM hsn_master;
+      SELECT COUNT(*) INTO config_count FROM unified_configuration;
+      SELECT COUNT(*) INTO override_count FROM admin_overrides;
+      
+      RAISE NOTICE '';
+      RAISE NOTICE '🎉 HSN SYSTEM SEED DATA COMPLETED SUCCESSFULLY!';
+      RAISE NOTICE '================================================';
+      RAISE NOTICE '📊 HSN Master records: %', hsn_count;
+      RAISE NOTICE '🌍 Country configurations: %', config_count; 
+      RAISE NOTICE '⚙️ Admin overrides: %', override_count;
+      RAISE NOTICE '';
+      RAISE NOTICE '🔥 KEY FEATURES READY:';
+      RAISE NOTICE '✅ Currency conversion (USD → origin country)';
+      RAISE NOTICE '✅ Nepal kurta minimum valuation ($10 USD → NPR)';
+      RAISE NOTICE '✅ Per-item HSN classification';
+      RAISE NOTICE '✅ Admin override system';
+      RAISE NOTICE '✅ Government API integration configs';
+      RAISE NOTICE '✅ Comprehensive product database';
+      RAISE NOTICE '';
+      RAISE NOTICE '💡 Ready for HSN calculation engine integration!';
+    END;
+    
+  ELSE
+    RAISE NOTICE '⚠️ HSN tables not found - they will be created by migrations';
+  END IF;
+  
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE '❌ Error populating HSN seed data: %', SQLERRM;
+    RAISE NOTICE '💡 HSN seed data will be populated by migrations instead';
 END $$;

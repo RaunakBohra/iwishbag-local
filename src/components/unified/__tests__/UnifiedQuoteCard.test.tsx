@@ -51,17 +51,17 @@ const mockQuote: UnifiedQuote = {
   created_at: '2024-01-15T10:00:00Z',
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 159.99,
-  item_price: 120.00,
-  sales_tax_price: 9.60,
-  merchant_shipping_price: 8.00,
-  international_shipping: 15.00,
-  customs_and_ecs: 4.80,
+  item_price: 120.0,
+  sales_tax_price: 9.6,
+  merchant_shipping_price: 8.0,
+  international_shipping: 15.0,
+  customs_and_ecs: 4.8,
   domestic_shipping: 2.59,
-  handling_charge: 0.00,
-  insurance_amount: 0.00,
-  payment_gateway_fee: 0.00,
-  vat: 0.00,
-  discount: 0.00,
+  handling_charge: 0.0,
+  insurance_amount: 0.0,
+  payment_gateway_fee: 0.0,
+  vat: 0.0,
+  discount: 0.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -69,11 +69,11 @@ const mockQuote: UnifiedQuote = {
     info: {
       name: 'John Doe',
       email: 'john@example.com',
-      phone: '+1234567890'
-    }
+      phone: '+1234567890',
+    },
   },
   shipping_address: {
-    formatted: '123 Test St, Mumbai, Maharashtra 400001, India'
+    formatted: '123 Test St, Mumbai, Maharashtra 400001, India',
   },
   items: [
     {
@@ -81,22 +81,20 @@ const mockQuote: UnifiedQuote = {
       name: 'Test Product',
       description: 'A great test product',
       quantity: 2,
-      price: 60.00,
+      price: 60.0,
       product_url: 'https://amazon.com/test-product',
-      image_url: 'https://example.com/image.jpg'
-    }
+      image_url: 'https://example.com/image.jpg',
+    },
   ],
   notes: 'Test notes for the quote',
   admin_notes: 'Admin test notes',
   priority: 'medium',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render component with providers
-const renderUnifiedQuoteCard = (
-  props: Partial<Parameters<typeof UnifiedQuoteCard>[0]> = {}
-) => {
+const renderUnifiedQuoteCard = (props: Partial<Parameters<typeof UnifiedQuoteCard>[0]> = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -118,7 +116,7 @@ const renderUnifiedQuoteCard = (
           <UnifiedQuoteCard {...defaultProps} />
         </QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -149,9 +147,9 @@ describe('UnifiedQuoteCard', () => {
     });
 
     it('should handle missing customer data gracefully', () => {
-      const quoteWithoutCustomer = { 
-        ...mockQuote, 
-        customer_data: null 
+      const quoteWithoutCustomer = {
+        ...mockQuote,
+        customer_data: null,
       };
       renderUnifiedQuoteCard({ quote: quoteWithoutCustomer });
 
@@ -215,8 +213,8 @@ describe('UnifiedQuoteCard', () => {
 
   describe('Status Display', () => {
     it('should display correct status colors', () => {
-      const { container } = renderUnifiedQuoteCard({ 
-        quote: { ...mockQuote, status: 'approved' }
+      const { container } = renderUnifiedQuoteCard({
+        quote: { ...mockQuote, status: 'approved' },
       });
 
       const statusIndicator = container.querySelector('.bg-green-500');
@@ -225,17 +223,17 @@ describe('UnifiedQuoteCard', () => {
 
     it('should show appropriate actions based on status', async () => {
       // Test 'sent' status shows approve/reject buttons
-      renderUnifiedQuoteCard({ 
+      renderUnifiedQuoteCard({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       expect(screen.getByText('Approve')).toBeInTheDocument();
 
       // Test 'approved' status shows add to cart button
-      renderUnifiedQuoteCard({ 
+      renderUnifiedQuoteCard({
         quote: { ...mockQuote, status: 'approved' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       expect(screen.getByText('Add to Cart')).toBeInTheDocument();
@@ -251,18 +249,20 @@ describe('UnifiedQuoteCard', () => {
           info: {
             name: '<img src=x onerror=alert("xss")>John Doe',
             email: 'john@example.com',
-            phone: '+1234567890'
-          }
+            phone: '+1234567890',
+          },
         },
-        items: [{
-          id: 'item-1',
-          name: '<script>alert("xss")</script>Clean Product Name',
-          description: 'Clean description',
-          quantity: 1,
-          price: 60.00,
-          product_url: 'https://example.com/product',
-          image_url: 'https://example.com/image.jpg'
-        }]
+        items: [
+          {
+            id: 'item-1',
+            name: '<script>alert("xss")</script>Clean Product Name',
+            description: 'Clean description',
+            quantity: 1,
+            price: 60.0,
+            product_url: 'https://example.com/product',
+            image_url: 'https://example.com/image.jpg',
+          },
+        ],
       };
 
       renderUnifiedQuoteCard({ quote: maliciousQuote });
@@ -271,7 +271,7 @@ describe('UnifiedQuoteCard', () => {
       expect(screen.getByText('SAFE-ID')).toBeInTheDocument();
       expect(screen.getByText('John Doe')).toBeInTheDocument();
       expect(screen.getByText('Clean Product Name')).toBeInTheDocument();
-      
+
       // Should not render script tags
       expect(document.querySelector('script')).not.toBeInTheDocument();
     });
@@ -280,7 +280,7 @@ describe('UnifiedQuoteCard', () => {
       const invalidQuote = {
         ...mockQuote,
         final_total_usd: 'invalid-number' as any,
-        created_at: 'invalid-date'
+        created_at: 'invalid-date',
       };
 
       renderUnifiedQuoteCard({ quote: invalidQuote });
@@ -293,16 +293,16 @@ describe('UnifiedQuoteCard', () => {
   describe('Performance Monitoring', () => {
     it('should log performance metrics in detailed mode', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      
-      renderUnifiedQuoteCard({ 
+
+      renderUnifiedQuoteCard({
         performanceMode: 'detailed',
-        quote: mockQuote 
+        quote: mockQuote,
       });
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('UnifiedQuoteCard Performance:'),
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -311,15 +311,15 @@ describe('UnifiedQuoteCard', () => {
 
     it('should not log performance metrics in fast mode', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      
-      renderUnifiedQuoteCard({ 
+
+      renderUnifiedQuoteCard({
         performanceMode: 'fast',
-        quote: mockQuote 
+        quote: mockQuote,
       });
 
       expect(consoleSpy).not.toHaveBeenCalledWith(
         expect.stringContaining('UnifiedQuoteCard Performance:'),
-        expect.any(Object)
+        expect.any(Object),
       );
 
       consoleSpy.mockRestore();
@@ -350,10 +350,10 @@ describe('UnifiedQuoteCard', () => {
       const user = userEvent.setup();
       const mockOnAction = vi.fn();
 
-      renderUnifiedQuoteCard({ 
+      renderUnifiedQuoteCard({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const approveButton = screen.getByText('Approve');
@@ -366,10 +366,10 @@ describe('UnifiedQuoteCard', () => {
       const user = userEvent.setup();
       const mockOnSelect = vi.fn();
 
-      renderUnifiedQuoteCard({ 
+      renderUnifiedQuoteCard({
         viewMode: 'admin',
         onSelect: mockOnSelect,
-        isSelected: false
+        isSelected: false,
       });
 
       const checkbox = screen.getByRole('checkbox');
@@ -388,10 +388,10 @@ describe('UnifiedQuoteCard', () => {
 
     it('should track conversion events for A/B testing', async () => {
       const user = userEvent.setup();
-      
-      renderUnifiedQuoteCard({ 
+
+      renderUnifiedQuoteCard({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const approveButton = screen.getByText('Approve');
@@ -433,29 +433,29 @@ describe('UnifiedQuoteCard', () => {
 
     it('should support keyboard navigation', async () => {
       const user = userEvent.setup();
-      renderUnifiedQuoteCard({ 
+      renderUnifiedQuoteCard({
         quote: { ...mockQuote, status: 'sent' },
-        viewMode: 'customer'
+        viewMode: 'customer',
       });
 
       const approveButton = screen.getByText('Approve');
-      
+
       // Should be focusable
       approveButton.focus();
       expect(approveButton).toHaveFocus();
 
       // Should be activatable with Enter key
       const mockOnAction = vi.fn();
-      renderUnifiedQuoteCard({ 
+      renderUnifiedQuoteCard({
         quote: { ...mockQuote, status: 'sent' },
         viewMode: 'customer',
-        onAction: mockOnAction
+        onAction: mockOnAction,
       });
 
       const newApproveButton = screen.getByText('Approve');
       newApproveButton.focus();
       await user.keyboard('{Enter}');
-      
+
       expect(mockOnAction).toHaveBeenCalled();
     });
   });
@@ -463,7 +463,7 @@ describe('UnifiedQuoteCard', () => {
   describe('Error Handling', () => {
     it('should display error state for invalid quotes', () => {
       const invalidQuote = null as any;
-      
+
       renderUnifiedQuoteCard({ quote: invalidQuote });
 
       expect(screen.getByText('Invalid quote data')).toBeInTheDocument();

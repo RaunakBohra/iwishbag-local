@@ -28,12 +28,11 @@ interface UseQuoteManagementProps {
   pageSize?: number;
 }
 
-export const useQuoteManagement = ({ 
+export const useQuoteManagement = ({
   filters,
   page = 0,
-  pageSize = 25
+  pageSize = 25,
 }: UseQuoteManagementProps) => {
-
   // Internal state management
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedQuoteIds, setSelectedQuoteIds] = useState<string[]>([]);
@@ -46,7 +45,7 @@ export const useQuoteManagement = ({
   const { getStatusesForQuotesList, getStatusConfig, quoteStatuses } = useStatusManagement();
   const { user, session } = useAuth();
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
-  
+
   const isAuthenticated = !!user && !!session && !user.is_anonymous;
 
   // Enhanced debug logging for query enablement
@@ -61,12 +60,12 @@ export const useQuoteManagement = ({
       statuses: filters.statuses,
       countries: filters.countries,
       statusesLength: filters.statuses?.length || 0,
-      countriesLength: filters.countries?.length || 0
+      countriesLength: filters.countries?.length || 0,
     },
     queryWillRun: isAuthenticated && !!isAdmin && !isAdminLoading,
     searchTerm,
     page,
-    pageSize
+    pageSize,
   });
 
   // INVESTIGATION: Test if query key arrays are causing the issue
@@ -78,110 +77,113 @@ export const useQuoteManagement = ({
         statuses: filters.statuses || [],
         countries: filters.countries || [],
         page,
-        pageSize
-      }
+        pageSize,
+      },
     ],
     queryFn: async () => {
       console.log('🚀 [useQuoteManagement] Main query function STARTED - NO SENTRY');
-      
+
       try {
         console.log('🚀 [useQuoteManagement] Main query function - inside try block');
         const queryStartTime = Date.now();
-          
-          // Debug authentication context
-          console.log('🔍 useQuoteManagement Authentication Debug:', {
-            userId: user?.id,
-            userEmail: user?.email,
-            isAnonymous: user?.is_anonymous,
-            hasSession: !!session,
-            sessionUserId: session?.user?.id,
-            accessToken: session?.access_token ? 'present' : 'missing',
-            isAuthenticated,
-            isAdmin
-          });
-          
-          // Validate authentication for admin operations
-          if (!isAuthenticated) {
-            console.warn('⚠️ No authenticated user for admin quote management');
-            throw new Error('Authentication required for admin operations');
-          }
-          
-          if (!isAdmin) {
-            console.warn('⚠️ Non-admin user attempting admin operations');
-            throw new Error('Admin role required for quote management');
-          }
-          
-          // INVESTIGATION: Test exact same query as working test query
-          console.log('🔍 [useQuoteManagement] Testing exact same structure as working test query...');
-          
-          // Use proper admin query with all necessary fields
-          let query = supabase
-            .from('quotes')
-            .select(COMMON_QUERIES.adminQuotesWithProfiles)
-            .order('created_at', { ascending: false });
 
-          // Apply filters
-          if (searchTerm && searchTerm.trim()) {
-            query = query.or(`display_id.ilike.%${searchTerm}%,customer_data->info->>email.ilike.%${searchTerm}%`);
-          }
+        // Debug authentication context
+        console.log('🔍 useQuoteManagement Authentication Debug:', {
+          userId: user?.id,
+          userEmail: user?.email,
+          isAnonymous: user?.is_anonymous,
+          hasSession: !!session,
+          sessionUserId: session?.user?.id,
+          accessToken: session?.access_token ? 'present' : 'missing',
+          isAuthenticated,
+          isAdmin,
+        });
 
-          if (filters.statuses && filters.statuses.length > 0) {
-            query = query.in('status', filters.statuses);
-          }
+        // Validate authentication for admin operations
+        if (!isAuthenticated) {
+          console.warn('⚠️ No authenticated user for admin quote management');
+          throw new Error('Authentication required for admin operations');
+        }
 
-          if (filters.countries && filters.countries.length > 0) {
-            query = query.in('destination_country', filters.countries);
-          }
+        if (!isAdmin) {
+          console.warn('⚠️ Non-admin user attempting admin operations');
+          throw new Error('Admin role required for quote management');
+        }
 
-          // Apply pagination
-          const start = page * pageSize;
-          const end = start + pageSize - 1;
-          query = query.range(start, end);
+        // INVESTIGATION: Test exact same query as working test query
+        console.log(
+          '🔍 [useQuoteManagement] Testing exact same structure as working test query...',
+        );
 
-          const { data, error } = await query;
-            
-          console.log('🔍 [useQuoteManagement] Main Query Results (same as test):', {
-            hasError: !!error,
-            errorMessage: error?.message,
-            dataCount: data?.length || 0,
-            data: data || []
-          });
-          
-          if (error) {
-            console.error('🚨 Main Query Error:', error);
-            throw error;
-          }
-          
-          // Transform data to extract JSONB fields for easier component access
-          const transformedData = (data || []).map(quote => ({
-            ...quote,
-            email: quote.customer_data?.info?.email || null,
-            customer_name: quote.customer_data?.info?.name || null,
-            product_name: quote.items?.[0]?.name || null,
-          }));
-          
-          console.log('🔍 [useQuoteManagement] Transformation Debug:', {
-            originalCount: data?.length || 0,
-            transformedCount: transformedData.length
-          });
-          
-          const result = transformedData;
+        // Use proper admin query with all necessary fields
+        let query = supabase
+          .from('quotes')
+          .select(COMMON_QUERIES.adminQuotesWithProfiles)
+          .order('created_at', { ascending: false });
 
-          // Log performance metrics  
-          const queryDuration = Date.now() - queryStartTime;
-          console.log('🚀 [useQuoteManagement] Query completed in:', queryDuration, 'ms');
+        // Apply filters
+        if (searchTerm && searchTerm.trim()) {
+          query = query.or(
+            `display_id.ilike.%${searchTerm}%,customer_data->info->>email.ilike.%${searchTerm}%`,
+          );
+        }
 
-          return result;
-        } catch (error) {
-          console.error('🚨 [useQuoteManagement] Query error:', error);
+        if (filters.statuses && filters.statuses.length > 0) {
+          query = query.in('status', filters.statuses);
+        }
+
+        if (filters.countries && filters.countries.length > 0) {
+          query = query.in('destination_country', filters.countries);
+        }
+
+        // Apply pagination
+        const start = page * pageSize;
+        const end = start + pageSize - 1;
+        query = query.range(start, end);
+
+        const { data, error } = await query;
+
+        console.log('🔍 [useQuoteManagement] Main Query Results (same as test):', {
+          hasError: !!error,
+          errorMessage: error?.message,
+          dataCount: data?.length || 0,
+          data: data || [],
+        });
+
+        if (error) {
+          console.error('🚨 Main Query Error:', error);
           throw error;
         }
+
+        // Transform data to extract JSONB fields for easier component access
+        const transformedData = (data || []).map((quote) => ({
+          ...quote,
+          email: quote.customer_data?.info?.email || null,
+          customer_name: quote.customer_data?.info?.name || null,
+          product_name: quote.items?.[0]?.name || null,
+        }));
+
+        console.log('🔍 [useQuoteManagement] Transformation Debug:', {
+          originalCount: data?.length || 0,
+          transformedCount: transformedData.length,
+        });
+
+        const result = transformedData;
+
+        // Log performance metrics
+        const queryDuration = Date.now() - queryStartTime;
+        console.log('🚀 [useQuoteManagement] Query completed in:', queryDuration, 'ms');
+
+        return result;
+      } catch (error) {
+        console.error('🚨 [useQuoteManagement] Query error:', error);
+        throw error;
+      }
     },
     enabled: isAuthenticated && !!isAdmin && !isAdminLoading,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for performance
-    gcTime: 10 * 60 * 1000 // 10 minutes garbage collection
+    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
   });
-
 
   const updateMultipleQuotesStatusMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
@@ -226,7 +228,7 @@ export const useQuoteManagement = ({
                 Sentry.addBreadcrumb({
                   message: 'Failed to fetch quote for update',
                   level: 'warning',
-                  data: { quoteId, error: fetchError.message }
+                  data: { quoteId, error: fetchError.message },
                 });
                 console.error(`Failed to fetch quote ${quoteId}: ${fetchError.message}`);
                 continue;
@@ -251,18 +253,23 @@ export const useQuoteManagement = ({
                 }
               }
 
-              const { error } = await supabase.from('quotes').update(singleUpdate).eq('id', quoteId);
+              const { error } = await supabase
+                .from('quotes')
+                .update(singleUpdate)
+                .eq('id', quoteId);
 
               if (error) {
-                const updateError = new Error(`Failed to update quote ${quoteId}: ${error.message}`);
+                const updateError = new Error(
+                  `Failed to update quote ${quoteId}: ${error.message}`,
+                );
                 scope.setLevel('error');
                 Sentry.captureException(updateError, {
-                  tags: { quoteId, operation: 'individual_quote_update' }
+                  tags: { quoteId, operation: 'individual_quote_update' },
                 });
                 throw updateError;
               }
             }
-            
+
             updateTransaction.setStatus('ok');
             return;
           }
@@ -273,7 +280,7 @@ export const useQuoteManagement = ({
             const bulkError = new Error(error.message);
             scope.setLevel('error');
             Sentry.captureException(bulkError, {
-              tags: { operation: 'bulk_quote_update' }
+              tags: { operation: 'bulk_quote_update' },
             });
             throw bulkError;
           }
@@ -286,7 +293,7 @@ export const useQuoteManagement = ({
             quoteIds: ids,
             targetStatus: status,
           });
-          
+
           updateTransaction.setStatus('internal_error');
           throw error;
         } finally {
@@ -400,13 +407,13 @@ export const useQuoteManagement = ({
 
   const handleBulkApprove = () => {
     console.log('✅ Initiating bulk approve for:', selectedQuoteIds.length, 'quotes');
-    
+
     // Find approved status from configuration
     const approvedStatusConfig = quoteStatuses.find(
       (s) => s.name === 'approved' || s.id === 'approved',
     );
     const approvedStatus = approvedStatusConfig?.name || 'approved';
-    
+
     updateMultipleQuotesStatusMutation.mutate({
       ids: selectedQuoteIds,
       status: approvedStatus,
@@ -415,7 +422,7 @@ export const useQuoteManagement = ({
 
   const handleBulkExport = () => {
     console.log('📊 Initiating bulk export for:', selectedQuoteIds.length, 'quotes');
-    
+
     if (selectedQuoteIds.length === 0) {
       toast({
         title: 'No quotes selected',
@@ -426,10 +433,20 @@ export const useQuoteManagement = ({
     }
 
     // Filter quotes to only export selected ones
-    const selectedQuotes = quotes?.filter(quote => selectedQuoteIds.includes(quote.id)) || [];
-    
+    const selectedQuotes = quotes?.filter((quote) => selectedQuoteIds.includes(quote.id)) || [];
+
     const csvContent = [
-      ['Quote ID', 'Product', 'Email', 'Status', 'Price', 'Total', 'Created', 'Customer', 'Internal ID'].join(','),
+      [
+        'Quote ID',
+        'Product',
+        'Email',
+        'Status',
+        'Price',
+        'Total',
+        'Created',
+        'Customer',
+        'Internal ID',
+      ].join(','),
       ...selectedQuotes.map((quote) =>
         [
           quote.display_id || '',
@@ -452,7 +469,7 @@ export const useQuoteManagement = ({
     link.download = `selected-quotes-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
-    
+
     toast({
       title: 'Export completed',
       description: `${selectedQuotes.length} quotes exported successfully`,
@@ -461,45 +478,44 @@ export const useQuoteManagement = ({
 
   const handleBulkEmail = () => {
     console.log('📧 Initiating bulk email for:', selectedQuoteIds.length, 'quotes');
-    
+
     // This would typically open a bulk email modal
     // For now, show a toast with quote count and email addresses
-    const selectedQuotes = quotes?.filter(quote => selectedQuoteIds.includes(quote.id)) || [];
-    const emailAddresses = selectedQuotes.map(quote => quote.email).filter(Boolean);
-    
+    const selectedQuotes = quotes?.filter((quote) => selectedQuoteIds.includes(quote.id)) || [];
+    const emailAddresses = selectedQuotes.map((quote) => quote.email).filter(Boolean);
+
     toast({
       title: 'Bulk Email',
       description: `Ready to send email to ${emailAddresses.length} customers. Email modal integration needed.`,
     });
-    
+
     // TODO: Open bulk email modal with selectedQuoteIds
     // This would integrate with SendEmailModal component
   };
 
   const handleBulkDuplicate = () => {
     console.log('📋 Initiating bulk duplicate for:', selectedQuoteIds.length, 'quotes');
-    
+
     toast({
       title: 'Bulk Duplicate',
       description: `Feature coming soon. Would duplicate ${selectedQuoteIds.length} quotes.`,
     });
-    
+
     // TODO: Implement bulk duplication logic
     // This would create new quotes based on selected ones
   };
 
   const handleBulkPriority = () => {
     console.log('⭐ Initiating bulk priority change for:', selectedQuoteIds.length, 'quotes');
-    
+
     toast({
       title: 'Bulk Priority Change',
       description: `Feature coming soon. Would update priority for ${selectedQuoteIds.length} quotes.`,
     });
-    
+
     // TODO: Implement priority change modal/logic
     // This would allow setting high/medium/low priority for selected quotes
   };
-
 
   const handleBulkAction = (
     action:

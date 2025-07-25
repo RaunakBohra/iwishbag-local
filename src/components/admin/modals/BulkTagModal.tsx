@@ -40,7 +40,7 @@ const PREDEFINED_TAGS = [
   'Wholesale',
   'Corporate',
   'Influencer',
-  'Return Customer'
+  'Return Customer',
 ];
 
 export const BulkTagModal: React.FC<BulkTagModalProps> = ({
@@ -59,22 +59,28 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
   const applyTagsMutation = useMutation({
     mutationFn: async () => {
       setIsSubmitting(true);
-      
+
       const updates = selectedCustomers.map(async (customer) => {
         const currentNotes = customer.internal_notes || '';
         let updatedNotes = currentNotes;
-        
+
         if (action === 'add') {
           // Add new tags (avoid duplicates)
-          const existingTags = currentNotes.split(',').map(tag => tag.trim()).filter(Boolean);
-          const newTags = selectedTags.filter(tag => !existingTags.includes(tag));
+          const existingTags = currentNotes
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean);
+          const newTags = selectedTags.filter((tag) => !existingTags.includes(tag));
           if (newTags.length > 0) {
             updatedNotes = [...existingTags, ...newTags].join(', ');
           }
         } else {
           // Remove tags
-          const existingTags = currentNotes.split(',').map(tag => tag.trim()).filter(Boolean);
-          const remainingTags = existingTags.filter(tag => !selectedTags.includes(tag));
+          const existingTags = currentNotes
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter(Boolean);
+          const remainingTags = existingTags.filter((tag) => !selectedTags.includes(tag));
           updatedNotes = remainingTags.join(', ');
         }
 
@@ -111,22 +117,20 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
   });
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
   const handleAddCustomTag = () => {
     if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
-      setSelectedTags(prev => [...prev, customTag.trim()]);
+      setSelectedTags((prev) => [...prev, customTag.trim()]);
       setCustomTag('');
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setSelectedTags(prev => prev.filter(tag => tag !== tagToRemove));
+    setSelectedTags((prev) => prev.filter((tag) => tag !== tagToRemove));
   };
 
   const handleSubmit = () => {
@@ -166,11 +170,12 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
             <div className="flex items-center space-x-2 mb-2">
               <Users className="h-4 w-4 text-blue-600" />
               <span className="font-medium text-blue-900">
-                {selectedCustomers.length} Customer{selectedCustomers.length !== 1 ? 's' : ''} Selected
+                {selectedCustomers.length} Customer{selectedCustomers.length !== 1 ? 's' : ''}{' '}
+                Selected
               </span>
             </div>
             <div className="flex flex-wrap gap-1">
-              {selectedCustomers.slice(0, 5).map(customer => (
+              {selectedCustomers.slice(0, 5).map((customer) => (
                 <Badge key={customer.id} variant="outline" className="text-xs bg-white">
                   {customer.full_name || customer.email}
                 </Badge>
@@ -188,15 +193,12 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
             <Label className="text-sm font-medium">Action</Label>
             <div className="flex space-x-4">
               <label className="flex items-center space-x-2 cursor-pointer">
-                <Checkbox 
-                  checked={action === 'add'} 
-                  onCheckedChange={() => setAction('add')}
-                />
+                <Checkbox checked={action === 'add'} onCheckedChange={() => setAction('add')} />
                 <span className="text-sm">Add Tags</span>
               </label>
               <label className="flex items-center space-x-2 cursor-pointer">
-                <Checkbox 
-                  checked={action === 'remove'} 
+                <Checkbox
+                  checked={action === 'remove'}
                   onCheckedChange={() => setAction('remove')}
                 />
                 <span className="text-sm">Remove Tags</span>
@@ -207,14 +209,12 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
           {/* Selected Tags Display */}
           {selectedTags.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Selected Tags ({selectedTags.length})
-              </Label>
+              <Label className="text-sm font-medium">Selected Tags ({selectedTags.length})</Label>
               <div className="flex flex-wrap gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                {selectedTags.map(tag => (
-                  <Badge 
-                    key={tag} 
-                    variant="secondary" 
+                {selectedTags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
                     className="bg-purple-100 text-purple-800 pr-1"
                   >
                     {tag}
@@ -270,7 +270,7 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
           <div className="space-y-3">
             <Label className="text-sm font-medium">Predefined Tags</Label>
             <div className="grid grid-cols-2 gap-2">
-              {PREDEFINED_TAGS.map(tag => (
+              {PREDEFINED_TAGS.map((tag) => (
                 <label
                   key={tag}
                   className="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
@@ -287,24 +287,20 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
         </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || selectedTags.length === 0}
-            className={action === 'add' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-red-600 hover:bg-red-700'}
-          >
-            {isSubmitting 
-              ? `${action === 'add' ? 'Adding' : 'Removing'} Tags...` 
-              : `${action === 'add' ? 'Add' : 'Remove'} ${selectedTags.length} Tag${selectedTags.length !== 1 ? 's' : ''}`
+            className={
+              action === 'add' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-red-600 hover:bg-red-700'
             }
+          >
+            {isSubmitting
+              ? `${action === 'add' ? 'Adding' : 'Removing'} Tags...`
+              : `${action === 'add' ? 'Add' : 'Remove'} ${selectedTags.length} Tag${selectedTags.length !== 1 ? 's' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>

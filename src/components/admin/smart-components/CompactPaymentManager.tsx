@@ -153,7 +153,9 @@ export const CompactPaymentManager: React.FC<CompactPaymentManagerProps> = ({
           </Badge>
         </div>
         <div className="flex items-center space-x-1">
-          <span className="text-sm font-medium text-gray-900">{currencyDisplay.formatDualAmount(payment.amount).short}</span>
+          <span className="text-sm font-medium text-gray-900">
+            {currencyDisplay.formatDualAmount(payment.amount).short}
+          </span>
           <Button
             variant="ghost"
             size="sm"

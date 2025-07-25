@@ -234,33 +234,37 @@ export const useCartStore = create<CartStore>()(
 
           try {
             // PERFORMANCE FIX: Bulk update with performance tracking
-            const itemIds = state.items.map(item => item.id);
+            const itemIds = state.items.map((item) => item.id);
             if (itemIds.length === 0) return;
-            
+
             // Track performance of cart sync operation
-            await trackCartOperation('sync', async () => {
-              // Single query updates all cart items at once - 90% performance improvement
-              const { error } = await supabase
-                .from('quotes')
-                .update({ in_cart: true })
-                .in('id', itemIds);
-                
-              if (error) throw error;
-              return { success: true };
-            }, { 
-              itemCount: itemIds.length, 
-              userId: state.userId 
-            });
-            
-            logger.info('Cart synced successfully', { 
-              itemCount: itemIds.length, 
-              userId: state.userId 
+            await trackCartOperation(
+              'sync',
+              async () => {
+                // Single query updates all cart items at once - 90% performance improvement
+                const { error } = await supabase
+                  .from('quotes')
+                  .update({ in_cart: true })
+                  .in('id', itemIds);
+
+                if (error) throw error;
+                return { success: true };
+              },
+              {
+                itemCount: itemIds.length,
+                userId: state.userId,
+              },
+            );
+
+            logger.info('Cart synced successfully', {
+              itemCount: itemIds.length,
+              userId: state.userId,
             });
           } catch (error) {
             console.error('Error in syncWithServer:', error);
-            logger.error('Cart sync exception', { 
+            logger.error('Cart sync exception', {
               error: error instanceof Error ? error.message : 'Unknown error',
-              itemCount: state.items.length
+              itemCount: state.items.length,
             });
           } finally {
             set({ isSyncing: false });
@@ -299,7 +303,7 @@ export const useCartStore = create<CartStore>()(
               .eq('in_cart', true) // Server-side filtering - 75% performance improvement
               .order('created_at', { ascending: false })
               .limit(50); // Reasonable limit for cart items
-              
+
             if (quotesError) {
               console.error('Cart loading error details:', quotesError);
               throw quotesError;

@@ -18,6 +18,8 @@ import {
   Ticket,
   MessageSquare,
   Zap,
+  UserCog,
+  Calculator,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -64,6 +66,11 @@ const menuGroups = [
         title: 'Customer Management',
         url: '/admin/customers',
         icon: UserCheck,
+      },
+      {
+        title: 'User & Role Management',
+        url: '/admin/users',
+        icon: UserCog,
       },
       {
         title: 'Messages',
@@ -119,6 +126,11 @@ const menuGroups = [
         title: 'Country Settings',
         url: '/admin/countries',
         icon: Globe,
+      },
+      {
+        title: 'HSN Management',
+        url: '/admin/hsn-management',
+        icon: Calculator,
       },
       {
         title: 'Customs Categories',

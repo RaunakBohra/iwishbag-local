@@ -70,7 +70,7 @@ export const useQuoteQueries = (id: string | undefined) => {
       try {
         // Get all countries from unified configuration system
         const allCountries = await unifiedConfigService.getAllCountries();
-        
+
         if (!allCountries) {
           return [];
         }

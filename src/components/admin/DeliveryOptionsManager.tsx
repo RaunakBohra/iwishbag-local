@@ -457,26 +457,42 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                               const purchaseCountry = quote.destination_country || 'US';
                               const deliveryCountry = quote.destination_country || 'US';
                               const exchangeRate = quote.exchange_rate;
-                              
+
                               // Format dual currency inline using CurrencyService
-                              const formatDualCurrency = (amount: number, originCountry: string, destinationCountry: string, exchangeRate?: number) => {
-                                const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
-                                const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
-                                
-                                const originSymbol = currencyService.getCurrencySymbol(originCurrency);
+                              const formatDualCurrency = (
+                                amount: number,
+                                originCountry: string,
+                                destinationCountry: string,
+                                exchangeRate?: number,
+                              ) => {
+                                const originCurrency =
+                                  currencyService.getCurrencyForCountrySync(originCountry);
+                                const destinationCurrency =
+                                  currencyService.getCurrencyForCountrySync(destinationCountry);
+
+                                const originSymbol =
+                                  currencyService.getCurrencySymbol(originCurrency);
                                 const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
                                 if (exchangeRate && exchangeRate !== 1) {
                                   let convertedAmount = amount * exchangeRate;
-                                  const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
+                                  const noDecimalCurrencies = [
+                                    'NPR',
+                                    'INR',
+                                    'JPY',
+                                    'KRW',
+                                    'VND',
+                                    'IDR',
+                                  ];
                                   if (noDecimalCurrencies.includes(destinationCurrency)) {
                                     convertedAmount = Math.round(convertedAmount);
                                   } else {
                                     convertedAmount = Math.round(convertedAmount * 100) / 100;
                                   }
-                                  const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
+                                  const destinationSymbol =
+                                    currencyService.getCurrencySymbol(destinationCurrency);
                                   const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
-                                  
+
                                   return {
                                     origin: originFormatted,
                                     destination: destinationFormatted,

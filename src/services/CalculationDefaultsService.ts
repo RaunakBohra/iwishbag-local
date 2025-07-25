@@ -36,8 +36,8 @@ export class CalculationDefaultsService {
    * Calculate default handling charge based on shipping option configuration
    */
   calculateHandlingDefault(
-    quote: UnifiedQuote, 
-    selectedOption: ShippingOption | null = null
+    quote: UnifiedQuote,
+    selectedOption: ShippingOption | null = null,
   ): number {
     console.log('[CalculationDefaults] calculateHandlingDefault called:', {
       quoteId: quote.id,
@@ -46,21 +46,26 @@ export class CalculationDefaultsService {
     });
 
     if (!selectedOption?.handling_charge) {
-      console.log('[CalculationDefaults] No handling_charge config found for option:', selectedOption?.id);
+      console.log(
+        '[CalculationDefaults] No handling_charge config found for option:',
+        selectedOption?.id,
+      );
       return 0;
     }
 
     const config: HandlingChargeConfig = selectedOption.handling_charge;
-    // Use costprice_total_usd as primary source, fallback to calculated value from items
-    const itemsValue = quote.costprice_total_usd || quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
-    
+    // Use base_total_usd as primary source, fallback to calculated value from items
+    const itemsValue =
+      quote.base_total_usd ||
+      quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+
     console.log('[CalculationDefaults] Items value extracted:', {
       quoteId: quote.id,
-      costprice_total_usd: quote.costprice_total_usd,
+      base_total_usd: quote.base_total_usd,
       itemsValue,
       itemsCount: quote.items?.length,
       originCountry: quote.origin_country,
-      currency: quote.currency
+      currency: quote.currency,
     });
 
     // Calculate: base fee + percentage of value
@@ -68,10 +73,7 @@ export class CalculationDefaultsService {
     const calculatedAmount = config.base_fee + percentageAmount;
 
     // Apply min/max constraints
-    const constrainedAmount = Math.max(
-      config.min_fee,
-      Math.min(calculatedAmount, config.max_fee)
-    );
+    const constrainedAmount = Math.max(config.min_fee, Math.min(calculatedAmount, config.max_fee));
 
     console.log('[CalculationDefaults] Handling calculation DETAILED:', {
       quoteId: quote.id,
@@ -83,7 +85,7 @@ export class CalculationDefaultsService {
       step6_minConstraint: config.min_fee,
       step7_maxConstraint: config.max_fee,
       step8_finalResult: constrainedAmount,
-      expectedFormulaCheck: `Base $${config.base_fee} + ${config.percentage_of_value}% of $${itemsValue} = $${calculatedAmount.toFixed(2)}`
+      expectedFormulaCheck: `Base $${config.base_fee} + ${config.percentage_of_value}% of $${itemsValue} = $${calculatedAmount.toFixed(2)}`,
     });
 
     return Math.round(constrainedAmount * 100) / 100;
@@ -93,9 +95,9 @@ export class CalculationDefaultsService {
    * Calculate default insurance amount based on shipping option and customer preference
    */
   calculateInsuranceDefault(
-    quote: UnifiedQuote, 
+    quote: UnifiedQuote,
     selectedOption: ShippingOption | null = null,
-    customerOptedIn: boolean = false
+    customerOptedIn: boolean = false,
   ): number {
     console.log('[CalculationDefaults] calculateInsuranceDefault called:', {
       quoteId: quote.id,
@@ -110,12 +112,14 @@ export class CalculationDefaultsService {
     }
 
     const config: InsuranceConfig = selectedOption.insurance_options;
-    // Use costprice_total_usd as primary source, fallback to calculated value from items
-    const itemsValue = quote.costprice_total_usd || quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
+    // Use base_total_usd as primary source, fallback to calculated value from items
+    const itemsValue =
+      quote.base_total_usd ||
+      quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
 
     // Check if customer opted in or if it's default enabled
     const shouldCalculate = customerOptedIn || config.default_enabled;
-    
+
     if (!shouldCalculate) {
       console.log('[CalculationDefaults] Insurance not enabled - customer opt-in required');
       return 0;
@@ -124,9 +128,9 @@ export class CalculationDefaultsService {
     // Calculate: percentage of value with max coverage limit
     const percentageAmount = (itemsValue * config.coverage_percentage) / 100;
     const constrainedAmount = Math.min(percentageAmount, config.max_coverage);
-    
+
     // Apply minimum fee if configured
-    const finalAmount = config.min_fee 
+    const finalAmount = config.min_fee
       ? Math.max(constrainedAmount, config.min_fee)
       : constrainedAmount;
 
@@ -149,16 +153,16 @@ export class CalculationDefaultsService {
    * Get human-readable explanation of how the default was calculated
    */
   getDefaultExplanation(
-    type: 'handling' | 'insurance', 
+    type: 'handling' | 'insurance',
     amount: number,
     selectedOption: ShippingOption | null = null,
     itemsValue: number = 0,
-    originCountry: string = 'US'
+    originCountry: string = 'US',
   ): string {
     // Get currency symbol for origin country (amounts are calculated in origin currency)
     const countryCurrency = currencyService.getCurrencyForCountrySync(originCountry);
     const currencySymbol = currencyService.getCurrencySymbol(countryCurrency);
-    
+
     if (!selectedOption) return `Default ${type}: ${currencySymbol}${amount.toFixed(2)}`;
 
     if (type === 'handling' && selectedOption.handling_charge) {
@@ -182,8 +186,8 @@ export class CalculationDefaultsService {
    */
   suggestDefaultReset(
     quote: UnifiedQuote,
-    selectedOption: ShippingOption | null = null
-  ): { 
+    selectedOption: ShippingOption | null = null,
+  ): {
     shouldSuggestHandlingReset: boolean;
     shouldSuggestInsuranceReset: boolean;
     handlingDifference: number;
@@ -191,7 +195,7 @@ export class CalculationDefaultsService {
   } {
     const currentHandling = quote.operational_data?.handling_charge || 0;
     const currentInsurance = quote.operational_data?.insurance_amount || 0;
-    
+
     const defaultHandling = this.calculateHandlingDefault(quote, selectedOption);
     const customerOptedIn = quote.customer_data?.preferences?.insurance_opted_in || false;
     const defaultInsurance = this.calculateInsuranceDefault(quote, selectedOption, customerOptedIn);
@@ -216,7 +220,7 @@ export class CalculationDefaultsService {
    */
   getCalculationData(
     quote: UnifiedQuote,
-    selectedOption: ShippingOption | null = null
+    selectedOption: ShippingOption | null = null,
   ): {
     handlingDefault: number;
     insuranceDefault: number;
@@ -227,7 +231,9 @@ export class CalculationDefaultsService {
     const customerOptedIn = quote.customer_data?.preferences?.insurance_opted_in || false;
     const handlingDefault = this.calculateHandlingDefault(quote, selectedOption);
     const insuranceDefault = this.calculateInsuranceDefault(quote, selectedOption, customerOptedIn);
-    const itemsValue = quote.costprice_total_usd || quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
+    const itemsValue =
+      quote.base_total_usd ||
+      quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
 
     const currentHandling = quote.operational_data?.handling_charge || 0;
     const currentInsurance = quote.operational_data?.insurance_amount || 0;
@@ -235,9 +241,22 @@ export class CalculationDefaultsService {
     return {
       handlingDefault,
       insuranceDefault,
-      handlingExplanation: this.getDefaultExplanation('handling', handlingDefault, selectedOption, itemsValue, quote.origin_country),
-      insuranceExplanation: this.getDefaultExplanation('insurance', insuranceDefault, selectedOption, itemsValue, quote.origin_country),
-      isManualOverride: currentHandling !== handlingDefault || currentInsurance !== insuranceDefault,
+      handlingExplanation: this.getDefaultExplanation(
+        'handling',
+        handlingDefault,
+        selectedOption,
+        itemsValue,
+        quote.origin_country,
+      ),
+      insuranceExplanation: this.getDefaultExplanation(
+        'insurance',
+        insuranceDefault,
+        selectedOption,
+        itemsValue,
+        quote.origin_country,
+      ),
+      isManualOverride:
+        currentHandling !== handlingDefault || currentInsurance !== insuranceDefault,
     };
   }
 }

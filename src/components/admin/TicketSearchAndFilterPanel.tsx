@@ -5,19 +5,19 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Search, 
-  Filter, 
-  RotateCcw, 
-  ChevronDown, 
+import {
+  Search,
+  Filter,
+  RotateCcw,
+  ChevronDown,
   ChevronUp,
   Activity,
   AlertTriangle,
@@ -26,7 +26,7 @@ import {
   Clock,
   X,
   Target,
-  MapPin
+  MapPin,
 } from 'lucide-react';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import {
@@ -35,7 +35,7 @@ import {
   TicketCategory,
   TICKET_STATUS_LABELS,
   TICKET_PRIORITY_LABELS,
-  TICKET_CATEGORY_LABELS
+  TICKET_CATEGORY_LABELS,
 } from '@/types/ticket';
 
 // Enhanced filter interface for tickets
@@ -105,18 +105,18 @@ const getQuickFilters = (currentUserId?: string): QuickFilter[] => [
     icon: Users,
     description: 'Tickets assigned to me',
     filters: { assignmentStatus: 'mine' },
-    variant: 'default'
+    variant: 'default',
   },
   {
     id: 'urgent_open',
     label: 'Urgent & Open',
     icon: AlertTriangle,
     description: 'High priority tickets needing attention',
-    filters: { 
-      priorities: ['urgent', 'high'], 
-      statuses: ['open', 'in_progress'] 
+    filters: {
+      priorities: ['urgent', 'high'],
+      statuses: ['open', 'in_progress'],
     },
-    variant: 'urgent'
+    variant: 'urgent',
   },
   {
     id: 'overdue',
@@ -124,18 +124,18 @@ const getQuickFilters = (currentUserId?: string): QuickFilter[] => [
     icon: Clock,
     description: 'Tickets past SLA deadline',
     filters: { slaStatus: 'overdue' },
-    variant: 'urgent'
+    variant: 'urgent',
   },
   {
     id: 'needs_response',
     label: 'Needs Response',
     icon: Target,
     description: 'Open tickets awaiting first response',
-    filters: { 
+    filters: {
       statuses: ['open'],
-      slaStatus: 'approaching_deadline'
+      slaStatus: 'approaching_deadline',
     },
-    variant: 'warning'
+    variant: 'warning',
   },
   {
     id: 'unassigned',
@@ -143,7 +143,7 @@ const getQuickFilters = (currentUserId?: string): QuickFilter[] => [
     icon: Users,
     description: 'Tickets needing assignment',
     filters: { assignmentStatus: 'unassigned' },
-    variant: 'warning'
+    variant: 'warning',
   },
   {
     id: 'with_orders',
@@ -151,8 +151,8 @@ const getQuickFilters = (currentUserId?: string): QuickFilter[] => [
     icon: MapPin,
     description: 'Tickets related to orders',
     filters: { hasOrder: true },
-    variant: 'default'
-  }
+    variant: 'default',
+  },
 ];
 
 export function TicketSearchAndFilterPanel({
@@ -169,7 +169,7 @@ export function TicketSearchAndFilterPanel({
   resultsCount,
   className = '',
   collapsed = false,
-  onCollapsedChange
+  onCollapsedChange,
 }: TicketSearchAndFilterPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -184,22 +184,22 @@ export function TicketSearchAndFilterPanel({
   const handleSearchTextChange = (value: string) => {
     onFiltersChange({
       ...filters,
-      searchText: value
+      searchText: value,
     });
   };
 
   const handleMultiSelectToggle = <T extends string>(
     field: keyof TicketSearchFilters,
     value: T,
-    currentValues: T[]
+    currentValues: T[],
   ) => {
     const newValues = currentValues.includes(value)
-      ? currentValues.filter(v => v !== value)
+      ? currentValues.filter((v) => v !== value)
       : [...currentValues, value];
-    
+
     onFiltersChange({
       ...filters,
-      [field]: newValues
+      [field]: newValues,
     });
   };
 
@@ -208,21 +208,21 @@ export function TicketSearchAndFilterPanel({
       ...filters,
       assignmentStatus: status,
       // Clear assignedTo when changing assignment status
-      assignedTo: status === 'all' ? [] : filters.assignedTo
+      assignedTo: status === 'all' ? [] : filters.assignedTo,
     });
   };
 
   const handleSLAStatusChange = (status: typeof filters.slaStatus) => {
     onFiltersChange({
       ...filters,
-      slaStatus: status
+      slaStatus: status,
     });
   };
 
   const handleHasOrderChange = (hasOrder: boolean | null) => {
     onFiltersChange({
       ...filters,
-      hasOrder: hasOrder
+      hasOrder: hasOrder,
     });
   };
 
@@ -230,9 +230,9 @@ export function TicketSearchAndFilterPanel({
     // Merge quick filter with current filters, replacing conflicting fields
     const newFilters = {
       ...filters,
-      ...quickFilter.filters
+      ...quickFilter.filters,
     };
-    
+
     onFiltersChange(newFilters);
   };
 
@@ -278,12 +278,12 @@ export function TicketSearchAndFilterPanel({
   const quickFilters = getQuickFilters(user?.id);
 
   const getAssigneeName = (id: string) => {
-    const assignee = availableAssignees.find(a => a.id === id);
+    const assignee = availableAssignees.find((a) => a.id === id);
     return assignee ? `${assignee.name} (${assignee.role})` : id;
   };
 
   const getCountryName = (code: string) => {
-    const country = availableCountries.find(c => c.value === code);
+    const country = availableCountries.find((c) => c.value === code);
     return country?.label || code;
   };
 
@@ -304,9 +304,7 @@ export function TicketSearchAndFilterPanel({
               </CardTitle>
               <div className="flex items-center gap-2">
                 {resultsCount !== undefined && (
-                  <span className="text-sm text-gray-600">
-                    {resultsCount} tickets
-                  </span>
+                  <span className="text-sm text-gray-600">{resultsCount} tickets</span>
                 )}
                 {isCollapsed ? (
                   <ChevronDown className="h-4 w-4" />
@@ -327,9 +325,13 @@ export function TicketSearchAndFilterPanel({
                 {quickFilters.map((quickFilter) => (
                   <Button
                     key={quickFilter.id}
-                    variant={quickFilter.variant === 'urgent' ? 'destructive' : 
-                            quickFilter.variant === 'warning' ? 'secondary' : 
-                            'outline'}
+                    variant={
+                      quickFilter.variant === 'urgent'
+                        ? 'destructive'
+                        : quickFilter.variant === 'warning'
+                          ? 'secondary'
+                          : 'outline'
+                    }
                     size="sm"
                     onClick={() => applyQuickFilter(quickFilter)}
                     className="flex items-center gap-2"
@@ -380,7 +382,13 @@ export function TicketSearchAndFilterPanel({
                     <DropdownMenuCheckboxItem
                       key={status.value}
                       checked={filters.statuses.includes(status.value as TicketStatus)}
-                      onCheckedChange={() => handleMultiSelectToggle('statuses', status.value as TicketStatus, filters.statuses)}
+                      onCheckedChange={() =>
+                        handleMultiSelectToggle(
+                          'statuses',
+                          status.value as TicketStatus,
+                          filters.statuses,
+                        )
+                      }
                     >
                       <div className="flex items-center justify-between w-full">
                         <span>{status.label}</span>
@@ -416,7 +424,13 @@ export function TicketSearchAndFilterPanel({
                     <DropdownMenuCheckboxItem
                       key={priority.value}
                       checked={filters.priorities.includes(priority.value as TicketPriority)}
-                      onCheckedChange={() => handleMultiSelectToggle('priorities', priority.value as TicketPriority, filters.priorities)}
+                      onCheckedChange={() =>
+                        handleMultiSelectToggle(
+                          'priorities',
+                          priority.value as TicketPriority,
+                          filters.priorities,
+                        )
+                      }
                     >
                       <div className="flex items-center justify-between w-full">
                         <span>{priority.label}</span>
@@ -483,7 +497,11 @@ export function TicketSearchAndFilterPanel({
               >
                 <Filter className="h-4 w-4" />
                 Advanced
-                {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showAdvancedFilters ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
               </Button>
             </div>
 
@@ -494,7 +512,10 @@ export function TicketSearchAndFilterPanel({
                   {/* Category Filter */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2 w-full justify-between">
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2 w-full justify-between"
+                      >
                         <span className="flex items-center gap-2">
                           <Target className="h-4 w-4" />
                           Category
@@ -514,7 +535,13 @@ export function TicketSearchAndFilterPanel({
                         <DropdownMenuCheckboxItem
                           key={category.value}
                           checked={filters.categories.includes(category.value as TicketCategory)}
-                          onCheckedChange={() => handleMultiSelectToggle('categories', category.value as TicketCategory, filters.categories)}
+                          onCheckedChange={() =>
+                            handleMultiSelectToggle(
+                              'categories',
+                              category.value as TicketCategory,
+                              filters.categories,
+                            )
+                          }
                         >
                           <div className="flex items-center justify-between w-full">
                             <span>{category.label}</span>
@@ -532,7 +559,10 @@ export function TicketSearchAndFilterPanel({
                   {/* SLA Status Filter */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2 w-full justify-between">
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2 w-full justify-between"
+                      >
                         <span className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           SLA Status
@@ -578,7 +608,10 @@ export function TicketSearchAndFilterPanel({
                   {/* Has Order Filter */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2 w-full justify-between">
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2 w-full justify-between"
+                      >
                         <span className="flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
                           Order Status
@@ -619,7 +652,10 @@ export function TicketSearchAndFilterPanel({
                   {availableCountries.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2 w-full justify-between">
+                        <Button
+                          variant="outline"
+                          className="flex items-center gap-2 w-full justify-between"
+                        >
                           <span className="flex items-center gap-2">
                             <MapPin className="h-4 w-4" />
                             Country
@@ -639,7 +675,9 @@ export function TicketSearchAndFilterPanel({
                           <DropdownMenuCheckboxItem
                             key={country.value}
                             checked={filters.countries.includes(country.value)}
-                            onCheckedChange={() => handleMultiSelectToggle('countries', country.value, filters.countries)}
+                            onCheckedChange={() =>
+                              handleMultiSelectToggle('countries', country.value, filters.countries)
+                            }
                           >
                             <div className="flex items-center justify-between w-full">
                               <span>{country.label}</span>
@@ -665,8 +703,7 @@ export function TicketSearchAndFilterPanel({
                 <div className="flex flex-wrap gap-2">
                   {filters.searchText && (
                     <Badge variant="secondary" className="flex items-center gap-1">
-                      <Search className="h-3 w-3" />
-                      "{filters.searchText}"
+                      <Search className="h-3 w-3" />"{filters.searchText}"
                       <button
                         onClick={() => removeFilter('search', '')}
                         className="ml-1 hover:text-red-600"
@@ -675,7 +712,7 @@ export function TicketSearchAndFilterPanel({
                       </button>
                     </Badge>
                   )}
-                  
+
                   {filters.statuses.map((status) => (
                     <Badge key={status} variant="outline" className="flex items-center gap-1">
                       <Activity className="h-3 w-3" />
@@ -744,9 +781,13 @@ export function TicketSearchAndFilterPanel({
                   {filters.assignmentStatus !== 'all' && (
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
-                      {filters.assignmentStatus === 'mine' ? 'My Tickets' :
-                       filters.assignmentStatus === 'assigned' ? 'Assigned' :
-                       filters.assignmentStatus === 'unassigned' ? 'Unassigned' : ''}
+                      {filters.assignmentStatus === 'mine'
+                        ? 'My Tickets'
+                        : filters.assignmentStatus === 'assigned'
+                          ? 'Assigned'
+                          : filters.assignmentStatus === 'unassigned'
+                            ? 'Unassigned'
+                            : ''}
                       <button
                         onClick={() => handleAssignmentStatusChange('all')}
                         className="ml-1 hover:text-red-600"
@@ -759,9 +800,13 @@ export function TicketSearchAndFilterPanel({
                   {filters.slaStatus !== 'all' && (
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {filters.slaStatus === 'on_track' ? 'On Track' :
-                       filters.slaStatus === 'approaching_deadline' ? 'Approaching Deadline' :
-                       filters.slaStatus === 'overdue' ? 'Overdue' : ''}
+                      {filters.slaStatus === 'on_track'
+                        ? 'On Track'
+                        : filters.slaStatus === 'approaching_deadline'
+                          ? 'Approaching Deadline'
+                          : filters.slaStatus === 'overdue'
+                            ? 'Overdue'
+                            : ''}
                       <button
                         onClick={() => handleSLAStatusChange('all')}
                         className="ml-1 hover:text-red-600"
@@ -789,17 +834,13 @@ export function TicketSearchAndFilterPanel({
 
             {/* Action Buttons */}
             <div className="flex gap-3 pt-2">
-              <Button 
-                onClick={onSearch}
-                disabled={isLoading}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={onSearch} disabled={isLoading} className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
                 {isLoading ? 'Searching...' : 'Apply Filters'}
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 onClick={onReset}
                 disabled={!hasActiveFilters || isLoading}
                 className="flex items-center gap-2"

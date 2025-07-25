@@ -3,14 +3,18 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Link, Package, Settings } from 'lucide-react';
+import { ExternalLink, Link, Package, Settings, FileText, Sparkles, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState, useEffect } from 'react';
 
 // Define the shape of a product item in the form
 interface ProductFormItem {
   productUrl: string;
   productName: string;
-  customer_notes: string;
+  options: string;
+  price_usd?: number;
+  quantity?: number;
 }
 
 // Define the form data structure
@@ -24,18 +28,28 @@ interface ProductInfoFieldsProps {
   setValue: UseFormSetValue<ProductFormData>;
 }
 
+
 export const ProductInfoFields = ({ control, index, setValue }: ProductInfoFieldsProps) => {
-  // Watch the product URL field
-  const _productUrl = useWatch({
+
+  // Watch the product URL and product name fields
+  const productUrl = useWatch({
     control,
     name: `items.${index}.productUrl`,
   });
+  
+  const productName = useWatch({
+    control,
+    name: `items.${index}.productName`,
+  });
+
+
 
   const handleOpenUrl = (url: string) => {
     if (url && url.trim()) {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -115,7 +129,7 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
       {/* Product Options */}
       <FormField
         control={control}
-        name={`items.${index}.customer_notes`}
+        name={`items.${index}.options`}
         render={({ field }) => (
           <FormItem>
             <FormLabel className="flex items-center space-x-2">
@@ -142,6 +156,8 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
           </FormItem>
         )}
       />
+
+
     </div>
   );
 };

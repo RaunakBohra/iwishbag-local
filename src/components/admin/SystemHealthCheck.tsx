@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
-import { 
-  useUnacknowledgedBreaches, 
-  useBreachStats, 
-  useBreachDetection 
+import {
+  useUnacknowledgedBreaches,
+  useBreachStats,
+  useBreachDetection,
 } from '@/hooks/useSLABreaches';
 import { useAssignmentStats } from '@/hooks/useAutoAssignment';
 import { useTicketStats, useAdminTickets } from '@/hooks/useTickets';
@@ -27,10 +27,26 @@ export const SystemHealthCheck = () => {
   const [healthChecks, setHealthChecks] = useState<HealthCheckItem[]>([]);
 
   // Test hooks
-  const { data: breaches, isLoading: breachesLoading, error: breachesError } = useUnacknowledgedBreaches();
-  const { data: breachStats, isLoading: breachStatsLoading, error: breachStatsError } = useBreachStats();
-  const { data: assignmentStats, isLoading: assignmentLoading, error: assignmentError } = useAssignmentStats();
-  const { data: ticketStats, isLoading: ticketStatsLoading, error: ticketStatsError } = useTicketStats();
+  const {
+    data: breaches,
+    isLoading: breachesLoading,
+    error: breachesError,
+  } = useUnacknowledgedBreaches();
+  const {
+    data: breachStats,
+    isLoading: breachStatsLoading,
+    error: breachStatsError,
+  } = useBreachStats();
+  const {
+    data: assignmentStats,
+    isLoading: assignmentLoading,
+    error: assignmentError,
+  } = useAssignmentStats();
+  const {
+    data: ticketStats,
+    isLoading: ticketStatsLoading,
+    error: ticketStatsError,
+  } = useTicketStats();
   const { data: tickets, isLoading: ticketsLoading, error: ticketsError } = useAdminTickets({});
   const breachDetection = useBreachDetection();
 
@@ -39,42 +55,72 @@ export const SystemHealthCheck = () => {
       {
         name: 'SLA Breach Notifications',
         status: breachesLoading ? 'loading' : breachesError ? 'error' : 'success',
-        message: breachesLoading ? 'Loading...' : breachesError ? 'Failed to load' : `${breaches?.length || 0} unacknowledged breaches`,
-        data: breaches
+        message: breachesLoading
+          ? 'Loading...'
+          : breachesError
+            ? 'Failed to load'
+            : `${breaches?.length || 0} unacknowledged breaches`,
+        data: breaches,
       },
       {
         name: 'SLA Breach Statistics',
         status: breachStatsLoading ? 'loading' : breachStatsError ? 'error' : 'success',
-        message: breachStatsLoading ? 'Loading...' : breachStatsError ? 'Failed to load' : `${breachStats?.total_unacknowledged || 0} total unacknowledged`,
-        data: breachStats
+        message: breachStatsLoading
+          ? 'Loading...'
+          : breachStatsError
+            ? 'Failed to load'
+            : `${breachStats?.total_unacknowledged || 0} total unacknowledged`,
+        data: breachStats,
       },
       {
         name: 'Auto-Assignment System',
         status: assignmentLoading ? 'loading' : assignmentError ? 'error' : 'success',
-        message: assignmentLoading ? 'Loading...' : assignmentError ? 'Failed to load' : `${assignmentStats?.active_rules || 0} active rules, ${assignmentStats?.total_assignments || 0} assignments made`,
-        data: assignmentStats
+        message: assignmentLoading
+          ? 'Loading...'
+          : assignmentError
+            ? 'Failed to load'
+            : `${assignmentStats?.active_rules || 0} active rules, ${assignmentStats?.total_assignments || 0} assignments made`,
+        data: assignmentStats,
       },
       {
         name: 'Support Tickets',
         status: ticketsLoading ? 'loading' : ticketsError ? 'error' : 'success',
-        message: ticketsLoading ? 'Loading...' : ticketsError ? 'Failed to load' : `${tickets?.length || 0} tickets loaded`,
-        data: tickets
+        message: ticketsLoading
+          ? 'Loading...'
+          : ticketsError
+            ? 'Failed to load'
+            : `${tickets?.length || 0} tickets loaded`,
+        data: tickets,
       },
       {
         name: 'Ticket Statistics',
         status: ticketStatsLoading ? 'loading' : ticketStatsError ? 'error' : 'success',
-        message: ticketStatsLoading ? 'Loading...' : ticketStatsError ? 'Failed to load' : `${ticketStats?.total || 0} total tickets`,
-        data: ticketStats
-      }
+        message: ticketStatsLoading
+          ? 'Loading...'
+          : ticketStatsError
+            ? 'Failed to load'
+            : `${ticketStats?.total || 0} total tickets`,
+        data: ticketStats,
+      },
     ];
 
     setHealthChecks(checks);
   }, [
-    breaches, breachesLoading, breachesError,
-    breachStats, breachStatsLoading, breachStatsError,
-    assignmentStats, assignmentLoading, assignmentError,
-    tickets, ticketsLoading, ticketsError,
-    ticketStats, ticketStatsLoading, ticketStatsError
+    breaches,
+    breachesLoading,
+    breachesError,
+    breachStats,
+    breachStatsLoading,
+    breachStatsError,
+    assignmentStats,
+    assignmentLoading,
+    assignmentError,
+    tickets,
+    ticketsLoading,
+    ticketsError,
+    ticketStats,
+    ticketStatsLoading,
+    ticketStatsError,
   ]);
 
   const getStatusIcon = (status: string) => {
@@ -111,9 +157,13 @@ export const SystemHealthCheck = () => {
     breachDetection.mutate();
   };
 
-  const overallStatus = healthChecks.every(c => c.status === 'success') ? 'success' :
-                       healthChecks.some(c => c.status === 'error') ? 'error' :
-                       healthChecks.some(c => c.status === 'loading') ? 'loading' : 'warning';
+  const overallStatus = healthChecks.every((c) => c.status === 'success')
+    ? 'success'
+    : healthChecks.some((c) => c.status === 'error')
+      ? 'error'
+      : healthChecks.some((c) => c.status === 'loading')
+        ? 'loading'
+        : 'warning';
 
   return (
     <div className="space-y-6">
@@ -122,7 +172,15 @@ export const SystemHealthCheck = () => {
           <CardTitle className="flex items-center gap-2">
             {getStatusIcon(overallStatus)}
             System Health Check
-            <Badge variant={overallStatus === 'success' ? 'default' : overallStatus === 'error' ? 'destructive' : 'secondary'}>
+            <Badge
+              variant={
+                overallStatus === 'success'
+                  ? 'default'
+                  : overallStatus === 'error'
+                    ? 'destructive'
+                    : 'secondary'
+              }
+            >
               {overallStatus.toUpperCase()}
             </Badge>
           </CardTitle>
@@ -148,19 +206,16 @@ export const SystemHealthCheck = () => {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-6 flex gap-2">
-            <Button 
-              onClick={runBreachDetection} 
+            <Button
+              onClick={runBreachDetection}
               disabled={breachDetection.isPending}
               variant="outline"
             >
               {breachDetection.isPending ? 'Running...' : 'Test Breach Detection'}
             </Button>
-            <Button 
-              onClick={() => window.location.reload()} 
-              variant="outline"
-            >
+            <Button onClick={() => window.location.reload()} variant="outline">
               Refresh All Data
             </Button>
           </div>
@@ -179,15 +234,21 @@ export const SystemHealthCheck = () => {
               <div className="text-sm text-gray-600">Total Tickets</div>
             </div>
             <div className="text-center p-4 bg-red-50 rounded-lg">
-              <div className="text-2xl font-bold text-red-600">{breachStats?.total_unacknowledged || 0}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {breachStats?.total_unacknowledged || 0}
+              </div>
               <div className="text-sm text-gray-600">Unacknowledged Breaches</div>
             </div>
             <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{assignmentStats?.active_rules || 0}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {assignmentStats?.active_rules || 0}
+              </div>
               <div className="text-sm text-gray-600">Active Assignment Rules</div>
             </div>
             <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{assignmentStats?.total_assignments || 0}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {assignmentStats?.total_assignments || 0}
+              </div>
               <div className="text-sm text-gray-600">Total Assignments</div>
             </div>
           </div>

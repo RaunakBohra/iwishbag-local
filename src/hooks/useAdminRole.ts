@@ -9,9 +9,9 @@ export const useAdminRole = () => {
     queryKey: ['admin-role', user?.id],
     queryFn: async () => {
       console.log('🔍 [useAdminRole] Checking admin role for user:', {
-        user: user ? { id: user.id, email: user.email, isAnonymous: user.is_anonymous } : null
+        user: user ? { id: user.id, email: user.email, isAnonymous: user.is_anonymous } : null,
       });
-      
+
       if (!user) {
         console.log('🔍 [useAdminRole] No user found, returning false');
         return false;
@@ -21,14 +21,14 @@ export const useAdminRole = () => {
         _user_id: user.id,
         _role: 'admin',
       });
-      
+
       console.log('🔍 [useAdminRole] RPC call results:', {
         hasError: !!error,
         errorMessage: error?.message,
         data,
-        isAdmin: !!data
+        isAdmin: !!data,
       });
-      
+
       if (error) {
         console.error('Error checking admin role:', error);
         return false;

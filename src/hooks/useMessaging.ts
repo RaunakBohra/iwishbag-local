@@ -117,7 +117,9 @@ export const useMessaging = (hasAdminRole: boolean | undefined) => {
       // Database constraint: sender_id <> recipient_id
       let finalRecipientId = recipientId;
       if (recipientId === user.id) {
-        console.warn('[useMessaging] Admin cannot send message to themselves, converting to general message');
+        console.warn(
+          '[useMessaging] Admin cannot send message to themselves, converting to general message',
+        );
         finalRecipientId = null; // Convert to general admin message
       }
 

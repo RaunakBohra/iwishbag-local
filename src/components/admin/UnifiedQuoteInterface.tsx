@@ -6,8 +6,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { calculateCorrectBaseTotalUSD, getExchangeRateFromQuote } from '@/utils/currencyConversion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,6 +46,7 @@ import {
   Smartphone,
   MessageCircle,
   Settings,
+  Tag,
 } from 'lucide-react';
 import {
   Select,
@@ -55,12 +56,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
+import { DualWeightSuggestions } from '@/components/admin/smart-weight-field/DualWeightSuggestions';
 import { normalizeShippingOptionId } from '@/utils/shippingOptionUtils';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 
@@ -86,8 +88,14 @@ import { ShippingConfigurationPrompt } from './smart-components/ShippingConfigur
 import { CompactPaymentManager } from './smart-components/CompactPaymentManager';
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
+import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
+import { TaxCalculationSidebar } from './smart-components/TaxCalculationSidebar';
+import { TaxMethodSelectionPanel } from './tax-method-selection/TaxMethodSelectionPanel';
+import { PerItemValuationSelector } from './tax-method-selection/PerItemValuationSelector';
+import { TaxHubContainer } from './tax-hub/TaxHubContainer';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
+import { SmartHSNSearch } from './hsn-components/SmartHSNSearch';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -117,48 +125,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Core state
   const quoteId = initialQuoteId || paramId;
-  
-  // ✅ MIGRATED TO REACT QUERY: Replace local state with cached query
-  const {
-    data: quote,
-    isLoading: isLoadingQuote,
-    error: quoteError,
-    refetch: refetchQuote,
-  } = useQuery({
-    queryKey: ['admin-quote', quoteId],
-    queryFn: async () => {
-      if (!quoteId) throw new Error('No quote ID provided');
-      const quoteData = await unifiedDataEngine.getQuote(quoteId, true);
-      if (!quoteData) throw new Error('Quote not found');
-      return quoteData;
-    },
-    enabled: !!quoteId,
-    staleTime: 30 * 1000, // 30 seconds - fresh admin data
-    refetchOnWindowFocus: true, // ✅ Refetch when admin returns to tab
-    refetchOnMount: true, // ✅ Always refetch when component mounts
-    refetchInterval: 45 * 1000, // ✅ Background refresh every 45 seconds
-    retry: 2,
-    onSuccess: (quoteData) => {
-      // Populate form with fresh quote data
-      if (quoteData && form) {
-        populateFormFromQuote(quoteData);
-      }
-    },
-    onError: (error) => {
-      console.error('Error loading quote:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load quote data.',
-        variant: 'destructive',
-      });
-    },
-  });
-  
+  const [quote, setQuote] = useState<UnifiedQuote | null>(null);
+
   // Get standardized currency display
   const currencyDisplay = useAdminQuoteCurrency(quote);
-  
-  // Use React Query loading state instead of local state
-  const isLoading = isLoadingQuote;
+  const [isLoading, setIsLoading] = useState(true);
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Smart features state
@@ -180,6 +151,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const [productToDelete, setProductToDelete] = useState<{ index: number; name: string } | null>(
     null,
   );
+
+  // HSN interface state
+  const [editingHSNItemId, setEditingHSNItemId] = useState<string | null>(null);
+  const [hsnFormData, setHsnFormData] = useState<{[key: string]: { hsn_code: string; category: string }}>({});
+  const [selectedHSNData, setSelectedHSNData] = useState<{[key: string]: any}>({});
+
+  // Tax method selection state
+  const [showTaxMethodPanel, setShowTaxMethodPanel] = useState(false);
+  const [showValuationSelector, setShowValuationSelector] = useState(false);
+  const [currentTaxMethod, setCurrentTaxMethod] = useState<string>('auto');
+  const [itemValuationMethods, setItemValuationMethods] = useState<Record<string, string>>({});
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -224,102 +206,196 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     enableLogging: true,
   });
 
-
   // Status transitions for auto-progression
   const { handleQuoteSent } = useStatusTransitions();
 
-
-  // ✅ Calculate smart features when quote data changes
+  // Load quote data
   useEffect(() => {
-    if (quote && !isLoading) {
-      calculateSmartFeatures(quote);
+    if (!quoteId) {
+      setIsLoading(false);
+      return;
     }
-  }, [quote, isLoading]);
 
-  // ✅ CROSS-COMPONENT SYNC: Function to invalidate both admin and user caches
-  const invalidateQuoteCaches = useCallback(async () => {
-    // Invalidate admin cache
-    queryClient.invalidateQueries({ queryKey: ['admin-quote', quoteId] });
-    // ✅ CRITICAL: Also invalidate user cache so changes show immediately
-    queryClient.invalidateQueries({ queryKey: ['quote', quoteId] });
-    // Invalidate related queries
-    queryClient.invalidateQueries({ queryKey: ['quotes'] });
-    queryClient.invalidateQueries({ queryKey: ['admin-quotes'] });
-  }, [queryClient, quoteId]);
+    loadQuoteData();
+  }, [quoteId]);
 
-  // ✅ ENHANCED CALLBACK: Combines refetch with cache invalidation
-  const handleQuoteUpdate = useCallback(async () => {
-    await refetchQuote();
-    await invalidateQuoteCaches();
-  }, [refetchQuote, invalidateQuoteCaches]);
+  // Ensure form is populated when quote becomes available (fixes refresh issue)
+  useEffect(() => {
+    // Form population monitoring
 
-  // ✅ HELPER: Create enhanced quote with current form values
-  const createEnhancedQuote = (baseQuote?: UnifiedQuote): UnifiedQuote | null => {
-    const currentFormValues = form.getValues();
-    const quoteToCalculate = baseQuote || quote;
+    if (quote && isEditMode && !isLoading) {
+      // Ensuring form population
+      
+      // Check if form is actually populated
+      const formItems = form.watch('items');
+      const hasFormItems = formItems && formItems.length > 0;
+      const hasQuoteItems = quote.items && quote.items.length > 0;
+      
+      // Repopulate form if it's empty but quote has items (typical refresh issue)
+      if (!hasFormItems && hasQuoteItems) {
+        // Form empty - repopulating
+        populateFormFromQuote(quote);
+      } else if (hasFormItems && hasQuoteItems && formItems.length !== quote.items.length) {
+        // Item count mismatch - repopulating
+        populateFormFromQuote(quote);
+      } else {
+        // Form properly populated
+      }
+    }
+  }, [quote, isEditMode, isLoading, form]);
+
+  // Force form population on initial load in edit mode (additional safety)
+  useEffect(() => {
+    // Only run once when component is fully loaded and in edit mode
+    const timeoutId = setTimeout(() => {
+      if (quote && isEditMode && !isLoading) {
+        const formItems = form.watch('items');
+        if (!formItems || formItems.length === 0) {
+          // Timeout check - force populating
+          populateFormFromQuote(quote);
+        }
+      }
+    }, 1000); // Give 1 second for everything to settle
+
+    return () => clearTimeout(timeoutId);
+  }, []); // Empty dependency array - only run once on mount
+
+  const loadQuoteData = async (forceRefresh = false, skipNavigationOnError = false) => {
+    const maxRetries = 3;
+    let attempt = 0;
+    let quoteData = null;
     
-    if (!quoteToCalculate) {
-      console.error('❌ No quote data available for enhancement');
-      return null;
-    }
+    while (attempt < maxRetries) {
+      try {
+        setIsLoading(true);
+        console.log(`🔄 [LoadQuoteData] Attempt ${attempt + 1}/${maxRetries} for quote ${quoteId}`, { forceRefresh, skipNavigationOnError });
+        
+        // Add small delay for retry attempts and force refresh
+        if (forceRefresh || attempt > 0) {
+          const delay = attempt > 0 ? 200 * attempt : 100; // Exponential backoff
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        
+        quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
+        
+        if (!quoteData) {
+          console.warn(`⚠️ [LoadQuoteData] Quote not found on attempt ${attempt + 1}, quote ID: ${quoteId}`);
+          
+          // If this is not the last attempt, continue retrying
+          if (attempt < maxRetries - 1) {
+            attempt++;
+            continue;
+          }
+          
+          // Last attempt failed - only navigate if not skipped (e.g., not during tax method changes)
+          if (!skipNavigationOnError) {
+            console.error(`❌ [LoadQuoteData] Quote not found after ${maxRetries} attempts, navigating away`);
+            toast({
+              title: 'Quote not found',
+              description: 'The requested quote could not be found after multiple attempts.',
+              variant: 'destructive',
+            });
+            navigate('/admin/quotes');
+            return;
+          } else {
+            console.warn(`⚠️ [LoadQuoteData] Quote not found but navigation skipped (tax method change context)`);
+            toast({
+              title: 'Temporary Error',
+              description: 'Quote data temporarily unavailable. Please try again.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+        
+        // Success! Break out of retry loop
+        console.log(`✅ [LoadQuoteData] Successfully loaded quote on attempt ${attempt + 1}`);
+        
+        // Process the successfully loaded quote data
+        console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
+          oldStatus: quote?.status,
+          newStatus: quoteData.status,
+          quoteId: quoteData.id,
+          oldItems: quote?.items?.map(i => ({ id: i.id, hsn: i.hsn_code, category: i.category })),
+          newItems: quoteData.items?.map(i => ({ id: i.id, hsn: i.hsn_code, category: i.category }))
+        });
+        setQuote(quoteData);
 
-    return {
-      ...quoteToCalculate,
-      operational_data: {
-        ...quoteToCalculate.operational_data,
-        // ✅ KEY FIX: Map sales_tax_price from form to purchase_tax_rate expected by engine
-        purchase_tax_rate: currentFormValues.sales_tax_price ? 
-          (Number(currentFormValues.sales_tax_price) / (quoteToCalculate.calculation_data?.breakdown?.items_total || 100)) * 100 : 
-          undefined,
-        customs: {
-          ...quoteToCalculate.operational_data?.customs,
-          percentage: Number(currentFormValues.customs_percentage) || quoteToCalculate.operational_data?.customs?.percentage || 0,
-        },
-        handling_charge: Number(currentFormValues.handling_charge) || quoteToCalculate.operational_data?.handling_charge,
-        insurance_amount: Number(currentFormValues.insurance_amount) || quoteToCalculate.operational_data?.insurance_amount,
-      },
-      items: currentFormValues.items?.map((item, index) => ({
-        ...quoteToCalculate.items[index],
-        name: item.product_name || quoteToCalculate.items[index]?.name || '',
-        costprice_origin: Number(item.item_price) || 0,
-        weight_kg: Number(item.item_weight) || 0,
-        quantity: Number(item.quantity) || 1,
-      })) || quoteToCalculate.items,
-    };
+        // Initialize HSN state for existing items
+        if (quoteData.items) {
+          const initialHsnFormData: {[key: string]: { hsn_code: string; category: string }} = {};
+          const initialSelectedData: {[key: string]: any} = {};
+          
+          quoteData.items.forEach(item => {
+            if (item.hsn_code || item.category) {
+              initialHsnFormData[item.id] = {
+                hsn_code: item.hsn_code || '',
+                category: item.category || ''
+              };
+              
+              if (item.hsn_code && item.category) {
+                initialSelectedData[item.id] = {
+                  hsn_code: item.hsn_code,
+                  category: item.category,
+                  description: `${item.category} item`,
+                  minimum_valuation_usd: undefined // Will be loaded from database if needed
+                };
+              }
+            }
+          });
+          
+          setHsnFormData(initialHsnFormData);
+          setSelectedHSNData(initialSelectedData);
+        }
+
+        // Initialize tax method selection state from quote operational data
+        setCurrentTaxMethod(quoteData.calculation_method_preference || 'auto');
+        
+        // Initialize per-item valuation methods from operational data
+        if (quoteData.operational_data?.item_valuation_preferences) {
+          setItemValuationMethods(quoteData.operational_data.item_valuation_preferences);
+        }
+
+        // Populate form with quote data
+        populateFormFromQuote(quoteData);
+
+        // Calculate smart features
+        await calculateSmartFeatures(quoteData);
+        
+        break;
+        
+      } catch (error) {
+        console.error(`❌ [LoadQuoteData] Error on attempt ${attempt + 1}:`, error);
+        
+        // If this is not the last attempt, continue retrying
+        if (attempt < maxRetries - 1) {
+          attempt++;
+          continue;
+        }
+        
+        // Last attempt failed with error
+        toast({
+          title: 'Loading Error',
+          description: 'Failed to load quote data. Please refresh the page.',
+          variant: 'destructive',
+        });
+        
+        if (!skipNavigationOnError) {
+          navigate('/admin/quotes');
+        }
+        return;
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
-  const calculateSmartFeatures = async (baseQuote?: UnifiedQuote) => {
+  const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
     try {
       setIsCalculating(true);
-      
-      // Get current form values for calculations
-      const currentFormValues = form.getValues();
-      
-      // ✅ NEW: Always use enhanced quote data
-      const enhancedQuote = createEnhancedQuote(baseQuote);
-      if (!enhancedQuote) return;
-
-      const quoteToCalculate = baseQuote || quote;
-      
-      console.log('🔄 [REAL-TIME] Calculating with form values:', {
-        salesTaxPrice: currentFormValues.sales_tax_price,
-        salesTaxPriceType: typeof currentFormValues.sales_tax_price,
-        itemsTotal: quoteToCalculate.calculation_data?.breakdown?.items_total,
-        calculatedPurchaseTaxRate: currentFormValues.sales_tax_price ? 
-          (Number(currentFormValues.sales_tax_price) / (quoteToCalculate.calculation_data?.breakdown?.items_total || 100)) * 100 : 
-          undefined,
-        finalPurchaseTaxRate: enhancedQuote.operational_data?.purchase_tax_rate,
-        customsPercentage: enhancedQuote.operational_data?.customs?.percentage,
-      });
-
-      console.log('📤 [DEBUG] Sending enhanced quote to SmartCalculationEngine:', {
-        quoteId: enhancedQuote.id,
-        operationalData: enhancedQuote.operational_data,
-        purchaseTaxRate: enhancedQuote.operational_data?.purchase_tax_rate,
-      });
 
       const result = await smartCalculationEngine.calculateWithShippingOptions({
-        quote: enhancedQuote,
+        quote: quoteData,
         preferences: {
           speed_priority: 'medium',
           cost_priority: 'medium',
@@ -328,59 +404,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
 
       if (result.success) {
-        setLiveQuote(result.updated_quote); // ✅ Update live quote for real-time display
+        setQuote(result.updated_quote);
         setShippingOptions(result.shipping_options);
         setShippingRecommendations(result.smart_recommendations);
         setSmartSuggestions(result.optimization_suggestions);
         setOptimizationScore(result.updated_quote.optimization_score);
-        
-        console.log('✅ [REAL-TIME] Calculation success, updated breakdown:', {
-          purchaseTax: result.updated_quote.calculation_data?.breakdown?.purchase_tax,
-          destinationTax: result.updated_quote.calculation_data?.breakdown?.destination_tax,
-          customs: result.updated_quote.calculation_data?.breakdown?.customs,
-          vatPercentage: result.updated_quote.operational_data?.customs?.smart_tier?.vat_percentage,
-        });
-
-        // ✅ FIX: Persist async calculation results to database
-        // This ensures that sync calculations can access the smart_tier data
-        try {
-          console.log('💾 [FIX] Persisting async calculation results to database:', {
-            quoteId: quote?.id,
-            operationalDataUpdate: {
-              customs: result.updated_quote.operational_data?.customs,
-              shipping: result.updated_quote.operational_data?.shipping,
-            },
-            calculationDataUpdate: {
-              breakdown: result.updated_quote.calculation_data?.breakdown,
-              exchange_rate: result.updated_quote.calculation_data?.exchange_rate,
-            }
-          });
-
-          const success = await unifiedDataEngine.updateQuote(quote!.id, {
-            calculation_data: result.updated_quote.calculation_data,
-            operational_data: result.updated_quote.operational_data,
-            final_total_usd: result.updated_quote.final_total_usd,
-            optimization_score: result.updated_quote.optimization_score,
-          });
-
-          if (success) {
-            console.log('✅ [FIX] Successfully persisted async calculation results to database');
-            // Refresh the quote from database to ensure consistency
-            try {
-              const freshQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
-              if (freshQuoteData) {
-                setQuote(freshQuoteData);
-                console.log('🔄 [FIX] Successfully refreshed quote data from database');
-              }
-            } catch (refreshError) {
-              console.error('❌ [FIX] Error refreshing quote data:', refreshError);
-            }
-          } else {
-            console.error('❌ [FIX] Failed to persist async calculation results to database');
-          }
-        } catch (persistError) {
-          console.error('❌ [FIX] Error persisting async calculation results:', persistError);
-        }
       }
     } catch (error) {
       console.error('Error calculating smart features:', error);
@@ -388,7 +416,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setIsCalculating(false);
     }
   };
-
 
   const handleShippingOptionSelect = async (optionId: string) => {
     console.log('[DEBUG] handleShippingOptionSelect called with:', {
@@ -457,17 +484,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         id: selectedOption.id,
         name: selectedOption.name,
         carrier: selectedOption.carrier,
-        cost_usd: selectedOption.cost_usd
+        cost_usd: selectedOption.cost_usd,
       },
       breakdownUpdate: {
         oldShipping: quote.calculation_data?.breakdown?.shipping,
         newShipping: selectedOption.cost_usd,
-        shippingChange: selectedOption.cost_usd - (quote.calculation_data?.breakdown?.shipping || 0)
+        shippingChange:
+          selectedOption.cost_usd - (quote.calculation_data?.breakdown?.shipping || 0),
       },
       operationalDataUpdate: {
         originalSelectedOption: quote.operational_data?.shipping?.selected_option,
-        newSelectedOption: optimisticQuote.operational_data.shipping.selected_option
-      }
+        newSelectedOption: optimisticQuote.operational_data.shipping.selected_option,
+      },
     });
 
     // Set optimistic state immediately (no page refresh)
@@ -511,37 +539,38 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       } else {
         console.log('✅ [DEBUG] Database update successful!');
-        
+
         // Trigger recalculation to update handling charges and other dependent values
         console.log('🔄 [DEBUG] Triggering recalculation after shipping option change...');
         try {
-          // ✅ FIX: Use enhanced quote data for consistent calculations
-          const enhancedQuote = createEnhancedQuote(optimisticQuote);
           const calculationResult = smartCalculationEngine.calculateLiveSync({
-            quote: enhancedQuote || optimisticQuote,
+            quote: optimisticQuote,
             preferences: {
               speed_priority: 'medium',
               cost_priority: 'medium',
               show_all_options: false,
             },
           });
-          
+
           if (calculationResult.success) {
             console.log('✅ [DEBUG] Recalculation successful:', {
-              handlingCharge: calculationResult.updated_quote.calculation_data.breakdown.handling_charge,
-              finalTotal: calculationResult.updated_quote.final_total_usd
+              handlingCharge:
+                calculationResult.updated_quote.calculation_data.breakdown.handling_charge,
+              finalTotal: calculationResult.updated_quote.final_total_usd,
             });
-            
+
             // Update both quote state and live quote with recalculated values
             setQuote(calculationResult.updated_quote);
             if (isEditMode) {
               setLiveQuote(calculationResult.updated_quote);
             }
-            
+
             // Update form with recalculated values
-            form.setValue('handling_charge', calculationResult.updated_quote.calculation_data.breakdown.handling_charge || 0);
+            form.setValue(
+              'handling_charge',
+              calculationResult.updated_quote.calculation_data.breakdown.handling_charge || 0,
+            );
             form.setValue('final_total_usd', calculationResult.updated_quote.final_total_usd || 0);
-            
           } else {
             console.warn('⚠️ [DEBUG] Recalculation failed:', calculationResult.error);
           }
@@ -600,11 +629,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       duration: 2000,
     });
 
-    // Reset form when switching to view mode
-    if (!newEditMode && quote) {
-      populateFormFromQuote(liveQuote || quote);
+    // Reset form when switching modes to ensure proper synchronization
+    if (quote) {
+      if (!newEditMode) {
+        // Switching to view mode - populate form with latest data
+        console.log('🔄 Switching to view mode - repopulating form');
+        populateFormFromQuote(liveQuote || quote);
+      } else {
+        // Switching to edit mode - ensure form is populated for editing
+        console.log('✏️ Switching to edit mode - ensuring form is populated');
+        populateFormFromQuote(liveQuote || quote);
+      }
     }
   };
+
 
   // Watch form values for live updates
   const formValues = useWatch({ control: form.control });
@@ -648,7 +686,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           destination_country: formValues.destination_country,
           items: (formValues.items || []).map((item, index) => ({
             ...quote.items[index],
-            costprice_origin: Number(item.item_price) || 0,
+            price_usd: Number(item.item_price) || 0,
             weight_kg: Number(item.item_weight) || 0,
             quantity: Number(item.quantity) || 1,
           })),
@@ -678,14 +716,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             } else if (formValues.selected_shipping_option && result.shipping_options.length > 0) {
               // ✅ SIMPLE FIX: Update international shipping cost for existing selection when route changes
               const currentlySelected = result.shipping_options.find(
-                opt => opt.id === formValues.selected_shipping_option
+                (opt) => opt.id === formValues.selected_shipping_option,
               );
               if (currentlySelected) {
-                console.log('🔄 [DEBUG] Updating international shipping cost for existing selection:', {
-                  optionId: currentlySelected.id,
-                  oldCost: formValues.international_shipping,
-                  newCost: currentlySelected.cost_usd,
-                });
+                console.log(
+                  '🔄 [DEBUG] Updating international shipping cost for existing selection:',
+                  {
+                    optionId: currentlySelected.id,
+                    oldCost: formValues.international_shipping,
+                    newCost: currentlySelected.cost_usd,
+                  },
+                );
                 form.setValue('international_shipping', currentlySelected.cost_usd);
               }
             }
@@ -739,64 +780,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   }, [isEditMode, scheduleCalculation, recalculateShipping, quote]);
   const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
 
-  // Schedule form-based calculations when inputs change
-  const scheduleFormCalculation = React.useCallback(() => {
-    const currentFormValues = form.getValues();
-    const itemsWeight = currentFormValues.items?.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 0), 0) || 0;
-    scheduleCalculation('form-update', () => calculateSmartFeatures(liveQuote || quote), [
-      JSON.stringify(currentFormValues.items), // Use JSON string to detect deep changes
-      currentFormValues.customs_percentage,
-      currentFormValues.handling_charge,
-      currentFormValues.insurance_amount,
-      currentFormValues.origin_country,        // ✅ ADD: Country changes affect shipping routes
-      currentFormValues.destination_country,   // ✅ ADD: Country changes affect shipping routes
-      itemsWeight, // Include calculated weight as dependency
-      // Removed Date.now() to prevent infinite calculation loops
-    ]);
-  }, [scheduleCalculation, form, calculateSmartFeatures, liveQuote, quote]);
-
-  // Monitor form values for automatic calculation triggers
-  React.useEffect(() => {
-    if (formValues.items?.length > 0 && quote?.id) {
-      console.log('🔄 [FORM-MONITOR] Form values changed, scheduling calculation:', {
-        itemsCount: formValues.items.length,
-        totalWeight: formValues.items.reduce((sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 0), 0),
-        quoteId: quote.id,
-        origin: formValues.origin_country,
-        destination: formValues.destination_country
-      });
-      scheduleFormCalculation();
-    }
-  }, [
-    formValues.items, 
-    formValues.origin_country,        // ✅ ADD: Country changes trigger shipping recalculation
-    formValues.destination_country,   // ✅ ADD: Country changes trigger shipping recalculation
-    scheduleFormCalculation, 
-    quote?.id
-  ]);
-
-  // Dedicated country change monitor for immediate shipping recalculation
-  React.useEffect(() => {
-    if (quote?.id && formValues.origin_country && formValues.destination_country) {
-      console.log('🌍 [COUNTRY-MONITOR] Country changed, triggering immediate shipping recalculation:', {
-        origin: formValues.origin_country,
-        destination: formValues.destination_country,
-        quoteId: quote.id
-      });
-      
-      // Trigger immediate calculation when countries change (affects shipping routes)
-      scheduleFormCalculation();
-    }
-  }, [
-    formValues.origin_country,
-    formValues.destination_country,
-    quote?.id,
-    scheduleFormCalculation
-  ]);
-
   // Smart weight estimation state
   const [weightEstimations, setWeightEstimations] = useState<{ [key: string]: any }>({});
+  const [hsnWeights, setHsnWeights] = useState<{ [key: string]: HSNWeightData | null }>({});
   const [isEstimating, setIsEstimating] = useState<{ [key: string]: boolean }>({});
+  const [isLoadingHSN, setIsLoadingHSN] = useState<{ [key: string]: boolean }>({});
   const [estimationTimeouts, setEstimationTimeouts] = useState<{ [key: string]: NodeJS.Timeout }>(
     {},
   );
@@ -842,6 +830,160 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     [scheduleCalculation, batchDOMUpdate],
   );
 
+  // Fetch HSN weight for an item
+  const fetchHSNWeight = useCallback(
+    async (itemIndex: number, hsnCode: string | undefined) => {
+      if (!hsnCode) {
+        setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
+        return;
+      }
+
+      setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: true }));
+      try {
+        const weight = await hsnWeightService.getHSNWeight(hsnCode);
+        setHsnWeights((prev) => ({ ...prev, [itemIndex]: weight }));
+        console.log(`📊 [Weight] HSN weight found for ${hsnCode}:`, weight);
+      } catch (error) {
+        console.error('Error fetching HSN weight:', error);
+        setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
+      } finally {
+        setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: false }));
+      }
+    },
+    [],
+  );
+
+  // Handle weight selection from dual suggestions
+  const handleWeightSelection = useCallback(
+    async (itemIndex: number, weight: number, source: 'hsn' | 'ml') => {
+      const items = form.getValues('items') || [];
+      items[itemIndex] = {
+        ...items[itemIndex],
+        item_weight: weight,
+      };
+      form.setValue('items', items);
+
+      // Record the selection for analytics
+      const item = items[itemIndex];
+      if (item.product_name) {
+        await smartWeightEstimator.recordWeightSelection(
+          item.product_name,
+          hsnWeights[itemIndex]?.average || null,
+          weightEstimations[itemIndex]?.estimated_weight || 0,
+          weight,
+          source,
+          item.product_url,
+          item.options, // category field is actually in options for this quote structure
+          item.hsn_code // Use the item's specific HSN code
+        );
+      }
+
+      toast({
+        title: "Weight Applied",
+        description: `Using ${source === 'hsn' ? 'HSN database' : 'AI estimated'} weight: ${weight} kg`,
+        duration: 2000,
+      });
+    },
+    [form, hsnWeights, weightEstimations, quote?.hsn_code, toast],
+  );
+
+  // Handle HSN assignment for items
+  const handleHSNAssignment = useCallback(async (itemIndex: number, hsnData: any) => {
+    try {
+      const items = form.getValues('items') || [];
+      if (items[itemIndex]) {
+        // 1. Update form state immediately (for UI responsiveness)
+        items[itemIndex] = {
+          ...items[itemIndex],
+          hsn_code: hsnData.hsn_code,
+          category: hsnData.category || hsnData.display_name,
+        };
+        
+        form.setValue('items', items);
+
+        // 2. Persist to database immediately for sidebar synchronization
+        if (quote?.id && items[itemIndex].id) {
+          // Persisting HSN assignment to database
+
+          const success = await unifiedDataEngine.updateItem(quote.id, items[itemIndex].id, {
+            hsn_code: hsnData.hsn_code,
+            category: hsnData.category || hsnData.display_name,
+          });
+
+          if (success) {
+            // HSN database update successful
+            
+            // 3. Clear UnifiedDataEngine cache first
+            unifiedDataEngine.clearQuoteCache(quote.id);
+            
+            // 4. Invalidate React Query cache to ensure fresh data
+            await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
+            await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
+            await queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            
+            // 5. Trigger quote data refresh to update sidebar components
+            await loadQuoteData(true); // Force refresh
+            
+            // 6. Update liveQuote to trigger re-renders
+            if (isEditMode && quote) {
+              const updatedQuote = await unifiedDataEngine.getQuote(quote.id, true);
+              if (updatedQuote) {
+                setLiveQuote(updatedQuote);
+                console.log('✅ [HSN] LiveQuote updated with new HSN data');
+              }
+            }
+            
+            // 7. Fetch HSN weight for the updated item
+            if (hsnData.hsn_code) {
+              await fetchHSNWeight(itemIndex, hsnData.hsn_code);
+            }
+            
+            // Quote data refreshed for sidebar sync
+          } else {
+            console.error(`❌ [HSN] Database update failed for item ${items[itemIndex].id}`);
+            throw new Error('Database update failed');
+          }
+        }
+
+        // 4. Trigger quote calculation update after HSN assignment
+        if (quote?.id) {
+          scheduleCalculation(() => {
+            // HSN assignment triggered recalculation
+          });
+        }
+
+        toast({
+          title: "HSN Code Assigned",
+          description: `${hsnData.hsn_code} - ${hsnData.display_name}`,
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to assign HSN code:', error);
+      
+      // Enhanced error logging for debugging
+      console.error('🔍 [HSN Debug] Assignment failure details:', {
+        itemIndex,
+        hsnData: {
+          hsn_code: hsnData?.hsn_code,
+          category: hsnData?.category,
+          display_name: hsnData?.display_name,
+        },
+        quoteId: quote?.id,
+        itemId: items[itemIndex]?.id,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
+
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to assign HSN code. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  }, [form, quote?.id, scheduleCalculation, toast, loadQuoteData]);
+
   // Optimized function to add new item with batched updates
   const addNewItem = useCallback(() => {
     const currentItems = form.getValues('items') || [];
@@ -854,6 +996,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       quantity: 1,
       options: '',
       image_url: '',
+      hsn_code: '', // Include HSN code
     };
 
     batchDOMUpdate(() => {
@@ -1153,7 +1296,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         items: (formValues.items || []).map((item, index) => ({
           ...quote.items[index],
           name: item.product_name || '',
-          costprice_origin: Number(item.item_price) || 0,
+          price_usd: Number(item.item_price) || 0,
           weight_kg: Number(item.item_weight) || 0,
           quantity: Number(item.quantity) || 1,
           url: item.product_url || '',
@@ -1188,12 +1331,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         },
       };
 
-      // ✅ FIX: Use enhanced quote data for consistent calculations
-      const enhancedQuote = createEnhancedQuote(updatedQuote);
-      
       // Use SmartCalculationEngine sync mode for instant live updates
       const calculationResult = smartCalculationEngine.calculateLiveSync({
-        quote: enhancedQuote || updatedQuote,
+        quote: updatedQuote,
         preferences: {
           speed_priority: 'medium',
           cost_priority: 'medium',
@@ -1235,13 +1375,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setLiveQuote(createLiveQuote);
     } else if (quote) {
       console.log('[DEBUG] Recalculating liveQuote (view mode)');
-      // ✅ FIX: Use enhanced quote data for consistent calculations (even in view mode)
-      const enhancedQuote = createEnhancedQuote(quote);
-      
       // View mode: Recalculate using SmartCalculationEngine for consistency
       try {
         const calculationResult = smartCalculationEngine.calculateLiveSync({
-          quote: enhancedQuote || quote,
+          quote,
           preferences: {
             speed_priority: 'medium',
             cost_priority: 'medium',
@@ -1318,8 +1455,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           }, index * 200);
         }
       });
+      
+      // Also fetch HSN weights for items that have HSN codes
+      quote.items.forEach((item, index) => {
+        if (item.hsn_code) {
+          fetchHSNWeight(index, item.hsn_code);
+        }
+      });
     }
-  }, [isEditMode, quote?.id]); // Only trigger when edit mode changes or quote changes
+  }, [isEditMode, quote?.id, fetchHSNWeight]); // Only trigger when edit mode changes or quote changes
 
   // Smart metrics calculation (always uses live quote for consistency)
   const metrics = useMemo(() => {
@@ -1358,6 +1502,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Form population function
   const populateFormFromQuote = (quoteData: UnifiedQuote) => {
+    // Populating form from quote data
+    
     const calculationData = quoteData.calculation_data || {};
     const operationalData = quoteData.operational_data || {};
 
@@ -1368,9 +1514,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // ✅ AUTO-APPLY: Check for handling charge defaults when no existing value
     const existingHandling = operationalData.handling_charge || 0;
     let handlingChargeValue = existingHandling;
-    
+
     // Auto-apply default handling charge if no existing value and backend config available
-    if (existingHandling === 0 && calculationData.handlingDefault && calculationData.handlingDefault > 0) {
+    if (
+      existingHandling === 0 &&
+      calculationData.handlingDefault &&
+      calculationData.handlingDefault > 0
+    ) {
       handlingChargeValue = calculationData.handlingDefault;
       console.log('🎯 [DEBUG] Auto-applying default handling charge in form:', {
         quoteId: quoteData.id,
@@ -1383,9 +1533,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // ✅ AUTO-APPLY: Check for insurance defaults when no existing value
     const existingInsurance = operationalData.insurance_amount || 0;
     let insuranceAmountValue = existingInsurance;
-    
+
     // Auto-apply default insurance if no existing value and backend config available
-    if (existingInsurance === 0 && calculationData.insuranceDefault && calculationData.insuranceDefault > 0) {
+    if (
+      existingInsurance === 0 &&
+      calculationData.insuranceDefault &&
+      calculationData.insuranceDefault > 0
+    ) {
       insuranceAmountValue = calculationData.insuranceDefault;
       console.log('🛡️ [DEBUG] Auto-applying default insurance amount in form:', {
         quoteId: quoteData.id,
@@ -1394,6 +1548,50 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         autoAppliedValue: insuranceAmountValue,
       });
     }
+
+    // Debug logging for form initialization with validation
+    const rawItems = quoteData.items || [];
+    const formItemsData = rawItems.map((item, index) => {
+      // Ensure all required fields have proper defaults
+      const formattedItem = {
+        id: item.id || `item-${Date.now()}-${index}`, // More unique ID generation
+        item_price: Number(item.price_usd) || 0,
+        item_weight: Number(item.weight_kg) || 0,
+        quantity: Number(item.quantity) || 1,
+        product_name: String(item.name || ''),
+        options: String(item.options || ''),
+        product_url: String(item.url || ''),
+        image_url: String(item.image || ''),
+        hsn_code: item.hsn_code || '', // Include HSN code
+        category: item.category || '', // Include category
+      };
+      
+      // Validate critical fields
+      if (!formattedItem.product_name) {
+        console.warn(`⚠️ Item ${index} missing product name:`, item);
+      }
+      
+      return formattedItem;
+    });
+    
+    // Add default item if no items exist
+    if (formItemsData.length === 0) {
+      console.log('📦 No items found, adding default item for edit mode');
+      formItemsData.push({
+        id: `item-${Date.now()}-default`,
+        item_price: 0,
+        item_weight: 0,
+        quantity: 1,
+        product_name: '',
+        options: '',
+        product_url: '',
+        image_url: '',
+        hsn_code: '', // Include HSN code
+        category: '', // Include category
+      });
+    }
+    
+    // Form reset called
 
     form.reset({
       id: quoteData.id,
@@ -1410,17 +1608,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       currency: quoteData.currency,
       destination_currency: quoteData.currency || 'USD',
       status: quoteData.status,
-      items: (quoteData.items || []).map((item, index) => ({
-        id: item.id || `item-${index}`,
-        item_price: item.costprice_origin || 0,
-        item_weight: item.weight_kg || 0,
-        quantity: item.quantity || 1,
-        product_name: item.name || '',
-        options: item.options || '',
-        product_url: item.url || '',
-        image_url: item.image || '',
-      })),
+      items: formItemsData,
     });
+    
+    // Form reset complete
   };
 
   // Form save handler
@@ -1428,17 +1619,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     try {
       setIsCalculating(true);
       console.log('💾 [SAVE] Form data being submitted:', data);
-      console.log('💰 [SAVE] Item price updates being processed:', {
-        itemCount: data.items?.length || 0,
-        priceUpdates: data.items?.map((item, index) => ({
-          index: index + 1,
-          id: item.id,
-          name: item.product_name || 'Unnamed',
-          oldPrice: quote?.items?.[index]?.costprice_origin || 0,
-          newPrice: Number(item.item_price) || 0,
-          priceChange: (Number(item.item_price) || 0) - (quote?.items?.[index]?.costprice_origin || 0)
-        })) || []
-      });
 
       // Validate form data before submission
       const formErrors = form.formState.errors;
@@ -1471,88 +1651,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         return;
       }
 
-      // ✅ FIX: Map sales tax to correct field and trigger recalculation
-      const salesTaxPrice = Number(data.sales_tax_price) || 0;
-      const itemsTotal = data.items?.reduce((sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0) || 0;
-      const purchaseTaxRate = itemsTotal > 0 ? (salesTaxPrice / itemsTotal) * 100 : 0;
-      
-      console.log('💾 [SAVE-FIX] Correcting sales tax field mapping:', {
-        salesTaxPrice,
-        itemsTotal,
-        calculatedPurchaseTaxRate: purchaseTaxRate,
-        explanation: `Sales Tax $${salesTaxPrice} on $${itemsTotal} = ${purchaseTaxRate}%`
-      });
-
-      // ✅ FIX: Calculate proper USD totals using exchange rate conversion
-      const exchangeRate = getExchangeRateFromQuote(quote!);
-      
-      // Items total is in local currency, convert to USD for costprice_total_usd
-      const baseTotalUsd = itemsTotal / exchangeRate;
-      
-      // Final total calculation components
-      const internationalShipping = Number(data.international_shipping) || quote?.calculation_data?.breakdown?.shipping || 0;
-      const handlingCharge = Number(data.handling_charge) || 0;
-      const insuranceAmount = Number(data.insurance_amount) || 0;
-      const discount = Number(data.discount) || 0;
-      
-      // Preserve calculated amounts from existing breakdown (these come from SmartCalculationEngine)
-      const customs = quote?.calculation_data?.breakdown?.customs || 0;
-      const destinationTax = quote?.calculation_data?.breakdown?.destination_tax || 0;
-      const fees = quote?.calculation_data?.breakdown?.fees || 0;
-      
-      const finalTotalUsd = itemsTotal + salesTaxPrice + internationalShipping + handlingCharge + 
-                          insuranceAmount + customs + destinationTax + fees - discount;
-
-      console.log('💾 [SAVE-CALC] Manual save calculation breakdown:', {
-        itemsTotal,
-        itemsTotalCurrency: `${quote?.origin_country} local currency`,
-        exchangeRate,
-        baseTotalUsd,
-        salesTaxPrice, 
-        internationalShipping,
-        handlingCharge,
-        insuranceAmount,
-        customs,
-        destinationTax,
-        fees,
-        discount,
-        finalTotalUsd,
-        currencyFix: `Items: ${itemsTotal} local → $${baseTotalUsd.toFixed(2)} USD (÷${exchangeRate})`
-      });
-
       // Update quote with form data - CONVERT ALL VALUES TO NUMBERS!
       const success = await unifiedDataEngine.updateQuote(quoteId!, {
         customs_percentage: Number(data.customs_percentage) || 0,
         origin_country: data.origin_country || quote?.origin_country,
         destination_country: data.destination_country || quote?.destination_country,
-        costprice_total_usd: Math.round(baseTotalUsd * 100) / 100, // ✅ FIX: Correct USD conversion
-        final_total_usd: Math.round(finalTotalUsd * 100) / 100, // ✅ FIX: Update final total
         calculation_data: {
           ...quote?.calculation_data,
-          // ✅ LEGACY: Keep sales_tax_price for backward compatibility but it's not used by engine
-          sales_tax_price: salesTaxPrice,
+          sales_tax_price: Number(data.sales_tax_price) || 0,
           discount: Number(data.discount) || 0,
           customs_percentage: Number(data.customs_percentage) || 0,
           breakdown: {
             ...quote?.calculation_data?.breakdown,
-            // ✅ FIX: Update all form-editable breakdown fields
-            items_total: data.items?.reduce((sum, item) => sum + (Number(item.item_price) || 0) * (Number(item.quantity) || 1), 0) || 0,
-            purchase_tax: salesTaxPrice, // Transparent purchase tax amount
-            shipping: Number(data.international_shipping) || quote?.calculation_data?.breakdown?.shipping || 0,
-            handling: Number(data.handling_charge) || quote?.calculation_data?.breakdown?.handling || 0,
-            insurance: Number(data.insurance_amount) || quote?.calculation_data?.breakdown?.insurance || 0,
-            discount: Number(data.discount) || 0,
-            // Preserve calculated fields that should not be overwritten by form data
-            customs: quote?.calculation_data?.breakdown?.customs || 0,
-            destination_tax: quote?.calculation_data?.breakdown?.destination_tax || 0, 
-            fees: quote?.calculation_data?.breakdown?.fees || 0,
-            taxes: quote?.calculation_data?.breakdown?.taxes || 0, // Legacy field
+            shipping:
+              Number(data.international_shipping) ||
+              quote?.calculation_data?.breakdown?.shipping ||
+              0,
           },
         },
         operational_data: {
           ...quote?.operational_data,
-          // ✅ FIX: Map sales tax to purchase_tax_rate (what SmartCalculationEngine actually uses)
-          purchase_tax_rate: purchaseTaxRate,
           domestic_shipping: Number(data.domestic_shipping) || 0,
           handling_charge: Number(data.handling_charge) || 0,
           insurance_amount: Number(data.insurance_amount) || 0,
@@ -1562,40 +1680,48 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           },
         },
         items:
-          data.items?.map((item) => ({
-            id: item.id,
-            name: item.product_name || '',
-            costprice_origin: Number(item.item_price) || 0,
-            weight_kg: Number(item.item_weight) || 0,
-            quantity: Number(item.quantity) || 1,
-            url: item.product_url || '',
-            image: item.image_url || '',
-            options: item.options || '',
-          })) || [],
+          data.items?.map((item) => {
+            // Find existing item to preserve HSN data and other fields
+            const existingItem = quote?.items?.find(existing => existing.id === item.id);
+            
+            return {
+              id: item.id,
+              name: item.product_name || '',
+              price_usd: Number(item.item_price) || 0,
+              weight_kg: Number(item.item_weight) || 0,
+              quantity: Number(item.quantity) || 1,
+              url: item.product_url || '',
+              image: item.image_url || '',
+              options: item.options || '',
+              // 🏷️ PRESERVE HSN DATA from existing item or migration
+              hsn_code: item.hsn_code || existingItem?.hsn_code || '',
+              category: item.category || existingItem?.category || '',
+              tax_rate: item.tax_rate || existingItem?.tax_rate || 0,
+              minimum_valuation_usd: item.minimum_valuation_usd || existingItem?.minimum_valuation_usd || 0,
+              description: item.description || existingItem?.description || '',
+              // Preserve other smart_data and metadata
+              smart_data: existingItem?.smart_data || {},
+              hsn_data: existingItem?.hsn_data,
+              minimum_valuation_conversion: existingItem?.minimum_valuation_conversion,
+            };
+          }) || [],
       });
 
       console.log('✅ [SAVE] Update success:', success);
-      
+
       if (success) {
-        console.log('✅ [SAVE] Items successfully saved to database:', {
-          savedItemCount: data.items?.length || 0,
-          savedItems: data.items?.map((item) => ({
-            id: item.id,
-            name: item.product_name || '',
-            costprice_origin: Number(item.item_price) || 0,
-            quantity: Number(item.quantity) || 1
-          })) || []
-        });
         setLastSaveTime(new Date());
-        
+
         // 🚀 AUTO-STATUS PROGRESSION: pending → sent
         // Check if quote calculations were saved and status should auto-progress
         const currentStatus = quote?.status;
-        const hasCalculationData = data.items && data.items.length > 0 && 
-          (Number(data.international_shipping) > 0 || 
-           Number(data.customs_percentage) > 0 || 
-           Number(data.sales_tax_price) > 0);
-        
+        const hasCalculationData =
+          data.items &&
+          data.items.length > 0 &&
+          (Number(data.international_shipping) > 0 ||
+            Number(data.customs_percentage) > 0 ||
+            Number(data.sales_tax_price) > 0);
+
         console.log('🔄 [AUTO-STATUS] Checking auto-progression conditions:', {
           currentStatus,
           hasCalculationData,
@@ -1603,7 +1729,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           items: data.items?.length || 0,
           internationalShipping: Number(data.international_shipping) || 0,
           customsPercentage: Number(data.customs_percentage) || 0,
-          salesTax: Number(data.sales_tax_price) || 0
+          salesTax: Number(data.sales_tax_price) || 0,
         });
 
         // Auto-progress from 'pending' to 'sent' when calculations are saved
@@ -1611,10 +1737,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           try {
             console.log('✅ [AUTO-STATUS] Triggering auto-progression: pending → sent');
             await handleQuoteSent(quoteId, currentStatus);
-            
+
             toast({
               title: 'Quote updated and sent',
-              description: 'Quote has been calculated and automatically marked as sent. You can continue editing.',
+              description:
+                'Quote has been calculated and automatically marked as sent. You can continue editing.',
             });
           } catch (statusError) {
             console.error('❌ [AUTO-STATUS] Failed to auto-progress status:', statusError);
@@ -1627,21 +1754,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         } else {
           // Normal update without status change
           console.log('ℹ️ [AUTO-STATUS] No auto-progression needed:', {
-            reason: currentStatus !== 'pending' ? 'Status not pending' : 'No calculation data'
+            reason: currentStatus !== 'pending' ? 'Status not pending' : 'No calculation data',
           });
           toast({
             title: 'Quote updated',
             description: 'Quote has been successfully updated. You can continue editing.',
           });
         }
-        
-        // ✅ FIX: Trigger recalculation after save to update breakdown with new sales tax
-        console.log('🔄 [SAVE-FIX] Triggering recalculation after save to update breakdown');
-        await refetchQuote(); // ✅ React Query refetch instead of loadQuoteData
-        await invalidateQuoteCaches(); // ✅ CRITICAL: Sync with user cache
-        
-        // Then trigger calculation with new data to update the breakdown display
-        await calculateSmartFeatures();
+
+        // Removed setIsEditMode(false) - keep user in edit mode for continued editing
+        await loadQuoteData(); // Reload to get fresh data
       } else {
         toast({
           title: 'Error',
@@ -1700,8 +1822,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           description: 'All changes have been saved successfully.',
           duration: 3000,
         });
-        await refetchQuote(); // ✅ React Query refetch instead of loadQuoteData
-        await invalidateQuoteCaches(); // ✅ CRITICAL: Sync with user cache
+        await loadQuoteData(); // Reload to get fresh data
       } else {
         toast({
           title: 'Save failed',
@@ -1718,6 +1839,126 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
     } finally {
       setIsCalculating(false);
+    }
+  };
+
+  // Tax method selection handlers with optimistic updates
+  const handleTaxMethodChange = async (method: string, metadata?: any) => {
+    try {
+      console.log(`🎯 [Tax Method] Changing method from ${quote?.calculation_method_preference || 'auto'} to ${method}`);
+      
+      // 1. OPTIMISTIC UPDATE: Update UI immediately for instant feedback
+      setCurrentTaxMethod(method);
+      
+      // Create optimistic quote update for immediate UI feedback
+      if (quote) {
+        const optimisticQuote = {
+          ...quote,
+          calculation_method_preference: method,
+          operational_data: {
+            ...quote.operational_data,
+            tax_method_metadata: metadata
+          }
+        };
+        setQuote(optimisticQuote);
+        console.log(`✅ [Tax Method] Optimistic update applied for instant feedback`);
+      }
+      
+      // Show immediate feedback toast
+      toast({
+        title: "Tax Method Updated", 
+        description: `Calculation method changed to ${method}. Recalculating taxes...`,
+      });
+      
+      // 2. BACKGROUND SYNC: Update database without blocking UI
+      if (quote?.id) {
+        const updateSuccess = await unifiedDataEngine.updateQuote(quote.id, {
+          calculation_method_preference: method,
+          operational_data: {
+            ...quote.operational_data,
+            tax_method_metadata: metadata
+          }
+        });
+
+        if (updateSuccess) {
+          console.log(`✅ [Tax Method] Database updated successfully with method: ${method}`);
+          
+          // 3. BACKGROUND REFRESH: Sync with database (non-blocking)
+          // Skip navigation on error to prevent page refresh during tax method changes
+          try {
+            await loadQuoteData(true, true); // forceRefresh=true, skipNavigationOnError=true
+            console.log(`🔄 [Tax Method] Quote data synced from database`);
+          } catch (syncError) {
+            console.warn(`⚠️ [Tax Method] Database sync failed, but UI already updated:`, syncError);
+            // Don't throw error - optimistic update already applied
+          }
+          
+          // 4. TRIGGER RECALCULATION: With current quote state
+          scheduleCalculation(() => {
+            console.log(`🧮 [Tax Method] Recalculation triggered with new method: ${method}`);
+          });
+          
+        } else {
+          throw new Error('Database update failed - reverting optimistic update');
+        }
+      }
+    } catch (error) {
+      console.error('Tax method update error:', error);
+      
+      // ROLLBACK: Revert optimistic update on error
+      if (quote) {
+        setCurrentTaxMethod(quote.calculation_method_preference || 'auto');
+        setQuote(quote); // Revert to original quote state
+        console.log(`🔄 [Tax Method] Rolled back optimistic update due to error`);
+      }
+      
+      toast({
+        title: "Update Failed",
+        description: "Failed to update tax calculation method. Changes reverted.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleValuationMethodChange = async (itemId: string, method: string, amount?: number) => {
+    try {
+      setItemValuationMethods(prev => ({ ...prev, [itemId]: method }));
+      
+      // Update quote's operational data with per-item valuation preferences
+      if (quote?.id) {
+        const updatedOperationalData = {
+          ...quote.operational_data,
+          item_valuation_preferences: {
+            ...quote.operational_data?.item_valuation_preferences,
+            [itemId]: method
+          }
+        };
+        
+        if (amount && method === 'admin_override') {
+          updatedOperationalData.item_valuation_overrides = {
+            ...quote.operational_data?.item_valuation_overrides,
+            [itemId]: {
+              amount,
+              timestamp: new Date().toISOString(),
+              admin_id: 'current_admin' // Would be replaced with actual admin ID
+            }
+          };
+        }
+        
+        await unifiedDataEngine.updateQuote(quote.id, {
+          operational_data: updatedOperationalData
+        });
+        
+        // Trigger recalculation with new valuation method
+        await calculateSmartFeatures({ ...quote, operational_data: updatedOperationalData });
+      }
+    } catch (error) {
+      console.error('Valuation method update error:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update item valuation method.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1769,7 +2010,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>
-              {quote?.display_id || quote?.iwish_tracking_id || `Quote #${quote?.id?.substring(0, 8)}`}
+              {quote?.display_id ||
+                quote?.iwish_tracking_id ||
+                `Quote #${quote?.id?.substring(0, 8)}`}
             </BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -1908,7 +2151,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             <div className="flex items-center space-x-8">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {currencyDisplay.formatSingleAmount(liveQuote?.final_total_usd || quote.final_total_usd, 'origin')}
+                  {currencyDisplay.formatSingleAmount(
+                    liveQuote?.final_total_usd || quote.final_total_usd,
+                    'origin',
+                  )}
                 </div>
                 <div className="text-xs text-gray-600 font-medium">Total Quote Value</div>
                 {lastSaveTime && (
@@ -1980,7 +2226,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             {/* Left Column - Primary Edit Form (2/3 width) */}
             <div className="md:col-span-2 space-y-4">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onFormSubmit)} className="space-y-6">
+                <form 
+                  onSubmit={form.handleSubmit(onFormSubmit)} 
+                  onKeyDown={(e) => {
+                    // Prevent Enter key from submitting form unless it's in a textarea
+                    if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'TEXTAREA') {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="space-y-6"
+                >
                   {/* Products Section - Clean and Simple */}
                   <Card className="shadow-sm border-gray-200">
                     {/* Show "Add More" link when products exist */}
@@ -1996,14 +2251,87 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       </div>
                     )}
                     <CardContent className="p-0">
-                      {form.watch('items')?.length === 0 && (
+                      {(() => {
+                        const watchedItems = form.watch('items');
+                        console.log('🔍 DEBUG - Edit Mode Rendering:', {
+                          isEditMode,
+                          isLoading,
+                          hasQuote: !!quote,
+                          watchedItemsLength: watchedItems?.length,
+                          watchedItems: watchedItems,
+                          quoteItemsLength: quote?.items?.length,
+                          quoteItems: quote?.items,
+                          formErrors: form.formState.errors
+                        });
+                        return null;
+                      })()}
+                      
+                      {/* Loading state - prevent premature rendering */}
+                      {isLoading && (
+                        <div className="p-8 text-center text-gray-500">
+                          <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                          <p className="text-sm">Loading quote data...</p>
+                        </div>
+                      )}
+                      
+                      {/* Quote not loaded yet */}
+                      {!isLoading && !quote && (
+                        <div className="p-8 text-center text-gray-500">
+                          <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm">Quote data not available</p>
+                          <p className="text-xs mt-1">Please refresh the page</p>
+                        </div>
+                      )}
+                      
+                      {/* No items */}
+                      {!isLoading && quote && form.watch('items')?.length === 0 && (
                         <div className="p-8 text-center text-gray-500">
                           <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                           <p className="text-sm">No products added yet</p>
                           <p className="text-xs mt-1">Add your first product to get started</p>
                         </div>
                       )}
-                      {form.watch('items')?.map((item, index) => {
+                      
+                      {/* Render items only when not loading and quote is available */}
+                      {!isLoading && quote && (() => {
+                        try {
+                          const items = form.watch('items');
+                          
+                          // Additional safety checks
+                          if (!Array.isArray(items)) {
+                            console.error('🚨 Form items is not an array:', items);
+                            return (
+                              <div className="p-8 text-center text-red-500">
+                                <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                                <p className="text-sm">Data structure error</p>
+                                <p className="text-xs mt-1">Form items is not properly formatted</p>
+                                <button 
+                                  className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                  onClick={() => window.location.reload()}
+                                >
+                                  Reload Page
+                                </button>
+                              </div>
+                            );
+                          }
+                          
+                          if (items.length === 0) {
+                            return null; // Handled by the "No items" section above
+                          }
+                          
+                          return items.map((item, index) => {
+                            try {
+                              // Validate item structure
+                              if (!item || typeof item !== 'object') {
+                                console.error(`🚨 Invalid item at index ${index}:`, item);
+                                return (
+                                  <div key={`error-${index}`} className="p-4 border-b border-red-200 bg-red-50">
+                                    <div className="text-red-600 text-sm">
+                                      ⚠️ Item {index + 1} has invalid data structure
+                                    </div>
+                                  </div>
+                                );
+                              }
                         const smartData = quote?.items[index]?.smart_data;
                         const weightConfidence = smartData?.weight_confidence || 0;
                         const category = smartData?.category_detected;
@@ -2067,13 +2395,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   <div className="text-right">
                                     <div className="text-lg font-bold text-green-600">
                                       {currencyDisplay.formatSingleAmount(
-                                        Number(item.item_price) * Number(item.quantity), 
-                                        'origin'
+                                        Number(item.item_price) * Number(item.quantity),
+                                        'origin',
                                       )}
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      {currencyDisplay.formatSingleAmount(Number(item.item_price || 0), 'origin')} ×{' '}
-                                      {item.quantity || 1}
+                                      {currencyDisplay.formatSingleAmount(
+                                        Number(item.item_price || 0),
+                                        'origin',
+                                      )}{' '}
+                                      × {item.quantity || 1}
                                     </div>
                                   </div>
                                   <div className="flex space-x-1">
@@ -2139,6 +2470,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             e.target.value,
                                             items[index].product_url,
                                           );
+                                          // Also fetch HSN weight if item has HSN code
+                                          if (items[index].hsn_code) {
+                                            fetchHSNWeight(index, items[index].hsn_code);
+                                          }
                                         }, 800);
 
                                         setEstimationTimeouts((prev) => ({
@@ -2189,21 +2524,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                         value={item.item_price || ''}
                                         onChange={(e) => {
                                           const items = form.getValues('items') || [];
-                                          const oldPrice = items[index]?.item_price || 0;
-                                          const newPrice = parseFloat(e.target.value) || 0;
-                                          
-                                          console.log(`💰 [PRICE-UPDATE] Item ${index + 1} price changed:`, {
-                                            itemId: items[index]?.id,
-                                            itemName: items[index]?.product_name || 'Unnamed',
-                                            oldPrice: oldPrice,
-                                            newPrice: newPrice,
-                                            change: newPrice - oldPrice,
-                                            inputValue: e.target.value
-                                          });
-                                          
                                           items[index] = {
                                             ...items[index],
-                                            item_price: newPrice,
+                                            item_price: parseFloat(e.target.value) || 0,
                                           };
                                           form.setValue('items', items);
                                         }}
@@ -2215,7 +2538,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   <div className="col-span-4">
                                     <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
                                       Weight
-                                      {isEstimating[index.toString()] && (
+                                      {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
                                         <div className="ml-2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                       )}
                                     </label>
@@ -2224,11 +2547,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                         type="number"
                                         step="0.001"
                                         min="0"
-                                        className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 ${
-                                          weightEstimations[index.toString()]
-                                            ? 'border-blue-300 focus:ring-blue-500 focus:border-blue-500 pr-14'
-                                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                                        }`}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         value={item.item_weight || ''}
                                         onChange={(e) => {
                                           const items = form.getValues('items') || [];
@@ -2237,34 +2556,81 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             item_weight: parseFloat(e.target.value) || 0,
                                           };
                                           form.setValue('items', items);
-                                          scheduleFormCalculation();
                                         }}
                                         placeholder="0.2"
                                       />
                                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
                                         kg
                                       </span>
-
-                                      {/* AI Suggestion Button */}
-                                      {weightEstimations[index.toString()] && (
-                                        <button
-                                          type="button"
-                                          className="absolute right-8 top-1/2 -translate-y-1/2 px-1 py-0.5 text-xs bg-blue-100 text-blue-700 border border-blue-300 rounded hover:bg-blue-200 focus:outline-none"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            applyWeightSuggestion(
-                                              index,
-                                              weightEstimations[index.toString()].estimated_weight,
-                                            );
-                                          }}
-                                          title={`Apply AI suggestion: ${weightEstimations[index.toString()].estimated_weight} kg`}
-                                        >
-                                          Apply [
-                                          {weightEstimations[index.toString()].estimated_weight}]
-                                        </button>
-                                      )}
                                     </div>
+                                    
+                                    {/* Dual Weight Suggestions */}
+                                    {(hsnWeights[index.toString()] || weightEstimations[index.toString()]) && (
+                                      <div className="mt-2">
+                                        <DualWeightSuggestions
+                                          hsnWeight={hsnWeights[index.toString()] ? {
+                                            ...hsnWeights[index.toString()]!,
+                                            source: 'hsn' as const
+                                          } : undefined}
+                                          mlWeight={weightEstimations[index.toString()] ? {
+                                            estimated: weightEstimations[index.toString()].estimated_weight,
+                                            confidence: weightEstimations[index.toString()].confidence,
+                                            reasoning: weightEstimations[index.toString()].reasoning,
+                                            source: 'ml' as const
+                                          } : undefined}
+                                          currentWeight={item.item_weight || undefined}
+                                          onSelectWeight={(weight, source) => handleWeightSelection(index, weight, source)}
+                                          isLoading={isEstimating[index.toString()] || isLoadingHSN[index.toString()]}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* HSN Code Assignment Section */}
+                                  <div className="col-span-6">
+                                    <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center">
+                                      <Tag className="w-3 h-3 mr-1" />
+                                      HSN Classification
+                                      {!item.hsn_code && (
+                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                                          Unclassified
+                                        </span>
+                                      )}
+                                    </label>
+                                    
+                                    {item.hsn_code ? (
+                                      <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center space-x-2">
+                                            <span className="font-mono font-bold text-green-700">{item.hsn_code}</span>
+                                            <span className="text-sm text-green-600">{item.category || 'General'}</span>
+                                          </div>
+                                          <SmartHSNSearch
+                                            currentHSNCode={item.hsn_code}
+                                            productName={item.product_name}
+                                            onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                            placeholder="Search HSN code for this product..."
+                                            size="sm"
+                                          />
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                                        <div className="flex items-center justify-between">
+                                          <div className="text-sm text-amber-700">
+                                            <div className="font-medium">HSN code not assigned</div>
+                                            <div className="text-xs">Tax calculations use fallback rates</div>
+                                          </div>
+                                          <SmartHSNSearch
+                                            currentHSNCode={undefined}
+                                            productName={item.product_name}
+                                            onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                            placeholder="Search HSN code for this product..."
+                                            size="sm"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
 
                                   <div className="col-span-2">
@@ -2290,6 +2656,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   </div>
                                 </div>
                               </div>
+
 
                               {/* Customer Notes - Professional Inline Style */}
                               {item.options && item.options.trim() && (
@@ -2352,7 +2719,45 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             </div>
                           </div>
                         );
-                      })}
+                            } catch (error) {
+                              console.error(`🚨 Error rendering item ${index}:`, error, item);
+                              return (
+                                <div key={`render-error-${index}`} className="p-4 border-b border-red-200 bg-red-50">
+                                  <div className="text-red-600 text-sm">
+                                    ⚠️ Error rendering item {index + 1}: {error instanceof Error ? error.message : 'Unknown error'}
+                                  </div>
+                                  <button 
+                                    className="mt-2 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                    onClick={() => {
+                                      console.log('Item causing error:', item);
+                                      const items = form.getValues('items') || [];
+                                      items.splice(index, 1);
+                                      form.setValue('items', items);
+                                    }}
+                                  >
+                                    Remove Item
+                                  </button>
+                                </div>
+                              );
+                            }
+                          });
+                        } catch (error) {
+                          console.error('🚨 Critical error in item rendering:', error);
+                          return (
+                            <div className="p-8 text-center text-red-500">
+                              <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                              <p className="text-sm">Critical rendering error</p>
+                              <p className="text-xs mt-1">{error instanceof Error ? error.message : 'Unknown error'}</p>
+                              <button 
+                                className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                onClick={() => window.location.reload()}
+                              >
+                                Reload Page
+                              </button>
+                            </div>
+                          );
+                        }
+                      })()}
                     </CardContent>
                   </Card>
 
@@ -2383,7 +2788,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                     // Wait for shipping options to be loaded
                     if (!shippingOptions || shippingOptions.length === 0) {
-                      console.log('🔧 [DEBUG] Shipping options not loaded yet, showing form without defaults');
+                      console.log(
+                        '🔧 [DEBUG] Shipping options not loaded yet, showing form without defaults',
+                      );
                       // Show form without defaults while waiting for shipping options
                       return (
                         <QuoteDetailForm
@@ -2413,13 +2820,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                     const selectedOptionId = liveQuote.operational_data?.shipping?.selected_option;
                     const normalizedId = normalizeShippingOptionId(selectedOptionId);
-                    const selectedOption = shippingOptions.find(opt => opt.id === normalizedId);
-                    
+                    const selectedOption = shippingOptions.find((opt) => opt.id === normalizedId);
+
                     console.log('🔧 [DEBUG] Shipping option matching:', {
                       originalId: selectedOptionId,
                       normalizedId,
                       foundOption: selectedOption?.id,
-                      availableOptions: shippingOptions.map(opt => opt.id),
+                      availableOptions: shippingOptions.map((opt) => opt.id),
                       shippingOptionsCount: shippingOptions.length,
                       firstOptionSample: shippingOptions[0],
                     });
@@ -2427,75 +2834,93 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     // Additional debug for the exact matching logic
                     console.log('🔧 [DEBUG] Detailed matching attempt:', {
                       searchingFor: normalizedId,
-                      matches: shippingOptions.map(opt => ({
+                      matches: shippingOptions.map((opt) => ({
                         id: opt.id,
                         matches: opt.id === normalizedId,
                         hasHandling: !!opt.handling_charge,
-                        hasInsurance: !!opt.insurance_options
-                      }))
+                        hasInsurance: !!opt.insurance_options,
+                      })),
                     });
 
                     // If no selected option found, try to create a fallback from the shipping route
                     let fallbackOption = null;
                     if (!selectedOption && normalizedId) {
-                      console.log('🔧 [DEBUG] Attempting to create fallback option for:', normalizedId);
-                      
+                      console.log(
+                        '🔧 [DEBUG] Attempting to create fallback option for:',
+                        normalizedId,
+                      );
+
                       // Try to create a basic option structure for calculation
                       fallbackOption = {
                         id: normalizedId,
-                        carrier: normalizedId.includes('dhl') ? 'DHL' : normalizedId.includes('fedex') ? 'FedEx' : 'Unknown',
+                        carrier: normalizedId.includes('dhl')
+                          ? 'DHL'
+                          : normalizedId.includes('fedex')
+                            ? 'FedEx'
+                            : 'Unknown',
                         name: normalizedId.replace('_', ' ').toUpperCase(),
                         cost_usd: 0,
                         // Add handling_charge config for all shipping options (fallback if DB fails)
-                        handling_charge: 
-                          normalizedId === 'dhl_standard' ? {
-                            base_fee: 5,
-                            percentage_of_value: 2,
-                            min_fee: 3,
-                            max_fee: 50
-                          } : 
-                          normalizedId === 'dhl_express' ? {
-                            base_fee: 8,
-                            percentage_of_value: 2.5,
-                            min_fee: 5,
-                            max_fee: 80
-                          } : 
-                          normalizedId === 'fedex_standard' ? {
-                            base_fee: 6,
-                            percentage_of_value: 1.8,
-                            min_fee: 4,
-                            max_fee: 60
-                          } : undefined,
+                        handling_charge:
+                          normalizedId === 'dhl_standard'
+                            ? {
+                                base_fee: 5,
+                                percentage_of_value: 2,
+                                min_fee: 3,
+                                max_fee: 50,
+                              }
+                            : normalizedId === 'dhl_express'
+                              ? {
+                                  base_fee: 8,
+                                  percentage_of_value: 2.5,
+                                  min_fee: 5,
+                                  max_fee: 80,
+                                }
+                              : normalizedId === 'fedex_standard'
+                                ? {
+                                    base_fee: 6,
+                                    percentage_of_value: 1.8,
+                                    min_fee: 4,
+                                    max_fee: 60,
+                                  }
+                                : undefined,
                         // Add insurance_options config for all shipping options (fallback if DB fails)
-                        insurance_options: 
-                          normalizedId === 'dhl_standard' ? {
-                            coverage_percentage: 1.5,
-                            max_coverage: 5000,
-                            min_fee: 2,
-                            available: true,
-                            default_enabled: false
-                          } : 
-                          normalizedId === 'dhl_express' ? {
-                            coverage_percentage: 1.5,
-                            max_coverage: 10000,
-                            min_fee: 3,
-                            available: true,
-                            default_enabled: false
-                          } : 
-                          normalizedId === 'fedex_standard' ? {
-                            coverage_percentage: 1.2,
-                            max_coverage: 7500,
-                            min_fee: 2.5,
-                            available: true,
-                            default_enabled: false
-                          } : undefined
+                        insurance_options:
+                          normalizedId === 'dhl_standard'
+                            ? {
+                                coverage_percentage: 1.5,
+                                max_coverage: 5000,
+                                min_fee: 2,
+                                available: true,
+                                default_enabled: false,
+                              }
+                            : normalizedId === 'dhl_express'
+                              ? {
+                                  coverage_percentage: 1.5,
+                                  max_coverage: 10000,
+                                  min_fee: 3,
+                                  available: true,
+                                  default_enabled: false,
+                                }
+                              : normalizedId === 'fedex_standard'
+                                ? {
+                                    coverage_percentage: 1.2,
+                                    max_coverage: 7500,
+                                    min_fee: 2.5,
+                                    available: true,
+                                    default_enabled: false,
+                                  }
+                                : undefined,
                       };
-                      
+
                       console.log('🔧 [DEBUG] Created fallback option:', fallbackOption);
                     }
 
                     const optionToUse = selectedOption || fallbackOption;
-                    const calculationData = calculationDefaultsService.getCalculationData(liveQuote, optionToUse);
+                    const calculationData = calculationDefaultsService.getCalculationData(
+                      liveQuote,
+                      optionToUse,
+                    );
 
                     // Debug: Check current breakdown structure
                     console.log('🔧 [DEBUG] Current breakdown structure:', {
@@ -2532,7 +2957,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         onSelectShippingOption={handleShippingOptionSelect}
                         onShowShippingDetails={() => setShowShippingDetails(true)}
                         isEditingRoute={isEditingRoute}
-                        onTriggerCalculation={() => scheduleCalculation('sales-tax-update', calculateSmartFeatures, [liveQuote || quote])} // ✅ NEW: Real-time calculation trigger
                       />
                     );
                   })()}
@@ -2542,7 +2966,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-3 pt-4">
                     <Button
-                      type="button"
                       variant="outline"
                       onClick={() => handleModeToggle(false)}
                       disabled={isCalculating}
@@ -2551,7 +2974,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       Cancel
                     </Button>
                     <Button
-                      type="button"
                       onClick={() => calculateSmartFeatures(liveQuote || quote)}
                       disabled={isCalculating}
                       variant="outline"
@@ -2560,7 +2982,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                       {isCalculating ? 'Calculating...' : 'Recalculate'}
                     </Button>
                     <Button
-                      type="button"
                       onClick={async () => {
                         console.log('💾 [EDIT-SAVE] Save button clicked');
                         console.log('💾 [EDIT-SAVE] Current form values:', form.getValues());
@@ -2597,17 +3018,37 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* Customer Information */}
               <CompactCustomerInfo
                 quote={liveQuote || quote}
-                onUpdateQuote={handleQuoteUpdate}
+                onUpdateQuote={loadQuoteData}
                 compact={true}
                 editMode={isEditMode}
               />
 
-
               {/* Status Management - Outside form to prevent submission conflicts */}
               <CompactStatusManager
                 quote={liveQuote || quote}
-                onStatusUpdate={handleQuoteUpdate}
+                onStatusUpdate={loadQuoteData}
                 compact={true}
+              />
+
+              {/* Tax Calculation Sidebar - Comprehensive Tax Information */}
+              <TaxCalculationSidebar
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                editMode={isEditMode}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+                onMethodChange={handleTaxMethodChange}
+                onValuationChange={handleValuationMethodChange}
+              />
+
+              {/* HSN Tax Breakdown - Item-level tax transparency */}
+              <CompactHSNTaxBreakdown
+                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
               />
 
               {/* Shipping Options or Configuration Prompt */}
@@ -2627,7 +3068,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               ) : (
                 <ShippingConfigurationPrompt
                   quote={liveQuote || quote}
-                  onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                  onNavigateToSettings={() => (window.location.href = '/admin/shipping-routes')}
                 />
               )}
 
@@ -2643,31 +3084,35 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               ].includes(quote.status) && (
                 <CompactPaymentManager
                   quote={liveQuote || quote}
-                  onPaymentUpdate={handleQuoteUpdate}
+                  onPaymentUpdate={loadQuoteData}
                   compact={true}
                 />
               )}
 
-              {/* Live Cost Breakdown */}
-              {(() => {
-                const usedQuote = liveQuote || quote;
-                console.log('🔍 [UnifiedQuoteInterface] Passing quote to CompactCalculationBreakdown:', {
-                  quoteId: quote?.id,
-                  hasLiveQuote: !!liveQuote,
-                  usingLiveQuote: !!liveQuote,
-                  originalCalculationData: quote?.calculation_data,
-                  liveCalculationData: liveQuote?.calculation_data,
-                  usedCalculationData: usedQuote?.calculation_data,
-                });
-                return (
-                  <CompactCalculationBreakdown
-                    key={`breakdown-${usedQuote?.id}-${usedQuote?.final_total_usd}`}
-                    quote={usedQuote}
-                    shippingOptions={shippingOptions}
-                    isCalculating={isCalculating}
-                  />
-                );
-              })()}
+              {/* Tax Calculation Sidebar - HSN Transparency */}
+              <TaxCalculationSidebar
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* HSN Tax Breakdown - Item-level tax transparency */}
+              <CompactHSNTaxBreakdown
+                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* Live Cost Breakdown - Essential Financial Summary */}
+              <CompactCalculationBreakdown
+                quote={liveQuote || quote}
+                shippingOptions={shippingOptions}
+                isCalculating={isCalculating}
+              />
 
               {/* AI Insights - Compact Version */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/20">
@@ -2766,7 +3211,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               <span>•</span>
                               <span>Weight: {item.weight_kg} kg each</span>
                               <span>•</span>
-                              <span>Unit Price: {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0), 'origin')}</span>
+                              <span>
+                                Unit Price:{' '}
+                                {currencyDisplay.formatSingleAmount(
+                                  Number(item.price_usd || 0),
+                                  'origin',
+                                )}
+                              </span>
                             </div>
                             {/* Customer Notes - Professional Inline Style */}
                             {item.options && item.options.trim() && (
@@ -2781,7 +3232,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
-                            {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0) * item.quantity, 'origin')}
+                            {currencyDisplay.formatSingleAmount(
+                              Number(item.price_usd || 0) * item.quantity,
+                              'origin',
+                            )}
                           </div>
                           <div className="text-xs text-gray-500">Total</div>
                         </div>
@@ -2791,9 +3245,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 </CardContent>
               </Card>
 
-              {/* Cost Breakdown - Clean Professional Style */}
+              {/* Tax Calculation Sidebar - HSN Transparency */}
+              <TaxCalculationSidebar
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* HSN Tax Breakdown - Item-level tax transparency */}
+              <CompactHSNTaxBreakdown
+                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
+                quote={liveQuote || quote}
+                isCalculating={isCalculating}
+                compact={true}
+                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                onUpdateQuote={loadQuoteData}
+              />
+
+              {/* Cost Breakdown - Professional Financial Summary */}
               <CompactCalculationBreakdown
-                key={`breakdown-${(liveQuote || quote)?.id}-${(liveQuote || quote)?.final_total_usd}`}
                 quote={liveQuote || quote}
                 shippingOptions={shippingOptions}
                 isCalculating={isCalculating}
@@ -2805,11 +3276,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* 1. Customer Information - First Priority (customer context) */}
               <CompactCustomerInfo
                 quote={liveQuote || quote}
-                onUpdateQuote={handleQuoteUpdate}
+                onUpdateQuote={loadQuoteData}
                 compact={true}
                 editMode={isEditMode}
               />
-
 
               {/* 2. Quote Summary - Second Priority (order overview) */}
               <Card className="shadow-sm border-blue-200 bg-blue-50/30">
@@ -2821,7 +3291,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Total Value</span>
                       <span className="text-xl font-bold text-blue-600">
-                        {currencyDisplay.formatSingleAmount(liveQuote?.final_total_usd || quote.final_total_usd, 'origin')}
+                        {currencyDisplay.formatSingleAmount(
+                          liveQuote?.final_total_usd || quote.final_total_usd,
+                          'origin',
+                        )}
                       </span>
                     </div>
 
@@ -2852,10 +3325,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   {!isEditMode && (
                     <div className="mt-4 pt-3 border-t border-blue-200">
                       {(() => {
-                        const selectedShippingOptionId = quote.operational_data?.shipping?.selected_option;
-                        const selectedShippingOption = shippingOptions.find(opt => opt.id === selectedShippingOptionId);
-                        const shippingCost = liveQuote?.calculation_data?.breakdown?.shipping || quote.calculation_data?.breakdown?.shipping || 0;
-                        
+                        const selectedShippingOptionId =
+                          quote.operational_data?.shipping?.selected_option;
+                        const selectedShippingOption = shippingOptions.find(
+                          (opt) => opt.id === selectedShippingOptionId,
+                        );
+                        const shippingCost =
+                          liveQuote?.calculation_data?.breakdown?.shipping ||
+                          quote.calculation_data?.breakdown?.shipping ||
+                          0;
+
                         if (selectedShippingOption) {
                           return (
                             <div className="flex items-center justify-between">
@@ -2865,7 +3344,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   {selectedShippingOption.carrier} {selectedShippingOption.name}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {selectedShippingOption.days} • {currencyDisplay.formatSingleAmount(shippingCost, 'origin')}
+                                  {selectedShippingOption.days} •{' '}
+                                  {currencyDisplay.formatSingleAmount(shippingCost, 'origin')}
                                 </div>
                               </div>
                             </div>
@@ -2912,14 +3392,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* 3. Status Management - Third Priority (actionable) */}
               <CompactStatusManager
                 quote={liveQuote || quote}
-                onStatusUpdate={handleQuoteUpdate}
+                onStatusUpdate={loadQuoteData}
                 compact={true}
               />
 
               {/* 4. iwishBag Tracking Management - Fourth Priority (tracking) */}
               <CompactShippingManager
                 quote={liveQuote || quote}
-                onUpdateQuote={handleQuoteUpdate}
+                onUpdateQuote={loadQuoteData}
                 compact={true}
               />
 
@@ -2941,7 +3421,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 ) : (
                   <ShippingConfigurationPrompt
                     quote={liveQuote || quote}
-                    onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                    onNavigateToSettings={() => (window.location.href = '/admin/shipping-routes')}
                   />
                 )
               ) : (
@@ -2949,7 +3429,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 shippingOptions.length === 0 && (
                   <ShippingConfigurationPrompt
                     quote={liveQuote || quote}
-                    onNavigateToSettings={() => window.location.href = '/admin/shipping-routes'}
+                    onNavigateToSettings={() => (window.location.href = '/admin/shipping-routes')}
                   />
                 )
               )}
@@ -2957,91 +3437,95 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               {/* 5.5. Admin Override Controls - Handling & Insurance */}
               {isEditMode && (
                 <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center space-x-2 text-sm">
-                    <Settings className="w-4 h-4 text-orange-600" />
-                    <span>Admin Overrides</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Handling Charge Override */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-700">
-                      Handling Charge Override
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Auto-calculated"
-                          value={form.watch('handling_charge') || ''}
-                          onChange={(e) => {
-                            form.setValue('handling_charge', Number(e.target.value));
-                            scheduleFormCalculation();
-                          }}
-                          className="text-xs"
-                        />
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center space-x-2 text-sm">
+                      <Settings className="w-4 h-4 text-orange-600" />
+                      <span>Admin Overrides</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Handling Charge Override */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-700">
+                        Handling Charge Override
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Auto-calculated"
+                            value={form.watch('handling_charge') || ''}
+                            onChange={(e) => {
+                              form.setValue('handling_charge', Number(e.target.value));
+                              scheduleCalculation();
+                            }}
+                            className="text-xs"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Auto:{' '}
+                          {currencyDisplay.formatSingleAmount(
+                            liveQuote?.operational_data?.calculated_handling || 0,
+                            'origin',
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Auto: {currencyDisplay.formatSingleAmount(
-                          liveQuote?.operational_data?.calculated_handling || 0,
-                          'origin'
-                        )}
-                      </div>
+                      <p className="text-xs text-gray-500">
+                        Override carrier handling charge calculation
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Override carrier handling charge calculation
-                    </p>
-                  </div>
 
-                  {/* Insurance Override */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium text-gray-700">
-                      Insurance Override
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="Auto-calculated"
-                          value={form.watch('insurance_amount') || ''}
-                          onChange={(e) => {
-                            form.setValue('insurance_amount', Number(e.target.value));
-                            scheduleFormCalculation();
-                          }}
-                          className="text-xs"
-                        />
+                    {/* Insurance Override */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-700">
+                        Insurance Override
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Auto-calculated"
+                            value={form.watch('insurance_amount') || ''}
+                            onChange={(e) => {
+                              form.setValue('insurance_amount', Number(e.target.value));
+                              scheduleCalculation();
+                            }}
+                            className="text-xs"
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Auto:{' '}
+                          {currencyDisplay.formatSingleAmount(
+                            liveQuote?.operational_data?.calculated_insurance || 0,
+                            'origin',
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Auto: {currencyDisplay.formatSingleAmount(
-                          liveQuote?.operational_data?.calculated_insurance || 0,
-                          'origin'
-                        )}
-                      </div>
+                      <p className="text-xs text-gray-500">Override customer insurance selection</p>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Override customer insurance selection
-                    </p>
-                  </div>
 
-                  {/* Customer Preferences Info */}
-                  <div className="pt-2 border-t border-gray-200 space-y-1">
-                    <h4 className="text-xs font-medium text-gray-700">Customer Preferences:</h4>
-                    <div className="text-xs text-gray-600 space-y-1">
-                      <div>Insurance Opted: {
-                        liveQuote?.customer_data?.preferences?.insurance_opted_in ? 
-                        <span className="text-green-600">Yes</span> : 
-                        <span className="text-red-600">No</span>
-                      }</div>
-                      <div>Selected Carrier: {
-                        liveQuote?.operational_data?.shipping?.selected_option || 'Auto'
-                      }</div>
+                    {/* Customer Preferences Info */}
+                    <div className="pt-2 border-t border-gray-200 space-y-1">
+                      <h4 className="text-xs font-medium text-gray-700">Customer Preferences:</h4>
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>
+                          Insurance Opted:{' '}
+                          {liveQuote?.customer_data?.preferences?.insurance_opted_in ? (
+                            <span className="text-green-600">Yes</span>
+                          ) : (
+                            <span className="text-red-600">No</span>
+                          )}
+                        </div>
+                        <div>
+                          Selected Carrier:{' '}
+                          {liveQuote?.operational_data?.shipping?.selected_option || 'Auto'}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
               )}
 
               {/* 6. Payment Management - Sixth Priority (conditional) */}
@@ -3056,7 +3540,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               ].includes(quote.status) && (
                 <CompactPaymentManager
                   quote={liveQuote || quote}
-                  onPaymentUpdate={handleQuoteUpdate}
+                  onPaymentUpdate={loadQuoteData}
                   compact={true}
                 />
               )}

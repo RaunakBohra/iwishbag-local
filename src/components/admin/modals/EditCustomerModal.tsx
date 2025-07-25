@@ -85,7 +85,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: EditCustomerFormData) => {
       setIsSubmitting(true);
-      
+
       // Update profile data
       const { error: profileError } = await supabase
         .from('profiles')
@@ -117,7 +117,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
       setIsSubmitting(false);
       queryClient.invalidateQueries({ queryKey: ['customer-profile', customer.id] });
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
-      
+
       toast({
         title: 'Customer Updated',
         description: `${data.full_name}'s profile has been updated successfully.`,
@@ -145,7 +145,8 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
   };
 
   // Get primary address for display
-  const primaryAddress = customer.user_addresses?.find(addr => addr.is_primary) || customer.user_addresses?.[0];
+  const primaryAddress =
+    customer.user_addresses?.find((addr) => addr.is_primary) || customer.user_addresses?.[0];
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -186,9 +187,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               placeholder="Enter customer's full name"
               {...register('full_name')}
             />
-            {errors.full_name && (
-              <p className="text-sm text-red-600">{errors.full_name.message}</p>
-            )}
+            {errors.full_name && <p className="text-sm text-red-600">{errors.full_name.message}</p>}
           </div>
 
           {/* Email */}
@@ -204,9 +203,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               {...register('email')}
               disabled // Email changes are complex, disable for now
             />
-            {errors.email && (
-              <p className="text-sm text-red-600">{errors.email.message}</p>
-            )}
+            {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
             <p className="text-xs text-gray-500">
               Email changes require additional verification. Contact system admin if needed.
             </p>
@@ -218,14 +215,8 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               <Phone className="h-4 w-4" />
               <span>Phone Number</span>
             </Label>
-            <Input
-              id="phone"
-              placeholder="Enter phone number (optional)"
-              {...register('phone')}
-            />
-            {errors.phone && (
-              <p className="text-sm text-red-600">{errors.phone.message}</p>
-            )}
+            <Input id="phone" placeholder="Enter phone number (optional)" {...register('phone')} />
+            {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
           </div>
 
           {/* Address Display (Read-only) */}
@@ -236,9 +227,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
                 <span>Primary Address</span>
               </Label>
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-900">
-                  {primaryAddress.street_address}
-                </p>
+                <p className="text-sm text-gray-900">{primaryAddress.street_address}</p>
                 <p className="text-sm text-gray-600">
                   {primaryAddress.city}, {primaryAddress.state} {primaryAddress.postal_code}
                 </p>
@@ -256,15 +245,15 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               <Checkbox
                 id="cod_enabled"
                 checked={codEnabled}
-                onCheckedChange={(checked) => setValue('cod_enabled', checked as boolean, { shouldDirty: true })}
+                onCheckedChange={(checked) =>
+                  setValue('cod_enabled', checked as boolean, { shouldDirty: true })
+                }
               />
               <Label htmlFor="cod_enabled" className="text-sm font-medium">
                 Enable Cash on Delivery (COD)
               </Label>
             </div>
-            <p className="text-xs text-gray-500">
-              Allow this customer to pay via Cash on Delivery
-            </p>
+            <p className="text-xs text-gray-500">Allow this customer to pay via Cash on Delivery</p>
           </div>
 
           {/* Internal Notes */}
@@ -295,12 +284,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
         </form>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button

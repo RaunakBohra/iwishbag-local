@@ -52,10 +52,7 @@ interface AddCustomerModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
-  open,
-  onOpenChange,
-}) => {
+export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,7 +77,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
   const addCustomerMutation = useMutation({
     mutationFn: async (data: AddCustomerFormData) => {
       setIsSubmitting(true);
-      
+
       // First, create the user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: data.email,
@@ -107,17 +104,15 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
       if (profileError) throw profileError;
 
       // Add address
-      const { error: addressError } = await supabase
-        .from('user_addresses')
-        .insert({
-          user_id: userId,
-          address_line1: data.addressLine1,
-          address_line2: data.addressLine2 || null,
-          city: data.city,
-          country: data.country,
-          postal_code: data.postalCode,
-          is_default: true,
-        });
+      const { error: addressError } = await supabase.from('user_addresses').insert({
+        user_id: userId,
+        address_line1: data.addressLine1,
+        address_line2: data.addressLine2 || null,
+        city: data.city,
+        country: data.country,
+        postal_code: data.postalCode,
+        is_default: true,
+      });
 
       if (addressError) throw addressError;
 
@@ -171,7 +166,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
               <User className="h-4 w-4 text-gray-600" />
               <h3 className="font-medium text-gray-900">Personal Information</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address *</Label>
@@ -185,18 +180,12 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
                     {...register('email')}
                   />
                 </div>
-                {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email.message}</p>
-                )}
+                {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name *</Label>
-                <Input
-                  id="fullName"
-                  placeholder="John Doe"
-                  {...register('fullName')}
-                />
+                <Input id="fullName" placeholder="John Doe" {...register('fullName')} />
                 {errors.fullName && (
                   <p className="text-sm text-red-600">{errors.fullName.message}</p>
                 )}
@@ -249,35 +238,19 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  placeholder="New York"
-                  {...register('city')}
-                />
-                {errors.city && (
-                  <p className="text-sm text-red-600">{errors.city.message}</p>
-                )}
+                <Input id="city" placeholder="New York" {...register('city')} />
+                {errors.city && <p className="text-sm text-red-600">{errors.city.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="country">Country *</Label>
-                <Input
-                  id="country"
-                  placeholder="United States"
-                  {...register('country')}
-                />
-                {errors.country && (
-                  <p className="text-sm text-red-600">{errors.country.message}</p>
-                )}
+                <Input id="country" placeholder="United States" {...register('country')} />
+                {errors.country && <p className="text-sm text-red-600">{errors.country.message}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="postalCode">Postal Code *</Label>
-                <Input
-                  id="postalCode"
-                  placeholder="10001"
-                  {...register('postalCode')}
-                />
+                <Input id="postalCode" placeholder="10001" {...register('postalCode')} />
                 {errors.postalCode && (
                   <p className="text-sm text-red-600">{errors.postalCode.message}</p>
                 )}
@@ -323,19 +296,10 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
               {isSubmitting ? 'Creating Customer...' : 'Add Customer'}
             </Button>
           </DialogFooter>

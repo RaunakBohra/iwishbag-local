@@ -6,7 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -33,12 +39,12 @@ const TEMPLATE_CATEGORIES = [
   { value: 'payment', label: 'Payment & Billing' },
   { value: 'refund', label: 'Refunds & Returns' },
   { value: 'technical', label: 'Technical Support' },
-  { value: 'product', label: 'Product Questions' }
+  { value: 'product', label: 'Product Questions' },
 ];
 
-export const ReplyTemplatesManager = ({ 
-  onTemplateSelect, 
-  mode = 'manage' 
+export const ReplyTemplatesManager = ({
+  onTemplateSelect,
+  mode = 'manage',
 }: ReplyTemplatesManagerProps) => {
   const [templates, setTemplates] = useState<ReplyTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<ReplyTemplate[]>([]);
@@ -47,7 +53,7 @@ export const ReplyTemplatesManager = ({
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ReplyTemplate | null>(null);
-  
+
   const { toast } = useToast();
 
   // Form state for create/edit
@@ -55,7 +61,7 @@ export const ReplyTemplatesManager = ({
     name: '',
     category: 'general',
     subject_template: '',
-    body_template: ''
+    body_template: '',
   });
 
   // Load templates
@@ -69,7 +75,7 @@ export const ReplyTemplatesManager = ({
         .order('usage_count', { ascending: false });
 
       if (error) throw error;
-      
+
       setTemplates(data || []);
       setFilteredTemplates(data || []);
     } catch (error) {
@@ -77,7 +83,7 @@ export const ReplyTemplatesManager = ({
       toast({
         title: 'Error',
         description: 'Failed to load reply templates',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -89,14 +95,15 @@ export const ReplyTemplatesManager = ({
     let filtered = templates;
 
     if (searchTerm) {
-      filtered = filtered.filter(template => 
-        template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        template.body_template.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (template) =>
+          template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          template.body_template.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(template => template.category === selectedCategory);
+      filtered = filtered.filter((template) => template.category === selectedCategory);
     }
 
     setFilteredTemplates(filtered);
@@ -126,7 +133,7 @@ export const ReplyTemplatesManager = ({
     navigator.clipboard.writeText(content);
     toast({
       title: 'Copied!',
-      description: 'Template copied to clipboard'
+      description: 'Template copied to clipboard',
     });
   };
 
@@ -142,7 +149,7 @@ export const ReplyTemplatesManager = ({
             category: formData.category,
             subject_template: formData.subject_template || null,
             body_template: formData.body_template,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .eq('id', editingTemplate.id);
 
@@ -150,14 +157,12 @@ export const ReplyTemplatesManager = ({
         toast({ title: 'Success', description: 'Template updated successfully' });
       } else {
         // Create new template
-        const { error } = await supabase
-          .from('reply_templates')
-          .insert({
-            name: formData.name,
-            category: formData.category,
-            subject_template: formData.subject_template || null,
-            body_template: formData.body_template
-          });
+        const { error } = await supabase.from('reply_templates').insert({
+          name: formData.name,
+          category: formData.category,
+          subject_template: formData.subject_template || null,
+          body_template: formData.body_template,
+        });
 
         if (error) throw error;
         toast({ title: 'Success', description: 'Template created successfully' });
@@ -173,7 +178,7 @@ export const ReplyTemplatesManager = ({
       toast({
         title: 'Error',
         description: 'Failed to save template',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
@@ -189,7 +194,7 @@ export const ReplyTemplatesManager = ({
         .eq('id', templateId);
 
       if (error) throw error;
-      
+
       toast({ title: 'Success', description: 'Template deleted successfully' });
       loadTemplates();
     } catch (error) {
@@ -197,7 +202,7 @@ export const ReplyTemplatesManager = ({
       toast({
         title: 'Error',
         description: 'Failed to delete template',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
@@ -209,7 +214,7 @@ export const ReplyTemplatesManager = ({
       name: template.name,
       category: template.category,
       subject_template: template.subject_template || '',
-      body_template: template.body_template
+      body_template: template.body_template,
     });
     setShowCreateDialog(true);
   };
@@ -231,15 +236,17 @@ export const ReplyTemplatesManager = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {TEMPLATE_CATEGORIES.map(cat => (
-                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+              {TEMPLATE_CATEGORIES.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="max-h-60 overflow-y-auto space-y-2">
-          {filteredTemplates.map(template => (
+          {filteredTemplates.map((template) => (
             <div
               key={template.id}
               className="p-3 border rounded cursor-pointer hover:bg-gray-50"
@@ -248,7 +255,7 @@ export const ReplyTemplatesManager = ({
               <div className="flex justify-between items-start mb-1">
                 <span className="font-medium text-sm">{template.name}</span>
                 <Badge variant="outline" className="text-xs">
-                  {TEMPLATE_CATEGORIES.find(c => c.value === template.category)?.label}
+                  {TEMPLATE_CATEGORIES.find((c) => c.value === template.category)?.label}
                 </Badge>
               </div>
               <p className="text-xs text-gray-600 line-clamp-2">{template.body_template}</p>
@@ -288,8 +295,10 @@ export const ReplyTemplatesManager = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {TEMPLATE_CATEGORIES.map(cat => (
-              <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+            {TEMPLATE_CATEGORIES.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -297,38 +306,26 @@ export const ReplyTemplatesManager = ({
 
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTemplates.map(template => (
+        {filteredTemplates.map((template) => (
           <Card key={template.id}>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-sm">{template.name}</CardTitle>
                 <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyTemplate(template)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => copyTemplate(template)}>
                     <Copy className="h-3 w-3" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => editTemplate(template)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => editTemplate(template)}>
                     <Edit className="h-3 w-3" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => deleteTemplate(template.id)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => deleteTemplate(template.id)}>
                     <Trash2 className="h-3 w-3 text-red-500" />
                   </Button>
                 </div>
               </div>
               <div className="flex justify-between">
                 <Badge variant="outline" className="text-xs">
-                  {TEMPLATE_CATEGORIES.find(c => c.value === template.category)?.label}
+                  {TEMPLATE_CATEGORIES.find((c) => c.value === template.category)?.label}
                 </Badge>
                 <span className="text-xs text-gray-500">{template.usage_count} uses</span>
               </div>
@@ -344,9 +341,7 @@ export const ReplyTemplatesManager = ({
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingTemplate ? 'Edit Template' : 'Create New Template'}
-            </DialogTitle>
+            <DialogTitle>{editingTemplate ? 'Edit Template' : 'Create New Template'}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -355,22 +350,24 @@ export const ReplyTemplatesManager = ({
                 <label className="text-sm font-medium">Template Name</label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="e.g., Order Status Update"
                 />
               </div>
               <div>
                 <label className="text-sm font-medium">Category</label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {TEMPLATE_CATEGORIES.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
+                    {TEMPLATE_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -381,32 +378,44 @@ export const ReplyTemplatesManager = ({
               <label className="text-sm font-medium">Subject Template (Optional)</label>
               <Input
                 value={formData.subject_template}
-                onChange={(e) => setFormData(prev => ({ ...prev, subject_template: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, subject_template: e.target.value }))
+                }
                 placeholder="e.g., Update on Your Order #{{order_id}}"
               />
-              <p className="text-xs text-gray-500 mt-1">Use {{variable}} for dynamic content</p>
+              <p className="text-xs text-gray-500 mt-1">Use {{ variable }} for dynamic content</p>
             </div>
 
             <div>
               <label className="text-sm font-medium">Body Template</label>
               <Textarea
                 value={formData.body_template}
-                onChange={(e) => setFormData(prev => ({ ...prev, body_template: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, body_template: e.target.value }))
+                }
                 placeholder="Hi {{customer_name}},
 
 Thank you for contacting us..."
                 className="min-h-[200px]"
               />
-              <p className="text-xs text-gray-500 mt-1">Available variables: {{customer_name}}, {{order_id}}, {{tracking_id}}, {{status}}, etc.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Available variables: {{ customer_name }}, {{ order_id }}, {{ tracking_id }},{' '}
+                {{ status }}, etc.
+              </p>
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowCreateDialog(false);
                   setEditingTemplate(null);
-                  setFormData({ name: '', category: 'general', subject_template: '', body_template: '' });
+                  setFormData({
+                    name: '',
+                    category: 'general',
+                    subject_template: '',
+                    body_template: '',
+                  });
                 }}
               >
                 Cancel

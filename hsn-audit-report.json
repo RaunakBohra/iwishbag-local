@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-07-24T18:44:16.793Z",
+  "consoleLogs": [],
+  "errors": [
+    "[AUDIT ERROR] Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:8082/admin/quotes/46749ac8-3336-43aa-bcbc-ec9f30000aef\nCall log:\n\u001b[2m  - navigating to \"http://localhost:8082/admin/quotes/46749ac8-3336-43aa-bcbc-ec9f30000aef\", waiting until \"networkidle\"\u001b[22m\n"
+  ],
+  "networkActivity": [],
+  "summary": {
+    "totalLogs": 0,
+    "hsnLogs": 0,
+    "errors": 1,
+    "networkRequests": 0,
+    "submissions": 0
+  }
+}

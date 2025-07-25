@@ -38,11 +38,11 @@ import {
 } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, ShippingRecommendation } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
-import { 
-  formatDeliveryDays, 
-  getDeliveryDaysForSorting, 
-  isExpressDelivery, 
-  isEconomyDelivery 
+import {
+  formatDeliveryDays,
+  getDeliveryDaysForSorting,
+  isExpressDelivery,
+  isEconomyDelivery,
 } from '@/lib/deliveryFormatUtils';
 
 interface ShippingSelectionModalProps {
@@ -292,13 +292,24 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
                               </div>
                               <div className="text-sm text-gray-500">
                                 {getTotalWeight() > 0 && (
-                                  <>≈ {currencyDisplay.formatSingleAmount(option.cost_usd / getTotalWeight(), 'origin')}/kg</>
+                                  <>
+                                    ≈{' '}
+                                    {currencyDisplay.formatSingleAmount(
+                                      option.cost_usd / getTotalWeight(),
+                                      'origin',
+                                    )}
+                                    /kg
+                                  </>
                                 )}
                               </div>
                               {recommendation && recommendation.savings_usd > 0 && (
                                 <div className="text-sm text-green-600 font-medium">
                                   <TrendingDown className="w-3 h-3 inline mr-1" />
-                                  Save {currencyDisplay.formatSingleAmount(recommendation.savings_usd, 'origin')}
+                                  Save{' '}
+                                  {currencyDisplay.formatSingleAmount(
+                                    recommendation.savings_usd,
+                                    'origin',
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -314,7 +325,9 @@ export const ShippingSelectionModal: React.FC<ShippingSelectionModalProps> = ({
                                 ) : (
                                   <Clock className="w-3 h-3 text-gray-400" />
                                 )}
-                                <span className="font-medium">{formatDeliveryDays(option.days, 'admin')}</span>
+                                <span className="font-medium">
+                                  {formatDeliveryDays(option.days, 'admin')}
+                                </span>
                               </div>
                             </div>
 

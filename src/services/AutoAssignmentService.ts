@@ -86,7 +86,12 @@ export class AutoAssignmentService {
   /**
    * Create a new assignment rule
    */
-  async createAssignmentRule(rule: Omit<AutoAssignmentRule, 'id' | 'created_at' | 'updated_at' | 'assignment_count' | 'last_assigned_user_id'>): Promise<AutoAssignmentRule | null> {
+  async createAssignmentRule(
+    rule: Omit<
+      AutoAssignmentRule,
+      'id' | 'created_at' | 'updated_at' | 'assignment_count' | 'last_assigned_user_id'
+    >,
+  ): Promise<AutoAssignmentRule | null> {
     try {
       const { data, error } = await supabase
         .from('auto_assignment_rules')
@@ -133,10 +138,7 @@ export class AutoAssignmentService {
    */
   async deleteAssignmentRule(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('auto_assignment_rules')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('auto_assignment_rules').delete().eq('id', id);
 
       if (error) {
         console.error('❌ Error deleting assignment rule:', error);
@@ -163,7 +165,7 @@ export class AutoAssignmentService {
   async assignTicket(ticketId: string): Promise<string | null> {
     try {
       const { data, error } = await supabase.rpc('auto_assign_ticket', {
-        ticket_id: ticketId
+        ticket_id: ticketId,
       });
 
       if (error) {
@@ -185,16 +187,14 @@ export class AutoAssignmentService {
     try {
       const [rulesResult, ticketsResult] = await Promise.all([
         // Get rules stats
-        supabase
-          .from('auto_assignment_rules')
-          .select('id, is_active, assignment_count'),
-        
+        supabase.from('auto_assignment_rules').select('id, is_active, assignment_count'),
+
         // Get unassigned tickets count
         supabase
           .from('support_tickets')
           .select('id, created_at')
           .is('assigned_to', null)
-          .not('status', 'in', '(resolved,closed)')
+          .not('status', 'in', '(resolved,closed)'),
       ]);
 
       const rules = rulesResult.data || [];
@@ -210,7 +210,7 @@ export class AutoAssignmentService {
 
       return {
         total_rules: rules.length,
-        active_rules: rules.filter(r => r.is_active).length,
+        active_rules: rules.filter((r) => r.is_active).length,
         total_assignments: rules.reduce((sum, r) => sum + (r.assignment_count || 0), 0),
         assignments_today: assignmentsToday.data?.length || 0,
         unassigned_tickets: unassignedTickets.length,
@@ -230,18 +230,22 @@ export class AutoAssignmentService {
   /**
    * Get eligible users for assignment (admins and moderators)
    */
-  async getEligibleUsers(): Promise<{ id: string; full_name: string; email: string; role: string }[]> {
+  async getEligibleUsers(): Promise<
+    { id: string; full_name: string; email: string; role: string }[]
+  > {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
+        .select(
+          `
           id,
           full_name,
           email,
           user_roles!inner (
             role
           )
-        `)
+        `,
+        )
         .in('user_roles.role', ['admin', 'moderator'])
         .order('full_name', { ascending: true });
 
@@ -250,11 +254,11 @@ export class AutoAssignmentService {
         return [];
       }
 
-      return (data || []).map(user => ({
+      return (data || []).map((user) => ({
         id: user.id,
         full_name: user.full_name || user.email,
         email: user.email,
-        role: user.user_roles[0]?.role || 'user'
+        role: user.user_roles[0]?.role || 'user',
       }));
     } catch (error) {
       console.error('❌ Exception fetching eligible users:', error);
@@ -265,7 +269,10 @@ export class AutoAssignmentService {
   /**
    * Test assignment rule against sample data
    */
-  testAssignmentRule(rule: AutoAssignmentRule, ticket: { priority: string; category: string }): boolean {
+  testAssignmentRule(
+    rule: AutoAssignmentRule,
+    ticket: { priority: string; category: string },
+  ): boolean {
     // Check priority criteria
     if (rule.criteria.priority && rule.criteria.priority.length > 0) {
       if (!rule.criteria.priority.includes(ticket.priority)) {

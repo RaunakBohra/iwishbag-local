@@ -34,11 +34,7 @@ const TermsConditions = React.lazy(() => import('@/pages/TermsConditions'));
 const Returns = React.lazy(() => import('@/pages/Returns'));
 const Checkout = React.lazy(() => import('@/pages/Checkout'));
 const NotFound = React.lazy(() => import('@/pages/NotFound'));
-const MessageCenter = React.lazy(() =>
-  import('@/components/messaging/MessageCenter').then((m) => ({
-    default: m.MessageCenter,
-  })),
-);
+const MessageCenterPage = React.lazy(() => import('@/pages/MessageCenterPage'));
 const Cart = React.lazy(() => import('@/components/cart/Cart').then((m) => ({ default: m.Cart })));
 const CostEstimatorPage = React.lazy(() => import('@/pages/CostEstimator'));
 const TestPayment = React.lazy(() => import('@/pages/TestPayment'));
@@ -121,6 +117,7 @@ const MLWeightEstimatorTester = React.lazy(() =>
     default: m.MLWeightEstimatorTester,
   })),
 );
+const HSNTestPage = React.lazy(() => import('@/pages/dev/hsn-test'));
 const SystemSettings = React.lazy(() =>
   import('@/components/admin/SystemSettings').then((m) => ({
     default: m.SystemSettings,
@@ -130,10 +127,15 @@ const TestEmail = React.lazy(() => import('@/pages/TestEmail'));
 const PaymentManagementPageNew = React.lazy(() => import('@/pages/admin/PaymentManagementPage'));
 const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
 const CustomerProfile = React.lazy(() => import('@/pages/admin/CustomerProfile'));
-const DuplicateComponentsPreview = React.lazy(() => import('@/pages/admin/DuplicateComponentsPreview'));
+const DuplicateComponentsPreview = React.lazy(
+  () => import('@/pages/admin/DuplicateComponentsPreview'),
+);
+const UserManagementPage = React.lazy(() => import('@/pages/admin/UserManagementPage'));
+const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
+import { PermissionsProvider } from '@/contexts/PermissionsContext';
 
 // Import test utilities in development
 if (import.meta.env.DEV) {
@@ -170,6 +172,7 @@ const router = createBrowserRouter([
           },
           { path: 'customers', element: <EnhancedCustomerManagementPage /> },
           { path: 'customers/:customerId', element: <CustomerProfile /> },
+          { path: 'users', element: <UserManagementPage /> },
           { path: 'support-tickets', element: <SupportTicketsPage /> },
           { path: 'auto-assignment', element: <AutoAssignmentPage /> },
           // { path: 'templates', element: <QuoteTemplatesPage /> }, // Component not found - commented out
@@ -182,6 +185,14 @@ const router = createBrowserRouter([
             ),
           },
           { path: 'countries', element: <CountrySettings /> },
+          { 
+            path: 'hsn-management', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <HSNManagement />
+              </ErrorBoundary>
+            ),
+          },
           { path: 'customs', element: <CustomsCategories /> },
           { path: 'bank-accounts', element: <BankAccountSettings /> },
           { path: 'system-settings', element: <SystemSettings /> },
@@ -201,11 +212,17 @@ const router = createBrowserRouter([
           { path: 'cleanup/duplicates', element: <DuplicateComponentsPreview /> },
           { path: 'debug/payu', element: <PayUDebugPage /> },
           { path: 'ml/weight-estimator', element: <MLWeightEstimatorTester /> },
+          { path: 'dev/hsn-test', element: <HSNTestPage /> },
           { path: 'blog', element: <BlogManagementPage /> },
           { path: '*', element: <NotFound /> },
         ],
       },
     ],
+  },
+  // Development routes (public access)
+  {
+    path: 'dev/hsn-test',
+    element: <HSNTestPage />,
   },
   // Auth routes - No Layout wrapper
   {
@@ -417,7 +434,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'messages',
-            element: <MessageCenter />,
+            element: <MessageCenterPage />,
           },
           {
             path: 'profile',
@@ -451,17 +468,19 @@ function App() {
       <QueryProvider>
         <AuthProvider>
           <UserRoleEnsurer />
-          <AccessibilityProvider>
-            <StatusConfigProvider>
-              <HelmetProvider>
-                <Suspense fallback={null}>
-                  <RouterProvider router={router} />
-                </Suspense>
-                <PhoneCollectionProvider />
-                <Toaster />
-              </HelmetProvider>
-            </StatusConfigProvider>
-          </AccessibilityProvider>
+          <PermissionsProvider>
+            <AccessibilityProvider>
+              <StatusConfigProvider>
+                <HelmetProvider>
+                  <Suspense fallback={null}>
+                    <RouterProvider router={router} />
+                  </Suspense>
+                  <PhoneCollectionProvider />
+                  <Toaster />
+                </HelmetProvider>
+              </StatusConfigProvider>
+            </AccessibilityProvider>
+          </PermissionsProvider>
         </AuthProvider>
       </QueryProvider>
     </ErrorBoundary>

@@ -94,7 +94,7 @@ export class SLABreachService {
   async getTicketBreachNotifications(ticketId: string): Promise<BreachNotification[]> {
     try {
       const { data, error } = await supabase.rpc('get_ticket_breach_notifications', {
-        ticket_uuid: ticketId
+        ticket_uuid: ticketId,
       });
 
       if (error) {
@@ -116,7 +116,7 @@ export class SLABreachService {
     try {
       const { data, error } = await supabase.rpc('acknowledge_breach_notification', {
         notification_id: notificationId,
-        user_id: userId
+        user_id: userId,
       });
 
       if (error) {
@@ -138,13 +138,15 @@ export class SLABreachService {
     try {
       const { data, error } = await supabase
         .from('breach_notifications')
-        .select(`
+        .select(
+          `
           id,
           breach_type,
           severity,
           sent_at,
           acknowledged_at
-        `)
+        `,
+        )
         .gte('sent_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
 
       if (error) {
@@ -157,15 +159,26 @@ export class SLABreachService {
       const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000;
 
       return {
-        total_unacknowledged: notifications.filter(n => !n.acknowledged_at).length,
-        critical_breaches: notifications.filter(n => !n.acknowledged_at && n.severity === 'critical').length,
-        high_priority_breaches: notifications.filter(n => !n.acknowledged_at && n.severity === 'high').length,
-        response_breaches: notifications.filter(n => !n.acknowledged_at && n.breach_type.includes('response_breach')).length,
-        resolution_breaches: notifications.filter(n => !n.acknowledged_at && n.breach_type.includes('resolution_breach')).length,
-        warnings: notifications.filter(n => !n.acknowledged_at && n.breach_type.includes('warning')).length,
-        breaches_last_24h: notifications.filter(n => 
-          new Date(n.sent_at).getTime() > twentyFourHoursAgo &&
-          (n.breach_type === 'response_breach' || n.breach_type === 'resolution_breach')
+        total_unacknowledged: notifications.filter((n) => !n.acknowledged_at).length,
+        critical_breaches: notifications.filter(
+          (n) => !n.acknowledged_at && n.severity === 'critical',
+        ).length,
+        high_priority_breaches: notifications.filter(
+          (n) => !n.acknowledged_at && n.severity === 'high',
+        ).length,
+        response_breaches: notifications.filter(
+          (n) => !n.acknowledged_at && n.breach_type.includes('response_breach'),
+        ).length,
+        resolution_breaches: notifications.filter(
+          (n) => !n.acknowledged_at && n.breach_type.includes('resolution_breach'),
+        ).length,
+        warnings: notifications.filter(
+          (n) => !n.acknowledged_at && n.breach_type.includes('warning'),
+        ).length,
+        breaches_last_24h: notifications.filter(
+          (n) =>
+            new Date(n.sent_at).getTime() > twentyFourHoursAgo &&
+            (n.breach_type === 'response_breach' || n.breach_type === 'resolution_breach'),
         ).length,
       };
     } catch (error) {
@@ -180,14 +193,14 @@ export class SLABreachService {
    */
   async sendBreachNotifications(notifications: BreachNotification[]): Promise<number> {
     console.log('📧 SLA Breach Notifications to send:', notifications.length);
-    
+
     // For now, we'll log the notifications and mark them as "sent"
     // In a real implementation, this would integrate with the email system
     for (const notification of notifications) {
       console.log(`📧 Breach notification for ticket ${notification.ticket_id}:`, {
         type: notification.breach_type,
         severity: notification.severity,
-        ticket: notification.ticket_subject
+        ticket: notification.ticket_subject,
       });
 
       // Update notification as sent (simplified)
@@ -195,7 +208,7 @@ export class SLABreachService {
         .from('breach_notifications')
         .update({
           notification_method: 'email',
-          sent_to: [] // Would contain recipient IDs in real implementation
+          sent_to: [], // Would contain recipient IDs in real implementation
         })
         .eq('id', notification.id);
     }
@@ -210,15 +223,17 @@ export class SLABreachService {
     try {
       const templateKey = this.getEmailTemplate(notification.breach_type);
       const subject = this.getEmailSubject(notification);
-      
+
       // Get ticket details for context
       const { data: ticket } = await supabase
         .from('support_tickets')
-        .select(`
+        .select(
+          `
           *,
           user_profile:user_id(full_name, email),
           assigned_to_profile:assigned_to(full_name, email)
-        `)
+        `,
+        )
         .eq('id', notification.ticket_id)
         .single();
 
@@ -246,7 +261,7 @@ export class SLABreachService {
           deadline: new Date(notification.notification_data.deadline).toLocaleString(),
           timeInfo: this.formatTimeInfo(notification),
           ticketUrl: `${typeof window !== 'undefined' ? window.location.origin : ''}/admin/support-tickets`,
-        }
+        },
       };
     } catch (error) {
       console.error('❌ Error preparing notification data:', error);
@@ -279,7 +294,7 @@ export class SLABreachService {
     const severity = notification.severity === 'critical' ? '🚨 CRITICAL' : '⚠️';
     const type = notification.breach_type.includes('response') ? 'Response' : 'Resolution';
     const action = notification.breach_type.includes('breach') ? 'BREACH' : 'Warning';
-    
+
     return `${severity} SLA ${type} ${action} - Ticket #${notification.ticket_id.slice(0, 8)}`;
   }
 
@@ -294,7 +309,7 @@ export class SLABreachService {
       recipients.push({
         id: ticket.assigned_to,
         email: ticket.assigned_to_profile.email,
-        name: ticket.assigned_to_profile.full_name || ticket.assigned_to_profile.email
+        name: ticket.assigned_to_profile.full_name || ticket.assigned_to_profile.email,
       });
     }
 
@@ -302,21 +317,23 @@ export class SLABreachService {
     if (notification.severity === 'critical') {
       const { data: admins } = await supabase
         .from('profiles')
-        .select(`
+        .select(
+          `
           id,
           email,
           full_name,
           user_roles!inner (role)
-        `)
+        `,
+        )
         .eq('user_roles.role', 'admin');
 
       if (admins) {
-        admins.forEach(admin => {
-          if (!recipients.some(r => r.id === admin.id)) {
+        admins.forEach((admin) => {
+          if (!recipients.some((r) => r.id === admin.id)) {
             recipients.push({
               id: admin.id,
               email: admin.email,
-              name: admin.full_name || admin.email
+              name: admin.full_name || admin.email,
             });
           }
         });
@@ -331,15 +348,15 @@ export class SLABreachService {
    */
   private formatTimeInfo(notification: BreachNotification): string {
     const data = notification.notification_data;
-    
+
     if (data.time_remaining_hours !== undefined) {
       return `${Math.floor(data.time_remaining_hours)} hours remaining`;
     }
-    
+
     if (data.ticket_age_hours !== undefined) {
       return `Overdue by ${Math.floor(data.ticket_age_hours - 24)} hours`;
     }
-    
+
     return 'Time information unavailable';
   }
 

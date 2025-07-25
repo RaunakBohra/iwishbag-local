@@ -128,17 +128,23 @@ export const CustomerProfile: React.FC = () => {
   const [editCustomerOpen, setEditCustomerOpen] = useState(false);
 
   // Fetch customer profile data
-  const { data: customer, isLoading: customerLoading, error: customerError } = useQuery({
+  const {
+    data: customer,
+    isLoading: customerLoading,
+    error: customerError,
+  } = useQuery({
     queryKey: ['customer-profile', customerId],
     queryFn: async () => {
       if (!customerId) throw new Error('Customer ID is required');
 
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
+        .select(
+          `
           *,
           user_addresses (*)
-        `)
+        `,
+        )
         .eq('id', customerId)
         .single();
 
@@ -184,8 +190,8 @@ export const CustomerProfile: React.FC = () => {
       };
     }
 
-    const paidOrders = orders.filter(order => 
-      ['paid', 'ordered', 'shipped', 'completed'].includes(order.status)
+    const paidOrders = orders.filter((order) =>
+      ['paid', 'ordered', 'shipped', 'completed'].includes(order.status),
     );
 
     const totalSpent = paidOrders.reduce((sum, order) => sum + (order.final_total_usd || 0), 0);
@@ -193,16 +199,20 @@ export const CustomerProfile: React.FC = () => {
     const quoteCount = orders.length;
     const avgOrderValue = orderCount > 0 ? totalSpent / orderCount : 0;
 
-    const lastOrderDate = paidOrders.length > 0 
-      ? new Date(Math.max(...paidOrders.map(o => new Date(o.created_at).getTime())))
-      : null;
+    const lastOrderDate =
+      paidOrders.length > 0
+        ? new Date(Math.max(...paidOrders.map((o) => new Date(o.created_at).getTime())))
+        : null;
 
-    const lastActivityDate = orders.length > 0
-      ? new Date(Math.max(...orders.map(o => new Date(o.created_at).getTime())))
-      : new Date(customer.created_at);
+    const lastActivityDate =
+      orders.length > 0
+        ? new Date(Math.max(...orders.map((o) => new Date(o.created_at).getTime())))
+        : new Date(customer.created_at);
 
     // Calculate risk score (0-100, lower is better)
-    const daysSinceLastActivity = Math.ceil((Date.now() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceLastActivity = Math.ceil(
+      (Date.now() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
     let riskScore = 20; // Base risk
 
     if (daysSinceLastActivity > 180) riskScore += 40;
@@ -216,7 +226,7 @@ export const CustomerProfile: React.FC = () => {
     else if (totalSpent > 500) riskScore -= 10;
 
     const orderFrequency = orderCount >= 5 ? 'high' : orderCount >= 2 ? 'medium' : 'low';
-    const customerLifetimeValue = totalSpent + (avgOrderValue * 2); // Predictive CLV
+    const customerLifetimeValue = totalSpent + avgOrderValue * 2; // Predictive CLV
 
     return {
       totalSpent,
@@ -253,8 +263,10 @@ export const CustomerProfile: React.FC = () => {
     // Positive factors
     score += Math.min(analytics.orderCount * 10, 30);
     score += Math.min(analytics.totalSpent / 100, 20);
-    
-    const daysSinceActivity = Math.ceil((Date.now() - analytics.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    const daysSinceActivity = Math.ceil(
+      (Date.now() - analytics.lastActivityDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
     if (daysSinceActivity <= 7) score += 15;
     else if (daysSinceActivity <= 30) score += 5;
     else if (daysSinceActivity > 90) score -= 20;
@@ -280,7 +292,7 @@ export const CustomerProfile: React.FC = () => {
     const name = customer?.full_name || customer?.email || 'User';
     return name
       .split(' ')
-      .map(word => word.charAt(0))
+      .map((word) => word.charAt(0))
       .slice(0, 2)
       .join('')
       .toUpperCase();
@@ -311,7 +323,9 @@ export const CustomerProfile: React.FC = () => {
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Customer Not Found</h2>
-          <p className="text-gray-600 mb-4">The customer profile you're looking for doesn't exist.</p>
+          <p className="text-gray-600 mb-4">
+            The customer profile you're looking for doesn't exist.
+          </p>
           <Button onClick={() => navigate('/admin/customers')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Customers
@@ -321,7 +335,8 @@ export const CustomerProfile: React.FC = () => {
     );
   }
 
-  const primaryAddress = customer.user_addresses?.find(addr => addr.is_primary) || customer.user_addresses?.[0];
+  const primaryAddress =
+    customer.user_addresses?.find((addr) => addr.is_primary) || customer.user_addresses?.[0];
 
   // Button handlers
   const handleEditCustomer = () => {
@@ -356,8 +371,8 @@ export const CustomerProfile: React.FC = () => {
 
   const handleExportData = () => {
     if (!customer || !orders) return;
-    
-    const csvContent = 
+
+    const csvContent =
       'data:text/csv;charset=utf-8,' +
       'Field,Value\\n' +
       `Customer ID,${customer.id}\\n` +
@@ -390,18 +405,20 @@ export const CustomerProfile: React.FC = () => {
   };
 
   // Convert customer to the format expected by modals
-  const customerForModals = customer ? {
-    id: customer.id,
-    email: customer.email,
-    full_name: customer.full_name,
-    phone: customer.phone,
-    avatar_url: customer.avatar_url,
-    cod_enabled: customer.cod_enabled,
-    internal_notes: customer.internal_notes,
-    created_at: customer.created_at,
-    updated_at: customer.updated_at,
-    user_addresses: customer.user_addresses
-  } : null;
+  const customerForModals = customer
+    ? {
+        id: customer.id,
+        email: customer.email,
+        full_name: customer.full_name,
+        phone: customer.phone,
+        avatar_url: customer.avatar_url,
+        cod_enabled: customer.cod_enabled,
+        internal_notes: customer.internal_notes,
+        created_at: customer.created_at,
+        updated_at: customer.updated_at,
+        user_addresses: customer.user_addresses,
+      }
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -419,11 +436,9 @@ export const CustomerProfile: React.FC = () => {
               Back to Customers
             </Button>
             <div>
-              <H1 className="text-gray-900">
-                {customer.full_name || 'Unnamed Customer'}
-              </H1>
+              <H1 className="text-gray-900">{customer.full_name || 'Unnamed Customer'}</H1>
               <div className="flex items-center space-x-3 mt-1">
-                <Badge variant="outline" className={cn("text-xs", status.color)}>
+                <Badge variant="outline" className={cn('text-xs', status.color)}>
                   <status.icon className="h-3 w-3 mr-1" />
                   {status.label}
                 </Badge>
@@ -474,9 +489,7 @@ export const CustomerProfile: React.FC = () => {
                     <DollarSign className="h-4 w-4 text-green-600" />
                     <BodySmall className="text-gray-600">Total Spent</BodySmall>
                   </div>
-                  <H3 className="text-gray-900 mt-1">
-                    ${analytics.totalSpent.toFixed(0)}
-                  </H3>
+                  <H3 className="text-gray-900 mt-1">${analytics.totalSpent.toFixed(0)}</H3>
                   <BodySmall className="text-green-600 mt-1">
                     +${analytics.totalSavings.toFixed(0)} saved
                   </BodySmall>
@@ -502,9 +515,7 @@ export const CustomerProfile: React.FC = () => {
                     <BarChart3 className="h-4 w-4 text-purple-600" />
                     <BodySmall className="text-gray-600">Avg Order</BodySmall>
                   </div>
-                  <H3 className="text-gray-900 mt-1">
-                    ${analytics.avgOrderValue.toFixed(0)}
-                  </H3>
+                  <H3 className="text-gray-900 mt-1">${analytics.avgOrderValue.toFixed(0)}</H3>
                   <BodySmall className="text-gray-600 mt-1">
                     {analytics.orderFrequency} frequency
                   </BodySmall>
@@ -559,8 +570,11 @@ export const CustomerProfile: React.FC = () => {
                         </Button>
                       </div>
                       <div className="space-y-3">
-                        {orders.slice(0, 5).map(order => (
-                          <div key={order.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        {orders.slice(0, 5).map((order) => (
+                          <div
+                            key={order.id}
+                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                          >
                             <div className="flex items-center space-x-3">
                               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                 <Package className="h-4 w-4 text-blue-600" />
@@ -590,8 +604,11 @@ export const CustomerProfile: React.FC = () => {
 
                   <TabsContent value="orders" className="space-y-4">
                     <div className="space-y-3">
-                      {orders.map(order => (
-                        <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      {orders.map((order) => (
+                        <div
+                          key={order.id}
+                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
                           <div className="flex items-center space-x-4">
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                               <Package className="h-5 w-5 text-blue-600" />
@@ -601,7 +618,8 @@ export const CustomerProfile: React.FC = () => {
                                 Order #{order.display_id || order.id.slice(0, 8)}
                               </Body>
                               <BodySmall className="text-gray-600">
-                                {format(new Date(order.created_at), 'MMM d, yyyy')} • {order.destination_country}
+                                {format(new Date(order.created_at), 'MMM d, yyyy')} •{' '}
+                                {order.destination_country}
                               </BodySmall>
                               {order.iwish_tracking_id && (
                                 <BodySmall className="text-blue-600">
@@ -651,11 +669,16 @@ export const CustomerProfile: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <BodySmall className="text-gray-600">Risk Score</BodySmall>
-                            <BodySmall className={cn(
-                              "font-medium",
-                              analytics.riskScore < 30 ? "text-green-600" :
-                              analytics.riskScore < 60 ? "text-yellow-600" : "text-red-600"
-                            )}>
+                            <BodySmall
+                              className={cn(
+                                'font-medium',
+                                analytics.riskScore < 30
+                                  ? 'text-green-600'
+                                  : analytics.riskScore < 60
+                                    ? 'text-yellow-600'
+                                    : 'text-red-600',
+                              )}
+                            >
                               {analytics.riskScore}%
                             </BodySmall>
                           </div>
@@ -667,26 +690,30 @@ export const CustomerProfile: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div>
                         <H3 className="text-gray-900 mb-3">Purchase Patterns</H3>
                         <div className="space-y-3">
                           <div className="flex justify-between">
                             <BodySmall className="text-gray-600">Avg Days Between Orders</BodySmall>
                             <BodySmall className="font-medium text-gray-900">
-                              {analytics.orderCount > 1 ? 
-                                Math.ceil((analytics.lastActivityDate.getTime() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24) / analytics.orderCount)
-                                : 'N/A'
-                              }
+                              {analytics.orderCount > 1
+                                ? Math.ceil(
+                                    (analytics.lastActivityDate.getTime() -
+                                      new Date(customer.created_at).getTime()) /
+                                      (1000 * 60 * 60 * 24) /
+                                      analytics.orderCount,
+                                  )
+                                : 'N/A'}
                             </BodySmall>
                           </div>
                           <div className="flex justify-between">
                             <BodySmall className="text-gray-600">Quote Conversion Rate</BodySmall>
                             <BodySmall className="font-medium text-gray-900">
-                              {analytics.quoteCount > 0 ? 
-                                Math.round((analytics.orderCount / analytics.quoteCount) * 100)
-                                : 0
-                              }%
+                              {analytics.quoteCount > 0
+                                ? Math.round((analytics.orderCount / analytics.quoteCount) * 100)
+                                : 0}
+                              %
                             </BodySmall>
                           </div>
                           <div className="flex justify-between">
@@ -718,8 +745,8 @@ export const CustomerProfile: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
                     {getCustomerAvatarUrl() && (
-                      <AvatarImage 
-                        src={getCustomerAvatarUrl()!} 
+                      <AvatarImage
+                        src={getCustomerAvatarUrl()!}
                         alt={customer.full_name || customer.email}
                         className="object-cover"
                       />
@@ -786,7 +813,7 @@ export const CustomerProfile: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <BodySmall className="text-gray-600">COD Enabled</BodySmall>
-                  <Badge variant={customer.cod_enabled ? "default" : "secondary"}>
+                  <Badge variant={customer.cod_enabled ? 'default' : 'secondary'}>
                     {customer.cod_enabled ? 'Enabled' : 'Disabled'}
                   </Badge>
                 </div>
@@ -816,19 +843,39 @@ export const CustomerProfile: React.FC = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleSendMessage}>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                  onClick={handleSendMessage}
+                >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleSendEmail}>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                  onClick={handleSendEmail}
+                >
                   <Mail className="h-4 w-4 mr-2" />
                   Send Email
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleCreateTicket}>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                  onClick={handleCreateTicket}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Create Ticket
                 </Button>
-                <Button variant="outline" className="w-full justify-start" size="sm" onClick={handleAddTag}>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                  onClick={handleAddTag}
+                >
                   <Tag className="h-4 w-4 mr-2" />
                   Add Tag
                 </Button>
@@ -836,7 +883,7 @@ export const CustomerProfile: React.FC = () => {
             </Card>
           </div>
         </div>
-        
+
         {/* Modals */}
         {customerForModals && (
           <>
@@ -845,20 +892,20 @@ export const CustomerProfile: React.FC = () => {
               onOpenChange={setEditCustomerOpen}
               customer={customerForModals}
             />
-            
+
             <BulkTagModal
               open={bulkTagOpen}
               onOpenChange={setBulkTagOpen}
               selectedCustomers={[customerForModals]}
             />
-            
+
             <SendEmailModal
               open={sendEmailOpen}
               onOpenChange={setSendEmailOpen}
               recipients={[customerForModals]}
               isBulk={false}
             />
-            
+
             <CustomerMessageModal
               open={customerMessageOpen}
               onOpenChange={setCustomerMessageOpen}

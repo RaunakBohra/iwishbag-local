@@ -8,7 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
 import { TicketWithDetails, CreateSurveyData } from '@/types/ticket';
 import { cn } from '@/lib/utils';
@@ -20,7 +27,10 @@ const surveySchema = z.object({
   response_time_rating: z.number().min(1).max(5),
   resolution_rating: z.number().min(1).max(5),
   would_recommend: z.boolean(),
-  additional_comments: z.string().max(1000, 'Comments must be less than 1000 characters').optional(),
+  additional_comments: z
+    .string()
+    .max(1000, 'Comments must be less than 1000 characters')
+    .optional(),
 });
 
 type SurveyForm = z.infer<typeof surveySchema>;
@@ -38,19 +48,15 @@ const StarRating: React.FC<StarRatingProps> = ({ value, onChange, label, descrip
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">{label}</Label>
-      {description && (
-        <p className="text-xs text-gray-600">{description}</p>
-      )}
+      {description && <p className="text-xs text-gray-600">{description}</p>}
       <div className="flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
             type="button"
             className={cn(
-              "p-1 transition-colors",
-              (hoveredValue >= star || value >= star)
-                ? "text-yellow-400"
-                : "text-gray-300"
+              'p-1 transition-colors',
+              hoveredValue >= star || value >= star ? 'text-yellow-400' : 'text-gray-300',
             )}
             onMouseEnter={() => setHoveredValue(star)}
             onMouseLeave={() => setHoveredValue(0)}
@@ -80,10 +86,10 @@ const RecommendationToggle: React.FC<RecommendationToggleProps> = ({ value, onCh
         <button
           type="button"
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors",
+            'flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors',
             value === true
-              ? "bg-green-50 border-green-200 text-green-700"
-              : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+              ? 'bg-green-50 border-green-200 text-green-700'
+              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100',
           )}
           onClick={() => onChange(true)}
         >
@@ -93,10 +99,10 @@ const RecommendationToggle: React.FC<RecommendationToggleProps> = ({ value, onCh
         <button
           type="button"
           className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors",
+            'flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors',
             value === false
-              ? "bg-red-50 border-red-200 text-red-700"
-              : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100',
           )}
           onClick={() => onChange(false)}
         >
@@ -138,8 +144,12 @@ export const CustomerSatisfactionSurvey: React.FC<CustomerSatisfactionSurveyProp
   });
 
   const handleSubmit = async (values: SurveyForm) => {
-    if (values.rating === 0 || values.experience_rating === 0 || 
-        values.response_time_rating === 0 || values.resolution_rating === 0) {
+    if (
+      values.rating === 0 ||
+      values.experience_rating === 0 ||
+      values.response_time_rating === 0 ||
+      values.resolution_rating === 0
+    ) {
       toast({
         title: 'Incomplete Survey',
         description: 'Please provide ratings for all sections.',
@@ -278,10 +288,7 @@ export const CustomerSatisfactionSurvey: React.FC<CustomerSatisfactionSurveyProp
               name="would_recommend"
               render={({ field }) => (
                 <FormItem>
-                  <RecommendationToggle
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
+                  <RecommendationToggle value={field.value} onChange={field.onChange} />
                 </FormItem>
               )}
             />
@@ -327,16 +334,11 @@ export const CustomerSatisfactionSurvey: React.FC<CustomerSatisfactionSurveyProp
             {/* Actions */}
             <div className="flex items-center justify-between pt-6">
               {onSkip && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onSkip}
-                  disabled={isSubmitting}
-                >
+                <Button type="button" variant="ghost" onClick={onSkip} disabled={isSubmitting}>
                   Skip Survey
                 </Button>
               )}
-              
+
               <div className="flex gap-3 ml-auto">
                 <Button
                   type="submit"

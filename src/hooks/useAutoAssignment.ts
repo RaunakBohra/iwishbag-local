@@ -58,8 +58,12 @@ export const useCreateAssignmentRule = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (rule: Omit<AutoAssignmentRule, 'id' | 'created_at' | 'updated_at' | 'assignment_count' | 'last_assigned_user_id'>) => 
-      autoAssignmentService.createAssignmentRule(rule),
+    mutationFn: (
+      rule: Omit<
+        AutoAssignmentRule,
+        'id' | 'created_at' | 'updated_at' | 'assignment_count' | 'last_assigned_user_id'
+      >,
+    ) => autoAssignmentService.createAssignmentRule(rule),
     onSuccess: (data) => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
@@ -102,7 +106,7 @@ export const useUpdateAssignmentRule = () => {
     onSuccess: (success) => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
-      
+
       if (success) {
         toast({
           title: 'Success',
@@ -140,7 +144,7 @@ export const useDeleteAssignmentRule = () => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
       queryClient.invalidateQueries({ queryKey: ['assignment-stats'] });
-      
+
       if (success) {
         toast({
           title: 'Success',
@@ -178,7 +182,7 @@ export const useToggleAssignmentRule = () => {
     onSuccess: (success, variables) => {
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: ['assignment-rules'] });
-      
+
       if (success) {
         toast({
           title: 'Success',
@@ -217,7 +221,7 @@ export const useManualAssignTicket = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tickets'] });
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
       queryClient.invalidateQueries({ queryKey: ['assignment-stats'] });
-      
+
       if (assignedUserId) {
         toast({
           title: 'Success',
@@ -269,15 +273,15 @@ export const useAutoAssignmentUtils = () => {
 
   const formatCriteria = (criteria: Record<string, string[]>) => {
     const parts = [];
-    
+
     if (criteria.priority && criteria.priority.length > 0) {
       parts.push(`Priority: ${criteria.priority.join(', ')}`);
     }
-    
+
     if (criteria.category && criteria.category.length > 0) {
       parts.push(`Category: ${criteria.category.join(', ')}`);
     }
-    
+
     return parts.length > 0 ? parts.join(' • ') : 'All tickets';
   };
 

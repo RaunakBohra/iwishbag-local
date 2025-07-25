@@ -53,7 +53,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     queryFn: async () => {
       try {
         const allCountries = await unifiedConfigService.getAllCountries();
-        
+
         if (!allCountries) {
           return [];
         }

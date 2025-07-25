@@ -45,7 +45,7 @@ export function ExchangeRateManager() {
   const fetchExchangeRates = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch existing exchange rates
       const { data, error } = await supabase
         .from('shipping_routes')
@@ -344,7 +344,11 @@ export function ExchangeRateManager() {
                       <SelectContent>
                         {countries.map((country) => (
                           <SelectItem key={country.code} value={country.code}>
-                            {country.name} ({currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(country.code))})
+                            {country.name} (
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(country.code),
+                            )}
+                            )
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -367,7 +371,11 @@ export function ExchangeRateManager() {
                       <SelectContent>
                         {countries.map((country) => (
                           <SelectItem key={country.code} value={country.code}>
-                            {country.name} ({currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(country.code))})
+                            {country.name} (
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(country.code),
+                            )}
+                            )
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -391,9 +399,14 @@ export function ExchangeRateManager() {
                   />
                   {newRate.origin_country && newRate.destination_country && (
                     <div className="text-xs text-gray-500 mt-1">
-                      1 {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(newRate.origin_country))} ={' '}
-                      {newRate.exchange_rate}{' '}
-                      {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(newRate.destination_country))}
+                      1{' '}
+                      {currencyService.getCurrencySymbol(
+                        currencyService.getCurrencyForCountrySync(newRate.origin_country),
+                      )}{' '}
+                      = {newRate.exchange_rate}{' '}
+                      {currencyService.getCurrencySymbol(
+                        currencyService.getCurrencyForCountrySync(newRate.destination_country),
+                      )}
                     </div>
                   )}
                 </div>
@@ -413,7 +426,9 @@ export function ExchangeRateManager() {
         {rates.map((rate) => {
           const status = getRateStatus(rate);
           const originCurrency = currencyService.getCurrencyForCountrySync(rate.origin_country);
-          const destinationCurrency = currencyService.getCurrencyForCountrySync(rate.destination_country);
+          const destinationCurrency = currencyService.getCurrencyForCountrySync(
+            rate.destination_country,
+          );
 
           return (
             <Card key={rate.id}>
@@ -460,8 +475,14 @@ export function ExchangeRateManager() {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <div className="font-mono text-lg font-semibold">
-                        1 {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(rate.origin_country))} = {rate.exchange_rate}{' '}
-                        {currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(rate.destination_country))}
+                        1{' '}
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(rate.origin_country),
+                        )}{' '}
+                        = {rate.exchange_rate}{' '}
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(rate.destination_country),
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">Rate: {rate.exchange_rate}</div>
                     </div>
@@ -501,12 +522,11 @@ export function ExchangeRateManager() {
         })}
       </div>
 
-
       {rates.length === 0 && (
         <Card className="shadow-sm border-blue-200 bg-blue-50/20 overflow-hidden">
           {/* Configuration Prompt Indicator */}
           <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-1 w-full" />
-          
+
           <CardContent className="p-6">
             <div className="text-center">
               <TrendingUp className="h-12 w-12 text-blue-500 mx-auto mb-4" />
@@ -515,7 +535,8 @@ export function ExchangeRateManager() {
                   Exchange Rates Configuration
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  No exchange rates configured yet. Set up currency conversion to enable accurate pricing.
+                  No exchange rates configured yet. Set up currency conversion to enable accurate
+                  pricing.
                 </p>
               </div>
 
@@ -524,29 +545,33 @@ export function ExchangeRateManager() {
                 <div className="flex items-start space-x-3">
                   <Settings className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h4 className="font-medium text-blue-900 text-sm mb-2">
-                      Quick Setup Options
-                    </h4>
-                    
+                    <h4 className="font-medium text-blue-900 text-sm mb-2">Quick Setup Options</h4>
+
                     <div className="space-y-2 text-xs text-blue-800">
                       <div className="flex items-center space-x-2">
                         <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                        <span><strong>Automatic:</strong> Configure Exchange Rate API in System Settings</span>
+                        <span>
+                          <strong>Automatic:</strong> Configure Exchange Rate API in System Settings
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                        <span><strong>Manual:</strong> Create custom rates for specific shipping routes</span>
+                        <span>
+                          <strong>Manual:</strong> Create custom rates for specific shipping routes
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                        <span><strong>Hybrid:</strong> Use API rates with manual overrides</span>
+                        <span>
+                          <strong>Hybrid:</strong> Use API rates with manual overrides
+                        </span>
                       </div>
                     </div>
 
                     <div className="mt-3 flex items-center space-x-3 text-xs">
                       <Button
                         size="sm"
-                        onClick={() => window.location.href = '/admin/system-settings'}
+                        onClick={() => (window.location.href = '/admin/system-settings')}
                         className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         <Settings className="w-3 h-3 mr-1" />
@@ -555,7 +580,7 @@ export function ExchangeRateManager() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => window.location.href = '/admin/shipping-routes'}
+                        onClick={() => (window.location.href = '/admin/shipping-routes')}
                         className="h-7 px-3 border-blue-300 text-blue-700 hover:bg-blue-100"
                       >
                         <TrendingUp className="w-3 h-3 mr-1" />
@@ -568,7 +593,9 @@ export function ExchangeRateManager() {
 
               {/* Benefits */}
               <div className="text-left">
-                <div className="text-xs font-medium text-gray-700 mb-2">Benefits of configuring exchange rates:</div>
+                <div className="text-xs font-medium text-gray-700 mb-2">
+                  Benefits of configuring exchange rates:
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-600">
                   <div className="flex items-center space-x-2">
                     <CheckCircle className="w-3 h-3 text-green-600" />

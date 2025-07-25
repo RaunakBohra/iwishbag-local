@@ -16,12 +16,12 @@ export const formatDateRelative = (dateString: string): string => {
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Yesterday';
   if (diffDays <= 7) return `${diffDays} days ago`;
-  
+
   // For older dates, show formatted date
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   });
 };
 
@@ -33,10 +33,10 @@ export const formatDateAdmin = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'short', 
+    month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -59,11 +59,11 @@ export const formatDateCompact = (dateString: string): string => {
 
   // Less than 7 days - show days
   if (diffDays <= 7) return `${diffDays}d ago`;
-  
+
   // Older dates - show compact format
   return date.toLocaleDateString('en-US', {
     month: 'numeric',
     day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? '2-digit' : undefined
+    year: date.getFullYear() !== now.getFullYear() ? '2-digit' : undefined,
   });
 };

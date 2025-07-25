@@ -126,7 +126,9 @@ export const AdminMessageCenterComplete = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<typeof MESSAGE_TEMPLATES[0] | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<(typeof MESSAGE_TEMPLATES)[0] | null>(
+    null,
+  );
 
   // Get selected conversation and user data
   const selectedConversation = useMemo(() => {

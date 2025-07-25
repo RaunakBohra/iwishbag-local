@@ -1,22 +1,48 @@
-<testsuites id="" name="" tests="3" failures="0" skipped="0" errors="0" time="4.263584">
-<testsuite name="setup-test.spec.ts" timestamp="2025-07-21T17:45:04.780Z" hostname="chromium" tests="3" failures="0" skipped="0" time="5.464" errors="0">
-<testcase name="Setup Verification › should load iwishBag homepage successfully" classname="setup-test.spec.ts" time="2.305">
-<system-out>
-<![CDATA[✅ Homepage loaded successfully
-📄 Page title: iWishBag Shop Internationally
-🌐 Page URL: http://localhost:8081/
+<testsuites id="" name="" tests="1" failures="1" skipped="0" errors="0" time="9.973101999999999">
+<testsuite name="hsn-investigation.spec.ts" timestamp="2025-07-24T17:40:55.936Z" hostname="chromium" tests="1" failures="1" skipped="0" time="8.714" errors="0">
+<testcase name="HSN Category Assignment Investigation › investigate HSN category assignment issue" classname="hsn-investigation.spec.ts" time="8.714">
+<failure message="hsn-investigation.spec.ts:5:3 investigate HSN category assignment issue" type="FAILURE">
+<![CDATA[  [chromium] › hsn-investigation.spec.ts:5:3 › HSN Category Assignment Investigation › investigate HSN category assignment issue 
+
+    Error: locator.fill: Target page, context or browser has been closed
+    Call log:
+      - waiting for getByLabel(/email/i)
+
+
+       at helpers/auth.ts:38
+
+      36 |   
+      37 |   // Fill login form
+    > 38 |   await page.getByLabel(/email/i).fill(user.email);
+         |                                   ^
+      39 |   await page.getByLabel(/password/i).fill(user.password);
+      40 |   
+      41 |   // Submit form
+        at login (/Users/raunakbohra/Desktop/global-wishlist-hub/e2e/helpers/auth.ts:38:35)
+        at /Users/raunakbohra/Desktop/global-wishlist-hub/e2e/hsn-investigation.spec.ts:14:5
+
+    attachment #1: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/hsn-investigation-HSN-Cate-38a3a-N-category-assignment-issue-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
 ]]>
-</system-out>
-</testcase>
-<testcase name="Setup Verification › should have functional navigation" classname="setup-test.spec.ts" time="1.584">
+</failure>
 <system-out>
-<![CDATA[ℹ️ No standard navigation found - this might be expected for your design
-]]>
-</system-out>
-</testcase>
-<testcase name="Setup Verification › should handle 404 errors gracefully" classname="setup-test.spec.ts" time="1.575">
-<system-out>
-<![CDATA[📊 404 test status: 200
+<![CDATA[[LOG] ⚙️ UnifiedConfigurationService initialized
+[ERROR] Failed to load resource: the server responded with a status of 404 (Not Found)
+[LOG] 2025-07-24T17:40:57.857Z DEBUG[Auth]: Auth state changed {event: INITIAL_SESSION, userId: undefined, isAnonymous: undefined}
+[LOG] 2025-07-24T17:40:57.906Z DEBUG[Auth]: Auth state changed {event: SIGNED_IN, userId: 79050c19-bd31-4b7d-a83b-573878e4b3f7, isAnonymous: true}
+[LOG] 2025-07-24T17:40:57.906Z DEBUG[Auth]: Anonymous user signed in {userId: 79050c19-bd31-4b7d-a83b-573878e4b3f7}
+[LOG] 🔄 Loading status settings from database...
+[LOG] 🔍 [useAdminRole] Checking admin role for user: {user: Object}
+[LOG] 🔄 Setting cart storage key for user: 79050c19-bd31-4b7d-a83b-573878e4b3f7
+[ERROR] 404 Error: User attempted to access non-existent route: /login
+[LOG] Fetching users with roles for local development...
+[LOG] ✅ Loaded quote statuses from database: [pending, sent, approved, rejected, expired, calculated]
+[LOG] ✅ Loaded order statuses from database: [processing, paid, ordered, shipped, completed, cancelled, payment_pending]
+[LOG] 🔍 [useAdminRole] RPC call results: {hasError: false, errorMessage: undefined, data: false, isAdmin: false}
+[LOG] Users with roles fetched: 1 users
+
+[[ATTACHMENT|../test-results/hsn-investigation-HSN-Cate-38a3a-N-category-assignment-issue-chromium/video.webm]]
 ]]>
 </system-out>
 </testcase>

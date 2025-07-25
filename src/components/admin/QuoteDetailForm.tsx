@@ -80,7 +80,11 @@ export const QuoteDetailForm = ({
   // Auto-apply detected handling charge when available and field is empty
   useEffect(() => {
     const currentHandlingCharge = form.getValues('handling_charge');
-    if (detectedHandlingCharge && detectedHandlingCharge > 0 && (!currentHandlingCharge || currentHandlingCharge === 0)) {
+    if (
+      detectedHandlingCharge &&
+      detectedHandlingCharge > 0 &&
+      (!currentHandlingCharge || currentHandlingCharge === 0)
+    ) {
       console.log('🎯 [DEBUG] Auto-applying detected handling charge to form field:', {
         detectedHandlingCharge,
         currentHandlingCharge,
@@ -89,10 +93,14 @@ export const QuoteDetailForm = ({
     }
   }, [detectedHandlingCharge, form]);
 
-  // Auto-apply detected insurance amount when available and field is empty  
+  // Auto-apply detected insurance amount when available and field is empty
   useEffect(() => {
     const currentInsuranceAmount = form.getValues('insurance_amount');
-    if (detectedInsuranceAmount && detectedInsuranceAmount > 0 && (!currentInsuranceAmount || currentInsuranceAmount === 0)) {
+    if (
+      detectedInsuranceAmount &&
+      detectedInsuranceAmount > 0 &&
+      (!currentInsuranceAmount || currentInsuranceAmount === 0)
+    ) {
       console.log('🛡️ [DEBUG] Auto-applying detected insurance amount to form field:', {
         detectedInsuranceAmount,
         currentInsuranceAmount,
@@ -100,7 +108,6 @@ export const QuoteDetailForm = ({
       form.setValue('insurance_amount', detectedInsuranceAmount);
     }
   }, [detectedInsuranceAmount, form]);
-
 
   // Watch form values
   const watchedValues = useWatch({
@@ -304,8 +311,10 @@ export const QuoteDetailForm = ({
               render={({ field }) => {
                 // Find selected shipping option for display
                 const selectedShippingOptionId = form.watch('selected_shipping_option');
-                const selectedOption = shippingOptions.find(opt => opt.id === selectedShippingOptionId);
-                
+                const selectedOption = shippingOptions.find(
+                  (opt) => opt.id === selectedShippingOptionId,
+                );
+
                 return (
                   <FormItem className="m-0">
                     <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
@@ -331,9 +340,7 @@ export const QuoteDetailForm = ({
                           <span className="font-medium text-blue-800">
                             {selectedOption.carrier} - {selectedOption.name}
                           </span>
-                          <span className="text-blue-600">
-                            {selectedOption.days}
-                          </span>
+                          <span className="text-blue-600">{selectedOption.days}</span>
                         </div>
                       </div>
                     )}
@@ -394,24 +401,26 @@ export const QuoteDetailForm = ({
                           value={field.value ?? ''}
                           onWheel={handleNumberInputWheel}
                           className="h-8 pl-6"
-                          placeholder={detectedInsuranceAmount ? `Default: ${detectedInsuranceAmount.toFixed(2)}` : "10.00"}
+                          placeholder={
+                            detectedInsuranceAmount
+                              ? `Default: ${detectedInsuranceAmount.toFixed(2)}`
+                              : '10.00'
+                          }
                         />
                       </div>
                     </FormControl>
-                    {detectedInsuranceAmount !== undefined && 
-                     detectedInsuranceAmount !== Number(field.value) && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          form.setValue('insurance_amount', detectedInsuranceAmount)
-                        }
-                        className="h-8 px-2 text-xs"
-                      >
-                        Apply Default
-                      </Button>
-                    )}
+                    {detectedInsuranceAmount !== undefined &&
+                      detectedInsuranceAmount !== Number(field.value) && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => form.setValue('insurance_amount', detectedInsuranceAmount)}
+                          className="h-8 px-2 text-xs"
+                        >
+                          Apply Default
+                        </Button>
+                      )}
                   </div>
                   {insuranceExplanation && (
                     <div className="mt-1">
@@ -459,19 +468,20 @@ export const QuoteDetailForm = ({
                           value={field.value ?? ''}
                           onWheel={handleNumberInputWheel}
                           className="h-8 pl-6"
-                          placeholder={detectedHandlingCharge ? `Default: ${detectedHandlingCharge.toFixed(2)}` : "15.00"}
+                          placeholder={
+                            detectedHandlingCharge
+                              ? `Default: ${detectedHandlingCharge.toFixed(2)}`
+                              : '15.00'
+                          }
                         />
                       </div>
                     </FormControl>
-                    {detectedHandlingCharge && 
-                     detectedHandlingCharge !== Number(field.value) && (
+                    {detectedHandlingCharge && detectedHandlingCharge !== Number(field.value) && (
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          form.setValue('handling_charge', detectedHandlingCharge)
-                        }
+                        onClick={() => form.setValue('handling_charge', detectedHandlingCharge)}
                         className="h-8 px-2 text-xs"
                       >
                         Apply Default
@@ -540,7 +550,6 @@ export const QuoteDetailForm = ({
           </FormItem>
         )}
       />
-
     </div>
   );
 };

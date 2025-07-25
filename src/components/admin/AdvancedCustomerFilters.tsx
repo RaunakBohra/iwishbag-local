@@ -15,11 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Command,
@@ -67,29 +63,29 @@ export interface FilterPreset {
   count?: number;
 }
 
-export type FilterField = 
-  | 'name' 
-  | 'email' 
-  | 'status' 
-  | 'location' 
-  | 'joinDate' 
-  | 'totalSpent' 
-  | 'orderCount' 
-  | 'lastActivity' 
+export type FilterField =
+  | 'name'
+  | 'email'
+  | 'status'
+  | 'location'
+  | 'joinDate'
+  | 'totalSpent'
+  | 'orderCount'
+  | 'lastActivity'
   | 'healthScore';
 
-export type FilterOperator = 
-  | 'contains' 
-  | 'equals' 
-  | 'not_equals' 
-  | 'starts_with' 
+export type FilterOperator =
+  | 'contains'
+  | 'equals'
+  | 'not_equals'
+  | 'starts_with'
   | 'ends_with'
-  | 'greater_than' 
-  | 'less_than' 
-  | 'between' 
-  | 'in' 
+  | 'greater_than'
+  | 'less_than'
+  | 'between'
+  | 'in'
   | 'not_in'
-  | 'is_empty' 
+  | 'is_empty'
   | 'is_not_empty';
 
 interface AdvancedCustomerFiltersProps {
@@ -107,9 +103,7 @@ const FILTER_PRESETS: FilterPreset[] = [
     description: 'High-value customers with VIP status',
     icon: Star,
     color: 'bg-yellow-500',
-    conditions: [
-      { id: '1', field: 'status', operator: 'equals', value: 'vip' }
-    ]
+    conditions: [{ id: '1', field: 'status', operator: 'equals', value: 'vip' }],
   },
   {
     id: 'at-risk',
@@ -119,8 +113,8 @@ const FILTER_PRESETS: FilterPreset[] = [
     color: 'bg-red-500',
     conditions: [
       { id: '1', field: 'healthScore', operator: 'less_than', value: 40 },
-      { id: '2', field: 'lastActivity', operator: 'greater_than', value: 90, logic: 'AND' }
-    ]
+      { id: '2', field: 'lastActivity', operator: 'greater_than', value: 90, logic: 'AND' },
+    ],
   },
   {
     id: 'high-value',
@@ -128,9 +122,7 @@ const FILTER_PRESETS: FilterPreset[] = [
     description: 'Customers with total spent > $500',
     icon: DollarSign,
     color: 'bg-green-500',
-    conditions: [
-      { id: '1', field: 'totalSpent', operator: 'greater_than', value: 500 }
-    ]
+    conditions: [{ id: '1', field: 'totalSpent', operator: 'greater_than', value: 500 }],
   },
   {
     id: 'new-customers',
@@ -138,9 +130,7 @@ const FILTER_PRESETS: FilterPreset[] = [
     description: 'Joined in the last 30 days',
     icon: Users,
     color: 'bg-blue-500',
-    conditions: [
-      { id: '1', field: 'joinDate', operator: 'greater_than', value: 30 }
-    ]
+    conditions: [{ id: '1', field: 'joinDate', operator: 'greater_than', value: 30 }],
   },
   {
     id: 'frequent-buyers',
@@ -148,9 +138,7 @@ const FILTER_PRESETS: FilterPreset[] = [
     description: 'Customers with 3+ orders',
     icon: Zap,
     color: 'bg-purple-500',
-    conditions: [
-      { id: '1', field: 'orderCount', operator: 'greater_than', value: 3 }
-    ]
+    conditions: [{ id: '1', field: 'orderCount', operator: 'greater_than', value: 3 }],
   },
   {
     id: 'international',
@@ -158,10 +146,8 @@ const FILTER_PRESETS: FilterPreset[] = [
     description: 'Customers outside US/IN',
     icon: MapPin,
     color: 'bg-indigo-500',
-    conditions: [
-      { id: '1', field: 'location', operator: 'not_in', value: ['US', 'IN'] }
-    ]
-  }
+    conditions: [{ id: '1', field: 'location', operator: 'not_in', value: ['US', 'IN'] }],
+  },
 ];
 
 // Field configurations for dynamic filter building
@@ -212,7 +198,7 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
   onFiltersChange,
   totalCustomers,
   filteredCount,
-  isLoading = false
+  isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeConditions, setActiveConditions] = useState<FilterCondition[]>([]);
@@ -221,19 +207,25 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
   const [showPresets, setShowPresets] = useState(false);
 
   // Search with debounce
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    onFiltersChange(activeConditions, value);
-  }, [activeConditions, onFiltersChange]);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+      onFiltersChange(activeConditions, value);
+    },
+    [activeConditions, onFiltersChange],
+  );
 
   // Apply preset filter
-  const applyPreset = useCallback((preset: FilterPreset) => {
-    setActiveConditions(preset.conditions);
-    setActivePreset(preset.id);
-    setSearchQuery('');
-    onFiltersChange(preset.conditions, '');
-    setShowPresets(false);
-  }, [onFiltersChange]);
+  const applyPreset = useCallback(
+    (preset: FilterPreset) => {
+      setActiveConditions(preset.conditions);
+      setActivePreset(preset.id);
+      setSearchQuery('');
+      onFiltersChange(preset.conditions, '');
+      setShowPresets(false);
+    },
+    [onFiltersChange],
+  );
 
   // Clear all filters
   const clearAllFilters = useCallback(() => {
@@ -244,12 +236,15 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
   }, [onFiltersChange]);
 
   // Remove specific condition
-  const removeCondition = useCallback((conditionId: string) => {
-    const newConditions = activeConditions.filter(c => c.id !== conditionId);
-    setActiveConditions(newConditions);
-    setActivePreset(null); // Clear preset if manually editing
-    onFiltersChange(newConditions, searchQuery);
-  }, [activeConditions, searchQuery, onFiltersChange]);
+  const removeCondition = useCallback(
+    (conditionId: string) => {
+      const newConditions = activeConditions.filter((c) => c.id !== conditionId);
+      setActiveConditions(newConditions);
+      setActivePreset(null); // Clear preset if manually editing
+      onFiltersChange(newConditions, searchQuery);
+    },
+    [activeConditions, searchQuery, onFiltersChange],
+  );
 
   // Add new condition
   const addCondition = useCallback(() => {
@@ -258,7 +253,7 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
       field: 'name',
       operator: 'contains',
       value: '',
-      logic: activeConditions.length > 0 ? 'AND' : undefined
+      logic: activeConditions.length > 0 ? 'AND' : undefined,
     };
     const newConditions = [...activeConditions, newCondition];
     setActiveConditions(newConditions);
@@ -267,14 +262,17 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
   }, [activeConditions]);
 
   // Update condition
-  const updateCondition = useCallback((conditionId: string, updates: Partial<FilterCondition>) => {
-    const newConditions = activeConditions.map(c =>
-      c.id === conditionId ? { ...c, ...updates } : c
-    );
-    setActiveConditions(newConditions);
-    setActivePreset(null);
-    onFiltersChange(newConditions, searchQuery);
-  }, [activeConditions, searchQuery, onFiltersChange]);
+  const updateCondition = useCallback(
+    (conditionId: string, updates: Partial<FilterCondition>) => {
+      const newConditions = activeConditions.map((c) =>
+        c.id === conditionId ? { ...c, ...updates } : c,
+      );
+      setActiveConditions(newConditions);
+      setActivePreset(null);
+      onFiltersChange(newConditions, searchQuery);
+    },
+    [activeConditions, searchQuery, onFiltersChange],
+  );
 
   // Get available operators for field type
   const getOperatorsForField = (field: FilterField) => {
@@ -294,7 +292,9 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
           {index > 0 && (
             <Select
               value={condition.logic || 'AND'}
-              onValueChange={(value) => updateCondition(condition.id, { logic: value as 'AND' | 'OR' })}
+              onValueChange={(value) =>
+                updateCondition(condition.id, { logic: value as 'AND' | 'OR' })
+              }
             >
               <SelectTrigger className="w-20 h-8">
                 <SelectValue />
@@ -309,11 +309,13 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
           {/* Field selector */}
           <Select
             value={condition.field}
-            onValueChange={(value) => updateCondition(condition.id, { 
-              field: value as FilterField,
-              operator: 'contains',
-              value: ''
-            })}
+            onValueChange={(value) =>
+              updateCondition(condition.id, {
+                field: value as FilterField,
+                operator: 'contains',
+                value: '',
+              })
+            }
           >
             <SelectTrigger className="w-40 h-8">
               <SelectValue />
@@ -330,13 +332,15 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
           {/* Operator selector */}
           <Select
             value={condition.operator}
-            onValueChange={(value) => updateCondition(condition.id, { operator: value as FilterOperator })}
+            onValueChange={(value) =>
+              updateCondition(condition.id, { operator: value as FilterOperator })
+            }
           >
             <SelectTrigger className="w-36 h-8">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {operators.map(op => (
+              {operators.map((op) => (
                 <SelectItem key={op.value} value={op.value}>
                   {op.label}
                 </SelectItem>
@@ -354,7 +358,7 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
               <SelectContent>
-                {fieldConfig.options.map(option => (
+                {fieldConfig.options.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option.charAt(0).toUpperCase() + option.slice(1)}
                   </SelectItem>
@@ -387,9 +391,9 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
 
   // Calculate preset counts (mock data for now)
   const presetsWithCounts = useMemo(() => {
-    return FILTER_PRESETS.map(preset => ({
+    return FILTER_PRESETS.map((preset) => ({
       ...preset,
-      count: Math.floor(totalCustomers * Math.random() * 0.3) // Mock calculation
+      count: Math.floor(totalCustomers * Math.random() * 0.3), // Mock calculation
     }));
   }, [totalCustomers]);
 
@@ -448,8 +452,18 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
                         onSelect={() => applyPreset(preset)}
                         className="flex items-center space-x-3 p-3 cursor-pointer"
                       >
-                        <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", preset.color.replace('bg-', 'bg-').replace('-500', '-100'))}>
-                          <Icon className={cn("h-4 w-4", preset.color.replace('bg-', 'text-').replace('-500', '-600'))} />
+                        <div
+                          className={cn(
+                            'w-8 h-8 rounded-full flex items-center justify-center',
+                            preset.color.replace('bg-', 'bg-').replace('-500', '-100'),
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              'h-4 w-4',
+                              preset.color.replace('bg-', 'text-').replace('-500', '-600'),
+                            )}
+                          />
                         </div>
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">{preset.name}</div>
@@ -472,8 +486,8 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
           variant="outline"
           onClick={() => setShowAdvanced(!showAdvanced)}
           className={cn(
-            "border-gray-300",
-            showAdvanced && "bg-blue-50 border-blue-300 text-blue-700"
+            'border-gray-300',
+            showAdvanced && 'bg-blue-50 border-blue-300 text-blue-700',
           )}
         >
           <Filter className="h-4 w-4 mr-2" />
@@ -502,13 +516,10 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
       {hasActiveFilters && (
         <div className="flex items-center space-x-2 flex-wrap">
           <span className="text-sm text-gray-600 font-medium">Active filters:</span>
-          
+
           {/* Search query chip */}
           {searchQuery && (
-            <Badge
-              variant="outline"
-              className="bg-blue-50 border-blue-300 text-blue-700 pr-1"
-            >
+            <Badge variant="outline" className="bg-blue-50 border-blue-300 text-blue-700 pr-1">
               Search: "{searchQuery}"
               <Button
                 variant="ghost"
@@ -527,7 +538,7 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
               variant="outline"
               className="bg-purple-50 border-purple-300 text-purple-700 pr-1"
             >
-              {presetsWithCounts.find(p => p.id === activePreset)?.name}
+              {presetsWithCounts.find((p) => p.id === activePreset)?.name}
               <Button
                 variant="ghost"
                 size="sm"
@@ -547,7 +558,11 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
               className="bg-gray-50 border-gray-300 text-gray-700 pr-1"
             >
               {index > 0 && <span className="text-xs mr-1">{condition.logic}</span>}
-              {FILTER_FIELDS[condition.field].label} {getOperatorsForField(condition.field).find(op => op.value === condition.operator)?.label.toLowerCase()} {condition.value}
+              {FILTER_FIELDS[condition.field].label}{' '}
+              {getOperatorsForField(condition.field)
+                .find((op) => op.value === condition.operator)
+                ?.label.toLowerCase()}{' '}
+              {condition.value}
               <Button
                 variant="ghost"
                 size="sm"
@@ -578,12 +593,7 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-gray-900">Advanced Filters</h4>
               <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addCondition}
-                  className="h-8"
-                >
+                <Button variant="outline" size="sm" onClick={addCondition} className="h-8">
                   <Plus className="h-4 w-4 mr-1" />
                   Add Condition
                 </Button>
@@ -592,20 +602,15 @@ export const AdvancedCustomerFilters: React.FC<AdvancedCustomerFiltersProps> = (
 
             {activeConditions.length > 0 ? (
               <div className="space-y-2">
-                {activeConditions.map((condition, index) => 
-                  renderConditionEditor(condition, index)
+                {activeConditions.map((condition, index) =>
+                  renderConditionEditor(condition, index),
                 )}
               </div>
             ) : (
               <div className="text-center py-6 text-gray-500">
                 <Filter className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No advanced filters applied</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addCondition}
-                  className="mt-2 h-8"
-                >
+                <Button variant="outline" size="sm" onClick={addCondition} className="mt-2 h-8">
                   Add your first condition
                 </Button>
               </div>

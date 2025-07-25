@@ -91,7 +91,15 @@ interface WorldClassCustomerTableProps {
   onViewOrders?: (customerId: string) => void;
 }
 
-type SortField = 'name' | 'email' | 'location' | 'joinDate' | 'totalSpent' | 'orders' | 'lastActivity' | 'status';
+type SortField =
+  | 'name'
+  | 'email'
+  | 'location'
+  | 'joinDate'
+  | 'totalSpent'
+  | 'orders'
+  | 'lastActivity'
+  | 'status';
 type SortDirection = 'asc' | 'desc';
 
 export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = ({
@@ -137,7 +145,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
     const name = customer.full_name || customer.email || 'User';
     return name
       .split(' ')
-      .map(word => word.charAt(0))
+      .map((word) => word.charAt(0))
       .slice(0, 2)
       .join('')
       .toUpperCase();
@@ -148,7 +156,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays <= 7) return `${diffDays}d ago`;
@@ -157,31 +165,36 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   const getCustomerHealthScore = (customer: Customer, analytics?: CustomerAnalytics) => {
-    const daysSinceJoin = Math.ceil((new Date().getTime() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceJoin = Math.ceil(
+      (new Date().getTime() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24),
+    );
     const orderCount = analytics?.orderCount || 0;
     const totalSpent = analytics?.totalSpent || 0;
-    const lastActivityDays = analytics ? Math.ceil((new Date().getTime() - analytics.lastActivity.getTime()) / (1000 * 60 * 60 * 24)) : daysSinceJoin;
+    const lastActivityDays = analytics
+      ? Math.ceil((new Date().getTime() - analytics.lastActivity.getTime()) / (1000 * 60 * 60 * 24))
+      : daysSinceJoin;
 
     // Calculate health score (0-100)
     let score = 50; // Base score
-    
+
     // Boost for orders and spending
     score += Math.min(orderCount * 10, 30); // Up to +30 for orders
     score += Math.min(totalSpent / 100, 20); // Up to +20 for spending
-    
+
     // Penalty for inactivity
     if (lastActivityDays > 90) score -= 30;
     else if (lastActivityDays > 30) score -= 15;
     else if (lastActivityDays <= 7) score += 10;
-    
+
     // VIP bonus
     if (customer.internal_notes?.includes('VIP')) score += 20;
-    
+
     return Math.max(0, Math.min(100, score));
   };
 
   const getHealthIndicator = (score: number) => {
-    if (score >= 80) return { color: 'bg-green-500', label: 'Excellent', textColor: 'text-green-700' };
+    if (score >= 80)
+      return { color: 'bg-green-500', label: 'Excellent', textColor: 'text-green-700' };
     if (score >= 60) return { color: 'bg-blue-500', label: 'Good', textColor: 'text-blue-700' };
     if (score >= 40) return { color: 'bg-yellow-500', label: 'Fair', textColor: 'text-yellow-700' };
     return { color: 'bg-red-500', label: 'At Risk', textColor: 'text-red-700' };
@@ -189,12 +202,24 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
   const getCustomerStatus = (customer: Customer) => {
     if (customer.internal_notes?.includes('VIP')) {
-      return { label: 'VIP', className: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: Star };
+      return {
+        label: 'VIP',
+        className: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+        icon: Star,
+      };
     }
     if (customer.cod_enabled) {
-      return { label: 'Active', className: 'bg-green-100 text-green-800 border-green-300', icon: Activity };
+      return {
+        label: 'Active',
+        className: 'bg-green-100 text-green-800 border-green-300',
+        icon: Activity,
+      };
     }
-    return { label: 'Inactive', className: 'bg-gray-100 text-gray-800 border-gray-300', icon: Clock };
+    return {
+      label: 'Inactive',
+      className: 'bg-gray-100 text-gray-800 border-gray-300',
+      icon: Clock,
+    };
   };
 
   // Apply filter conditions
@@ -207,13 +232,13 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
     for (const condition of filterConditions) {
       const conditionResult = evaluateCondition(customer, analytics, condition);
-      
+
       if (currentLogic === 'AND') {
         result = result && conditionResult;
       } else {
         result = result || conditionResult;
       }
-      
+
       // Set logic for next condition
       if (condition.logic) {
         currentLogic = condition.logic;
@@ -224,7 +249,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   // Evaluate individual filter condition
-  const evaluateCondition = (customer: Customer, analytics: CustomerAnalytics | undefined, condition: FilterCondition): boolean => {
+  const evaluateCondition = (
+    customer: Customer,
+    analytics: CustomerAnalytics | undefined,
+    condition: FilterCondition,
+  ): boolean => {
     const { field, operator, value } = condition;
     let fieldValue: any;
 
@@ -245,7 +274,9 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         fieldValue = customer.user_addresses[0]?.country || '';
         break;
       case 'joinDate':
-        const daysSinceJoin = Math.ceil((new Date().getTime() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceJoin = Math.ceil(
+          (new Date().getTime() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24),
+        );
         fieldValue = daysSinceJoin;
         break;
       case 'totalSpent':
@@ -255,7 +286,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         fieldValue = analytics?.orderCount || 0;
         break;
       case 'lastActivity':
-        const lastActivityDays = analytics ? Math.ceil((new Date().getTime() - analytics.lastActivity.getTime()) / (1000 * 60 * 60 * 24)) : Infinity;
+        const lastActivityDays = analytics
+          ? Math.ceil(
+              (new Date().getTime() - analytics.lastActivity.getTime()) / (1000 * 60 * 60 * 24),
+            )
+          : Infinity;
         fieldValue = lastActivityDays;
         break;
       case 'healthScore':
@@ -296,30 +331,32 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
   // Sorting and filtering
   const sortedAndFilteredCustomers = useMemo(() => {
-    let filtered = customers.filter(customer => {
-      const analytics = customerAnalytics.find(ca => ca.customerId === customer.id);
-      
+    const filtered = customers.filter((customer) => {
+      const analytics = customerAnalytics.find((ca) => ca.customerId === customer.id);
+
       // Search filter
       const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || 
-        (customer.full_name?.toLowerCase().includes(searchLower)) ||
+      const matchesSearch =
+        !searchQuery ||
+        customer.full_name?.toLowerCase().includes(searchLower) ||
         customer.email.toLowerCase().includes(searchLower) ||
-        customer.user_addresses.some(addr => 
-          addr.city?.toLowerCase().includes(searchLower) || 
-          addr.country?.toLowerCase().includes(searchLower)
+        customer.user_addresses.some(
+          (addr) =>
+            addr.city?.toLowerCase().includes(searchLower) ||
+            addr.country?.toLowerCase().includes(searchLower),
         );
-      
+
       // Advanced filter conditions
       const matchesConditions = applyFilterConditions(customer, analytics);
-      
+
       return matchesSearch && matchesConditions;
     });
 
     // Sorting
     return filtered.sort((a, b) => {
       let aValue: any, bValue: any;
-      const aAnalytics = customerAnalytics.find(ca => ca.customerId === a.id);
-      const bAnalytics = customerAnalytics.find(ca => ca.customerId === b.id);
+      const aAnalytics = customerAnalytics.find((ca) => ca.customerId === a.id);
+      const bAnalytics = customerAnalytics.find((ca) => ca.customerId === b.id);
 
       switch (sortField) {
         case 'name':
@@ -362,7 +399,15 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [customers, customerAnalytics, searchQuery, filterConditions, sortField, sortDirection, applyFilterConditions]);
+  }, [
+    customers,
+    customerAnalytics,
+    searchQuery,
+    filterConditions,
+    sortField,
+    sortDirection,
+    applyFilterConditions,
+  ]);
 
   // Selection handlers
   const handleSelectAll = () => {
@@ -370,16 +415,16 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
       setSelectedCustomers([]);
       setShowBulkActions(false);
     } else {
-      setSelectedCustomers(sortedAndFilteredCustomers.map(c => c.id));
+      setSelectedCustomers(sortedAndFilteredCustomers.map((c) => c.id));
       setShowBulkActions(true);
     }
   };
 
   const handleSelectCustomer = (customerId: string) => {
     const newSelection = selectedCustomers.includes(customerId)
-      ? selectedCustomers.filter(id => id !== customerId)
+      ? selectedCustomers.filter((id) => id !== customerId)
       : [...selectedCustomers, customerId];
-    
+
     setSelectedCustomers(newSelection);
     setShowBulkActions(newSelection.length > 0);
   };
@@ -396,9 +441,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
-    return sortDirection === 'asc' ? 
-      <ArrowUp className="w-4 h-4 text-blue-600" /> : 
-      <ArrowDown className="w-4 h-4 text-blue-600" />;
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="w-4 h-4 text-blue-600" />
+    ) : (
+      <ArrowDown className="w-4 h-4 text-blue-600" />
+    );
   };
 
   if (isLoading) {
@@ -434,7 +481,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              {sortedAndFilteredCustomers.length} Customer{sortedAndFilteredCustomers.length !== 1 ? 's' : ''}
+              {sortedAndFilteredCustomers.length} Customer
+              {sortedAndFilteredCustomers.length !== 1 ? 's' : ''}
             </h2>
             {selectedCustomers.length > 0 && (
               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
@@ -442,17 +490,13 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               </Badge>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" onClick={onExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => onAddCustomer?.()}
-            >
+            <Button variant="outline" size="sm" onClick={() => onAddCustomer?.()}>
               <UserPlus className="w-4 h-4 mr-2" />
               Add Customer
             </Button>
@@ -474,39 +518,40 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         {showBulkActions && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
             <span className="text-sm text-blue-700">
-              {selectedCustomers.length} customer{selectedCustomers.length !== 1 ? 's' : ''} selected
+              {selectedCustomers.length} customer{selectedCustomers.length !== 1 ? 's' : ''}{' '}
+              selected
             </span>
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-blue-700 border-blue-300"
                 onClick={() => onBulkEmail?.(selectedCustomers)}
               >
                 <Mail className="w-4 h-4 mr-2" />
                 Email
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-blue-700 border-blue-300"
                 onClick={() => onBulkTag?.(selectedCustomers)}
               >
                 <Tag className="w-4 h-4 mr-2" />
                 Tag
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-blue-700 border-blue-300"
                 onClick={() => onBulkExport?.(selectedCustomers)}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Export Selected
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setSelectedCustomers([]);
                   setShowBulkActions(false);
@@ -527,11 +572,14 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
             <TableRow className="bg-gray-50 border-b border-gray-200">
               <TableHead className="w-12 px-6">
                 <Checkbox
-                  checked={selectedCustomers.length === sortedAndFilteredCustomers.length && sortedAndFilteredCustomers.length > 0}
+                  checked={
+                    selectedCustomers.length === sortedAndFilteredCustomers.length &&
+                    sortedAndFilteredCustomers.length > 0
+                  }
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="px-6 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('name')}
               >
@@ -540,7 +588,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                   {getSortIcon('name')}
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="px-6 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('location')}
               >
@@ -549,7 +597,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                   {getSortIcon('location')}
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="px-6 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('orders')}
               >
@@ -558,7 +606,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                   {getSortIcon('orders')}
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="px-6 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('totalSpent')}
               >
@@ -567,7 +615,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                   {getSortIcon('totalSpent')}
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="px-6 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('lastActivity')}
               >
@@ -576,7 +624,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                   {getSortIcon('lastActivity')}
                 </div>
               </TableHead>
-              <TableHead 
+              <TableHead
                 className="px-6 cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('status')}
               >
@@ -592,7 +640,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
           </TableHeader>
           <TableBody>
             {sortedAndFilteredCustomers.map((customer) => {
-              const analytics = customerAnalytics.find(ca => ca.customerId === customer.id);
+              const analytics = customerAnalytics.find((ca) => ca.customerId === customer.id);
               const healthScore = getCustomerHealthScore(customer, analytics);
               const healthIndicator = getHealthIndicator(healthScore);
               const status = getCustomerStatus(customer);
@@ -600,11 +648,11 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               const primaryAddress = customer.user_addresses?.[0];
 
               return (
-                <TableRow 
+                <TableRow
                   key={customer.id}
                   className={cn(
-                    "border-b border-gray-100 hover:bg-gray-50 transition-colors",
-                    isSelected && "bg-blue-50 border-blue-200"
+                    'border-b border-gray-100 hover:bg-gray-50 transition-colors',
+                    isSelected && 'bg-blue-50 border-blue-200',
                   )}
                 >
                   <TableCell className="px-6">
@@ -613,13 +661,13 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                       onCheckedChange={() => handleSelectCustomer(customer.id)}
                     />
                   </TableCell>
-                  
+
                   <TableCell className="px-6">
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
                         {getCustomerAvatarUrl(customer) && (
-                          <AvatarImage 
-                            src={getCustomerAvatarUrl(customer)!} 
+                          <AvatarImage
+                            src={getCustomerAvatarUrl(customer)!}
                             alt={customer.full_name || customer.email}
                             className="object-cover"
                           />
@@ -629,7 +677,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div 
+                        <div
                           className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
                           onClick={() => navigate(`/admin/customers/${customer.id}`)}
                         >
@@ -644,7 +692,9 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                     <div className="flex items-center space-x-1 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
                       <span>
-                        {primaryAddress ? `${primaryAddress.city}, ${primaryAddress.country}` : 'No address'}
+                        {primaryAddress
+                          ? `${primaryAddress.city}, ${primaryAddress.country}`
+                          : 'No address'}
                       </span>
                     </div>
                   </TableCell>
@@ -669,22 +719,21 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
 
                   <TableCell className="px-6">
                     <span className="text-sm text-gray-600">
-                      {analytics ? formatDate(analytics.lastActivity.toISOString()) : formatDate(customer.created_at)}
+                      {analytics
+                        ? formatDate(analytics.lastActivity.toISOString())
+                        : formatDate(customer.created_at)}
                     </span>
                   </TableCell>
 
                   <TableCell className="px-6">
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center space-x-2">
-                        <div className={cn("w-2 h-2 rounded-full", healthIndicator.color)} />
-                        <span className={cn("text-xs font-medium", healthIndicator.textColor)}>
+                        <div className={cn('w-2 h-2 rounded-full', healthIndicator.color)} />
+                        <span className={cn('text-xs font-medium', healthIndicator.textColor)}>
                           {healthScore}%
                         </span>
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={cn("text-xs", status.className)}
-                      >
+                      <Badge variant="outline" className={cn('text-xs', status.className)}>
                         {status.label}
                       </Badge>
                     </div>
@@ -698,7 +747,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           onClick={() => navigate(`/admin/customers/${customer.id}`)}
                           className="cursor-pointer"
                         >
@@ -757,8 +806,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               : 'Customers will appear here when users sign up.'}
           </p>
           {searchQuery || filterConditions.length > 0 ? (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setSearchQuery('');
                 setFilterConditions([]);

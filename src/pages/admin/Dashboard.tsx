@@ -21,6 +21,7 @@ import { SimpleEnhancedAnalytics } from '@/components/admin/SimpleEnhancedAnalyt
 import { SimpleShareStats } from '@/components/admin/SimpleShareStats';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { SystemHealthCheck } from '@/components/admin/SystemHealthCheck';
+import { PermissionsTestCard } from '@/components/admin/PermissionsTestCard';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -275,15 +276,20 @@ const AdminDashboard = () => {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Dashboard Overview</TabsTrigger>
           <TabsTrigger value="health-check">System Health Check</TabsTrigger>
+          <TabsTrigger value="permissions-test">Permissions Test</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="health-check" className="space-y-6">
           <SystemHealthCheck />
         </TabsContent>
-        
+
+        <TabsContent value="permissions-test" className="space-y-6">
+          <PermissionsTestCard />
+        </TabsContent>
+
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>

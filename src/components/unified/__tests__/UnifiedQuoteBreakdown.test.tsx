@@ -55,17 +55,17 @@ const mockQuoteWithBreakdown: UnifiedQuote = {
   created_at: '2024-01-15T10:00:00Z',
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 159.99,
-  item_price: 120.00,
-  sales_tax_price: 9.60,
-  merchant_shipping_price: 8.00,
-  international_shipping: 15.00,
-  customs_and_ecs: 4.80,
+  item_price: 120.0,
+  sales_tax_price: 9.6,
+  merchant_shipping_price: 8.0,
+  international_shipping: 15.0,
+  customs_and_ecs: 4.8,
   domestic_shipping: 2.59,
-  handling_charge: 5.00,
-  insurance_amount: 3.00,
-  payment_gateway_fee: 2.50,
-  vat: 1.50,
-  discount: 12.00,
+  handling_charge: 5.0,
+  insurance_amount: 3.0,
+  payment_gateway_fee: 2.5,
+  vat: 1.5,
+  discount: 12.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -73,8 +73,8 @@ const mockQuoteWithBreakdown: UnifiedQuote = {
     info: {
       name: 'John Doe',
       email: 'john@example.com',
-      phone: '+1234567890'
-    }
+      phone: '+1234567890',
+    },
   },
   items: [
     {
@@ -82,16 +82,16 @@ const mockQuoteWithBreakdown: UnifiedQuote = {
       name: 'Test Product',
       description: 'A great test product',
       quantity: 2,
-      price: 60.00,
+      price: 60.0,
       product_url: 'https://amazon.com/test-product',
-      image_url: 'https://example.com/image.jpg'
-    }
-  ]
+      image_url: 'https://example.com/image.jpg',
+    },
+  ],
 };
 
 // Helper function to render component with providers
 const renderUnifiedQuoteBreakdown = (
-  props: Partial<Parameters<typeof UnifiedQuoteBreakdown>[0]> = {}
+  props: Partial<Parameters<typeof UnifiedQuoteBreakdown>[0]> = {},
 ) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -113,7 +113,7 @@ const renderUnifiedQuoteBreakdown = (
           <UnifiedQuoteBreakdown {...defaultProps} />
         </QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -163,7 +163,7 @@ describe('UnifiedQuoteBreakdown', () => {
 
       // Customer view should show 2 decimal places
       expect(screen.getByText('$120.00')).toBeInTheDocument(); // Item cost
-      expect(screen.getByText('$9.60')).toBeInTheDocument();   // Sales tax
+      expect(screen.getByText('$9.60')).toBeInTheDocument(); // Sales tax
     });
 
     it('should display amounts with higher precision for admin view', () => {
@@ -171,19 +171,19 @@ describe('UnifiedQuoteBreakdown', () => {
 
       // Admin view should show 4 decimal places (though test might show 2 if amount is whole)
       expect(screen.getByText('$120.0000')).toBeInTheDocument(); // Item cost
-      expect(screen.getByText('$9.6000')).toBeInTheDocument();   // Sales tax
+      expect(screen.getByText('$9.6000')).toBeInTheDocument(); // Sales tax
     });
 
     it('should handle very small amounts correctly', () => {
       const quoteWithSmallAmounts = {
         ...mockQuoteWithBreakdown,
         payment_gateway_fee: 0.001,
-        insurance_amount: 0.0001
+        insurance_amount: 0.0001,
       };
 
-      renderUnifiedQuoteBreakdown({ 
+      renderUnifiedQuoteBreakdown({
         quote: quoteWithSmallAmounts,
-        viewMode: 'admin' 
+        viewMode: 'admin',
       });
 
       expect(screen.getByText('$0.0010')).toBeInTheDocument(); // Gateway fee
@@ -221,7 +221,7 @@ describe('UnifiedQuoteBreakdown', () => {
     it('should validate currency amounts', () => {
       const invalidQuote = {
         ...mockQuoteWithBreakdown,
-        final_total_usd: -100 // Invalid negative amount
+        final_total_usd: -100, // Invalid negative amount
       };
 
       renderUnifiedQuoteBreakdown({ quote: invalidQuote });
@@ -233,7 +233,7 @@ describe('UnifiedQuoteBreakdown', () => {
     it('should handle extremely large amounts', () => {
       const quoteWithLargeAmount = {
         ...mockQuoteWithBreakdown,
-        final_total_usd: 1500000 // Very large amount
+        final_total_usd: 1500000, // Very large amount
       };
 
       renderUnifiedQuoteBreakdown({ quote: quoteWithLargeAmount });
@@ -246,13 +246,13 @@ describe('UnifiedQuoteBreakdown', () => {
       const inconsistentQuote = {
         ...mockQuoteWithBreakdown,
         // Manually set total that doesn't match calculated total
-        final_total_usd: 200.00 // Different from calculated total
+        final_total_usd: 200.0, // Different from calculated total
       };
 
-      renderUnifiedQuoteBreakdown({ 
+      renderUnifiedQuoteBreakdown({
         quote: inconsistentQuote,
         viewMode: 'admin',
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       // Admin should see calculation variance warning
@@ -266,7 +266,7 @@ describe('UnifiedQuoteBreakdown', () => {
 
       renderUnifiedQuoteBreakdown({
         enableRealTimeUpdates: true,
-        onAmountChange: mockOnAmountChange
+        onAmountChange: mockOnAmountChange,
       });
 
       // Should call callback with final total
@@ -280,7 +280,7 @@ describe('UnifiedQuoteBreakdown', () => {
 
       renderUnifiedQuoteBreakdown({
         enableRealTimeUpdates: false,
-        onAmountChange: mockOnAmountChange
+        onAmountChange: mockOnAmountChange,
       });
 
       // Should not call callback
@@ -294,7 +294,7 @@ describe('UnifiedQuoteBreakdown', () => {
       const mockOnLineItemClick = vi.fn();
 
       renderUnifiedQuoteBreakdown({
-        onLineItemClick: mockOnLineItemClick
+        onLineItemClick: mockOnLineItemClick,
       });
 
       const itemCostRow = screen.getByText('Item Cost').closest('div');
@@ -304,8 +304,8 @@ describe('UnifiedQuoteBreakdown', () => {
         expect.objectContaining({
           id: 'item-cost',
           label: 'Item Cost',
-          amount: 120.00
-        })
+          amount: 120.0,
+        }),
       );
     });
 
@@ -314,7 +314,7 @@ describe('UnifiedQuoteBreakdown', () => {
 
       renderUnifiedQuoteBreakdown({
         allowExpansion: true,
-        compact: true
+        compact: true,
       });
 
       const expandButton = screen.getByText('Expand');
@@ -335,12 +335,12 @@ describe('UnifiedQuoteBreakdown', () => {
     it('should not show savings section when no discounts', () => {
       const quoteWithoutDiscount = {
         ...mockQuoteWithBreakdown,
-        discount: 0
+        discount: 0,
       };
 
-      renderUnifiedQuoteBreakdown({ 
+      renderUnifiedQuoteBreakdown({
         quote: quoteWithoutDiscount,
-        showSavings: true 
+        showSavings: true,
       });
 
       expect(screen.queryByText('You save')).not.toBeInTheDocument();
@@ -359,13 +359,13 @@ describe('UnifiedQuoteBreakdown', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       renderUnifiedQuoteBreakdown({
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       await waitFor(() => {
         expect(consoleSpy).toHaveBeenCalledWith(
           expect.stringContaining('UnifiedQuoteBreakdown Performance:'),
-          expect.any(Object)
+          expect.any(Object),
         );
       });
 
@@ -376,7 +376,7 @@ describe('UnifiedQuoteBreakdown', () => {
       const performanceSpy = vi.spyOn(performance, 'now');
 
       renderUnifiedQuoteBreakdown({
-        performanceMode: 'detailed'
+        performanceMode: 'detailed',
       });
 
       expect(performanceSpy).toHaveBeenCalled();
@@ -397,7 +397,7 @@ describe('UnifiedQuoteBreakdown', () => {
     it('should handle missing currency conversion', () => {
       const quoteWithoutCurrency = {
         ...mockQuoteWithBreakdown,
-        final_total_usd: undefined as any
+        final_total_usd: undefined as any,
       };
 
       renderUnifiedQuoteBreakdown({ quote: quoteWithoutCurrency });
@@ -420,7 +420,7 @@ describe('UnifiedQuoteBreakdown', () => {
       // Breakdown items should be in a structured list or table format
       const itemCost = screen.getByText('Item Cost');
       const itemCostValue = screen.getByText('$120.00');
-      
+
       expect(itemCost).toBeInTheDocument();
       expect(itemCostValue).toBeInTheDocument();
     });
@@ -430,11 +430,11 @@ describe('UnifiedQuoteBreakdown', () => {
       const mockOnLineItemClick = vi.fn();
 
       renderUnifiedQuoteBreakdown({
-        onLineItemClick: mockOnLineItemClick
+        onLineItemClick: mockOnLineItemClick,
       });
 
       const itemCostRow = screen.getByText('Item Cost').closest('div');
-      
+
       // Should be focusable and clickable with keyboard
       itemCostRow?.focus();
       await user.keyboard('{Enter}');
@@ -471,9 +471,9 @@ describe('UnifiedQuoteBreakdown', () => {
     it('should expand to full breakdown when toggled', async () => {
       const user = userEvent.setup();
 
-      renderUnifiedQuoteBreakdown({ 
+      renderUnifiedQuoteBreakdown({
         compact: true,
-        allowExpansion: true
+        allowExpansion: true,
       });
 
       const expandButton = screen.getByText('Expand');

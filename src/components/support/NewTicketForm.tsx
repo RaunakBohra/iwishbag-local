@@ -73,8 +73,8 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
 
   // Get user's quotes and orders for dropdown selection
   const { quotes, orders } = useDashboardState();
-  const userQuotes = [...(quotes || []), ...(orders || [])].filter(quote => 
-    quote && quote.id && quote.destination_country
+  const userQuotes = [...(quotes || []), ...(orders || [])].filter(
+    (quote) => quote && quote.id && quote.destination_country,
   );
 
   const form = useForm<NewTicketForm>({
@@ -90,9 +90,10 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
   const selectedQuoteId = form.watch('quote_id');
 
   // Find selected quote for context display
-  const selectedQuote: QuoteWithTracking | null = selectedQuoteId && selectedQuoteId !== 'none'
-    ? (userQuotes.find(quote => quote.id === selectedQuoteId) as QuoteWithTracking)
-    : null;
+  const selectedQuote: QuoteWithTracking | null =
+    selectedQuoteId && selectedQuoteId !== 'none'
+      ? (userQuotes.find((quote) => quote.id === selectedQuoteId) as QuoteWithTracking)
+      : null;
 
   const onSubmit = async (values: NewTicketForm) => {
     if (!user) {
@@ -100,18 +101,21 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       return;
     }
 
-    createTicket({
-      subject: values.subject,
-      description: values.description,
-      priority: values.priority || 'medium', // Default to medium for customer tickets
-      category: values.category,
-      quote_id: values.quote_id && values.quote_id !== 'none' ? values.quote_id : undefined,
-    }, {
-      onSuccess: () => {
-        form.reset();
-        onSuccess?.();
-      }
-    });
+    createTicket(
+      {
+        subject: values.subject,
+        description: values.description,
+        priority: values.priority || 'medium', // Default to medium for customer tickets
+        category: values.category,
+        quote_id: values.quote_id && values.quote_id !== 'none' ? values.quote_id : undefined,
+      },
+      {
+        onSuccess: () => {
+          form.reset();
+          onSuccess?.();
+        },
+      },
+    );
   };
 
   return (
@@ -152,7 +156,6 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
               )}
             />
 
-
             {/* Order Selection - Always shown if quotes exist */}
             {userQuotes.length > 0 && (
               <FormField
@@ -192,16 +195,16 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-medium text-blue-900">Order Details</h4>
-                      <Badge variant={selectedQuote.status === 'delivered' ? 'default' : 'secondary'}>
+                      <Badge
+                        variant={selectedQuote.status === 'delivered' ? 'default' : 'secondary'}
+                      >
                         {selectedQuote.status}
                       </Badge>
                       {selectedQuote.tracking_status && (
-                        <Badge variant="outline">
-                          {selectedQuote.tracking_status}
-                        </Badge>
+                        <Badge variant="outline">{selectedQuote.tracking_status}</Badge>
                       )}
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-800">
                       {selectedQuote.iwish_tracking_id && (
                         <div className="flex items-center gap-2">
@@ -209,38 +212,42 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
                           <span>ID: {selectedQuote.iwish_tracking_id}</span>
                         </div>
                       )}
-                      
+
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
                         <span>To: {selectedQuote.destination_country}</span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
                         <span>Total: ${selectedQuote.final_total_usd?.toFixed(2) || 'N/A'}</span>
                       </div>
-                      
+
                       {selectedQuote.estimated_delivery_date && (
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
-                          <span>Est. Delivery: {new Date(selectedQuote.estimated_delivery_date).toLocaleDateString()}</span>
+                          <span>
+                            Est. Delivery:{' '}
+                            {new Date(selectedQuote.estimated_delivery_date).toLocaleDateString()}
+                          </span>
                         </div>
                       )}
                     </div>
-                    
+
                     {selectedQuote.items && (
                       <div className="mt-2 text-xs text-blue-700">
-                        Items: {Array.isArray(selectedQuote.items) 
-                          ? selectedQuote.items.map((item: any) => item?.name || 'Unnamed item').join(', ')
-                          : 'Product details available'
-                        }
+                        Items:{' '}
+                        {Array.isArray(selectedQuote.items)
+                          ? selectedQuote.items
+                              .map((item: any) => item?.name || 'Unnamed item')
+                              .join(', ')
+                          : 'Product details available'}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             )}
-
 
             {/* Subject */}
             <FormField

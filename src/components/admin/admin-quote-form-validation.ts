@@ -22,6 +22,8 @@ export const adminQuoteItemSchema = z.object({
   customer_notes: z.string().optional().nullable(),
   product_url: z.string().optional().nullable(),
   image_url: z.string().optional().nullable(),
+  hsn_code: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
 });
 
 export const adminQuoteFormSchema = z.object({

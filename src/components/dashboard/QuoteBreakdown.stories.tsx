@@ -25,72 +25,71 @@ const createMockQuote = (overrides = {}) => ({
   destination_currency: 'INR',
   final_total_usd: 150.99,
   final_total_local: 12574.17,
-  item_price: 120.00,
-  sales_tax_price: 8.40,
-  international_shipping: 25.00,
-  customs_and_ecs: 18.90,
-  domestic_shipping: 15.00,
-  handling_charge: 10.00,
-  insurance_amount: 5.50,
-  payment_gateway_fee: 4.60,
-  vat: 3.00,
-  discount: 0.00,
+  item_price: 120.0,
+  sales_tax_price: 8.4,
+  international_shipping: 25.0,
+  customs_and_ecs: 18.9,
+  domestic_shipping: 15.0,
+  handling_charge: 10.0,
+  insurance_amount: 5.5,
+  payment_gateway_fee: 4.6,
+  vat: 3.0,
+  discount: 0.0,
   sub_total: 147.99,
   exchange_rate: 83.28,
   created_at: '2025-01-15T10:30:00Z',
   updated_at: '2025-01-15T11:45:00Z',
   expires_at: '2025-01-22T10:30:00Z',
   breakdown: {
-    itemPrice: 120.00,
-    salesTax: 8.40,
+    itemPrice: 120.0,
+    salesTax: 8.4,
     merchantShipping: 12.59,
-    internationalShipping: 25.00,
-    customsAndEcs: 18.90,
-    domesticShipping: 15.00,
-    handlingCharge: 10.00,
-    insurance: 5.50,
-    paymentGatewayFee: 4.60,
-    vat: 3.00,
-    discount: 0.00,
+    internationalShipping: 25.0,
+    customsAndEcs: 18.9,
+    domesticShipping: 15.0,
+    handlingCharge: 10.0,
+    insurance: 5.5,
+    paymentGatewayFee: 4.6,
+    vat: 3.0,
+    discount: 0.0,
     totalUSD: 150.99,
     totalINR: 12574.17,
-    exchangeRate: 83.28
+    exchangeRate: 83.28,
   },
   items: [
     {
       id: 'item-1',
       name: 'Wireless Bluetooth Headphones',
       quantity: 1,
-      costprice_origin: 89.99,
+      price_usd: 89.99,
       weight_kg: 0.3,
       url: 'https://amazon.com/product/123',
-      image_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop',
-      options: 'Color: Black, Size: Over-ear'
+      image_url:
+        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop',
+      options: 'Color: Black, Size: Over-ear',
     },
     {
-      id: 'item-2', 
+      id: 'item-2',
       name: 'Phone Case',
       quantity: 2,
-      costprice_origin: 15.00,
+      price_usd: 15.0,
       weight_kg: 0.1,
       url: 'https://amazon.com/product/456',
       image_url: 'https://images.unsplash.com/photo-1556656793-08538906a9f8?w=300&h=300&fit=crop',
-      options: 'Material: Silicone, Color: Clear'
-    }
+      options: 'Material: Silicone, Color: Clear',
+    },
   ],
   quote_items: [],
   in_cart: false,
   iwish_tracking_id: null,
-  ...overrides
+  ...overrides,
 });
 
 // Wrapper component to provide necessary context
 const StoryWrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
     <MemoryRouter>
-      <div className="max-w-4xl mx-auto p-4">
-        {children}
-      </div>
+      <div className="max-w-4xl mx-auto p-4">{children}</div>
     </MemoryRouter>
   </QueryClientProvider>
 );
@@ -102,7 +101,8 @@ const meta: Meta<typeof QuoteBreakdown> = {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'QuoteBreakdown displays comprehensive quote information including items, pricing breakdown, status, and action buttons. Core component for customer quote management in iwishBag.',
+        component:
+          'QuoteBreakdown displays comprehensive quote information including items, pricing breakdown, status, and action buttons. Core component for customer quote management in iwishBag.',
       },
     },
   },
@@ -136,7 +136,7 @@ const meta: Meta<typeof QuoteBreakdown> = {
   },
   args: {
     onApprove: action('approve'),
-    onReject: action('reject'), 
+    onReject: action('reject'),
     onCalculate: action('calculate'),
     onRecalculate: action('recalculate'),
     onSave: action('save'),
@@ -269,10 +269,10 @@ export const HighValueQuote: Story = {
     quote: createMockQuote({
       final_total_usd: 2499.99,
       final_total_local: 208249.17,
-      item_price: 2200.00,
-      sales_tax_price: 154.00,
+      item_price: 2200.0,
+      sales_tax_price: 154.0,
       international_shipping: 89.99,
-      customs_and_ecs: 315.00,
+      customs_and_ecs: 315.0,
     }),
   },
   parameters: {
@@ -290,9 +290,9 @@ export const LowValueQuote: Story = {
       final_total_usd: 25.99,
       final_total_local: 2164.47,
       item_price: 19.99,
-      sales_tax_price: 1.40,
-      international_shipping: 4.60,
-      customs_and_ecs: 0.00,
+      sales_tax_price: 1.4,
+      international_shipping: 4.6,
+      customs_and_ecs: 0.0,
     }),
   },
   parameters: {
@@ -307,7 +307,7 @@ export const LowValueQuote: Story = {
 export const WithDiscount: Story = {
   args: {
     quote: createMockQuote({
-      discount: 25.00,
+      discount: 25.0,
       final_total_usd: 125.99,
       final_total_local: 10489.17,
     }),
@@ -328,7 +328,7 @@ export const USToNepal: Story = {
       origin_country: 'US',
       destination_country: 'NP',
       destination_currency: 'NPR',
-      final_total_local: 20284.00,
+      final_total_local: 20284.0,
       exchange_rate: 134.25,
     }),
   },
@@ -371,12 +371,13 @@ export const SingleItem: Story = {
           id: 'item-1',
           name: 'Premium Mechanical Keyboard',
           quantity: 1,
-          costprice_origin: 149.99,
+          price_usd: 149.99,
           weight_kg: 1.2,
           url: 'https://amazon.com/product/keyboard',
-          image_url: 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop',
-          options: 'Switch: Cherry MX Blue, Layout: US'
-        }
+          image_url:
+            'https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop',
+          options: 'Switch: Cherry MX Blue, Layout: US',
+        },
       ],
     }),
   },
@@ -397,32 +398,35 @@ export const MultipleItems: Story = {
           id: 'item-1',
           name: 'Gaming Mouse',
           quantity: 1,
-          costprice_origin: 79.99,
+          price_usd: 79.99,
           weight_kg: 0.15,
           url: 'https://amazon.com/product/mouse',
-          image_url: 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=300&h=300&fit=crop',
-          options: 'DPI: 16000, RGB: Yes'
+          image_url:
+            'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=300&h=300&fit=crop',
+          options: 'DPI: 16000, RGB: Yes',
         },
         {
           id: 'item-2',
           name: 'Gaming Mousepad',
           quantity: 1,
-          costprice_origin: 29.99,
+          price_usd: 29.99,
           weight_kg: 0.3,
           url: 'https://amazon.com/product/mousepad',
-          image_url: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
-          options: 'Size: XL, Surface: Speed'
+          image_url:
+            'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300&h=300&fit=crop',
+          options: 'Size: XL, Surface: Speed',
         },
         {
           id: 'item-3',
           name: 'USB Cable',
           quantity: 2,
-          costprice_origin: 12.99,
+          price_usd: 12.99,
           weight_kg: 0.05,
           url: 'https://amazon.com/product/cable',
-          image_url: 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop',
-          options: 'Length: 2m, Type: USB-C'
-        }
+          image_url:
+            'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=300&fit=crop',
+          options: 'Length: 2m, Type: USB-C',
+        },
       ],
     }),
   },
@@ -521,7 +525,7 @@ export const StatusComparison: Story = {
   render: () => (
     <div className="space-y-8">
       <h3 className="text-xl font-semibold">Quote Status Comparison</h3>
-      
+
       <div className="space-y-4">
         <div>
           <h4 className="font-medium mb-2">Pending Quote</h4>
@@ -536,7 +540,7 @@ export const StatusComparison: Story = {
             isProcessing={false}
           />
         </div>
-        
+
         <div>
           <h4 className="font-medium mb-2">Sent Quote (Ready for Approval)</h4>
           <QuoteBreakdown
@@ -550,7 +554,7 @@ export const StatusComparison: Story = {
             isProcessing={false}
           />
         </div>
-        
+
         <div>
           <h4 className="font-medium mb-2">Approved Quote</h4>
           <QuoteBreakdown

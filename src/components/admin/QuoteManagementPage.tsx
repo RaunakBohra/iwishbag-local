@@ -40,31 +40,34 @@ export const QuoteManagementPage = () => {
   const { data: allCountries, isLoading: countriesLoading } = useAllCountries();
 
   // URL-based filter state management
-  const filters = useMemo<SearchFilters>(() => ({
-    searchText: searchParams.get('search') || '',
-    countries: searchParams.get('countries') ? searchParams.get('countries')!.split(',') : []
-  }), [searchParams]);
+  const filters = useMemo<SearchFilters>(
+    () => ({
+      searchText: searchParams.get('search') || '',
+      countries: searchParams.get('countries') ? searchParams.get('countries')!.split(',') : [],
+    }),
+    [searchParams],
+  );
 
   const updateFilters = (newFilters: SearchFilters) => {
     const params = new URLSearchParams(searchParams);
-    
+
     // Update search parameter
     if (newFilters.searchText) {
       params.set('search', newFilters.searchText);
     } else {
       params.delete('search');
     }
-    
+
     // Update countries parameter
     if (newFilters.countries.length > 0) {
       params.set('countries', newFilters.countries.join(','));
     } else {
       params.delete('countries');
     }
-    
+
     setSearchParams(params, { replace: true });
   };
-  
+
   // UI state
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -79,7 +82,7 @@ export const QuoteManagementPage = () => {
   const handleResetFilters = () => {
     updateFilters({
       searchText: '',
-      countries: []
+      countries: [],
     });
   };
 
@@ -102,30 +105,32 @@ export const QuoteManagementPage = () => {
     handleDeleteQuotes,
     isDeletingQuotes,
   } = useQuoteManagement({
-    filters
+    filters,
   });
-
 
   // Calculate country counts from quotes
   const availableCountries: CountryOption[] = useMemo(() => {
     if (!allCountries || !quotes) return [];
-    
+
     // Count quotes per destination country
-    const countryCounts = quotes.reduce((acc, quote) => {
-      const country = quote.destination_country;
-      if (country) {
-        acc[country] = (acc[country] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
+    const countryCounts = quotes.reduce(
+      (acc, quote) => {
+        const country = quote.destination_country;
+        if (country) {
+          acc[country] = (acc[country] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     // Map countries from database with counts
     return allCountries
-      .filter(country => countryCounts[country.code] > 0) // Only show countries with quotes
-      .map(country => ({
+      .filter((country) => countryCounts[country.code] > 0) // Only show countries with quotes
+      .map((country) => ({
         code: country.code,
         name: country.name,
-        count: countryCounts[country.code] || 0
+        count: countryCounts[country.code] || 0,
       }))
       .sort((a, b) => (b.count || 0) - (a.count || 0)); // Sort by count descending
   }, [allCountries, quotes]);
@@ -242,8 +247,6 @@ export const QuoteManagementPage = () => {
     setConfirmAction(null);
   };
 
-
-
   return (
     <div className="min-h-screen bg-gray-50/40">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -267,7 +270,7 @@ export const QuoteManagementPage = () => {
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
-                
+
                 <H1 className="text-gray-900">Quote Management</H1>
                 <BodySmall className="text-gray-600">
                   Manage customer quotes and quote requests
@@ -339,21 +342,19 @@ export const QuoteManagementPage = () => {
                 </div>
                 <H2 className="text-gray-900 mb-2">No quotes found</H2>
                 <Body className="text-gray-600 mb-6">
-                  {filters.searchText ||
-                  filters.countries.length > 0
+                  {filters.searchText || filters.countries.length > 0
                     ? 'Try adjusting your filters to see more results.'
                     : 'Get started by creating your first quote.'}
                 </Body>
-                {!filters.searchText &&
-                  filters.countries.length === 0 && (
-                    <Button
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Quote
-                    </Button>
-                  )}
+                {!filters.searchText && filters.countries.length === 0 && (
+                  <Button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Quote
+                  </Button>
+                )}
               </div>
             )}
           </div>

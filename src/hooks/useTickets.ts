@@ -349,7 +349,8 @@ export const useSubmitSatisfactionSurvey = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (surveyData: CreateSurveyData) => ticketService.submitSatisfactionSurvey(surveyData),
+    mutationFn: (surveyData: CreateSurveyData) =>
+      ticketService.submitSatisfactionSurvey(surveyData),
     onSuccess: (data, variables) => {
       if (data) {
         // Invalidate survey-related queries

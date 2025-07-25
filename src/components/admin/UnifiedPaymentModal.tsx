@@ -49,10 +49,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
-import {
-  getCurrencySymbol,
-  getDestinationCountryFromQuote,
-} from '@/lib/currencyUtils';
+import { getCurrencySymbol, getDestinationCountryFromQuote } from '@/lib/currencyUtils';
 import { currencyService } from '@/services/CurrencyService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -2085,7 +2082,10 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           {paymentSummary.isOverpaid && (
                             <span className="block mt-1 text-teal-600">
                               Overpaid by:{' '}
-                              {currencyService.formatAmount(paymentSummary.overpaidAmount, currency)}
+                              {currencyService.formatAmount(
+                                paymentSummary.overpaidAmount,
+                                currency,
+                              )}
                             </span>
                           )}
                         </AlertDescription>

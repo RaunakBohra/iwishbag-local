@@ -114,7 +114,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
     }
   };
 
-
   // NEW: Cancel the pending selection
   const handleCancelSelection = () => {
     setPendingOptionId(null);
@@ -183,7 +182,9 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           ) : (
             <>
               <span className="text-sm font-medium text-gray-900">
-                {selectedOption ? currencyDisplay.formatDualAmount(selectedOption.cost_usd).short : currencyDisplay.formatSingleAmount(0, 'origin')}
+                {selectedOption
+                  ? currencyDisplay.formatDualAmount(selectedOption.cost_usd).short
+                  : currencyDisplay.formatSingleAmount(0, 'origin')}
               </span>
               {/* Unified chevron toggle for both edit and view modes */}
               {compact && (
@@ -263,8 +264,8 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           <div className="space-y-2">
             {recommendations
               // Deduplicate by option_id to prevent duplicate recommendations
-              .filter((rec, index, arr) => 
-                arr.findIndex(r => r.option_id === rec.option_id) === index
+              .filter(
+                (rec, index, arr) => arr.findIndex((r) => r.option_id === rec.option_id) === index,
               )
               .slice(0, 2)
               .map((rec) => {
@@ -273,30 +274,30 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
 
                 return (
                   <div key={rec.option_id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-xs">
-                    {rec.reason === 'cost_savings' && (
-                      <TrendingDown className="w-3 h-3 text-green-600" />
-                    )}
-                    {rec.reason === 'fast_delivery' && <Zap className="w-3 h-3 text-blue-600" />}
-                    <span className="text-green-700">
-                      {option.carrier}: {currencyDisplay.formatDualAmount(option.cost_usd).short}
-                    </span>
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {rec.reason === 'cost_savings' && `Save $${rec.savings_usd.toFixed(2)}`}
-                      {rec.reason === 'fast_delivery' && 'Fastest'}
-                    </Badge>
+                    <div className="flex items-center space-x-2 text-xs">
+                      {rec.reason === 'cost_savings' && (
+                        <TrendingDown className="w-3 h-3 text-green-600" />
+                      )}
+                      {rec.reason === 'fast_delivery' && <Zap className="w-3 h-3 text-blue-600" />}
+                      <span className="text-green-700">
+                        {option.carrier}: {currencyDisplay.formatDualAmount(option.cost_usd).short}
+                      </span>
+                      <Badge variant="outline" className="text-xs h-4 px-1">
+                        {rec.reason === 'cost_savings' && `Save $${rec.savings_usd.toFixed(2)}`}
+                        {rec.reason === 'fast_delivery' && 'Fastest'}
+                      </Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOptionSelect(rec.option_id)}
+                      className="h-6 px-2 text-xs text-green-700 border-green-300"
+                    >
+                      Select
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleOptionSelect(rec.option_id)}
-                    className="h-6 px-2 text-xs text-green-700 border-green-300"
-                  >
-                    Select
-                  </Button>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       )}
@@ -390,7 +391,14 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                   </div>
                   <div className="text-xs text-gray-500">
                     {getTotalWeight() > 0 && (
-                      <>≈ {currencyDisplay.formatSingleAmount(option.cost_usd / getTotalWeight(), 'origin')}/kg</>
+                      <>
+                        ≈{' '}
+                        {currencyDisplay.formatSingleAmount(
+                          option.cost_usd / getTotalWeight(),
+                          'origin',
+                        )}
+                        /kg
+                      </>
                     )}
                   </div>
 
@@ -406,7 +414,8 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
               {editMode && pendingOptionId === option.id && (
                 <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between bg-blue-50/50 -m-3 mt-3 p-3 rounded-b-lg">
                   <div className="text-xs text-blue-700">
-                    <span className="font-medium">Confirm selection:</span> {option.carrier} - {option.name}
+                    <span className="font-medium">Confirm selection:</span> {option.carrier} -{' '}
+                    {option.name}
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button
@@ -471,7 +480,11 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
           </div>
           <div>
             <div className="font-semibold text-green-600">
-              {currencyDisplay.formatDualAmount(Math.min(...shippingOptions.map((o) => o.cost_usd))).short}
+              {
+                currencyDisplay.formatDualAmount(
+                  Math.min(...shippingOptions.map((o) => o.cost_usd)),
+                ).short
+              }
             </div>
             <div className="text-gray-500">Cheapest</div>
           </div>
@@ -503,7 +516,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
         {/* Show expanded options if: compact mode AND expanded, OR non-compact mode (always expanded) */}
         {(compact && isExpanded) || !compact ? <ExpandedOptions /> : null}
       </Card>
-
     </>
   );
 };

@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { action } from '@storybook/addon-actions';
 import { useState } from 'react';
-import { 
-  SearchAndFilterPanel, 
-  SearchFilters, 
+import {
+  SearchAndFilterPanel,
+  SearchFilters,
   DEFAULT_STATUS_OPTIONS,
   DEFAULT_COUNTRY_OPTIONS,
   StatusOption,
-  CountryOption
+  CountryOption,
 } from './SearchAndFilterPanel';
 
 const meta: Meta<typeof SearchAndFilterPanel> = {
@@ -17,7 +17,8 @@ const meta: Meta<typeof SearchAndFilterPanel> = {
     layout: 'centered',
     docs: {
       description: {
-        component: 'SearchAndFilterPanel provides comprehensive search and filtering capabilities for iwishBag quote management. Features full-text search, multi-select status and country filters, active filter management, and collapsible interface.',
+        component:
+          'SearchAndFilterPanel provides comprehensive search and filtering capabilities for iwishBag quote management. Features full-text search, multi-select status and country filters, active filter management, and collapsible interface.',
       },
     },
   },
@@ -67,7 +68,7 @@ const InteractiveWrapper = (args: any) => {
     const resetFilters: SearchFilters = {
       searchText: '',
       statuses: [],
-      countries: []
+      countries: [],
     };
     setFilters(resetFilters);
     action('reset')(resetFilters);
@@ -94,7 +95,7 @@ export const Default: Story = {
     filters: {
       searchText: '',
       statuses: [],
-      countries: []
+      countries: [],
     },
     onFiltersChange: action('filtersChange'),
     onSearch: action('search'),
@@ -111,7 +112,7 @@ export const WithActiveFilters: Story = {
     filters: {
       searchText: 'wireless headphones',
       statuses: ['pending', 'approved'],
-      countries: ['IN', 'NP']
+      countries: ['IN', 'NP'],
     },
     resultsCount: 15,
     isLoading: false,
@@ -132,7 +133,7 @@ export const Loading: Story = {
     filters: {
       searchText: 'gaming setup',
       statuses: ['sent'],
-      countries: ['IN']
+      countries: ['IN'],
     },
     isLoading: true,
     resultsCount: 0,
@@ -153,7 +154,7 @@ export const Collapsed: Story = {
     filters: {
       searchText: '',
       statuses: ['approved'],
-      countries: []
+      countries: [],
     },
     collapsed: true,
     resultsCount: 42,
@@ -178,7 +179,7 @@ const LARGE_STATUS_OPTIONS: StatusOption[] = [
   { value: 'shipped', label: 'Shipped', color: 'cyan', count: 19 },
   { value: 'completed', label: 'Completed', color: 'emerald', count: 56 },
   { value: 'expired', label: 'Expired', color: 'gray', count: 8 },
-  { value: 'cancelled', label: 'Cancelled', color: 'red', count: 4 }
+  { value: 'cancelled', label: 'Cancelled', color: 'red', count: 4 },
 ];
 
 const LARGE_COUNTRY_OPTIONS: CountryOption[] = [
@@ -191,7 +192,7 @@ const LARGE_COUNTRY_OPTIONS: CountryOption[] = [
   { code: 'DE', name: 'Germany', flag: '🇩🇪', count: 15 },
   { code: 'FR', name: 'France', flag: '🇫🇷', count: 12 },
   { code: 'JP', name: 'Japan', flag: '🇯🇵', count: 23 },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬', count: 8 }
+  { code: 'SG', name: 'Singapore', flag: '🇸🇬', count: 8 },
 ];
 
 export const LargeDataset: Story = {
@@ -200,7 +201,7 @@ export const LargeDataset: Story = {
     filters: {
       searchText: '',
       statuses: [],
-      countries: []
+      countries: [],
     },
     availableStatuses: LARGE_STATUS_OPTIONS,
     availableCountries: LARGE_COUNTRY_OPTIONS,
@@ -222,7 +223,7 @@ export const HighActivity: Story = {
     filters: {
       searchText: 'electronics smartphone laptop gaming',
       statuses: ['pending', 'sent', 'approved', 'paid'],
-      countries: ['IN', 'NP', 'US', 'UK']
+      countries: ['IN', 'NP', 'US', 'UK'],
     },
     availableStatuses: LARGE_STATUS_OPTIONS,
     availableCountries: LARGE_COUNTRY_OPTIONS,
@@ -244,7 +245,7 @@ export const NoResults: Story = {
     filters: {
       searchText: 'nonexistent product xyz',
       statuses: ['expired'],
-      countries: ['XX']
+      countries: ['XX'],
     },
     resultsCount: 0,
     isLoading: false,
@@ -262,12 +263,12 @@ export const NoResults: Story = {
 const MINIMAL_STATUS_OPTIONS: StatusOption[] = [
   { value: 'pending', label: 'Pending', count: 3 },
   { value: 'approved', label: 'Approved', count: 2 },
-  { value: 'completed', label: 'Completed', count: 1 }
+  { value: 'completed', label: 'Completed', count: 1 },
 ];
 
 const MINIMAL_COUNTRY_OPTIONS: CountryOption[] = [
   { code: 'IN', name: 'India', flag: '🇮🇳', count: 4 },
-  { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 2 }
+  { code: 'NP', name: 'Nepal', flag: '🇳🇵', count: 2 },
 ];
 
 export const MinimalDataset: Story = {
@@ -276,7 +277,7 @@ export const MinimalDataset: Story = {
     filters: {
       searchText: '',
       statuses: [],
-      countries: []
+      countries: [],
     },
     availableStatuses: MINIMAL_STATUS_OPTIONS,
     availableCountries: MINIMAL_COUNTRY_OPTIONS,
@@ -298,7 +299,7 @@ export const StatusFilterOnly: Story = {
     filters: {
       searchText: '',
       statuses: ['approved', 'paid'],
-      countries: []
+      countries: [],
     },
     resultsCount: 42,
   },
@@ -317,7 +318,7 @@ export const CountryFilterOnly: Story = {
     filters: {
       searchText: '',
       statuses: [],
-      countries: ['IN', 'NP']
+      countries: ['IN', 'NP'],
     },
     resultsCount: 67,
   },
@@ -336,7 +337,7 @@ export const SearchTextOnly: Story = {
     filters: {
       searchText: 'bluetooth headphones wireless',
       statuses: [],
-      countries: []
+      countries: [],
     },
     resultsCount: 23,
   },
@@ -356,7 +357,7 @@ export const MobileView: Story = {
     filters: {
       searchText: 'mobile search',
       statuses: ['pending'],
-      countries: ['IN']
+      countries: ['IN'],
     },
     resultsCount: 18,
   },
@@ -379,7 +380,7 @@ export const DarkTheme: Story = {
     filters: {
       searchText: 'dark mode test',
       statuses: ['approved', 'shipped'],
-      countries: ['US', 'UK']
+      countries: ['US', 'UK'],
     },
     resultsCount: 31,
   },
@@ -399,7 +400,7 @@ export const RealWorldUsage: Story = {
     const [filters, setFilters] = useState<SearchFilters>({
       searchText: '',
       statuses: [],
-      countries: []
+      countries: [],
     });
     const [resultsCount, setResultsCount] = useState(156);
     const [isLoading, setIsLoading] = useState(false);
@@ -413,7 +414,7 @@ export const RealWorldUsage: Story = {
         if (filters.searchText) mockCount = Math.floor(mockCount * 0.3);
         if (filters.statuses.length > 0) mockCount = Math.floor(mockCount * 0.6);
         if (filters.countries.length > 0) mockCount = Math.floor(mockCount * 0.8);
-        
+
         setResultsCount(mockCount);
         setIsLoading(false);
         action('search-completed')({ filters, resultsCount: mockCount });
@@ -424,7 +425,7 @@ export const RealWorldUsage: Story = {
       const resetFilters: SearchFilters = {
         searchText: '',
         statuses: [],
-        countries: []
+        countries: [],
       };
       setFilters(resetFilters);
       setResultsCount(156);
@@ -443,7 +444,7 @@ export const RealWorldUsage: Story = {
           isLoading={isLoading}
           resultsCount={resultsCount}
         />
-        
+
         {/* Mock results display */}
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <h3 className="font-medium text-gray-900 mb-2">Search Results</h3>

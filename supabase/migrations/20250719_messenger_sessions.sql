@@ -14,7 +14,8 @@ CREATE INDEX IF NOT EXISTS idx_messenger_sessions_updated_at ON public.messenger
 -- Enable RLS
 ALTER TABLE public.messenger_sessions ENABLE ROW LEVEL SECURITY;
 
--- Create policy for service role access (for webhook)
+-- Create policy for service role access (for webhook) - with conflict handling
+DROP POLICY IF EXISTS "Service role can manage all sessions" ON public.messenger_sessions;
 CREATE POLICY "Service role can manage all sessions" ON public.messenger_sessions
     FOR ALL USING (true)
     WITH CHECK (true);

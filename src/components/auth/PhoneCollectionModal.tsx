@@ -166,7 +166,13 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
 
   return (
     <Dialog open={isModalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className={useGradientStyling ? "bg-white border-gray-200 shadow-2xl max-w-md rounded-xl overflow-hidden" : "sm:max-w-[425px]"}>
+      <DialogContent
+        className={
+          useGradientStyling
+            ? 'bg-white border-gray-200 shadow-2xl max-w-md rounded-xl overflow-hidden'
+            : 'sm:max-w-[425px]'
+        }
+      >
         {useGradientStyling ? (
           // Gradient styling for auth context
           <div className="bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-400 px-6 pt-6 pb-4 -mx-6 -mt-6 mb-6">
@@ -189,9 +195,7 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
               <Phone className="h-5 w-5" />
               {title}
             </DialogTitle>
-            <DialogDescription>
-              {description}
-            </DialogDescription>
+            <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
         )}
 
@@ -210,7 +214,7 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
           </div>
         )}
 
-        <div className={showBenefits ? "" : "space-y-6"}>
+        <div className={showBenefits ? '' : 'space-y-6'}>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               <FormField
@@ -218,15 +222,23 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={useGradientStyling ? "text-sm font-medium text-gray-700" : undefined}>
+                    <FormLabel
+                      className={
+                        useGradientStyling ? 'text-sm font-medium text-gray-700' : undefined
+                      }
+                    >
                       Phone Number {!showCountrySelection && '*'}
                     </FormLabel>
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder={showCountrySelection ? "+1 (555) 123-4567" : "+1 234 567 8901"}
+                        placeholder={showCountrySelection ? '+1 (555) 123-4567' : '+1 234 567 8901'}
                         {...field}
-                        className={useGradientStyling ? "h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500" : undefined}
+                        className={
+                          useGradientStyling
+                            ? 'h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500'
+                            : undefined
+                        }
                         disabled={isLoading}
                       />
                     </FormControl>
@@ -280,7 +292,11 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                     variant="outline"
                     onClick={handleSkip}
                     disabled={isLoading}
-                    className={useGradientStyling ? "px-6 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg h-11" : "flex-1"}
+                    className={
+                      useGradientStyling
+                        ? 'px-6 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-lg h-11'
+                        : 'flex-1'
+                    }
                   >
                     Skip for Now
                   </Button>
@@ -288,9 +304,12 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className={useGradientStyling ? 
-                    "flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-colors h-11" : 
-                    skipOption ? "flex-1" : "w-full"
+                  className={
+                    useGradientStyling
+                      ? 'flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-colors h-11'
+                      : skipOption
+                        ? 'flex-1'
+                        : 'w-full'
                   }
                 >
                   {isLoading ? (
@@ -303,8 +322,10 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Save Phone Number
                     </>
+                  ) : showCountrySelection ? (
+                    'Save Phone'
                   ) : (
-                    showCountrySelection ? 'Save Phone' : 'Save Phone Number'
+                    'Save Phone Number'
                   )}
                 </Button>
               </div>

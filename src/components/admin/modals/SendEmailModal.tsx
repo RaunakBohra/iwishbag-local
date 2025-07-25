@@ -52,26 +52,30 @@ const getEmailTemplates = () => [
     id: 'welcome',
     name: 'Welcome Message',
     subject: 'Welcome to iwishBag!',
-    message: 'Dear [CUSTOMER_NAME],\n\nWelcome to iwishBag! We are excited to have you as part of our global shopping community.\n\nWith iwishBag, you can now shop from your favorite international stores and have items delivered right to your doorstep. Our team is here to make your international shopping experience seamless and enjoyable.\n\nIf you have any questions or need assistance, please do not hesitate to reach out to our customer support team.\n\nHappy shopping!\n\nBest regards,\nThe iwishBag Team'
+    message:
+      'Dear [CUSTOMER_NAME],\n\nWelcome to iwishBag! We are excited to have you as part of our global shopping community.\n\nWith iwishBag, you can now shop from your favorite international stores and have items delivered right to your doorstep. Our team is here to make your international shopping experience seamless and enjoyable.\n\nIf you have any questions or need assistance, please do not hesitate to reach out to our customer support team.\n\nHappy shopping!\n\nBest regards,\nThe iwishBag Team',
   },
   {
     id: 'order_update',
-    name: 'Order Update',  
+    name: 'Order Update',
     subject: 'Your iwishBag Order Update',
-    message: 'Dear [CUSTOMER_NAME],\n\nWe wanted to update you on the status of your recent order with iwishBag.\n\nYour order is currently being processed and will be shipped soon. We will send you tracking information as soon as your package is on its way.\n\nThank you for choosing iwishBag for your international shopping needs!\n\nBest regards,\nThe iwishBag Team'
+    message:
+      'Dear [CUSTOMER_NAME],\n\nWe wanted to update you on the status of your recent order with iwishBag.\n\nYour order is currently being processed and will be shipped soon. We will send you tracking information as soon as your package is on its way.\n\nThank you for choosing iwishBag for your international shopping needs!\n\nBest regards,\nThe iwishBag Team',
   },
   {
     id: 'promotional',
     name: 'Promotional Offer',
     subject: 'Special Offer Just for You!',
-    message: 'Dear [CUSTOMER_NAME],\n\nWe have a special offer just for you!\n\nAs one of our valued customers, you are eligible for exclusive discounts on your next international shopping order. Use this opportunity to get those items you have been wanting at an even better price.\n\nThis offer is valid for a limited time, so do not miss out!\n\nBest regards,\nThe iwishBag Team'
+    message:
+      'Dear [CUSTOMER_NAME],\n\nWe have a special offer just for you!\n\nAs one of our valued customers, you are eligible for exclusive discounts on your next international shopping order. Use this opportunity to get those items you have been wanting at an even better price.\n\nThis offer is valid for a limited time, so do not miss out!\n\nBest regards,\nThe iwishBag Team',
   },
   {
     id: 'feedback',
     name: 'Feedback Request',
     subject: 'We would love your feedback!',
-    message: 'Dear [CUSTOMER_NAME],\n\nThank you for being a valued iwishBag customer! Your experience matters to us, and we would love to hear about your recent shopping experience.\n\nYour feedback helps us improve our services and better serve customers like you. Could you take a moment to share your thoughts?\n\nWe appreciate your time and look forward to serving you again soon.\n\nBest regards,\nThe iwishBag Team'
-  }
+    message:
+      'Dear [CUSTOMER_NAME],\n\nThank you for being a valued iwishBag customer! Your experience matters to us, and we would love to hear about your recent shopping experience.\n\nYour feedback helps us improve our services and better serve customers like you. Could you take a moment to share your thoughts?\n\nWe appreciate your time and look forward to serving you again soon.\n\nBest regards,\nThe iwishBag Team',
+  },
 ];
 
 export const SendEmailModal: React.FC<SendEmailModalProps> = ({
@@ -110,40 +114,45 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   const sendEmailMutation = useMutation({
     mutationFn: async (data: SendEmailFormData) => {
       setIsSubmitting(true);
-      
+
       // Safety check for recipients
       if (!safeRecipients || safeRecipients.length === 0) {
         throw new Error('No recipients selected for email');
       }
-      
+
       // Simulate email sending (replace with actual email service integration)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // For bulk emails, we'll use a generic greeting or the first customer's name
-      const customerNameForTemplate = isBulk && safeRecipients.length > 1 
-        ? 'Valued Customer' 
-        : safeRecipients[0]?.full_name || 'Customer';
+      const customerNameForTemplate =
+        isBulk && safeRecipients.length > 1
+          ? 'Valued Customer'
+          : safeRecipients[0]?.full_name || 'Customer';
 
       const emailData = {
-        recipients: safeRecipients.map(r => ({
+        recipients: safeRecipients.map((r) => ({
           email: r.email,
-          name: r.full_name || 'Customer'
+          name: r.full_name || 'Customer',
         })),
         subject: data.subject,
         message: data.message.replace(/\[CUSTOMER_NAME\]/g, customerNameForTemplate),
         isBulk,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
+
       console.log('Email would be sent:', emailData);
-      
+
       return emailData;
     },
     onSuccess: (data) => {
       setIsSubmitting(false);
       toast({
         title: 'Email Sent Successfully',
-        description: 'Email sent to ' + safeRecipients.length + ' recipient' + (safeRecipients.length !== 1 ? 's' : ''),
+        description:
+          'Email sent to ' +
+          safeRecipients.length +
+          ' recipient' +
+          (safeRecipients.length !== 1 ? 's' : ''),
       });
       reset();
       setSelectedTemplate('');
@@ -161,7 +170,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
 
   const handleTemplateSelect = (templateId: string) => {
     const templates = getEmailTemplates();
-    const template = templates.find(t => t.id === templateId);
+    const template = templates.find((t) => t.id === templateId);
     if (template) {
       setValue('subject', template.subject);
       setValue('message', template.message);
@@ -203,7 +212,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
               </span>
             </div>
             <div className="flex flex-wrap gap-1">
-              {safeRecipients.slice(0, 5).map(recipient => (
+              {safeRecipients.slice(0, 5).map((recipient) => (
                 <Badge key={recipient.id} variant="outline" className="text-xs bg-white">
                   {recipient.email}
                 </Badge>
@@ -227,7 +236,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
                 <SelectValue placeholder="Choose a template or compose custom email" />
               </SelectTrigger>
               <SelectContent>
-                {EMAIL_TEMPLATES.map(template => (
+                {EMAIL_TEMPLATES.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name}
                   </SelectItem>
@@ -244,14 +253,8 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
           {/* Subject Line */}
           <div className="space-y-2">
             <Label htmlFor="subject">Subject Line *</Label>
-            <Input
-              id="subject"
-              placeholder="Enter email subject"
-              {...register('subject')}
-            />
-            {errors.subject && (
-              <p className="text-sm text-red-600">{errors.subject.message}</p>
-            )}
+            <Input id="subject" placeholder="Enter email subject" {...register('subject')} />
+            {errors.subject && <p className="text-sm text-red-600">{errors.subject.message}</p>}
             <p className="text-xs text-gray-500">
               Character count: {subject?.length || 0}/100 (recommended)
             </p>
@@ -269,9 +272,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
               className="min-h-[200px]"
               {...register('message')}
             />
-            {errors.message && (
-              <p className="text-sm text-red-600">{errors.message.message}</p>
-            )}
+            {errors.message && <p className="text-sm text-red-600">{errors.message.message}</p>}
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span>Use [CUSTOMER_NAME] to personalize with customer names</span>
               <span>Character count: {message?.length || 0}</span>
@@ -285,7 +286,10 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
                 <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
                 <div className="text-sm text-yellow-800">
                   <p className="font-medium">Bulk Email Notice</p>
-                  <p>This email will be sent to {safeRecipients.length} customers. Please review the content carefully before sending.</p>
+                  <p>
+                    This email will be sent to {safeRecipients.length} customers. Please review the
+                    content carefully before sending.
+                  </p>
                 </div>
               </div>
             </div>
@@ -293,12 +297,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
         </form>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button
@@ -307,10 +306,10 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
             className="bg-green-600 hover:bg-green-700"
           >
             <Send className="h-4 w-4 mr-2" />
-            {isSubmitting 
-              ? 'Sending...' 
-              : 'Send Email' + (safeRecipients.length > 1 ? ' (' + safeRecipients.length + ')' : '')
-            }
+            {isSubmitting
+              ? 'Sending...'
+              : 'Send Email' +
+                (safeRecipients.length > 1 ? ' (' + safeRecipients.length + ')' : '')}
           </Button>
         </DialogFooter>
       </DialogContent>

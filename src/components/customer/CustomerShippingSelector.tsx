@@ -10,7 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Truck, Clock, DollarSign, Zap, CheckCircle, Package } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, RouteHandlingCharge } from '@/types/unified-quote';
 import { currencyService } from '@/services/CurrencyService';
-import { formatDeliveryDays, isExpressDelivery, getDeliveryDaysForSorting } from '@/lib/deliveryFormatUtils';
+import {
+  formatDeliveryDays,
+  isExpressDelivery,
+  getDeliveryDaysForSorting,
+} from '@/lib/deliveryFormatUtils';
 
 interface CustomerShippingSelectorProps {
   quote: UnifiedQuote;

@@ -13,6 +13,8 @@ import {
   Package,
   Settings,
   HelpCircle,
+  Search,
+  Command,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -35,6 +37,7 @@ import { useSidebar } from '@/hooks/use-sidebar';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
 import { cn } from '@/lib/design-system';
+import { useCommandPalette } from '@/hooks/useCommandPalette';
 
 const Header = () => {
   const { user, signOut, isAnonymous } = useAuth();
@@ -42,6 +45,7 @@ const Header = () => {
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { openPalette, getShortcutDisplay } = useCommandPalette();
 
   const { data: hasAdminRole } = useAdminRole();
   const { itemCount: cartItemCount } = useCart();
@@ -278,6 +282,21 @@ const Header = () => {
 
         {/* Right Section - Actions and User Menu */}
         <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4 min-w-0">
+          {/* Command Palette Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden sm:flex items-center space-x-2 h-8 px-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors border border-gray-200"
+            onClick={openPalette}
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden md:inline">Search</span>
+            <div className="hidden lg:flex items-center space-x-0.5 ml-1 text-xs text-gray-400">
+              <Command className="h-3 w-3" />
+              <span>K</span>
+            </div>
+          </Button>
+
           {/* Admin Search - only show in admin area */}
           {isAdminArea && (
             <div className="hidden sm:block">

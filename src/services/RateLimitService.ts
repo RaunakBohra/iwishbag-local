@@ -1,12 +1,12 @@
 /**
  * RateLimitService - Lightweight rate limiting for quote share operations
- * 
+ *
  * Features:
  * - 10 share links per hour per user (configurable)
  * - Memory-based storage with automatic cleanup
  * - User-friendly error messages
  * - Admin bypass capability
- * 
+ *
  * System Impact: Minimal - just counters in memory
  */
 
@@ -27,12 +27,12 @@ class RateLimitService {
   private static instance: RateLimitService;
   private rateLimitData: Map<string, RateLimitEntry> = new Map();
   private cleanupInterval: NodeJS.Timeout | null = null;
-  
+
   private config: RateLimitConfig = {
     maxSharesPerHour: 10,
     maxSharesPerDay: 50,
     windowSizeHours: 1,
-    adminBypass: true
+    adminBypass: true,
   };
 
   private constructor() {
@@ -50,7 +50,10 @@ class RateLimitService {
   /**
    * Check if user can generate a share link
    */
-  public canGenerateShareLink(userId: string, isAdmin: boolean = false): {
+  public canGenerateShareLink(
+    userId: string,
+    isAdmin: boolean = false,
+  ): {
     allowed: boolean;
     remainingCount: number;
     resetTime: number;
@@ -61,48 +64,48 @@ class RateLimitService {
       return {
         allowed: true,
         remainingCount: this.config.maxSharesPerHour,
-        resetTime: Date.now() + (this.config.windowSizeHours * 60 * 60 * 1000)
+        resetTime: Date.now() + this.config.windowSizeHours * 60 * 60 * 1000,
       };
     }
 
     const now = Date.now();
-    const windowStart = now - (this.config.windowSizeHours * 60 * 60 * 1000);
+    const windowStart = now - this.config.windowSizeHours * 60 * 60 * 1000;
     const key = `${userId}:${Math.floor(now / (60 * 60 * 1000))}`;
-    
+
     const entry = this.rateLimitData.get(key);
-    
+
     if (!entry || entry.resetTime < now) {
       // Create new entry or reset expired one
       const newEntry: RateLimitEntry = {
         count: 0,
-        resetTime: now + (this.config.windowSizeHours * 60 * 60 * 1000),
-        userId
+        resetTime: now + this.config.windowSizeHours * 60 * 60 * 1000,
+        userId,
       };
       this.rateLimitData.set(key, newEntry);
-      
+
       return {
         allowed: true,
         remainingCount: this.config.maxSharesPerHour - 1,
-        resetTime: newEntry.resetTime
+        resetTime: newEntry.resetTime,
       };
     }
 
     // Check if limit exceeded
     if (entry.count >= this.config.maxSharesPerHour) {
       const minutesUntilReset = Math.ceil((entry.resetTime - now) / (60 * 1000));
-      
+
       return {
         allowed: false,
         remainingCount: 0,
         resetTime: entry.resetTime,
-        message: `Share link limit exceeded. You can generate ${this.config.maxSharesPerHour} links per hour. Try again in ${minutesUntilReset} minutes.`
+        message: `Share link limit exceeded. You can generate ${this.config.maxSharesPerHour} links per hour. Try again in ${minutesUntilReset} minutes.`,
       };
     }
 
     return {
       allowed: true,
       remainingCount: this.config.maxSharesPerHour - entry.count - 1,
-      resetTime: entry.resetTime
+      resetTime: entry.resetTime,
     };
   }
 
@@ -112,17 +115,17 @@ class RateLimitService {
   public recordShareLinkGeneration(userId: string): void {
     const now = Date.now();
     const key = `${userId}:${Math.floor(now / (60 * 60 * 1000))}`;
-    
+
     const entry = this.rateLimitData.get(key);
-    
+
     if (entry && entry.resetTime > now) {
       entry.count += 1;
     } else {
       // Create new entry
       this.rateLimitData.set(key, {
         count: 1,
-        resetTime: now + (this.config.windowSizeHours * 60 * 60 * 1000),
-        userId
+        resetTime: now + this.config.windowSizeHours * 60 * 60 * 1000,
+        userId,
       });
     }
   }
@@ -139,13 +142,13 @@ class RateLimitService {
     const now = Date.now();
     const key = `${userId}:${Math.floor(now / (60 * 60 * 1000))}`;
     const entry = this.rateLimitData.get(key);
-    
+
     if (!entry || entry.resetTime < now) {
       return {
         currentCount: 0,
         maxAllowed: this.config.maxSharesPerHour,
-        resetTime: now + (this.config.windowSizeHours * 60 * 60 * 1000),
-        remainingTime: this.config.windowSizeHours * 60 * 60 * 1000
+        resetTime: now + this.config.windowSizeHours * 60 * 60 * 1000,
+        remainingTime: this.config.windowSizeHours * 60 * 60 * 1000,
       };
     }
 
@@ -153,7 +156,7 @@ class RateLimitService {
       currentCount: entry.count,
       maxAllowed: this.config.maxSharesPerHour,
       resetTime: entry.resetTime,
-      remainingTime: entry.resetTime - now
+      remainingTime: entry.resetTime - now,
     };
   }
 
@@ -189,21 +192,22 @@ class RateLimitService {
     highUsageUsers: Array<{ userId: string; count: number; resetTime: number }>;
   } {
     const now = Date.now();
-    const activeEntries = Array.from(this.rateLimitData.values())
-      .filter(entry => entry.resetTime > now);
+    const activeEntries = Array.from(this.rateLimitData.values()).filter(
+      (entry) => entry.resetTime > now,
+    );
 
     const totalCount = activeEntries.reduce((sum, entry) => sum + entry.count, 0);
     const averageUsage = activeEntries.length > 0 ? totalCount / activeEntries.length : 0;
-    
+
     const highUsageUsers = activeEntries
-      .filter(entry => entry.count >= this.config.maxSharesPerHour * 0.8) // 80% of limit
+      .filter((entry) => entry.count >= this.config.maxSharesPerHour * 0.8) // 80% of limit
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
     return {
       totalActiveUsers: activeEntries.length,
       averageUsagePerUser: Math.round(averageUsage * 100) / 100,
-      highUsageUsers
+      highUsageUsers,
     };
   }
 
@@ -215,9 +219,12 @@ class RateLimitService {
       clearInterval(this.cleanupInterval);
     }
 
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000); // Every 5 minutes
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanup();
+      },
+      5 * 60 * 1000,
+    ); // Every 5 minutes
   }
 
   /**
@@ -233,7 +240,7 @@ class RateLimitService {
       }
     }
 
-    expiredKeys.forEach(key => {
+    expiredKeys.forEach((key) => {
       this.rateLimitData.delete(key);
     });
 

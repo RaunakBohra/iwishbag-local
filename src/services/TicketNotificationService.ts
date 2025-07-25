@@ -18,7 +18,7 @@ export interface TicketNotificationData {
   quote_id?: string | null;
   created_at: string;
   updated_at: string;
-  
+
   // Related data
   user_profile?: {
     id: string;
@@ -41,7 +41,7 @@ export interface ReplyNotificationData {
   message: string;
   user_id: string;
   created_at: string;
-  
+
   // Related data
   user_profile?: {
     id: string;
@@ -67,10 +67,12 @@ export class TicketNotificationService {
     try {
       const { data: adminRoles, error } = await supabase
         .from('user_roles')
-        .select(`
+        .select(
+          `
           user_id,
-          profiles(email, full_name)
-        `)
+          profiles!inner(email, full_name)
+        `,
+        )
         .eq('role', 'admin');
 
       if (error) {
@@ -79,8 +81,8 @@ export class TicketNotificationService {
       }
 
       const emails = adminRoles
-        ?.map(role => (role.profiles as any)?.email)
-        ?.filter(email => email && email.includes('@')) || [];
+        .map((role) => (role.profiles as any)?.email)
+        .filter((email) => email && email.includes('@'));
 
       return emails.length > 0 ? emails : ['admin@iwishbag.com'];
     } catch (error) {
@@ -94,10 +96,10 @@ export class TicketNotificationService {
    */
   private getStatusLabel(status: string): string {
     const statusLabels: Record<string, string> = {
-      'open': 'Open',
-      'in_progress': 'In Progress', 
-      'resolved': 'Resolved',
-      'closed': 'Closed',
+      open: 'Open',
+      in_progress: 'In Progress',
+      resolved: 'Resolved',
+      closed: 'Closed',
     };
     return statusLabels[status] || status;
   }
@@ -107,13 +109,13 @@ export class TicketNotificationService {
    */
   private getCategoryLabel(category: string): string {
     const categoryLabels: Record<string, string> = {
-      'order_issue': 'Order Issue',
-      'payment_issue': 'Payment Issue',
-      'shipping_issue': 'Shipping Issue',
-      'account_issue': 'Account Issue',
-      'product_inquiry': 'Product Inquiry',
-      'general_inquiry': 'General Inquiry',
-      'technical_issue': 'Technical Issue',
+      order_issue: 'Order Issue',
+      payment_issue: 'Payment Issue',
+      shipping_issue: 'Shipping Issue',
+      account_issue: 'Account Issue',
+      product_inquiry: 'Product Inquiry',
+      general_inquiry: 'General Inquiry',
+      technical_issue: 'Technical Issue',
     };
     return categoryLabels[category] || category;
   }
@@ -130,7 +132,8 @@ export class TicketNotificationService {
       const emailService = useEmailNotifications();
 
       const customerEmail = ticket.user_profile?.email;
-      const customerName = ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
+      const customerName =
+        ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
 
       // 1. Send confirmation email to customer
       if (customerEmail) {
@@ -166,7 +169,6 @@ export class TicketNotificationService {
       // 3. Add auto-response message about business hours
       const autoResponse = businessHoursService.getAutoResponseMessage();
       await this.createSystemReply(ticket.id, autoResponse);
-
     } catch (error) {
       console.error('❌ Failed to send ticket created notifications:', error);
     }
@@ -178,7 +180,7 @@ export class TicketNotificationService {
   async notifyTicketStatusUpdate(
     ticket: TicketNotificationData,
     oldStatus: string,
-    newStatus: string
+    newStatus: string,
   ): Promise<void> {
     try {
       // Only notify customer if status change is meaningful
@@ -190,12 +192,12 @@ export class TicketNotificationService {
       const emailService = useEmailNotifications();
 
       const customerEmail = ticket.user_profile?.email;
-      const customerName = ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
+      const customerName =
+        ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
 
       if (customerEmail) {
-        const assignedToName = ticket.assigned_to_profile?.full_name || 
-                              ticket.assigned_to_profile?.email || 
-                              undefined;
+        const assignedToName =
+          ticket.assigned_to_profile?.full_name || ticket.assigned_to_profile?.email || undefined;
 
         await emailService.sendTicketStatusUpdateEmail({
           customerEmail,
@@ -219,7 +221,7 @@ export class TicketNotificationService {
   async notifyTicketReply(
     ticket: TicketNotificationData,
     reply: ReplyNotificationData,
-    isCustomerReply: boolean
+    isCustomerReply: boolean,
   ): Promise<void> {
     try {
       console.log(`📧 Sending reply notification for ticket ${ticket.id}`);
@@ -230,11 +232,10 @@ export class TicketNotificationService {
       if (isCustomerReply) {
         // Customer replied - notify admins
         const adminEmails = await this.getAdminEmails();
-        const customerName = ticket.user_profile?.full_name || 
-                           ticket.user_profile?.email || 
-                           'Customer';
-        const assignedToName = ticket.assigned_to_profile?.full_name || 
-                              ticket.assigned_to_profile?.email;
+        const customerName =
+          ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
+        const assignedToName =
+          ticket.assigned_to_profile?.full_name || ticket.assigned_to_profile?.email;
 
         for (const adminEmail of adminEmails) {
           await emailService.sendAdminNewReplyEmail({
@@ -251,9 +252,8 @@ export class TicketNotificationService {
       } else {
         // Admin replied - notify customer
         const customerEmail = ticket.user_profile?.email;
-        const customerName = ticket.user_profile?.full_name || 
-                           ticket.user_profile?.email || 
-                           'Customer';
+        const customerName =
+          ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
 
         if (customerEmail) {
           await emailService.sendTicketReplyEmail({
@@ -283,9 +283,8 @@ export class TicketNotificationService {
       const emailService = useEmailNotifications();
 
       const customerEmail = ticket.user_profile?.email;
-      const customerName = ticket.user_profile?.full_name || 
-                         ticket.user_profile?.email || 
-                         'Customer';
+      const customerName =
+        ticket.user_profile?.full_name || ticket.user_profile?.email || 'Customer';
 
       if (customerEmail) {
         await emailService.sendTicketClosedEmail({
@@ -310,14 +309,12 @@ export class TicketNotificationService {
       // Get system user ID (you might need to create a system user in your database)
       const systemUserId = '00000000-0000-0000-0000-000000000000'; // Replace with actual system user ID
 
-      const { error } = await supabase
-        .from('ticket_replies')
-        .insert({
-          ticket_id: ticketId,
-          user_id: systemUserId,
-          message: message,
-          is_internal: false, // Visible to customer
-        });
+      const { error } = await supabase.from('ticket_replies').insert({
+        ticket_id: ticketId,
+        user_id: systemUserId,
+        message: message,
+        is_internal: false, // Visible to customer
+      });
 
       if (error) {
         console.error('❌ Failed to create system reply:', error);
@@ -335,7 +332,7 @@ export class TicketNotificationService {
   async batchNotifyTicketUpdates(
     tickets: TicketNotificationData[],
     updateType: 'status_change' | 'assignment' | 'priority_change',
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): Promise<void> {
     try {
       console.log(`📧 Sending batch notifications for ${tickets.length} tickets (${updateType})`);

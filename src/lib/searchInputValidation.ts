@@ -1,6 +1,6 @@
 /**
  * Search Input Validation and Sanitization
- * 
+ *
  * Provides security utilities for validating and sanitizing search inputs
  * to prevent injection attacks and malicious input.
  */
@@ -58,7 +58,9 @@ export function validateSearchText(input: string): ValidationResult {
 
   // Length validation
   if (sanitizedValue.length > SEARCH_INPUT_LIMITS.SEARCH_TEXT_MAX_LENGTH) {
-    errors.push(`Search text must be ${SEARCH_INPUT_LIMITS.SEARCH_TEXT_MAX_LENGTH} characters or less`);
+    errors.push(
+      `Search text must be ${SEARCH_INPUT_LIMITS.SEARCH_TEXT_MAX_LENGTH} characters or less`,
+    );
   }
 
   // Character allowlist validation
@@ -107,7 +109,17 @@ export function validateStatusFilters(statuses: string[]): ValidationResult {
   }
 
   // Validate each status
-  const validStatuses = ['pending', 'sent', 'approved', 'rejected', 'paid', 'shipped', 'completed', 'expired', 'cancelled'];
+  const validStatuses = [
+    'pending',
+    'sent',
+    'approved',
+    'rejected',
+    'paid',
+    'shipped',
+    'completed',
+    'expired',
+    'cancelled',
+  ];
   const sanitizedStatuses = statuses.filter((status) => {
     if (typeof status !== 'string') return false;
     if (!validStatuses.includes(status.toLowerCase())) return false;
@@ -208,16 +220,16 @@ export function validateSearchFilters(filters: {
 export function logSuspiciousSearchAttempt(
   input: string,
   userId?: string,
-  userAgent?: string
+  userAgent?: string,
 ): void {
   console.warn('🚨 Suspicious search input detected:', {
     timestamp: new Date().toISOString(),
     input: input.substring(0, 100), // Only log first 100 chars for privacy
     userId: userId || 'anonymous',
     userAgent: userAgent || 'unknown',
-    suspiciousPatterns: SUSPICIOUS_PATTERNS
-      .map(pattern => pattern.test(input) ? pattern.source : null)
-      .filter(Boolean),
+    suspiciousPatterns: SUSPICIOUS_PATTERNS.map((pattern) =>
+      pattern.test(input) ? pattern.source : null,
+    ).filter(Boolean),
   });
 
   // In production, this would send to security monitoring system

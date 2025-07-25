@@ -21,62 +21,62 @@ export const COLOR_VARIANTS: Record<string, ColorVariant> = {
   // Control group - our research-based colors
   control: {
     name: 'Control (Research-Based)',
-    primary: '#FF6B35',      // Orange-red for urgency
-    secondary: '#FF8500',    // Orange for energy
-    accent: '#1565C0',       // Trust blue
+    primary: '#FF6B35', // Orange-red for urgency
+    secondary: '#FF8500', // Orange for energy
+    accent: '#1565C0', // Trust blue
     description: 'Research-backed psychology colors',
-    targetMetric: 'baseline_conversion'
+    targetMetric: 'baseline_conversion',
   },
-  
+
   // High urgency variant
   urgency_boost: {
     name: 'High Urgency',
-    primary: '#DC2626',      // Stronger red for more urgency
-    secondary: '#EA580C',    // Urgent orange
-    accent: '#1565C0',       // Keep trust blue
+    primary: '#DC2626', // Stronger red for more urgency
+    secondary: '#EA580C', // Urgent orange
+    accent: '#1565C0', // Keep trust blue
     description: 'Stronger urgency colors for immediate action',
-    targetMetric: 'quick_approval_rate'
+    targetMetric: 'quick_approval_rate',
   },
-  
+
   // Warmth optimized variant
   warmth_focused: {
     name: 'Warmth Focused',
-    primary: '#F59E0B',      // Warm amber
-    secondary: '#FB923C',    // Warm orange
-    accent: '#0369A1',       // Deeper trust blue
+    primary: '#F59E0B', // Warm amber
+    secondary: '#FB923C', // Warm orange
+    accent: '#0369A1', // Deeper trust blue
     description: 'Warmer colors for happiness association',
-    targetMetric: 'customer_satisfaction'
+    targetMetric: 'customer_satisfaction',
   },
-  
+
   // Trust maximized variant
   trust_maximized: {
     name: 'Trust Maximized',
-    primary: '#059669',      // Trust green (growth, prosperity)
-    secondary: '#0891B2',    // Secondary trust cyan
-    accent: '#1E40AF',       // Deep trust blue
+    primary: '#059669', // Trust green (growth, prosperity)
+    secondary: '#0891B2', // Secondary trust cyan
+    accent: '#1E40AF', // Deep trust blue
     description: 'Maximum trust colors for international shopping',
-    targetMetric: 'international_conversion'
+    targetMetric: 'international_conversion',
   },
-  
+
   // Cultural India variant
   india_optimized: {
     name: 'India Optimized',
-    primary: '#EA580C',      // Saffron/orange (auspicious)
-    secondary: '#DC2626',    // Cultural red
-    accent: '#1565C0',       // Universal trust blue
+    primary: '#EA580C', // Saffron/orange (auspicious)
+    secondary: '#DC2626', // Cultural red
+    accent: '#1565C0', // Universal trust blue
     description: 'Colors optimized for Indian cultural preferences',
-    targetMetric: 'india_market_conversion'
+    targetMetric: 'india_market_conversion',
   },
-  
+
   // Cultural Nepal variant
   nepal_optimized: {
     name: 'Nepal Optimized',
-    primary: '#DC143C',      // Nepal flag red
-    secondary: '#F59E0B',    // Warm gold/amber
-    accent: '#003893',       // Nepal flag blue
+    primary: '#DC143C', // Nepal flag red
+    secondary: '#F59E0B', // Warm gold/amber
+    accent: '#003893', // Nepal flag blue
     description: 'Colors matching Nepal cultural preferences',
-    targetMetric: 'nepal_market_conversion'
-  }
+    targetMetric: 'nepal_market_conversion',
+  },
 };
 
 interface ABTestConfig {
@@ -92,33 +92,33 @@ const ACTIVE_TESTS: Record<string, ABTestConfig> = {
     testName: 'Quote Approval Color Psychology',
     variants: ['control', 'urgency_boost', 'warmth_focused'],
     trafficSplit: {
-      control: 40,        // 40% get research-based colors
-      urgency_boost: 30,  // 30% get high urgency colors
-      warmth_focused: 30  // 30% get warmth-focused colors
+      control: 40, // 40% get research-based colors
+      urgency_boost: 30, // 30% get high urgency colors
+      warmth_focused: 30, // 30% get warmth-focused colors
     },
-    isActive: true
+    isActive: true,
   },
-  
+
   international_trust: {
     testName: 'International Shopping Trust Colors',
     variants: ['control', 'trust_maximized'],
     trafficSplit: {
       control: 50,
-      trust_maximized: 50
+      trust_maximized: 50,
     },
-    isActive: true
+    isActive: true,
   },
-  
+
   cultural_optimization: {
     testName: 'Cultural Color Preferences',
     variants: ['control', 'india_optimized', 'nepal_optimized'],
     trafficSplit: {
       control: 40,
       india_optimized: 30,
-      nepal_optimized: 30
+      nepal_optimized: 30,
     },
-    isActive: false // Activate based on user location
-  }
+    isActive: false, // Activate based on user location
+  },
 };
 
 /**
@@ -127,13 +127,13 @@ const ACTIVE_TESTS: Record<string, ABTestConfig> = {
 function hashUserId(userId: string, testName: string): number {
   let hash = 0;
   const input = `${userId}-${testName}`;
-  
+
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
-  
+
   return Math.abs(hash);
 }
 
@@ -143,7 +143,7 @@ function hashUserId(userId: string, testName: string): number {
 function assignVariant(userId: string, testConfig: ABTestConfig): string {
   const hash = hashUserId(userId, testConfig.testName);
   const bucket = hash % 100; // 0-99
-  
+
   let cumulativePercentage = 0;
   for (const [variant, percentage] of Object.entries(testConfig.trafficSplit)) {
     cumulativePercentage += percentage;
@@ -151,7 +151,7 @@ function assignVariant(userId: string, testConfig: ABTestConfig): string {
       return variant;
     }
   }
-  
+
   // Fallback to control
   return 'control';
 }
@@ -161,11 +161,11 @@ function assignVariant(userId: string, testConfig: ABTestConfig): string {
  */
 export const useColorVariantTesting = (testName?: string) => {
   const { user } = useAuth();
-  
+
   // Use user ID or create anonymous identifier
   const userId = useMemo(() => {
     if (user?.id) return user.id;
-    
+
     // Create persistent anonymous ID for consistent variant assignment
     let anonymousId = sessionStorage.getItem('anonymous_ab_id');
     if (!anonymousId) {
@@ -174,20 +174,20 @@ export const useColorVariantTesting = (testName?: string) => {
     }
     return anonymousId;
   }, [user?.id]);
-  
+
   // Determine which test to use
   const activeTestName = testName || 'quote_approval_colors';
   const testConfig = ACTIVE_TESTS[activeTestName];
-  
+
   // Get assigned variant
   const variant = useMemo(() => {
     if (!testConfig || !testConfig.isActive) {
       return 'control';
     }
-    
+
     return assignVariant(userId, testConfig);
   }, [userId, testConfig]);
-  
+
   // Get color scheme for assigned variant
   const colorScheme = useMemo(() => {
     const variantConfig = COLOR_VARIANTS[variant] || COLOR_VARIANTS.control;
@@ -203,7 +203,7 @@ export const useColorVariantTesting = (testName?: string) => {
       accent: variantConfig.accent,
     };
   }, [variant]);
-  
+
   // Analytics tracking function
   const trackConversion = useMemo(() => {
     return (action: string, value?: number) => {
@@ -217,7 +217,7 @@ export const useColorVariantTesting = (testName?: string) => {
           user_id: userId,
         });
       }
-      
+
       // Also track to console for development
       console.log('🧪 A/B Test Conversion:', {
         testName: activeTestName,
@@ -225,27 +225,27 @@ export const useColorVariantTesting = (testName?: string) => {
         action,
         value,
         userId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     };
   }, [activeTestName, variant, userId]);
-  
+
   return {
     // Current variant information
     variant,
     variantName: COLOR_VARIANTS[variant]?.name || 'Unknown',
     variantDescription: COLOR_VARIANTS[variant]?.description || '',
-    
+
     // Color scheme
     colors: colorScheme,
-    
+
     // Test information
     testName: activeTestName,
     isActive: testConfig?.isActive || false,
-    
+
     // Analytics
     trackConversion,
-    
+
     // Utilities
     isControl: variant === 'control',
     isTestVariant: variant !== 'control',
@@ -257,19 +257,19 @@ export const useColorVariantTesting = (testName?: string) => {
  */
 export const useConversionButtonColors = () => {
   const { colors, trackConversion, variant } = useColorVariantTesting('quote_approval_colors');
-  
+
   return {
     // Button-specific colors
     approveButton: colors.primary,
     addToCartButton: colors.secondary,
     checkoutButton: colors.primary,
     trustButton: colors.accent,
-    
+
     // Event tracking helpers
     onApproveClick: () => trackConversion('quote_approved'),
     onAddToCartClick: () => trackConversion('added_to_cart'),
     onCheckoutClick: (value?: number) => trackConversion('checkout_started', value),
-    
+
     // Variant info for styling classes
     variantClass: `color-variant-${variant}`,
     variant,
@@ -285,7 +285,7 @@ export const setColorVariantOverride = (variant: string | null) => {
   } else {
     sessionStorage.removeItem('color_variant_override');
   }
-  
+
   // Reload to apply changes
   window.location.reload();
 };

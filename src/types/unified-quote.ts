@@ -13,12 +13,28 @@ export interface QuoteItem {
   quantity: number;
   costprice_origin: number; // Cost price in origin country currency (INR, NPR, etc.)
   weight_kg: number;
+  
+  // HSN Classification Fields
+  hsn_code?: string;
+  category?: string;
+  
   smart_data: {
     weight_confidence: number; // 0-1 scale
     price_confidence: number; // 0-1 scale
     category_detected?: string;
     customs_suggestions: string[];
     optimization_hints: string[];
+    // Enhanced weight tracking
+    weight_source?: 'hsn' | 'ml' | 'manual';
+    weight_suggestions?: {
+      hsn_weight?: number;
+      hsn_min?: number;
+      hsn_max?: number;
+      hsn_packaging?: number;
+      ml_weight?: number;
+      hsn_confidence?: number;
+      ml_confidence?: number;
+    };
   };
 }
 
@@ -307,6 +323,10 @@ export interface QuoteItemInput {
   quantity: number;
   costprice_origin: number; // Cost price in origin country currency
   weight_kg: number;
+  
+  // HSN Classification Fields (optional for input)
+  hsn_code?: string;
+  category?: string;
 }
 
 export interface QuoteCalculationInput {

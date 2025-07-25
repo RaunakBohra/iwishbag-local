@@ -66,16 +66,16 @@ const accessibleQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 199.99,
   item_price: 149.99,
-  sales_tax_price: 12.00,
-  merchant_shipping_price: 10.00,
-  international_shipping: 18.00,
-  customs_and_ecs: 7.50,
-  domestic_shipping: 5.00,
-  handling_charge: 2.50,
-  insurance_amount: 1.50,
-  payment_gateway_fee: 2.50,
-  vat: 0.00,
-  discount: 5.00,
+  sales_tax_price: 12.0,
+  merchant_shipping_price: 10.0,
+  international_shipping: 18.0,
+  customs_and_ecs: 7.5,
+  domestic_shipping: 5.0,
+  handling_charge: 2.5,
+  insurance_amount: 1.5,
+  payment_gateway_fee: 2.5,
+  vat: 0.0,
+  discount: 5.0,
   destination_country: 'CA',
   origin_country: 'US',
   website: 'amazon.com',
@@ -83,26 +83,28 @@ const accessibleQuote: UnifiedQuote = {
     info: {
       name: 'Maria Rodriguez',
       email: 'maria@example.com',
-      phone: '+1-555-0123'
-    }
+      phone: '+1-555-0123',
+    },
   },
   shipping_address: {
-    formatted: '789 Maple Street, Toronto, ON M5H 2N2, Canada'
+    formatted: '789 Maple Street, Toronto, ON M5H 2N2, Canada',
   },
-  items: [{
-    id: 'accessible-item',
-    name: 'Bluetooth Speaker',
-    description: 'Portable wireless speaker with 12-hour battery life',
-    quantity: 1,
-    price: 149.99,
-    product_url: 'https://amazon.com/bluetooth-speaker',
-    image_url: 'https://example.com/speaker.jpg'
-  }],
+  items: [
+    {
+      id: 'accessible-item',
+      name: 'Bluetooth Speaker',
+      description: 'Portable wireless speaker with 12-hour battery life',
+      quantity: 1,
+      price: 149.99,
+      product_url: 'https://amazon.com/bluetooth-speaker',
+      image_url: 'https://example.com/speaker.jpg',
+    },
+  ],
   notes: 'Gift wrapping requested',
   admin_notes: 'Customer has accessibility needs - ensure clear communication',
   priority: 'medium',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
@@ -117,11 +119,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -142,7 +142,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           viewMode="guest"
           onSubmit={vi.fn()}
           enableRealTimeValidation={true}
-        />
+        />,
       );
 
       const results = await axe(container);
@@ -151,11 +151,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
     it('should meet WCAG 2.2 AA standards for quote card', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibleQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" layout="detail" />,
       );
 
       const results = await axe(container);
@@ -164,11 +160,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
     it('should meet WCAG 2.2 AA standards for quote breakdown', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteBreakdown
-          quote={accessibleQuote}
-          viewMode="customer"
-          allowExpansion={true}
-        />
+        <UnifiedQuoteBreakdown quote={accessibleQuote} viewMode="customer" allowExpansion={true} />,
       );
 
       const results = await axe(container);
@@ -182,7 +174,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           viewMode="customer"
           layout="horizontal"
           enableHotkeys={true}
-        />
+        />,
       );
 
       const results = await axe(container);
@@ -193,7 +185,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       const quotes = Array.from({ length: 5 }, (_, i) => ({
         ...accessibleQuote,
         id: `list-quote-${i}`,
-        display_id: `QT-LIST${i.toString().padStart(3, '0')}`
+        display_id: `QT-LIST${i.toString().padStart(3, '0')}`,
       }));
 
       const { container } = renderWithProviders(
@@ -203,7 +195,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           layout="list"
           enableSearch={true}
           enableSorting={true}
-        />
+        />,
       );
 
       const results = await axe(container);
@@ -217,16 +209,12 @@ describe('Unified Components Accessibility Integration Tests', () => {
       const mockOnSubmit = vi.fn();
 
       renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={mockOnSubmit}
-        />
+        <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={mockOnSubmit} />,
       );
 
       // Navigate through all form fields using Tab
       const productUrlInput = screen.getByLabelText(/product url/i);
-      
+
       await user.tab();
       expect(productUrlInput).toHaveFocus();
 
@@ -272,7 +260,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           layout="horizontal"
           onAction={mockOnAction}
           enableHotkeys={true}
-        />
+        />,
       );
 
       // Test Tab navigation through actions
@@ -303,7 +291,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       const quotes = Array.from({ length: 50 }, (_, i) => ({
         ...accessibleQuote,
         id: `keyboard-nav-${i}`,
-        display_id: `QT-KB${i.toString().padStart(3, '0')}`
+        display_id: `QT-KB${i.toString().padStart(3, '0')}`,
       }));
 
       renderWithProviders(
@@ -313,7 +301,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           layout="list"
           enableVirtualScrolling={true}
           enableSearch={true}
-        />
+        />,
       );
 
       // Navigate to search input
@@ -341,11 +329,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
   describe('Screen Reader Support', () => {
     it('should provide proper ARIA labels and descriptions for quote card', () => {
       renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibleQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" layout="detail" />,
       );
 
       // Check for proper heading structure
@@ -358,11 +342,17 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
       // Check for proper status announcement
       const statusElement = screen.getByText('sent');
-      expect(statusElement).toHaveAttribute('aria-label', expect.stringContaining('Quote status is sent'));
+      expect(statusElement).toHaveAttribute(
+        'aria-label',
+        expect.stringContaining('Quote status is sent'),
+      );
 
       // Check for product information accessibility
       const productName = screen.getByText('Bluetooth Speaker');
-      expect(productName).toHaveAttribute('aria-label', expect.stringContaining('Product: Bluetooth Speaker'));
+      expect(productName).toHaveAttribute(
+        'aria-label',
+        expect.stringContaining('Product: Bluetooth Speaker'),
+      );
     });
 
     it('should provide proper ARIA labels for interactive elements in breakdown', async () => {
@@ -376,7 +366,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           onLineItemClick={mockOnLineItemClick}
           allowExpansion={true}
           compact={true}
-        />
+        />,
       );
 
       // Check expand/collapse button accessibility
@@ -394,8 +384,9 @@ describe('Unified Components Accessibility Integration Tests', () => {
       // Check line item accessibility
       const itemCostElement = screen.getByText('Item Cost');
       expect(itemCostElement.closest('div')).toHaveAttribute('role', 'button');
-      expect(itemCostElement.closest('div')).toHaveAttribute('aria-label', 
-        expect.stringContaining('Item Cost: $149.99')
+      expect(itemCostElement.closest('div')).toHaveAttribute(
+        'aria-label',
+        expect.stringContaining('Item Cost: $149.99'),
       );
     });
 
@@ -408,7 +399,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           viewMode="guest"
           onSubmit={vi.fn()}
           enableRealTimeValidation={true}
-        />
+        />,
       );
 
       // Submit form without filling required fields
@@ -419,7 +410,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
         const errorMessages = screen.getAllByRole('alert');
         expect(errorMessages.length).toBeGreaterThan(0);
 
-        errorMessages.forEach(error => {
+        errorMessages.forEach((error) => {
           expect(error).toHaveAttribute('aria-live', 'polite');
         });
       });
@@ -435,13 +426,9 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
       renderWithProviders(
         <div>
-          <UnifiedQuoteCard
-            quote={accessibleQuote}
-            viewMode="customer"
-            onAction={mockOnAction}
-          />
+          <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" onAction={mockOnAction} />
           <div role="status" aria-live="polite" id="status-announcements"></div>
-        </div>
+        </div>,
       );
 
       const approveButton = screen.getByText('Approve Quote');
@@ -456,11 +443,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
   describe('Color Contrast and Visual Accessibility', () => {
     it('should maintain proper color contrast for all text elements', () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibleQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" layout="detail" />,
       );
 
       // Test high contrast elements
@@ -475,7 +458,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
       // Test link colors
       const links = container.querySelectorAll('a');
-      links.forEach(link => {
+      links.forEach((link) => {
         const styles = window.getComputedStyle(link);
         expect(styles.color).toBeTruthy();
       });
@@ -485,7 +468,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       // Mock high contrast mode
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: vi.fn().mockImplementation(query => ({
+        value: vi.fn().mockImplementation((query) => ({
           matches: query === '(prefers-contrast: high)',
           media: query,
           onchange: null,
@@ -498,11 +481,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       });
 
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibleQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" layout="detail" />,
       );
 
       // Should apply high contrast classes
@@ -513,7 +492,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       // Mock reduced motion preference
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: vi.fn().mockImplementation(query => ({
+        value: vi.fn().mockImplementation((query) => ({
           matches: query === '(prefers-reduced-motion: reduce)',
           media: query,
           onchange: null,
@@ -526,17 +505,13 @@ describe('Unified Components Accessibility Integration Tests', () => {
       });
 
       renderWithProviders(
-        <UnifiedQuoteActions
-          quote={accessibleQuote}
-          viewMode="customer"
-          layout="horizontal"
-        />
+        <UnifiedQuoteActions quote={accessibleQuote} viewMode="customer" layout="horizontal" />,
       );
 
       // Should disable animations when reduced motion is preferred
       // This would be tested by checking for reduced motion classes or styles
       const actionButtons = screen.getAllByRole('button');
-      actionButtons.forEach(button => {
+      actionButtons.forEach((button) => {
         const styles = window.getComputedStyle(button);
         // In reduced motion mode, transitions should be minimal
         expect(styles.transition).toMatch(/(none|0s)/);
@@ -554,23 +529,15 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
         return (
           <div>
-            <button onClick={() => setShowBreakdown(true)}>
-              Show Breakdown
-            </button>
+            <button onClick={() => setShowBreakdown(true)}>Show Breakdown</button>
             {showBreakdown && (
-              <div 
-                role="dialog" 
-                aria-modal="true"
-                aria-labelledby="breakdown-title"
-              >
+              <div role="dialog" aria-modal="true" aria-labelledby="breakdown-title">
                 <UnifiedQuoteBreakdown
                   quote={accessibleQuote}
                   viewMode="customer"
                   allowExpansion={true}
                 />
-                <button onClick={() => setShowBreakdown(false)}>
-                  Close
-                </button>
+                <button onClick={() => setShowBreakdown(false)}>Close</button>
               </div>
             )}
           </div>
@@ -586,7 +553,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       await waitFor(() => {
         const modal = screen.getByRole('dialog');
         expect(modal).toBeInTheDocument();
-        
+
         // First focusable element in modal should receive focus
         const closeButton = screen.getByText('Close');
         expect(closeButton).toHaveFocus();
@@ -614,24 +581,14 @@ describe('Unified Components Accessibility Integration Tests', () => {
 
         return (
           <div>
-            <UnifiedQuoteCard
-              quote={accessibleQuote}
-              viewMode="customer"
-              layout="compact"
-            />
+            <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" layout="compact" />
             <button onClick={() => setShowDetails(!showDetails)}>
               {showDetails ? 'Hide Details' : 'Show Details'}
             </button>
             {showDetails && (
               <div id="dynamic-details">
-                <UnifiedQuoteBreakdown
-                  quote={accessibleQuote}
-                  viewMode="customer"
-                />
-                <UnifiedQuoteActions
-                  quote={accessibleQuote}
-                  viewMode="customer"
-                />
+                <UnifiedQuoteBreakdown quote={accessibleQuote} viewMode="customer" />
+                <UnifiedQuoteActions quote={accessibleQuote} viewMode="customer" />
               </div>
             )}
           </div>
@@ -659,14 +616,14 @@ describe('Unified Components Accessibility Integration Tests', () => {
       // Test with different locales
       const languages = ['en', 'hi', 'ne'];
 
-      languages.forEach(locale => {
+      languages.forEach((locale) => {
         renderWithProviders(
           <UnifiedQuoteForm
             mode="create"
             viewMode="guest"
             locale={locale as any}
             onSubmit={vi.fn()}
-          />
+          />,
         );
 
         // Form should remain accessible regardless of language
@@ -685,11 +642,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       document.documentElement.lang = 'ar';
 
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibleQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibleQuote} viewMode="customer" layout="detail" />,
       );
 
       // Should apply RTL-appropriate styles
@@ -711,7 +664,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
           quote={accessibleQuote}
           viewMode="customer"
           onAction={failingAction}
-        />
+        />,
       );
 
       const approveButton = screen.getByText('Approve Quote');
@@ -737,16 +690,12 @@ describe('Unified Components Accessibility Integration Tests', () => {
     });
 
     it('should handle loading states accessibly', async () => {
-      const slowAction = vi.fn().mockImplementation(
-        () => new Promise(resolve => setTimeout(resolve, 1000))
-      );
+      const slowAction = vi
+        .fn()
+        .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
 
       renderWithProviders(
-        <UnifiedQuoteActions
-          quote={accessibleQuote}
-          viewMode="customer"
-          onAction={slowAction}
-        />
+        <UnifiedQuoteActions quote={accessibleQuote} viewMode="customer" onAction={slowAction} />,
       );
 
       const approveButton = screen.getByText('Approve Quote');
@@ -757,7 +706,7 @@ describe('Unified Components Accessibility Integration Tests', () => {
       await waitFor(() => {
         expect(approveButton).toBeDisabled();
         expect(approveButton).toHaveAttribute('aria-busy', 'true');
-        
+
         const loadingIndicator = screen.getByRole('status');
         expect(loadingIndicator).toBeInTheDocument();
         expect(loadingIndicator).toHaveAttribute('aria-label', expect.stringContaining('loading'));

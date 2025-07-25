@@ -20,7 +20,7 @@ export const useUnreadMessagesCount = (options: UseUnreadMessagesCountOptions = 
     data: unreadCount = 0,
     isLoading,
     error,
-    refetch
+    refetch,
   } = useQuery({
     queryKey: ['unread-messages-count', user?.id],
     queryFn: async (): Promise<number> => {
@@ -30,14 +30,16 @@ export const useUnreadMessagesCount = (options: UseUnreadMessagesCountOptions = 
       }
 
       try {
-        console.log('📬 [useUnreadMessagesCount] Fetching unread messages count for user:', user.id);
+        console.log(
+          '📬 [useUnreadMessagesCount] Fetching unread messages count for user:',
+          user.id,
+        );
 
         // Call the database function to get unread message count
-        const { data, error } = await supabase
-          .rpc('get_unread_message_count', {
-            p_quote_id: null, // null to get count for all quotes
-            p_user_id: user.id
-          });
+        const { data, error } = await supabase.rpc('get_unread_message_count', {
+          p_quote_id: null, // null to get count for all quotes
+          p_user_id: user.id,
+        });
 
         if (error) {
           console.error('🚨 [useUnreadMessagesCount] Database error:', error);

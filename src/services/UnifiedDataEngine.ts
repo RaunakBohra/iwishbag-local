@@ -4,7 +4,8 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
-import { currencyService } from '@/services/CurrencyService';
+import CurrencyConversionService from '@/services/CurrencyConversionService';
+import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import type {
   UnifiedQuote,
   UnifiedQuoteRow,
@@ -17,6 +18,21 @@ import type {
   QuoteCalculationResult,
 } from '@/types/unified-quote';
 
+// HSN Master Record interface
+export interface HSNMasterRecord {
+  hsn_code: string;
+  description: string;
+  category: string;
+  subcategory?: string;
+  keywords: string[];
+  minimum_valuation_usd?: number;
+  requires_currency_conversion: boolean;
+  weight_data: any;
+  tax_data: any;
+  classification_data: any;
+  is_active: boolean;
+}
+
 /**
  * Unified Data Engine - Single source of truth for all quote operations
  * Handles JSONB data transformation, validation, and smart operations
@@ -25,8 +41,11 @@ export class UnifiedDataEngine {
   private static instance: UnifiedDataEngine;
   private cache = new Map<string, { data: any; timestamp: number }>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private currencyService: CurrencyConversionService;
 
-  private constructor() {}
+  private constructor() {
+    this.currencyService = CurrencyConversionService.getInstance();
+  }
 
   static getInstance(): UnifiedDataEngine {
     if (!UnifiedDataEngine.instance) {
@@ -53,7 +72,7 @@ export class UnifiedDataEngine {
       shipping_carrier: row.shipping_carrier || null,
       tracking_number: row.tracking_number || null,
       items: Array.isArray(row.items) ? row.items : [],
-      costprice_total_usd: row.costprice_total_usd,
+      base_total_usd: row.base_total_usd,
       final_total_usd: row.final_total_usd,
       calculation_data: row.calculation_data || this.getDefaultCalculationData(),
       customer_data: row.customer_data || this.getDefaultCustomerData(),
@@ -83,11 +102,11 @@ export class UnifiedDataEngine {
       id: item.id || `item_${Date.now()}_${Math.random()}`,
       name: item.product_name || item.name || 'Unknown Product',
       quantity: item.quantity || 1,
-      costprice_origin: item.costprice_origin || item.price || 0,
+      price_usd: item.price_usd || item.price || 0,
       weight_kg: item.weight_kg || item.weight || 0.5,
       url: item.product_url || item.url || '',
       image_url: item.image_url || '',
-      customer_notes: item.options || '',
+      options: item.options || '',
       smart_data: {
         weight_confidence: 0.5, // Default confidence for old data
         category_detected: 'general',
@@ -135,7 +154,7 @@ export class UnifiedDataEngine {
     const operational_data: OperationalData = {
       customs: {
         category: 'general',
-        percentage: oldQuote.customs_percentage || 0,
+        percentage: oldQuote.customs_percentage || 10,
         tier_suggestions: [],
       },
       shipping: {
@@ -173,7 +192,7 @@ export class UnifiedDataEngine {
       origin_country: oldQuote.origin_country || 'US',
       destination_country: oldQuote.destination_country || 'US',
       items,
-      costprice_total_usd: oldQuote.item_price || 0,
+      base_total_usd: oldQuote.item_price || 0,
       final_total_usd: oldQuote.final_total_usd || 0,
       currency: oldQuote.currency || oldQuote.destination_currency || 'USD',
       calculation_data,
@@ -237,11 +256,6 @@ export class UnifiedDataEngine {
 
     // Enhance customer data with profile information if available and customer data is empty
     if (profileData && !quote.is_anonymous) {
-      // Ensure customer info object exists
-      if (!quote.customer_data.info) {
-        quote.customer_data.info = {};
-      }
-      
       // Only update if customer info is empty or missing name
       if (!quote.customer_data.info.name && profileData.full_name) {
         quote.customer_data.info.name = profileData.full_name;
@@ -342,22 +356,14 @@ export class UnifiedDataEngine {
   }
 
   /**
-   * Create new quote with smart defaults and automatic calculation
+   * Create new quote with smart defaults
    */
   async createQuote(input: QuoteCalculationInput): Promise<QuoteCalculationResult> {
     try {
-      console.log('🚀 [QUOTE-CREATION-FIX] Starting enhanced quote creation with smart calculation');
-      
       // Generate smart suggestions for new quote
       const smartSuggestions = await this.generateSmartSuggestions(input.items);
 
-      // ✅ FIX: Get smart calculation data with real exchange rate
-      const calculationData = await this.getDefaultCalculationData(
-        input.origin_country,
-        input.destination_country
-      );
-
-      // Create quote data with smart defaults
+      // Create quote data
       const quoteData = {
         display_id: null, // Let database trigger generate sequential ID (#1001, #1002, etc.)
         status: 'pending',
@@ -374,9 +380,9 @@ export class UnifiedDataEngine {
             optimization_hints: [],
           },
         })),
-        costprice_total_usd: input.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0),
-        final_total_usd: 0, // Will be calculated by SmartCalculationEngine
-        calculation_data: calculationData, // ✅ FIX: Now has real exchange rate
+        base_total_usd: input.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0),
+        final_total_usd: 0, // Will be calculated
+        calculation_data: this.getDefaultCalculationData(),
         customer_data: input.customer_data || this.getDefaultCustomerData(),
         operational_data: this.getDefaultOperationalData(),
         currency: 'USD',
@@ -385,77 +391,20 @@ export class UnifiedDataEngine {
         optimization_score: 0,
       };
 
-      // Insert basic quote first
       const { data, error } = await supabase.from('quotes').insert(quoteData).select().single();
 
       if (error) throw error;
 
-      const basicQuote = this.transformFromDB(data);
-      
-      console.log('✅ [QUOTE-CREATION-FIX] Basic quote created:', {
-        id: basicQuote.id,
-        route: `${basicQuote.origin_country}→${basicQuote.destination_country}`,
-        exchangeRate: basicQuote.calculation_data?.exchange_rate?.rate,
-        exchangeSource: basicQuote.calculation_data?.exchange_rate?.source
-      });
+      const quote = this.transformFromDB(data);
 
-      // ✅ FIX: Now trigger SmartCalculationEngine for VAT, customs, etc.
-      try {
-        // Import SmartCalculationEngine dynamically to avoid circular dependency
-        const { smartCalculationEngine } = await import('./SmartCalculationEngine');
-        
-        console.log('🧠 [QUOTE-CREATION-FIX] Running smart calculation for new quote...');
-        
-        const smartResult = await smartCalculationEngine.calculateWithShippingOptions({
-          quote: basicQuote,
-          preferences: {
-            speed_priority: 'medium',
-            cost_priority: 'medium',
-            show_all_options: false, // For creation, just get basic calculation
-          },
-        });
-
-        if (smartResult.success) {
-          console.log('🎯 [QUOTE-CREATION-FIX] Smart calculation successful, saving results...');
-          
-          // Save smart calculation results back to database
-          const updateSuccess = await this.updateQuote(basicQuote.id, {
-            calculation_data: smartResult.updated_quote.calculation_data,
-            operational_data: smartResult.updated_quote.operational_data,
-            final_total_usd: smartResult.updated_quote.final_total_usd,
-            optimization_score: smartResult.updated_quote.optimization_score,
-          });
-
-          if (updateSuccess) {
-            console.log('✅ [QUOTE-CREATION-FIX] Quote creation complete with smart calculation');
-            return {
-              success: true,
-              quote: smartResult.updated_quote,
-              smart_suggestions: [...smartSuggestions, ...smartResult.optimization_suggestions],
-              shipping_options: smartResult.shipping_options,
-            };
-          } else {
-            console.warn('⚠️ [QUOTE-CREATION-FIX] Failed to save smart calculation results, returning basic quote');
-          }
-        } else {
-          console.warn('⚠️ [QUOTE-CREATION-FIX] Smart calculation failed:', smartResult.error);
-        }
-      } catch (smartError) {
-        console.error('❌ [QUOTE-CREATION-FIX] Smart calculation error:', smartError);
-        // Continue with basic quote if smart calculation fails
-      }
-
-      // Fallback: return basic quote if smart calculation fails
-      console.log('📋 [QUOTE-CREATION-FIX] Returning basic quote (smart calculation skipped)');
       return {
         success: true,
-        quote: basicQuote,
+        quote,
         smart_suggestions: smartSuggestions,
-        shipping_options: [],
+        shipping_options: [], // Will be populated by SmartCalculationEngine
       };
-      
     } catch (error) {
-      console.error('❌ [QUOTE-CREATION-FIX] Error creating quote:', error);
+      console.error('Error creating quote:', error);
       return {
         success: false,
         quote: {} as UnifiedQuote,
@@ -535,33 +484,192 @@ export class UnifiedDataEngine {
 
     const updatedItems = [...quote.items, newItem];
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.costprice_origin * item.quantity,
+      (sum, item) => sum + item.price_usd * item.quantity,
       0,
     );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
-      costprice_total_usd: newBaseTotal,
+      base_total_usd: newBaseTotal,
     });
   }
 
   async updateItem(quoteId: string, itemId: string, updates: Partial<QuoteItem>): Promise<boolean> {
-    const quote = await this.getQuote(quoteId);
-    if (!quote) return false;
+    try {
+      const quote = await this.getQuote(quoteId);
+      if (!quote) {
+        console.error(`Quote ${quoteId} not found for item update`);
+        return false;
+      }
 
-    const updatedItems = quote.items.map((item) =>
-      item.id === itemId ? { ...item, ...updates } : item,
-    );
+      // Find the item to update
+      const existingItem = quote.items.find(item => item.id === itemId);
+      if (!existingItem) {
+        console.error(`Item ${itemId} not found in quote ${quoteId}`);
+        return false;
+      }
 
-    const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.costprice_origin * item.quantity,
-      0,
-    );
+      // Validate HSN fields if they're being updated
+      if (updates.hsn_code !== undefined || updates.category !== undefined) {
+        const validationResult = await this.validateHSNFields(updates, existingItem);
+        if (!validationResult.isValid) {
+          console.error(`HSN validation failed for item ${itemId}:`, validationResult.errors);
+          throw new Error(`HSN validation failed: ${validationResult.errors.join(', ')}`);
+        }
+      }
 
-    return this.updateQuote(quoteId, {
-      items: updatedItems,
-      costprice_total_usd: newBaseTotal,
-    });
+      // Apply updates with proper smart_data handling
+      const updatedItems = quote.items.map((item) => {
+        if (item.id === itemId) {
+          const updatedItem = { ...item, ...updates };
+          
+          // Enhanced smart_data handling for HSN updates
+          if (updates.hsn_code || updates.category) {
+            updatedItem.smart_data = {
+              ...item.smart_data,
+              hsn_last_updated: new Date().toISOString(),
+              hsn_update_source: 'admin_interface',
+              hsn_validation_status: 'validated',
+            };
+          }
+          
+          return updatedItem;
+        }
+        return item;
+      });
+
+      // Recalculate totals
+      const newBaseTotal = updatedItems.reduce(
+        (sum, item) => sum + item.price_usd * item.quantity,
+        0,
+      );
+
+      // Enhanced operational_data tracking for HSN modifications
+      const operationalUpdates: any = {};
+      if (updates.hsn_code !== undefined || updates.category !== undefined) {
+        const previousHsnCode = existingItem.hsn_code;
+        const previousCategory = existingItem.category;
+        const newHsnCode = updates.hsn_code ?? existingItem.hsn_code;
+        const newCategory = updates.category ?? existingItem.category;
+        
+        // Determine the type of HSN modification
+        let modificationType = 'update';
+        if (!previousHsnCode && newHsnCode) {
+          modificationType = 'assign';
+        } else if (previousHsnCode && !newHsnCode) {
+          modificationType = 'clear';
+        } else if (previousHsnCode !== newHsnCode) {
+          modificationType = 'change';
+        }
+        
+        // Create detailed admin override log entry
+        const overrideLogEntry = {
+          timestamp: new Date().toISOString(),
+          item_id: itemId,
+          item_name: existingItem.name,
+          modification_type: modificationType,
+          previous_hsn_code: previousHsnCode || null,
+          new_hsn_code: newHsnCode || null,
+          previous_category: previousCategory || null,
+          new_category: newCategory || null,
+          admin_source: 'unified_quote_interface',
+          validation_passed: true,
+        };
+        
+        // Update operational data with enhanced tracking
+        const existingOverrides = quote.operational_data?.admin_hsn_overrides || [];
+        operationalUpdates.operational_data = {
+          ...quote.operational_data,
+          last_hsn_modification: new Date().toISOString(),
+          hsn_items_count: updatedItems.filter(item => item.hsn_code).length,
+          admin_override_count: (quote.operational_data?.admin_override_count || 0) + 1,
+          // Enhanced admin override tracking
+          admin_hsn_overrides: [...existingOverrides, overrideLogEntry].slice(-50), // Keep last 50 modifications
+          last_admin_override: overrideLogEntry,
+          admin_modification_summary: {
+            total_modifications: (quote.operational_data?.admin_modification_summary?.total_modifications || 0) + 1,
+            assignments: (quote.operational_data?.admin_modification_summary?.assignments || 0) + (modificationType === 'assign' ? 1 : 0),
+            changes: (quote.operational_data?.admin_modification_summary?.changes || 0) + (modificationType === 'change' ? 1 : 0),
+            clears: (quote.operational_data?.admin_modification_summary?.clears || 0) + (modificationType === 'clear' ? 1 : 0),
+            last_activity: new Date().toISOString(),
+          },
+        };
+
+        // Log the admin override for debugging
+        console.log(`🔒 [ADMIN-OVERRIDE] HSN modification logged:`, {
+          quoteId,
+          itemId,
+          modificationType,
+          from: `${previousHsnCode}/${previousCategory}`,
+          to: `${newHsnCode}/${newCategory}`,
+          overrideCount: operationalUpdates.operational_data.admin_override_count,
+        });
+      }
+
+      const success = await this.updateQuote(quoteId, {
+        items: updatedItems,
+        base_total_usd: newBaseTotal,
+        ...operationalUpdates,
+      });
+
+      if (success && (updates.hsn_code || updates.category)) {
+        console.log(`✅ Item ${itemId} updated with HSN data: ${updates.hsn_code || 'category only'}`);
+      }
+
+      return success;
+    } catch (error) {
+      console.error(`Error updating item ${itemId} in quote ${quoteId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Validate HSN fields for data integrity
+   */
+  private async validateHSNFields(
+    updates: Partial<QuoteItem>, 
+    existingItem: QuoteItem
+  ): Promise<{ isValid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+    const hsnCode = updates.hsn_code ?? existingItem.hsn_code;
+    const category = updates.category ?? existingItem.category;
+
+    // HSN code format validation
+    if (hsnCode && !/^\d{2,8}$/.test(hsnCode)) {
+      errors.push('HSN code must be 2-8 digits only');
+    }
+
+    // Category validation - Allow any category from HSN database
+    // Note: Category will be validated against database records below
+
+    // Consistency validation - both HSN and category should be provided together
+    if ((hsnCode && !category) || (!hsnCode && category)) {
+      errors.push('HSN code and category must be provided together');
+    }
+
+    // Database validation - check if HSN code exists in hsn_master
+    if (hsnCode && category) {
+      try {
+        const { data: hsnRecord, error } = await supabase
+          .from('hsn_master')
+          .select('hsn_code, category')
+          .eq('hsn_code', hsnCode)
+          .eq('is_active', true)
+          .single();
+
+        if (error || !hsnRecord) {
+          errors.push(`HSN code ${hsnCode} not found in HSN master database`);
+        }
+        // Note: Category mismatch validation removed - using database category as source of truth
+      } catch (error) {
+        errors.push('Failed to validate HSN code against database');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
   }
 
   async removeItem(quoteId: string, itemId: string): Promise<boolean> {
@@ -572,13 +680,13 @@ export class UnifiedDataEngine {
     if (updatedItems.length === 0) return false; // Don't allow empty quotes
 
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.costprice_origin * item.quantity,
+      (sum, item) => sum + item.price_usd * item.quantity,
       0,
     );
 
     return this.updateQuote(quoteId, {
       items: updatedItems,
-      costprice_total_usd: newBaseTotal,
+      base_total_usd: newBaseTotal,
     });
   }
 
@@ -604,7 +712,7 @@ export class UnifiedDataEngine {
     }
 
     // Price validation suggestions
-    const totalValue = items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
+    const totalValue = items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
     if (totalValue > 1000) {
       suggestions.push({
         id: crypto.randomUUID(),
@@ -621,32 +729,9 @@ export class UnifiedDataEngine {
   }
 
   /**
-   * Default data structures with smart exchange rate calculation
+   * Default data structures
    */
-  private async getDefaultCalculationData(originCountry?: string, destinationCountry?: string): Promise<CalculationData> {
-    let exchangeRate = {
-      rate: 1,
-      source: 'default',
-      confidence: 1,
-    };
-
-    // ✅ FIX: Calculate real exchange rate if countries are different
-    if (originCountry && destinationCountry && originCountry !== destinationCountry) {
-      try {
-        console.log(`🔄 [EXCHANGE-FIX] Calculating exchange rate for ${originCountry}→${destinationCountry}`);
-        const rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
-        exchangeRate = {
-          rate,
-          source: 'currency_service',
-          confidence: 0.95,
-        };
-        console.log(`✅ [EXCHANGE-FIX] Exchange rate calculated: ${rate}`);
-      } catch (error) {
-        console.warn(`⚠️ [EXCHANGE-FIX] Failed to get exchange rate for ${originCountry}→${destinationCountry}:`, error);
-        // Keep default rate: 1
-      }
-    }
-
+  private getDefaultCalculationData(): CalculationData {
     return {
       breakdown: {
         items_total: 0,
@@ -656,7 +741,11 @@ export class UnifiedDataEngine {
         fees: 0,
         discount: 0,
       },
-      exchange_rate: exchangeRate,
+      exchange_rate: {
+        rate: 1,
+        source: 'unified_configuration',
+        confidence: 1,
+      },
       smart_optimizations: [],
     };
   }
@@ -717,6 +806,13 @@ export class UnifiedDataEngine {
 
   private clearCache(key: string): void {
     this.cache.delete(key);
+  }
+
+  /**
+   * Public method to clear quote cache (useful for forcing refresh after updates)
+   */
+  public clearQuoteCache(quoteId: string): void {
+    this.clearCache(`quote_${quoteId}`);
   }
 
   /**
@@ -793,6 +889,422 @@ export class UnifiedDataEngine {
       status_breakdown: statusBreakdown,
       top_destinations: topDestinations,
     };
+  }
+
+  /**
+   * 🆕 NEW: HSN System Integration Methods
+   */
+
+  /**
+   * Get HSN record by code with caching
+   */
+  async getHSNRecord(hsnCode: string): Promise<HSNMasterRecord | null> {
+    const cacheKey = `hsn_${hsnCode}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('hsn_master')
+        .select('*')
+        .eq('hsn_code', hsnCode)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !data) {
+        console.warn(`HSN code ${hsnCode} not found in database`);
+        return null;
+      }
+
+      const record: HSNMasterRecord = {
+        hsn_code: data.hsn_code,
+        description: data.description,
+        category: data.category,
+        subcategory: data.subcategory,
+        keywords: data.keywords || [],
+        minimum_valuation_usd: data.minimum_valuation_usd,
+        requires_currency_conversion: data.requires_currency_conversion,
+        weight_data: data.weight_data || {},
+        tax_data: data.tax_data || {},
+        classification_data: data.classification_data || {},
+        is_active: data.is_active,
+      };
+
+      this.setCache(cacheKey, record);
+      return record;
+    } catch (error) {
+      console.error('Error fetching HSN record:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Search HSN records by keywords for classification
+   */
+  async searchHSNByKeywords(
+    keywords: string[],
+    category?: string,
+    limit: number = 10,
+  ): Promise<HSNMasterRecord[]> {
+    const cacheKey = `hsn_search_${keywords.join('_')}_${category || 'all'}_${limit}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      let query = supabase.from('hsn_master').select('*').eq('is_active', true);
+
+      // Add category filter if specified
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      // Use text search on keywords array
+      if (keywords.length > 0) {
+        const keywordQuery = keywords.map((k) => `"${k}"`).join(' | ');
+        query = query.textSearch('keywords', keywordQuery);
+      }
+
+      const { data, error } = await query.limit(limit);
+
+      if (error) {
+        console.error('Error searching HSN records:', error);
+        return [];
+      }
+
+      const records: HSNMasterRecord[] = (data || []).map((item) => ({
+        hsn_code: item.hsn_code,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        keywords: item.keywords || [],
+        minimum_valuation_usd: item.minimum_valuation_usd,
+        requires_currency_conversion: item.requires_currency_conversion,
+        weight_data: item.weight_data || {},
+        tax_data: item.tax_data || {},
+        classification_data: item.classification_data || {},
+        is_active: item.is_active,
+      }));
+
+      this.setCache(cacheKey, records);
+      return records;
+    } catch (error) {
+      console.error('Error searching HSN records:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get HSN records by category
+   */
+  async getHSNByCategory(category: string, limit: number = 20): Promise<HSNMasterRecord[]> {
+    const cacheKey = `hsn_category_${category}_${limit}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('hsn_master')
+        .select('*')
+        .eq('category', category)
+        .eq('is_active', true)
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching HSN records by category:', error);
+        return [];
+      }
+
+      const records: HSNMasterRecord[] = (data || []).map((item) => ({
+        hsn_code: item.hsn_code,
+        description: item.description,
+        category: item.category,
+        subcategory: item.subcategory,
+        keywords: item.keywords || [],
+        minimum_valuation_usd: item.minimum_valuation_usd,
+        requires_currency_conversion: item.requires_currency_conversion,
+        weight_data: item.weight_data || {},
+        tax_data: item.tax_data || {},
+        classification_data: item.classification_data || {},
+        is_active: item.is_active,
+      }));
+
+      this.setCache(cacheKey, records);
+      return records;
+    } catch (error) {
+      console.error('Error fetching HSN records by category:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 🆕 NEW: Currency Conversion Integration Methods
+   */
+
+  /**
+   * Convert minimum valuation for quote items
+   */
+  async convertMinimumValuationsForQuote(quote: UnifiedQuote): Promise<{
+    conversions: Array<{
+      itemId: string;
+      itemName: string;
+      usdAmount: number;
+      convertedAmount: number;
+      originCurrency: string;
+      exchangeRate: number;
+    }>;
+    totalConversions: number;
+    failedConversions: number;
+  }> {
+    const conversions: Array<{
+      itemId: string;
+      itemName: string;
+      usdAmount: number;
+      convertedAmount: number;
+      originCurrency: string;
+      exchangeRate: number;
+    }> = [];
+
+    let totalConversions = 0;
+    let failedConversions = 0;
+
+    for (const item of quote.items) {
+      if (!item.hsn_code) continue;
+
+      try {
+        // Get HSN record to check if minimum valuation exists
+        const hsnRecord = await this.getHSNRecord(item.hsn_code);
+        if (
+          !hsnRecord ||
+          !hsnRecord.minimum_valuation_usd ||
+          !hsnRecord.requires_currency_conversion
+        ) {
+          continue;
+        }
+
+        // Convert minimum valuation
+        const conversion = await this.currencyService.convertMinimumValuation(
+          hsnRecord.minimum_valuation_usd,
+          quote.origin_country,
+        );
+
+        conversions.push({
+          itemId: item.id,
+          itemName: item.name,
+          usdAmount: hsnRecord.minimum_valuation_usd,
+          convertedAmount: conversion.convertedAmount,
+          originCurrency: conversion.originCurrency,
+          exchangeRate: conversion.exchangeRate,
+        });
+
+        totalConversions++;
+      } catch (error) {
+        console.error(`Failed to convert minimum valuation for item ${item.name}:`, error);
+        failedConversions++;
+      }
+    }
+
+    return {
+      conversions,
+      totalConversions,
+      failedConversions,
+    };
+  }
+
+  /**
+   * Enhance quote items with HSN classification and currency conversion data
+   */
+  async enhanceQuoteWithHSNData(quote: UnifiedQuote): Promise<UnifiedQuote> {
+    console.log('🏷️ [HSN] Enhancing quote with HSN data:', quote.id);
+
+    try {
+      const enhancedItems = await Promise.all(
+        quote.items.map(async (item) => {
+          const enhancedItem = { ...item };
+
+          // Auto-classify HSN code if missing
+          if (!item.hsn_code) {
+            try {
+              const classificationResult = await autoProductClassifier.classifyProduct({
+                productName: item.name,
+                productUrl: item.url,
+                category: item.category,
+              });
+
+              if (classificationResult.hsnCode && classificationResult.confidence > 0.6) {
+                enhancedItem.hsn_code = classificationResult.hsnCode;
+                console.log(
+                  `✅ [HSN] Auto-classified ${item.name} as HSN ${classificationResult.hsnCode}`,
+                );
+              }
+            } catch (error) {
+              console.error(`❌ [HSN] Classification failed for ${item.name}:`, error);
+            }
+          }
+
+          // Add HSN metadata if HSN code is available
+          if (enhancedItem.hsn_code) {
+            const hsnRecord = await this.getHSNRecord(enhancedItem.hsn_code);
+            if (hsnRecord) {
+              enhancedItem.hsn_data = {
+                description: hsnRecord.description,
+                category: hsnRecord.category,
+                subcategory: hsnRecord.subcategory,
+                minimum_valuation_usd: hsnRecord.minimum_valuation_usd,
+                requires_currency_conversion: hsnRecord.requires_currency_conversion,
+                typical_weight_kg: hsnRecord.weight_data?.typical_weights?.per_unit?.average,
+              };
+
+              // Add currency conversion data if applicable
+              if (hsnRecord.minimum_valuation_usd && hsnRecord.requires_currency_conversion) {
+                try {
+                  const conversion = await this.currencyService.convertMinimumValuation(
+                    hsnRecord.minimum_valuation_usd,
+                    quote.origin_country,
+                  );
+
+                  enhancedItem.minimum_valuation_conversion = {
+                    usd_amount: conversion.usdAmount,
+                    converted_amount: conversion.convertedAmount,
+                    origin_currency: conversion.originCurrency,
+                    exchange_rate: conversion.exchangeRate,
+                    valuation_method:
+                      item.price_usd >= conversion.convertedAmount
+                        ? 'actual_price'
+                        : 'minimum_valuation',
+                  };
+                } catch (error) {
+                  console.error(`❌ [CURRENCY] Conversion failed for ${item.name}:`, error);
+                }
+              }
+            }
+          }
+
+          return enhancedItem;
+        }),
+      );
+
+      const enhancedQuote: UnifiedQuote = {
+        ...quote,
+        items: enhancedItems,
+        operational_data: {
+          ...quote.operational_data,
+          hsn_enhancement: {
+            enhanced_at: new Date().toISOString(),
+            items_with_hsn: enhancedItems.filter((item) => item.hsn_code).length,
+            items_with_conversion: enhancedItems.filter((item) => item.minimum_valuation_conversion)
+              .length,
+            auto_classified_items: enhancedItems.filter(
+              (item) => item.hsn_code && !quote.items.find((orig) => orig.id === item.id)?.hsn_code,
+            ).length,
+          },
+        },
+      };
+
+      console.log('✅ [HSN] Quote enhancement completed:', {
+        quoteId: quote.id,
+        itemsWithHSN: enhancedItems.filter((item) => item.hsn_code).length,
+        itemsWithConversion: enhancedItems.filter((item) => item.minimum_valuation_conversion)
+          .length,
+      });
+
+      return enhancedQuote;
+    } catch (error) {
+      console.error('❌ [HSN] Quote enhancement failed:', error);
+      return quote; // Return original quote on failure
+    }
+  }
+
+  /**
+   * Get HSN admin override history for a quote
+   */
+  getHSNAdminOverrideHistory(quote: UnifiedQuote): {
+    overrides: Array<any>;
+    summary: {
+      total_modifications: number;
+      assignments: number;
+      changes: number;
+      clears: number;
+      last_activity: string | null;
+    };
+    recent_activity: Array<any>;
+  } {
+    const operationalData = quote.operational_data || {};
+    const overrides = operationalData.admin_hsn_overrides || [];
+    const summary = operationalData.admin_modification_summary || {
+      total_modifications: 0,
+      assignments: 0,
+      changes: 0,
+      clears: 0,
+      last_activity: null,
+    };
+
+    // Get recent activity (last 10 modifications)
+    const recentActivity = overrides
+      .slice(-10)
+      .reverse()
+      .map(override => ({
+        ...override,
+        time_ago: this.getTimeAgo(override.timestamp),
+        action_description: this.getOverrideActionDescription(override),
+      }));
+
+    return {
+      overrides,
+      summary,
+      recent_activity: recentActivity,
+    };
+  }
+
+  /**
+   * Generate human-readable description for HSN override action
+   */
+  private getOverrideActionDescription(override: any): string {
+    const { modification_type, item_name, previous_hsn_code, new_hsn_code } = override;
+    
+    switch (modification_type) {
+      case 'assign':
+        return `Assigned HSN ${new_hsn_code} to "${item_name}"`;
+      case 'change':
+        return `Changed "${item_name}" from HSN ${previous_hsn_code} to ${new_hsn_code}`;
+      case 'clear':
+        return `Removed HSN ${previous_hsn_code} from "${item_name}"`;
+      default:
+        return `Updated HSN for "${item_name}"`;
+    }
+  }
+
+  /**
+   * Calculate time ago from timestamp
+   */
+  private getTimeAgo(timestamp: string): string {
+    const now = new Date();
+    const past = new Date(timestamp);
+    const diffMs = now.getTime() - past.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMinutes < 1) return 'just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return past.toLocaleDateString();
+  }
+
+  /**
+   * Clear HSN-related cache entries
+   */
+  clearHSNCache(): void {
+    const keysToDelete: string[] = [];
+
+    for (const [key] of this.cache) {
+      if (key.startsWith('hsn_')) {
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach((key) => this.cache.delete(key));
+    console.log(`🧹 Cleared ${keysToDelete.length} HSN cache entries`);
   }
 }
 

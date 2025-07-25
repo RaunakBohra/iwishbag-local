@@ -151,7 +151,7 @@ class UnifiedSupportEngine {
     in_progress: ['pending', 'resolved', 'open'],
     pending: ['in_progress', 'open', 'closed'],
     resolved: ['closed', 'open'], // Allow reopening if needed
-    closed: [] // Terminal state
+    closed: [], // Terminal state
   };
 
   private constructor() {
@@ -187,13 +187,16 @@ class UnifiedSupportEngine {
   /**
    * Get smart status suggestions based on current status and context
    */
-  getStatusSuggestions(currentStatus: TicketStatus, isAdmin: boolean = true): {
+  getStatusSuggestions(
+    currentStatus: TicketStatus,
+    isAdmin: boolean = true,
+  ): {
     suggested: TicketStatus | null;
     reason: string;
     all: TicketStatus[];
   } {
     const allowedTransitions = this.getAllowedTransitions(currentStatus);
-    
+
     // Smart suggestions based on current status and user role
     let suggested: TicketStatus | null = null;
     let reason = '';
@@ -203,7 +206,7 @@ class UnifiedSupportEngine {
       return {
         suggested: null,
         reason: 'Status changes automatically based on ticket activity',
-        all: []
+        all: [],
       };
     }
 
@@ -233,7 +236,7 @@ class UnifiedSupportEngine {
     return {
       suggested,
       reason,
-      all: allowedTransitions
+      all: allowedTransitions,
     };
   }
 
@@ -261,8 +264,8 @@ class UnifiedSupportEngine {
   private clearCache(pattern?: string): void {
     if (pattern) {
       Array.from(this.cache.keys())
-        .filter(key => key.includes(pattern))
-        .forEach(key => this.cache.delete(key));
+        .filter((key) => key.includes(pattern))
+        .forEach((key) => this.cache.delete(key));
     } else {
       this.cache.clear();
     }
@@ -308,26 +311,25 @@ class UnifiedSupportEngine {
 
       // Fetch the complete ticket record
       const ticket = await this.getTicketById(data);
-      
+
       if (ticket) {
         console.log('✅ Ticket created successfully:', ticket.id);
         this.clearCache('tickets');
-        
+
         // Send notifications (async, don't block)
-        this.sendTicketNotifications(ticket, 'created').catch(err => {
+        this.sendTicketNotifications(ticket, 'created').catch((err) => {
           console.error('❌ Failed to send ticket creation notifications:', err);
           Sentry.captureException(err);
         });
 
         // Check for auto-assignment
-        this.checkAutoAssignment(ticket).catch(err => {
+        this.checkAutoAssignment(ticket).catch((err) => {
           console.error('❌ Auto-assignment failed:', err);
           Sentry.captureException(err);
         });
       }
 
       return ticket;
-
     } catch (error) {
       console.error('❌ Exception in createTicket:', error);
       Sentry.captureException(error);
@@ -348,7 +350,8 @@ class UnifiedSupportEngine {
 
       const { data, error } = await supabase
         .from('support_system')
-        .select(`
+        .select(
+          `
           *,
           quote:quotes(
             id,
@@ -362,7 +365,8 @@ class UnifiedSupportEngine {
             items,
             customer_data
           )
-        `)
+        `,
+        )
         .eq('id', ticketId)
         .eq('system_type', 'ticket')
         .single();
@@ -374,10 +378,9 @@ class UnifiedSupportEngine {
 
       const ticket = data as SupportRecord;
       this.setCache(cacheKey, ticket);
-      
+
       console.log('✅ Ticket fetched successfully:', ticket.id);
       return ticket;
-
     } catch (error) {
       console.error('❌ Exception in getTicketById:', error);
       Sentry.captureException(error);
@@ -392,7 +395,7 @@ class UnifiedSupportEngine {
     filters: TicketFilters = {},
     userId?: string,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
   ): Promise<SupportRecord[]> {
     try {
       const cacheKey = this.getCacheKey('tickets', { filters, userId, limit, offset });
@@ -403,7 +406,8 @@ class UnifiedSupportEngine {
 
       let query = supabase
         .from('support_system')
-        .select(`
+        .select(
+          `
           *,
           quote:quotes(
             id,
@@ -417,7 +421,8 @@ class UnifiedSupportEngine {
             items,
             customer_data
           )
-        `)
+        `,
+        )
         .eq('system_type', 'ticket')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -430,7 +435,7 @@ class UnifiedSupportEngine {
       // Apply status filter
       if (filters.status && filters.status.length > 0) {
         const statusConditions = filters.status
-          .map(status => `ticket_data->>'status' = '${status}'`)
+          .map((status) => `ticket_data->>'status' = '${status}'`)
           .join(' OR ');
         query = query.or(statusConditions);
       }
@@ -438,7 +443,7 @@ class UnifiedSupportEngine {
       // Apply priority filter
       if (filters.priority && filters.priority.length > 0) {
         const priorityConditions = filters.priority
-          .map(priority => `ticket_data->>'priority' = '${priority}'`)
+          .map((priority) => `ticket_data->>'priority' = '${priority}'`)
           .join(' OR ');
         query = query.or(priorityConditions);
       }
@@ -446,7 +451,7 @@ class UnifiedSupportEngine {
       // Apply category filter
       if (filters.category && filters.category.length > 0) {
         const categoryConditions = filters.category
-          .map(category => `ticket_data->>'category' = '${category}'`)
+          .map((category) => `ticket_data->>'category' = '${category}'`)
           .join(' OR ');
         query = query.or(categoryConditions);
       }
@@ -472,10 +477,9 @@ class UnifiedSupportEngine {
 
       const tickets = data as SupportRecord[];
       this.setCache(cacheKey, tickets);
-      
+
       console.log(`✅ Fetched ${tickets.length} tickets`);
       return tickets;
-
     } catch (error) {
       console.error('❌ Exception in getTickets:', error);
       Sentry.captureException(error);
@@ -489,7 +493,7 @@ class UnifiedSupportEngine {
   async updateTicketStatus(
     ticketId: string,
     newStatus: TicketStatus,
-    reason?: string
+    reason?: string,
   ): Promise<boolean> {
     try {
       console.log('🔄 Updating ticket status:', ticketId, 'to:', newStatus);
@@ -510,12 +514,16 @@ class UnifiedSupportEngine {
       }
 
       const currentStatus = currentTicket.ticket_data.status as TicketStatus;
-      
+
       // Validate status transition
       if (!this.isValidTransition(currentStatus, newStatus)) {
         const allowedTransitions = this.getAllowedTransitions(currentStatus);
-        console.warn(`❌ Invalid status transition: ${currentStatus} → ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`);
-        throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`);
+        console.warn(
+          `❌ Invalid status transition: ${currentStatus} → ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`,
+        );
+        throw new Error(
+          `Invalid status transition from ${currentStatus} to ${newStatus}. Allowed transitions: ${allowedTransitions.join(', ')}`,
+        );
       }
 
       console.log(`✅ Valid status transition: ${currentStatus} → ${newStatus}`);
@@ -542,17 +550,16 @@ class UnifiedSupportEngine {
       // Send notifications (async)
       const ticket = await this.getTicketById(ticketId);
       if (ticket) {
-        this.sendTicketNotifications(ticket, 'status_updated', { 
+        this.sendTicketNotifications(ticket, 'status_updated', {
           new_status: newStatus,
-          reason 
-        }).catch(err => {
+          reason,
+        }).catch((err) => {
           console.error('❌ Failed to send status update notifications:', err);
           Sentry.captureException(err);
         });
       }
 
       return true;
-
     } catch (error) {
       console.error('❌ Exception in updateTicketStatus:', error);
       Sentry.captureException(error);
@@ -567,7 +574,7 @@ class UnifiedSupportEngine {
     ticketId: string,
     interactionType: InteractionType,
     content: any,
-    isInternal: boolean = false
+    isInternal: boolean = false,
   ): Promise<SupportInteraction | null> {
     try {
       console.log('💬 Adding interaction to ticket:', ticketId, interactionType);
@@ -621,7 +628,7 @@ class UnifiedSupportEngine {
         const ticket = await this.getTicketById(ticketId);
         if (ticket) {
           const isCustomerReply = ticket.user_id === user.id;
-          
+
           if (isCustomerReply) {
             // Customer replied - handle pending tickets
             await this.handleCustomerReply(ticketId);
@@ -637,15 +644,14 @@ class UnifiedSupportEngine {
       if (ticket && interactionType === 'reply') {
         this.sendTicketNotifications(ticket, 'reply_added', {
           interaction: interaction,
-          is_customer_reply: ticket.user_id === user.id
-        }).catch(err => {
+          is_customer_reply: ticket.user_id === user.id,
+        }).catch((err) => {
           console.error('❌ Failed to send reply notifications:', err);
           Sentry.captureException(err);
         });
       }
 
       return interaction as SupportInteraction;
-
     } catch (error) {
       console.error('❌ Exception in addInteraction:', error);
       Sentry.captureException(error);
@@ -677,10 +683,9 @@ class UnifiedSupportEngine {
 
       const interactions = data as SupportInteraction[];
       this.setCache(cacheKey, interactions);
-      
+
       console.log(`✅ Fetched ${interactions.length} interactions`);
       return interactions;
-
     } catch (error) {
       console.error('❌ Exception in getTicketInteractions:', error);
       Sentry.captureException(error);
@@ -701,22 +706,24 @@ class UnifiedSupportEngine {
       if (!ticket || !ticket.sla_data) return;
 
       const now = new Date().toISOString();
-      let slaData = { ...ticket.sla_data };
+      const slaData = { ...ticket.sla_data };
 
       // Handle resolution SLA
       if (status === 'resolved' || status === 'closed') {
         if (!slaData.resolution_sla.resolved_at) {
           slaData.resolution_sla.resolved_at = now;
-          
+
           // Check if resolution SLA was breached
           const createdAt = new Date(ticket.created_at);
           const resolvedAt = new Date(now);
-          const resolutionTimeHours = (resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-          
+          const resolutionTimeHours =
+            (resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+
           if (resolutionTimeHours > slaData.resolution_sla.target_hours) {
             slaData.resolution_sla.is_breached = true;
-            slaData.resolution_sla.breach_duration = resolutionTimeHours - slaData.resolution_sla.target_hours;
-            
+            slaData.resolution_sla.breach_duration =
+              resolutionTimeHours - slaData.resolution_sla.target_hours;
+
             // Log SLA breach
             await this.logSLABreach(ticketId, 'resolution', slaData.resolution_sla.breach_duration);
           }
@@ -726,12 +733,11 @@ class UnifiedSupportEngine {
       // Update the ticket's SLA data
       await supabase
         .from('support_system')
-        .update({ 
+        .update({
           sla_data: slaData,
-          updated_at: now 
+          updated_at: now,
         })
         .eq('id', ticketId);
-
     } catch (error) {
       console.error('❌ Error updating SLA tracking:', error);
       Sentry.captureException(error);
@@ -746,7 +752,7 @@ class UnifiedSupportEngine {
       const ticket = await this.getTicketById(ticketId);
       if (!ticket || !ticket.sla_data) return;
 
-      let slaData = { ...ticket.sla_data };
+      const slaData = { ...ticket.sla_data };
 
       // Only set first response if not already set
       if (!slaData.response_sla.first_response_at) {
@@ -760,8 +766,9 @@ class UnifiedSupportEngine {
 
         if (responseTimeMinutes > slaData.response_sla.target_minutes) {
           slaData.response_sla.is_breached = true;
-          slaData.response_sla.breach_duration = responseTimeMinutes - slaData.response_sla.target_minutes;
-          
+          slaData.response_sla.breach_duration =
+            responseTimeMinutes - slaData.response_sla.target_minutes;
+
           // Log SLA breach
           await this.logSLABreach(ticketId, 'response', slaData.response_sla.breach_duration);
         }
@@ -769,13 +776,12 @@ class UnifiedSupportEngine {
         // Update the ticket's SLA data
         await supabase
           .from('support_system')
-          .update({ 
+          .update({
             sla_data: slaData,
-            updated_at: now 
+            updated_at: now,
           })
           .eq('id', ticketId);
       }
-
     } catch (error) {
       console.error('❌ Error handling first response:', error);
       Sentry.captureException(error);
@@ -786,13 +792,13 @@ class UnifiedSupportEngine {
    * Log SLA breach
    */
   private async logSLABreach(
-    ticketId: string, 
-    breachType: 'response' | 'resolution', 
-    breachDuration: number
+    ticketId: string,
+    breachType: 'response' | 'resolution',
+    breachDuration: number,
   ): Promise<void> {
     try {
       console.log(`⚠️ SLA breach detected: ${breachType} for ticket ${ticketId}`);
-      
+
       // Create a breach record in the unified system
       const {
         data: { user },
@@ -805,9 +811,9 @@ class UnifiedSupportEngine {
           breach_type: breachType,
           breach_duration: breachDuration,
           severity: breachDuration > (breachType === 'response' ? 60 : 24) ? 'high' : 'medium',
-          auto_generated: true
+          auto_generated: true,
         },
-        true // internal note
+        true, // internal note
       );
 
       // Send breach notifications
@@ -815,13 +821,12 @@ class UnifiedSupportEngine {
       if (ticket) {
         this.sendTicketNotifications(ticket, 'sla_breach', {
           breach_type: breachType,
-          breach_duration: breachDuration
-        }).catch(err => {
+          breach_duration: breachDuration,
+        }).catch((err) => {
           console.error('❌ Failed to send SLA breach notifications:', err);
           Sentry.captureException(err);
         });
       }
-
     } catch (error) {
       console.error('❌ Error logging SLA breach:', error);
       Sentry.captureException(error);
@@ -841,16 +846,15 @@ class UnifiedSupportEngine {
       // If ticket is pending, transition to open when customer replies
       if (currentStatus === 'pending') {
         console.log('🔄 Customer replied to pending ticket, transitioning to open:', ticketId);
-        
+
         await this.updateTicketStatus(
-          ticketId, 
-          'open', 
-          'Automatically reopened - customer provided response'
+          ticketId,
+          'open',
+          'Automatically reopened - customer provided response',
         );
 
         console.log('✅ Ticket automatically transitioned from pending to open');
       }
-
     } catch (error) {
       console.error('❌ Error handling customer reply:', error);
       // Don't throw - this is a nice-to-have feature, shouldn't break the reply process
@@ -869,17 +873,19 @@ class UnifiedSupportEngine {
 
       // Auto-transition to in_progress when agent replies to open or pending tickets
       if (currentStatus === 'open' || currentStatus === 'pending') {
-        console.log(`🔄 Agent replied to ${currentStatus} ticket, transitioning to in_progress:`, ticketId);
-        
+        console.log(
+          `🔄 Agent replied to ${currentStatus} ticket, transitioning to in_progress:`,
+          ticketId,
+        );
+
         await this.updateTicketStatus(
-          ticketId, 
-          'in_progress', 
-          `Automatically moved to in progress - agent provided response`
+          ticketId,
+          'in_progress',
+          `Automatically moved to in progress - agent provided response`,
         );
 
         console.log('✅ Ticket automatically transitioned to in_progress');
       }
-
     } catch (error) {
       console.error('❌ Error handling agent reply:', error);
       // Don't throw - this is a nice-to-have feature, shouldn't break the reply process
@@ -912,9 +918,9 @@ class UnifiedSupportEngine {
       }
 
       // Find matching rule
-      const matchingRule = rules?.find(rule => {
+      const matchingRule = rules?.find((rule) => {
         if (!rule.assignment_data) return false;
-        
+
         const conditions = rule.assignment_data.conditions;
         const ticketData = ticket.ticket_data!;
 
@@ -931,8 +937,8 @@ class UnifiedSupportEngine {
         // Check keywords match
         if (conditions.keywords && conditions.keywords.length > 0) {
           const description = ticketData.description.toLowerCase();
-          const hasKeyword = conditions.keywords.some(keyword => 
-            description.includes(keyword.toLowerCase())
+          const hasKeyword = conditions.keywords.some((keyword) =>
+            description.includes(keyword.toLowerCase()),
           );
           if (!hasKeyword) return false;
         }
@@ -949,12 +955,15 @@ class UnifiedSupportEngine {
 
       if (matchingRule && matchingRule.assignment_data) {
         const assigneeId = matchingRule.assignment_data.assignment.assignee_id;
-        
+
         if (assigneeId) {
-          await this.assignTicket(ticket.id, assigneeId, `Auto-assigned by rule: ${matchingRule.assignment_data.rule_name}`);
+          await this.assignTicket(
+            ticket.id,
+            assigneeId,
+            `Auto-assigned by rule: ${matchingRule.assignment_data.rule_name}`,
+          );
         }
       }
-
     } catch (error) {
       console.error('❌ Error in auto-assignment:', error);
       Sentry.captureException(error);
@@ -978,15 +987,15 @@ class UnifiedSupportEngine {
         metadata: {
           ...ticket.ticket_data.metadata,
           assigned_at: new Date().toISOString(),
-          assignment_reason: reason
-        }
+          assignment_reason: reason,
+        },
       };
 
       const { error } = await supabase
         .from('support_system')
-        .update({ 
+        .update({
           ticket_data: updatedTicketData,
-          updated_at: new Date().toISOString() 
+          updated_at: new Date().toISOString(),
         })
         .eq('id', ticketId);
 
@@ -1007,16 +1016,15 @@ class UnifiedSupportEngine {
           {
             to_user: assigneeId,
             reason: reason || 'Manual assignment',
-            automatic: reason?.includes('Auto-assigned') || false
+            automatic: reason?.includes('Auto-assigned') || false,
           },
-          true
+          true,
         );
       }
 
       console.log('✅ Ticket assigned successfully');
       this.clearCache('tickets');
       return true;
-
     } catch (error) {
       console.error('❌ Exception in assignTicket:', error);
       Sentry.captureException(error);
@@ -1034,7 +1042,7 @@ class UnifiedSupportEngine {
   private async sendTicketNotifications(
     ticket: SupportRecord,
     event: 'created' | 'reply_added' | 'status_updated' | 'sla_breach',
-    eventData?: any
+    eventData?: any,
   ): Promise<void> {
     try {
       // This would integrate with your existing notification system
@@ -1043,14 +1051,13 @@ class UnifiedSupportEngine {
 
       // Get user preferences (simplified - would fetch from unified system)
       const userPrefs = await this.getUserNotificationPreferences(ticket.user_id);
-      
+
       if (userPrefs.email_notifications) {
         // Send actual email notification
         await this.sendTicketEmailNotification(ticket, event, eventData);
       }
 
       // Add more notification channels as needed (SMS, in-app, etc.)
-
     } catch (error) {
       console.error('❌ Error sending notifications:', error);
       Sentry.captureException(error);
@@ -1063,7 +1070,7 @@ class UnifiedSupportEngine {
   private async sendTicketEmailNotification(
     ticket: SupportRecord,
     event: 'created' | 'reply_added' | 'status_updated' | 'sla_breach',
-    eventData?: any
+    eventData?: any,
   ): Promise<void> {
     try {
       console.log('📧 Sending enhanced email notification for ticket:', ticket.id, event);
@@ -1077,19 +1084,19 @@ class UnifiedSupportEngine {
 
       // Prepare additional data for different event types
       let additionalData: any = {};
-      
+
       if (event === 'status_updated' && eventData) {
         additionalData = {
           oldStatus: eventData.old_status,
-          newStatus: eventData.new_status
+          newStatus: eventData.new_status,
         };
       } else if (event === 'reply_added' && eventData) {
         additionalData = {
-          replyMessage: eventData.reply_message || 'New reply available'
+          replyMessage: eventData.reply_message || 'New reply available',
         };
       } else if (event === 'sla_breach' && eventData) {
         additionalData = {
-          slaType: eventData.breach_type || 'response'
+          slaType: eventData.breach_type || 'response',
         };
       }
 
@@ -1097,11 +1104,10 @@ class UnifiedSupportEngine {
       await notificationService.sendTicketEmailNotification(
         ticketWithDetails,
         event,
-        additionalData
+        additionalData,
       );
 
       console.log('✅ Enhanced ticket email notification sent successfully');
-
     } catch (error) {
       console.error('❌ Failed to send enhanced ticket email notification:', error);
       // Don't throw - email failures shouldn't break the ticket system
@@ -1140,11 +1146,10 @@ class UnifiedSupportEngine {
         created_at: ticket.created_at,
         updated_at: ticket.updated_at,
         user_profile: userProfile,
-        quote: ticket.quote || null
+        quote: ticket.quote || null,
       };
 
       return ticketWithDetails;
-
     } catch (error) {
       console.error('❌ Error converting ticket for notifications:', error);
       return null;
@@ -1171,11 +1176,11 @@ class UnifiedSupportEngine {
   private generateEmailContent(
     ticket: SupportRecord,
     event: 'created' | 'reply_added' | 'status_updated' | 'sla_breach',
-    eventData?: any
+    eventData?: any,
   ): { subject: string; html: string; template: string } {
     const ticketData = ticket.ticket_data!;
     const ticketId = ticket.id.slice(0, 8);
-    
+
     switch (event) {
       case 'created':
         return {
@@ -1198,7 +1203,7 @@ class UnifiedSupportEngine {
             
             <p>You can track your ticket progress in your account dashboard.</p>
             <p>Best regards,<br>iwishBag Support Team</p>
-          `
+          `,
         };
 
       case 'status_updated':
@@ -1208,9 +1213,9 @@ class UnifiedSupportEngine {
           in_progress: 'Being Worked On',
           pending: 'Waiting for Your Response',
           resolved: 'Resolved',
-          closed: 'Closed'
+          closed: 'Closed',
         };
-        
+
         return {
           subject: `Ticket Update - #${ticketId} is now ${statusLabels[newStatus]}`,
           template: 'ticket_status_updated',
@@ -1225,21 +1230,29 @@ class UnifiedSupportEngine {
               <strong>New Status:</strong> <span style="color: #0066cc; font-weight: bold;">${statusLabels[newStatus]}</span>
             </div>
             
-            ${newStatus === 'pending' ? `
+            ${
+              newStatus === 'pending'
+                ? `
               <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
                 <strong>Action Required:</strong> We need additional information from you to continue. Please check your ticket and reply with the requested details.
               </div>
-            ` : ''}
+            `
+                : ''
+            }
             
-            ${newStatus === 'resolved' ? `
+            ${
+              newStatus === 'resolved'
+                ? `
               <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
                 <strong>Issue Resolved:</strong> Your issue has been resolved! If you need further assistance, please reply within 7 days.
               </div>
-            ` : ''}
+            `
+                : ''
+            }
             
             <p>View your ticket in your account dashboard for more details.</p>
             <p>Best regards,<br>iwishBag Support Team</p>
-          `
+          `,
         };
 
       case 'reply_added':
@@ -1248,7 +1261,7 @@ class UnifiedSupportEngine {
           // Don't email customer about their own reply
           return { subject: '', html: '', template: '' };
         }
-        
+
         return {
           subject: `New Response to Your Ticket - #${ticketId}`,
           template: 'ticket_reply',
@@ -1270,7 +1283,7 @@ class UnifiedSupportEngine {
             
             <p>You can view the complete conversation and reply in your account dashboard.</p>
             <p>Best regards,<br>iwishBag Support Team</p>
-          `
+          `,
         };
 
       case 'sla_breach':
@@ -1293,7 +1306,7 @@ class UnifiedSupportEngine {
             
             <p>Thank you for your patience.</p>
             <p>Best regards,<br>iwishBag Support Team</p>
-          `
+          `,
         };
 
       default:
@@ -1306,7 +1319,7 @@ class UnifiedSupportEngine {
             <p>Your support ticket #${ticketId} has been updated.</p>
             <p>Please check your account dashboard for details.</p>
             <p>Best regards,<br>iwishBag Support Team</p>
-          `
+          `,
         };
     }
   }
@@ -1321,7 +1334,7 @@ class UnifiedSupportEngine {
       in_app_notifications: true,
       notification_frequency: 'immediate',
       categories: ['general', 'payment', 'shipping', 'refund', 'product', 'customs'],
-      escalation_notifications: true
+      escalation_notifications: true,
     };
 
     try {
@@ -1337,7 +1350,6 @@ class UnifiedSupportEngine {
       }
 
       return { ...defaultPrefs, ...data.notification_prefs };
-
     } catch (error) {
       console.error('❌ Error fetching notification preferences:', error);
       return defaultPrefs;
@@ -1383,31 +1395,31 @@ class UnifiedSupportEngine {
           closed: 0,
           avg_response_time: 0,
           avg_resolution_time: 0,
-          sla_compliance: 0
+          sla_compliance: 0,
         };
       }
 
       const tickets = data || [];
       const stats = {
         total: tickets.length,
-        open: tickets.filter(t => t.ticket_data?.status === 'open').length,
-        in_progress: tickets.filter(t => t.ticket_data?.status === 'in_progress').length,
-        resolved: tickets.filter(t => t.ticket_data?.status === 'resolved').length,
-        closed: tickets.filter(t => t.ticket_data?.status === 'closed').length,
+        open: tickets.filter((t) => t.ticket_data?.status === 'open').length,
+        in_progress: tickets.filter((t) => t.ticket_data?.status === 'in_progress').length,
+        resolved: tickets.filter((t) => t.ticket_data?.status === 'resolved').length,
+        closed: tickets.filter((t) => t.ticket_data?.status === 'closed').length,
         avg_response_time: 0,
         avg_resolution_time: 0,
-        sla_compliance: 0
+        sla_compliance: 0,
       };
 
       // Calculate averages and SLA compliance (simplified calculations)
-      const resolvedTickets = tickets.filter(t => t.sla_data?.response_sla?.first_response_at);
-      const closedTickets = tickets.filter(t => t.sla_data?.resolution_sla?.resolved_at);
-      
+      const resolvedTickets = tickets.filter((t) => t.sla_data?.response_sla?.first_response_at);
+      const closedTickets = tickets.filter((t) => t.sla_data?.resolution_sla?.resolved_at);
+
       if (resolvedTickets.length > 0) {
         const totalResponseTime = resolvedTickets.reduce((sum, ticket) => {
           const created = new Date(ticket.created_at);
           const responded = new Date(ticket.sla_data.response_sla.first_response_at);
-          return sum + ((responded.getTime() - created.getTime()) / (1000 * 60)); // minutes
+          return sum + (responded.getTime() - created.getTime()) / (1000 * 60); // minutes
         }, 0);
         stats.avg_response_time = totalResponseTime / resolvedTickets.length;
       }
@@ -1416,21 +1428,21 @@ class UnifiedSupportEngine {
         const totalResolutionTime = closedTickets.reduce((sum, ticket) => {
           const created = new Date(ticket.created_at);
           const resolved = new Date(ticket.sla_data.resolution_sla.resolved_at);
-          return sum + ((resolved.getTime() - created.getTime()) / (1000 * 60 * 60)); // hours
+          return sum + (resolved.getTime() - created.getTime()) / (1000 * 60 * 60); // hours
         }, 0);
         stats.avg_resolution_time = totalResolutionTime / closedTickets.length;
       }
 
       // SLA compliance rate
-      const slaCompliantTickets = tickets.filter(t => 
-        !t.sla_data?.response_sla?.is_breached && !t.sla_data?.resolution_sla?.is_breached
+      const slaCompliantTickets = tickets.filter(
+        (t) => !t.sla_data?.response_sla?.is_breached && !t.sla_data?.resolution_sla?.is_breached,
       ).length;
-      stats.sla_compliance = tickets.length > 0 ? (slaCompliantTickets / tickets.length) * 100 : 100;
+      stats.sla_compliance =
+        tickets.length > 0 ? (slaCompliantTickets / tickets.length) * 100 : 100;
 
       this.setCache(cacheKey, stats);
       console.log('✅ Ticket stats calculated:', stats);
       return stats;
-
     } catch (error) {
       console.error('❌ Exception in getTicketStats:', error);
       Sentry.captureException(error);
@@ -1442,7 +1454,7 @@ class UnifiedSupportEngine {
         closed: 0,
         avg_response_time: 0,
         avg_resolution_time: 0,
-        sla_compliance: 0
+        sla_compliance: 0,
       };
     }
   }

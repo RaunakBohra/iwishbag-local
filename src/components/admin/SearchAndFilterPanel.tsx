@@ -7,23 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import * as Sentry from '@sentry/react';
 import { validateSearchText, logSuspiciousSearchAttempt } from '@/lib/searchInputValidation';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Search, 
-  Filter, 
-  RotateCcw, 
-  ChevronDown, 
-  ChevronUp,
-  MapPin,
-  X
-} from 'lucide-react';
+import { Search, Filter, RotateCcw, ChevronDown, ChevronUp, MapPin, X } from 'lucide-react';
 
 // Types for search and filter state
 export interface SearchFilters {
@@ -71,7 +63,7 @@ export const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
   { value: 'paid', label: 'Paid', color: 'purple', count: 7 },
   { value: 'shipped', label: 'Shipped', color: 'indigo', count: 4 },
   { value: 'completed', label: 'Completed', color: 'emerald', count: 9 },
-  { value: 'expired', label: 'Expired', color: 'gray', count: 2 }
+  { value: 'expired', label: 'Expired', color: 'gray', count: 2 },
 ];
 
 export const DEFAULT_COUNTRY_OPTIONS: CountryOption[] = [
@@ -80,7 +72,7 @@ export const DEFAULT_COUNTRY_OPTIONS: CountryOption[] = [
   { code: 'US', name: 'United States', flag: '🇺🇸', count: 12 },
   { code: 'UK', name: 'United Kingdom', flag: '🇬🇧', count: 8 },
   { code: 'AU', name: 'Australia', flag: '🇦🇺', count: 6 },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', count: 4 }
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', count: 4 },
 ];
 
 export function SearchAndFilterPanel({
@@ -93,7 +85,7 @@ export function SearchAndFilterPanel({
   resultsCount,
   className = '',
   collapsed = false,
-  onCollapsedChange
+  onCollapsedChange,
 }: SearchAndFilterPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
 
@@ -106,11 +98,11 @@ export function SearchAndFilterPanel({
   const handleSearchTextChange = (value: string) => {
     // SECURITY: Validate and sanitize search input
     const validationResult = validateSearchText(value);
-    
+
     if (!validationResult.isValid) {
       // Log suspicious attempts for security monitoring
       logSuspiciousSearchAttempt(value);
-      
+
       // Capture security event in Sentry
       Sentry.addBreadcrumb({
         message: 'Invalid search input detected',
@@ -118,28 +110,27 @@ export function SearchAndFilterPanel({
         data: {
           originalInput: value.substring(0, 50), // Truncate for privacy
           errors: validationResult.errors,
-        }
+        },
       });
-      
+
       // Use sanitized value instead of original
       value = validationResult.sanitizedValue;
     }
-    
+
     onFiltersChange({
       ...filters,
-      searchText: validationResult.sanitizedValue
+      searchText: validationResult.sanitizedValue,
     });
   };
 
-
   const handleCountryToggle = (country: string) => {
     const newCountries = filters.countries.includes(country)
-      ? filters.countries.filter(c => c !== country)
+      ? filters.countries.filter((c) => c !== country)
       : [...filters.countries, country];
-    
+
     onFiltersChange({
       ...filters,
-      countries: newCountries
+      countries: newCountries,
     });
   };
 
@@ -151,7 +142,7 @@ export function SearchAndFilterPanel({
   const activeFilterCount = filters.countries.length + (filters.searchText ? 1 : 0);
 
   const getCountryName = (code: string) => {
-    const country = availableCountries.find(c => c.code === code);
+    const country = availableCountries.find((c) => c.code === code);
     return country ? `${country.flag} ${country.name}` : code;
   };
 
@@ -201,9 +192,7 @@ export function SearchAndFilterPanel({
               </CardTitle>
               <div className="flex items-center gap-2">
                 {resultsCount !== undefined && (
-                  <span className="text-sm text-gray-600">
-                    {resultsCount} results
-                  </span>
+                  <span className="text-sm text-gray-600">{resultsCount} results</span>
                 )}
                 {isCollapsed ? (
                   <ChevronDown className="h-4 w-4" />
@@ -221,7 +210,9 @@ export function SearchAndFilterPanel({
             <div className="flex flex-wrap gap-3 items-end">
               {/* Search Text Input */}
               <div className="flex-1 min-w-[300px] space-y-1">
-                <Label htmlFor="search-text" className="text-sm">Search Quotes</Label>
+                <Label htmlFor="search-text" className="text-sm">
+                  Search Quotes
+                </Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
@@ -257,7 +248,9 @@ export function SearchAndFilterPanel({
                       onCheckedChange={() => handleCountryToggle(country.code)}
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span>{country.flag} {country.name}</span>
+                        <span>
+                          {country.flag} {country.name}
+                        </span>
                         {country.count !== undefined && (
                           <Badge variant="outline" className="text-xs">
                             {country.count}
@@ -268,9 +261,9 @@ export function SearchAndFilterPanel({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              
+
               {/* Action Buttons - Inline */}
-              <Button 
+              <Button
                 onClick={handleSearchWithMonitoring}
                 disabled={isLoading}
                 className="flex items-center gap-2"
@@ -278,9 +271,9 @@ export function SearchAndFilterPanel({
                 <Search className="h-4 w-4" />
                 {isLoading ? 'Searching...' : 'Search'}
               </Button>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 onClick={onReset}
                 disabled={!hasActiveFilters || isLoading}
                 className="flex items-center gap-2"
@@ -297,8 +290,7 @@ export function SearchAndFilterPanel({
                 <div className="flex flex-wrap gap-2">
                   {filters.searchText && (
                     <Badge variant="secondary" className="flex items-center gap-1">
-                      <Search className="h-3 w-3" />
-                      "{filters.searchText}"
+                      <Search className="h-3 w-3" />"{filters.searchText}"
                       <button
                         onClick={() => handleSearchTextChange('')}
                         className="ml-1 hover:text-red-600"
@@ -307,7 +299,7 @@ export function SearchAndFilterPanel({
                       </button>
                     </Badge>
                   )}
-                  
+
                   {filters.countries.map((country) => (
                     <Badge key={country} variant="outline" className="flex items-center gap-1">
                       <MapPin className="h-3 w-3" />
@@ -323,7 +315,6 @@ export function SearchAndFilterPanel({
                 </div>
               </div>
             )}
-
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

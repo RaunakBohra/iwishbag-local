@@ -219,7 +219,7 @@ export class QuoteMessageService {
       if (!user) return 0;
 
       const isAdmin = await this.isUserAdmin(user.id);
-      
+
       console.log('🔍 [DEBUG] Getting total message count:', { quoteId, userId: user.id, isAdmin });
 
       // First, try to get all messages for this quote to see what we can access
@@ -236,18 +236,18 @@ export class QuoteMessageService {
       }
 
       const totalCount = messages?.length || 0;
-      console.log('✅ [DEBUG] Total message count result:', { 
-        quoteId, 
-        totalCount, 
+      console.log('✅ [DEBUG] Total message count result:', {
+        quoteId,
+        totalCount,
         isAdmin,
-        messagesPreview: messages?.slice(0, 3).map(m => ({
+        messagesPreview: messages?.slice(0, 3).map((m) => ({
           id: m.id,
           sender_id: m.sender_id,
           recipient_id: m.recipient_id,
-          is_internal: m.is_internal
-        }))
+          is_internal: m.is_internal,
+        })),
       });
-      
+
       return totalCount;
     } catch (error) {
       console.error('❌ Error getting total message count:', error);
