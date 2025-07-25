@@ -254,78 +254,80 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   return (
     <div className={className}>
-      {/* HSN Search Dropdown */}
+      {/* World-Class HSN Search Dropdown */}
       <Popover onOpenChange={(open) => {
         setIsOpen(open);
         if (open) {
-          // Reset search when opening
           setSearchQuery('');
           setSelectedCategory('');
         }
       }}>
         <PopoverTrigger asChild>
           {trigger ? trigger : (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className={`w-full justify-start text-left font-normal ${getSizeClasses()}`}
+              className={`
+                w-full flex items-center justify-between px-3 py-2.5
+                bg-white border border-gray-300 rounded-lg 
+                text-left text-gray-900 
+                hover:border-gray-400 hover:shadow-sm
+                focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:shadow-sm
+                transition-all duration-200 ease-in-out
+                group
+                ${getSizeClasses()}
+              `}
             >
-              <Search className="mr-2 h-4 w-4" />
-              {currentHSNData ? (
-                <span className="flex items-center truncate">
-                  <span className="font-medium text-gray-900">{currentHSNData.category}</span>
-                  <span className="mx-2 text-gray-400">-</span>
-                  <span className="font-mono font-semibold text-blue-700">{currentHSNData.hsn_code}</span>
-                </span>
-              ) : currentHSNCode ? (
-                `HSN: ${currentHSNCode}`
-              ) : (
-                <span className="text-gray-500">{placeholder}</span>
-              )}
-            </Button>
+              <div className="flex items-center min-w-0 flex-1">
+                <Search className="mr-2.5 h-4 w-4 text-gray-400 group-hover:text-gray-500 flex-shrink-0 transition-colors duration-150" />
+                {currentHSNData ? (
+                  <div className="flex items-center min-w-0 flex-1">
+                    <div 
+                      className="w-2 h-2 rounded-full mr-2 flex-shrink-0"
+                      style={{ backgroundColor: currentHSNData.color }}
+                    />
+                    <span className="font-medium text-gray-900 truncate">
+                      {currentHSNData.category}
+                    </span>
+                    <span className="mx-2 text-gray-400">-</span>
+                    <span className="font-mono font-semibold text-blue-600 flex-shrink-0">
+                      {currentHSNData.hsn_code}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-gray-500 truncate font-medium">
+                    Search HSN codes...
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center ml-2 flex-shrink-0">
+                <ChevronRight className="h-4 w-4 text-gray-400 rotate-90 group-hover:text-gray-500 transition-colors duration-150" />
+              </div>
+            </button>
           )}
         </PopoverTrigger>
         
         <PopoverContent 
-          className="w-80 p-0 border border-gray-200 shadow-lg" 
+          className="
+            w-96 p-0 border border-gray-200/60 
+            shadow-2xl rounded-xl bg-white
+            animate-in fade-in-0 zoom-in-95 duration-200
+            data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95
+          " 
           align="start"
+          sideOffset={8}
           onOpenAutoFocus={(e) => {
             e.preventDefault();
-            setTimeout(() => {
-              inputRef.current?.focus();
-            }, 50);
+            // Smooth focus with slight delay for better UX
+            setTimeout(() => inputRef.current?.focus(), 100);
           }}
         >
-          {/* Search Input */}
-          <div className="p-3 border-b border-gray-100">
-            {/* Back button and category filter */}
-            {selectedCategory && (
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategory('');
-                      setSearchQuery('');
-                      handleSearch('');
-                    }}
-                    className="flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    <ChevronRight className="h-3 w-3 mr-1 rotate-180" />
-                    Back to Categories
-                  </button>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  {selectedCategory}
-                </Badge>
-              </div>
-            )}
-            
+          {/* Command Palette Style Input - Stripe/GitHub Inspired */}
+          <div className="p-4 border-b border-gray-100/80">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors duration-150" />
               <Input
                 ref={inputRef}
-                placeholder={selectedCategory ? `Search in ${selectedCategory}...` : "Search by category, product, or HSN code..."}
+                placeholder="Search HSN codes by category, name, or code..."
                 value={searchQuery}
                 onChange={(e) => handleSearchInputChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -337,107 +339,139 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                     setIsOpen(false);
                   }
                 }}
-                className="pl-10 h-9 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="
+                  pl-10 pr-12 h-11 w-full
+                  border-0 bg-gray-50/80 rounded-lg
+                  text-gray-900 placeholder-gray-500
+                  focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500
+                  transition-all duration-200 ease-in-out
+                  text-sm font-medium
+                "
               />
               {isLoading && (
-                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-              )}
-              {/* Clear search button */}
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('');
-                    handleSearch('');
-                  }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                </div>
               )}
             </div>
+            
+            {/* Search Hints - GitHub style */}
+            {!searchQuery && (
+              <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">↑↓</kbd>
+                <span>to navigate</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">↵</kbd>
+                <span>to select</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">esc</kbd>
+                <span>to close</span>
+              </div>
+            )}
           </div>
 
-          {/* Results */}
-          <ScrollArea className="max-h-64">
-            <div className="p-1">
-              {/* AI Suggestions */}
-              {autoSuggestions.length > 0 && (
-                <div className="p-2">
-                  <div className="flex items-center space-x-1 mb-2">
-                    <Lightbulb className="h-3 w-3 text-amber-500" />
-                    <span className="text-xs font-medium text-gray-700">AI Suggestions</span>
-                  </div>
+          {/* Unified Results List */}
+          <ScrollArea className="max-h-80">
+            <div className="py-2">
+              {/* Smart Combined Results */}
+              {searchQuery ? (
+                <>
+                  {/* AI Suggestions First (if any) */}
                   {autoSuggestions.slice(0, 2).map((hsn) => (
-                    <DropdownHSNItem
+                    <ModernHSNItem
+                      key={`ai-${hsn.hsn_code}`}
+                      hsn={hsn}
+                      onSelect={handleHSNSelect}
+                      showBadge="AI"
+                    />
+                  ))}
+                  
+                  {/* Regular Search Results */}
+                  {searchResults.map((hsn) => (
+                    <ModernHSNItem
                       key={hsn.hsn_code}
                       hsn={hsn}
                       onSelect={handleHSNSelect}
-                      showConfidence={true}
                     />
                   ))}
-                  {autoSuggestions.length > 2 && <div className="border-b border-gray-100 my-2" />}
-                </div>
-              )}
 
-              {/* Search Results */}
-              {searchResults.map((hsn) => (
-                <DropdownHSNItem
-                  key={hsn.hsn_code}
-                  hsn={hsn}
-                  onSelect={handleHSNSelect}
-                />
-              ))}
-
-              {/* Show All Categories button when there are search results */}
-              {searchResults.length > 0 && (searchQuery || selectedCategory) && (
-                <div className="border-t border-gray-100 p-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedCategory('');
-                      handleSearch('');
-                    }}
-                    className="w-full text-left text-xs text-gray-600 hover:text-gray-700 p-2 hover:bg-gray-50 rounded-md"
-                  >
-                    Browse all categories →
-                  </button>
-                </div>
-              )}
-
-              {/* Category Buttons - Show when no search results */}
-              {searchResults.length === 0 && !isLoading && !searchQuery && (
-                <div className="p-2">
-                  <div className="text-xs font-medium text-gray-700 mb-2">Browse by Category</div>
-                  {categoryGroups.slice(0, 4).map((group) => (
-                    <button
-                      key={group.category}
-                      type="button"
-                      onClick={() => handleCategorySelect(group.category)}
-                      className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      <div 
-                        className="w-3 h-3 rounded-full mr-3 flex-shrink-0"
-                        style={{ backgroundColor: group.color }}
-                      ></div>
-                      <div className="flex-1">
-                        <div className="font-medium text-sm text-gray-900">{group.display_name}</div>
-                        <div className="text-xs text-gray-500">{group.count} codes</div>
+                  {/* No Results State - Enhanced */}
+                  {searchResults.length === 0 && autoSuggestions.length === 0 && !isLoading && (
+                    <div className="px-4 py-8 text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Search className="h-5 w-5 text-gray-400" />
                       </div>
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* No Results */}
-              {searchResults.length === 0 && !isLoading && searchQuery && (
-                <div className="p-4 text-center text-gray-500">
-                  <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">No HSN codes found</p>
-                  <p className="text-xs">Try different keywords</p>
-                </div>
+                      <div className="text-sm font-medium text-gray-900 mb-1">No HSN codes found</div>
+                      <div className="text-xs text-gray-500 mb-4">
+                        Try different keywords or browse categories below
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          inputRef.current?.focus();
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Clear search and browse categories
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Popular Categories - Enhanced Design */
+                <>
+                  {/* Section Header */}
+                  <div className="px-4 py-3 border-b border-gray-50">
+                    <div className="flex items-center gap-2">
+                      <Grid3X3 className="h-4 w-4 text-gray-400" />
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Browse Categories</span>
+                    </div>
+                  </div>
+                  
+                  {/* Category List */}
+                  <div className="py-1">
+                    {categoryGroups.slice(0, 6).map((group, index) => (
+                      <button
+                        key={group.category}
+                        type="button"
+                        onClick={() => handleCategorySelect(group.category)}
+                        className="
+                          w-full flex items-center px-4 py-3 text-left 
+                          hover:bg-gray-50 active:bg-gray-100
+                          transition-all duration-150 ease-in-out
+                          group cursor-pointer
+                          border-l-2 border-transparent hover:border-l-blue-500
+                        "
+                        style={{
+                          animationDelay: `${index * 50}ms`
+                        }}
+                      >
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full mr-3 flex-shrink-0 ring-2 ring-white shadow-sm"
+                          style={{ backgroundColor: group.color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-900 truncate">
+                              {group.display_name}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                              {group.count}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {group.count} HSN codes available
+                          </div>
+                        </div>
+                        <ChevronRight className="
+                          h-4 w-4 text-gray-300 group-hover:text-gray-500 
+                          flex-shrink-0 ml-2
+                          transition-all duration-150 ease-in-out
+                          group-hover:translate-x-0.5
+                        " />
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </ScrollArea>
@@ -447,17 +481,17 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   );
 };
 
-// Dropdown HSN Item - Clean Category - HSN Code Format
-interface DropdownHSNItemProps {
+// Modern HSN Item - World-class dropdown item following Stripe/GitHub patterns
+interface ModernHSNItemProps {
   hsn: HSNSearchResult;
   onSelect: (hsn: HSNSearchResult, event?: React.MouseEvent) => void;
-  showConfidence?: boolean;
+  showBadge?: 'AI' | 'Popular' | null;
 }
 
-const DropdownHSNItem: React.FC<DropdownHSNItemProps> = ({
+const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
   hsn,
   onSelect,
-  showConfidence = false,
+  showBadge = null,
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -465,50 +499,79 @@ const DropdownHSNItem: React.FC<DropdownHSNItemProps> = ({
     onSelect(hsn, e);
   };
 
+  const getBadgeConfig = () => {
+    if (showBadge === 'AI') {
+      return {
+        text: 'AI',
+        className: 'bg-purple-100 text-purple-700 border-purple-200'
+      };
+    }
+    if (showBadge === 'Popular' || hsn.search_priority <= 2) {
+      return {
+        text: 'Popular',
+        className: 'bg-blue-50 text-blue-700 border-blue-200'
+      };
+    }
+    return null;
+  };
+
+  const badgeConfig = getBadgeConfig();
+
   return (
     <button
       type="button"
-      className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded-md transition-colors group"
+      className="
+        w-full flex items-center px-3 py-2.5 text-left 
+        hover:bg-gray-50 active:bg-gray-100
+        transition-colors duration-150 ease-in-out
+        group cursor-pointer
+        border-l-2 border-transparent hover:border-l-blue-500
+      "
       onClick={handleClick}
     >
-      {/* Category Color Dot */}
-      <div 
-        className="w-3 h-3 rounded-full flex-shrink-0 mr-3 mt-1"
-        style={{ backgroundColor: hsn.color }}
-      ></div>
-
-      {/* Category - HSN Code Format */}
+      {/* Content Section */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center space-x-2">
-          <span className="font-medium text-gray-900 text-sm">
+        {/* Main Line: Category - HSN Code */}
+        <div className="flex items-center gap-2 mb-1">
+          <div 
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: hsn.color }}
+          />
+          <span className="font-medium text-gray-900 text-sm truncate">
             {hsn.category}
           </span>
-          <span className="text-gray-400">-</span>
-          <span className="font-mono font-semibold text-blue-700 text-sm">
+          <span className="text-gray-400 text-sm">-</span>
+          <span className="font-mono font-semibold text-blue-600 text-sm">
             {hsn.hsn_code}
           </span>
-          {showConfidence && (
-            <Badge variant="secondary" className="text-xs h-4 px-1">
-              {Math.round(hsn.confidence * 100)}%
-            </Badge>
-          )}
-          {hsn.search_priority <= 2 && (
-            <Badge variant="outline" className="text-xs h-4 px-1 bg-yellow-50 text-yellow-700 border-yellow-200">
-              <Star className="h-2 w-2 mr-1" />
-              Popular
-            </Badge>
+          {badgeConfig && (
+            <span className={`
+              inline-flex items-center px-1.5 py-0.5 text-xs font-medium 
+              rounded-md border ${badgeConfig.className}
+            `}>
+              {badgeConfig.text}
+            </span>
           )}
         </div>
-        <div className="text-xs text-gray-500 mt-0.5 truncate">
+        
+        {/* Description Line */}
+        <div className="text-xs text-gray-600 truncate mb-0.5">
           {hsn.display_name}
         </div>
-        <div className="text-xs text-gray-400 mt-0.5">
+        
+        {/* Tax Info Line */}
+        <div className="text-xs text-gray-500">
           {hsn.tax_data.typical_rates.customs.common}% customs duty
         </div>
       </div>
 
-      {/* Subtle arrow on hover */}
-      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Right Arrow - GitHub/Stripe style */}
+      <ChevronRight className="
+        h-4 w-4 text-gray-300 group-hover:text-gray-500 
+        flex-shrink-0 ml-2
+        transition-all duration-150 ease-in-out
+        group-hover:translate-x-0.5
+      " />
     </button>
   );
 };

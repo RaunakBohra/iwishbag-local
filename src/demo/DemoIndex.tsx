@@ -12,13 +12,6 @@ const DemoIndex = () => {
 
   const demos = [
     {
-      id: 'airbnb-style',
-      title: '🏠 Airbnb-Inspired Homepage',
-      description: 'Clean, minimalist homepage design inspired by Airbnb\'s proven UX patterns. Single-focus hero with clear visual hierarchy.',
-      features: ['Minimalist aesthetic', 'Single primary CTA', 'Clean search interface', 'Airbnb-style navigation'],
-      component: () => window.location.href = '/demo/airbnb-style'
-    },
-    {
       id: 'inline-stripe',
       title: '🔥 Inline Stripe Design (FINAL IMPLEMENTATION)',
       description: 'Ultra-compact inline selectors - Weight & HSN on single line! Already integrated in your product forms.',
@@ -116,13 +109,7 @@ const DemoIndex = () => {
               </div>
               
               <button 
-                onClick={() => {
-                  if (demo.id === 'airbnb-style') {
-                    window.location.href = '/demo/airbnb-style';
-                  } else {
-                    setSelectedDemo(demo.id);
-                  }
-                }}
+                onClick={() => setSelectedDemo(demo.id)}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
                 <Eye className="h-4 w-4" />

@@ -94,6 +94,13 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
             weight_configuration: {},
             api_configuration: {},
           },
+          admin_overrides: quote.operational_data?.admin_overrides || [],
+          apply_exemptions: true,
+          calculation_date: new Date(),
+          // 2-tier tax system preferences
+          calculation_method_preference: quote.calculation_method_preference || 'auto',
+          valuation_method_preference: quote.valuation_method_preference || 'auto',
+          admin_id: 'current_admin',
         };
 
         const calculatorItems = itemsWithHSN.map((item) => ({
@@ -108,6 +115,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
         }));
 
         const breakdowns = await taxCalculator.calculateMultipleItemTaxes(calculatorItems, context);
+        console.log('[HSN BREAKDOWN DEBUG] Tax breakdowns calculated:', breakdowns);
         setTaxBreakdowns(breakdowns);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to calculate HSN taxes');
@@ -269,7 +277,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                   <div className="text-xs text-red-600">Customs Duty</div>
                   {taxBreakdowns.length > 0 && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.customs_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length)}%
+                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.customs_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length) || 0}%
                     </div>
                   )}
                 </div>
@@ -280,7 +288,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                   <div className="text-xs text-blue-600">Local Taxes</div>
                   {taxBreakdowns.length > 0 && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.local_tax_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length)}%
+                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.local_tax_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length) || 0}%
                     </div>
                   )}
                 </div>
@@ -377,13 +385,13 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-gray-600">Customs Rate:</span>
                             <span className="font-medium text-red-600">
-                              {breakdown.customs_calculation.rate_percentage}%
+                              {breakdown.customs_calculation?.rate_percentage || 'N/A'}%
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Local Tax ({breakdown.local_tax_calculation.tax_type.toUpperCase()}):</span>
+                            <span className="text-gray-600">Local Tax ({breakdown.local_tax_calculation?.tax_type?.toUpperCase() || 'TAX'}):</span>
                             <span className="font-medium text-blue-600">
-                              {breakdown.local_tax_calculation.rate_percentage}%
+                              {breakdown.local_tax_calculation?.rate_percentage || 'N/A'}%
                             </span>
                           </div>
                         </div>
@@ -396,7 +404,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                             </div>
                             <div className="text-gray-600">Customs</div>
                             <div className="text-gray-500 text-xs">
-                              ({breakdown.customs_calculation.rate_percentage}%)
+                              ({breakdown.customs_calculation?.rate_percentage || 'N/A'}%)
                             </div>
                           </div>
                           <div className="text-center">
@@ -405,7 +413,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                             </div>
                             <div className="text-gray-600">Local Tax</div>
                             <div className="text-gray-500 text-xs">
-                              ({breakdown.local_tax_calculation.rate_percentage}%)
+                              ({breakdown.local_tax_calculation?.rate_percentage || 'N/A'}%)
                             </div>
                           </div>
                           <div className="text-center">
