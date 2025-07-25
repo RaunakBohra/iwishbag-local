@@ -28,6 +28,28 @@ supabase db push --include-all
 psql -h localhost -p 54322 -d postgres -U postgres -f src/scripts/ensure-database-functions.sql
 ```
 
+### 2.5. **Apply Enhanced HSN System (Single Migration)**
+If HSN tables are missing after reset, apply the enhanced all-in-one migration:
+```bash
+# Apply Enhanced HSN System Complete Migration (includes everything)
+PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250725200000_enhanced_hsn_system_complete.sql
+```
+
+**OR** apply individual migrations (legacy method):
+```bash
+# Apply HSN atomic migration (DB-reset safe)
+PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250725000000_hsn_system_atomic_migration.sql
+
+# Apply comprehensive HSN seed data (23 HSN codes, 15 categories)
+PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250725100000_comprehensive_hsn_seed_data.sql
+
+# Fix user_roles updated_at column error (prevents ERROR 42703)
+PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250725110000_fix_user_roles_updated_at_column.sql
+
+# Apply HSN search optimization (creates hsn_search_optimized materialized view)
+PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250724115500_enhance_hsn_search_data.sql
+```
+
 ### 3. **Verify Critical Functions**
 Execute in Supabase SQL Editor to verify:
 ```sql
@@ -42,6 +64,26 @@ SELECT * FROM get_user_roles_new(auth.uid());
 
 -- Test tracking system
 SELECT generate_iwish_tracking_id() as sample_tracking_id;
+
+-- Test HSN system tables (Should return 23, 4, 1 respectively)
+SELECT COUNT(*) as hsn_master_count FROM hsn_master;
+SELECT COUNT(*) as unified_config_count FROM unified_configuration;
+SELECT COUNT(*) as admin_overrides_count FROM admin_overrides;
+
+-- Verify HSN category coverage (Should show 15 categories)
+SELECT COUNT(DISTINCT category) as category_count, 
+       STRING_AGG(DISTINCT category, ', ') as categories 
+FROM hsn_master;
+
+-- Test HSN currency conversion function
+SELECT get_hsn_with_currency_conversion('6204', 'NP')->'currency_conversion' as nepal_kurta_test;
+
+-- Test HSN search optimization (should return 23 records)
+SELECT COUNT(*) as hsn_search_records FROM hsn_search_optimized;
+
+-- Test search functionality
+SELECT hsn_code, display_name, icon FROM hsn_search_optimized 
+WHERE search_vector @@ to_tsquery('english', 'mobile | phone') LIMIT 3;
 ```
 
 ### 4. **Essential RPC Functions List**
@@ -53,15 +95,25 @@ These functions MUST exist for the system to work:
 - `get_user_roles_new(UUID)` - User role management
 - `generate_iwish_tracking_id()` - Tracking system
 - `update_updated_at_column()` - Timestamp triggers
+- `convert_minimum_valuation_usd_to_origin()` - HSN currency conversion
+- `get_hsn_with_currency_conversion()` - HSN data with conversion
+- `refresh_hsn_search_cache()` - Refreshes HSN search materialized view
 
 ### 5. **Migration Files to Check**
 - `20250724091000_create_missing_rpc_functions.sql` - Contains the missing RPC functions
 - `20250724090000_create_user_activity_analytics.sql` - User activity tracking system
-- `20250724084700_create_hsn_tax_system.sql` - HSN classification system
+- `20250724084700_create_hsn_tax_system.sql` - HSN classification system (7 basic HSN codes)
+- `20250724115500_enhance_hsn_search_data.sql` - HSN search optimization (hsn_search_optimized view)
+- `20250725000000_hsn_system_atomic_migration.sql` - DB-reset safe HSN system (includes table creation)
+- `20250725100000_comprehensive_hsn_seed_data.sql` - Comprehensive HSN seed data (23 codes, 15 categories)
+- `20250725110000_fix_user_roles_updated_at_column.sql` - Fixes ERROR 42703 user_roles trigger issue
+- `20250725200000_enhanced_hsn_system_complete.sql` - **RECOMMENDED**: All-in-one enhanced HSN system (includes everything above)
 
 ### 6. **Recovery Script Location**
-- **Primary**: Migration file will auto-apply
+- **RECOMMENDED**: Enhanced single-command recovery at `src/scripts/enhanced-database-recovery.sql`
+- **Legacy**: Individual migration files (see above)
 - **Backup**: Manual script at `src/scripts/ensure-database-functions.sql`
+- **Legacy Complete**: Multi-step recovery at `src/scripts/complete-database-recovery.sql`
 
 ## Tech Stack
 - **Frontend**: React 18, TypeScript 5, Vite, Tailwind CSS, Shadcn UI

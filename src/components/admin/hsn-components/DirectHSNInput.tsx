@@ -3,35 +3,19 @@
 // Features: Direct typing, real-time search, clean text display
 // ============================================================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Search,
-  X,
-  Tag,
-  Star,
-  Lightbulb,
-  Loader2,
-  ChevronDown,
-} from 'lucide-react';
-import {
-  enhancedHSNSearchService,
-  HSNSearchResult,
-} from '@/services/EnhancedHSNSearchService';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Search, X, Lightbulb, Loader2, ChevronDown } from 'lucide-react';
+import { enhancedHSNSearchService, HSNSearchResult } from '@/services/EnhancedHSNSearchService';
 import { useToast } from '@/hooks/use-toast';
 
 interface DirectHSNInputProps {
@@ -62,9 +46,34 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   const [autoSuggestions, setAutoSuggestions] = useState<HSNSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isEditing, setIsEditing] = useState(false);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const initializeSearch = async () => {
+    try {
+      // Initialize the learning system
+      await enhancedHSNSearchService.initializeContextualLearning();
+
+      // Load popular HSN codes for empty state
+      const popular = await enhancedHSNSearchService.searchHSN({ limit: 8 });
+      setSearchResults(popular);
+    } catch (error) {
+      console.error('Failed to initialize HSN search:', error);
+    }
+  };
+
+  const detectHSNFromProduct = useCallback(async () => {
+    if (!productName) return;
+
+    try {
+      const result = await enhancedHSNSearchService.getEnhancedProductSuggestions(productName);
+      setAutoSuggestions(result.suggestions);
+    } catch (error) {
+      console.error('HSN detection failed:', error);
+    }
+  }, [productName]);
 
   // Initialize search and auto-suggestions when component mounts
   useEffect(() => {
@@ -76,31 +85,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
     if (productName && !value) {
       detectHSNFromProduct();
     }
-  }, [productName, value]);
-
-  const initializeSearch = async () => {
-    try {
-      // Initialize the learning system
-      await enhancedHSNSearchService.initializeContextualLearning();
-      
-      // Load popular HSN codes for empty state
-      const popular = await enhancedHSNSearchService.searchHSN({ limit: 8 });
-      setSearchResults(popular);
-    } catch (error) {
-      console.error('Failed to initialize HSN search:', error);
-    }
-  };
-
-  const detectHSNFromProduct = async () => {
-    if (!productName) return;
-
-    try {
-      const result = await enhancedHSNSearchService.getEnhancedProductSuggestions(productName);
-      setAutoSuggestions(result.suggestions);
-    } catch (error) {
-      console.error('HSN detection failed:', error);
-    }
-  };
+  }, [productName, value, detectHSNFromProduct]);
 
   const handleSearch = async (query: string) => {
     setSelectedIndex(-1); // Reset selection
@@ -136,6 +121,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   const handleInputChange = (newValue: string) => {
     setSearchQuery(newValue);
     setSelectedIndex(-1);
+    setIsEditing(true); // User is actively typing
 
     // Clear previous timeout
     if (searchTimeoutRef.current) {
@@ -150,11 +136,17 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
 
   const handleHSNSelect = (hsn: HSNSearchResult) => {
     console.log('🎯 [DirectHSN] handleHSNSelect called:', hsn);
-    
+
     onSelect(hsn);
     setIsOpen(false);
     setSearchQuery('');
     setSelectedIndex(-1);
+    setIsEditing(false); // Stop editing mode
+    
+    // Return focus to input after selection
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
 
     toast({
       title: 'HSN Code Selected',
@@ -168,20 +160,21 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
     }
     setSearchQuery('');
     setSelectedIndex(-1);
+    setIsEditing(false); // Stop editing mode
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const allItems = [...autoSuggestions.slice(0, 2), ...searchResults];
-    
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => (prev < allItems.length - 1 ? prev + 1 : 0));
+        setSelectedIndex((prev) => (prev < allItems.length - 1 ? prev + 1 : 0));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : allItems.length - 1));
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
         break;
       case 'Enter':
         e.preventDefault();
@@ -198,9 +191,15 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
 
   // Display current selection or search input
   const getDisplayText = () => {
-    if (value && displayValue) {
+    // Always prioritize what user is typing when actively editing
+    if (isEditing && searchQuery.trim()) {
+      return searchQuery;
+    }
+    // Show display value when not editing and we have a selected value
+    if (!isEditing && value && displayValue) {
       return displayValue; // Show "Category - HSN123"
     }
+    // Default to search query (could be empty)
     return searchQuery;
   };
 
@@ -216,10 +215,12 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
               value={getDisplayText()}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
+              onClick={() => setIsOpen(true)}
               onFocus={() => {
                 setIsOpen(true);
+                setIsEditing(true);
                 if (!searchQuery && !value) {
-                  handleSearch(''); // Load initial results
+                  handleSearch('');
                 }
               }}
               placeholder={placeholder}
@@ -229,19 +230,20 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                 ${value ? 'font-medium text-gray-900' : 'text-gray-600'}
               `}
             />
-            
+
             {/* Right side icons */}
             <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
-              {isLoading && (
-                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-              )}
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
               {showClearButton && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="h-6 w-6 p-0 hover:bg-gray-100"
-                  onClick={handleClear}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClear();
+                  }}
                 >
                   <X className="h-3 w-3 text-gray-400" />
                 </Button>
@@ -275,9 +277,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                         <Lightbulb className="h-4 w-4 text-purple-500" />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
-                              {hsn.category}
-                            </span>
+                            <span className="font-medium text-sm">{hsn.category}</span>
                             <span className="text-gray-400">-</span>
                             <span className="font-mono font-semibold text-blue-600 text-sm">
                               {hsn.hsn_code}
@@ -286,9 +286,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                               AI
                             </span>
                           </div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {hsn.display_name}
-                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">{hsn.display_name}</div>
                         </div>
                       </div>
                     </CommandItem>
@@ -297,7 +295,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
               )}
 
               {/* Search Results Section */}
-              <CommandGroup heading={searchQuery ? "Search Results" : "Popular HSN Codes"}>
+              <CommandGroup heading={searchQuery ? 'Search Results' : 'Popular HSN Codes'}>
                 {searchResults.map((hsn, index) => {
                   const actualIndex = autoSuggestions.slice(0, 2).length + index;
                   return (
@@ -310,15 +308,13 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                       `}
                     >
                       <div className="flex items-center gap-2 flex-1">
-                        <div 
+                        <div
                           className="w-2 h-2 rounded-full flex-shrink-0"
                           style={{ backgroundColor: hsn.color }}
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
-                              {hsn.category}
-                            </span>
+                            <span className="font-medium text-sm">{hsn.category}</span>
                             <span className="text-gray-400">-</span>
                             <span className="font-mono font-semibold text-blue-600 text-sm">
                               {hsn.hsn_code}
@@ -329,9 +325,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {hsn.display_name}
-                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">{hsn.display_name}</div>
                           <div className="text-xs text-gray-400 mt-0.5">
                             {hsn.tax_data.typical_rates.customs.common}% customs duty
                           </div>
@@ -343,19 +337,22 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
               </CommandGroup>
 
               {/* Empty State */}
-              {searchResults.length === 0 && autoSuggestions.length === 0 && !isLoading && searchQuery && (
-                <CommandEmpty>
-                  <div className="py-6 text-center">
-                    <Search className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <div className="text-sm font-medium text-gray-900 mb-1">
-                      No HSN codes found
+              {searchResults.length === 0 &&
+                autoSuggestions.length === 0 &&
+                !isLoading &&
+                searchQuery && (
+                  <CommandEmpty>
+                    <div className="py-6 text-center">
+                      <Search className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <div className="text-sm font-medium text-gray-900 mb-1">
+                        No HSN codes found
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Try different keywords or check spelling
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Try different keywords or check spelling
-                    </div>
-                  </div>
-                </CommandEmpty>
-              )}
+                  </CommandEmpty>
+                )}
             </CommandList>
           </Command>
         </PopoverContent>

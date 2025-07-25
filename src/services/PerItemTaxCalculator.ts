@@ -261,7 +261,7 @@ class PerItemTaxCalculator {
         confidence_score: this.calculateConfidenceScore(hsnData, item),
         warnings: this.generateWarnings(
           {
-            taxable_amount_origin_currency: selectedAmount,
+            taxable_amount_origin_currency: landedCost,
             valuation_method: valuationOptions.valuation_method,
             minimum_valuation_conversion: valuationOptions.minimum_valuation_conversion,
           },

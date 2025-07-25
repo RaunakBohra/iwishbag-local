@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
+import { useQuery } from '@tanstack/react-query';
+import { HSN_QUERY_KEYS } from '@/hooks/useHSNQuoteCalculation';
 import {
   Tags,
   Calculator,
@@ -68,64 +70,86 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const taxCalculator = PerItemTaxCalculator.getInstance();
 
-  // Calculate HSN tax breakdowns
-  useEffect(() => {
-    const calculateHSNTaxes = async () => {
-      if (!quote?.items?.length) return;
+  // Calculate HSN tax breakdowns using React Query for real-time updates
+  const hsnTaxQuery = useQuery({
+    queryKey: ['hsn-tax-breakdown', quote?.id, quote?.updated_at, quote?.calculation_method_preference],
+    queryFn: async () => {
+      if (!quote?.items?.length) return [];
 
+      const enhanced = await unifiedDataEngine.enhanceQuoteWithHSNData(quote);
+      const itemsWithHSN = enhanced.items.filter((item) => item.hsn_code);
+
+      if (itemsWithHSN.length === 0) {
+        return [];
+      }
+
+      // Extract quote-level amounts for proper CIF/landed cost calculation
+      const selectedShipping = quote.operational_data?.selected_shipping_option;
+      const shippingCost = selectedShipping?.cost_usd || 0;
+      const insuranceAmount = quote.operational_data?.insurance_amount || 0;
+      const handlingFee = quote.operational_data?.handling_charge || 0;
+
+      console.log(`[HSN BREAKDOWN DEBUG] Quote totals - Shipping: ${shippingCost}, Insurance: ${insuranceAmount}, Handling: ${handlingFee}`);
+
+      const context = {
+        route: {
+          id: 1,
+          origin_country: quote.origin_country,
+          destination_country: quote.destination_country,
+          tax_configuration: {},
+          weight_configuration: {},
+          api_configuration: {},
+        },
+        admin_overrides: quote.operational_data?.admin_overrides || [],
+        apply_exemptions: true,
+        calculation_date: new Date(),
+        // 2-tier tax system preferences
+        calculation_method_preference: quote.calculation_method_preference || 'auto',
+        valuation_method_preference: quote.valuation_method_preference || 'auto',
+        admin_id: 'current_admin',
+        // CIF/landed cost components
+        quote_totals: {
+          shipping_cost: shippingCost,
+          insurance_amount: insuranceAmount,
+          handling_fee: handlingFee
+        }
+      };
+
+      const calculatorItems = itemsWithHSN.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price_origin_currency: item.price_usd,
+        weight_kg: item.weight_kg,
+        hsn_code: item.hsn_code,
+        category: item.category,
+        url: item.url,
+        quantity: item.quantity || 1,
+      }));
+
+      const breakdowns = await taxCalculator.calculateMultipleItemTaxes(calculatorItems, context);
+      console.log('[HSN BREAKDOWN DEBUG] Tax breakdowns calculated:', breakdowns);
+      return breakdowns;
+    },
+    enabled: !!quote?.id && !!quote?.items?.length,
+    staleTime: 30000, // 30 second stale time
+    refetchOnWindowFocus: false,
+    retry: 2,
+  });
+
+  // Update local state from query
+  useEffect(() => {
+    if (hsnTaxQuery.data) {
+      setTaxBreakdowns(hsnTaxQuery.data);
+      setIsLoading(false);
+      setError(null);
+    } else if (hsnTaxQuery.error) {
+      setError(hsnTaxQuery.error instanceof Error ? hsnTaxQuery.error.message : 'Failed to calculate HSN taxes');
+      setIsLoading(false);
+    } else if (hsnTaxQuery.isLoading) {
       setIsLoading(true);
       setError(null);
-
-      try {
-        const enhanced = await unifiedDataEngine.enhanceQuoteWithHSNData(quote);
-        const itemsWithHSN = enhanced.items.filter((item) => item.hsn_code);
-
-        if (itemsWithHSN.length === 0) {
-          setTaxBreakdowns([]);
-          return;
-        }
-
-        const context = {
-          route: {
-            id: 1,
-            origin_country: quote.origin_country,
-            destination_country: quote.destination_country,
-            tax_configuration: {},
-            weight_configuration: {},
-            api_configuration: {},
-          },
-          admin_overrides: quote.operational_data?.admin_overrides || [],
-          apply_exemptions: true,
-          calculation_date: new Date(),
-          // 2-tier tax system preferences
-          calculation_method_preference: quote.calculation_method_preference || 'auto',
-          valuation_method_preference: quote.valuation_method_preference || 'auto',
-          admin_id: 'current_admin',
-        };
-
-        const calculatorItems = itemsWithHSN.map((item) => ({
-          id: item.id,
-          name: item.name,
-          price_origin_currency: item.price_usd,
-          weight_kg: item.weight_kg,
-          hsn_code: item.hsn_code,
-          category: item.category,
-          url: item.url,
-          quantity: item.quantity || 1,
-        }));
-
-        const breakdowns = await taxCalculator.calculateMultipleItemTaxes(calculatorItems, context);
-        console.log('[HSN BREAKDOWN DEBUG] Tax breakdowns calculated:', breakdowns);
-        setTaxBreakdowns(breakdowns);
-      } catch (error) {
-        setError(error instanceof Error ? error.message : 'Failed to calculate HSN taxes');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    calculateHSNTaxes();
-  }, [quote, taxCalculator]);
+    }
+  }, [hsnTaxQuery.data, hsnTaxQuery.error, hsnTaxQuery.isLoading]);
 
   // Calculate summary metrics following Stripe/Shopify patterns
   const summary = React.useMemo(() => {

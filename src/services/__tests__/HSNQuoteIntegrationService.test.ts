@@ -8,7 +8,7 @@ import { HSNQuoteIntegrationService, HSNRealTimeOptions } from '../HSNQuoteInteg
 import { governmentAPIOrchestrator } from '../api/GovernmentAPIOrchestrator';
 import { autoProductClassifier } from '../AutoProductClassifier';
 import { weightDetectionService } from '../WeightDetectionService';
-import { perItemTaxCalculator } from '../PerItemTaxCalculator';
+import PerItemTaxCalculator from '../PerItemTaxCalculator';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 
 // Mock dependencies

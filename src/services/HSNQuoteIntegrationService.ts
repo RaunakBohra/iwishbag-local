@@ -14,7 +14,7 @@ import {
 import { hsnTaxIntegrationService } from './HSNTaxIntegrationService';
 import { autoProductClassifier } from './AutoProductClassifier';
 import { weightDetectionService } from './WeightDetectionService';
-import { perItemTaxCalculator, ItemTaxBreakdown } from './PerItemTaxCalculator';
+import PerItemTaxCalculator, { ItemTaxBreakdown } from './PerItemTaxCalculator';
 import { smartCalculationEngine } from './SmartCalculationEngine';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 
@@ -330,7 +330,7 @@ export class HSNQuoteIntegrationService {
       try {
         const taxData = item.hsn_code ? taxRates.get(item.hsn_code) : null;
 
-        const breakdown = await perItemTaxCalculator.calculateItemTaxes({
+        const breakdown = await PerItemTaxCalculator.getInstance().calculateItemTaxes({
           item,
           taxData,
           originCountry: quote.origin_country!,

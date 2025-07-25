@@ -18,8 +18,6 @@ import {
 } from '@/components/ui/dialog';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
-import { SingleLineProductFields } from '@/components/admin/ultra-compact-selectors/SingleLineProductFields';
-import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { DirectHSNInput } from '@/components/admin/hsn-components/DirectHSNInput';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
@@ -33,8 +31,8 @@ import {
   CheckCircle,
   Lightbulb,
   Loader2,
-  Brain,
   Tag,
+  DollarSign,
 } from 'lucide-react';
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
@@ -108,18 +106,25 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
   };
 
   // Handle item update
-  const handleUpdateItem = async (updatedItem: QuoteItem & { weight_source?: 'hsn' | 'ml' | 'manual' }) => {
+  const handleUpdateItem = async (
+    updatedItem: QuoteItem & { weight_source?: 'hsn' | 'ml' | 'manual' },
+  ) => {
     try {
       // Merge weight source into smart_data
       const itemWithWeightSource = {
         ...updatedItem,
         smart_data: {
           ...updatedItem.smart_data,
-          weight_source: updatedItem.weight_source || updatedItem.smart_data?.weight_source || 'manual',
-        }
+          weight_source:
+            updatedItem.weight_source || updatedItem.smart_data?.weight_source || 'manual',
+        },
       };
-      
-      const success = await unifiedDataEngine.updateItem(quote.id, updatedItem.id, itemWithWeightSource);
+
+      const success = await unifiedDataEngine.updateItem(
+        quote.id,
+        updatedItem.id,
+        itemWithWeightSource,
+      );
       if (success) {
         toast({
           title: 'Item updated',
@@ -140,7 +145,9 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
   };
 
   // Handle item addition
-  const handleAddItem = async (newItem: Partial<QuoteItem> & { weight_source?: 'hsn' | 'ml' | 'manual' }) => {
+  const handleAddItem = async (
+    newItem: Partial<QuoteItem> & { weight_source?: 'hsn' | 'ml' | 'manual' },
+  ) => {
     try {
       const itemToAdd = {
         ...newItem,
@@ -172,7 +179,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
       });
     }
   };
-
 
   return (
     <div className="space-y-6">
@@ -243,7 +249,10 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                       <div className="flex items-center space-x-1">
                         {item.hsn_code ? (
                           <div className="flex flex-col gap-1">
-                            <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300 w-fit">
+                            <Badge
+                              variant="default"
+                              className="text-xs bg-green-100 text-green-800 border-green-300 w-fit"
+                            >
                               {item.hsn_code}
                             </Badge>
                             {item.category && (
@@ -251,7 +260,10 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                             )}
                           </div>
                         ) : (
-                          <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 border-amber-300">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-amber-100 text-amber-800 border-amber-300"
+                          >
                             Not Assigned
                           </Badge>
                         )}
@@ -288,21 +300,25 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                         ))}
                       {/* Weight Source Badge */}
                       {item.smart_data?.weight_source && (
-                        <Badge 
+                        <Badge
                           variant={
-                            item.smart_data.weight_source === 'hsn' ? 'default' : 
-                            item.smart_data.weight_source === 'ml' ? 'secondary' : 
-                            'outline'
-                          } 
+                            item.smart_data.weight_source === 'hsn'
+                              ? 'default'
+                              : item.smart_data.weight_source === 'ml'
+                                ? 'secondary'
+                                : 'outline'
+                          }
                           className="text-xs"
                         >
-                          {item.smart_data.weight_source === 'hsn' ? 'HSN' : 
-                           item.smart_data.weight_source === 'ml' ? 'AI' : 
-                           'Manual'}
+                          {item.smart_data.weight_source === 'hsn'
+                            ? 'HSN'
+                            : item.smart_data.weight_source === 'ml'
+                              ? 'AI'
+                              : 'Manual'}
                         </Badge>
                       )}
                     </div>
-                    
+
                     {/* HSN Details */}
                     {item.hsn_code && (
                       <div className="flex items-start space-x-2">
@@ -360,7 +376,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                       </div>
                     )}
                   </div>
-
                 </div>
 
                 {/* Actions */}
@@ -522,7 +537,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
   const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isLoadingHSN, setIsLoadingHSN] = useState(false);
-  const [selectedWeightSource, setSelectedWeightSource] = useState<'hsn' | 'ml' | 'manual' | null>(null);
+  const [selectedWeightSource, setSelectedWeightSource] = useState<'hsn' | 'ml' | 'manual' | null>(
+    null,
+  );
 
   // Fetch HSN weight when component mounts or HSN code changes
   useEffect(() => {
@@ -568,7 +585,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
   const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
     setEditForm((prev) => ({ ...prev, weight_kg: weight }));
     setSelectedWeightSource(source);
-    
+
     // Record the selection for analytics
     if (editForm.name) {
       await smartWeightEstimator.recordWeightSelection(
@@ -579,7 +596,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
         source,
         undefined, // url
         undefined, // category
-        hsnCode
+        hsnCode,
       );
     }
   };
@@ -601,8 +618,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
             originalEstimate: mlEstimation.estimated_weight,
           },
         );
-      } catch (error) {
-      }
+      } catch (error) {}
     }
 
     const updatedItem: QuoteItem & { weight_source?: 'hsn' | 'ml' | 'manual' } = {
@@ -651,7 +667,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                 </div>
               )}
             </Label>
-            
+
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-center gap-4 flex-wrap">
                 {/* Quantity Field */}
@@ -661,7 +677,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                     <Input
                       type="number"
                       value={editForm.quantity}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, quantity: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, quantity: Number(e.target.value) }))
+                      }
                       className="w-16 h-8 border-0 p-0 text-center text-sm font-medium"
                       min="1"
                     />
@@ -676,12 +694,16 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                     <Input
                       type="number"
                       value={editForm.price_usd}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, price_usd: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({ ...prev, price_usd: Number(e.target.value) }))
+                      }
                       className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                       step="0.01"
                       min="0"
                     />
-                    <span className="text-xs text-gray-400 ml-1">{currencyDisplay.originCurrency}</span>
+                    <span className="text-xs text-gray-400 ml-1">
+                      {currencyDisplay.originCurrency}
+                    </span>
                   </div>
                 </div>
 
@@ -694,7 +716,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                       type="number"
                       value={editForm.weight_kg}
                       onChange={(e) => {
-                        setEditForm(prev => ({ ...prev, weight_kg: Number(e.target.value) }));
+                        setEditForm((prev) => ({ ...prev, weight_kg: Number(e.target.value) }));
                         setSelectedWeightSource('manual');
                       }}
                       className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
@@ -703,7 +725,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                     />
                     <span className="text-xs text-gray-400 ml-1">kg</span>
                   </div>
-                  
+
                   {/* Weight Suggestions */}
                   {(hsnWeight || mlEstimation) && (
                     <div className="flex gap-1">
@@ -739,19 +761,23 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                   <div className="flex-1">
                     <DirectHSNInput
                       value={editForm.hsn_code}
-                      displayValue={editForm.hsn_code && editForm.category ? `${editForm.category} - ${editForm.hsn_code}` : ''}
+                      displayValue={
+                        editForm.hsn_code && editForm.category
+                          ? `${editForm.category} - ${editForm.hsn_code}`
+                          : ''
+                      }
                       onSelect={(hsn) => {
-                        setEditForm(prev => ({
+                        setEditForm((prev) => ({
                           ...prev,
                           hsn_code: hsn.hsn_code,
-                          category: hsn.display_name
+                          category: hsn.display_name,
                         }));
                       }}
                       onClear={() => {
-                        setEditForm(prev => ({
+                        setEditForm((prev) => ({
                           ...prev,
                           hsn_code: '',
-                          category: ''
+                          category: '',
                         }));
                       }}
                       productName={editForm.name}
@@ -761,7 +787,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* HSN Category Display */}
               {editForm.category && (
                 <div className="mt-2 text-xs text-gray-600">
@@ -802,7 +828,12 @@ interface AddItemDialogProps {
   hsnCode?: string;
 }
 
-const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currencyDisplay, hsnCode }) => {
+const AddItemDialog: React.FC<AddItemDialogProps> = ({
+  onSave,
+  onCancel,
+  currencyDisplay,
+  hsnCode,
+}) => {
   const [addForm, setAddForm] = useState({
     name: '',
     quantity: 1,
@@ -817,7 +848,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
   const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const [isLoadingHSN, setIsLoadingHSN] = useState(false);
-  const [selectedWeightSource, setSelectedWeightSource] = useState<'hsn' | 'ml' | 'manual' | null>(null);
+  const [selectedWeightSource, setSelectedWeightSource] = useState<'hsn' | 'ml' | 'manual' | null>(
+    null,
+  );
 
   // Fetch HSN weight when component mounts or HSN code changes
   useEffect(() => {
@@ -865,7 +898,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
   const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
     setAddForm((prev) => ({ ...prev, weight_kg: weight }));
     setSelectedWeightSource(source);
-    
+
     // Record the selection for analytics
     if (addForm.name) {
       await smartWeightEstimator.recordWeightSelection(
@@ -876,14 +909,18 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
         source,
         addForm.url || undefined,
         undefined, // category
-        hsnCode
+        hsnCode,
       );
     }
   };
 
   const handleSave = async () => {
     // Learn from user input if different from ML estimation
-    if (mlEstimation && Math.abs(addForm.weight_kg - mlEstimation.estimated_weight) > 0.1 && selectedWeightSource !== 'hsn') {
+    if (
+      mlEstimation &&
+      Math.abs(addForm.weight_kg - mlEstimation.estimated_weight) > 0.1 &&
+      selectedWeightSource !== 'hsn'
+    ) {
       try {
         await smartWeightEstimator.learnFromActualWeight(
           addForm.name,
@@ -894,8 +931,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
             originalEstimate: mlEstimation.estimated_weight,
           },
         );
-      } catch (error) {
-      }
+      } catch (error) {}
     }
 
     const newItem: Partial<QuoteItem> & { weight_source?: 'hsn' | 'ml' | 'manual' } = {
@@ -944,7 +980,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
             />
           </div>
 
-
           {/* Inline Product Fields - Quantity, Price, Weight, HSN */}
           <div>
             <Label className="flex items-center space-x-2 mb-2">
@@ -958,7 +993,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                 </div>
               )}
             </Label>
-            
+
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-center gap-4 flex-wrap">
                 {/* Quantity Field */}
@@ -968,7 +1003,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                     <Input
                       type="number"
                       value={addForm.quantity}
-                      onChange={(e) => setAddForm(prev => ({ ...prev, quantity: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setAddForm((prev) => ({ ...prev, quantity: Number(e.target.value) }))
+                      }
                       className="w-16 h-8 border-0 p-0 text-center text-sm font-medium"
                       min="1"
                     />
@@ -983,12 +1020,16 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                     <Input
                       type="number"
                       value={addForm.price_usd}
-                      onChange={(e) => setAddForm(prev => ({ ...prev, price_usd: Number(e.target.value) }))}
+                      onChange={(e) =>
+                        setAddForm((prev) => ({ ...prev, price_usd: Number(e.target.value) }))
+                      }
                       className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                       step="0.01"
                       min="0"
                     />
-                    <span className="text-xs text-gray-400 ml-1">{currencyDisplay.originCurrency}</span>
+                    <span className="text-xs text-gray-400 ml-1">
+                      {currencyDisplay.originCurrency}
+                    </span>
                   </div>
                 </div>
 
@@ -1001,7 +1042,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                       type="number"
                       value={addForm.weight_kg}
                       onChange={(e) => {
-                        setAddForm(prev => ({ ...prev, weight_kg: Number(e.target.value) }));
+                        setAddForm((prev) => ({ ...prev, weight_kg: Number(e.target.value) }));
                         setSelectedWeightSource('manual');
                       }}
                       className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
@@ -1010,7 +1051,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                     />
                     <span className="text-xs text-gray-400 ml-1">kg</span>
                   </div>
-                  
+
                   {/* Weight Suggestions */}
                   {(hsnWeight || mlEstimation) && (
                     <div className="flex gap-1">
@@ -1046,19 +1087,23 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                   <div className="flex-1">
                     <DirectHSNInput
                       value={addForm.hsn_code}
-                      displayValue={addForm.hsn_code && addForm.category ? `${addForm.category} - ${addForm.hsn_code}` : ''}
+                      displayValue={
+                        addForm.hsn_code && addForm.category
+                          ? `${addForm.category} - ${addForm.hsn_code}`
+                          : ''
+                      }
                       onSelect={(hsn) => {
-                        setAddForm(prev => ({
+                        setAddForm((prev) => ({
                           ...prev,
                           hsn_code: hsn.hsn_code,
-                          category: hsn.display_name
+                          category: hsn.display_name,
                         }));
                       }}
                       onClear={() => {
-                        setAddForm(prev => ({
+                        setAddForm((prev) => ({
                           ...prev,
                           hsn_code: '',
-                          category: ''
+                          category: '',
                         }));
                       }}
                       productName={addForm.name}
@@ -1068,7 +1113,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                   </div>
                 </div>
               </div>
-              
+
               {/* HSN Category Display */}
               {addForm.category && (
                 <div className="mt-2 text-xs text-gray-600">
@@ -1078,7 +1123,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
               )}
             </div>
           </div>
-
 
           <div>
             <Label htmlFor="options">Options/Notes</Label>

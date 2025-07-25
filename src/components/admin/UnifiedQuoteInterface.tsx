@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { HSN_QUERY_KEYS } from '@/hooks/useHSNQuoteCalculation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +100,7 @@ import { QuoteTaxSettings } from './smart-components/QuoteTaxSettings';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import { SmartHSNSearch } from './hsn-components/SmartHSNSearch';
+import { DirectHSNInput } from './hsn-components/DirectHSNInput';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -604,8 +606,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
         await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
         await queryClient.invalidateQueries({ queryKey: ['quotes'] });
+        // Invalidate HSN-specific caches for real-time updates
+        await queryClient.invalidateQueries({ queryKey: HSN_QUERY_KEYS.quoteCalculation(quote.id) });
+        await queryClient.invalidateQueries({ queryKey: ['hsn-tax-breakdown', quote.id] });
 
-        console.log(`[TAX METHOD DEBUG] Cache invalidated, triggering recalculation`);
+        console.log(`[TAX METHOD DEBUG] Cache invalidated (including HSN), triggering recalculation`);
 
         // Trigger recalculation with updated quote data
         await calculateSmartFeatures(updatedLiveQuote);
@@ -910,6 +915,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
               await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
               await queryClient.invalidateQueries({ queryKey: ['quotes'] });
+              // Invalidate HSN-specific caches for real-time updates
+              await queryClient.invalidateQueries({ queryKey: HSN_QUERY_KEYS.quoteCalculation(quote.id) });
+              await queryClient.invalidateQueries({ queryKey: ['hsn-tax-breakdown', quote.id] });
 
               // 5. Trigger quote data refresh to update sidebar components
               await loadQuoteData(true); // Force refresh
@@ -2349,41 +2357,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                             {/* HSN Field */}
                                             <div className="flex items-center gap-2">
                                               <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
-                                              <div className="flex items-center">
-                                                {item.hsn_code ? (
-                                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                                                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
-                                                      <Tag className="w-3 h-3 mr-1" />
-                                                      {item.hsn_code}
-                                                    </Badge>
-                                                    <SmartHSNSearch
-                                                      currentHSNCode={item.hsn_code}
-                                                      productName={item.product_name}
-                                                      onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
-                                                      size="sm"
-                                                      compact={true}
-                                                      trigger={
-                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
-                                                          <Edit className="w-3 h-3" />
-                                                        </Button>
-                                                      }
-                                                    />
-                                                  </div>
-                                                ) : (
-                                                  <SmartHSNSearch
-                                                    currentHSNCode={undefined}
-                                                    productName={item.product_name}
-                                                    onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
-                                                    size="sm"
-                                                    compact={true}
-                                                    trigger={
-                                                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                                                        <Search className="w-3 h-3 mr-1" />
-                                                        Search HSN
-                                                      </Button>
-                                                    }
-                                                  />
-                                                )}
+                                              <div className="flex-1">
+                                                <DirectHSNInput
+                                                  value={item.hsn_code || ''}
+                                                  displayValue={item.hsn_code && item.category ? `${item.category} - ${item.hsn_code}` : ''}
+                                                  onSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                                  productName={item.product_name}
+                                                  placeholder="Type to search HSN codes..."
+                                                  className="max-w-xs"
+                                                />
                                               </div>
                                             </div>
                                           </div>
