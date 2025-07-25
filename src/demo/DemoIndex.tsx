@@ -12,6 +12,13 @@ const DemoIndex = () => {
 
   const demos = [
     {
+      id: 'airbnb-style',
+      title: '🏠 Airbnb-Inspired Homepage',
+      description: 'Clean, minimalist homepage design inspired by Airbnb\'s proven UX patterns. Single-focus hero with clear visual hierarchy.',
+      features: ['Minimalist aesthetic', 'Single primary CTA', 'Clean search interface', 'Airbnb-style navigation'],
+      component: () => window.location.href = '/demo/airbnb-style'
+    },
+    {
       id: 'inline-stripe',
       title: '🔥 Inline Stripe Design (FINAL IMPLEMENTATION)',
       description: 'Ultra-compact inline selectors - Weight & HSN on single line! Already integrated in your product forms.',

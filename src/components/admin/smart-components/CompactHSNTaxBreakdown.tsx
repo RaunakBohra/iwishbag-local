@@ -260,6 +260,16 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Tax Method Indicator */}
+              <div className="flex items-center justify-between text-xs p-2 bg-blue-50 rounded border border-blue-200">
+                <span className="text-gray-600">Tax Calculation Method:</span>
+                <Badge variant="outline" className="text-xs">
+                  {quote.calculation_method_preference === 'hsn_only' ? 'HSN Only' :
+                   quote.calculation_method_preference === 'legacy_fallback' ? 'Legacy Fallback' :
+                   quote.calculation_method_preference === 'admin_choice' ? 'Admin Choice' : 'Auto (Hybrid)'}
+                </Badge>
+              </div>
+
               {/* Primary Totals - Most Important Information First */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center p-3 bg-red-50 rounded border border-red-200">
@@ -267,22 +277,38 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                     {currencyDisplay.formatSingleAmount(summary.totalCustoms, 'origin')}
                   </div>
                   <div className="text-xs text-red-600">Customs Duty</div>
+                  {taxBreakdowns.length > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.customs_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length)}%
+                    </div>
+                  )}
                 </div>
                 <div className="text-center p-3 bg-blue-50 rounded border border-blue-200">
                   <div className="text-lg font-semibold text-blue-700">
                     {currencyDisplay.formatSingleAmount(summary.totalLocalTaxes, 'origin')}
                   </div>
                   <div className="text-xs text-blue-600">Local Taxes</div>
+                  {taxBreakdowns.length > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.local_tax_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length)}%
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Total Tax Impact */}
+              {/* Total Tax Impact */}  
               <div className="text-center p-2 bg-purple-50 rounded border border-purple-200">
                 <div className="text-sm text-purple-600">
                   Total Tax Impact: <span className="font-semibold">
                     {currencyDisplay.formatSingleAmount(summary.totalTaxes, 'origin')}
                   </span>
                 </div>
+                {taxBreakdowns.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {taxBreakdowns.filter(b => b.valuation_method === 'minimum_valuation').length > 0 && 
+                      `${taxBreakdowns.filter(b => b.valuation_method === 'minimum_valuation').length} items used min. valuation`}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -335,26 +361,87 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                       </Button>
                     </div>
 
-                    {/* Tax Calculation Display - Show Applied Method Only */}
+                    {/* Tax Calculation Display with Transparency */}
                     {!isUnclassified && (
-                      <div className="grid grid-cols-3 gap-2 text-xs border-t pt-2">
-                        <div className="text-center">
-                          <div className="font-medium text-red-600">
-                            {currencyDisplay.formatSingleAmount(breakdown.total_customs, 'origin')}
+                      <div className="space-y-3 border-t pt-2">
+                        {/* Valuation Method Indicator */}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Valuation Method:</span>
+                          <div className="flex items-center space-x-2">
+                            <Badge 
+                              variant={breakdown.valuation_method === 'minimum_valuation' ? 'default' : 'outline'} 
+                              className="text-xs"
+                            >
+                              {breakdown.valuation_method === 'minimum_valuation' ? 'Min Valuation' : 
+                               breakdown.valuation_method === 'original_price' ? 'Product Value' :
+                               breakdown.valuation_method === 'higher_of_both' ? 'Higher Value' : 'Admin Override'}
+                            </Badge>
+                            {breakdown.minimum_valuation_conversion && (
+                              <Info className="w-3 h-3 text-blue-500" title="Minimum valuation applied" />
+                            )}
                           </div>
-                          <div className="text-gray-600">Customs</div>
                         </div>
-                        <div className="text-center">
-                          <div className="font-medium text-blue-600">
-                            {currencyDisplay.formatSingleAmount(breakdown.total_local_taxes, 'origin')}
+
+                        {/* Tax Rates Applied */}
+                        <div className="bg-gray-50 rounded p-2 space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Customs Rate:</span>
+                            <span className="font-medium text-red-600">
+                              {breakdown.customs_calculation.rate_percentage}%
+                            </span>
                           </div>
-                          <div className="text-gray-600">Local Tax</div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">Local Tax ({breakdown.local_tax_calculation.tax_type.toUpperCase()}):</span>
+                            <span className="font-medium text-blue-600">
+                              {breakdown.local_tax_calculation.rate_percentage}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <div className="font-medium text-purple-600">
-                            {currencyDisplay.formatSingleAmount(breakdown.total_taxes, 'origin')}
+
+                        {/* Calculation Breakdown */}  
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="text-center">
+                            <div className="font-medium text-red-600">
+                              {currencyDisplay.formatSingleAmount(breakdown.total_customs, 'origin')}
+                            </div>
+                            <div className="text-gray-600">Customs</div>
+                            <div className="text-gray-500 text-xs">
+                              ({breakdown.customs_calculation.rate_percentage}%)
+                            </div>
                           </div>
-                          <div className="text-gray-600">Total</div>
+                          <div className="text-center">
+                            <div className="font-medium text-blue-600">
+                              {currencyDisplay.formatSingleAmount(breakdown.total_local_taxes, 'origin')}
+                            </div>
+                            <div className="text-gray-600">Local Tax</div>
+                            <div className="text-gray-500 text-xs">
+                              ({breakdown.local_tax_calculation.rate_percentage}%)
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-medium text-purple-600">
+                              {currencyDisplay.formatSingleAmount(breakdown.total_taxes, 'origin')}
+                            </div>
+                            <div className="text-gray-600">Total</div>
+                          </div>
+                        </div>
+
+                        {/* Valuation Details */}
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div className="flex justify-between">
+                            <span>Taxable Amount:</span>
+                            <span className="font-medium">
+                              {currencyDisplay.formatSingleAmount(breakdown.taxable_amount_origin_currency, 'origin')}
+                            </span>
+                          </div>
+                          {breakdown.minimum_valuation_conversion && (
+                            <div className="flex justify-between text-amber-600">
+                              <span>Min. Val. Applied:</span>
+                              <span className="font-medium">
+                                {breakdown.minimum_valuation_conversion.conversion_details}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

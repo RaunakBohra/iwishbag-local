@@ -31,6 +31,7 @@ import {
   Calculator,
   Tag,
   Weight,
+  Info,
 } from 'lucide-react';
 import type { ItemTaxBreakdown } from '@/services/PerItemTaxCalculator';
 
@@ -188,45 +189,100 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
           </div>
         )}
 
-        {/* Tax Calculation Breakdown */}
+        {/* Tax Calculation Breakdown with Enhanced Transparency */}
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
             <Calculator className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-800">Tax Calculation</span>
+            <span className="text-sm font-medium text-gray-800">Tax Calculation Details</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Customs Duty</span>
-                <span className="font-medium">
-                  {breakdown.customsDuty.rate}% = ${breakdown.customsDuty.amount.toFixed(2)}
-                </span>
+          {/* Valuation Method Used */}
+          <div className="mb-3 p-2 bg-white rounded border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-600">Valuation Method:</span>
+              <Badge 
+                variant={breakdown.valuation_method === 'minimum_valuation' ? 'default' : 'outline'}
+                className="text-xs"
+              >
+                {breakdown.valuation_method === 'minimum_valuation' ? 'Minimum Valuation' : 
+                 breakdown.valuation_method === 'original_price' ? 'Product Value' :
+                 breakdown.valuation_method === 'higher_of_both' ? 'Higher of Both' : 'Admin Override'}
+              </Badge>
+            </div>
+            <div className="text-xs text-gray-600">
+              Taxable Amount: <span className="font-medium">${breakdown.taxable_amount_origin_currency?.toFixed(2) || breakdown.valuationAmount?.toFixed(2)}</span>
+            </div>
+            {breakdown.minimum_valuation_conversion && (
+              <div className="text-xs text-amber-600 mt-1">
+                Min. Valuation Applied: {breakdown.minimum_valuation_conversion.conversion_details}
               </div>
+            )}
+          </div>
+
+          {/* Tax Rates and Calculations */}
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center p-2 bg-red-50 rounded">
+              <div>
+                <span className="text-gray-700">Customs Duty</span>
+                <div className="text-xs text-gray-600">
+                  Rate: {breakdown.customs_calculation?.rate_percentage || breakdown.customsDuty?.rate}%
+                </div>
+              </div>
+              <span className="font-medium text-red-600">
+                ${(breakdown.total_customs || breakdown.customsDuty?.amount)?.toFixed(2)}
+              </span>
             </div>
 
-            <div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Local Tax</span>
-                <span className="font-medium">
-                  {breakdown.localTax.rate}% = ${breakdown.localTax.amount.toFixed(2)}
+            <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+              <div>
+                <span className="text-gray-700">
+                  {breakdown.local_tax_calculation?.tax_type?.toUpperCase() || 'Local Tax'}
                 </span>
+                <div className="text-xs text-gray-600">
+                  Rate: {breakdown.local_tax_calculation?.rate_percentage || breakdown.localTax?.rate}%
+                </div>
               </div>
+              <span className="font-medium text-blue-600">
+                ${(breakdown.total_local_taxes || breakdown.localTax?.amount)?.toFixed(2)}
+              </span>
             </div>
           </div>
 
-          <Separator className="my-2" />
+          <Separator className="my-3" />
 
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-gray-800">Total Tax</span>
-            <span className="font-bold text-red-600">${breakdown.totalTaxAmount.toFixed(2)}</span>
+          {/* Summary Totals */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="font-medium text-gray-800">Total Tax</span>
+              <span className="font-bold text-red-600">
+                ${(breakdown.total_taxes || breakdown.totalTaxAmount)?.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <span className="font-medium text-gray-800">Item Total (with tax)</span>
+              <span className="font-bold text-green-600">
+                ${breakdown.totalItemCostWithTax?.toFixed(2) || 
+                  ((breakdown.costPrice || breakdown.original_price_origin_currency || 0) + 
+                   (breakdown.total_taxes || breakdown.totalTaxAmount || 0)).toFixed(2)}
+              </span>
+            </div>
           </div>
 
-          <div className="flex justify-between items-center mt-1">
-            <span className="font-medium text-gray-800">Item Total (with tax)</span>
-            <span className="font-bold text-green-600">
-              ${breakdown.totalItemCostWithTax.toFixed(2)}
-            </span>
+          {/* Data Source and Confidence */}
+          <div className="mt-3 pt-2 border-t text-xs text-gray-600">
+            <div className="flex items-center justify-between">
+              <span>Confidence Score:</span>
+              <Badge variant="outline" className="text-xs">
+                {Math.round((breakdown.confidence_score || breakdown.classificationConfidence || 0) * 100)}%
+              </Badge>
+            </div>
+            {breakdown.warnings && breakdown.warnings.length > 0 && (
+              <div className="mt-1 text-amber-600">
+                <AlertTriangle className="h-3 w-3 inline mr-1" />
+                {breakdown.warnings[0]}
+              </div>
+            )}
           </div>
         </div>
 
