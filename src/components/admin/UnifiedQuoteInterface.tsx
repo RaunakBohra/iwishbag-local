@@ -111,6 +111,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AdminQuoteFormValues, adminQuoteFormSchema } from './admin-quote-form-validation';
 import { ModeToggle } from '@/components/ui/mode-toggle';
+import { 
+  handleError, 
+  createCalculationError, 
+  createDatabaseError, 
+  createNetworkError,
+  ErrorBoundary 
+} from '@/lib/errorHandling';
+import { QuoteErrorRecovery } from '@/components/error/QuoteErrorRecovery';
 
 interface UnifiedQuoteInterfaceProps {
   initialQuoteId?: string;
@@ -393,6 +401,48 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
     try {
       setIsCalculating(true);
+<<<<<<< Updated upstream
+=======
+      
+      // Get current form values for calculations
+      const currentFormValues = form.getValues();
+      
+      // ✅ NEW: Always use enhanced quote data
+      const enhancedQuote = createEnhancedQuote(baseQuote);
+      if (!enhancedQuote) {
+        const error = createCalculationError(
+          'quote enhancement',
+          { baseQuote, formValues: currentFormValues },
+          'Unable to create enhanced quote for calculation'
+        );
+        handleError(error, {
+          component: 'UnifiedQuoteInterface',
+          action: 'calculateSmartFeatures',
+          quoteId: quote?.id,
+          userId: quote?.user_id,
+        });
+        return;
+      }
+
+      const quoteToCalculate = baseQuote || quote;
+      
+      console.log('🔄 [REAL-TIME] Calculating with form values:', {
+        salesTaxPrice: currentFormValues.sales_tax_price,
+        salesTaxPriceType: typeof currentFormValues.sales_tax_price,
+        itemsTotal: quoteToCalculate.calculation_data?.breakdown?.items_total,
+        calculatedPurchaseTaxRate: currentFormValues.sales_tax_price ? 
+          (Number(currentFormValues.sales_tax_price) / (quoteToCalculate.calculation_data?.breakdown?.items_total || 100)) * 100 : 
+          undefined,
+        finalPurchaseTaxRate: enhancedQuote.operational_data?.purchase_tax_rate,
+        customsPercentage: enhancedQuote.operational_data?.customs?.percentage,
+      });
+
+      console.log('📤 [DEBUG] Sending enhanced quote to SmartCalculationEngine:', {
+        quoteId: enhancedQuote.id,
+        operationalData: enhancedQuote.operational_data,
+        purchaseTaxRate: enhancedQuote.operational_data?.purchase_tax_rate,
+      });
+>>>>>>> Stashed changes
 
       const result = await smartCalculationEngine.calculateWithShippingOptions({
         quote: quoteData,
@@ -409,9 +459,103 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         setShippingRecommendations(result.smart_recommendations);
         setSmartSuggestions(result.optimization_suggestions);
         setOptimizationScore(result.updated_quote.optimization_score);
+<<<<<<< Updated upstream
+=======
+        
+        console.log('✅ [REAL-TIME] Calculation success, updated breakdown:', {
+          purchaseTax: result.updated_quote.calculation_data?.breakdown?.purchase_tax,
+          destinationTax: result.updated_quote.calculation_data?.breakdown?.destination_tax,
+          customs: result.updated_quote.calculation_data?.breakdown?.customs,
+          vatPercentage: result.updated_quote.operational_data?.customs?.smart_tier?.vat_percentage,
+        });
+
+        // ✅ FIX: Persist async calculation results to database
+        // This ensures that sync calculations can access the smart_tier data
+        try {
+          console.log('💾 [FIX] Persisting async calculation results to database:', {
+            quoteId: quote?.id,
+            operationalDataUpdate: {
+              customs: result.updated_quote.operational_data?.customs,
+              shipping: result.updated_quote.operational_data?.shipping,
+            },
+            calculationDataUpdate: {
+              breakdown: result.updated_quote.calculation_data?.breakdown,
+              exchange_rate: result.updated_quote.calculation_data?.exchange_rate,
+            }
+          });
+
+          const success = await unifiedDataEngine.updateQuote(quote!.id, {
+            calculation_data: result.updated_quote.calculation_data,
+            operational_data: result.updated_quote.operational_data,
+            final_total_usd: result.updated_quote.final_total_usd,
+            optimization_score: result.updated_quote.optimization_score,
+          });
+
+          if (success) {
+            console.log('✅ [FIX] Successfully persisted async calculation results to database');
+            // Refresh the quote from database to ensure consistency
+            try {
+              const freshQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
+              if (freshQuoteData) {
+                setQuote(freshQuoteData);
+                console.log('🔄 [FIX] Successfully refreshed quote data from database');
+              }
+            } catch (refreshError) {
+              const error = createDatabaseError(
+                'refresh quote data',
+                'quotes',
+                { quoteId: quote.id, error: refreshError }
+              );
+              handleError(error, {
+                component: 'UnifiedQuoteInterface',
+                action: 'refreshQuoteData',
+                quoteId: quote.id,
+                showToast: false, // Already showing success, don't confuse user
+              });
+            }
+          } else {
+            const error = createDatabaseError(
+              'persist calculation results',
+              'quotes',
+              { quoteId: quote.id, result: result.updated_quote }
+            );
+            handleError(error, {
+              component: 'UnifiedQuoteInterface',
+              action: 'persistCalculationResults',
+              quoteId: quote.id,
+            });
+          }
+        } catch (persistError) {
+          const error = createDatabaseError(
+            'persist async calculation results',
+            'quotes',
+            { quoteId: quote.id, persistError }
+          );
+          handleError(error, {
+            component: 'UnifiedQuoteInterface',
+            action: 'persistAsyncCalculationResults',
+            quoteId: quote.id,
+          });
+        }
+>>>>>>> Stashed changes
       }
     } catch (error) {
-      console.error('Error calculating smart features:', error);
+      const appError = createCalculationError(
+        'smart features calculation',
+        { 
+          quoteId: quote?.id,
+          formValues: form.getValues(),
+          enhancedQuote: createEnhancedQuote(baseQuote)
+        },
+        error instanceof Error ? error.message : 'Failed to calculate smart features'
+      );
+      
+      handleError(appError, {
+        component: 'UnifiedQuoteInterface',
+        action: 'calculateSmartFeatures',
+        quoteId: quote?.id,
+        userId: quote?.user_id,
+      });
     } finally {
       setIsCalculating(false);
     }
@@ -1969,6 +2113,25 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading smart quote interface...</p>
         </div>
+      </div>
+    );
+  }
+
+  // Enhanced error handling with recovery
+  if (quoteError) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 space-y-6">
+        <QuoteErrorRecovery
+          error={quoteError instanceof Error ? quoteError : new Error(String(quoteError))}
+          quote={quote}
+          onRetry={refetchQuote}
+          onIgnore={() => {
+            // Allow continuing without quote for testing
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Ignoring quote error in development mode');
+            }
+          }}
+        />
       </div>
     );
   }

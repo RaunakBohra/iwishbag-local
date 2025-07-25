@@ -157,7 +157,9 @@
       "Bash(git clone:*)",
       "Bash(source:*)",
       "Bash(pip install:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(npm:*)",
+      "Bash(git stash push:*)"
     ],
     "deny": []
   }

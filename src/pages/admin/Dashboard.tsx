@@ -22,6 +22,8 @@ import { SimpleShareStats } from '@/components/admin/SimpleShareStats';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { SystemHealthCheck } from '@/components/admin/SystemHealthCheck';
 import { PermissionsTestCard } from '@/components/admin/PermissionsTestCard';
+import { HSNManagementQuickAction } from '@/components/admin/HSNManagementQuickAction';
+import { ErrorMonitoringDashboard } from '@/components/admin/ErrorMonitoringDashboard';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -223,30 +225,38 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {quickActions.map((action) => (
-          <Card key={action.title} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className={`p-3 rounded-lg ${action.color}`}>
-                  <action.icon className="h-6 w-6" />
+      {/* Quick Actions and HSN Management Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Quick Actions - Take up 3 columns */}
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {quickActions.map((action) => (
+            <Card key={action.title} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className={`p-3 rounded-lg ${action.color}`}>
+                    <action.icon className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold">{action.title}</h3>
+                    <p className="text-sm text-muted-foreground">{action.description}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold">{action.title}</h3>
-                  <p className="text-sm text-muted-foreground">{action.description}</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => navigate(action.href)}
-              >
-                Go to {action.title}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+                <Button
+                  variant="outline"
+                  className="w-full mt-4"
+                  onClick={() => navigate(action.href)}
+                >
+                  Go to {action.title}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* HSN Management Quick Action - Take up 1 column */}
+        <div className="lg:col-span-1">
+          <HSNManagementQuickAction />
+        </div>
       </div>
 
       {/* System Status */}
@@ -276,10 +286,11 @@ const AdminDashboard = () => {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Dashboard Overview</TabsTrigger>
           <TabsTrigger value="health-check">System Health Check</TabsTrigger>
           <TabsTrigger value="permissions-test">Permissions Test</TabsTrigger>
+          <TabsTrigger value="error-monitoring">Error Monitoring</TabsTrigger>
         </TabsList>
 
         <TabsContent value="health-check" className="space-y-6">
@@ -290,6 +301,10 @@ const AdminDashboard = () => {
           <PermissionsTestCard />
         </TabsContent>
 
+        <TabsContent value="error-monitoring" className="space-y-6">
+          <ErrorMonitoringDashboard />
+        </TabsContent>
+        
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
