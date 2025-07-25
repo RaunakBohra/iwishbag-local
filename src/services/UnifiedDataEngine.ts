@@ -216,11 +216,9 @@ export class UnifiedDataEngine {
     if (!forceRefresh) {
       const cached = this.getCached(cacheKey);
       if (cached) {
-        console.log(`📋 [DEBUG] Returning cached quote ${id}`);
         return cached;
       }
     } else {
-      console.log(`🔄 [DEBUG] Force refreshing quote ${id}, clearing cache`);
       this.clearCache(cacheKey);
     }
 
@@ -241,7 +239,6 @@ export class UnifiedDataEngine {
       .single();
 
     if (quoteError || !quoteData) {
-      console.error('Error fetching quote:', quoteError);
       return null;
     }
 
@@ -287,7 +284,6 @@ export class UnifiedDataEngine {
           }
         } catch (error) {
           // Silently fail - OAuth avatar is not critical
-          console.debug('Could not fetch OAuth avatar for user:', quote.user_id);
         }
       }
     }
@@ -343,7 +339,6 @@ export class UnifiedDataEngine {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching quotes:', error);
       return { quotes: [], total: 0 };
     }
 
@@ -404,7 +399,6 @@ export class UnifiedDataEngine {
         shipping_options: [], // Will be populated by SmartCalculationEngine
       };
     } catch (error) {
-      console.error('Error creating quote:', error);
       return {
         success: false,
         quote: {} as UnifiedQuote,
@@ -419,11 +413,6 @@ export class UnifiedDataEngine {
    * Update quote with smart validation
    */
   async updateQuote(id: string, updates: Partial<UnifiedQuote>): Promise<boolean> {
-    console.log('💾 [DEBUG] UnifiedDataEngine.updateQuote called:', {
-      quoteId: id,
-      updates,
-      operationalDataUpdate: updates.operational_data,
-    });
 
     try {
       // Transform updates for database
@@ -442,30 +431,25 @@ export class UnifiedDataEngine {
       if (updates.optimization_score !== undefined)
         dbUpdates.optimization_score = updates.optimization_score;
 
-      console.log('💾 [DEBUG] Final database update payload:', dbUpdates);
 
       const { error } = await supabase.from('quotes').update(dbUpdates).eq('id', id);
 
       if (error) {
-        console.error('❌ [DEBUG] Database update failed:', error);
         throw error;
       }
 
-      console.log('✅ [DEBUG] Database update successful');
 
       // Clear cache aggressively for status updates
       this.clearCache(`quote_${id}`);
 
       // Also clear any related cache entries that might be affected
       if (updates.status) {
-        console.log('🔄 [DEBUG] Status update detected, clearing all caches for quote', id);
         // Clear all cached entries to ensure fresh data
         this.cache.clear();
       }
 
       return true;
     } catch (error) {
-      console.error('❌ [DEBUG] Failed to update quote:', error);
       return false;
     }
   }
@@ -498,14 +482,12 @@ export class UnifiedDataEngine {
     try {
       const quote = await this.getQuote(quoteId);
       if (!quote) {
-        console.error(`Quote ${quoteId} not found for item update`);
         return false;
       }
 
       // Find the item to update
       const existingItem = quote.items.find(item => item.id === itemId);
       if (!existingItem) {
-        console.error(`Item ${itemId} not found in quote ${quoteId}`);
         return false;
       }
 
@@ -513,7 +495,6 @@ export class UnifiedDataEngine {
       if (updates.hsn_code !== undefined || updates.category !== undefined) {
         const validationResult = await this.validateHSNFields(updates, existingItem);
         if (!validationResult.isValid) {
-          console.error(`HSN validation failed for item ${itemId}:`, validationResult.errors);
           throw new Error(`HSN validation failed: ${validationResult.errors.join(', ')}`);
         }
       }
@@ -596,14 +577,6 @@ export class UnifiedDataEngine {
         };
 
         // Log the admin override for debugging
-        console.log(`🔒 [ADMIN-OVERRIDE] HSN modification logged:`, {
-          quoteId,
-          itemId,
-          modificationType,
-          from: `${previousHsnCode}/${previousCategory}`,
-          to: `${newHsnCode}/${newCategory}`,
-          overrideCount: operationalUpdates.operational_data.admin_override_count,
-        });
       }
 
       const success = await this.updateQuote(quoteId, {
@@ -613,12 +586,10 @@ export class UnifiedDataEngine {
       });
 
       if (success && (updates.hsn_code || updates.category)) {
-        console.log(`✅ Item ${itemId} updated with HSN data: ${updates.hsn_code || 'category only'}`);
       }
 
       return success;
     } catch (error) {
-      console.error(`Error updating item ${itemId} in quote ${quoteId}:`, error);
       return false;
     }
   }
@@ -831,7 +802,6 @@ export class UnifiedDataEngine {
       quoteIds.forEach((id) => this.clearCache(`quote_${id}`));
       return true;
     } catch (error) {
-      console.error('Error bulk updating status:', error);
       return false;
     }
   }
@@ -912,7 +882,6 @@ export class UnifiedDataEngine {
         .single();
 
       if (error || !data) {
-        console.warn(`HSN code ${hsnCode} not found in database`);
         return null;
       }
 
@@ -933,7 +902,6 @@ export class UnifiedDataEngine {
       this.setCache(cacheKey, record);
       return record;
     } catch (error) {
-      console.error('Error fetching HSN record:', error);
       return null;
     }
   }
@@ -967,7 +935,6 @@ export class UnifiedDataEngine {
       const { data, error } = await query.limit(limit);
 
       if (error) {
-        console.error('Error searching HSN records:', error);
         return [];
       }
 
@@ -988,7 +955,6 @@ export class UnifiedDataEngine {
       this.setCache(cacheKey, records);
       return records;
     } catch (error) {
-      console.error('Error searching HSN records:', error);
       return [];
     }
   }
@@ -1010,7 +976,6 @@ export class UnifiedDataEngine {
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching HSN records by category:', error);
         return [];
       }
 
@@ -1031,7 +996,6 @@ export class UnifiedDataEngine {
       this.setCache(cacheKey, records);
       return records;
     } catch (error) {
-      console.error('Error fetching HSN records by category:', error);
       return [];
     }
   }
@@ -1098,7 +1062,6 @@ export class UnifiedDataEngine {
 
         totalConversions++;
       } catch (error) {
-        console.error(`Failed to convert minimum valuation for item ${item.name}:`, error);
         failedConversions++;
       }
     }
@@ -1114,7 +1077,6 @@ export class UnifiedDataEngine {
    * Enhance quote items with HSN classification and currency conversion data
    */
   async enhanceQuoteWithHSNData(quote: UnifiedQuote): Promise<UnifiedQuote> {
-    console.log('🏷️ [HSN] Enhancing quote with HSN data:', quote.id);
 
     try {
       const enhancedItems = await Promise.all(
@@ -1132,12 +1094,8 @@ export class UnifiedDataEngine {
 
               if (classificationResult.hsnCode && classificationResult.confidence > 0.6) {
                 enhancedItem.hsn_code = classificationResult.hsnCode;
-                console.log(
-                  `✅ [HSN] Auto-classified ${item.name} as HSN ${classificationResult.hsnCode}`,
-                );
               }
             } catch (error) {
-              console.error(`❌ [HSN] Classification failed for ${item.name}:`, error);
             }
           }
 
@@ -1173,7 +1131,6 @@ export class UnifiedDataEngine {
                         : 'minimum_valuation',
                   };
                 } catch (error) {
-                  console.error(`❌ [CURRENCY] Conversion failed for ${item.name}:`, error);
                 }
               }
             }
@@ -1200,16 +1157,9 @@ export class UnifiedDataEngine {
         },
       };
 
-      console.log('✅ [HSN] Quote enhancement completed:', {
-        quoteId: quote.id,
-        itemsWithHSN: enhancedItems.filter((item) => item.hsn_code).length,
-        itemsWithConversion: enhancedItems.filter((item) => item.minimum_valuation_conversion)
-          .length,
-      });
 
       return enhancedQuote;
     } catch (error) {
-      console.error('❌ [HSN] Quote enhancement failed:', error);
       return quote; // Return original quote on failure
     }
   }
@@ -1304,7 +1254,6 @@ export class UnifiedDataEngine {
     }
 
     keysToDelete.forEach((key) => this.cache.delete(key));
-    console.log(`🧹 Cleared ${keysToDelete.length} HSN cache entries`);
   }
 }
 

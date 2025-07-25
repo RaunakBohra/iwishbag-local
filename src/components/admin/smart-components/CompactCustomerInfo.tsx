@@ -85,10 +85,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
     queryKey: ['user_addresses', quote.user_id],
     queryFn: async () => {
       if (!quote.user_id) {
-        console.log('🔍 [DEBUG] No user_id for quote:', quote.id);
         return [];
       }
-      console.log('🔍 [DEBUG] Fetching addresses for user:', quote.user_id);
 
       const { data, error } = await supabase
         .from('user_addresses')
@@ -98,11 +96,9 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ [DEBUG] Error fetching saved addresses:', error);
         return [];
       }
 
-      console.log('✅ [DEBUG] Found addresses:', data?.length || 0, data);
       return data || [];
     },
     enabled: !!quote.user_id && !isAnonymous,
@@ -124,9 +120,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   } = useQuery({
     queryKey: ['total-messages', quote.id],
     queryFn: async () => {
-      console.log('🔄 [DEBUG] React Query calling getTotalMessageCount for quote:', quote.id);
       const result = await quoteMessageService.getTotalMessageCount(quote.id);
-      console.log('🔄 [DEBUG] React Query received result:', result);
       return result;
     },
     refetchInterval: 30000, // Refresh every 30 seconds for testing (same as unread)
@@ -139,7 +133,6 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
 
   // Manual cache invalidation effect for debugging
   useEffect(() => {
-    console.log('🔄 [DEBUG] Component mounted, invalidating cache for quote:', quote.id);
     queryClient.invalidateQueries({ queryKey: ['total-messages', quote.id] });
   }, []); // Only run once on mount
 
@@ -156,7 +149,6 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
           filter: `quote_id=eq.${quote.id}`,
         },
         (payload) => {
-          console.log('📨 [DEBUG] Real-time message update:', payload);
           // Invalidate both message count queries to refresh the data
           queryClient.invalidateQueries({ queryKey: ['unread-messages', quote.id] });
           queryClient.invalidateQueries({ queryKey: ['total-messages', quote.id] });
@@ -172,7 +164,6 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
 
   // Only log when addresses are found/loaded (reduce console spam)
   if (savedAddresses && savedAddresses.length > 0 && !addressesLoading) {
-    console.log('✅ [DEBUG] Addresses loaded successfully:', savedAddresses.length);
   }
 
   // Admin address management mutations
@@ -378,65 +369,6 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       .toUpperCase()
       .slice(0, 2);
   };
-
-  // Debug message counts specifically
-  console.log('📊 [DEBUG] Message counts UI STATE:', {
-    quote_id: quote.id,
-    unreadCount,
-    totalCount,
-    totalCountLoading,
-    totalCountError,
-    unreadCountType: typeof unreadCount,
-    totalCountType: typeof totalCount,
-    hasUnread: (unreadCount || 0) > 0,
-    hasMessages: (totalCount || 0) > 0,
-    displayValues: {
-      showRedBadge: unreadCount && unreadCount > 0,
-      showBlueDot: (!unreadCount || unreadCount === 0) && totalCount && totalCount > 0,
-      showTotalCount: totalCount && totalCount > 0,
-    },
-  });
-
-  // Debug logging to understand the data structure
-  console.log('🔍 [DEBUG] CompactCustomerInfo data:', {
-    quote_id: quote.id,
-    quote_user_id: quote.user_id,
-    current_user_id: user?.id,
-    is_current_user: user && quote.user_id === user.id,
-    editMode: editMode,
-    customer_data: quote.customer_data,
-    customerInfo,
-    auth_context: user
-      ? {
-          name: user.user_metadata?.name,
-          full_name: user.user_metadata?.full_name,
-          email: user.email,
-          avatar_url: user.user_metadata?.avatar_url,
-          picture: user.user_metadata?.picture,
-          phone: user.phone,
-          phone_metadata: user.user_metadata?.phone,
-        }
-      : null,
-    resolved_data: {
-      name: getCustomerName(),
-      email: getCustomerEmail(),
-      phone: getCustomerPhone(),
-      avatar: getCustomerAvatarUrl(),
-    },
-    shipping_address: shippingAddress,
-    is_anonymous: isAnonymous,
-    saved_addresses: {
-      count: savedAddresses?.length || 0,
-      has_default: savedAddresses?.some((addr) => addr.is_default) || false,
-      loading: addressesLoading,
-    },
-    message_counts: {
-      unread: unreadCount || 0,
-      total: totalCount || 0,
-      has_unread: (unreadCount || 0) > 0,
-      has_messages: (totalCount || 0) > 0,
-    },
-  });
 
   // Compact Header View (Always Visible)
   const CompactHeader = () => (

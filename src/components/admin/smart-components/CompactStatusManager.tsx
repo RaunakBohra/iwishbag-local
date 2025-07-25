@@ -60,17 +60,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
   const currentConfig = getStatusConfig(displayStatus, category);
   const allowedTransitions = getAllowedTransitions(displayStatus, category);
 
-  // Debug logging
-  console.log(`🔍 CompactStatusManager Debug:`, {
-    status: displayStatus,
-    actualStatus: quote.status,
-    optimisticStatus,
-    category,
-    isOrderStatus,
-    currentConfig: !!currentConfig,
-    allowedTransitions: allowedTransitions.length,
-    transitions: allowedTransitions,
-  });
   const canTransition = allowedTransitions.length > 0;
 
   // Fallback to basic config if not found in dynamic system
@@ -179,7 +168,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         throw new Error('Failed to update quote in database');
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
       toast({
         title: 'Cart Error',
         description: 'Failed to add quote to cart. Please try again.',
@@ -222,9 +210,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
     setOptimisticStatus(newStatus);
 
     try {
-      console.log(
-        `CompactStatusManager: Updating quote ${quote.id} status from ${displayStatus} to ${newStatus}`,
-      );
 
       // Handle cart-related business logic before status update
       if (newStatus === 'rejected' || newStatus === 'expired') {
@@ -271,7 +256,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         throw new Error('Failed to update quote status');
       }
     } catch (error) {
-      console.error('Error updating status:', error);
 
       // Revert optimistic update on error
       setOptimisticStatus(null);
@@ -290,7 +274,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       // Remove from cart store using the hook
       await removeItem(quote.id);
     } catch (error) {
-      console.error('Error removing from cart:', error);
       // Don't throw - this is a side effect, main status update should still proceed
     }
   };

@@ -63,16 +63,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
   const selectedOptionId = quote.operational_data?.shipping?.selected_option;
   const selectedOption = shippingOptions.find((opt) => opt.id === selectedOptionId);
 
-  // Debug logging for component state
-  console.log('[DEBUG] CompactShippingOptions render:', {
-    selectedOptionId,
-    selectedOption: selectedOption
-      ? { id: selectedOption.id, carrier: selectedOption.carrier, cost: selectedOption.cost_usd }
-      : null,
-    shippingOptionsCount: shippingOptions.length,
-    quoteId: quote.id,
-    operationalData: quote.operational_data,
-  });
 
   // Get top recommendation
   const topRecommendation = recommendations[0];
@@ -108,7 +98,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
         setPendingOptionId(null);
         setShowSaveControls(false);
       } catch (error) {
-        console.error('Failed to save shipping option:', error);
         // Error handling - could show toast notification
       }
     }
@@ -319,14 +308,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
               onClick={() => {
-                console.log('🖱️ [DEBUG] CompactShippingOptions - Option clicked:', {
-                  optionId: option.id,
-                  carrier: option.carrier,
-                  name: option.name,
-                  cost: option.cost_usd,
-                  wasSelected: isSelected,
-                  selectedOptionId: quote.operational_data?.shipping?.selected_option,
-                });
                 handleOptionSelect(option.id);
               }}
             >

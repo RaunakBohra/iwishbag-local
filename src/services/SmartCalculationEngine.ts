@@ -94,21 +94,6 @@ export class SmartCalculationEngine {
         0,
       );
 
-      console.log('🏋️ [WEIGHT DEBUG] Total weight calculation:', {
-        quoteId: input.quote.id,
-        totalWeight,
-        itemBreakdown: input.quote.items.map((item) => ({
-          name: item.name,
-          weight_kg: item.weight_kg,
-          quantity: item.quantity,
-          totalItemWeight: item.weight_kg * item.quantity,
-        })),
-        hasZeroWeight: totalWeight === 0,
-        warningIfZero:
-          totalWeight === 0
-            ? '⚠️ Zero weight detected - this will result in base-only shipping cost!'
-            : '✅ Weight detected',
-      });
 
       // ✅ SIMPLIFIED: Don't generate shipping options in sync mode
       // Just use the breakdown values that were passed in via the quote
@@ -126,7 +111,6 @@ export class SmartCalculationEngine {
         optimization_suggestions: [],
       };
     } catch (error) {
-      console.error('Fast calculation error:', error);
       return {
         success: false,
         updated_quote: input.quote,
@@ -213,7 +197,6 @@ export class SmartCalculationEngine {
       this.setCachedResult(cacheKey, result);
       return result;
     } catch (error) {
-      console.error('Smart calculation error:', error);
       return {
         success: false,
         updated_quote: input.quote,
@@ -244,12 +227,6 @@ export class SmartCalculationEngine {
       currency_conversions_applied: number;
     };
   }> {
-    console.log('🏷️ [HSN] Starting HSN-based per-item tax calculation:', {
-      quoteId: quote.id,
-      itemCount: quote.items.length,
-      originCountry: quote.origin_country,
-      destinationCountry: quote.destination_country,
-    });
 
     try {
       // Get effective tax method from database based on quote preferences
@@ -257,7 +234,6 @@ export class SmartCalculationEngine {
         .rpc('get_effective_tax_method', { quote_id_param: quote.id })
         .single();
 
-      console.log('🏷️ [HSN] Effective tax method from database:', effectiveTaxMethod);
 
       // Prepare enhanced tax calculation context with 2-tier preferences
       const context: TaxCalculationContext = {
@@ -286,13 +262,6 @@ export class SmartCalculationEngine {
         admin_id: input?.tax_calculation_preferences?.admin_id,
       };
 
-      console.log('🏷️ [HSN] Enhanced tax calculation context:', {
-        calculation_method: context.calculation_method_preference,
-        valuation_method: context.valuation_method_preference,
-        source: effectiveTaxMethod?.source || 'default',
-        confidence: effectiveTaxMethod?.confidence || 0.5,
-      });
-
       // Enhanced items with HSN classification and weight detection
       const enhancedItems = await Promise.all(
         quote.items.map(async (item) => {
@@ -301,7 +270,6 @@ export class SmartCalculationEngine {
 
           // Auto-classify HSN code if not provided
           if (!hsnCode) {
-            console.log(`🔍 [HSN] Auto-classifying item: ${item.name}`);
             try {
               const classificationResult = await autoProductClassifier.classifyProduct({
                 productName: item.name,
@@ -312,22 +280,14 @@ export class SmartCalculationEngine {
 
               if (classificationResult.hsnCode && classificationResult.confidence > 0.6) {
                 hsnCode = classificationResult.hsnCode;
-                console.log(
-                  `✅ [HSN] Auto-classified ${item.name} as HSN ${hsnCode} (confidence: ${classificationResult.confidence})`,
-                );
               } else {
-                console.warn(
-                  `⚠️ [HSN] Low confidence classification for ${item.name} (${classificationResult.confidence})`,
-                );
               }
             } catch (error) {
-              console.error(`❌ [HSN] Classification failed for ${item.name}:`, error);
             }
           }
 
           // Auto-detect weight if not provided or seems incorrect
           if (!detectedWeight || detectedWeight < 0.01) {
-            console.log(`⚖️ [WEIGHT] Auto-detecting weight for: ${item.name}`);
             try {
               const weightResult = await weightDetectionService.detectWeight({
                 productName: item.name,
@@ -338,16 +298,9 @@ export class SmartCalculationEngine {
 
               if (weightResult.weight && weightResult.confidence > 0.5) {
                 detectedWeight = weightResult.weight;
-                console.log(
-                  `✅ [WEIGHT] Auto-detected weight for ${item.name}: ${detectedWeight}kg (confidence: ${weightResult.confidence})`,
-                );
               } else {
-                console.warn(
-                  `⚠️ [WEIGHT] Low confidence weight detection for ${item.name} (${weightResult.confidence})`,
-                );
               }
             } catch (error) {
-              console.error(`❌ [WEIGHT] Weight detection failed for ${item.name}:`, error);
             }
           }
 
@@ -364,14 +317,6 @@ export class SmartCalculationEngine {
         }),
       );
 
-      console.log('🏷️ [HSN] Enhanced items with classifications:', {
-        items: enhancedItems.map((item) => ({
-          name: item.name,
-          hsn_code: item.hsn_code,
-          weight_kg: item.weight_kg,
-          price: item.price_origin_currency,
-        })),
-      });
 
       // Calculate per-item taxes
       const taxBreakdowns = await this.perItemTaxCalculator.calculateMultipleItemTaxes(
@@ -379,13 +324,6 @@ export class SmartCalculationEngine {
         context,
       );
 
-      console.log('💰 [HSN] Per-item tax calculations completed:', {
-        totalItems: taxBreakdowns.length,
-        totalTaxes: taxBreakdowns.reduce((sum, breakdown) => sum + breakdown.total_taxes, 0),
-        itemsWithMinimumValuation: taxBreakdowns.filter(
-          (b) => b.valuation_method === 'minimum_valuation',
-        ).length,
-      });
 
       // Get calculation summary
       const summary = await this.perItemTaxCalculator.getCalculationSummary(taxBreakdowns);
@@ -395,19 +333,15 @@ export class SmartCalculationEngine {
         summary,
       };
     } catch (error) {
-      console.error('❌ [HSN] HSN-based tax calculation failed:', error);
 
       // Fallback to unified tax calculation if HSN calculation fails
       const fallbackMethod = input?.tax_calculation_preferences?.calculation_method_preference || 'auto';
       if (fallbackMethod === 'legacy_fallback' || fallbackMethod === 'auto') {
-        console.log('🔄 [HSN] Attempting unified fallback tax calculation...');
         
         try {
           const fallbackResults = await this.calculateUnifiedFallbackTaxes(quote, input);
-          console.log('✅ [HSN] Unified fallback calculation succeeded');
           return fallbackResults;
         } catch (fallbackError) {
-          console.error('❌ [HSN] Unified fallback calculation also failed:', fallbackError);
         }
       }
 
@@ -444,12 +378,6 @@ export class SmartCalculationEngine {
       currency_conversions_applied: number;
     };
   }> {
-    console.log('🔄 [FALLBACK] Starting unified fallback tax calculation:', {
-      quoteId: quote.id,
-      itemCount: quote.items.length,
-      originCountry: quote.origin_country,
-      destinationCountry: quote.destination_country,
-    });
 
     try {
       // Get unified tax data for this route
@@ -457,14 +385,6 @@ export class SmartCalculationEngine {
         quote.origin_country,
         quote.destination_country
       );
-
-      console.log('🔄 [FALLBACK] Unified tax data retrieved:', {
-        dataSource: unifiedTaxData.data_source,
-        confidenceScore: unifiedTaxData.confidence_score,
-        customsPercent: unifiedTaxData.customs_percent,
-        vatPercent: unifiedTaxData.vat_percent,
-        fallbackReason: unifiedTaxData.fallback_reason,
-      });
 
       // Calculate totals for traditional percentage-based calculation
       const itemsTotal = quote.items.reduce(
@@ -476,15 +396,6 @@ export class SmartCalculationEngine {
       const customsAmount = itemsTotal * (unifiedTaxData.customs_percent / 100);
       const localTaxAmount = itemsTotal * (unifiedTaxData.vat_percent / 100);
       const totalTaxes = customsAmount + localTaxAmount;
-
-      console.log('🔄 [FALLBACK] Tax calculations completed:', {
-        itemsTotal,
-        customsAmount,
-        localTaxAmount,
-        totalTaxes,
-        customsRate: unifiedTaxData.customs_percent,
-        localTaxRate: unifiedTaxData.vat_percent,
-      });
 
       // Create simplified breakdown (since this is route-level, not per-item)
       const breakdown: ItemTaxBreakdown[] = [{
@@ -548,7 +459,6 @@ export class SmartCalculationEngine {
         currency_conversions_applied: 0, // Not applicable for unified fallback
       };
 
-      console.log('✅ [FALLBACK] Unified fallback calculation completed successfully:', summary);
 
       return {
         breakdown,
@@ -556,7 +466,6 @@ export class SmartCalculationEngine {
       };
 
     } catch (error) {
-      console.error('❌ [FALLBACK] Unified fallback tax calculation failed:', error);
       throw error; // Re-throw to be handled by the caller
     }
   }
@@ -566,7 +475,6 @@ export class SmartCalculationEngine {
    */
   async debugFreshShippingRoutes(): Promise<void> {
     try {
-      console.log('🔄 [DEBUG] Force fetching FRESH shipping routes (bypass cache)...');
 
       const { data: freshRoutes, error } = await supabase
         .from('shipping_routes')
@@ -576,25 +484,9 @@ export class SmartCalculationEngine {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('❌ [DEBUG] Error fetching fresh routes:', error);
         return;
       }
-
-      console.log('🔄 [DEBUG] FRESH Routes Data (just fetched from DB):', {
-        fetchTime: new Date().toISOString(),
-        routeCount: freshRoutes?.length || 0,
-        routes: freshRoutes?.map((route) => ({
-          id: route.id,
-          route: `${route.origin_country} → ${route.destination_country}`,
-          base_cost: route.base_shipping_cost,
-          per_kg: route.shipping_per_kg,
-          delivery_options: route.delivery_options,
-          last_updated: route.updated_at,
-          last_created: route.created_at,
-        })),
-      });
     } catch (error) {
-      console.error('❌ [DEBUG] Failed to fetch fresh routes:', error);
     }
   }
 
@@ -607,29 +499,7 @@ export class SmartCalculationEngine {
         .from('shipping_routes')
         .select('*')
         .eq('is_active', true);
-
-      console.log('🔍 [DEBUG] All Available Shipping Routes (FULL DATABASE DATA):', {
-        routeCount: allRoutes?.length || 0,
-        routes:
-          allRoutes?.map((route) => ({
-            id: route.id,
-            route: `${route.origin_country} → ${route.destination_country}`,
-            base_shipping_cost: route.base_shipping_cost,
-            shipping_per_kg: route.shipping_per_kg,
-            cost_per_kg: route.cost_per_kg,
-            weight_tiers: route.weight_tiers,
-            delivery_options_count: route.delivery_options?.length || 0,
-            delivery_options_full: route.delivery_options,
-            is_active: route.is_active,
-            updated_at: route.updated_at,
-            created_at: route.created_at,
-          })) || [],
-        error: error ? error.message : null,
-        timestamp: new Date().toISOString(),
-        note: '🚨 CHECK: Are these values matching your shipping routes modal settings?',
-      });
     } catch (error) {
-      console.error('❌ [DEBUG] Failed to list shipping routes:', error);
     }
   }
 
@@ -643,12 +513,6 @@ export class SmartCalculationEngine {
     value: number;
   }): Promise<ShippingOption[]> {
     // 🔍 ENHANCED DEBUG: Log main calculation flow
-    console.log('🚀 [DEBUG] calculateAllShippingOptions - Starting calculation flow:', {
-      originCountry: params.originCountry,
-      destinationCountry: params.destinationCountry,
-      weight: params.weight,
-      value: params.value,
-    });
 
     // Debug: List all available routes first (check for caching issues)
     await this.debugListAllShippingRoutes();
@@ -659,42 +523,18 @@ export class SmartCalculationEngine {
 
     try {
       // Method 1: Route-specific shipping with multiple carriers
-      console.log(
-        '🔍 [DEBUG] calculateAllShippingOptions - Method 1: Attempting route-specific options',
-      );
       routeOptions = await this.getRouteSpecificOptions(params);
-      console.log('🔍 [DEBUG] calculateAllShippingOptions - Route-specific results:', {
-        optionsFound: routeOptions.length,
-        options: routeOptions.map((opt) => ({
-          id: opt.id,
-          carrier: opt.carrier,
-          cost: opt.cost_usd,
-          name: opt.name,
-        })),
-      });
       options.push(...routeOptions);
 
       // Method 2: Country settings fallback with standard options
       if (options.length === 0) {
-        console.log(
-          '🔍 [DEBUG] calculateAllShippingOptions - Method 2: Attempting country settings fallback',
-        );
         const fallbackOptions = await this.getCountrySettingsOptions(params);
-        console.log('🔍 [DEBUG] calculateAllShippingOptions - Country settings results:', {
-          optionsFound: fallbackOptions.length,
-        });
         options.push(...fallbackOptions);
       }
 
       // Method 3: Smart estimation for missing routes
       if (options.length === 0) {
-        console.log(
-          '🔍 [DEBUG] calculateAllShippingOptions - Method 3: Using estimated options as last resort',
-        );
         const estimatedOptions = this.getEstimatedOptions(params);
-        console.log('🔍 [DEBUG] calculateAllShippingOptions - Estimated results:', {
-          optionsFound: estimatedOptions.length,
-        });
         options.push(...estimatedOptions);
       }
 
@@ -707,30 +547,10 @@ export class SmartCalculationEngine {
         }));
 
       // 🔍 ENHANCED DEBUG: Log final results summary
-      console.log('✅ [DEBUG] calculateAllShippingOptions - Final Results Summary:', {
-        totalOptionsFound: finalOptions.length,
-        methodUsed:
-          options.length > 0
-            ? routeOptions.length > 0
-              ? 'route-specific'
-              : 'country-settings'
-            : 'estimated-fallback',
-        finalOptions: finalOptions.map((opt) => ({
-          id: opt.id,
-          carrier: opt.carrier,
-          name: opt.name,
-          cost: opt.cost_usd,
-          days: opt.days,
-        })),
-      });
 
       return finalOptions;
     } catch (error) {
-      console.error('❌ [ERROR] calculateAllShippingOptions - Exception occurred:', error);
       const fallbackOptions = this.getEstimatedOptions(params);
-      console.log('🔍 [DEBUG] calculateAllShippingOptions - Using fallback due to error:', {
-        fallbackOptionsCount: fallbackOptions.length,
-      });
       return fallbackOptions;
     }
   }
@@ -745,14 +565,6 @@ export class SmartCalculationEngine {
     value: number;
   }): Promise<ShippingOption[]> {
     // 🔍 ENHANCED DEBUG: Log exact query parameters
-    console.log('🔍 [DEBUG] getRouteSpecificOptions - Query Parameters:', {
-      originCountry: params.originCountry,
-      destinationCountry: params.destinationCountry,
-      weight: params.weight,
-      value: params.value,
-      timestamp: new Date().toISOString(),
-      expectedQuery: `SELECT * FROM shipping_routes WHERE origin_country='${params.originCountry}' AND destination_country='${params.destinationCountry}' AND is_active=true`,
-    });
 
     const { data: route, error } = await supabase
       .from('shipping_routes')
@@ -763,46 +575,8 @@ export class SmartCalculationEngine {
       .single();
 
     // 🔍 ENHANCED DEBUG: Log query results with full route data
-    console.log('🔍 [DEBUG] getRouteSpecificOptions - Database Query Results:', {
-      querySuccess: !error,
-      routeFound: !!route,
-      error: error
-        ? {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-          }
-        : null,
-      routeData: route
-        ? {
-            id: route.id,
-            origin_country: route.origin_country,
-            destination_country: route.destination_country,
-            is_active: route.is_active,
-            base_shipping_cost: route.base_shipping_cost,
-            shipping_per_kg: route.shipping_per_kg,
-            cost_per_kg: route.cost_per_kg,
-            cost_percentage: route.cost_percentage,
-            weight_tiers: route.weight_tiers,
-            delivery_options_count: route.delivery_options?.length || 0,
-            delivery_options_raw: route.delivery_options,
-            exchange_rate: route.exchange_rate,
-            // NEW: Debug the weight tiers specifically
-            weightTierBreakdown:
-              route.weight_tiers?.map((tier: any) => ({
-                range: `${tier.min}kg - ${tier.max === null ? '∞' : tier.max + 'kg'}`,
-                cost: tier.cost,
-                tierData: tier,
-              })) || [],
-          }
-        : null,
-    });
 
     if (error || !route) {
-      console.log(
-        '❌ [DEBUG] getRouteSpecificOptions - No route found or error occurred, returning empty options',
-      );
       return [];
     }
 
@@ -822,52 +596,15 @@ export class SmartCalculationEngine {
 
     // Validate that route has delivery options
     if (!deliveryOptions || deliveryOptions.length === 0) {
-      console.warn(
-        `⚠️ Route ${route.origin_country}->${route.destination_country} has no delivery options configured.`,
-      );
       return [];
     }
 
     // Validate that at least one delivery option is active
     const activeDeliveryOptions = deliveryOptions.filter((opt) => opt.active);
     if (activeDeliveryOptions.length === 0) {
-      console.warn(
-        `⚠️ Route ${route.origin_country}->${route.destination_country} has no active delivery options.`,
-      );
       return [];
     }
 
-    // Debug logging for route analysis
-    console.log('🚢 [DEBUG] Route Analysis - DELIVERY OPTIONS FROM DATABASE:', {
-      route_id: route.id,
-      origin: route.origin_country,
-      destination: route.destination_country,
-      route_updated_at: route.updated_at,
-      inputParams: {
-        weight: params.weight,
-        value: params.value,
-      },
-      routeBasicInfo: {
-        base_shipping_cost: route.base_shipping_cost,
-        shipping_per_kg: route.shipping_per_kg,
-        weight_tiers: route.weight_tiers,
-      },
-      deliveryOptionsFromDB:
-        deliveryOptions?.map((opt) => ({
-          id: opt.id,
-          name: opt.name,
-          carrier: opt.carrier,
-          price: opt.price,
-          active: opt.active,
-          min_days: opt.min_days,
-          max_days: opt.max_days,
-          full_option: opt,
-        })) || [],
-      expectedFromModal: {
-        dhl_premium_should_be: 0,
-        note: '🚨 VERIFY: Does this match your modal settings?',
-      },
-    });
 
     // Generate options for each delivery option
     for (const deliveryOption of deliveryOptions || []) {
@@ -877,10 +614,6 @@ export class SmartCalculationEngine {
       try {
         baseCost = this.calculateRouteBaseCost(route, params.weight, params.value);
       } catch (error) {
-        console.error(
-          `❌ Failed to calculate base cost for delivery option ${deliveryOption.name}:`,
-          error,
-        );
         // Skip this delivery option if base cost calculation fails
         continue;
       }
@@ -889,63 +622,14 @@ export class SmartCalculationEngine {
       const deliveryPremium = deliveryOption.price || 0;
       const optionCost = baseCost + deliveryPremium;
 
-      console.log('🔍 [SHIPPING COST DEBUG] Option cost breakdown:', {
-        deliveryOptionName: deliveryOption.name,
-        deliveryOptionCarrier: deliveryOption.carrier,
-        baseCost: baseCost,
-        deliveryPremium: deliveryPremium,
-        finalOptionCost: optionCost,
-        calculationFormula: `${baseCost} (base) + ${deliveryPremium} (premium) = ${optionCost}`,
-        possibleIssue:
-          optionCost < baseCost ? '🚨 PREMIUM IS NEGATIVE!' : '✅ Premium added correctly',
-      });
-
       // Validate that we don't accidentally create zero-cost shipping
       if (optionCost <= 0) {
-        console.warn(
-          `⚠️ Zero or negative shipping cost detected for ${deliveryOption.name}: $${optionCost}. Skipping option.`,
-        );
         continue;
       }
 
       // 🚨 IMPORTANT NOTE FOR DEVELOPERS: All costs in ORIGIN CURRENCY
       // This delivery option calculation keeps costs in origin country currency
       // NO currency conversion applied - rates stay as configured in shipping modal
-      console.log(
-        '💰 [DEBUG] Delivery Option Cost Calculation (ADDITIVE MODEL - ORIGIN CURRENCY):',
-        {
-          option: deliveryOption.name,
-          carrier: deliveryOption.carrier,
-          deliveryOptionRaw: deliveryOption,
-          aditiveCostBreakdown: {
-            routeBaseCost: route.base_shipping_cost,
-            weightTierCost:
-              route.weight_tiers?.find(
-                (t) => params.weight >= t.min && (t.max === null || params.weight <= t.max),
-              )?.cost || 'N/A',
-            calculatedBaseCost: baseCost,
-            deliveryPremium: deliveryPremium,
-            finalTotalCost: optionCost,
-            roundedCost: Math.round(optionCost * 100) / 100,
-            currencyNote: 'All values in origin country currency (no conversion)',
-          },
-          inputParameters: {
-            weight: params.weight,
-            value: params.value,
-          },
-          expectedForUser: {
-            description: 'For 1kg package with your settings (origin currency)',
-            shouldBe:
-              '₹1 (base) + ₹15 (tier) + ₹' +
-              deliveryPremium +
-              ' (premium) = ₹' +
-              (1 + 15 + deliveryPremium),
-            note: 'Currency symbol shown as example - actual currency depends on origin country',
-          },
-          businessRule: 'Shipping costs remain in origin currency as per business requirements',
-          fullCalculation: `${route.base_shipping_cost} (route base) + tier cost + ${deliveryPremium} (${deliveryOption.name} premium) = ${optionCost} (origin currency)`,
-        },
-      );
 
       // ✅ FIX: Calculate total delivery days including processing + customs + shipping
       const processingDays = route.processing_days || 2; // Default 2 days
@@ -966,22 +650,6 @@ export class SmartCalculationEngine {
         totalMinDays === totalMaxDays
           ? `${totalMinDays} days (by ${format(estimatedDeliveryMin, 'MMM do')})`
           : `${totalMinDays}-${totalMaxDays} days (${format(estimatedDeliveryMin, 'MMM do')}-${format(estimatedDeliveryMax, 'MMM do')})`;
-
-      console.log('📅 [DELIVERY DAYS DEBUG] Complete delivery timeline calculation:', {
-        deliveryOptionName: deliveryOption.name,
-        breakdown: {
-          processingDays: `${processingDays} days (order processing)`,
-          shippingDays: `${deliveryOption.min_days}-${deliveryOption.max_days} days (${deliveryOption.carrier} transit)`,
-          customsClearance: `${customsClearanceDays} days (customs processing)`,
-          localDelivery: `${localDeliveryDays} day (final delivery)`,
-        },
-        totalDays: deliveryDays,
-        estimatedDates: {
-          minDate: format(estimatedDeliveryMin, 'EEEE, MMMM do, yyyy'),
-          maxDate: format(estimatedDeliveryMax, 'EEEE, MMMM do, yyyy'),
-        },
-        formula: `${processingDays} + ${deliveryOption.min_days}-${deliveryOption.max_days} + ${customsClearanceDays} + ${localDeliveryDays} = ${totalMinDays}-${totalMaxDays} days`,
-      });
 
       options.push({
         id: `${route.id}_delivery_${deliveryOption.id}`,
@@ -1018,17 +686,11 @@ export class SmartCalculationEngine {
       .single();
 
     if (error || !countrySettings) {
-      console.warn(
-        `⚠️ No country settings found for ${params.destinationCountry}. Admin must configure country-specific shipping settings.`,
-      );
       return [];
     }
 
     // Validate required country settings
     if (!countrySettings.min_shipping || !countrySettings.additional_weight) {
-      console.warn(
-        `⚠️ Incomplete country settings for ${params.destinationCountry}: min_shipping=${countrySettings.min_shipping}, additional_weight=${countrySettings.additional_weight}. Admin must configure complete shipping settings.`,
-      );
       return [];
     }
 
@@ -1050,22 +712,6 @@ export class SmartCalculationEngine {
     const estimatedDeliveryMax = addBusinessDays(currentDate, totalMaxDays);
 
     const deliveryDays = `${totalDays}-${totalMaxDays} days (${format(estimatedDeliveryMin, 'MMM do')}-${format(estimatedDeliveryMax, 'MMM do')})`;
-
-    console.log('🏳️ [COUNTRY FALLBACK DEBUG] Standard delivery calculation:', {
-      fallbackReason: 'No specific shipping route found',
-      destinationCountry: params.destinationCountry,
-      breakdown: {
-        processingDays: `${processingDays} days (order processing)`,
-        shippingDays: `${shippingDays}-14 days (standard shipping)`,
-        customsClearance: `${customsClearanceDays} days (customs processing)`,
-        localDelivery: `${localDeliveryDays} day (final delivery)`,
-      },
-      totalDays: deliveryDays,
-      estimatedDates: {
-        minDate: format(estimatedDeliveryMin, 'EEEE, MMMM do, yyyy'),
-        maxDate: format(estimatedDeliveryMax, 'EEEE, MMMM do, yyyy'),
-      },
-    });
 
     return [
       {
@@ -1091,9 +737,6 @@ export class SmartCalculationEngine {
     value: number;
   }): ShippingOption[] {
     // No more hardcoded estimates - admin must configure proper shipping routes
-    console.error(
-      `❌ No shipping route configured for ${params.originCountry} → ${params.destinationCountry}. Admin must configure shipping routes with proper pricing data.`,
-    );
 
     // Return empty array to force proper route configuration
     return [];
@@ -1117,30 +760,6 @@ export class SmartCalculationEngine {
    * @returns Base shipping cost in ORIGIN COUNTRY CURRENCY (no conversion)
    */
   private calculateRouteBaseCost(route: any, weight: number, value: number): number {
-    // 🚨 [DEBUG] Show EXACT route data being used for calculations
-    console.log('🧮 [DEBUG] calculateRouteBaseCost - Route Data Used:', {
-      route_id: route.id,
-      origin_destination: `${route.origin_country} → ${route.destination_country}`,
-      inputParameters: { weight, value },
-      routeDataFromDB: {
-        base_shipping_cost: route.base_shipping_cost,
-        shipping_per_kg: route.shipping_per_kg,
-        cost_per_kg: route.cost_per_kg,
-        cost_percentage: route.cost_percentage,
-        weight_tiers: route.weight_tiers,
-        updated_at: route.updated_at,
-      },
-      expectedFromModal: {
-        base_should_be: 1,
-        per_kg_should_be: 50,
-        note: '🚨 COMPARE: Does DB data match your modal settings?',
-      },
-      weightInputs: {
-        weight: weight,
-        value: value,
-        willCalculateWeight: weight > 0,
-      },
-    });
 
     // Validate required route data
     if (!route.base_shipping_cost) {
@@ -1154,49 +773,17 @@ export class SmartCalculationEngine {
 
     // Weight-based cost calculation - ADDITIVE MODEL
     if (route.weight_tiers && route.weight_tiers.length > 0) {
-      console.log('🔍 [TIER DEBUG] Weight tier matching process:', {
-        weight,
-        allTiers: route.weight_tiers,
-        tierMatchingLogic: route.weight_tiers.map((t: any) => ({
-          tier: t,
-          weightMin: t.min,
-          weightMax: t.max,
-          matches: weight >= t.min && (t.max === null || weight <= t.max),
-          reason: `${weight} >= ${t.min} AND (${t.max} === null OR ${weight} <= ${t.max})`,
-        })),
-      });
 
       const tier = route.weight_tiers.find(
         (tier: any) => weight >= tier.min && (tier.max === null || weight <= tier.max),
       );
-
-      console.log('🔍 [TIER DEBUG] Final tier selection:', {
-        selectedTier: tier,
-        weight,
-        selectionLogic: tier ? 'Found matching tier' : 'No matching tier found',
-      });
 
       if (tier) {
         // 🚀 FIXED: Tier cost is PER-KG rate, must multiply by weight
         const tierRatePerKg = tier.cost;
         const tierCost = weight * tierRatePerKg;
         baseCost += tierCost; // Add calculated tier cost to base cost
-        console.log('📦 Using weight tier (CORRECTED - PER KG MODEL):', {
-          tier,
-          weight,
-          initialBaseCost,
-          tierRatePerKg,
-          tierCost,
-          finalBaseCost: baseCost,
-          calculation: `${initialBaseCost} (base) + (${weight}kg × ₹${tierRatePerKg}/kg = ₹${tierCost}) = ₹${baseCost}`,
-          reasoning: 'Tier cost is per-kg rate multiplied by actual weight',
-        });
       } else {
-        console.warn('⚠️ No matching weight tier found, falling back to per-kg calculation:', {
-          weight,
-          weight_tiers: route.weight_tiers,
-          fallback: 'Using base_cost + shipping_per_kg instead',
-        });
         // Fallback to per-kg calculation when no tier matches
         const perKgRate = route.shipping_per_kg || route.cost_per_kg;
         if (!perKgRate || perKgRate <= 0) {
@@ -1218,33 +805,13 @@ export class SmartCalculationEngine {
 
       const weightCost = weight * perKgRate;
       baseCost += weightCost; // Additive model: base + (weight * rate)
-      console.log('⚖️ Per-kg weight calculation (additive model):', {
-        weight,
-        perKgRate,
-        weightCost,
-        initialBaseCost,
-        finalBaseCost: baseCost,
-        calculation: `${initialBaseCost} (base) + ${weightCost} (weight) = ${baseCost}`,
-      });
     }
 
     // Value-based percentage
-    console.log('💎 [DEBUG] Checking value-based costs:', {
-      value,
-      costPercentage: route.cost_percentage,
-      shouldAddValueCost: !!(route.cost_percentage && route.cost_percentage > 0),
-      baseCostBeforeValue: baseCost,
-    });
 
     if (route.cost_percentage && route.cost_percentage > 0) {
       const valueCost = value * (route.cost_percentage / 100);
       baseCost += valueCost;
-      console.log('💎 Value-based calculation APPLIED:', {
-        value,
-        percentage: route.cost_percentage,
-        valueCost,
-        finalBaseCost: baseCost,
-      });
     }
 
     // 🚨 IMPORTANT: NO CURRENCY CONVERSION FOR SHIPPING COSTS
@@ -1267,30 +834,7 @@ export class SmartCalculationEngine {
     // - Keep shipping calculations in origin currency
     // - Only convert item prices/totals for customer display if needed
 
-    console.log('✅ [DEBUG] Shipping cost calculation (NO currency conversion):', {
-      baseCostInOriginCurrency: baseCost,
-      originCountry: route.origin_country,
-      destinationCountry: route.destination_country,
-      note: 'Shipping costs remain in origin currency as per business rules',
-    });
-
     // 🚨 FINAL COST TRACKING (Updated with corrected per-kg tier calculation)
-    console.log('🧮 [DEBUG] COMPLETE calculateRouteBaseCost breakdown (CORRECTED PER-KG MODEL):', {
-      step1_routeBase: route.base_shipping_cost,
-      step2_afterWeightTier: baseCost,
-      step3_afterValuePercentage: baseCost,
-      step4_finalCostOriginCurrency: baseCost,
-      currencyConversion: 'REMOVED - shipping stays in origin currency',
-      calculationModel: 'Base + (Weight × TierRate/kg) + ValuePercent = Total',
-      exampleFor12kg: {
-        base: route.base_shipping_cost,
-        weight: weight,
-        expectedTierRate: '₹45/kg for 12kg = ₹540',
-        expectedTotal: route.base_shipping_cost + weight * 45,
-        actualTotal: baseCost,
-        isCorrect: baseCost > 500 ? '✅ Looks correct for 12kg' : '❌ Too low - check calculation',
-      },
-    });
 
     return baseCost; // Return cost in origin country currency (no conversion)
   }
@@ -1375,28 +919,13 @@ export class SmartCalculationEngine {
     preferences?: EnhancedCalculationInput['preferences'],
     currentSelection?: string,
   ): ShippingOption {
-    console.log('🎯 [DEBUG] selectOptimalShippingOption called:', {
-      currentSelection,
-      availableOptions: options.map((opt) => ({
-        id: opt.id,
-        carrier: opt.carrier,
-        cost: opt.cost_usd,
-      })),
-      preferences,
-    });
 
     // Use current selection if valid
     if (currentSelection) {
       const existing = options.find((opt) => opt.id === currentSelection);
       if (existing) {
-        console.log('✅ [DEBUG] Using current selection:', {
-          id: existing.id,
-          carrier: existing.carrier,
-          cost: existing.cost_usd,
-        });
         return existing;
       } else {
-        console.log('⚠️ [DEBUG] Current selection not found in options:', currentSelection);
       }
     }
 
@@ -1419,11 +948,6 @@ export class SmartCalculationEngine {
       return bScore - aScore;
     })[0];
 
-    console.log('🎯 [DEBUG] Final selected option:', {
-      id: selected.id,
-      carrier: selected.carrier,
-      cost: selected.cost_usd,
-    });
     return selected;
   }
 
@@ -1439,9 +963,6 @@ export class SmartCalculationEngine {
     // ✅ REMOVED: No more generic fallback options
     // Live calculation should use existing shipping options from the context
     // If no shipping options exist, return empty array to prevent generic fallbacks
-    console.log(
-      '⚠️ [DEBUG] calculateSimpleShippingOptions called but returning empty - should use real route data',
-    );
     return [];
   }
 
@@ -1455,18 +976,6 @@ export class SmartCalculationEngine {
     totalWeight: number;
   }): { updated_quote: UnifiedQuote } {
     const { quote, selectedShipping, itemsTotal } = params;
-
-    console.log('🧮 [DEBUG] calculateCompleteCostsSync called:', {
-      quoteId: quote.id,
-      selectedShipping: {
-        id: selectedShipping.id,
-        carrier: selectedShipping.carrier,
-        cost: selectedShipping.cost_usd,
-      },
-      storedSelectedOption: quote.operational_data?.shipping?.selected_option,
-      itemsTotal,
-      currentBreakdownShipping: quote.calculation_data?.breakdown?.shipping,
-    });
 
     // Use existing exchange rate or default
     const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;
@@ -1487,18 +996,6 @@ export class SmartCalculationEngine {
       itemsTotal,
       quote,
     );
-
-    console.log('💰 [DEBUG] SmartCalculationEngine fee calculations:', {
-      itemsTotal,
-      handlingFee: {
-        fromQuote: quote.operational_data?.handling_charge,
-        final: handlingFee,
-      },
-      insuranceAmount: {
-        fromQuote: quote.operational_data?.insurance_amount,
-        final: insuranceAmount,
-      },
-    });
     const paymentGatewayFee =
       quote.operational_data?.payment_gateway_fee ||
       (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
@@ -1522,26 +1019,6 @@ export class SmartCalculationEngine {
     const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // 🔍 [DEBUG] Log breakdown shipping assignment
-    console.log('📊 [DEBUG] Breakdown Shipping Assignment:', {
-      quoteId: quote.id,
-      selectedShippingOption: {
-        id: selectedShipping.id,
-        name: selectedShipping.name,
-        carrier: selectedShipping.carrier,
-        cost_usd: selectedShipping.cost_usd,
-      },
-      breakdownUpdate: {
-        items_total: itemsTotal,
-        shipping: selectedShipping.cost_usd,
-        customs: customsAmount,
-        taxes: salesTax + vatAmount,
-        fees: paymentGatewayFee,
-        handling: handlingFee,
-        insurance: insuranceAmount,
-        discount: discount,
-        finalTotal: Math.round(finalTotal * 100) / 100,
-      },
-    });
 
     // Update quote data structures
     const updatedQuote: UnifiedQuote = {
@@ -1582,16 +1059,6 @@ export class SmartCalculationEngine {
       optimization_score: this.calculateOptimizationScore(finalTotal, itemsTotal),
     };
 
-    console.log('💾 [DEBUG] SmartCalculationEngine operational data update (sync):', {
-      quoteId: quote.id,
-      updatedOperationalData: {
-        handling_charge: updatedQuote.operational_data.handling_charge,
-        insurance_amount: updatedQuote.operational_data.insurance_amount,
-        payment_gateway_fee: updatedQuote.operational_data.payment_gateway_fee,
-      },
-      breakdown: updatedQuote.calculation_data.breakdown,
-    });
-
     return { updated_quote: updatedQuote };
   }
 
@@ -1605,13 +1072,6 @@ export class SmartCalculationEngine {
   }): { updated_quote: UnifiedQuote } {
     const { quote, itemsTotal } = params;
 
-    console.log('🧮 [DEBUG] calculateCompleteCostsSyncDirect called:', {
-      quoteId: quote.id,
-      itemsTotal,
-      currentBreakdownShipping: quote.calculation_data?.breakdown?.shipping,
-      useDirectValues: true,
-    });
-
     // Use existing exchange rate or default
     const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;
 
@@ -1620,19 +1080,11 @@ export class SmartCalculationEngine {
 
     // Validate shipping cost consistency and warn of potential data issues
     if (shippingCost === 0) {
-      console.warn(
-        `⚠️ Zero shipping cost in breakdown for quote ${quote.id}. This may indicate missing shipping selection or data sync issue.`,
-      );
     }
 
     // Check if selected shipping option exists and matches breakdown cost
     const selectedOptionId = quote.operational_data?.shipping?.selected_option;
     if (selectedOptionId && shippingCost > 0) {
-      console.log('✅ [DEBUG] Sync calculation using breakdown shipping:', {
-        selectedOptionId,
-        breakdownShippingCost: shippingCost,
-        dataSource: 'calculation_data.breakdown.shipping',
-      });
     }
 
     // Calculate customs using existing percentage or default
@@ -1697,13 +1149,6 @@ export class SmartCalculationEngine {
       },
     };
 
-    console.log('💾 [DEBUG] SmartCalculationEngine direct calculation result:', {
-      quoteId: quote.id,
-      finalTotal: updatedQuote.final_total_usd,
-      breakdown: updatedQuote.calculation_data.breakdown,
-      shippingUsed: shippingCost,
-    });
-
     return { updated_quote: updatedQuote };
   }
 
@@ -1743,23 +1188,8 @@ export class SmartCalculationEngine {
       // Use HSN-based per-item tax calculations
       customsAmount = hsnTaxSummary.total_customs;
       localTaxesAmount = hsnTaxSummary.total_local_taxes;
-
-      console.log('🏷️ [HSN] Using HSN-based tax calculations:', {
-        totalCustoms: customsAmount,
-        totalLocalTaxes: localTaxesAmount,
-        itemsWithMinimumValuation: hsnTaxSummary.items_with_minimum_valuation,
-        currencyConversions: hsnTaxSummary.currency_conversions_applied,
-        breakdown: hsnTaxBreakdown.map((item) => ({
-          item: item.item_name,
-          hsn: item.hsn_code,
-          customs: item.total_customs,
-          local_tax: item.total_local_taxes,
-          valuation_method: item.valuation_method,
-        })),
-      });
     } else {
       // Fallback to traditional tier-based calculation
-      console.log('🏷️ [HSN] No HSN tax data available, using traditional calculation');
 
       try {
         // Calculate total weight for customs calculation
@@ -1777,11 +1207,7 @@ export class SmartCalculationEngine {
         );
 
         customsPercentage = customsTierInfo.customs_percentage;
-        console.log(
-          `🎯 Smart customs: ${customsPercentage}% (tier: ${customsTierInfo.applied_tier?.rule_name || 'default'})`,
-        );
       } catch (error) {
-        console.warn('⚠️ Smart customs tier calculation failed, using manual/default:', error);
         // Fallback to manual percentage or default
         customsPercentage = quote.operational_data.customs?.percentage || 10;
       }
@@ -2023,11 +1449,6 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): Promise<number> {
-    console.log('🎯 [DEBUG] calculateRouteBasedHandling called:', {
-      shippingOptionId: shippingOption.id,
-      itemsTotal,
-      quoteId: quote.id,
-    });
 
     // ✅ AUTO-APPLY: Calculate default handling charge when available in backend
     const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(
@@ -2037,25 +1458,15 @@ export class SmartCalculationEngine {
 
     // If backend configuration is available, use calculated default (auto-apply)
     if (calculatedDefault > 0) {
-      console.log('📦 [DEBUG] Auto-applying route-based handling charge:', {
-        calculatedDefault,
-        shippingOptionId: shippingOption.id,
-        autoApplied: true,
-      });
       return calculatedDefault;
     }
 
     // Fallback: Check if there's a manual override when no backend config available
     const existingHandling = quote.operational_data?.handling_charge;
     if (existingHandling && existingHandling > 0) {
-      console.log(
-        '📦 [DEBUG] Using manual override handling (no backend config):',
-        existingHandling,
-      );
       return existingHandling;
     }
 
-    console.log('📦 [DEBUG] No handling charge - no backend config and no manual override');
     return 0;
   }
 
@@ -2067,29 +1478,18 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): Promise<number> {
-    console.log('🛡️ [DEBUG] calculateRouteBasedInsurance called:', {
-      shippingOptionId: shippingOption.id,
-      itemsTotal,
-      quoteId: quote.id,
-    });
 
     // Check customer preference for insurance
     const customerOptedIn = quote.customer_data?.preferences?.insurance_opted_in ?? false;
 
-    console.log('🛡️ [DEBUG] Customer insurance preference:', {
-      customerOptedIn,
-      customerPreferences: quote.customer_data?.preferences,
-    });
 
     // Check if shipping option has route-based insurance configuration
     const routeInsuranceConfig = (shippingOption as any).insurance_options;
 
     if (routeInsuranceConfig && routeInsuranceConfig.available) {
-      console.log('🛡️ [DEBUG] Using route-based insurance:', routeInsuranceConfig);
 
       // If customer hasn't opted in and route allows optional insurance, return 0
       if (!customerOptedIn && routeInsuranceConfig.optional !== false) {
-        console.log('🛡️ [DEBUG] Customer opted out of optional route insurance, returning 0');
         return 0;
       }
 
@@ -2101,33 +1501,20 @@ export class SmartCalculationEngine {
       const maxCoverage = routeInsuranceConfig.max_coverage || Infinity;
       const finalInsurance = Math.max(minFee, Math.min(maxCoverage, calculatedInsurance));
 
-      console.log('🛡️ [DEBUG] Route-based insurance calculation:', {
-        coveragePercentage,
-        calculatedInsurance,
-        minFee,
-        maxCoverage,
-        finalInsurance,
-      });
-
       return finalInsurance;
     }
 
     // Fallback to existing operational data
     const existingInsurance = quote.operational_data?.insurance_amount;
     if (existingInsurance && existingInsurance > 0) {
-      console.log('🛡️ [DEBUG] Using existing operational insurance:', existingInsurance);
       return existingInsurance;
     }
 
     // No fallback calculations - require explicit configuration
     if (!customerOptedIn) {
-      console.log('🛡️ [DEBUG] Customer opted out of insurance');
       return 0;
     }
 
-    console.error(
-      `❌ No insurance configuration found for route ${quote.origin_country} → ${quote.destination_country}. Admin must configure route-specific insurance options or provide operational data.`,
-    );
 
     // Return 0 instead of hardcoded values to force proper configuration
     return 0;
@@ -2141,11 +1528,6 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): number {
-    console.log('🎯 [DEBUG] calculateRouteBasedHandlingSync called:', {
-      shippingOptionId: shippingOption.id,
-      itemsTotal,
-      quoteId: quote.id,
-    });
 
     // ✅ AUTO-APPLY: Use CalculationDefaultsService for consistent calculation
     const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(
@@ -2155,25 +1537,15 @@ export class SmartCalculationEngine {
 
     // If backend configuration is available, use calculated default (auto-apply)
     if (calculatedDefault > 0) {
-      console.log('📦 [DEBUG] Auto-applying route-based handling charge (sync):', {
-        calculatedDefault,
-        shippingOptionId: shippingOption.id,
-        autoApplied: true,
-      });
       return calculatedDefault;
     }
 
     // Fallback to existing operational data when no backend config available
     const existingHandling = quote.operational_data?.handling_charge;
     if (existingHandling && existingHandling > 0) {
-      console.log(
-        '📦 [DEBUG] Using manual override handling (sync, no backend config):',
-        existingHandling,
-      );
       return existingHandling;
     }
 
-    console.log('📦 [DEBUG] No handling charge (sync) - no backend config and no manual override');
     return 0;
   }
 
@@ -2218,9 +1590,6 @@ export class SmartCalculationEngine {
     }
 
     // Return 0 to force proper configuration even in sync mode
-    console.warn(
-      `⚠️ No insurance configuration for sync operation ${quote.origin_country} → ${quote.destination_country}`,
-    );
     return 0;
   }
 
