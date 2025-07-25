@@ -47,9 +47,11 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isEditing, setIsEditing] = useState(false);
+  const [justSelected, setJustSelected] = useState(false);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
+  const justSelectedTimeoutRef = useRef<NodeJS.Timeout>();
 
   const initializeSearch = async () => {
     try {
@@ -86,6 +88,18 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
       detectHSNFromProduct();
     }
   }, [productName, value, detectHSNFromProduct]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      if (justSelectedTimeoutRef.current) {
+        clearTimeout(justSelectedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSearch = async (query: string) => {
     setSelectedIndex(-1); // Reset selection
@@ -142,11 +156,15 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
     setSearchQuery('');
     setSelectedIndex(-1);
     setIsEditing(false); // Stop editing mode
+    setJustSelected(true); // Prevent immediate reopening
     
-    // Return focus to input after selection
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
+    // Clear the justSelected flag after a delay
+    if (justSelectedTimeoutRef.current) {
+      clearTimeout(justSelectedTimeoutRef.current);
+    }
+    justSelectedTimeoutRef.current = setTimeout(() => {
+      setJustSelected(false);
+    }, 500);
 
     toast({
       title: 'HSN Code Selected',
@@ -206,8 +224,15 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   const showClearButton = value || searchQuery;
 
   return (
-    <div className={className}>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <div className={`hsn-input-wrapper ${className}`}>
+      <Popover open={isOpen} onOpenChange={(open) => {
+        if (!justSelected) {
+          setIsOpen(open);
+          if (!open) {
+            setIsEditing(false);
+          }
+        }
+      }}>
         <PopoverTrigger asChild>
           <div className="relative">
             <Input
@@ -215,12 +240,28 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
               value={getDisplayText()}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              onClick={() => setIsOpen(true)}
+              onClick={() => {
+                if (!isOpen && !justSelected) {
+                  setIsOpen(true);
+                }
+              }}
               onFocus={() => {
-                setIsOpen(true);
-                setIsEditing(true);
-                if (!searchQuery && !value) {
-                  handleSearch('');
+                if (!justSelected) {
+                  setIsOpen(true);
+                  setIsEditing(true);
+                  if (!searchQuery && !value) {
+                    handleSearch('');
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                // Only close if focus is moving outside the popover
+                const relatedTarget = e.relatedTarget as HTMLElement;
+                if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
+                  setTimeout(() => {
+                    setIsOpen(false);
+                    setIsEditing(false);
+                  }, 200);
                 }
               }}
               placeholder={placeholder}
@@ -242,6 +283,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                   className="h-6 w-6 p-0 hover:bg-gray-100"
                   onClick={(e) => {
                     e.stopPropagation();
+                    e.preventDefault();
                     handleClear();
                   }}
                 >
@@ -257,6 +299,13 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
           className="w-[--radix-popover-trigger-width] p-0 border border-gray-200 shadow-xl rounded-xl bg-white"
           align="start"
           sideOffset={4}
+          onInteractOutside={(e) => {
+            // Prevent closing when clicking on the input itself
+            const target = e.target as HTMLElement;
+            if (target.closest('.hsn-input-wrapper')) {
+              e.preventDefault();
+            }
+          }}
         >
           {/* Results List */}
           <Command className="rounded-xl">

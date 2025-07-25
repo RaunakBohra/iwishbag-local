@@ -63,22 +63,15 @@ export const useAdminQuoteCurrency = (
     const originSymbol = currencyService.getCurrencySymbolSync(originCurrency);
     const destinationSymbol = currencyService.getCurrencySymbolSync(destinationCurrency);
 
-    // Format dual amount function with inline implementation
+    // Format dual amount function with CurrencyService for consistent symbols
     const formatDualAmount = (amount: number) => {
-      // Format in origin currency
-      const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
+      // Format in origin currency using CurrencyService
+      const originFormatted = currencyService.formatAmount(amount, originCurrency);
 
       // Convert and format in destination currency if different
       if (exchangeRate && exchangeRate !== 1) {
-        let convertedAmount = amount * exchangeRate;
-        // Round to whole numbers for most Asian currencies
-        const noDecimalCurrencies = ['NPR', 'INR', 'JPY', 'KRW', 'VND', 'IDR'];
-        if (noDecimalCurrencies.includes(destinationCurrency)) {
-          convertedAmount = Math.round(convertedAmount);
-        } else {
-          convertedAmount = Math.round(convertedAmount * 100) / 100;
-        }
-        const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
+        const convertedAmount = amount * exchangeRate;
+        const destinationFormatted = currencyService.formatAmount(convertedAmount, destinationCurrency);
 
         return {
           origin: originFormatted,
@@ -95,7 +88,7 @@ export const useAdminQuoteCurrency = (
       };
     };
 
-    // Format single amount in specified currency
+    // Format single amount in specified currency using CurrencyService
     const formatSingleAmount = (
       amount: number,
       currency: 'origin' | 'destination' = 'destination',

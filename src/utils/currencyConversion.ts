@@ -70,7 +70,7 @@ export function calculateCorrectBaseTotalUSD(quote: UnifiedQuote): number {
 export function getCurrencySymbol(countryCode: string): string {
   const symbols: Record<string, string> = {
     'IN': '₹',
-    'NP': 'Rs.',
+    'NP': '₨',
     'US': '$',
     'UK': '£',
     'EU': '€',

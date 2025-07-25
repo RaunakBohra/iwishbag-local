@@ -257,7 +257,7 @@ function getCurrencySymbol(currency: string): string {
     INR: '₹',
     EUR: '€',
     GBP: '£',
-    NPR: 'Rs.',
+    NPR: '₨',
     CAD: 'C$',
     AUD: 'A$',
     SGD: 'S$',

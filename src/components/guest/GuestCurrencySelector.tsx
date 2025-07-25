@@ -45,7 +45,7 @@ export function GuestCurrencySelector({
         setAvailableCurrencies([
           { code: 'USD', symbol: '$', formatted: 'USD - $' },
           { code: 'INR', symbol: '₹', formatted: 'INR - ₹' },
-          { code: 'NPR', symbol: 'Rs', formatted: 'NPR - Rs' },
+          { code: 'NPR', symbol: '₨', formatted: 'NPR - ₨' },
           { code: 'EUR', symbol: '€', formatted: 'EUR - €' },
           { code: 'GBP', symbol: '£', formatted: 'GBP - £' },
         ]);
