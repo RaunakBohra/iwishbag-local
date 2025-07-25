@@ -8,7 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { useQuery } from '@tanstack/react-query';
 import { HSN_QUERY_KEYS } from '@/hooks/useHSNQuoteCalculation';
@@ -59,7 +65,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
   const [taxBreakdowns, setTaxBreakdowns] = useState<ItemTaxBreakdown[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemTaxBreakdown | null>(null);
@@ -72,7 +78,12 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
 
   // Calculate HSN tax breakdowns using React Query for real-time updates
   const hsnTaxQuery = useQuery({
-    queryKey: ['hsn-tax-breakdown', quote?.id, quote?.updated_at, quote?.calculation_method_preference],
+    queryKey: [
+      'hsn-tax-breakdown',
+      quote?.id,
+      quote?.updated_at,
+      quote?.calculation_method_preference,
+    ],
     queryFn: async () => {
       if (!quote?.items?.length) return [];
 
@@ -89,7 +100,9 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       const insuranceAmount = quote.operational_data?.insurance_amount || 0;
       const handlingFee = quote.operational_data?.handling_charge || 0;
 
-      console.log(`[HSN BREAKDOWN DEBUG] Quote totals - Shipping: ${shippingCost}, Insurance: ${insuranceAmount}, Handling: ${handlingFee}`);
+      console.log(
+        `[HSN BREAKDOWN DEBUG] Quote totals - Shipping: ${shippingCost}, Insurance: ${insuranceAmount}, Handling: ${handlingFee}`,
+      );
 
       const context = {
         route: {
@@ -111,8 +124,8 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
         quote_totals: {
           shipping_cost: shippingCost,
           insurance_amount: insuranceAmount,
-          handling_fee: handlingFee
-        }
+          handling_fee: handlingFee,
+        },
       };
 
       const calculatorItems = itemsWithHSN.map((item) => ({
@@ -127,7 +140,6 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       }));
 
       const breakdowns = await taxCalculator.calculateMultipleItemTaxes(calculatorItems, context);
-      console.log('[HSN BREAKDOWN DEBUG] Tax breakdowns calculated:', breakdowns);
       return breakdowns;
     },
     enabled: !!quote?.id && !!quote?.items?.length,
@@ -143,7 +155,11 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       setIsLoading(false);
       setError(null);
     } else if (hsnTaxQuery.error) {
-      setError(hsnTaxQuery.error instanceof Error ? hsnTaxQuery.error.message : 'Failed to calculate HSN taxes');
+      setError(
+        hsnTaxQuery.error instanceof Error
+          ? hsnTaxQuery.error.message
+          : 'Failed to calculate HSN taxes',
+      );
       setIsLoading(false);
     } else if (hsnTaxQuery.isLoading) {
       setIsLoading(true);
@@ -202,14 +218,16 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       if (success) {
         setEditDialogOpen(false);
         setEditingItem(null);
-        
+
         if (onUpdateQuote) onUpdateQuote();
         if (onRecalculate) onRecalculate();
       } else {
         setDialogError('Failed to update HSN classification');
       }
     } catch (error) {
-      setDialogError(error instanceof Error ? error.message : 'Failed to update HSN classification');
+      setDialogError(
+        error instanceof Error ? error.message : 'Failed to update HSN classification',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -276,7 +294,11 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="h-6 w-6 p-0"
                 >
-                  {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {isExpanded ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
                 </Button>
               </div>
             )}
@@ -301,7 +323,14 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                   <div className="text-xs text-red-600">Customs Duty</div>
                   {taxBreakdowns.length > 0 && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.customs_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length) || 0}%
+                      Avg:{' '}
+                      {Math.round(
+                        taxBreakdowns.reduce(
+                          (sum, b) => sum + (b.customs_calculation?.rate_percentage || 0),
+                          0,
+                        ) / taxBreakdowns.length,
+                      ) || 0}
+                      %
                     </div>
                   )}
                 </div>
@@ -312,23 +341,32 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                   <div className="text-xs text-blue-600">Local Taxes</div>
                   {taxBreakdowns.length > 0 && (
                     <div className="text-xs text-gray-500 mt-1">
-                      Avg: {Math.round(taxBreakdowns.reduce((sum, b) => sum + (b.local_tax_calculation?.rate_percentage || 0), 0) / taxBreakdowns.length) || 0}%
+                      Avg:{' '}
+                      {Math.round(
+                        taxBreakdowns.reduce(
+                          (sum, b) => sum + (b.local_tax_calculation?.rate_percentage || 0),
+                          0,
+                        ) / taxBreakdowns.length,
+                      ) || 0}
+                      %
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Total Tax Impact */}  
+              {/* Total Tax Impact */}
               <div className="text-center p-2 bg-purple-50 rounded border border-purple-200">
                 <div className="text-sm text-purple-600">
-                  Total Tax Impact: <span className="font-semibold">
+                  Total Tax Impact:{' '}
+                  <span className="font-semibold">
                     {currencyDisplay.formatSingleAmount(summary.totalTaxes, 'origin')}
                   </span>
                 </div>
                 {taxBreakdowns.length > 0 && (
                   <div className="text-xs text-gray-500 mt-1">
-                    {taxBreakdowns.filter(b => b.valuation_method === 'minimum_valuation').length > 0 && 
-                      `${taxBreakdowns.filter(b => b.valuation_method === 'minimum_valuation').length} items used min. valuation`}
+                    {taxBreakdowns.filter((b) => b.valuation_method === 'minimum_valuation')
+                      .length > 0 &&
+                      `${taxBreakdowns.filter((b) => b.valuation_method === 'minimum_valuation').length} items used min. valuation`}
                   </div>
                 )}
               </div>
@@ -340,13 +378,13 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
             <div className="mt-4 border-t border-purple-200 pt-4 space-y-3">
               {taxBreakdowns.map((breakdown) => {
                 const isUnclassified = !breakdown.hsn_code || breakdown.hsn_code.trim() === '';
-                
+
                 return (
                   <div
                     key={breakdown.item_id}
                     className={`border rounded-lg p-3 ${
-                      isUnclassified 
-                        ? 'border-amber-300 bg-amber-50' 
+                      isUnclassified
+                        ? 'border-amber-300 bg-amber-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -358,7 +396,10 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                         </h4>
                         <div className="flex items-center space-x-2 mt-1">
                           {isUnclassified ? (
-                            <Badge variant="secondary" className="text-xs bg-amber-200 text-amber-800">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs bg-amber-200 text-amber-800"
+                            >
                               HSN: Not Assigned
                             </Badge>
                           ) : (
@@ -390,16 +431,27 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-gray-600">Valuation Method:</span>
                           <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant={breakdown.valuation_method === 'minimum_valuation' ? 'default' : 'outline'} 
+                            <Badge
+                              variant={
+                                breakdown.valuation_method === 'minimum_valuation'
+                                  ? 'default'
+                                  : 'outline'
+                              }
                               className="text-xs"
                             >
-                              {breakdown.valuation_method === 'minimum_valuation' ? 'Min Valuation' : 
-                               breakdown.valuation_method === 'original_price' ? 'Product Value' :
-                               breakdown.valuation_method === 'higher_of_both' ? 'Higher Value' : 'Admin Override'}
+                              {breakdown.valuation_method === 'minimum_valuation'
+                                ? 'Min Valuation'
+                                : breakdown.valuation_method === 'original_price'
+                                  ? 'Product Value'
+                                  : breakdown.valuation_method === 'higher_of_both'
+                                    ? 'Higher Value'
+                                    : 'Admin Override'}
                             </Badge>
                             {breakdown.minimum_valuation_conversion && (
-                              <Info className="w-3 h-3 text-blue-500" title="Minimum valuation applied" />
+                              <Info
+                                className="w-3 h-3 text-blue-500"
+                                title="Minimum valuation applied"
+                              />
                             )}
                           </div>
                         </div>
@@ -413,18 +465,24 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-600">Local Tax ({breakdown.local_tax_calculation?.tax_type?.toUpperCase() || 'TAX'}):</span>
+                            <span className="text-gray-600">
+                              Local Tax (
+                              {breakdown.local_tax_calculation?.tax_type?.toUpperCase() || 'TAX'}):
+                            </span>
                             <span className="font-medium text-blue-600">
                               {breakdown.local_tax_calculation?.rate_percentage || 'N/A'}%
                             </span>
                           </div>
                         </div>
 
-                        {/* Calculation Breakdown */}  
+                        {/* Calculation Breakdown */}
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <div className="text-center">
                             <div className="font-medium text-red-600">
-                              {currencyDisplay.formatSingleAmount(breakdown.total_customs, 'origin')}
+                              {currencyDisplay.formatSingleAmount(
+                                breakdown.total_customs,
+                                'origin',
+                              )}
                             </div>
                             <div className="text-gray-600">Customs</div>
                             <div className="text-gray-500 text-xs">
@@ -433,7 +491,10 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                           </div>
                           <div className="text-center">
                             <div className="font-medium text-blue-600">
-                              {currencyDisplay.formatSingleAmount(breakdown.total_local_taxes, 'origin')}
+                              {currencyDisplay.formatSingleAmount(
+                                breakdown.total_local_taxes,
+                                'origin',
+                              )}
                             </div>
                             <div className="text-gray-600">Local Tax</div>
                             <div className="text-gray-500 text-xs">
@@ -453,13 +514,19 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                           <div className="flex justify-between">
                             <span>CIF Basis (Customs):</span>
                             <span className="font-medium">
-                              {currencyDisplay.formatSingleAmount(breakdown.customs_calculation?.basis_amount || 0, 'origin')}
+                              {currencyDisplay.formatSingleAmount(
+                                breakdown.customs_calculation?.basis_amount || 0,
+                                'origin',
+                              )}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span>Landed Cost (Local Tax):</span>
                             <span className="font-medium">
-                              {currencyDisplay.formatSingleAmount(breakdown.local_tax_calculation?.basis_amount || 0, 'origin')}
+                              {currencyDisplay.formatSingleAmount(
+                                breakdown.local_tax_calculation?.basis_amount || 0,
+                                'origin',
+                              )}
                             </span>
                           </div>
                           {breakdown.minimum_valuation_conversion && (
@@ -519,7 +586,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
           <DialogHeader>
             <DialogTitle>Edit HSN Classification</DialogTitle>
           </DialogHeader>
-          
+
           {editingItem && (
             <div className="space-y-4">
               <div>
@@ -535,7 +602,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                   onHSNSelect={(hsn) => {
                     setEditForm({
                       hsn_code: hsn.hsn_code,
-                      category: hsn.category
+                      category: hsn.category,
                     });
                   }}
                   placeholder="Search HSN by product name..."
@@ -547,7 +614,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                 <label className="text-sm font-medium text-gray-700">Category</label>
                 <Select
                   value={editForm.category}
-                  onValueChange={(value) => setEditForm(prev => ({ ...prev, category: value }))}
+                  onValueChange={(value) => setEditForm((prev) => ({ ...prev, category: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />

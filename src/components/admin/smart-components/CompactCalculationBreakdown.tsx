@@ -63,18 +63,6 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const hsnCalculationData = quote.calculation_data?.hsn_calculation;
   const hasHSNItems = quote.items?.some((item) => item.hsn_code) || false;
 
-  // Debug logging
-  console.log(`[COST BREAKDOWN DEBUG] Component rendering with quote:`, {
-    id: quote.id,
-    method: quote.calculation_method_preference,
-    breakdown: breakdown,
-    final_total: totalCost,
-    taxes: breakdown.taxes,
-    customs: breakdown.customs,
-    isHSNCalculation,
-    hsnCalculationData,
-  });
-
   // Calculate percentages for insights
   const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
 
@@ -82,8 +70,6 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const selectedShippingOption = shippingOptions.find(
     (opt) => opt.id === quote.operational_data?.shipping?.selected_option,
   );
-
-  // Debug logging for breakdown component (removed for production)
 
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
@@ -112,16 +98,55 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     };
   };
 
-  // ✅ REMOVED: Misleading estimate functions replaced with actual data display
-
   // Use standardized fee breakdown system
   const feeBreakdown = getAdminFeeBreakdown(quote);
+
+  // Calculate total taxes (combining all tax types)
+  const totalTaxes = (breakdown.taxes || quote.calculation_data?.sales_tax_price || 0) + 
+                     (breakdown.destination_tax || 0) + 
+                     (hsnCalculationData?.total_hsn_local_taxes || 0);
+
+  // Debug logging
+  console.log(`[BREAKDOWN DEBUG] Calculation breakdown analysis:`, {
+    id: quote.id,
+    method: quote.calculation_method_preference,
+    breakdown: breakdown,
+    final_total: totalCost,
+    taxes: breakdown.taxes,
+    customs: breakdown.customs,
+    isHSNCalculation,
+    hsnCalculationData,
+  });
+
+  // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
+  if (quote.id === 'bbfc6b7f-c630-41be-a688-ab3bb7087520') {
+    const feeBreakdownPreview = getAdminFeeBreakdown(quote);
+    console.log(`[DEBUG] Special quote tax and fee breakdown analysis:`, {
+      // Tax breakdown
+      breakdown_customs: breakdown.customs,
+      breakdown_taxes: breakdown.taxes, // Legacy sales tax
+      breakdown_destination_tax: breakdown.destination_tax,
+      sales_tax_price: quote.calculation_data?.sales_tax_price,
+      hsn_local_taxes: hsnCalculationData?.total_hsn_local_taxes,
+      total_taxes_calculated: totalTaxes,
+      
+      // Fee breakdown
+      breakdown_shipping: breakdown.shipping,
+      breakdown_handling: breakdown.handling,
+      breakdown_insurance: breakdown.insurance,
+      breakdown_fees: breakdown.fees,
+      operational_handling: quote.operational_data?.handling_charge,
+      operational_insurance: quote.operational_data?.insurance_amount,
+      fee_breakdown_preview: feeBreakdownPreview,
+    });
+  }
 
   // Key cost components for compact view
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
     { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
+    { label: 'Taxes', amount: totalTaxes, color: 'text-orange-600' },
     {
       label: feeBreakdown.compactDisplay.label,
       amount: feeBreakdown.compactDisplay.total,
@@ -332,13 +357,60 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             </div>
 
-            {/* Taxes & VAT */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <Calculator className="w-4 h-4 text-orange-600" />
-                <span className="text-gray-700">Taxes & VAT</span>
-                {/* Display tax calculation method with HSN indicator */}
-                {isHSNCalculation ? (
+            {/* Sales Tax (Local/Origin) */}
+            {(breakdown.taxes || quote.calculation_data?.sales_tax_price) && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calculator className="w-4 h-4 text-orange-600" />
+                  <span className="text-gray-700">Sales Tax</span>
+                  <Badge variant="outline" className="text-xs h-4 px-1 text-orange-600 border-orange-300">
+                    Origin
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0), 
+                      'origin'
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0), 
+                      'destination'
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Destination Tax (VAT/GST) */}
+            {breakdown.destination_tax && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Calculator className="w-4 h-4 text-green-600" />
+                  <span className="text-gray-700">Destination Tax</span>
+                  <Badge variant="outline" className="text-xs h-4 px-1 text-green-600 border-green-300">
+                    VAT/GST
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax), 'origin')}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax), 'destination')}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Legacy Combined Taxes (for HSN calculations) */}
+            {isHSNCalculation && hsnCalculationData && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Tags className="w-4 h-4 text-purple-600" />
+                  <span className="text-gray-700">HSN Local Taxes</span>
                   <Tooltip>
                     <TooltipTrigger>
                       <Badge
@@ -352,49 +424,34 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                     <TooltipContent>
                       <div className="text-xs space-y-1">
                         <p>Calculated using HSN codes</p>
-                        {hsnCalculationData && (
-                          <>
-                            <p>
-                              Local taxes:{' '}
-                              {currencyDisplay.formatSingleAmount(
-                                hsnCalculationData.total_hsn_local_taxes,
-                                'origin',
-                              )}
-                            </p>
-                            <p>Method: {quote.calculation_method_preference || 'auto'}</p>
-                          </>
-                        )}
+                        <p>
+                          Local taxes:{' '}
+                          {currencyDisplay.formatSingleAmount(
+                            hsnCalculationData.total_hsn_local_taxes,
+                            'origin',
+                          )}
+                        </p>
+                        <p>Method: {quote.calculation_method_preference || 'auto'}</p>
                       </div>
                     </TooltipContent>
                   </Tooltip>
-                ) : quote.calculation_method_preference ? (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs h-4 px-1 ${
-                      quote.calculation_method_preference === 'country_based'
-                        ? 'text-green-600 border-green-300'
-                        : quote.calculation_method_preference === 'manual'
-                          ? 'text-orange-600 border-orange-300'
-                          : 'text-blue-600 border-blue-300'
-                    }`}
-                  >
-                    {quote.calculation_method_preference === 'country_based'
-                      ? 'Country'
-                      : quote.calculation_method_preference === 'manual'
-                        ? 'Manual'
-                        : 'HSN'}
-                  </Badge>
-                ) : null}
-              </div>
-              <div className="text-right">
-                <div className="font-medium">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'origin')}
                 </div>
-                <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.taxes || 0), 'destination')}
+                <div className="text-right">
+                  <div className="font-medium">
+                    {currencyDisplay.formatSingleAmount(
+                      hsnCalculationData.total_hsn_local_taxes || 0, 
+                      'origin'
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {currencyDisplay.formatSingleAmount(
+                      hsnCalculationData.total_hsn_local_taxes || 0, 
+                      'destination'
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Standardized Fee Components */}
             {feeBreakdown.expandedDisplay.map((feeComponent, index) => (

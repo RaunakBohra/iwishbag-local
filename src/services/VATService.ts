@@ -42,7 +42,7 @@ class VATService {
 
   /**
    * Get VAT percentage with hierarchical lookup
-   * 
+   *
    * Priority hierarchy (similar to exchange rates):
    * 1. shipping_routes.vat_percentage (highest priority - route-specific)
    * 2. country_settings.vat (medium priority - country default)
@@ -56,7 +56,7 @@ class VATService {
           percentage: 0,
           source: 'fallback',
           confidence: 1.0,
-          route: `${originCountry}→${destinationCountry}`
+          route: `${originCountry}→${destinationCountry}`,
         };
       }
 
@@ -71,13 +71,13 @@ class VATService {
 
       if (!routeError && shippingRoute?.vat_percentage !== null) {
         console.log(
-          `[VATService] Using shipping route VAT: ${originCountry}→${destinationCountry} = ${shippingRoute.vat_percentage}%`
+          `[VATService] Using shipping route VAT: ${originCountry}→${destinationCountry} = ${shippingRoute.vat_percentage}%`,
         );
         return {
           percentage: Number(shippingRoute.vat_percentage),
           source: 'shipping_route',
           confidence: 0.95,
-          route: `${originCountry}→${destinationCountry}`
+          route: `${originCountry}→${destinationCountry}`,
         };
       }
 
@@ -90,34 +90,36 @@ class VATService {
 
       if (!countryError && countrySettings?.vat !== null) {
         console.log(
-          `[VATService] Using country settings VAT: ${destinationCountry} = ${countrySettings.vat}%`
+          `[VATService] Using country settings VAT: ${destinationCountry} = ${countrySettings.vat}%`,
         );
         return {
           percentage: Number(countrySettings.vat),
           source: 'country_settings',
           confidence: 0.85,
-          route: `${originCountry}→${destinationCountry}`
+          route: `${originCountry}→${destinationCountry}`,
         };
       }
 
       // Priority 3: Final fallback (0%)
       console.warn(
-        `[VATService] No VAT data found for ${originCountry}→${destinationCountry}, using 0% fallback`
+        `[VATService] No VAT data found for ${originCountry}→${destinationCountry}, using 0% fallback`,
       );
       return {
         percentage: 0,
         source: 'fallback',
         confidence: 0.5,
-        route: `${originCountry}→${destinationCountry}`
+        route: `${originCountry}→${destinationCountry}`,
       };
-
     } catch (error) {
-      console.error(`[VATService] Error getting VAT for ${originCountry}→${destinationCountry}:`, error);
+      console.error(
+        `[VATService] Error getting VAT for ${originCountry}→${destinationCountry}:`,
+        error,
+      );
       return {
         percentage: 0,
         source: 'fallback',
         confidence: 0.1,
-        route: `${originCountry}→${destinationCountry}`
+        route: `${originCountry}→${destinationCountry}`,
       };
     }
   }
@@ -126,13 +128,18 @@ class VATService {
    * ⚠️ DEPRECATED: Use SmartCalculationEngine.getCustomsPercentageFromRoute() instead
    * This method is kept for backward compatibility only
    */
-  async getCustomsPercentage(originCountry: string, destinationCountry: string): Promise<CustomsResult> {
-    console.warn('⚠️ VATService.getCustomsPercentage is deprecated - use SmartCalculationEngine.getCustomsPercentageFromRoute instead');
+  async getCustomsPercentage(
+    originCountry: string,
+    destinationCountry: string,
+  ): Promise<CustomsResult> {
+    console.warn(
+      '⚠️ VATService.getCustomsPercentage is deprecated - use SmartCalculationEngine.getCustomsPercentageFromRoute instead',
+    );
     return {
       percentage: 0, // No defaults - must be configured
       source: 'deprecated_fallback',
       confidence: 0.1,
-      route: `${originCountry}→${destinationCountry}`
+      route: `${originCountry}→${destinationCountry}`,
     };
   }
 
@@ -142,7 +149,7 @@ class VATService {
    */
   async getTaxData(originCountry: string, destinationCountry: string): Promise<TaxLookupResult> {
     const cacheKey = `${originCountry}-${destinationCountry}`;
-    
+
     // Check cache first
     const cached = this.cache.get(cacheKey);
     if (cached) {
@@ -160,13 +167,13 @@ class VATService {
       // Get both VAT and customs data in parallel for efficiency
       const [vatResult, customsResult] = await Promise.all([
         this.getVATPercentage(originCountry, destinationCountry),
-        this.getCustomsPercentage(originCountry, destinationCountry)
+        this.getCustomsPercentage(originCountry, destinationCountry),
       ]);
 
       const result: TaxLookupResult = {
         vat: vatResult,
         customs: customsResult,
-        route: `${originCountry}→${destinationCountry}`
+        route: `${originCountry}→${destinationCountry}`,
       };
 
       // Cache the result
@@ -175,29 +182,28 @@ class VATService {
 
       console.log(`[VATService] Tax data for ${cacheKey}:`, {
         vat: `${vatResult.percentage}% (${vatResult.source})`,
-        customs: `${customsResult.percentage}% (${customsResult.source})`
+        customs: `${customsResult.percentage}% (${customsResult.source})`,
       });
 
       return result;
-
     } catch (error) {
       console.error(`[VATService] Error getting tax data for ${cacheKey}:`, error);
-      
+
       // Return fallback data in case of error
       return {
         vat: {
           percentage: 0,
           source: 'fallback',
           confidence: 0.1,
-          route: `${originCountry}→${destinationCountry}`
+          route: `${originCountry}→${destinationCountry}`,
         },
         customs: {
           percentage: 0,
           source: 'fallback',
           confidence: 0.1,
-          route: `${originCountry}→${destinationCountry}`
+          route: `${originCountry}→${destinationCountry}`,
         },
-        route: `${originCountry}→${destinationCountry}`
+        route: `${originCountry}→${destinationCountry}`,
       };
     }
   }
@@ -209,12 +215,14 @@ class VATService {
   getCachedVATData(originCountry: string, destinationCountry: string): VATResult | null {
     const cacheKey = `${originCountry}-${destinationCountry}`; // ✅ FIX: Use consistent dash format
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached && this.isCacheValid(cached)) {
-      console.log(`[VATService] Using cached VAT data (sync): ${cacheKey} = ${cached.vat.percentage}% (${cached.vat.source})`);
+      console.log(
+        `[VATService] Using cached VAT data (sync): ${cacheKey} = ${cached.vat.percentage}% (${cached.vat.source})`,
+      );
       return cached.vat;
     }
-    
+
     return null;
   }
 
@@ -240,7 +248,7 @@ class VATService {
   getCacheStats(): { size: number; keys: string[] } {
     return {
       size: this.cache.size,
-      keys: Array.from(this.cache.keys())
+      keys: Array.from(this.cache.keys()),
     };
   }
 }

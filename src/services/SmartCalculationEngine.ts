@@ -16,6 +16,7 @@ import PerItemTaxCalculator, {
 import { unifiedTaxFallbackService } from '@/services/UnifiedTaxFallbackService';
 import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import { weightDetectionService } from '@/services/WeightDetectionService';
+import { vatService } from '@/services/VATService';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -140,7 +141,6 @@ export class SmartCalculationEngine {
       });
 
       const cacheKey = this.generateCacheKey(input);
-      console.log(`[SMART ENGINE DEBUG] Cache key generated:`, cacheKey);
 
       const cached = this.getCachedResult(cacheKey);
       if (cached) {
@@ -150,7 +150,6 @@ export class SmartCalculationEngine {
         return cached;
       }
 
-      console.log(`[SMART ENGINE DEBUG] Cache MISS - proceeding with fresh calculation`);
 
       // Calculate base totals
       const itemsTotal = input.quote.items.reduce(
@@ -170,7 +169,7 @@ export class SmartCalculationEngine {
 
       const hsnTaxResults = await this.calculateHSNBasedTaxes(input.quote, input);
 
-      console.log(`[SMART ENGINE DEBUG] HSN calculation completed:`, {
+      console.log(`[SMART ENGINE DEBUG] HSN tax calculation completed:`, {
         breakdown_count: hsnTaxResults.breakdown.length,
         total_taxes: hsnTaxResults.summary.total_all_taxes,
       });
@@ -257,7 +256,7 @@ export class SmartCalculationEngine {
     };
   }> {
     try {
-      console.log(`[HSN TAX DEBUG] Starting HSN calculation with input preferences:`, {
+      console.log(`[HSN TAX CALCULATION DEBUG] Starting HSN-based tax calculation:`, {
         input_method: input?.tax_calculation_preferences?.calculation_method_preference,
         quote_method: quote.calculation_method_preference,
         quote_id: quote.id,
@@ -268,7 +267,6 @@ export class SmartCalculationEngine {
         .rpc('get_effective_tax_method', { quote_id_param: quote.id })
         .single();
 
-      console.log(`[HSN TAX DEBUG] Database effective method:`, effectiveTaxMethod);
 
       // Prepare enhanced tax calculation context with 2-tier preferences
       const context: TaxCalculationContext = {
@@ -302,7 +300,7 @@ export class SmartCalculationEngine {
         domestic_shipping: quote.operational_data?.domestic_shipping || 0,
       };
 
-      console.log(`[HSN TAX DEBUG] Context creation values:`, {
+      console.log(`[HSN TAX CALCULATION DEBUG] Calculation context prepared:`, {
         input_tax_prefs: input?.tax_calculation_preferences?.calculation_method_preference,
         quote_method: quote.calculation_method_preference,
         effective_method: effectiveTaxMethod?.calculation_method,
@@ -314,6 +312,16 @@ export class SmartCalculationEngine {
         handling_charge: context.handling_charge,
         domestic_shipping: context.domestic_shipping,
       });
+
+      // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
+      if (quote.id === 'bbfc6b7f-c630-41be-a688-ab3bb7087520') {
+        console.log(`[DEBUG] Special quote data analysis:`, {
+          operational_data: quote.operational_data,
+          breakdown_shipping: quote.calculation_data?.breakdown?.shipping,
+          breakdown_full: quote.calculation_data?.breakdown,
+          method_preference: quote.calculation_method_preference
+        });
+      }
 
       // Enhanced items with HSN classification and weight detection
       const enhancedItems = await Promise.all(
@@ -368,7 +376,7 @@ export class SmartCalculationEngine {
         }),
       );
 
-      console.log(`[SMART ENGINE DEBUG] Passing context to PerItemTaxCalculator:`, {
+      console.log(`[HSN TAX CALCULATION DEBUG] Enhanced items prepared:`, {
         full_context: context,
       });
 
@@ -1150,9 +1158,29 @@ export class SmartCalculationEngine {
     }
 
     // Calculate other costs using existing data - NO HARDCODED FALLBACKS
-    const salesTax = quote.calculation_data?.breakdown?.taxes || 0;
+    const salesTax = quote.calculation_data?.sales_tax_price || 0;
     const handlingFee = quote.operational_data?.handling_charge || 0;
     const insuranceAmount = quote.operational_data?.insurance_amount || 0;
+    
+    // ✅ CALCULATE DESTINATION TAX for sync method (use cached data only)
+    let destinationTax = 0;
+    try {
+      // Use cached VAT data only (no async calls in sync method)
+      const cachedVATResult = vatService.getCachedVATData(quote.origin_country, quote.destination_country);
+      
+      if (cachedVATResult && cachedVATResult.percentage > 0) {
+        const landedCost = itemsTotal + shippingCost + insuranceAmount + (quote.calculation_data?.breakdown?.customs || 0) + handlingFee + salesTax;
+        destinationTax = landedCost * (cachedVATResult.percentage / 100);
+        console.log(`[DESTINATION TAX SYNC] ${quote.destination_country}: ${cachedVATResult.percentage}% = ${destinationTax} (cached)`);
+      } else {
+        // Fallback to existing destination tax if no cached data
+        destinationTax = quote.calculation_data?.breakdown?.destination_tax || 0;
+        console.log(`[DESTINATION TAX SYNC] No cached VAT data, using existing: ${destinationTax}`);
+      }
+    } catch (error) {
+      console.warn(`[DESTINATION TAX SYNC] Error:`, error);
+      destinationTax = quote.calculation_data?.breakdown?.destination_tax || 0;
+    }
 
     // Calculate customs using CIF value (Cost, Insurance, Freight) - RESPECT CALCULATION METHOD
     let customsPercentage = 10; // Default
@@ -1189,6 +1217,7 @@ export class SmartCalculationEngine {
       shippingCost +
       customsAmount +
       salesTax +
+      destinationTax +
       handlingFee +
       insuranceAmount +
       domesticShipping +
@@ -1210,7 +1239,8 @@ export class SmartCalculationEngine {
           items_total: itemsTotal,
           shipping: shippingCost, // ✅ Use the provided value directly
           customs: customsAmount,
-          taxes: salesTax,
+          taxes: salesTax, // Local taxes only (legacy field)
+          destination_tax: destinationTax, // Destination tax as separate field
           fees: paymentGatewayFee,
           handling: handlingFee,
           insurance: insuranceAmount,
@@ -1259,87 +1289,78 @@ export class SmartCalculationEngine {
       quote.destination_country,
     );
 
-    // 🆕 NEW: Use tax calculation based on method preference
+    // ✅ SIMPLIFIED: Always read tax values from input fields (single source of truth)
     let customsAmount = 0;
     let localTaxesAmount = 0;
-    let customsPercentage = 10; // Default fallback
-    let customsTierInfo = null;
-    let insuranceAmount = 0; // Declare insurance amount at function scope
+    let destinationTaxAmount = 0;
+    let insuranceAmount = 0;
 
-    const calculationMethod = quote.calculation_method_preference || 'hsn_only';
 
-    console.log(`[COMPLETE COSTS DEBUG] Calculation method: ${calculationMethod}`);
-
-    // Check calculation method
-    if (calculationMethod === 'manual') {
-      // MANUAL MODE: Use customs percentage from input box
-      console.log(`[COMPLETE COSTS DEBUG] Using MANUAL calculation with customs input`);
-      customsPercentage = quote.operational_data?.customs?.percentage || 10;
-
-      // Calculate insurance for CIF
-      insuranceAmount = await this.calculateRouteBasedInsurance(
-        selectedShipping,
-        itemsTotal,
-        quote,
-      );
-
-      // Calculate customs on CIF value
-      const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
-      customsAmount = cifValue * (customsPercentage / 100);
-
-      // For manual mode, calculate local taxes as simple percentage
-      localTaxesAmount = 0; // Will be calculated as salesTax below
-    } else if (
-      calculationMethod === 'hsn_only' &&
-      hsnTaxSummary &&
-      hsnTaxBreakdown &&
-      hsnTaxBreakdown.length > 0
-    ) {
-      // HSN MODE: Use HSN-based per-item tax calculations
-      console.log(`[COMPLETE COSTS DEBUG] Using HSN-based tax calculation:`, {
-        total_customs: hsnTaxSummary.total_customs,
-        total_local_taxes: hsnTaxSummary.total_local_taxes,
-        method: quote.calculation_method_preference,
+    // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
+    if (quote.id === 'bbfc6b7f-c630-41be-a688-ab3bb7087520') {
+      console.log(`[DEBUG] Reading input fields as single source of truth:`, {
+        customs_percentage: quote.operational_data?.customs?.percentage,
+        sales_tax_price: quote.calculation_data?.sales_tax_price,
+        destination_tax: quote.calculation_data?.breakdown?.destination_tax,
+        insurance_amount: quote.operational_data?.insurance_amount,
+        handling_charge: quote.operational_data?.handling_charge,
+        domestic_shipping: quote.operational_data?.domestic_shipping,
       });
-      customsAmount = hsnTaxSummary.total_customs;
-      localTaxesAmount = hsnTaxSummary.total_local_taxes;
-    } else {
-      // COUNTRY BASED MODE: Use country-based tier calculation
-      console.log(`[COMPLETE COSTS DEBUG] Using COUNTRY-BASED tier calculation`);
-
-      try {
-        // Calculate total weight for customs calculation
-        const totalWeight = quote.items.reduce((sum, item) => sum + item.weight * item.quantity, 0);
-
-        // Use smart customs tier calculation
-        customsTierInfo = await calculateCustomsTier(
-          quote.origin_country,
-          quote.destination_country,
-          itemsTotal,
-          totalWeight,
-        );
-
-        customsPercentage = customsTierInfo.customs_percentage;
-      } catch (error) {
-        // Fallback to manual percentage or default
-        customsPercentage = quote.operational_data.customs?.percentage || 10;
-      }
-
-      // Calculate insurance first (needed for CIF calculation)
-      insuranceAmount = await this.calculateRouteBasedInsurance(
-        selectedShipping,
-        itemsTotal,
-        quote,
-      );
-
-      // Calculate customs using CIF value (Cost, Insurance, Freight) - FIXED
-      const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
-      customsAmount = cifValue * (customsPercentage / 100);
-      localTaxesAmount = 0; // Will be calculated separately below
     }
 
+    // ✅ SIMPLIFIED TAX CALCULATION: Read directly from input fields
+    const customsPercentage = quote.operational_data?.customs?.percentage || 0;
+    
+    // Calculate insurance for CIF
+    insuranceAmount = await this.calculateRouteBasedInsurance(
+      selectedShipping,
+      itemsTotal,
+      quote,
+    );
+
+    // Calculate customs using CIF value if percentage is provided
+    if (customsPercentage > 0) {
+      const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
+      customsAmount = cifValue * (customsPercentage / 100);
+    }
+
+    // Read sales tax from input fields
+    localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+    
     // Calculate taxes and fees using route-based configuration
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
+    
+    // ✅ CALCULATE DESTINATION TAX: Get VAT/GST rate for destination country
+    try {
+      const vatResult = await vatService.getVATPercentage(quote.origin_country, quote.destination_country);
+      
+      if (vatResult.percentage > 0) {
+        // Calculate destination tax on landed cost (CIF + Customs + Handling + Local Taxes)
+        const landedCost = itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee + localTaxesAmount;
+        destinationTaxAmount = landedCost * (vatResult.percentage / 100);
+        
+        console.log(`[DESTINATION TAX DEBUG] Calculated destination tax:`, {
+          destination_country: quote.destination_country,
+          vat_rate: vatResult.percentage,
+          vat_source: vatResult.source,
+          landed_cost: landedCost,
+          destination_tax_amount: destinationTaxAmount
+        });
+      } else {
+        destinationTaxAmount = 0;
+        console.log(`[DESTINATION TAX DEBUG] No VAT/GST for ${quote.destination_country}`);
+      }
+    } catch (error) {
+      console.warn(`[DESTINATION TAX] Error calculating destination tax:`, error);
+      destinationTaxAmount = quote.calculation_data?.breakdown?.destination_tax || 0;
+    }
+
+    console.log(`[SMART ENGINE DEBUG] Final calculated values:`, {
+      customs_percentage: customsPercentage,
+      customs_amount: customsAmount,
+      sales_tax: localTaxesAmount,
+      destination_tax: destinationTaxAmount,
+    });
 
     // For non-HSN calculations, calculate insurance here (HSN already calculated above)
     if (!hsnTaxSummary) {
@@ -1358,15 +1379,14 @@ export class SmartCalculationEngine {
     const paymentGatewayFee =
       (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
 
-    // Calculate VAT (if applicable)
+    // Calculate VAT (if applicable) - deprecated, replaced by destination tax
     let vatAmount = 0;
     if (hsnTaxSummary) {
       // VAT is already included in localTaxesAmount for HSN calculations
       vatAmount = 0;
     } else {
-      // Use smart tier VAT percentage for traditional calculation on landed cost - FIXED
-      const vatPercentage = customsTierInfo?.vat_percentage || 0;
-      vatAmount = vatPercentage > 0 ? landedCostForTax * (vatPercentage / 100) : 0;
+      // Legacy VAT calculation - will be replaced by destination tax
+      vatAmount = 0; // Deprecated - destination tax is calculated separately
     }
 
     // Calculate totals
@@ -1376,6 +1396,7 @@ export class SmartCalculationEngine {
       customsAmount +
       salesTax +
       localTaxesAmount + // Add HSN local taxes (GST/VAT)
+      destinationTaxAmount + // Add destination tax (GST/VAT from input field)
       handlingFee +
       insuranceAmount +
       vatAmount;
@@ -1385,12 +1406,13 @@ export class SmartCalculationEngine {
     const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // Update quote data structures with HSN tax information
-    console.log(`[COMPLETE COSTS DEBUG] Creating breakdown with values:`, {
+    console.log(`[SMART ENGINE DEBUG] Tax breakdown summary:`, {
       customs: customsAmount,
-      taxes: salesTax + localTaxesAmount + vatAmount,
+      taxes: salesTax + localTaxesAmount + vatAmount + destinationTaxAmount,
       localTaxes: localTaxesAmount,
       salesTax: salesTax,
       vatAmount: vatAmount,
+      destinationTax: destinationTaxAmount,
       method: quote.calculation_method_preference,
     });
 
@@ -1400,7 +1422,8 @@ export class SmartCalculationEngine {
         items_total: itemsTotal,
         shipping: selectedShipping.cost_usd,
         customs: customsAmount,
-        taxes: salesTax + localTaxesAmount + vatAmount, // Include HSN local taxes
+        taxes: salesTax + localTaxesAmount + vatAmount, // Local taxes only (legacy field)
+        destination_tax: destinationTaxAmount, // Destination tax as separate field
         fees: paymentGatewayFee,
         handling: handlingFee,
         insurance: insuranceAmount,
@@ -1425,7 +1448,7 @@ export class SmartCalculationEngine {
         : {
             method: 'traditional_tier',
             customs_percentage: customsPercentage,
-            tier_info: customsTierInfo?.applied_tier?.rule_name || 'default',
+            tier_info: 'manual_calculation',
             calculation_timestamp: new Date().toISOString(),
           },
     };
@@ -1442,15 +1465,7 @@ export class SmartCalculationEngine {
       customs: {
         ...quote.operational_data.customs,
         percentage: customsPercentage,
-        smart_tier: customsTierInfo
-          ? {
-              tier_name: customsTierInfo.applied_tier?.rule_name || 'default',
-              tier_id: customsTierInfo.applied_tier?.id || null,
-              fallback_used: customsTierInfo.fallback_used,
-              route: customsTierInfo.route,
-              vat_percentage: customsTierInfo.vat_percentage,
-            }
-          : null,
+        smart_tier: null, // Smart tier calculation not used in this implementation
       },
       // 🆕 NEW: Add HSN operational data
       hsn_tax_data: hsnTaxBreakdown
@@ -1501,7 +1516,7 @@ export class SmartCalculationEngine {
       optimization_score: this.calculateOptimizationScore(finalTotal, itemsTotal),
     };
 
-    console.log(`[COMPLETE COSTS DEBUG] Returning updated quote with:`, {
+    console.log(`[SMART ENGINE DEBUG] Quote calculation completed:`, {
       id: updatedQuote.id,
       method: updatedQuote.calculation_method_preference,
       final_total: updatedQuote.final_total_usd,
