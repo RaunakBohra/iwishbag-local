@@ -4,12 +4,14 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Plane, MapPin, CreditCard, Package, Calculator, Building2, Home, Globe } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
+import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import type { UnifiedQuote } from '@/types/unified-quote';
 
 type Quote = Tables<'quotes'>;
 type CountrySettings = Tables<'country_settings'>;
 
 interface QuoteBreakdownDetailsProps {
-  quote: Quote;
+  quote: UnifiedQuote;
   countrySettings?: CountrySettings | null;
 }
 
@@ -17,6 +19,9 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
   quote,
   countrySettings
 }) => {
+  // Get currency formatting from unified hook
+  const { formatPrice, formatPriceWithUSD, displayCurrency, exchangeRate } = useQuoteDisplayCurrency(quote);
+
   // Extract breakdown data from quote
   const breakdown = quote.calculation_data?.breakdown || {};
   const itemsTotal = breakdown.items_total || quote.item_price || 0;
@@ -31,14 +36,6 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
     (quote.payment_gateway_fee || 0);
   const discount = breakdown.discount || quote.discount || 0;
   const finalTotal = quote.final_total_usd || 0;
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
 
   // Enhanced tax breakdown with detailed categories
   const getDetailedTaxBreakdown = () => {
@@ -254,7 +251,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">
-                    {formatCurrency(item.amount)}
+                    {formatPrice(item.amount)}
                   </p>
                 </div>
               </div>
@@ -276,7 +273,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-green-700">
-                  -{formatCurrency(discount)}
+                  -{formatPrice(discount)}
                 </p>
               </div>
             </div>
@@ -294,21 +291,21 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-primary">
-              {formatCurrency(finalTotal)}
+              {formatPrice(finalTotal)}
             </p>
-            {countrySettings?.currency && countrySettings.currency !== 'USD' && (
+            {displayCurrency !== 'USD' && (
               <p className="text-sm text-gray-500">
-                ≈ {countrySettings.currency} {(finalTotal * (countrySettings.rate_from_usd || 1)).toFixed(2)}
+                ≈ ${finalTotal.toFixed(2)} USD
               </p>
             )}
           </div>
         </div>
 
         {/* Additional Information */}
-        {quote.calculation_data?.exchange_rate && (
+        {displayCurrency !== 'USD' && exchangeRate && exchangeRate !== 1 && (
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-xs text-blue-800">
-              <strong>Exchange Rate:</strong> 1 USD = {quote.calculation_data.exchange_rate.rate} {countrySettings?.currency || quote.destination_country}
+              <strong>Exchange Rate:</strong> 1 USD = {exchangeRate.toFixed(4)} {displayCurrency}
             </p>
             <p className="text-xs text-blue-600 mt-1">
               Rates updated regularly to ensure accurate pricing

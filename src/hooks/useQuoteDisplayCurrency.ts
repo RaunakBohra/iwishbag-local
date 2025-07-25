@@ -87,7 +87,7 @@ export function useQuoteDisplayCurrency(quote: UnifiedQuote): QuoteDisplayCurren
       
       return currency.formatAmount(amount);
     };
-  }, [currency]);
+  }, [currency.formatAmount]);
 
   // Format price with USD equivalent for transparency
   const formatPriceWithUSD = useMemo(() => {
@@ -112,7 +112,7 @@ export function useQuoteDisplayCurrency(quote: UnifiedQuote): QuoteDisplayCurren
       
       return `${localFormatted} (≈ ${usdFormatted})`;
     };
-  }, [currency]);
+  }, [currency.formatAmount, currency.currency]);
 
   return {
     displayCurrency: currency.currency,
@@ -146,7 +146,7 @@ export function useSimpleQuoteDisplayCurrency(
       
       return currency.formatAmount(amount);
     };
-  }, [currency]);
+  }, [currency.formatAmount]);
 
   const formatPriceWithUSD = useMemo(() => {
     return (amount: number): string => {
@@ -168,7 +168,7 @@ export function useSimpleQuoteDisplayCurrency(
       
       return `${localFormatted} (≈ ${usdFormatted})`;
     };
-  }, [currency]);
+  }, [currency.formatAmount, currency.currency]);
 
   return {
     displayCurrency: currency.currency,

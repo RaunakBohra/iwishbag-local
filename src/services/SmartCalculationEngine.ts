@@ -980,29 +980,31 @@ export class SmartCalculationEngine {
     // Use existing exchange rate or default
     const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1.0;
 
-    // Calculate customs using existing percentage or default
-    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
-    const customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
-
-    // Calculate other costs using route-based configuration
-    const salesTax = quote.calculation_data?.breakdown?.taxes || itemsTotal * 0.1;
-
-    // Calculate route-based handling charge (sync version uses existing data or simple fallback)
-    const handlingFee = this.calculateRouteBasedHandlingSync(selectedShipping, itemsTotal, quote);
-
-    // Calculate route-based insurance (sync version uses existing data or simple fallback)
+    // Calculate route-based insurance first (needed for CIF calculation)
     const insuranceAmount = this.calculateRouteBasedInsuranceSync(
       selectedShipping,
       itemsTotal,
       quote,
     );
+
+    // Calculate customs using CIF value (Cost, Insurance, Freight) - FIXED
+    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
+    const customsAmount = cifValue * (customsPercentage / 100);
+
+    // Calculate route-based handling charge (sync version uses existing data or simple fallback)
+    const handlingFee = this.calculateRouteBasedHandlingSync(selectedShipping, itemsTotal, quote);
+
+    // Calculate other costs using route-based configuration
+    const salesTax = quote.calculation_data?.breakdown?.taxes || itemsTotal * 0.1;
     const paymentGatewayFee =
       quote.operational_data?.payment_gateway_fee ||
       (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
 
-    // Calculate VAT
+    // Calculate VAT on landed cost (CIF + Customs + Handling) - FIXED
     const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
-    const vatAmount = vatPercentage > 0 ? itemsTotal * (vatPercentage / 100) : 0;
+    const landedCost = cifValue + customsAmount + handlingFee;
+    const vatAmount = vatPercentage > 0 ? landedCost * (vatPercentage / 100) : 0;
 
     // Calculate totals
     const subtotal =
@@ -1087,14 +1089,15 @@ export class SmartCalculationEngine {
     if (selectedOptionId && shippingCost > 0) {
     }
 
-    // Calculate customs using existing percentage or default
-    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
-    const customsAmount = (itemsTotal + shippingCost) * (customsPercentage / 100);
-
     // Calculate other costs using existing data - NO HARDCODED FALLBACKS
     const salesTax = quote.calculation_data?.breakdown?.taxes || 0;
     const handlingFee = quote.operational_data?.handling_charge || 0;
     const insuranceAmount = quote.operational_data?.insurance_amount || 0;
+
+    // Calculate customs using CIF value (Cost, Insurance, Freight) - FIXED
+    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    const cifValue = itemsTotal + shippingCost + insuranceAmount;
+    const customsAmount = cifValue * (customsPercentage / 100);
     const domesticShipping = quote.operational_data?.domestic_shipping || 0;
     const discount = quote.calculation_data?.discount || 0;
 
@@ -1102,9 +1105,10 @@ export class SmartCalculationEngine {
       quote.operational_data?.payment_gateway_fee ||
       (itemsTotal + shippingCost + customsAmount) * 0.029 + 0.3;
 
-    // Calculate VAT
+    // Calculate VAT on landed cost (CIF + Customs + Handling) - FIXED
     const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
-    const vatAmount = vatPercentage > 0 ? itemsTotal * (vatPercentage / 100) : 0;
+    const landedCost = cifValue + customsAmount + handlingFee;
+    const vatAmount = vatPercentage > 0 ? landedCost * (vatPercentage / 100) : 0;
 
     // Calculate totals
     const subtotal =
@@ -1183,6 +1187,7 @@ export class SmartCalculationEngine {
     let localTaxesAmount = 0;
     let customsPercentage = 10; // Default fallback
     let customsTierInfo = null;
+    let insuranceAmount = 0; // Declare insurance amount at function scope
 
     if (hsnTaxSummary && hsnTaxBreakdown && hsnTaxBreakdown.length > 0) {
       // Use HSN-based per-item tax calculations
@@ -1212,19 +1217,31 @@ export class SmartCalculationEngine {
         customsPercentage = quote.operational_data.customs?.percentage || 10;
       }
 
-      customsAmount = (itemsTotal + selectedShipping.cost_usd) * (customsPercentage / 100);
+      // Calculate insurance first (needed for CIF calculation)
+      insuranceAmount = await this.calculateRouteBasedInsurance(
+        selectedShipping,
+        itemsTotal,
+        quote,
+      );
+
+      // Calculate customs using CIF value (Cost, Insurance, Freight) - FIXED
+      const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
+      customsAmount = cifValue * (customsPercentage / 100);
       localTaxesAmount = 0; // Will be calculated separately below
     }
 
     // Calculate taxes and fees using route-based configuration
-    // Note: For HSN calculations, salesTax is already included in localTaxesAmount
-    const salesTax = hsnTaxSummary ? 0 : itemsTotal * 0.1; // Use HSN taxes when available
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
-    const insuranceAmount = await this.calculateRouteBasedInsurance(
-      selectedShipping,
-      itemsTotal,
-      quote,
-    );
+    
+    // For non-HSN calculations, calculate insurance here (HSN already calculated above)
+    if (!hsnTaxSummary) {
+      insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
+    }
+
+    // Note: For HSN calculations, salesTax is already included in localTaxesAmount
+    // For non-HSN, calculate on landed cost instead of just itemsTotal - FIXED
+    const landedCostForTax = itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee;
+    const salesTax = hsnTaxSummary ? 0 : landedCostForTax * 0.1;
     const paymentGatewayFee =
       (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
 
@@ -1234,9 +1251,9 @@ export class SmartCalculationEngine {
       // VAT is already included in localTaxesAmount for HSN calculations
       vatAmount = 0;
     } else {
-      // Use smart tier VAT percentage for traditional calculation
+      // Use smart tier VAT percentage for traditional calculation on landed cost - FIXED
       const vatPercentage = customsTierInfo?.vat_percentage || 0;
-      vatAmount = vatPercentage > 0 ? itemsTotal * (vatPercentage / 100) : 0;
+      vatAmount = vatPercentage > 0 ? landedCostForTax * (vatPercentage / 100) : 0;
     }
 
     // Calculate totals
