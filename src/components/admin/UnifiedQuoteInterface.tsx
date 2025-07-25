@@ -47,6 +47,7 @@ import {
   MessageCircle,
   Settings,
   Tag,
+  Search,
 } from 'lucide-react';
 import {
   Select,
@@ -55,6 +56,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
@@ -89,10 +95,7 @@ import { CompactPaymentManager } from './smart-components/CompactPaymentManager'
 import { CompactShippingManager } from './smart-components/CompactShippingManager';
 import { CompactCalculationBreakdown } from './smart-components/CompactCalculationBreakdown';
 import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
-import { TaxCalculationSidebar } from './smart-components/TaxCalculationSidebar';
-import { TaxMethodSelectionPanel } from './tax-method-selection/TaxMethodSelectionPanel';
-import { PerItemValuationSelector } from './tax-method-selection/PerItemValuationSelector';
-import { TaxHubContainer } from './tax-hub/TaxHubContainer';
+import { QuoteTaxSettings } from './smart-components/QuoteTaxSettings';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import { SmartHSNSearch } from './hsn-components/SmartHSNSearch';
@@ -111,12 +114,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AdminQuoteFormValues, adminQuoteFormSchema } from './admin-quote-form-validation';
 import { ModeToggle } from '@/components/ui/mode-toggle';
-import { 
-  handleError, 
-  createCalculationError, 
-  createDatabaseError, 
+import {
+  handleError,
+  createCalculationError,
+  createDatabaseError,
   createNetworkError,
-  ErrorBoundary 
+  ErrorBoundary,
 } from '@/lib/errorHandling';
 import { QuoteErrorRecovery } from '@/components/error/QuoteErrorRecovery';
 
@@ -162,14 +165,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // HSN interface state
   const [editingHSNItemId, setEditingHSNItemId] = useState<string | null>(null);
-  const [hsnFormData, setHsnFormData] = useState<{[key: string]: { hsn_code: string; category: string }}>({});
-  const [selectedHSNData, setSelectedHSNData] = useState<{[key: string]: any}>({});
-
-  // Tax method selection state
-  const [showTaxMethodPanel, setShowTaxMethodPanel] = useState(false);
-  const [showValuationSelector, setShowValuationSelector] = useState(false);
-  const [currentTaxMethod, setCurrentTaxMethod] = useState<string>('auto');
-  const [itemValuationMethods, setItemValuationMethods] = useState<Record<string, string>>({});
+  const [hsnFormData, setHsnFormData] = useState<{
+    [key: string]: { hsn_code: string; category: string };
+  }>({});
+  const [selectedHSNData, setSelectedHSNData] = useState<{ [key: string]: any }>({});
 
   // Form state for editing
   const form = useForm<AdminQuoteFormValues>({
@@ -196,9 +195,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Performance optimization hooks
   const { batchUpdate, batchMultipleUpdates, flushUpdates } = useBatchedFormUpdates(form, {
     debounceMs: 500,
-    onBatchComplete: () => {
-      console.log('[PERF] Batch form update completed');
-    },
+    onBatchComplete: () => {},
   });
 
   const { containerRef, batchDOMUpdate, setStableMinHeight } = useLayoutShiftPrevention({
@@ -233,12 +230,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
     if (quote && isEditMode && !isLoading) {
       // Ensuring form population
-      
+
       // Check if form is actually populated
       const formItems = form.watch('items');
       const hasFormItems = formItems && formItems.length > 0;
       const hasQuoteItems = quote.items && quote.items.length > 0;
-      
+
       // Repopulate form if it's empty but quote has items (typical refresh issue)
       if (!hasFormItems && hasQuoteItems) {
         // Form empty - repopulating
@@ -272,32 +269,28 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     const maxRetries = 3;
     let attempt = 0;
     let quoteData = null;
-    
+
     while (attempt < maxRetries) {
       try {
         setIsLoading(true);
-        console.log(`🔄 [LoadQuoteData] Attempt ${attempt + 1}/${maxRetries} for quote ${quoteId}`, { forceRefresh, skipNavigationOnError });
-        
+
         // Add small delay for retry attempts and force refresh
         if (forceRefresh || attempt > 0) {
           const delay = attempt > 0 ? 200 * attempt : 100; // Exponential backoff
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
-        
+
         quoteData = await unifiedDataEngine.getQuote(quoteId!, forceRefresh);
-        
+
         if (!quoteData) {
-          console.warn(`⚠️ [LoadQuoteData] Quote not found on attempt ${attempt + 1}, quote ID: ${quoteId}`);
-          
           // If this is not the last attempt, continue retrying
           if (attempt < maxRetries - 1) {
             attempt++;
             continue;
           }
-          
+
           // Last attempt failed - only navigate if not skipped (e.g., not during tax method changes)
           if (!skipNavigationOnError) {
-            console.error(`❌ [LoadQuoteData] Quote not found after ${maxRetries} attempts, navigating away`);
             toast({
               title: 'Quote not found',
               description: 'The requested quote could not be found after multiple attempts.',
@@ -306,7 +299,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             navigate('/admin/quotes');
             return;
           } else {
-            console.warn(`⚠️ [LoadQuoteData] Quote not found but navigation skipped (tax method change context)`);
             toast({
               title: 'Temporary Error',
               description: 'Quote data temporarily unavailable. Please try again.',
@@ -315,53 +307,38 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             return;
           }
         }
-        
+
         // Success! Break out of retry loop
-        console.log(`✅ [LoadQuoteData] Successfully loaded quote on attempt ${attempt + 1}`);
-        
+
         // Process the successfully loaded quote data
-        console.log('[DEBUG] loadQuoteData: Updating quote state with new data', {
-          oldStatus: quote?.status,
-          newStatus: quoteData.status,
-          quoteId: quoteData.id,
-          oldItems: quote?.items?.map(i => ({ id: i.id, hsn: i.hsn_code, category: i.category })),
-          newItems: quoteData.items?.map(i => ({ id: i.id, hsn: i.hsn_code, category: i.category }))
-        });
+
         setQuote(quoteData);
 
         // Initialize HSN state for existing items
         if (quoteData.items) {
-          const initialHsnFormData: {[key: string]: { hsn_code: string; category: string }} = {};
-          const initialSelectedData: {[key: string]: any} = {};
-          
-          quoteData.items.forEach(item => {
+          const initialHsnFormData: { [key: string]: { hsn_code: string; category: string } } = {};
+          const initialSelectedData: { [key: string]: any } = {};
+
+          quoteData.items.forEach((item) => {
             if (item.hsn_code || item.category) {
               initialHsnFormData[item.id] = {
                 hsn_code: item.hsn_code || '',
-                category: item.category || ''
+                category: item.category || '',
               };
-              
+
               if (item.hsn_code && item.category) {
                 initialSelectedData[item.id] = {
                   hsn_code: item.hsn_code,
                   category: item.category,
                   description: `${item.category} item`,
-                  minimum_valuation_usd: undefined // Will be loaded from database if needed
+                  minimum_valuation_usd: undefined, // Will be loaded from database if needed
                 };
               }
             }
           });
-          
+
           setHsnFormData(initialHsnFormData);
           setSelectedHSNData(initialSelectedData);
-        }
-
-        // Initialize tax method selection state from quote operational data
-        setCurrentTaxMethod(quoteData.calculation_method_preference || 'auto');
-        
-        // Initialize per-item valuation methods from operational data
-        if (quoteData.operational_data?.item_valuation_preferences) {
-          setItemValuationMethods(quoteData.operational_data.item_valuation_preferences);
         }
 
         // Populate form with quote data
@@ -369,25 +346,22 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
         // Calculate smart features
         await calculateSmartFeatures(quoteData);
-        
+
         break;
-        
       } catch (error) {
-        console.error(`❌ [LoadQuoteData] Error on attempt ${attempt + 1}:`, error);
-        
         // If this is not the last attempt, continue retrying
         if (attempt < maxRetries - 1) {
           attempt++;
           continue;
         }
-        
+
         // Last attempt failed with error
         toast({
           title: 'Loading Error',
           description: 'Failed to load quote data. Please refresh the page.',
           variant: 'destructive',
         });
-        
+
         if (!skipNavigationOnError) {
           navigate('/admin/quotes');
         }
@@ -415,13 +389,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         // Preserve the calculation_method_preference from the optimistic update
         const updatedQuote = {
           ...result.updated_quote,
-          calculation_method_preference: quoteData.calculation_method_preference || result.updated_quote.calculation_method_preference,
+          calculation_method_preference:
+            quoteData.calculation_method_preference ||
+            result.updated_quote.calculation_method_preference,
           operational_data: {
             ...result.updated_quote.operational_data,
-            ...quoteData.operational_data
-          }
+            ...quoteData.operational_data,
+          },
         };
-        
+
         setQuote(updatedQuote);
         setShippingOptions(result.shipping_options);
         setShippingRecommendations(result.smart_recommendations);
@@ -431,12 +407,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     } catch (error) {
       const appError = createCalculationError(
         'smart features calculation',
-        { 
-          quoteId: quote?.id
+        {
+          quoteId: quote?.id,
         },
-        error instanceof Error ? error.message : 'Failed to calculate smart features'
+        error instanceof Error ? error.message : 'Failed to calculate smart features',
       );
-      
+
       handleError(appError, {
         component: 'UnifiedQuoteInterface',
         action: 'calculateSmartFeatures',
@@ -449,19 +425,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   };
 
   const handleShippingOptionSelect = async (optionId: string) => {
-    console.log('[DEBUG] handleShippingOptionSelect called with:', {
-      optionId,
-      quoteId: quote?.id,
-      currentSelectedOption: quote?.operational_data?.shipping?.selected_option,
-      availableOptions: shippingOptions.map((opt) => ({
-        id: opt.id,
-        carrier: opt.carrier,
-        cost: opt.cost_usd,
-      })),
-    });
-
     if (!quote) {
-      console.error('❌ [DEBUG] No quote available');
       return;
     }
 
@@ -469,26 +433,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     const selectedOption = shippingOptions.find((opt) => opt.id === optionId);
 
     if (!selectedOption) {
-      console.warn('⚠️ [DEBUG] Selected shipping option not found:', optionId);
       return;
     }
 
-    console.log('✅ [DEBUG] Found selected option:', {
-      id: selectedOption.id,
-      carrier: selectedOption.carrier,
-      name: selectedOption.name,
-      cost: selectedOption.cost_usd,
-    });
-
     // Optimistic update: Update form values immediately for instant UI feedback
-    console.log('[DEBUG] Updating form values...');
+
     form.setValue('selected_shipping_option', optionId);
     form.setValue('international_shipping', selectedOption.cost_usd);
-
-    console.log('[DEBUG] Form values after update:', {
-      selected_shipping_option: form.getValues('selected_shipping_option'),
-      international_shipping: form.getValues('international_shipping'),
-    });
 
     // Optimistic update: Update local quote state immediately
     const optimisticQuote = {
@@ -509,26 +460,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       },
     };
 
-    console.log('🔍 [DEBUG] Shipping Option Selected - Optimistic Update:', {
-      quoteId: quote.id,
-      selectedOption: {
-        id: selectedOption.id,
-        name: selectedOption.name,
-        carrier: selectedOption.carrier,
-        cost_usd: selectedOption.cost_usd,
-      },
-      breakdownUpdate: {
-        oldShipping: quote.calculation_data?.breakdown?.shipping,
-        newShipping: selectedOption.cost_usd,
-        shippingChange:
-          selectedOption.cost_usd - (quote.calculation_data?.breakdown?.shipping || 0),
-      },
-      operationalDataUpdate: {
-        originalSelectedOption: quote.operational_data?.shipping?.selected_option,
-        newSelectedOption: optimisticQuote.operational_data.shipping.selected_option,
-      },
-    });
-
     // Set optimistic state immediately (no page refresh)
     setQuote(optimisticQuote);
 
@@ -539,7 +470,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       duration: 2000,
     });
 
-    console.log('💾 [DEBUG] Starting database update...');
     try {
       // Update database in background
       const updatePayload = {
@@ -547,14 +477,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         calculation_data: optimisticQuote.calculation_data, // ✅ Also update calculation breakdown
       };
 
-      console.log('💾 [DEBUG] Update payload:', updatePayload);
-
       const success = await unifiedDataEngine.updateQuote(quote.id, updatePayload);
 
-      console.log('💾 [DEBUG] Database update result:', success);
-
       if (!success) {
-        console.error('❌ [DEBUG] Database update failed, rolling back...');
         // Rollback on failure
         setQuote(quote);
         form.setValue(
@@ -569,10 +494,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           variant: 'destructive',
         });
       } else {
-        console.log('✅ [DEBUG] Database update successful!');
-
         // Trigger recalculation to update handling charges and other dependent values
-        console.log('🔄 [DEBUG] Triggering recalculation after shipping option change...');
+
         try {
           const calculationResult = smartCalculationEngine.calculateLiveSync({
             quote: optimisticQuote,
@@ -584,12 +507,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           });
 
           if (calculationResult.success) {
-            console.log('✅ [DEBUG] Recalculation successful:', {
-              handlingCharge:
-                calculationResult.updated_quote.calculation_data.breakdown.handling_charge,
-              finalTotal: calculationResult.updated_quote.final_total_usd,
-            });
-
             // Update both quote state and live quote with recalculated values
             setQuote(calculationResult.updated_quote);
             if (isEditMode) {
@@ -603,15 +520,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             );
             form.setValue('final_total_usd', calculationResult.updated_quote.final_total_usd || 0);
           } else {
-            console.warn('⚠️ [DEBUG] Recalculation failed:', calculationResult.error);
           }
-        } catch (recalcError) {
-          console.error('❌ [DEBUG] Recalculation error:', recalcError);
-        }
+        } catch (recalcError) {}
       }
     } catch (error) {
-      console.error('❌ [DEBUG] Error updating shipping option:', error);
-
       // Rollback on error
       setQuote(quote);
       form.setValue(
@@ -647,6 +559,50 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     setSmartSuggestions(updatedSuggestions);
   };
 
+  // Handle tax method change
+  const handleTaxMethodChange = async (method: 'auto' | 'hsn_only' | 'legacy_fallback') => {
+    if (!quote) return;
+
+    try {
+      // Update quote with new tax method preference
+      const updatePayload = {
+        calculation_method_preference: method,
+      };
+
+      const success = await unifiedDataEngine.updateQuote(quote.id, updatePayload);
+
+      if (success) {
+        // Update local state
+        setQuote((prev) => (prev ? { ...prev, calculation_method_preference: method } : null));
+        if (liveQuote) {
+          setLiveQuote((prev) =>
+            prev ? { ...prev, calculation_method_preference: method } : null,
+          );
+        }
+
+        // Trigger recalculation with new method
+        await calculateSmartFeatures(liveQuote || quote);
+
+        toast({
+          title: 'Tax method updated',
+          description: `Now using ${method === 'auto' ? 'Auto (Hybrid)' : method === 'hsn_only' ? 'HSN Only' : 'Country Based'} calculation`,
+        });
+      } else {
+        toast({
+          title: 'Update failed',
+          description: 'Failed to update tax calculation method',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update tax calculation method',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Enhanced mode toggle handler with notifications - SCROLL PREVENTION REMOVED
   const handleModeToggle = (newEditMode: boolean) => {
     setIsEditMode(newEditMode);
@@ -664,16 +620,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     if (quote) {
       if (!newEditMode) {
         // Switching to view mode - populate form with latest data
-        console.log('🔄 Switching to view mode - repopulating form');
+
         populateFormFromQuote(liveQuote || quote);
       } else {
         // Switching to edit mode - ensure form is populated for editing
-        console.log('✏️ Switching to edit mode - ensuring form is populated');
+
         populateFormFromQuote(liveQuote || quote);
       }
     }
   };
-
 
   // Watch form values for live updates
   const formValues = useWatch({ control: form.control });
@@ -704,13 +659,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         formValues.origin_country &&
         formValues.destination_country
       ) {
-        console.log('Recalculating shipping options...', {
-          itemsTotal,
-          totalWeight,
-          origin: formValues.origin_country,
-          destination: formValues.destination_country,
-        });
-
         const tempQuote = {
           ...quote,
           origin_country: formValues.origin_country,
@@ -750,41 +698,22 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 (opt) => opt.id === formValues.selected_shipping_option,
               );
               if (currentlySelected) {
-                console.log(
-                  '🔄 [DEBUG] Updating international shipping cost for existing selection:',
-                  {
-                    optionId: currentlySelected.id,
-                    oldCost: formValues.international_shipping,
-                    newCost: currentlySelected.cost_usd,
-                  },
-                );
                 form.setValue('international_shipping', currentlySelected.cost_usd);
               }
             }
           } else {
-            console.warn('❌ Shipping calculation failed:', result.error);
             // Clear shipping options when calculation fails
             setShippingOptions([]);
             setShippingRecommendations([]);
           }
         } catch (calculationError) {
-          console.error('❌ Error during shipping calculation engine call:', calculationError);
           // Clear shipping options when engine fails
           setShippingOptions([]);
           setShippingRecommendations([]);
         }
       } else {
-        console.log('⏭️ Skipping shipping recalculation - missing required data:', {
-          hasItems: (formValues.items || []).length > 0,
-          itemsTotal,
-          totalWeight,
-          hasOrigin: !!formValues.origin_country,
-          hasDestination: !!formValues.destination_country,
-        });
       }
-    } catch (error) {
-      console.error('❌ Error recalculating shipping:', error);
-    }
+    } catch (error) {}
   }, [
     quote,
     formValues.items,
@@ -827,10 +756,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Optimized weight estimation using debounced calculations
   const estimateItemWeight = useCallback(
     (itemIndex: number, productName: string, productUrl?: string) => {
-      console.log('🔍 estimateItemWeight called:', { itemIndex, productName, productUrl });
-
       if (!productName.trim()) {
-        console.log('❌ Empty product name, clearing estimation');
         batchDOMUpdate(() => {
           setWeightEstimations((prev) => ({ ...prev, [itemIndex]: null }));
         });
@@ -843,14 +769,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         setIsEstimating((prev) => ({ ...prev, [itemIndex]: true }));
         try {
           const estimation = await smartWeightEstimator.estimateWeight(productName, productUrl);
-          console.log('✅ Weight estimation result:', estimation);
 
           batchDOMUpdate(() => {
             setWeightEstimations((prev) => ({ ...prev, [itemIndex]: estimation }));
             setIsEstimating((prev) => ({ ...prev, [itemIndex]: false }));
           });
         } catch (error) {
-          console.error('❌ Weight estimation error:', error);
           batchDOMUpdate(() => {
             setWeightEstimations((prev) => ({ ...prev, [itemIndex]: null }));
             setIsEstimating((prev) => ({ ...prev, [itemIndex]: false }));
@@ -862,27 +786,22 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   );
 
   // Fetch HSN weight for an item
-  const fetchHSNWeight = useCallback(
-    async (itemIndex: number, hsnCode: string | undefined) => {
-      if (!hsnCode) {
-        setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
-        return;
-      }
+  const fetchHSNWeight = useCallback(async (itemIndex: number, hsnCode: string | undefined) => {
+    if (!hsnCode) {
+      setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
+      return;
+    }
 
-      setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: true }));
-      try {
-        const weight = await hsnWeightService.getHSNWeight(hsnCode);
-        setHsnWeights((prev) => ({ ...prev, [itemIndex]: weight }));
-        console.log(`📊 [Weight] HSN weight found for ${hsnCode}:`, weight);
-      } catch (error) {
-        console.error('Error fetching HSN weight:', error);
-        setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
-      } finally {
-        setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: false }));
-      }
-    },
-    [],
-  );
+    setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: true }));
+    try {
+      const weight = await hsnWeightService.getHSNWeight(hsnCode);
+      setHsnWeights((prev) => ({ ...prev, [itemIndex]: weight }));
+    } catch (error) {
+      setHsnWeights((prev) => ({ ...prev, [itemIndex]: null }));
+    } finally {
+      setIsLoadingHSN((prev) => ({ ...prev, [itemIndex]: false }));
+    }
+  }, []);
 
   // Handle weight selection from dual suggestions
   const handleWeightSelection = useCallback(
@@ -905,12 +824,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           source,
           item.product_url,
           item.options, // category field is actually in options for this quote structure
-          item.hsn_code // Use the item's specific HSN code
+          item.hsn_code, // Use the item's specific HSN code
         );
       }
 
       toast({
-        title: "Weight Applied",
+        title: 'Weight Applied',
         description: `Using ${source === 'hsn' ? 'HSN database' : 'AI estimated'} weight: ${weight} kg`,
         duration: 2000,
       });
@@ -919,101 +838,89 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   );
 
   // Handle HSN assignment for items
-  const handleHSNAssignment = useCallback(async (itemIndex: number, hsnData: any) => {
-    try {
-      const items = form.getValues('items') || [];
-      if (items[itemIndex]) {
-        // 1. Update form state immediately (for UI responsiveness)
-        items[itemIndex] = {
-          ...items[itemIndex],
-          hsn_code: hsnData.hsn_code,
-          category: hsnData.category || hsnData.display_name,
-        };
-        
-        form.setValue('items', items);
-
-        // 2. Persist to database immediately for sidebar synchronization
-        if (quote?.id && items[itemIndex].id) {
-          // Persisting HSN assignment to database
-
-          const success = await unifiedDataEngine.updateItem(quote.id, items[itemIndex].id, {
+  const handleHSNAssignment = useCallback(
+    async (itemIndex: number, hsnData: any) => {
+      try {
+        const items = form.getValues('items') || [];
+        if (items[itemIndex]) {
+          // 1. Update form state immediately (for UI responsiveness)
+          items[itemIndex] = {
+            ...items[itemIndex],
             hsn_code: hsnData.hsn_code,
             category: hsnData.category || hsnData.display_name,
-          });
+          };
 
-          if (success) {
-            // HSN database update successful
-            
-            // 3. Clear UnifiedDataEngine cache first
-            unifiedDataEngine.clearQuoteCache(quote.id);
-            
-            // 4. Invalidate React Query cache to ensure fresh data
-            await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
-            await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
-            await queryClient.invalidateQueries({ queryKey: ['quotes'] });
-            
-            // 5. Trigger quote data refresh to update sidebar components
-            await loadQuoteData(true); // Force refresh
-            
-            // 6. Update liveQuote to trigger re-renders
-            if (isEditMode && quote) {
-              const updatedQuote = await unifiedDataEngine.getQuote(quote.id, true);
-              if (updatedQuote) {
-                setLiveQuote(updatedQuote);
-                console.log('✅ [HSN] LiveQuote updated with new HSN data');
+          form.setValue('items', items);
+
+          // 2. Persist to database immediately for sidebar synchronization
+          if (quote?.id && items[itemIndex].id) {
+            // Persisting HSN assignment to database
+
+            const success = await unifiedDataEngine.updateItem(quote.id, items[itemIndex].id, {
+              hsn_code: hsnData.hsn_code,
+              category: hsnData.category || hsnData.display_name,
+            });
+
+            if (success) {
+              // HSN database update successful
+
+              // 3. Clear UnifiedDataEngine cache first
+              unifiedDataEngine.clearQuoteCache(quote.id);
+
+              // 4. Invalidate React Query cache to ensure fresh data
+              await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
+              await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
+              await queryClient.invalidateQueries({ queryKey: ['quotes'] });
+
+              // 5. Trigger quote data refresh to update sidebar components
+              await loadQuoteData(true); // Force refresh
+
+              // 6. Update liveQuote to trigger re-renders
+              if (isEditMode && quote) {
+                const updatedQuote = await unifiedDataEngine.getQuote(quote.id, true);
+                if (updatedQuote) {
+                  setLiveQuote(updatedQuote);
+                }
               }
-            }
-            
-            // 7. Fetch HSN weight for the updated item
-            if (hsnData.hsn_code) {
-              await fetchHSNWeight(itemIndex, hsnData.hsn_code);
-            }
-            
-            // Quote data refreshed for sidebar sync
-          } else {
-            console.error(`❌ [HSN] Database update failed for item ${items[itemIndex].id}`);
-            throw new Error('Database update failed');
-          }
-        }
 
-        // 4. Trigger quote calculation update after HSN assignment
-        if (quote?.id) {
-          scheduleCalculation(() => {
-            // HSN assignment triggered recalculation
+              // 7. Fetch HSN weight for the updated item
+              if (hsnData.hsn_code) {
+                await fetchHSNWeight(itemIndex, hsnData.hsn_code);
+              }
+
+              // Quote data refreshed for sidebar sync
+            } else {
+              throw new Error('Database update failed');
+            }
+          }
+
+          // 4. Trigger quote calculation update after HSN assignment
+          if (quote?.id) {
+            scheduleCalculation(() => {
+              // HSN assignment triggered recalculation
+            });
+          }
+
+          toast({
+            title: 'HSN Code Assigned',
+            description: `${hsnData.hsn_code} - ${hsnData.display_name}`,
+            duration: 3000,
           });
         }
+      } catch (error) {
+        // Enhanced error logging for debugging
 
         toast({
-          title: "HSN Code Assigned",
-          description: `${hsnData.hsn_code} - ${hsnData.display_name}`,
-          duration: 3000,
+          title: 'Error',
+          description:
+            error instanceof Error ? error.message : 'Failed to assign HSN code. Please try again.',
+          variant: 'destructive',
+          duration: 5000,
         });
       }
-    } catch (error) {
-      console.error('Failed to assign HSN code:', error);
-      
-      // Enhanced error logging for debugging
-      console.error('🔍 [HSN Debug] Assignment failure details:', {
-        itemIndex,
-        hsnData: {
-          hsn_code: hsnData?.hsn_code,
-          category: hsnData?.category,
-          display_name: hsnData?.display_name,
-        },
-        quoteId: quote?.id,
-        itemId: items[itemIndex]?.id,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined,
-      });
-
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to assign HSN code. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      });
-    }
-  }, [form, quote?.id, scheduleCalculation, toast, loadQuoteData]);
+    },
+    [form, quote?.id, scheduleCalculation, toast, loadQuoteData],
+  );
 
   // Optimized function to add new item with batched updates
   const addNewItem = useCallback(() => {
@@ -1077,11 +984,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         return;
       }
 
-      console.log('🗺️ [ROUTE-SAVE] Saving route changes:', {
-        from: `${quote.origin_country} → ${quote.destination_country}`,
-        to: `${formData.origin_country} → ${formData.destination_country}`,
-      });
-
       // OPTIMISTIC UPDATE: Exit editing mode immediately for instant UI feedback
       setIsEditingRoute(false);
 
@@ -1107,8 +1009,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
 
         if (success) {
-          console.log('✅ [ROUTE-SAVE] Database update successful');
-
           // Intelligent delayed refresh to sync with database without overwriting optimistic updates
           setTimeout(async () => {
             try {
@@ -1122,45 +1022,36 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   freshQuoteData.destination_country === formData.destination_country;
 
                 if (databaseMatchesOptimistic) {
-                  console.log('✅ [ROUTE-SYNC] Database has updated route values, syncing UI');
                   // Database is in sync, safe to update UI with fresh data
                   setQuote(freshQuoteData);
                   populateFormFromQuote(freshQuoteData);
                   // Trigger shipping recalculation after route change
                   recalculateShipping();
                 } else {
-                  console.log('⏳ [ROUTE-SYNC] Database not yet updated, keeping optimistic state');
                   // Database hasn't updated yet, keep optimistic state and try again
                   setTimeout(async () => {
                     try {
                       const retryQuoteData = await unifiedDataEngine.getQuote(quote.id, true);
                       if (retryQuoteData) {
-                        console.log('🔄 [ROUTE-SYNC] Retry - checking database again...');
                         const retryMatches =
                           retryQuoteData.origin_country === formData.origin_country &&
                           retryQuoteData.destination_country === formData.destination_country;
 
                         if (retryMatches) {
-                          console.log('✅ [ROUTE-SYNC] Retry successful, syncing UI');
                           setQuote(retryQuoteData);
                           populateFormFromQuote(retryQuoteData);
                           recalculateShipping();
                         } else {
-                          console.log(
-                            '⚠️ [ROUTE-SYNC] Database still not updated after retry, keeping optimistic state',
-                          );
                           // Keep the optimistic state - it will be corrected on next user action or refresh
                         }
                       }
                     } catch (retryError) {
-                      console.error('❌ [ROUTE-SYNC] Retry fetch failed:', retryError);
                       // Keep optimistic state on error
                     }
                   }, 1000); // Retry after 1 second
                 }
               }
             } catch (error) {
-              console.error('❌ [ROUTE-SYNC] Error fetching fresh data:', error);
               // Keep optimistic state on error - don't break user experience
             }
           }, 500);
@@ -1176,8 +1067,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           });
         }
       } catch (error) {
-        console.error('❌ [ROUTE-SAVE] Error saving route:', error);
-
         // Revert optimistic update on error
         setQuote(quote);
         setIsEditingRoute(false);
@@ -1189,7 +1078,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       }
     } catch (initialError) {
-      console.error('❌ [ROUTE-EDITING] Initial operation error:', initialError);
       setIsEditingRoute(false);
     }
   };
@@ -1253,21 +1141,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         0,
       );
 
-      console.log('🧮 Calculating smart customs for:', {
-        origin: quote.origin_country,
-        destination: quote.destination_country,
-        itemsTotal,
-        totalWeight,
-      });
-
       const tierResult = await calculateCustomsTier(
         quote.origin_country,
         quote.destination_country,
         itemsTotal,
         totalWeight,
       );
-
-      console.log('✅ Smart customs result:', tierResult);
 
       setCustomsTierInfo(tierResult);
 
@@ -1280,7 +1159,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         duration: 3000,
       });
     } catch (error) {
-      console.error('❌ Smart customs calculation error:', error);
       toast({
         title: 'Customs Calculation Failed',
         description: 'Unable to calculate smart customs tier. Please try again.',
@@ -1294,8 +1172,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
   // Function to apply weight suggestion
   const applyWeightSuggestion = (itemIndex: number, suggestedWeight: number) => {
-    console.log('Applying weight suggestion:', { itemIndex, suggestedWeight });
-
     try {
       const items = form.getValues('items') || [];
       items[itemIndex] = { ...items[itemIndex], item_weight: suggestedWeight };
@@ -1303,17 +1179,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // Use setValue with shouldValidate: false to prevent triggering validation/submission
       form.setValue('items', items, { shouldValidate: false, shouldDirty: true });
 
-      console.log('✅ Weight suggestion applied successfully');
-
       // Optional: Show a brief success indicator
       toast({
         title: 'Weight Updated',
         description: `Applied AI suggestion: ${suggestedWeight} kg`,
         duration: 2000,
       });
-    } catch (error) {
-      console.error('❌ Error applying weight suggestion:', error);
-    }
+    } catch (error) {}
   };
 
   // Single calculator for ALL calculations - SmartCalculationEngine (fast sync mode for live editing)
@@ -1373,39 +1245,23 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
 
       if (calculationResult.success) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Live calculation (SmartCalculationEngine sync):', {
-            finalTotal: calculationResult.updated_quote.final_total_usd,
-            breakdown: calculationResult.updated_quote.calculation_data.breakdown,
-          });
+        if (import.meta.env.DEV) {
         }
         return calculationResult.updated_quote;
       } else {
-        console.warn('⚠️ SmartCalculationEngine sync failed:', calculationResult.error);
         return quote;
       }
     } catch (error) {
-      console.error('❌ Live calculation error:', error);
       return quote;
     }
   }, [quote, formValues]);
 
   // Always use SmartCalculationEngine for consistent calculations in both modes
   useEffect(() => {
-    console.log('[DEBUG] liveQuote useEffect triggered:', {
-      isEditMode,
-      hasCreateLiveQuote: !!createLiveQuote,
-      hasQuote: !!quote,
-      quoteId: quote?.id,
-      selectedShippingOption: quote?.operational_data?.shipping?.selected_option,
-    });
-
     if (isEditMode && createLiveQuote) {
-      console.log('[DEBUG] Setting liveQuote from createLiveQuote (edit mode)');
       // Edit mode: Use real-time calculated quote
       setLiveQuote(createLiveQuote);
     } else if (quote) {
-      console.log('[DEBUG] Recalculating liveQuote (view mode)');
       // View mode: Recalculate using SmartCalculationEngine for consistency
       try {
         const calculationResult = smartCalculationEngine.calculateLiveSync({
@@ -1418,30 +1274,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
 
         if (calculationResult.success) {
-          console.log('✅ [DEBUG] LiveQuote calculation successful');
           setLiveQuote(calculationResult.updated_quote);
         } else {
-          console.log('⚠️ [DEBUG] LiveQuote calculation failed, using original quote');
           setLiveQuote(quote); // Fallback to original
         }
       } catch (error) {
-        console.warn('❌ [DEBUG] View mode recalculation failed:', error);
         setLiveQuote(quote); // Fallback to original
       }
     } else {
-      console.log('[DEBUG] Setting liveQuote to quote (no calculations)');
       setLiveQuote(quote);
     }
   }, [isEditMode, createLiveQuote, quote]);
 
   // Debug logging for status changes
-  useEffect(() => {
-    console.log('[DEBUG] Quote or liveQuote status changed:', {
-      quoteStatus: quote?.status,
-      liveQuoteStatus: liveQuote?.status,
-      usingLiveQuote: !!liveQuote,
-    });
-  }, [quote?.status, liveQuote?.status]);
+  useEffect(() => {}, [quote?.status, liveQuote?.status]);
 
   // Sync calculated values back to form fields (fixes handling charge & insurance display)
   useEffect(() => {
@@ -1451,16 +1297,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // DISABLED: Automatic form syncing to prevent infinite loop
       // The form should be the source of truth for user input
       // Calculated values are used for display purposes only in breakdown components
-
-      console.log(
-        '[DEBUG] Form sync disabled - form values take precedence over calculated values:',
-        {
-          formHandling: form.getValues('handling_charge'),
-          calculatedHandling: operationalData.handling_charge,
-          formInsurance: form.getValues('insurance_amount'),
-          calculatedInsurance: operationalData.insurance_amount,
-        },
-      );
     }
   }, [liveQuote, isEditMode, form]);
 
@@ -1476,17 +1312,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Trigger weight estimation for existing items when edit mode is activated
   useEffect(() => {
     if (isEditMode && quote?.items) {
-      console.log('Edit mode activated, triggering weight estimation for existing items');
       quote.items.forEach((item, index) => {
         if (item.name && item.name.trim()) {
-          console.log(`Triggering estimation for item ${index}: ${item.name}`);
           // Delay each estimation slightly to avoid overwhelming the service
           setTimeout(() => {
             estimateItemWeight(index, item.name, item.url);
           }, index * 200);
         }
       });
-      
+
       // Also fetch HSN weights for items that have HSN codes
       quote.items.forEach((item, index) => {
         if (item.hsn_code) {
@@ -1534,7 +1368,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Form population function
   const populateFormFromQuote = (quoteData: UnifiedQuote) => {
     // Populating form from quote data
-    
+
     const calculationData = quoteData.calculation_data || {};
     const operationalData = quoteData.operational_data || {};
 
@@ -1553,12 +1387,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       calculationData.handlingDefault > 0
     ) {
       handlingChargeValue = calculationData.handlingDefault;
-      console.log('🎯 [DEBUG] Auto-applying default handling charge in form:', {
-        quoteId: quoteData.id,
-        existingHandling,
-        defaultHandling: calculationData.handlingDefault,
-        autoAppliedValue: handlingChargeValue,
-      });
     }
 
     // ✅ AUTO-APPLY: Check for insurance defaults when no existing value
@@ -1572,12 +1400,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       calculationData.insuranceDefault > 0
     ) {
       insuranceAmountValue = calculationData.insuranceDefault;
-      console.log('🛡️ [DEBUG] Auto-applying default insurance amount in form:', {
-        quoteId: quoteData.id,
-        existingInsurance,
-        defaultInsurance: calculationData.insuranceDefault,
-        autoAppliedValue: insuranceAmountValue,
-      });
     }
 
     // Debug logging for form initialization with validation
@@ -1596,18 +1418,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         hsn_code: item.hsn_code || '', // Include HSN code
         category: item.category || '', // Include category
       };
-      
+
       // Validate critical fields
       if (!formattedItem.product_name) {
-        console.warn(`⚠️ Item ${index} missing product name:`, item);
       }
-      
+
       return formattedItem;
     });
-    
+
     // Add default item if no items exist
     if (formItemsData.length === 0) {
-      console.log('📦 No items found, adding default item for edit mode');
       formItemsData.push({
         id: `item-${Date.now()}-default`,
         item_price: 0,
@@ -1621,7 +1441,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         category: '', // Include category
       });
     }
-    
+
     // Form reset called
 
     form.reset({
@@ -1641,7 +1461,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       status: quoteData.status,
       items: formItemsData,
     });
-    
+
     // Form reset complete
   };
 
@@ -1649,13 +1469,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   const onFormSubmit = async (data: AdminQuoteFormValues) => {
     try {
       setIsCalculating(true);
-      console.log('💾 [SAVE] Form data being submitted:', data);
 
       // Validate form data before submission
       const formErrors = form.formState.errors;
       if (Object.keys(formErrors).length > 0) {
-        console.error('❌ [SAVE] Form validation errors:', formErrors);
-
         // Generate detailed error message
         const errorMessages = [];
         if (formErrors.items) {
@@ -1713,8 +1530,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         items:
           data.items?.map((item) => {
             // Find existing item to preserve HSN data and other fields
-            const existingItem = quote?.items?.find(existing => existing.id === item.id);
-            
+            const existingItem = quote?.items?.find((existing) => existing.id === item.id);
+
             return {
               id: item.id,
               name: item.product_name || '',
@@ -1728,7 +1545,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               hsn_code: item.hsn_code || existingItem?.hsn_code || '',
               category: item.category || existingItem?.category || '',
               tax_rate: item.tax_rate || existingItem?.tax_rate || 0,
-              minimum_valuation_usd: item.minimum_valuation_usd || existingItem?.minimum_valuation_usd || 0,
+              minimum_valuation_usd:
+                item.minimum_valuation_usd || existingItem?.minimum_valuation_usd || 0,
               description: item.description || existingItem?.description || '',
               // Preserve other smart_data and metadata
               smart_data: existingItem?.smart_data || {},
@@ -1737,8 +1555,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             };
           }) || [],
       });
-
-      console.log('✅ [SAVE] Update success:', success);
 
       if (success) {
         setLastSaveTime(new Date());
@@ -1753,20 +1569,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             Number(data.customs_percentage) > 0 ||
             Number(data.sales_tax_price) > 0);
 
-        console.log('🔄 [AUTO-STATUS] Checking auto-progression conditions:', {
-          currentStatus,
-          hasCalculationData,
-          quoteId: quoteId,
-          items: data.items?.length || 0,
-          internationalShipping: Number(data.international_shipping) || 0,
-          customsPercentage: Number(data.customs_percentage) || 0,
-          salesTax: Number(data.sales_tax_price) || 0,
-        });
-
         // Auto-progress from 'pending' to 'sent' when calculations are saved
         if (currentStatus === 'pending' && hasCalculationData && quoteId) {
           try {
-            console.log('✅ [AUTO-STATUS] Triggering auto-progression: pending → sent');
             await handleQuoteSent(quoteId, currentStatus);
 
             toast({
@@ -1775,7 +1580,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 'Quote has been calculated and automatically marked as sent. You can continue editing.',
             });
           } catch (statusError) {
-            console.error('❌ [AUTO-STATUS] Failed to auto-progress status:', statusError);
             // Don't fail the whole operation, just show normal success message
             toast({
               title: 'Quote updated',
@@ -1784,9 +1588,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           }
         } else {
           // Normal update without status change
-          console.log('ℹ️ [AUTO-STATUS] No auto-progression needed:', {
-            reason: currentStatus !== 'pending' ? 'Status not pending' : 'No calculation data',
-          });
+
           toast({
             title: 'Quote updated',
             description: 'Quote has been successfully updated. You can continue editing.',
@@ -1803,7 +1605,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       }
     } catch (error) {
-      console.error('❌ [SAVE] Error saving quote:', error);
       toast({
         title: 'Error',
         description: `Failed to save quote changes: ${error.message}`,
@@ -1817,7 +1618,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   // Save handler for view mode - saves current live quote state
   const handleViewModeSave = async () => {
     if (!liveQuote) {
-      console.error('❌ [VIEW-SAVE] No live quote available');
       toast({
         title: 'Error',
         description: 'No quote data available to save.',
@@ -1828,11 +1628,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
     try {
       setIsCalculating(true);
-      console.log('💾 [VIEW-SAVE] Saving view mode changes...', {
-        quoteId: liveQuote.id,
-        finalTotal: liveQuote.final_total_usd,
-        status: liveQuote.status,
-      });
 
       // Save the current live quote state to database
       const success = await unifiedDataEngine.updateQuote(quoteId!, {
@@ -1843,8 +1638,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         final_total_usd: liveQuote.final_total_usd,
         items: liveQuote.items,
       });
-
-      console.log('✅ [VIEW-SAVE] Update success:', success);
 
       if (success) {
         setLastSaveTime(new Date());
@@ -1862,7 +1655,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       }
     } catch (error) {
-      console.error('❌ [VIEW-SAVE] Error saving quote:', error);
       toast({
         title: 'Save Error',
         description: `Failed to save quote: ${error.message}`,
@@ -1870,126 +1662,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
     } finally {
       setIsCalculating(false);
-    }
-  };
-
-  // Tax method selection handlers with optimistic updates
-  const handleTaxMethodChange = async (method: string, metadata?: any) => {
-    try {
-      console.log(`🎯 [Tax Method] Changing method from ${quote?.calculation_method_preference || 'auto'} to ${method}`);
-      
-      // 1. OPTIMISTIC UPDATE: Update UI immediately for instant feedback
-      setCurrentTaxMethod(method);
-      
-      // Create optimistic quote update for immediate UI feedback
-      if (quote) {
-        const optimisticQuote = {
-          ...quote,
-          calculation_method_preference: method,
-          operational_data: {
-            ...quote.operational_data,
-            tax_method_metadata: metadata
-          }
-        };
-        setQuote(optimisticQuote);
-        console.log(`✅ [Tax Method] Optimistic update applied for instant feedback`);
-      }
-      
-      // Show immediate feedback toast
-      toast({
-        title: "Tax Method Updated", 
-        description: `Calculation method changed to ${method}. Recalculating taxes...`,
-      });
-      
-      // 2. BACKGROUND SYNC: Update database without blocking UI
-      if (quote?.id) {
-        const updateSuccess = await unifiedDataEngine.updateQuote(quote.id, {
-          calculation_method_preference: method,
-          operational_data: {
-            ...quote.operational_data,
-            tax_method_metadata: metadata
-          }
-        });
-
-        if (updateSuccess) {
-          console.log(`✅ [Tax Method] Database updated successfully with method: ${method}`);
-          
-          // 3. BACKGROUND REFRESH: Sync with database (non-blocking)
-          // Skip navigation on error to prevent page refresh during tax method changes
-          try {
-            await loadQuoteData(true, true); // forceRefresh=true, skipNavigationOnError=true
-            console.log(`🔄 [Tax Method] Quote data synced from database`);
-          } catch (syncError) {
-            console.warn(`⚠️ [Tax Method] Database sync failed, but UI already updated:`, syncError);
-            // Don't throw error - optimistic update already applied
-          }
-          
-          // 4. TRIGGER RECALCULATION: With current quote state
-          scheduleCalculation(() => {
-            console.log(`🧮 [Tax Method] Recalculation triggered with new method: ${method}`);
-          });
-          
-        } else {
-          throw new Error('Database update failed - reverting optimistic update');
-        }
-      }
-    } catch (error) {
-      console.error('Tax method update error:', error);
-      
-      // ROLLBACK: Revert optimistic update on error
-      if (quote) {
-        setCurrentTaxMethod(quote.calculation_method_preference || 'auto');
-        setQuote(quote); // Revert to original quote state
-        console.log(`🔄 [Tax Method] Rolled back optimistic update due to error`);
-      }
-      
-      toast({
-        title: "Update Failed",
-        description: "Failed to update tax calculation method. Changes reverted.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleValuationMethodChange = async (itemId: string, method: string, amount?: number) => {
-    try {
-      setItemValuationMethods(prev => ({ ...prev, [itemId]: method }));
-      
-      // Update quote's operational data with per-item valuation preferences
-      if (quote?.id) {
-        const updatedOperationalData = {
-          ...quote.operational_data,
-          item_valuation_preferences: {
-            ...quote.operational_data?.item_valuation_preferences,
-            [itemId]: method
-          }
-        };
-        
-        if (amount && method === 'admin_override') {
-          updatedOperationalData.item_valuation_overrides = {
-            ...quote.operational_data?.item_valuation_overrides,
-            [itemId]: {
-              amount,
-              timestamp: new Date().toISOString(),
-              admin_id: 'current_admin' // Would be replaced with actual admin ID
-            }
-          };
-        }
-        
-        await unifiedDataEngine.updateQuote(quote.id, {
-          operational_data: updatedOperationalData
-        });
-        
-        // Trigger recalculation with new valuation method
-        await calculateSmartFeatures({ ...quote, operational_data: updatedOperationalData });
-      }
-    } catch (error) {
-      console.error('Valuation method update error:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update item valuation method.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -2259,11 +1931,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             {/* Left Column - Primary Edit Form (2/3 width) */}
             <div className="md:col-span-2 space-y-4">
               <Form {...form}>
-                <form 
-                  onSubmit={form.handleSubmit(onFormSubmit)} 
+                <form
+                  onSubmit={form.handleSubmit(onFormSubmit)}
                   onKeyDown={(e) => {
                     // Prevent Enter key from submitting form unless it's in a textarea
-                    if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'TEXTAREA') {
+                    if (
+                      e.key === 'Enter' &&
+                      e.target instanceof HTMLElement &&
+                      e.target.tagName !== 'TEXTAREA'
+                    ) {
                       e.preventDefault();
                     }
                   }}
@@ -2286,19 +1962,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     <CardContent className="p-0">
                       {(() => {
                         const watchedItems = form.watch('items');
-                        console.log('🔍 DEBUG - Edit Mode Rendering:', {
-                          isEditMode,
-                          isLoading,
-                          hasQuote: !!quote,
-                          watchedItemsLength: watchedItems?.length,
-                          watchedItems: watchedItems,
-                          quoteItemsLength: quote?.items?.length,
-                          quoteItems: quote?.items,
-                          formErrors: form.formState.errors
-                        });
+
                         return null;
                       })()}
-                      
+
                       {/* Loading state - prevent premature rendering */}
                       {isLoading && (
                         <div className="p-8 text-center text-gray-500">
@@ -2306,7 +1973,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           <p className="text-sm">Loading quote data...</p>
                         </div>
                       )}
-                      
+
                       {/* Quote not loaded yet */}
                       {!isLoading && !quote && (
                         <div className="p-8 text-center text-gray-500">
@@ -2315,7 +1982,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           <p className="text-xs mt-1">Please refresh the page</p>
                         </div>
                       )}
-                      
+
                       {/* No items */}
                       {!isLoading && quote && form.watch('items')?.length === 0 && (
                         <div className="p-8 text-center text-gray-500">
@@ -2324,21 +1991,497 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           <p className="text-xs mt-1">Add your first product to get started</p>
                         </div>
                       )}
-                      
+
                       {/* Render items only when not loading and quote is available */}
-                      {!isLoading && quote && (() => {
-                        try {
-                          const items = form.watch('items');
-                          
-                          // Additional safety checks
-                          if (!Array.isArray(items)) {
-                            console.error('🚨 Form items is not an array:', items);
+                      {!isLoading &&
+                        quote &&
+                        (() => {
+                          try {
+                            const items = form.watch('items');
+
+                            // Additional safety checks
+                            if (!Array.isArray(items)) {
+                              return (
+                                <div className="p-8 text-center text-red-500">
+                                  <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
+                                  <p className="text-sm">Data structure error</p>
+                                  <p className="text-xs mt-1">
+                                    Form items is not properly formatted
+                                  </p>
+                                  <button
+                                    className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                    onClick={() => window.location.reload()}
+                                  >
+                                    Reload Page
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            if (items.length === 0) {
+                              return null; // Handled by the "No items" section above
+                            }
+
+                            return items.map((item, index) => {
+                              try {
+                                // Validate item structure
+                                if (!item || typeof item !== 'object') {
+                                  return (
+                                    <div
+                                      key={`error-${index}`}
+                                      className="p-4 border-b border-red-200 bg-red-50"
+                                    >
+                                      <div className="text-red-600 text-sm">
+                                        ⚠️ Item {index + 1} has invalid data structure
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                const smartData = quote?.items[index]?.smart_data;
+                                const weightConfidence = smartData?.weight_confidence || 0;
+                                const category = smartData?.category_detected;
+                                const optimizationHints = smartData?.optimization_hints || [];
+                                const customsSuggestions = smartData?.customs_suggestions || [];
+
+                                const getWeightConfidenceBadge = (confidence: number) => {
+                                  if (confidence >= 0.8)
+                                    return {
+                                      variant: 'default' as const,
+                                      text: 'High',
+                                      color: 'text-green-600',
+                                    };
+                                  if (confidence >= 0.6)
+                                    return {
+                                      variant: 'secondary' as const,
+                                      text: 'Medium',
+                                      color: 'text-yellow-600',
+                                    };
+                                  return {
+                                    variant: 'destructive' as const,
+                                    text: 'Low',
+                                    color: 'text-red-600',
+                                  };
+                                };
+
+                                return (
+                                  <div
+                                    key={item.id || index}
+                                    className={`border-b border-gray-200 ${index === 0 ? 'border-t' : ''} hover:bg-gray-50/50 transition-colors`}
+                                  >
+                                    <div className="p-4 space-y-3">
+                                      {/* Compact Product Header */}
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3">
+                                          <div>
+                                            <h4 className="text-sm font-semibold text-gray-900 flex items-center">
+                                              Product {index + 1}
+                                              {category && (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="ml-2 text-xs text-blue-600 border-blue-300 bg-blue-50"
+                                                >
+                                                  {category}
+                                                </Badge>
+                                              )}
+                                            </h4>
+                                            <div className="flex items-center space-x-2 mt-1">
+                                              {weightConfidence > 0 && (
+                                                <Badge
+                                                  {...getWeightConfidenceBadge(weightConfidence)}
+                                                  className="text-xs h-4"
+                                                >
+                                                  AI:{' '}
+                                                  {getWeightConfidenceBadge(weightConfidence).text}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center space-x-3">
+                                          <div className="text-right">
+                                            <div className="text-lg font-bold text-green-600">
+                                              {currencyDisplay.formatSingleAmount(
+                                                Number(item.item_price) * Number(item.quantity),
+                                                'origin',
+                                              )}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              {currencyDisplay.formatSingleAmount(
+                                                Number(item.item_price || 0),
+                                                'origin',
+                                              )}{' '}
+                                              × {item.quantity || 1}
+                                            </div>
+                                          </div>
+                                          <div className="flex space-x-1">
+                                            {form.watch('items')?.length > 1 && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleRemoveItemConfirm(index)}
+                                                className="text-gray-400 hover:text-red-600 p-1 h-7 w-7"
+                                                title="Remove product"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Compact Product Form - World Class 2-Row Layout */}
+                                      <div className="space-y-3">
+                                        {/* Row 1: Name & URL */}
+                                        <div className="grid grid-cols-12 gap-3">
+                                          <div className="col-span-7">
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
+                                              Name *
+                                              <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
+                                            </label>
+                                            <input
+                                              type="text"
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                              value={item.product_name || ''}
+                                              onChange={(e) => {
+                                                const items = form.getValues('items') || [];
+                                                items[index] = {
+                                                  ...items[index],
+                                                  product_name: e.target.value,
+                                                };
+                                                form.setValue('items', items);
+
+                                                // Clear existing timeout for this item
+                                                const timeoutKey = index.toString();
+                                                if (estimationTimeouts[timeoutKey]) {
+                                                  clearTimeout(estimationTimeouts[timeoutKey]);
+                                                }
+
+                                                // Trigger weight estimation after a delay
+
+                                                const timeoutId = setTimeout(() => {
+                                                  estimateItemWeight(
+                                                    index,
+                                                    e.target.value,
+                                                    items[index].product_url,
+                                                  );
+                                                  // Also fetch HSN weight if item has HSN code
+                                                  if (items[index].hsn_code) {
+                                                    fetchHSNWeight(index, items[index].hsn_code);
+                                                  }
+                                                }, 800);
+
+                                                setEstimationTimeouts((prev) => ({
+                                                  ...prev,
+                                                  [timeoutKey]: timeoutId,
+                                                }));
+                                              }}
+                                              placeholder="iPhone 16 Pro Max"
+                                            />
+                                          </div>
+                                          <div className="col-span-5">
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                                              URL
+                                            </label>
+                                            <input
+                                              type="url"
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                              value={item.product_url || ''}
+                                              onChange={(e) => {
+                                                const items = form.getValues('items') || [];
+                                                items[index] = {
+                                                  ...items[index],
+                                                  product_url: e.target.value,
+                                                };
+                                                form.setValue('items', items);
+                                              }}
+                                              placeholder="amazon.com/..."
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Row 2: Inline Stripe Design - Quantity, Price, Weight, HSN all on one line */}
+                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                          <div className="flex items-center gap-4 flex-wrap">
+                                            {/* Quantity Field */}
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-gray-500 text-xs font-medium min-w-[30px]">QTY</span>
+                                              <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                                <input
+                                                  type="number"
+                                                  min="1"
+                                                  value={item.quantity || 1}
+                                                  onChange={(e) => {
+                                                    const items = form.getValues('items') || [];
+                                                    items[index] = {
+                                                      ...items[index],
+                                                      quantity: parseInt(e.target.value) || 1,
+                                                    };
+                                                    form.setValue('items', items);
+                                                  }}
+                                                  className="w-16 h-8 border-0 p-0 text-center text-sm font-medium"
+                                                  placeholder="1"
+                                                />
+                                              </div>
+                                            </div>
+
+                                            {/* Price Field */}
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-gray-500 text-xs font-medium min-w-[35px]">PRICE</span>
+                                              <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                                <DollarSign className="w-3 h-3 text-gray-400" />
+                                                <input
+                                                  type="number"
+                                                  step="0.01"
+                                                  min="0"
+                                                  value={item.item_price || ''}
+                                                  onChange={(e) => {
+                                                    const items = form.getValues('items') || [];
+                                                    items[index] = {
+                                                      ...items[index],
+                                                      item_price: parseFloat(e.target.value) || 0,
+                                                    };
+                                                    form.setValue('items', items);
+                                                  }}
+                                                  className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
+                                                  placeholder="1000"
+                                                />
+                                                <span className="text-xs text-gray-400 ml-1">{currencyDisplay.currencySymbols.origin}</span>
+                                              </div>
+                                            </div>
+
+                                            {/* Weight Field with Dropdown - Stripe Style */}
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
+                                              <div className="relative flex items-center">
+                                                <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                                  <Scale className="w-3 h-3 text-gray-400 mr-1" />
+                                                  <input
+                                                    type="number"
+                                                    step="0.001"
+                                                    min="0"
+                                                    value={item.item_weight || ''}
+                                                    onChange={(e) => {
+                                                      const items = form.getValues('items') || [];
+                                                      items[index] = {
+                                                        ...items[index],
+                                                        item_weight: parseFloat(e.target.value) || 0,
+                                                      };
+                                                      form.setValue('items', items);
+                                                    }}
+                                                    className="w-16 h-8 border-0 p-0 text-sm font-medium pr-8"
+                                                    placeholder="0.2"
+                                                  />
+                                                  <span className="absolute right-8 text-xs text-gray-400 pointer-events-none">kg</span>
+                                                  
+                                                  {/* Dropdown Arrow for Weight Suggestions */}
+                                                  {(hsnWeights[index.toString()] || weightEstimations[index.toString()]) && (
+                                                    <Popover>
+                                                      <PopoverTrigger asChild>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          className="absolute right-0 h-8 w-8 p-0 hover:bg-gray-50"
+                                                          type="button"
+                                                        >
+                                                          <ChevronDown className="w-3 h-3 text-gray-500" />
+                                                        </Button>
+                                                      </PopoverTrigger>
+                                                      <PopoverContent className="w-56 p-2" align="start">
+                                                        <div className="space-y-1">
+                                                          <div className="text-xs font-medium text-gray-900 px-2 py-1">
+                                                            Weight Suggestions
+                                                          </div>
+                                                          {hsnWeights[index.toString()] && (
+                                                            <button
+                                                              onClick={() => handleWeightSelection(index, hsnWeights[index.toString()]!.average, 'hsn')}
+                                                              className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-gray-50 transition-colors"
+                                                            >
+                                                              <div className="flex items-center gap-2">
+                                                                <span className="font-medium">{hsnWeights[index.toString()]!.average}kg</span>
+                                                                <span className="text-xs text-gray-500 uppercase">HSN</span>
+                                                              </div>
+                                                              <div className="text-xs text-green-600">
+                                                                {Math.round(hsnWeights[index.toString()]!.confidence * 100)}% confident
+                                                              </div>
+                                                            </button>
+                                                          )}
+                                                          {weightEstimations[index.toString()] && (
+                                                            <button
+                                                              onClick={() => handleWeightSelection(index, weightEstimations[index.toString()].estimated_weight, 'ml')}
+                                                              className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-gray-50 transition-colors"
+                                                            >
+                                                              <div className="flex items-center gap-2">
+                                                                <span className="font-medium">{weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg</span>
+                                                                <span className="text-xs text-gray-500 uppercase">AI</span>
+                                                              </div>
+                                                              <div className="text-xs text-blue-600">
+                                                                {Math.round(weightEstimations[index.toString()].confidence * 100)}% confident
+                                                              </div>
+                                                            </button>
+                                                          )}
+                                                        </div>
+                                                      </PopoverContent>
+                                                    </Popover>
+                                                  )}
+                                                  
+                                                  {/* Loading indicator */}
+                                                  {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
+                                                    <div className="absolute right-8 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            {/* HSN Field */}
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
+                                              <div className="flex items-center">
+                                                {item.hsn_code ? (
+                                                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                                    <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
+                                                      <Tag className="w-3 h-3 mr-1" />
+                                                      {item.hsn_code}
+                                                    </Badge>
+                                                    <SmartHSNSearch
+                                                      currentHSNCode={item.hsn_code}
+                                                      productName={item.product_name}
+                                                      onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                                      size="sm"
+                                                      compact={true}
+                                                      trigger={
+                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-2">
+                                                          <Edit className="w-3 h-3" />
+                                                        </Button>
+                                                      }
+                                                    />
+                                                  </div>
+                                                ) : (
+                                                  <SmartHSNSearch
+                                                    currentHSNCode={undefined}
+                                                    productName={item.product_name}
+                                                    onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                                    size="sm"
+                                                    compact={true}
+                                                    trigger={
+                                                      <Button variant="outline" size="sm" className="h-8 text-xs">
+                                                        <Search className="w-3 h-3 mr-1" />
+                                                        Search HSN
+                                                      </Button>
+                                                    }
+                                                  />
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          
+                                          {/* HSN Category Display */}
+                                          {item.category && (
+                                            <div className="mt-2 text-xs text-gray-600">
+                                              <Tag className="w-3 h-3 inline mr-1" />
+                                              {item.category}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Customer Notes - Professional Inline Style */}
+                                      {item.options && item.options.trim() && (
+                                        <div className="mt-2 px-3 py-2 bg-gray-50 border-l-4 border-gray-300 rounded-r-md">
+                                          <div className="flex items-start space-x-2">
+                                            <MessageCircle className="w-3 h-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                                            <div className="text-xs text-gray-600">
+                                              <span className="font-medium text-gray-700">
+                                                Customer Note:
+                                              </span>
+                                              <span className="ml-1">{item.options}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* AI Insights */}
+                                      {(optimizationHints.length > 0 ||
+                                        customsSuggestions.length > 0) && (
+                                        <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                                          <div className="flex items-center text-sm font-medium text-gray-800 mb-3">
+                                            <Lightbulb className="w-4 h-4 mr-2 text-amber-500" />
+                                            AI Insights
+                                          </div>
+
+                                          {optimizationHints.length > 0 && (
+                                            <div className="mb-3">
+                                              <span className="text-sm font-medium text-gray-700">
+                                                Optimization Tips:
+                                              </span>
+                                              <ul className="mt-1 space-y-1 text-sm text-gray-600">
+                                                {optimizationHints.map((hint, hintIndex) => (
+                                                  <li key={hintIndex} className="flex items-start">
+                                                    <span className="inline-block w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                                                    {hint}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          )}
+
+                                          {customsSuggestions.length > 0 && (
+                                            <div>
+                                              <span className="text-sm font-medium text-gray-700">
+                                                Customs Suggestions:
+                                              </span>
+                                              <div className="mt-2 flex flex-wrap gap-2">
+                                                {customsSuggestions.map(
+                                                  (suggestion, suggestionIndex) => (
+                                                    <span
+                                                      key={suggestionIndex}
+                                                      className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
+                                                    >
+                                                      {suggestion}
+                                                    </span>
+                                                  ),
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              } catch (error) {
+                                return (
+                                  <div
+                                    key={`render-error-${index}`}
+                                    className="p-4 border-b border-red-200 bg-red-50"
+                                  >
+                                    <div className="text-red-600 text-sm">
+                                      ⚠️ Error rendering item {index + 1}:{' '}
+                                      {error instanceof Error ? error.message : 'Unknown error'}
+                                    </div>
+                                    <button
+                                      className="mt-2 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
+                                      onClick={() => {
+                                        const items = form.getValues('items') || [];
+                                        items.splice(index, 1);
+                                        form.setValue('items', items);
+                                      }}
+                                    >
+                                      Remove Item
+                                    </button>
+                                  </div>
+                                );
+                              }
+                            });
+                          } catch (error) {
                             return (
                               <div className="p-8 text-center text-red-500">
                                 <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
-                                <p className="text-sm">Data structure error</p>
-                                <p className="text-xs mt-1">Form items is not properly formatted</p>
-                                <button 
+                                <p className="text-sm">Critical rendering error</p>
+                                <p className="text-xs mt-1">
+                                  {error instanceof Error ? error.message : 'Unknown error'}
+                                </p>
+                                <button
                                   className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
                                   onClick={() => window.location.reload()}
                                 >
@@ -2347,450 +2490,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               </div>
                             );
                           }
-                          
-                          if (items.length === 0) {
-                            return null; // Handled by the "No items" section above
-                          }
-                          
-                          return items.map((item, index) => {
-                            try {
-                              // Validate item structure
-                              if (!item || typeof item !== 'object') {
-                                console.error(`🚨 Invalid item at index ${index}:`, item);
-                                return (
-                                  <div key={`error-${index}`} className="p-4 border-b border-red-200 bg-red-50">
-                                    <div className="text-red-600 text-sm">
-                                      ⚠️ Item {index + 1} has invalid data structure
-                                    </div>
-                                  </div>
-                                );
-                              }
-                        const smartData = quote?.items[index]?.smart_data;
-                        const weightConfidence = smartData?.weight_confidence || 0;
-                        const category = smartData?.category_detected;
-                        const optimizationHints = smartData?.optimization_hints || [];
-                        const customsSuggestions = smartData?.customs_suggestions || [];
-
-                        const getWeightConfidenceBadge = (confidence: number) => {
-                          if (confidence >= 0.8)
-                            return {
-                              variant: 'default' as const,
-                              text: 'High',
-                              color: 'text-green-600',
-                            };
-                          if (confidence >= 0.6)
-                            return {
-                              variant: 'secondary' as const,
-                              text: 'Medium',
-                              color: 'text-yellow-600',
-                            };
-                          return {
-                            variant: 'destructive' as const,
-                            text: 'Low',
-                            color: 'text-red-600',
-                          };
-                        };
-
-                        return (
-                          <div
-                            key={item.id || index}
-                            className={`border-b border-gray-200 ${index === 0 ? 'border-t' : ''} hover:bg-gray-50/50 transition-colors`}
-                          >
-                            <div className="p-4 space-y-3">
-                              {/* Compact Product Header */}
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-gray-900 flex items-center">
-                                      Product {index + 1}
-                                      {category && (
-                                        <Badge
-                                          variant="outline"
-                                          className="ml-2 text-xs text-blue-600 border-blue-300 bg-blue-50"
-                                        >
-                                          {category}
-                                        </Badge>
-                                      )}
-                                    </h4>
-                                    <div className="flex items-center space-x-2 mt-1">
-                                      {weightConfidence > 0 && (
-                                        <Badge
-                                          {...getWeightConfidenceBadge(weightConfidence)}
-                                          className="text-xs h-4"
-                                        >
-                                          AI: {getWeightConfidenceBadge(weightConfidence).text}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                  <div className="text-right">
-                                    <div className="text-lg font-bold text-green-600">
-                                      {currencyDisplay.formatSingleAmount(
-                                        Number(item.item_price) * Number(item.quantity),
-                                        'origin',
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {currencyDisplay.formatSingleAmount(
-                                        Number(item.item_price || 0),
-                                        'origin',
-                                      )}{' '}
-                                      × {item.quantity || 1}
-                                    </div>
-                                  </div>
-                                  <div className="flex space-x-1">
-                                    {form.watch('items')?.length > 1 && (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleRemoveItemConfirm(index)}
-                                        className="text-gray-400 hover:text-red-600 p-1 h-7 w-7"
-                                        title="Remove product"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Compact Product Form - World Class 2-Row Layout */}
-                              <div className="space-y-3">
-                                {/* Row 1: Name & URL */}
-                                <div className="grid grid-cols-12 gap-3">
-                                  <div className="col-span-7">
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
-                                      Name *
-                                      <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
-                                    </label>
-                                    <input
-                                      type="text"
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                      value={item.product_name || ''}
-                                      onChange={(e) => {
-                                        console.log('Product name changed:', {
-                                          index,
-                                          value: e.target.value,
-                                        });
-                                        const items = form.getValues('items') || [];
-                                        items[index] = {
-                                          ...items[index],
-                                          product_name: e.target.value,
-                                        };
-                                        form.setValue('items', items);
-
-                                        // Clear existing timeout for this item
-                                        const timeoutKey = index.toString();
-                                        if (estimationTimeouts[timeoutKey]) {
-                                          console.log(
-                                            '🕐 Clearing existing timeout for:',
-                                            timeoutKey,
-                                          );
-                                          clearTimeout(estimationTimeouts[timeoutKey]);
-                                        }
-
-                                        // Trigger weight estimation after a delay
-                                        console.log('⏲️ Setting timeout for weight estimation...');
-                                        const timeoutId = setTimeout(() => {
-                                          console.log(
-                                            'Timeout triggered, calling estimateItemWeight',
-                                          );
-                                          estimateItemWeight(
-                                            index,
-                                            e.target.value,
-                                            items[index].product_url,
-                                          );
-                                          // Also fetch HSN weight if item has HSN code
-                                          if (items[index].hsn_code) {
-                                            fetchHSNWeight(index, items[index].hsn_code);
-                                          }
-                                        }, 800);
-
-                                        setEstimationTimeouts((prev) => ({
-                                          ...prev,
-                                          [timeoutKey]: timeoutId,
-                                        }));
-                                      }}
-                                      placeholder="iPhone 16 Pro Max"
-                                    />
-                                  </div>
-                                  <div className="col-span-5">
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                                      URL
-                                    </label>
-                                    <input
-                                      type="url"
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                      value={item.product_url || ''}
-                                      onChange={(e) => {
-                                        const items = form.getValues('items') || [];
-                                        items[index] = {
-                                          ...items[index],
-                                          product_url: e.target.value,
-                                        };
-                                        form.setValue('items', items);
-                                      }}
-                                      placeholder="amazon.com/..."
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Row 2: Pricing & Specifications - Compact Grid */}
-                                <div className="grid grid-cols-10 gap-3">
-                                  <div className="col-span-4">
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
-                                      Price *
-                                      <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
-                                    </label>
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
-                                        {currencyDisplay.currencySymbols.origin}
-                                      </span>
-                                      <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
-                                        value={item.item_price || ''}
-                                        onChange={(e) => {
-                                          const items = form.getValues('items') || [];
-                                          items[index] = {
-                                            ...items[index],
-                                            item_price: parseFloat(e.target.value) || 0,
-                                          };
-                                          form.setValue('items', items);
-                                        }}
-                                        placeholder="1,000.00"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="col-span-4">
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
-                                      Weight
-                                      {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
-                                        <div className="ml-2 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                      )}
-                                    </label>
-                                    <div className="relative">
-                                      <input
-                                        type="number"
-                                        step="0.001"
-                                        min="0"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        value={item.item_weight || ''}
-                                        onChange={(e) => {
-                                          const items = form.getValues('items') || [];
-                                          items[index] = {
-                                            ...items[index],
-                                            item_weight: parseFloat(e.target.value) || 0,
-                                          };
-                                          form.setValue('items', items);
-                                        }}
-                                        placeholder="0.2"
-                                      />
-                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                        kg
-                                      </span>
-                                    </div>
-                                    
-                                    {/* Dual Weight Suggestions */}
-                                    {(hsnWeights[index.toString()] || weightEstimations[index.toString()]) && (
-                                      <div className="mt-2">
-                                        <DualWeightSuggestions
-                                          hsnWeight={hsnWeights[index.toString()] ? {
-                                            ...hsnWeights[index.toString()]!,
-                                            source: 'hsn' as const
-                                          } : undefined}
-                                          mlWeight={weightEstimations[index.toString()] ? {
-                                            estimated: weightEstimations[index.toString()].estimated_weight,
-                                            confidence: weightEstimations[index.toString()].confidence,
-                                            reasoning: weightEstimations[index.toString()].reasoning,
-                                            source: 'ml' as const
-                                          } : undefined}
-                                          currentWeight={item.item_weight || undefined}
-                                          onSelectWeight={(weight, source) => handleWeightSelection(index, weight, source)}
-                                          isLoading={isEstimating[index.toString()] || isLoadingHSN[index.toString()]}
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* HSN Code Assignment Section */}
-                                  <div className="col-span-6">
-                                    <label className="block text-xs font-semibold text-gray-700 mb-2 flex items-center">
-                                      <Tag className="w-3 h-3 mr-1" />
-                                      HSN Classification
-                                      {!item.hsn_code && (
-                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                                          Unclassified
-                                        </span>
-                                      )}
-                                    </label>
-                                    
-                                    {item.hsn_code ? (
-                                      <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center space-x-2">
-                                            <span className="font-mono font-bold text-green-700">{item.hsn_code}</span>
-                                            <span className="text-sm text-green-600">{item.category || 'General'}</span>
-                                          </div>
-                                          <SmartHSNSearch
-                                            currentHSNCode={item.hsn_code}
-                                            productName={item.product_name}
-                                            onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
-                                            placeholder="Search HSN code for this product..."
-                                            size="sm"
-                                          />
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                                        <div className="flex items-center justify-between">
-                                          <div className="text-sm text-amber-700">
-                                            <div className="font-medium">HSN code not assigned</div>
-                                            <div className="text-xs">Tax calculations use fallback rates</div>
-                                          </div>
-                                          <SmartHSNSearch
-                                            currentHSNCode={undefined}
-                                            productName={item.product_name}
-                                            onHSNSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
-                                            placeholder="Search HSN code for this product..."
-                                            size="sm"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="col-span-2">
-                                    <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center">
-                                      Qty *
-                                      <span className="ml-1 w-1 h-1 bg-red-500 rounded-full"></span>
-                                    </label>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                      value={item.quantity || 1}
-                                      onChange={(e) => {
-                                        const items = form.getValues('items') || [];
-                                        items[index] = {
-                                          ...items[index],
-                                          quantity: parseInt(e.target.value) || 1,
-                                        };
-                                        form.setValue('items', items);
-                                      }}
-                                      placeholder="1"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-
-
-                              {/* Customer Notes - Professional Inline Style */}
-                              {item.options && item.options.trim() && (
-                                <div className="mt-2 px-3 py-2 bg-gray-50 border-l-4 border-gray-300 rounded-r-md">
-                                  <div className="flex items-start space-x-2">
-                                    <MessageCircle className="w-3 h-3 text-gray-500 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-gray-600">
-                                      <span className="font-medium text-gray-700">
-                                        Customer Note:
-                                      </span>
-                                      <span className="ml-1">{item.options}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* AI Insights */}
-                              {(optimizationHints.length > 0 || customsSuggestions.length > 0) && (
-                                <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                                  <div className="flex items-center text-sm font-medium text-gray-800 mb-3">
-                                    <Lightbulb className="w-4 h-4 mr-2 text-amber-500" />
-                                    AI Insights
-                                  </div>
-
-                                  {optimizationHints.length > 0 && (
-                                    <div className="mb-3">
-                                      <span className="text-sm font-medium text-gray-700">
-                                        Optimization Tips:
-                                      </span>
-                                      <ul className="mt-1 space-y-1 text-sm text-gray-600">
-                                        {optimizationHints.map((hint, hintIndex) => (
-                                          <li key={hintIndex} className="flex items-start">
-                                            <span className="inline-block w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
-                                            {hint}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                  {customsSuggestions.length > 0 && (
-                                    <div>
-                                      <span className="text-sm font-medium text-gray-700">
-                                        Customs Suggestions:
-                                      </span>
-                                      <div className="mt-2 flex flex-wrap gap-2">
-                                        {customsSuggestions.map((suggestion, suggestionIndex) => (
-                                          <span
-                                            key={suggestionIndex}
-                                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                                          >
-                                            {suggestion}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                            } catch (error) {
-                              console.error(`🚨 Error rendering item ${index}:`, error, item);
-                              return (
-                                <div key={`render-error-${index}`} className="p-4 border-b border-red-200 bg-red-50">
-                                  <div className="text-red-600 text-sm">
-                                    ⚠️ Error rendering item {index + 1}: {error instanceof Error ? error.message : 'Unknown error'}
-                                  </div>
-                                  <button 
-                                    className="mt-2 px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                    onClick={() => {
-                                      console.log('Item causing error:', item);
-                                      const items = form.getValues('items') || [];
-                                      items.splice(index, 1);
-                                      form.setValue('items', items);
-                                    }}
-                                  >
-                                    Remove Item
-                                  </button>
-                                </div>
-                              );
-                            }
-                          });
-                        } catch (error) {
-                          console.error('🚨 Critical error in item rendering:', error);
-                          return (
-                            <div className="p-8 text-center text-red-500">
-                              <Package className="w-12 h-12 mx-auto mb-3 text-red-300" />
-                              <p className="text-sm">Critical rendering error</p>
-                              <p className="text-xs mt-1">{error instanceof Error ? error.message : 'Unknown error'}</p>
-                              <button 
-                                className="mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                onClick={() => window.location.reload()}
-                              >
-                                Reload Page
-                              </button>
-                            </div>
-                          );
-                        }
-                      })()}
+                        })()}
                     </CardContent>
                   </Card>
 
@@ -2815,15 +2515,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   {(() => {
                     // Calculate default values for handling and insurance
                     if (!liveQuote) {
-                      console.log('🔧 [DEBUG] No liveQuote available');
                       return null;
                     }
 
                     // Wait for shipping options to be loaded
                     if (!shippingOptions || shippingOptions.length === 0) {
-                      console.log(
-                        '🔧 [DEBUG] Shipping options not loaded yet, showing form without defaults',
-                      );
                       // Show form without defaults while waiting for shipping options
                       return (
                         <QuoteDetailForm
@@ -2855,34 +2551,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     const normalizedId = normalizeShippingOptionId(selectedOptionId);
                     const selectedOption = shippingOptions.find((opt) => opt.id === normalizedId);
 
-                    console.log('🔧 [DEBUG] Shipping option matching:', {
-                      originalId: selectedOptionId,
-                      normalizedId,
-                      foundOption: selectedOption?.id,
-                      availableOptions: shippingOptions.map((opt) => opt.id),
-                      shippingOptionsCount: shippingOptions.length,
-                      firstOptionSample: shippingOptions[0],
-                    });
-
                     // Additional debug for the exact matching logic
-                    console.log('🔧 [DEBUG] Detailed matching attempt:', {
-                      searchingFor: normalizedId,
-                      matches: shippingOptions.map((opt) => ({
-                        id: opt.id,
-                        matches: opt.id === normalizedId,
-                        hasHandling: !!opt.handling_charge,
-                        hasInsurance: !!opt.insurance_options,
-                      })),
-                    });
 
                     // If no selected option found, try to create a fallback from the shipping route
                     let fallbackOption = null;
                     if (!selectedOption && normalizedId) {
-                      console.log(
-                        '🔧 [DEBUG] Attempting to create fallback option for:',
-                        normalizedId,
-                      );
-
                       // Try to create a basic option structure for calculation
                       fallbackOption = {
                         id: normalizedId,
@@ -2945,8 +2618,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                   }
                                 : undefined,
                       };
-
-                      console.log('🔧 [DEBUG] Created fallback option:', fallbackOption);
                     }
 
                     const optionToUse = selectedOption || fallbackOption;
@@ -2956,13 +2627,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     );
 
                     // Debug: Check current breakdown structure
-                    console.log('🔧 [DEBUG] Current breakdown structure:', {
-                      quoteId: liveQuote.id,
-                      breakdown: liveQuote.calculation_data?.breakdown,
-                      hasHandling: !!liveQuote.calculation_data?.breakdown?.handling,
-                      hasInsurance: !!liveQuote.calculation_data?.breakdown?.insurance,
-                      oldFeesValue: liveQuote.calculation_data?.breakdown?.fees,
-                    });
 
                     return (
                       <QuoteDetailForm
@@ -3016,18 +2680,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     </Button>
                     <Button
                       onClick={async () => {
-                        console.log('💾 [EDIT-SAVE] Save button clicked');
-                        console.log('💾 [EDIT-SAVE] Current form values:', form.getValues());
-
                         // Trigger validation
                         const isValid = await form.trigger();
-                        console.log('💾 [EDIT-SAVE] Form is valid:', isValid);
 
                         if (isValid) {
                           // Direct function call instead of form.handleSubmit()
                           await onFormSubmit(form.getValues());
                         } else {
-                          console.log('❌ [EDIT-SAVE] Form errors:', form.formState.errors);
                           toast({
                             title: 'Form Validation Failed',
                             description: 'Please check your inputs and try again.',
@@ -3056,6 +2715,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 editMode={isEditMode}
               />
 
+              {/* Tax Calculation Settings */}
+              <QuoteTaxSettings
+                quote={liveQuote || quote}
+                onMethodChange={handleTaxMethodChange}
+                isEditMode={isEditMode}
+              />
+
               {/* Status Management - Outside form to prevent submission conflicts */}
               <CompactStatusManager
                 quote={liveQuote || quote}
@@ -3063,26 +2729,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 compact={true}
               />
 
-              {/* Tax Calculation Sidebar - Comprehensive Tax Information */}
-              <TaxCalculationSidebar
-                quote={liveQuote || quote}
-                isCalculating={isCalculating}
-                editMode={isEditMode}
-                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
-                onUpdateQuote={loadQuoteData}
-                onMethodChange={handleTaxMethodChange}
-                onValuationChange={handleValuationMethodChange}
-              />
-
               {/* HSN Tax Breakdown - Item-level tax transparency */}
-              <CompactHSNTaxBreakdown
-                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
-                quote={liveQuote || quote}
-                isCalculating={isCalculating}
-                compact={true}
-                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
-                onUpdateQuote={loadQuoteData}
-              />
+              {isEditMode && (
+                <CompactHSNTaxBreakdown
+                  key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
+                  quote={liveQuote || quote}
+                  isCalculating={isCalculating}
+                  compact={true}
+                  onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
+                  onUpdateQuote={loadQuoteData}
+                />
+              )}
 
               {/* Shipping Options or Configuration Prompt */}
               {shippingOptions.length > 0 ? (
@@ -3121,24 +2778,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   compact={true}
                 />
               )}
-
-              {/* Tax Calculation Sidebar - HSN Transparency */}
-              <TaxCalculationSidebar
-                quote={liveQuote || quote}
-                isCalculating={isCalculating}
-                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
-                onUpdateQuote={loadQuoteData}
-              />
-
-              {/* HSN Tax Breakdown - Item-level tax transparency */}
-              <CompactHSNTaxBreakdown
-                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
-                quote={liveQuote || quote}
-                isCalculating={isCalculating}
-                compact={true}
-                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
-                onUpdateQuote={loadQuoteData}
-              />
 
               {/* Live Cost Breakdown - Essential Financial Summary */}
               <CompactCalculationBreakdown
@@ -3277,24 +2916,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Tax Calculation Sidebar - HSN Transparency */}
-              <TaxCalculationSidebar
-                quote={liveQuote || quote}
-                isCalculating={isCalculating}
-                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
-                onUpdateQuote={loadQuoteData}
-              />
-
-              {/* HSN Tax Breakdown - Item-level tax transparency */}
-              <CompactHSNTaxBreakdown
-                key={`hsn-${quote?.id}-${quote?.updated_at || Date.now()}`}
-                quote={liveQuote || quote}
-                isCalculating={isCalculating}
-                compact={true}
-                onRecalculate={() => calculateSmartFeatures(liveQuote || quote)}
-                onUpdateQuote={loadQuoteData}
-              />
 
               {/* Cost Breakdown - Professional Financial Summary */}
               <CompactCalculationBreakdown

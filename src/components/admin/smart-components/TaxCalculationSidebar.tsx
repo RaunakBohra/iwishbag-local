@@ -46,6 +46,7 @@ interface TaxCalculationSidebarProps {
   onRecalculate?: () => void;
   onUpdateQuote?: () => void;
   editMode?: boolean;
+  currentMethod?: string;
   onMethodChange?: (method: string, metadata?: any) => void;
   onValuationChange?: (itemId: string, method: string, amount?: number) => void;
   className?: string;
@@ -57,6 +58,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
   onRecalculate,
   onUpdateQuote,
   editMode = false,
+  currentMethod,
   onMethodChange,
   onValuationChange,
   className = '',
@@ -142,7 +144,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     const classificationProgress = totalItems > 0 ? (itemsWithHSN / totalItems) * 100 : 0;
     
     // Tax Calculation Method Analysis
-    const calculationMethod = quote.calculation_method_preference || 'auto';
+    const calculationMethod = currentMethod || quote.calculation_method_preference || 'auto';
     const isUsingHSNMethod = calculationMethod === 'hsn_based' || (calculationMethod === 'auto' && itemsWithHSN > 0);
     
     console.log(`📊 [TaxAnalytics] Current method: ${calculationMethod}, Quote ID: ${quote.id}, Items: ${totalItems}, HSN: ${itemsWithHSN}`);

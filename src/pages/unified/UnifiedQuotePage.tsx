@@ -26,8 +26,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 // Import our unified components
-import { UnifiedQuoteCard } from '@/components/unified/UnifiedQuoteCard';
-import { UnifiedQuoteBreakdown } from '@/components/unified/UnifiedQuoteBreakdown';
+// import { UnifiedQuoteCard } from '@/components/unified/UnifiedQuoteCard';
+// import { UnifiedQuoteBreakdown } from '@/components/unified/UnifiedQuoteBreakdown';
 import { UnifiedQuoteActions } from '@/components/unified/UnifiedQuoteActions';
 import { UnifiedQuoteForm } from '@/components/unified/UnifiedQuoteForm';
 import { QuoteThemeProvider, useQuoteTheme } from '@/contexts/QuoteThemeContext';
@@ -465,12 +465,12 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
           ) : quote ? (
             <>
               {/* Quote Card */}
-              <UnifiedQuoteCard
+              {/* <UnifiedQuoteCard
                 quote={quote}
                 viewMode={viewMode}
                 layout="card"
                 className="shadow-sm"
-              />
+              /> */}
 
               {/* Expandable Breakdown */}
               <Card className="shadow-sm">
@@ -594,7 +594,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-6">
-              <UnifiedQuoteCard quote={quote} viewMode={viewMode} layout="detail" />
+              {/* <UnifiedQuoteCard quote={quote} viewMode={viewMode} layout="detail" /> */}
 
               <UnifiedQuoteActions
                 quote={quote}

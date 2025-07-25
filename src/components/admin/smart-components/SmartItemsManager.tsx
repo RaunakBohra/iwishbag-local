@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
-import { DualWeightSuggestions } from '@/components/admin/smart-weight-field/DualWeightSuggestions';
+import { SingleLineProductFields } from '@/components/admin/ultra-compact-selectors/SingleLineProductFields';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
@@ -59,7 +59,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
   });
 
   // HSN assignment state
-  const [isUpdatingHSN, setIsUpdatingHSN] = useState<string | null>(null);
 
   const getWeightConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'text-green-600';
@@ -97,7 +96,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
         throw new Error('Failed to delete item');
       }
     } catch (error) {
-      console.error('Error deleting item:', error);
       toast({
         title: 'Delete failed',
         description: 'Failed to delete item. Please try again.',
@@ -132,7 +130,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
         throw new Error('Failed to update item');
       }
     } catch (error) {
-      console.error('Error updating item:', error);
       toast({
         title: 'Update failed',
         description: 'Failed to update item. Please try again.',
@@ -167,7 +164,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
         throw new Error('Failed to add item');
       }
     } catch (error) {
-      console.error('Error adding item:', error);
       toast({
         title: 'Add failed',
         description: 'Failed to add item. Please try again.',
@@ -176,35 +172,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
     }
   };
 
-  // Handler for inline HSN assignment
-  const handleInlineHSNAssignment = async (itemId: string, hsnData: any) => {
-    setIsUpdatingHSN(itemId);
-    try {
-      const success = await unifiedDataEngine.updateItem(quote.id, itemId, {
-        hsn_code: hsnData.hsn_code,
-        category: hsnData.category,
-      });
-
-      if (success) {
-        toast({
-          title: 'HSN code assigned',
-          description: `HSN ${hsnData.hsn_code} assigned to ${hsnData.display_name}`,
-        });
-        onUpdateQuote(); // Refresh quote data and recalculate
-      } else {
-        throw new Error('Failed to update HSN code');
-      }
-    } catch (error) {
-      console.error('Error updating HSN code:', error);
-      toast({
-        title: 'HSN assignment failed',
-        description: 'Failed to assign HSN code. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdatingHSN(null);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -274,9 +241,14 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                       <span className="text-gray-600">HSN Code:</span>
                       <div className="flex items-center space-x-1">
                         {item.hsn_code ? (
-                          <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
-                            {item.hsn_code}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300 w-fit">
+                              {item.hsn_code}
+                            </Badge>
+                            {item.category && (
+                              <span className="text-xs text-gray-500">{item.category}</span>
+                            )}
+                          </div>
                         ) : (
                           <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 border-amber-300">
                             Not Assigned
@@ -329,6 +301,20 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                         </Badge>
                       )}
                     </div>
+                    
+                    {/* HSN Details */}
+                    {item.hsn_code && (
+                      <div className="flex items-start space-x-2">
+                        <Tag className="w-3 h-3 text-gray-400 mt-0.5" />
+                        <div className="text-xs">
+                          <span className="text-gray-600">HSN Classification: </span>
+                          <span className="font-medium text-gray-800">{item.hsn_code}</span>
+                          {item.category && (
+                            <span className="text-gray-600"> - {item.category}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Category Detection */}
                     {item.smart_data?.category_detected && (
@@ -374,32 +360,6 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                     )}
                   </div>
 
-                  {/* Inline HSN Assignment for Unclassified Items */}
-                  {!item.hsn_code && (
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Tag className="w-4 h-4 text-amber-600" />
-                        <span className="text-sm font-medium text-amber-800">
-                          HSN Classification Required
-                        </span>
-                        {isUpdatingHSN === item.id && (
-                          <div className="flex items-center space-x-1">
-                            <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
-                            <span className="text-xs text-amber-700">Saving...</span>
-                          </div>
-                        )}
-                      </div>
-                      <SmartHSNSearch
-                        currentHSNCode=""
-                        productName={item.name}
-                        onHSNSelect={(hsn) => handleInlineHSNAssignment(item.id, hsn)}
-                        placeholder="Search HSN for this product..."
-                        size="sm"
-                        compact={true}
-                        disabled={isUpdatingHSN === item.id}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Actions */}
@@ -577,7 +537,6 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
         const weight = await hsnWeightService.getHSNWeight(currentHSN);
         setHsnWeight(weight);
       } catch (error) {
-        console.error('Error fetching HSN weight:', error);
         setHsnWeight(null);
       } finally {
         setIsLoadingHSN(false);
@@ -596,7 +555,6 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
           const estimation = await smartWeightEstimator.estimateWeight(editForm.name);
           setMlEstimation(estimation);
         } catch (error) {
-          console.error('Weight estimation error:', error);
         } finally {
           setIsEstimating(false);
         }
@@ -642,9 +600,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
             originalEstimate: mlEstimation.estimated_weight,
           },
         );
-        console.log('✅ ML learning completed from item edit');
       } catch (error) {
-        console.error('Error learning from edit:', error);
       }
     }
 
@@ -681,37 +637,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={editForm.quantity}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="price">Price ({currencyDisplay.originCurrency})</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={editForm.price_usd}
-                onChange={(e) =>
-                  setEditForm((prev) => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))
-                }
-              />
-            </div>
-          </div>
-
+          {/* Inline Product Fields - Quantity, Price, Weight, HSN */}
           <div>
-            <Label htmlFor="weight" className="flex items-center space-x-2">
-              <span>Weight (kg)</span>
+            <Label className="flex items-center space-x-2 mb-2">
+              <span>Product Details</span>
               {(isEstimating || isLoadingHSN) && (
                 <div className="flex items-center space-x-1">
                   <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -721,64 +650,145 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                 </div>
               )}
             </Label>
-            <Input
-              id="weight"
-              type="number"
-              step="0.001"
-              min="0"
-              value={editForm.weight_kg}
-              onChange={(e) => {
-                setEditForm((prev) => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }));
-                setSelectedWeightSource('manual');
-              }}
-            />
+            
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Quantity Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[30px]">QTY</span>
+                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                    <Input
+                      type="number"
+                      value={editForm.quantity}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, quantity: Number(e.target.value) }))}
+                      className="w-16 h-8 border-0 p-0 text-center text-sm font-medium"
+                      min="1"
+                    />
+                  </div>
+                </div>
 
-            {/* Dual Weight Suggestions */}
-            {(hsnWeight || mlEstimation) && (
-              <DualWeightSuggestions
-                hsnWeight={hsnWeight ? {
-                  ...hsnWeight,
-                  source: 'hsn' as const
-                } : undefined}
-                mlWeight={mlEstimation ? {
-                  estimated: mlEstimation.estimated_weight,
-                  confidence: mlEstimation.confidence,
-                  reasoning: mlEstimation.reasoning,
-                  source: 'ml' as const
-                } : undefined}
-                currentWeight={editForm.weight_kg}
-                onSelectWeight={handleSelectWeight}
-                isLoading={isEstimating || isLoadingHSN}
-              />
-            )}
-          </div>
+                {/* Price Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[35px]">PRICE</span>
+                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                    <DollarSign className="w-3 h-3 text-gray-400" />
+                    <Input
+                      type="number"
+                      value={editForm.price_usd}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, price_usd: Number(e.target.value) }))}
+                      className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
+                      step="0.01"
+                      min="0"
+                    />
+                    <span className="text-xs text-gray-400 ml-1">{currencyDisplay.originCurrency}</span>
+                  </div>
+                </div>
 
-          {/* HSN Classification Section */}
-          <div>
-            <Label className="flex items-center space-x-2">
-              <Tag className="w-4 h-4" />
-              <span>HSN Classification</span>
-            </Label>
-            <SmartHSNSearch
-              currentHSNCode={editForm.hsn_code}
-              productName={editForm.name}
-              onHSNSelect={(hsn) => {
-                setEditForm(prev => ({
-                  ...prev,
-                  hsn_code: hsn.hsn_code,
-                  category: hsn.category
-                }));
-              }}
-              placeholder="Search HSN by product name..."
-              size="default"
-            />
-            {editForm.category && (
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs">
-                  Category: {editForm.category}
-                </Badge>
+                {/* Weight Field with Suggestions */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
+                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                    <Scale className="w-3 h-3 text-gray-400" />
+                    <Input
+                      type="number"
+                      value={editForm.weight_kg}
+                      onChange={(e) => {
+                        setEditForm(prev => ({ ...prev, weight_kg: Number(e.target.value) }));
+                        setSelectedWeightSource('manual');
+                      }}
+                      className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
+                      step="0.01"
+                      min="0"
+                    />
+                    <span className="text-xs text-gray-400 ml-1">kg</span>
+                  </div>
+                  
+                  {/* Weight Suggestions */}
+                  {(hsnWeight || mlEstimation) && (
+                    <div className="flex gap-1">
+                      {hsnWeight && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleSelectWeight(hsnWeight.average, 'hsn')}
+                        >
+                          HSN: {hsnWeight.average}kg
+                        </Button>
+                      )}
+                      {mlEstimation && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleSelectWeight(mlEstimation.estimated_weight, 'ml')}
+                        >
+                          AI: {mlEstimation.estimated_weight.toFixed(2)}kg
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* HSN Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
+                  <div className="flex items-center">
+                    {editForm.hsn_code ? (
+                      <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                        <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {editForm.hsn_code}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 ml-2"
+                          onClick={() => {
+                            setEditForm(prev => ({
+                              ...prev,
+                              hsn_code: '',
+                              category: ''
+                            }));
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <SmartHSNSearch
+                        onSelect={(hsn) => {
+                          setEditForm(prev => ({
+                            ...prev,
+                            hsn_code: hsn.code,
+                            category: hsn.description
+                          }));
+                        }}
+                        productName={editForm.name}
+                        compact={true}
+                        trigger={
+                          <Button variant="outline" size="sm" className="h-8 text-xs">
+                            <Search className="w-3 h-3 mr-1" />
+                            Search HSN
+                          </Button>
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
+              
+              {/* HSN Category Display */}
+              {editForm.category && (
+                <div className="mt-2 text-xs text-gray-600">
+                  <Tag className="w-3 h-3 inline mr-1" />
+                  {editForm.category}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -819,6 +829,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
     weight_kg: 0,
     options: '',
     url: '',
+    hsn_code: hsnCode || '',
+    category: '',
   });
   const [mlEstimation, setMlEstimation] = useState<any>(null);
   const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
@@ -839,7 +851,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
         const weight = await hsnWeightService.getHSNWeight(hsnCode);
         setHsnWeight(weight);
       } catch (error) {
-        console.error('Error fetching HSN weight:', error);
         setHsnWeight(null);
       } finally {
         setIsLoadingHSN(false);
@@ -861,7 +872,6 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
           );
           setMlEstimation(estimation);
         } catch (error) {
-          console.error('Weight estimation error:', error);
         } finally {
           setIsEstimating(false);
         }
@@ -903,9 +913,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
             originalEstimate: mlEstimation.estimated_weight,
           },
         );
-        console.log('✅ ML learning completed from new item');
       } catch (error) {
-        console.error('Error learning from new item:', error);
       }
     }
 
@@ -917,6 +925,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
       weight_kg: addForm.weight_kg,
       options: addForm.options,
       url: addForm.url,
+      hsn_code: addForm.hsn_code,
+      category: addForm.category,
       weight_source: selectedWeightSource || 'manual',
     };
 
@@ -953,37 +963,11 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="quantity">Quantity *</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={addForm.quantity}
-                onChange={(e) =>
-                  setAddForm((prev) => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="price">Price ({currencyDisplay.originCurrency})</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={addForm.price_usd}
-                onChange={(e) =>
-                  setAddForm((prev) => ({ ...prev, price_usd: parseFloat(e.target.value) || 0 }))
-                }
-              />
-            </div>
-          </div>
 
+          {/* Inline Product Fields - Quantity, Price, Weight, HSN */}
           <div>
-            <Label htmlFor="weight" className="flex items-center space-x-2">
-              <span>Weight (kg)</span>
+            <Label className="flex items-center space-x-2 mb-2">
+              <span>Product Details</span>
               {(isEstimating || isLoadingHSN) && (
                 <div className="flex items-center space-x-1">
                   <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -993,36 +977,145 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                 </div>
               )}
             </Label>
-            <Input
-              id="weight"
-              type="number"
-              step="0.001"
-              min="0"
-              value={addForm.weight_kg}
-              onChange={(e) => {
-                setAddForm((prev) => ({ ...prev, weight_kg: parseFloat(e.target.value) || 0 }));
-                setSelectedWeightSource('manual');
-              }}
-            />
+            
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Quantity Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[30px]">QTY</span>
+                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                    <Input
+                      type="number"
+                      value={addForm.quantity}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, quantity: Number(e.target.value) }))}
+                      className="w-16 h-8 border-0 p-0 text-center text-sm font-medium"
+                      min="1"
+                    />
+                  </div>
+                </div>
 
-            {/* Dual Weight Suggestions */}
-            {(hsnWeight || mlEstimation) && (
-              <DualWeightSuggestions
-                hsnWeight={hsnWeight ? {
-                  ...hsnWeight,
-                  source: 'hsn' as const
-                } : undefined}
-                mlWeight={mlEstimation ? {
-                  estimated: mlEstimation.estimated_weight,
-                  confidence: mlEstimation.confidence,
-                  reasoning: mlEstimation.reasoning,
-                  source: 'ml' as const
-                } : undefined}
-                currentWeight={addForm.weight_kg}
-                onSelectWeight={handleSelectWeight}
-                isLoading={isEstimating || isLoadingHSN}
-              />
-            )}
+                {/* Price Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[35px]">PRICE</span>
+                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                    <DollarSign className="w-3 h-3 text-gray-400" />
+                    <Input
+                      type="number"
+                      value={addForm.price_usd}
+                      onChange={(e) => setAddForm(prev => ({ ...prev, price_usd: Number(e.target.value) }))}
+                      className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
+                      step="0.01"
+                      min="0"
+                    />
+                    <span className="text-xs text-gray-400 ml-1">{currencyDisplay.originCurrency}</span>
+                  </div>
+                </div>
+
+                {/* Weight Field with Suggestions */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
+                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                    <Scale className="w-3 h-3 text-gray-400" />
+                    <Input
+                      type="number"
+                      value={addForm.weight_kg}
+                      onChange={(e) => {
+                        setAddForm(prev => ({ ...prev, weight_kg: Number(e.target.value) }));
+                        setSelectedWeightSource('manual');
+                      }}
+                      className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
+                      step="0.01"
+                      min="0"
+                    />
+                    <span className="text-xs text-gray-400 ml-1">kg</span>
+                  </div>
+                  
+                  {/* Weight Suggestions */}
+                  {(hsnWeight || mlEstimation) && (
+                    <div className="flex gap-1">
+                      {hsnWeight && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleSelectWeight(hsnWeight.average, 'hsn')}
+                        >
+                          HSN: {hsnWeight.average}kg
+                        </Button>
+                      )}
+                      {mlEstimation && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleSelectWeight(mlEstimation.estimated_weight, 'ml')}
+                        >
+                          AI: {mlEstimation.estimated_weight.toFixed(2)}kg
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* HSN Field */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
+                  <div className="flex items-center">
+                    {addForm.hsn_code ? (
+                      <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                        <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {addForm.hsn_code}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 ml-2"
+                          onClick={() => {
+                            setAddForm(prev => ({
+                              ...prev,
+                              hsn_code: '',
+                              category: ''
+                            }));
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <SmartHSNSearch
+                        onSelect={(hsn) => {
+                          setAddForm(prev => ({
+                            ...prev,
+                            hsn_code: hsn.code,
+                            category: hsn.description
+                          }));
+                        }}
+                        productName={addForm.name}
+                        compact={true}
+                        trigger={
+                          <Button variant="outline" size="sm" className="h-8 text-xs">
+                            <Search className="w-3 h-3 mr-1" />
+                            Search HSN
+                          </Button>
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* HSN Category Display */}
+              {addForm.category && (
+                <div className="mt-2 text-xs text-gray-600">
+                  <Tag className="w-3 h-3 inline mr-1" />
+                  {addForm.category}
+                </div>
+              )}
+            </div>
           </div>
 
 

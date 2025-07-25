@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, ShoppingCart, Info, Calculator, BookOpen, AlertCircle } from 'lucide-react';
 import { QuoteSummary } from '@/components/dashboard/QuoteSummary';
 import { QuoteBreakdown } from '@/components/dashboard/QuoteBreakdown';
-import { HSNExplainerWidget } from '@/components/dashboard/customer-education/HSNExplainerWidget';
 import { TaxBreakdownEducation } from '@/components/dashboard/customer-education/TaxBreakdownEducation';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { useQuoteState } from '@/hooks/useQuoteState';
@@ -233,7 +232,6 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
             
             {showHSNEducation && (
               <div className="space-y-4">
-                <HSNExplainerWidget />
                 <TaxBreakdownEducation originCountry={quote.origin_country} destinationCountry={quote.destination_country} />
               </div>
             )}

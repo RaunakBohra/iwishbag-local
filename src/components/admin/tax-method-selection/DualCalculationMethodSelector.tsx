@@ -319,6 +319,11 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
     return <Badge variant={config.variant}>{config.text}</Badge>;
   };
 
+  // Sync selectedMethod when currentMethod prop changes
+  useEffect(() => {
+    setSelectedMethod(currentMethod);
+  }, [currentMethod]);
+
   // Initialize analysis on component mount
   useEffect(() => {
     analyzeMethodAvailability();

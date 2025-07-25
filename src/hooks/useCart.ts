@@ -37,7 +37,6 @@ export const useCart = () => {
   // Set the storage key per user for cart persistence
   useEffect(() => {
     if (userId) {
-      console.log('🔄 Setting cart storage key for user:', userId);
       setCartStorageKey(userId);
     }
   }, [userId]);

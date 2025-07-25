@@ -133,6 +133,9 @@ const DuplicateComponentsPreview = React.lazy(
 const UserManagementPage = React.lazy(() => import('@/pages/admin/UserManagementPage'));
 const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
 
+// Demo pages for weight recommendation designs
+const DemoIndex = React.lazy(() => import('@/demo/DemoIndex'));
+
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
 import { PermissionsProvider } from '@/contexts/PermissionsContext';
@@ -185,8 +188,8 @@ const router = createBrowserRouter([
             ),
           },
           { path: 'countries', element: <CountrySettings /> },
-          { 
-            path: 'hsn-management', 
+          {
+            path: 'hsn-management',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <HSNManagement />
@@ -223,6 +226,11 @@ const router = createBrowserRouter([
   {
     path: 'dev/hsn-test',
     element: <HSNTestPage />,
+  },
+  // Demo routes (public access for design review)
+  {
+    path: 'demo',
+    element: <DemoIndex />,
   },
   // Auth routes - No Layout wrapper
   {

@@ -250,6 +250,25 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="flex items-center space-x-2">
                 <Calculator className="w-4 h-4 text-orange-600" />
                 <span className="text-gray-700">Taxes & VAT</span>
+                {/* Display tax calculation method */}
+                {quote.calculation_method_preference && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs h-4 px-1 ${
+                      quote.calculation_method_preference === 'hsn_only' 
+                        ? 'text-purple-600 border-purple-300' 
+                        : quote.calculation_method_preference === 'legacy_fallback'
+                        ? 'text-green-600 border-green-300'
+                        : 'text-blue-600 border-blue-300'
+                    }`}
+                  >
+                    {quote.calculation_method_preference === 'hsn_only' 
+                      ? 'HSN' 
+                      : quote.calculation_method_preference === 'legacy_fallback'
+                      ? 'Country'
+                      : 'Auto'}
+                  </Badge>
+                )}
               </div>
               <div className="text-right">
                 <div className="font-medium">

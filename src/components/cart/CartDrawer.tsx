@@ -298,14 +298,31 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                   </div>
                 </div>
 
-                {/* Checkout Button */}
-                <Button 
-                  onClick={handleCheckout} 
-                  className="w-full h-12 bg-black hover:bg-gray-800 text-white font-medium" 
-                  disabled={!hasCartItems}
-                >
-                  Checkout
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  {/* Go to Cart Button */}
+                  <Button 
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate('/cart');
+                    }} 
+                    variant="outline"
+                    className="flex-1 h-12 font-medium" 
+                    disabled={!hasCartItems}
+                  >
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    View Cart
+                  </Button>
+
+                  {/* Checkout Button */}
+                  <Button 
+                    onClick={handleCheckout} 
+                    className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-medium" 
+                    disabled={!hasCartItems}
+                  >
+                    Checkout
+                  </Button>
+                </div>
 
                 <div className="text-center">
                   <p className="text-xs text-gray-500">
