@@ -150,7 +150,6 @@ export class SmartCalculationEngine {
         return cached;
       }
 
-
       // Calculate base totals
       const itemsTotal = input.quote.items.reduce(
         (sum, item) => sum + item.costprice_origin * item.quantity,
@@ -267,7 +266,6 @@ export class SmartCalculationEngine {
         .rpc('get_effective_tax_method', { quote_id_param: quote.id })
         .single();
 
-
       // Prepare enhanced tax calculation context with 2-tier preferences
       const context: TaxCalculationContext = {
         route: {
@@ -319,7 +317,7 @@ export class SmartCalculationEngine {
           operational_data: quote.operational_data,
           breakdown_shipping: quote.calculation_data?.breakdown?.shipping,
           breakdown_full: quote.calculation_data?.breakdown,
-          method_preference: quote.calculation_method_preference
+          method_preference: quote.calculation_method_preference,
         });
       }
 
@@ -1161,17 +1159,28 @@ export class SmartCalculationEngine {
     const salesTax = quote.calculation_data?.sales_tax_price || 0;
     const handlingFee = quote.operational_data?.handling_charge || 0;
     const insuranceAmount = quote.operational_data?.insurance_amount || 0;
-    
+
     // ✅ CALCULATE DESTINATION TAX for sync method (use cached data only)
     let destinationTax = 0;
     try {
       // Use cached VAT data only (no async calls in sync method)
-      const cachedVATResult = vatService.getCachedVATData(quote.origin_country, quote.destination_country);
-      
+      const cachedVATResult = vatService.getCachedVATData(
+        quote.origin_country,
+        quote.destination_country,
+      );
+
       if (cachedVATResult && cachedVATResult.percentage > 0) {
-        const landedCost = itemsTotal + shippingCost + insuranceAmount + (quote.calculation_data?.breakdown?.customs || 0) + handlingFee + salesTax;
+        const landedCost =
+          itemsTotal +
+          shippingCost +
+          insuranceAmount +
+          (quote.calculation_data?.breakdown?.customs || 0) +
+          handlingFee +
+          salesTax;
         destinationTax = landedCost * (cachedVATResult.percentage / 100);
-        console.log(`[DESTINATION TAX SYNC] ${quote.destination_country}: ${cachedVATResult.percentage}% = ${destinationTax} (cached)`);
+        console.log(
+          `[DESTINATION TAX SYNC] ${quote.destination_country}: ${cachedVATResult.percentage}% = ${destinationTax} (cached)`,
+        );
       } else {
         // Fallback to existing destination tax if no cached data
         destinationTax = quote.calculation_data?.breakdown?.destination_tax || 0;
@@ -1295,7 +1304,6 @@ export class SmartCalculationEngine {
     let destinationTaxAmount = 0;
     let insuranceAmount = 0;
 
-
     // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
     if (quote.id === 'bbfc6b7f-c630-41be-a688-ab3bb7087520') {
       console.log(`[DEBUG] Reading input fields as single source of truth:`, {
@@ -1310,13 +1318,9 @@ export class SmartCalculationEngine {
 
     // ✅ SIMPLIFIED TAX CALCULATION: Read directly from input fields
     const customsPercentage = quote.operational_data?.customs?.percentage || 0;
-    
+
     // Calculate insurance for CIF
-    insuranceAmount = await this.calculateRouteBasedInsurance(
-      selectedShipping,
-      itemsTotal,
-      quote,
-    );
+    insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
 
     // Calculate customs using CIF value if percentage is provided
     if (customsPercentage > 0) {
@@ -1326,25 +1330,34 @@ export class SmartCalculationEngine {
 
     // Read sales tax from input fields
     localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
-    
+
     // Calculate taxes and fees using route-based configuration
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
-    
+
     // ✅ CALCULATE DESTINATION TAX: Get VAT/GST rate for destination country
     try {
-      const vatResult = await vatService.getVATPercentage(quote.origin_country, quote.destination_country);
-      
+      const vatResult = await vatService.getVATPercentage(
+        quote.origin_country,
+        quote.destination_country,
+      );
+
       if (vatResult.percentage > 0) {
         // Calculate destination tax on landed cost (CIF + Customs + Handling + Local Taxes)
-        const landedCost = itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee + localTaxesAmount;
+        const landedCost =
+          itemsTotal +
+          selectedShipping.cost_usd +
+          insuranceAmount +
+          customsAmount +
+          handlingFee +
+          localTaxesAmount;
         destinationTaxAmount = landedCost * (vatResult.percentage / 100);
-        
+
         console.log(`[DESTINATION TAX DEBUG] Calculated destination tax:`, {
           destination_country: quote.destination_country,
           vat_rate: vatResult.percentage,
           vat_source: vatResult.source,
           landed_cost: landedCost,
-          destination_tax_amount: destinationTaxAmount
+          destination_tax_amount: destinationTaxAmount,
         });
       } else {
         destinationTaxAmount = 0;

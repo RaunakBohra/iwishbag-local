@@ -84,7 +84,17 @@ export interface ItemTaxBreakdown {
   };
 
   local_tax_calculation: {
-    tax_type: 'gst' | 'vat' | 'sales_tax' | 'state_tax' | 'local_tax' | 'pst' | 'excise_tax' | 'import_duty' | 'service_tax' | 'cess';
+    tax_type:
+      | 'gst'
+      | 'vat'
+      | 'sales_tax'
+      | 'state_tax'
+      | 'local_tax'
+      | 'pst'
+      | 'excise_tax'
+      | 'import_duty'
+      | 'service_tax'
+      | 'cess';
     rate_percentage: number;
     amount_origin_currency: number;
     basis_amount: number;
@@ -113,9 +123,19 @@ interface TaxCalculationContext {
   apply_exemptions?: boolean;
   calculation_date?: Date;
   // 2-tier tax system preferences
-  calculation_method_preference?: 'auto' | 'hsn_only' | 'legacy_fallback' | 'admin_choice';
-  valuation_method_preference?: 'auto' | 'actual_price' | 'minimum_valuation' | 'higher_of_both' | 'per_item_choice';
+  calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
+  valuation_method_preference?:
+    | 'auto'
+    | 'product_value'
+    | 'minimum_valuation'
+    | 'higher_of_both'
+    | 'per_item_choice';
   admin_id?: string; // For audit logging
+  // CIF Calculation components (from form inputs)
+  shipping_cost?: number;
+  insurance_amount?: number;
+  handling_charge?: number;
+  domestic_shipping?: number;
 }
 
 class PerItemTaxCalculator {
@@ -146,26 +166,30 @@ class PerItemTaxCalculator {
       totalShippingCost: number;
       totalInsuranceAmount: number;
       totalHandlingFee: number;
-    }
+    },
   ): Promise<ItemTaxBreakdown | null> {
     try {
       // Create placeholder breakdown for items without HSN codes
       if (!item.hsn_code || item.hsn_code.trim() === '') {
-        console.log(`⚠️ [HSN] Creating placeholder breakdown for item ${item.name} - no HSN code assigned`);
+        console.log(
+          `⚠️ [HSN] Creating placeholder breakdown for item ${item.name} - no HSN code assigned`,
+        );
         return this.createPlaceholderBreakdown(item, context);
       }
 
       // Get HSN data for the item
       const hsnData = await this.getHSNData(item.hsn_code);
       if (!hsnData) {
-        console.warn(`⚠️ [HSN] HSN code not found in database: ${item.hsn_code} for item: ${item.name}`);
+        console.warn(
+          `⚠️ [HSN] HSN code not found in database: ${item.hsn_code} for item: ${item.name}`,
+        );
         return null; // Return null if HSN data not found
       }
 
       // Get unified tax data with fallback mechanisms
       const unifiedTaxData = await this.unifiedTaxService.getUnifiedTaxData(
         context.route.origin_country,
-        context.route.destination_country
+        context.route.destination_country,
       );
 
       // Get tax rates with admin overrides and preferences
@@ -180,15 +204,12 @@ class PerItemTaxCalculator {
         context,
         totals.totalItemsValue,
         totals.totalShippingCost,
-        totals.totalInsuranceAmount
+        totals.totalInsuranceAmount,
+        totals.totalHandlingFee,
       );
 
       // Step 2: Calculate customs duty on CIF basis (international standard)
-      const customsCalculation = this.calculateCustoms(
-        cifValue,
-        taxRates.customs_rate,
-        context,
-      );
+      const customsCalculation = this.calculateCustoms(cifValue, taxRates.customs_rate, context);
 
       // Step 3: Calculate landed cost (CIF + Customs + Handling)
       const landedCost = this.calculateLandedCost(
@@ -196,15 +217,11 @@ class PerItemTaxCalculator {
         customsCalculation.amount_origin_currency,
         totals.totalHandlingFee,
         totals.totalItemsValue,
-        item.price_origin_currency
+        item.price_origin_currency,
       );
 
       // Step 4: Calculate local taxes on landed cost basis (international standard)
-      const localTaxCalculation = await this.calculateLocalTaxes(
-        landedCost,
-        taxRates,
-        context,
-      );
+      const localTaxCalculation = await this.calculateLocalTaxes(landedCost, taxRates, context);
 
       // Calculate both valuation options with the new CIF/landed cost logic
       const valuationOptions = await this.calculateBothValuationOptions(
@@ -212,7 +229,7 @@ class PerItemTaxCalculator {
         hsnData,
         context.route.origin_country,
         taxRates,
-        context.valuation_method_preference
+        context.valuation_method_preference,
       );
 
       // Build enhanced calculation options object
@@ -338,7 +355,7 @@ class PerItemTaxCalculator {
       confidence_score: 0, // Zero confidence for unclassified items
       warnings: [
         'HSN code not assigned - classification required for accurate tax calculation',
-        'Using placeholder values - actual taxes will be calculated after HSN assignment'
+        'Using placeholder values - actual taxes will be calculated after HSN assignment',
       ],
     };
 
@@ -350,20 +367,42 @@ class PerItemTaxCalculator {
    */
   private getQuoteTotals(items: QuoteItem[], context: TaxCalculationContext) {
     const totalItemsValue = items.reduce((sum, item) => sum + item.price_origin_currency, 0);
-    
-    // These would ideally come from the quote context, but we'll use defaults for now
-    // In a real implementation, these should be passed through the context
-    const totalShippingCost = 0; // TODO: Get from context
-    const totalInsuranceAmount = 0; // TODO: Get from context  
-    const totalHandlingFee = 0; // TODO: Get from context
-    
-    console.log(`[QUOTE TOTALS] Items: ${totalItemsValue}, Shipping: ${totalShippingCost}, Insurance: ${totalInsuranceAmount}, Handling: ${totalHandlingFee}`);
-    
+
+    // ✅ FIXED: Use actual values from context (form inputs)
+    const totalShippingCost = context.shipping_cost || 0;
+    const totalInsuranceAmount = context.insurance_amount || 0;
+    const totalHandlingFee = context.handling_charge || 0;
+    const totalDomesticShipping = context.domestic_shipping || 0;
+
+    console.log(
+      `[QUOTE TOTALS] Items: ${totalItemsValue}, Shipping: ${totalShippingCost}, Insurance: ${totalInsuranceAmount}, Handling: ${totalHandlingFee}, Domestic: ${totalDomesticShipping}`,
+    );
+
+    // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
+    const isSpecialQuote = items.some(
+      (item) => item.id?.includes('bbfc6b7f') || context.route?.origin_country,
+    );
+    if (isSpecialQuote || totalInsuranceAmount > 0 || totalHandlingFee > 0) {
+      console.log(`[PER ITEM TAX DEBUG] CIF component analysis:`, {
+        shipping_from_context: context.shipping_cost,
+        insurance_from_context: context.insurance_amount,
+        handling_from_context: context.handling_charge,
+        domestic_from_context: context.domestic_shipping,
+        calculated_totals: {
+          totalShippingCost,
+          totalInsuranceAmount,
+          totalHandlingFee,
+          totalDomesticShipping,
+        },
+      });
+    }
+
     return {
       totalItemsValue,
       totalShippingCost,
       totalInsuranceAmount,
-      totalHandlingFee
+      totalHandlingFee,
+      totalDomesticShipping,
     };
   }
 
@@ -374,10 +413,10 @@ class PerItemTaxCalculator {
     items: QuoteItem[],
     context: TaxCalculationContext,
   ): Promise<ItemTaxBreakdown[]> {
-    console.log(`[TAX CALCULATOR DEBUG] Received context:`, {
+    console.log(`[PER ITEM TAX] Starting multiple item tax calculation:`, {
       calculation_method_preference: context.calculation_method_preference,
       valuation_method_preference: context.valuation_method_preference,
-      items_count: items.length
+      items_count: items.length,
     });
 
     // Get quote-level totals for proper allocation
@@ -385,15 +424,19 @@ class PerItemTaxCalculator {
 
     const promises = items.map((item) => this.calculateItemTax(item, context, quoteTotals));
     const results = await Promise.all(promises);
-    
+
     // All items now get breakdown objects (real calculations or placeholders)
-    const allBreakdowns = results.filter((breakdown): breakdown is ItemTaxBreakdown => breakdown !== null);
-    
-    const itemsWithHSN = allBreakdowns.filter(b => b.hsn_code && b.hsn_code.trim() !== '').length;
+    const allBreakdowns = results.filter(
+      (breakdown): breakdown is ItemTaxBreakdown => breakdown !== null,
+    );
+
+    const itemsWithHSN = allBreakdowns.filter((b) => b.hsn_code && b.hsn_code.trim() !== '').length;
     const itemsWithoutHSN = allBreakdowns.length - itemsWithHSN;
-    
-    console.log(`✅ [HSN] Generated breakdowns for ${allBreakdowns.length} items (${itemsWithHSN} classified, ${itemsWithoutHSN} awaiting HSN assignment)`);
-    
+
+    console.log(
+      `✅ [HSN] Generated breakdowns for ${allBreakdowns.length} items (${itemsWithHSN} classified, ${itemsWithoutHSN} awaiting HSN assignment)`,
+    );
+
     return allBreakdowns;
   }
 
@@ -427,26 +470,31 @@ class PerItemTaxCalculator {
     valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both';
   }> {
     const originalPrice = item.price_origin_currency;
-    
+
     // Calculate actual price taxes
     const actualPriceCustoms = (originalPrice * taxRates.customs_rate) / 100;
-    
+
     // Calculate local tax based on available rates (enhanced for new tax types)
     let actualPriceLocalTax = 0;
     if (taxRates.state_tax_rate || taxRates.local_tax_rate) {
       // US taxes: combine state and local
-      actualPriceLocalTax = (originalPrice * ((taxRates.state_tax_rate || 0) + (taxRates.local_tax_rate || 0))) / 100;
+      actualPriceLocalTax =
+        (originalPrice * ((taxRates.state_tax_rate || 0) + (taxRates.local_tax_rate || 0))) / 100;
     } else if (taxRates.gst_rate && taxRates.cess_rate) {
       // India taxes: GST + CESS
-      actualPriceLocalTax = (originalPrice * ((taxRates.gst_rate || 0) + (taxRates.cess_rate || 0))) / 100;
+      actualPriceLocalTax =
+        (originalPrice * ((taxRates.gst_rate || 0) + (taxRates.cess_rate || 0))) / 100;
     } else if (taxRates.gst_rate && taxRates.pst_rate) {
       // Canada taxes: GST + PST
-      actualPriceLocalTax = (originalPrice * ((taxRates.gst_rate || 0) + (taxRates.pst_rate || 0))) / 100;
+      actualPriceLocalTax =
+        (originalPrice * ((taxRates.gst_rate || 0) + (taxRates.pst_rate || 0))) / 100;
     } else {
       // Standard single tax rate
-      actualPriceLocalTax = (originalPrice * (taxRates.gst_rate || taxRates.vat_rate || taxRates.sales_tax_rate || 0)) / 100;
+      actualPriceLocalTax =
+        (originalPrice * (taxRates.gst_rate || taxRates.vat_rate || taxRates.sales_tax_rate || 0)) /
+        100;
     }
-    
+
     const actual_price_calculation = {
       basis_amount: originalPrice,
       customs_amount: Math.round(actualPriceCustoms * 100) / 100,
@@ -471,24 +519,29 @@ class PerItemTaxCalculator {
     );
 
     const minimumAmount = minimumValuationConversion.convertedAmount;
-    
+
     // Calculate minimum valuation taxes
     const minimumValuationCustoms = (minimumAmount * taxRates.customs_rate) / 100;
-    
+
     // Calculate minimum valuation local tax (enhanced for new tax types)
     let minimumValuationLocalTax = 0;
     if (taxRates.state_tax_rate || taxRates.local_tax_rate) {
       // US taxes: combine state and local
-      minimumValuationLocalTax = (minimumAmount * ((taxRates.state_tax_rate || 0) + (taxRates.local_tax_rate || 0))) / 100;
+      minimumValuationLocalTax =
+        (minimumAmount * ((taxRates.state_tax_rate || 0) + (taxRates.local_tax_rate || 0))) / 100;
     } else if (taxRates.gst_rate && taxRates.cess_rate) {
       // India taxes: GST + CESS
-      minimumValuationLocalTax = (minimumAmount * ((taxRates.gst_rate || 0) + (taxRates.cess_rate || 0))) / 100;
+      minimumValuationLocalTax =
+        (minimumAmount * ((taxRates.gst_rate || 0) + (taxRates.cess_rate || 0))) / 100;
     } else if (taxRates.gst_rate && taxRates.pst_rate) {
       // Canada taxes: GST + PST
-      minimumValuationLocalTax = (minimumAmount * ((taxRates.gst_rate || 0) + (taxRates.pst_rate || 0))) / 100;
+      minimumValuationLocalTax =
+        (minimumAmount * ((taxRates.gst_rate || 0) + (taxRates.pst_rate || 0))) / 100;
     } else {
       // Standard single tax rate
-      minimumValuationLocalTax = (minimumAmount * (taxRates.gst_rate || taxRates.vat_rate || taxRates.sales_tax_rate || 0)) / 100;
+      minimumValuationLocalTax =
+        (minimumAmount * (taxRates.gst_rate || taxRates.vat_rate || taxRates.sales_tax_rate || 0)) /
+        100;
     }
 
     const minimum_valuation_calculation = {
@@ -506,7 +559,7 @@ class PerItemTaxCalculator {
 
     // Handle admin preferences for valuation method
     switch (valuationMethodPreference) {
-      case 'actual_price':
+      case 'product_value':
         selected_method = 'actual_price';
         auto_selected_amount = originalPrice;
         valuation_method = 'original_price';
@@ -561,35 +614,31 @@ class PerItemTaxCalculator {
     context: TaxCalculationContext,
     totalItemsValue: number,
     totalShippingCost: number,
-    totalInsuranceAmount: number
+    totalInsuranceAmount: number,
+    totalHandlingFee: number,
   ): number {
-    // Allocate shipping and insurance proportionally to item value
+    // Allocate shipping, insurance, and handling proportionally to item value
     const itemProportion = item.price_origin_currency / totalItemsValue;
     const allocatedShipping = totalShippingCost * itemProportion;
     const allocatedInsurance = totalInsuranceAmount * itemProportion;
-    
-    const cifValue = item.price_origin_currency + allocatedShipping + allocatedInsurance;
-    
-    console.log(`[CIF DEBUG] Item: ${item.name}`);
-    console.log(`[CIF DEBUG] Item Price: ${item.price_origin_currency}`);
-    console.log(`[CIF DEBUG] Allocated Shipping: ${allocatedShipping}`);
-    console.log(`[CIF DEBUG] Allocated Insurance: ${allocatedInsurance}`);
-    console.log(`[CIF DEBUG] CIF Value: ${cifValue}`);
-    
+    const allocatedHandling = totalHandlingFee * itemProportion;
+
+    // CIF = Cost + Insurance + Freight (including handling as part of freight)
+    const cifValue =
+      item.price_origin_currency + allocatedShipping + allocatedInsurance + allocatedHandling;
+
     return cifValue;
   }
 
   /**
    * Calculate customs duty on CIF basis (international standard)
    */
-  private calculateCustoms(
-    cifValue: number,
-    customsRate: number,
-    context: TaxCalculationContext,
-  ) {
+  private calculateCustoms(cifValue: number, customsRate: number, context: TaxCalculationContext) {
     const customsAmount = (cifValue * customsRate) / 100;
 
-    console.log(`[CUSTOMS DEBUG] CIF Value: ${cifValue}, Rate: ${customsRate}%, Amount: ${customsAmount}`);
+    console.log(
+      `[CUSTOMS DEBUG] CIF Value: ${cifValue}, Rate: ${customsRate}%, Amount: ${customsAmount}`,
+    );
 
     return {
       rate_percentage: customsRate,
@@ -607,16 +656,18 @@ class PerItemTaxCalculator {
     customsAmount: number,
     totalHandlingFee: number,
     totalItemsValue: number,
-    itemValue: number
+    itemValue: number,
   ): number {
     // Allocate handling fee proportionally to item value
     const itemProportion = itemValue / totalItemsValue;
     const allocatedHandling = totalHandlingFee * itemProportion;
-    
+
     const landedCost = cifValue + customsAmount + allocatedHandling;
-    
-    console.log(`[LANDED COST DEBUG] CIF: ${cifValue}, Customs: ${customsAmount}, Allocated Handling: ${allocatedHandling}, Landed Cost: ${landedCost}`);
-    
+
+    console.log(
+      `[LANDED COST DEBUG] CIF: ${cifValue}, Customs: ${customsAmount}, Allocated Handling: ${allocatedHandling}, Landed Cost: ${landedCost}`,
+    );
+
     return landedCost;
   }
 
@@ -630,9 +681,7 @@ class PerItemTaxCalculator {
   ) {
     // Determine tax type based on destination country
     const taxType = await this.getLocalTaxType(context.route.destination_country);
-    
-    console.log(`[LOCAL TAX DEBUG] Landed Cost: ${landedCost}, Tax Type: ${taxType}`);
-    
+
     // Handle different tax calculation methods based on type
     switch (taxType) {
       case 'state_tax':
@@ -656,11 +705,11 @@ class PerItemTaxCalculator {
   ) {
     const stateRate = taxRates.state_tax_rate || 0;
     const localRate = taxRates.local_tax_rate || 0;
-    
+
     const stateTaxAmount = (taxableAmount * stateRate) / 100;
     const localTaxAmount = (taxableAmount * localRate) / 100;
     const totalTaxAmount = stateTaxAmount + localTaxAmount;
-    
+
     return {
       tax_type: 'state_tax' as const,
       rate_percentage: stateRate + localRate,
@@ -683,11 +732,11 @@ class PerItemTaxCalculator {
   ) {
     const gstRate = taxRates.gst_rate || 0;
     const pstRate = taxRates.pst_rate || 0;
-    
+
     const gstAmount = (taxableAmount * gstRate) / 100;
     const pstAmount = (taxableAmount * pstRate) / 100;
     const totalTaxAmount = gstAmount + pstAmount;
-    
+
     return {
       tax_type: 'pst' as const,
       rate_percentage: gstRate + pstRate,
@@ -710,11 +759,11 @@ class PerItemTaxCalculator {
   ) {
     const gstRate = taxRates.gst_rate || 0;
     const cessRate = taxRates.cess_rate || 0;
-    
+
     const gstAmount = (taxableAmount * gstRate) / 100;
     const cessAmount = (taxableAmount * cessRate) / 100;
     const totalTaxAmount = gstAmount + cessAmount;
-    
+
     return {
       tax_type: 'gst' as const,
       rate_percentage: gstRate + cessRate,
@@ -740,7 +789,13 @@ class PerItemTaxCalculator {
     const taxAmount = (taxableAmount * taxRate) / 100;
 
     return {
-      tax_type: taxType as 'gst' | 'vat' | 'sales_tax' | 'excise_tax' | 'import_duty' | 'service_tax',
+      tax_type: taxType as
+        | 'gst'
+        | 'vat'
+        | 'sales_tax'
+        | 'excise_tax'
+        | 'import_duty'
+        | 'service_tax',
       rate_percentage: taxRate,
       amount_origin_currency: Math.round(taxAmount * 100) / 100,
       basis_amount: taxableAmount,
@@ -777,37 +832,39 @@ class PerItemTaxCalculator {
    * Get tax rates with admin overrides and preferences applied (2-tier system)
    */
   private async getTaxRatesWithPreferences(
-    hsnData: HSNData, 
+    hsnData: HSNData,
     context: TaxCalculationContext,
-    unifiedTaxData: UnifiedTaxData
+    unifiedTaxData: UnifiedTaxData,
   ) {
     // Determine calculation method based on admin preferences
     const calculationMethod = context.calculation_method_preference || 'auto';
-    
-    console.log(`[TAX CALCULATOR DEBUG] Using calculation method: ${calculationMethod} for HSN: ${hsnData.hsn_code}`);
-    
+
+    console.log(
+      `[TAX CALCULATOR DEBUG] Using calculation method: ${calculationMethod} for HSN: ${hsnData.hsn_code}`,
+    );
+
     let baseRates;
-    
+
     switch (calculationMethod) {
       case 'hsn_only':
         // Use only HSN-specific rates
         baseRates = this.getHSNTaxRates(hsnData);
-        console.log(`[TAX CALCULATOR DEBUG] HSN rates applied:`, baseRates);
         break;
-      case 'legacy_fallback':
-        // Use only unified fallback rates
+      case 'country_based':
+        // Use only unified fallback rates (country-based)
         baseRates = this.getUnifiedFallbackRates(unifiedTaxData);
-        console.log(`[TAX CALCULATOR DEBUG] Legacy fallback rates applied:`, baseRates);
         break;
-      case 'admin_choice':
-        // Admin has manually selected rates - check for overrides
-        baseRates = this.getAdminChosenRates(hsnData, unifiedTaxData, context);
-        console.log(`[TAX CALCULATOR DEBUG] Admin choice rates applied:`, baseRates);
+      case 'manual':
+        // Manual mode - use a combination but will be overridden by manual customs
+        baseRates = this.getHSNTaxRates(hsnData);
+        console.log(
+          `[TAX CALCULATOR DEBUG] Manual mode - HSN base rates (customs will be manual):`,
+          baseRates,
+        );
         break;
       default:
-        // 'auto' - intelligent selection between HSN and fallback
-        baseRates = await this.getAutoSelectedRates(hsnData, unifiedTaxData);
-        console.log(`[TAX CALCULATOR DEBUG] Auto-selected rates applied:`, baseRates);
+        // Default to HSN-only
+        baseRates = this.getHSNTaxRates(hsnData);
         break;
     }
 
@@ -828,19 +885,19 @@ class PerItemTaxCalculator {
       gst_rate: hsnData.tax_data?.typical_rates?.gst?.standard || 0,
       vat_rate: hsnData.tax_data?.typical_rates?.vat?.common || 0,
       sales_tax_rate: 0, // Legacy compatibility
-      
+
       // US Tax Types
       state_tax_rate: hsnData.tax_data?.typical_rates?.sales_tax?.state || 0,
       local_tax_rate: hsnData.tax_data?.typical_rates?.sales_tax?.local || 0,
-      
+
       // Other Country Tax Types
       pst_rate: hsnData.tax_data?.typical_rates?.pst?.provincial || 0,
       excise_tax_rate: hsnData.tax_data?.typical_rates?.excise_tax?.federal || 0,
       import_duty_rate: hsnData.tax_data?.typical_rates?.import_duty?.standard || 0,
       service_tax_rate: hsnData.tax_data?.typical_rates?.service_tax?.standard || 0,
       cess_rate: hsnData.tax_data?.typical_rates?.cess?.additional || 0,
-      
-      data_source: 'hsn_specific'
+
+      data_source: 'hsn_specific',
     };
   }
 
@@ -854,7 +911,7 @@ class PerItemTaxCalculator {
       vat_rate: unifiedTaxData.vat_percent,
       sales_tax_rate: unifiedTaxData.vat_percent, // Use VAT as sales tax fallback
       data_source: unifiedTaxData.data_source,
-      confidence_score: unifiedTaxData.confidence_score
+      confidence_score: unifiedTaxData.confidence_score,
     };
   }
 
@@ -862,14 +919,14 @@ class PerItemTaxCalculator {
    * Get admin-chosen tax rates (manual override mode)
    */
   private getAdminChosenRates(
-    hsnData: HSNData, 
+    hsnData: HSNData,
     unifiedTaxData: UnifiedTaxData,
-    context: TaxCalculationContext
+    context: TaxCalculationContext,
   ) {
     // In admin choice mode, start with HSN rates but allow fallback
     const hsnRates = this.getHSNTaxRates(hsnData);
     const fallbackRates = this.getUnifiedFallbackRates(unifiedTaxData);
-    
+
     // Use HSN rates where available, fallback where not
     return {
       customs_rate: hsnRates.customs_rate || fallbackRates.customs_rate,
@@ -877,7 +934,7 @@ class PerItemTaxCalculator {
       vat_rate: hsnRates.vat_rate || fallbackRates.vat_rate,
       sales_tax_rate: fallbackRates.sales_tax_rate,
       data_source: 'admin_choice',
-      admin_id: context.admin_id
+      admin_id: context.admin_id,
     };
   }
 
@@ -887,23 +944,23 @@ class PerItemTaxCalculator {
   private async getAutoSelectedRates(hsnData: HSNData, unifiedTaxData: UnifiedTaxData) {
     const hsnRates = this.getHSNTaxRates(hsnData);
     const fallbackRates = this.getUnifiedFallbackRates(unifiedTaxData);
-    
+
     // Calculate completeness scores
     const hsnCompleteness = this.calculateRateCompleteness(hsnRates);
     const fallbackCompleteness = this.calculateRateCompleteness(fallbackRates);
-    
+
     // Prefer HSN if it has good completeness, otherwise use fallback
     if (hsnCompleteness >= 0.7 && unifiedTaxData.confidence_score < 0.9) {
       return {
         ...hsnRates,
         data_source: 'hsn_auto_selected',
-        selection_reason: `HSN completeness: ${hsnCompleteness.toFixed(2)}`
+        selection_reason: `HSN completeness: ${hsnCompleteness.toFixed(2)}`,
       };
     } else {
       return {
         ...fallbackRates,
         data_source: 'fallback_auto_selected',
-        selection_reason: `Fallback confidence: ${unifiedTaxData.confidence_score.toFixed(2)}`
+        selection_reason: `Fallback confidence: ${unifiedTaxData.confidence_score.toFixed(2)}`,
       };
     }
   }
@@ -914,21 +971,29 @@ class PerItemTaxCalculator {
   private calculateRateCompleteness(rates: any): number {
     let total = 0;
     let available = 0;
-    
+
     // Core rate fields to check for completeness
     const rateFields = [
-      'customs_rate', 'gst_rate', 'vat_rate', 'sales_tax_rate',
-      'state_tax_rate', 'local_tax_rate', 'pst_rate', 'excise_tax_rate',
-      'import_duty_rate', 'service_tax_rate', 'cess_rate'
+      'customs_rate',
+      'gst_rate',
+      'vat_rate',
+      'sales_tax_rate',
+      'state_tax_rate',
+      'local_tax_rate',
+      'pst_rate',
+      'excise_tax_rate',
+      'import_duty_rate',
+      'service_tax_rate',
+      'cess_rate',
     ];
-    
+
     for (const field of rateFields) {
       total++;
       if (rates[field] && rates[field] > 0) {
         available++;
       }
     }
-    
+
     return available / total;
   }
 
@@ -942,7 +1007,7 @@ class PerItemTaxCalculator {
       gst_rate: hsnData.tax_data?.typical_rates?.gst?.standard || 0,
       vat_rate: hsnData.tax_data?.typical_rates?.vat?.common || 0,
       sales_tax_rate: 0, // Legacy - will be determined by destination country
-      
+
       // Extended tax types
       state_tax_rate: hsnData.tax_data?.typical_rates?.sales_tax?.state || 0,
       local_tax_rate: hsnData.tax_data?.typical_rates?.sales_tax?.local || 0,
@@ -1058,45 +1123,64 @@ class PerItemTaxCalculator {
     // Enhanced country-specific tax type mapping
     const countryTaxTypes: Record<string, string> = {
       // India - GST + CESS
-      'IN': 'gst',
-      
+      IN: 'gst',
+
       // USA - State + Local Sales Tax
-      'US': 'state_tax',
-      
+      US: 'state_tax',
+
       // Canada - GST + PST
-      'CA': 'pst',
-      
+      CA: 'pst',
+
       // European Union - VAT
-      'DE': 'vat', 'FR': 'vat', 'IT': 'vat', 'ES': 'vat', 'NL': 'vat',
-      'BE': 'vat', 'AT': 'vat', 'SE': 'vat', 'DK': 'vat', 'FI': 'vat',
-      'IE': 'vat', 'PT': 'vat', 'GR': 'vat', 'CZ': 'vat', 'PL': 'vat',
-      'HU': 'vat', 'SK': 'vat', 'SI': 'vat', 'EE': 'vat', 'LV': 'vat',
-      'LT': 'vat', 'LU': 'vat', 'MT': 'vat', 'CY': 'vat',
-      
+      DE: 'vat',
+      FR: 'vat',
+      IT: 'vat',
+      ES: 'vat',
+      NL: 'vat',
+      BE: 'vat',
+      AT: 'vat',
+      SE: 'vat',
+      DK: 'vat',
+      FI: 'vat',
+      IE: 'vat',
+      PT: 'vat',
+      GR: 'vat',
+      CZ: 'vat',
+      PL: 'vat',
+      HU: 'vat',
+      SK: 'vat',
+      SI: 'vat',
+      EE: 'vat',
+      LV: 'vat',
+      LT: 'vat',
+      LU: 'vat',
+      MT: 'vat',
+      CY: 'vat',
+
       // Other VAT countries
-      'GB': 'vat', // UK
-      'NP': 'vat', // Nepal
-      'NO': 'vat', // Norway
-      'CH': 'vat', // Switzerland
-      
+      GB: 'vat', // UK
+      NP: 'vat', // Nepal
+      NO: 'vat', // Norway
+      CH: 'vat', // Switzerland
+
       // Sales Tax countries
-      'AU': 'sales_tax', // Australia (GST but similar to sales tax)
-      'NZ': 'sales_tax', // New Zealand
-      'SG': 'sales_tax', // Singapore
-      'MY': 'sales_tax', // Malaysia
-      'TH': 'sales_tax', // Thailand
-      'VN': 'sales_tax', // Vietnam
-      'KR': 'sales_tax', // South Korea
-      'JP': 'sales_tax', // Japan
-      
+      AU: 'sales_tax', // Australia (GST but similar to sales tax)
+      NZ: 'sales_tax', // New Zealand
+      SG: 'sales_tax', // Singapore
+      MY: 'sales_tax', // Malaysia
+      TH: 'sales_tax', // Thailand
+      VN: 'sales_tax', // Vietnam
+      KR: 'sales_tax', // South Korea
+      JP: 'sales_tax', // Japan
+
       // Service Tax countries
-      'AE': 'service_tax', // UAE
-      'SA': 'service_tax', // Saudi Arabia
-      'QA': 'service_tax', // Qatar
-      'KW': 'service_tax', // Kuwait
-      
+      AE: 'service_tax', // UAE
+      SA: 'service_tax', // Saudi Arabia
+      QA: 'service_tax', // Qatar
+      KW: 'service_tax', // Kuwait
+
       // Default fallback
-      'default': 'sales_tax'
+      default: 'sales_tax',
     };
 
     return countryTaxTypes[countryCode] || countryTaxTypes['default'];

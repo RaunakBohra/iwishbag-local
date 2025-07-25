@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { HSN_QUERY_KEYS } from '@/hooks/useHSNQuoteCalculation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -107,6 +108,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { QuoteDetailForm } from './QuoteDetailForm';
+import { TaxCalculationDebugger } from './debug/TaxCalculationDebugger';
 import { Form, FormField, FormItem, FormControl } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
@@ -389,12 +391,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         // 🆕 CRITICAL FIX: Pass tax calculation preferences to ensure method selection works
         tax_calculation_preferences: {
           calculation_method_preference: quoteData.calculation_method_preference || 'hsn_only',
-          valuation_method_preference: quoteData.valuation_method_preference || 'auto',
+          valuation_method_preference: quoteData.valuation_method_preference || 'product_value',
           admin_id: 'current_admin', // This would be replaced with actual admin ID
         },
       });
 
-      console.log(`[CALCULATION DEBUG] Calculation completed successfully with updated taxes`);
       console.log(
         `[CALCULATION DEBUG] Result breakdown:`,
         result.updated_quote.calculation_data?.breakdown,
@@ -423,6 +424,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           breakdown: updatedQuote.calculation_data?.breakdown,
           final_total: updatedQuote.final_total_usd,
         });
+
+        console.log(`[CALCULATION DEBUG] Calculation completed successfully with updated taxes`);
+        console.log(`[CALCULATION DEBUG] Result breakdown:`, updatedQuote.calculation_data?.breakdown);
+        console.log(`[CALCULATION DEBUG] Result final_total_usd:`, updatedQuote.final_total_usd);
 
         setQuote(updatedQuote);
 
@@ -462,6 +467,42 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       setIsCalculating(false);
     }
   };
+
+  // ✅ NEW: Trigger calculation with current form values (for real-time updates)
+  const triggerCalculation = useCallback(async () => {
+    if (!quote || !form) return;
+    
+    const formValues = form.getValues();
+    
+    // Create updated quote with current form values including valuation preference
+    const updatedQuote: UnifiedQuote = {
+      ...quote,
+      valuation_method_preference: formValues.valuation_method_preference || 'product_value',
+      calculation_method_preference: quote.calculation_method_preference || 'hsn_only',
+      // Include other relevant form data
+      operational_data: {
+        ...quote.operational_data,
+        customs: {
+          ...quote.operational_data?.customs,
+          percentage: Number(formValues.customs_percentage) || 0,
+        },
+        domestic_shipping: Number(formValues.domestic_shipping) || 0,
+        handling_charge: Number(formValues.handling_charge) || 0,
+        insurance_amount: Number(formValues.insurance_amount) || 0,
+      },
+      calculation_data: {
+        ...quote.calculation_data,
+        sales_tax_price: Number(formValues.sales_tax_price) || 0,
+        breakdown: {
+          ...quote.calculation_data?.breakdown,
+          destination_tax: Number(formValues.destination_tax) || 0,
+        },
+      },
+    };
+    
+    // Trigger calculation with updated data
+    await calculateSmartFeatures(updatedQuote);
+  }, [quote, form]);
 
   const handleShippingOptionSelect = async (optionId: string) => {
     if (!quote) {
@@ -598,6 +639,150 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     setSmartSuggestions(updatedSuggestions);
   };
 
+  // ✅ NEW: Prefill tax input fields based on calculation method
+  const prefillTaxFieldsBasedOnMethod = async (
+    method: 'manual' | 'hsn_only' | 'country_based',
+    quoteData: any
+  ) => {
+    try {
+
+      if (method === 'manual') {
+        // Manual mode: leave fields as they are for user input
+        return;
+      }
+
+      if (method === 'hsn_only') {
+        // HSN mode: calculate and prefill with HSN-based values directly from HSN data
+        
+        if (quoteData.items && quoteData.items.length > 0) {
+          let totalCustomsAmount = 0;
+          let totalSalesTax = 0;
+          let totalDestinationTax = 0;
+          const totalValue = quoteData.items.reduce((sum: number, item: any) => 
+            sum + (item.costprice_origin || 0) * (item.quantity || 1), 0
+          );
+
+
+          // Process each item to get HSN-specific rates
+          for (const item of quoteData.items) {
+            if (item.hsn_code) {
+              try {
+                
+                // Get HSN-specific tax rates for this item
+                const { data: hsnData } = await supabase
+                  .from('hsn_master')
+                  .select('tax_data')
+                  .eq('hsn_code', item.hsn_code)
+                  .single();
+
+
+                if (hsnData?.tax_data?.typical_rates) {
+                  const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+                  
+                  // Customs percentage from HSN
+                  const customsRate = hsnData.tax_data.typical_rates.customs?.common || 0;
+                  const itemCustoms = (itemValue * customsRate) / 100;
+                  totalCustomsAmount += itemCustoms;
+
+                  // Destination tax based on country
+                  let destinationTaxRate = 0;
+                  if (quoteData.destination_country === 'IN') {
+                    // India: Use GST rate from HSN
+                    destinationTaxRate = hsnData.tax_data.typical_rates.gst?.standard || 0;
+                  } else if (quoteData.destination_country === 'NP' || 
+                             ['GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'SE', 'DK', 'FI', 'IE', 'PT', 'GR', 'CZ', 'PL', 'HU', 'SK', 'SI', 'EE', 'LV', 'LT', 'LU', 'MT', 'CY', 'NO', 'CH'].includes(quoteData.destination_country)) {
+                    // VAT countries: Use VAT rate from HSN
+                    destinationTaxRate = hsnData.tax_data.typical_rates.vat?.common || 0;
+                  } else if (quoteData.destination_country === 'US') {
+                    // USA: Use sales tax (if available in HSN data)
+                    destinationTaxRate = hsnData.tax_data.typical_rates.sales_tax?.standard || 0;
+                  }
+
+                  const itemDestinationTax = (itemValue * destinationTaxRate) / 100;
+                  totalDestinationTax += itemDestinationTax;
+
+                }
+              } catch (error) {
+                console.error(`[PREFILL DEBUG] Error getting HSN data for ${item.hsn_code}:`, error);
+              }
+            } else {
+              console.warn(`[PREFILL DEBUG] Item missing HSN code:`, item);
+            }
+          }
+
+          // Calculate weighted average customs percentage
+          const avgCustomsPercentage = totalValue > 0 ? (totalCustomsAmount / totalValue) * 100 : 0;
+          
+          console.log(`[PREFILL DEBUG] Final calculations:`, {
+            totalCustomsAmount,
+            totalDestinationTax,
+            avgCustomsPercentage,
+            totalValue
+          });
+
+          // Prefill the form fields
+          form.setValue('customs_percentage', Math.round(avgCustomsPercentage * 100) / 100, { shouldDirty: true });
+          form.setValue('sales_tax_price', Math.round(totalSalesTax * 100) / 100, { shouldDirty: true });
+          form.setValue('destination_tax', Math.round(totalDestinationTax * 100) / 100, { shouldDirty: true });
+
+          console.log(`[PREFILL DEBUG] Form values set:`, {
+            customs_percentage: Math.round(avgCustomsPercentage * 100) / 100,
+            sales_tax_price: Math.round(totalSalesTax * 100) / 100,
+            destination_tax: Math.round(totalDestinationTax * 100) / 100
+          });
+        }
+      }
+
+      if (method === 'country_based') {
+        // Country mode: use country default rates
+        if (quoteData.destination_country) {
+          try {
+            const { data: countrySettings } = await supabase
+              .from('country_settings')
+              .select('sales_tax, vat')
+              .eq('code', quoteData.destination_country)
+              .single();
+
+            if (countrySettings) {
+              const totalValue = quoteData.items?.reduce((sum: number, item: any) => 
+                sum + (item.costprice_origin || 0) * (item.quantity || 1), 0
+              ) || 0;
+
+              // Use default 10% customs for country mode (configurable default)
+              form.setValue('customs_percentage', 10, { shouldDirty: true });
+
+              // Use country's sales tax rate
+              if (countrySettings.sales_tax > 0) {
+                const salesTaxAmount = (totalValue * countrySettings.sales_tax) / 100;
+                form.setValue('sales_tax_price', Math.round(salesTaxAmount * 100) / 100, { shouldDirty: true });
+              } else {
+                form.setValue('sales_tax_price', 0, { shouldDirty: true });
+              }
+
+              // Use country's VAT rate for destination tax
+              if (countrySettings.vat > 0) {
+                const vatAmount = (totalValue * countrySettings.vat) / 100;
+                form.setValue('destination_tax', Math.round(vatAmount * 100) / 100, { shouldDirty: true });
+              } else {
+                form.setValue('destination_tax', 0, { shouldDirty: true });
+              }
+            }
+          } catch (error) {
+            console.warn('Error fetching country settings, using defaults');
+            // Fallback defaults
+            form.setValue('customs_percentage', 10, { shouldDirty: true });
+            form.setValue('sales_tax_price', 0, { shouldDirty: true });
+            form.setValue('destination_tax', 0, { shouldDirty: true });
+          }
+        }
+      }
+
+      console.log(`[PREFILL DEBUG] Tax fields prefilled successfully for ${method} method`);
+    } catch (error) {
+      console.error('[PREFILL DEBUG] Error prefilling tax fields:', error);
+    }
+  };
+
   // Handle tax method change with enhanced debugging and cache invalidation
   const handleTaxMethodChange = async (method: 'manual' | 'hsn_only' | 'country_based') => {
     if (!quote) return;
@@ -605,8 +790,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     console.log(
       `[TAX METHOD DEBUG] Starting method change from ${quote.calculation_method_preference} to ${method}`,
     );
-    console.log(`[TAX METHOD DEBUG] Current breakdown:`, quote.calculation_data?.breakdown);
-    console.log(`[TAX METHOD DEBUG] Current final_total_usd:`, quote.final_total_usd);
 
     try {
       setIsCalculating(true);
@@ -617,12 +800,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         updated_at: new Date().toISOString(), // Force timestamp update
       };
 
-      console.log(`[TAX METHOD DEBUG] Updating quote ${quote.id} with payload:`, updatePayload);
 
       const success = await unifiedDataEngine.updateQuote(quote.id, updatePayload);
 
       if (success) {
-        console.log(`[TAX METHOD DEBUG] Database update successful, updating local state`);
 
         // Update local state with new method
         const updatedQuote = { ...quote, calculation_method_preference: method };
@@ -633,7 +814,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           : updatedQuote;
         setLiveQuote(updatedLiveQuote);
 
-        console.log(`[TAX METHOD DEBUG] Local state updated, invalidating React Query cache`);
+
+        // ✅ NEW: Prefill form fields with calculated values based on method
+        await prefillTaxFieldsBasedOnMethod(method, updatedLiveQuote);
+
 
         // Invalidate React Query cache to ensure fresh data
         await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
@@ -663,10 +847,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             `[TAX METHOD DEBUG] New breakdown:`,
             calculatedQuote.calculation_data?.breakdown,
           );
-          console.log(`[TAX METHOD DEBUG] New final_total_usd:`, calculatedQuote.final_total_usd);
 
           // Save the calculation results to database
-          console.log(`[TAX METHOD DEBUG] Saving calculation results to database`);
           const calculationUpdatePayload = {
             calculation_data: calculatedQuote.calculation_data,
             final_total_usd: calculatedQuote.final_total_usd,
@@ -679,7 +861,6 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           );
 
           if (calcSaveSuccess) {
-            console.log(`[TAX METHOD DEBUG] Calculation results saved successfully`);
 
             // Clear cache to ensure fresh data on next load
             unifiedDataEngine.clearQuoteCache(quote.id);
@@ -862,6 +1043,28 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   }, [isEditMode, scheduleCalculation, recalculateShipping, quote]);
   const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
 
+  // 🆕 NEW: Watch for HSN code changes and auto-prefill if method is hsn_only
+  const [lastPrefillKey, setLastPrefillKey] = useState<string>('');
+  
+  useEffect(() => {
+    const currentMethod = quote?.calculation_method_preference || 'hsn_only';
+    const hasHSNCodes = liveQuote?.items?.some(item => item.hsn_code);
+    
+    // Create a key to prevent duplicate prefills
+    const hsnCodes = liveQuote?.items?.map(item => item.hsn_code).filter(Boolean).sort().join(',') || '';
+    const prefillKey = `${currentMethod}-${hsnCodes}-${liveQuote?.destination_country}`;
+    
+    if (currentMethod === 'hsn_only' && hasHSNCodes && isEditMode && liveQuote && prefillKey !== lastPrefillKey) {
+      
+      setLastPrefillKey(prefillKey);
+      
+      // Add a small delay to ensure form is ready
+      setTimeout(() => {
+        prefillTaxFieldsBasedOnMethod('hsn_only', liveQuote);
+      }, 100);
+    }
+  }, [liveQuote?.items, quote?.calculation_method_preference, isEditMode, lastPrefillKey, liveQuote?.destination_country]);
+
   // Smart weight estimation state
   const [weightEstimations, setWeightEstimations] = useState<{ [key: string]: any }>({});
   const [hsnWeights, setHsnWeights] = useState<{ [key: string]: HSNWeightData | null }>({});
@@ -970,6 +1173,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             ...items[itemIndex],
             hsn_code: hsnData.hsn_code,
             category: hsnData.category || hsnData.display_name,
+            customs_rate: hsnData.tax_data?.typical_rates?.customs?.common || 15,
+            local_tax_rate: hsnData.tax_data?.typical_rates?.gst?.standard || hsnData.tax_data?.typical_rates?.vat?.common || 0,
           };
 
           form.setValue('items', items);
@@ -981,6 +1186,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             const success = await unifiedDataEngine.updateItem(quote.id, items[itemIndex].id, {
               hsn_code: hsnData.hsn_code,
               category: hsnData.category || hsnData.display_name,
+              customs_rate: hsnData.tax_data?.typical_rates?.customs?.common || 15,
+              local_tax_rate: hsnData.tax_data?.typical_rates?.gst?.standard || hsnData.tax_data?.typical_rates?.vat?.common || 0,
             });
 
             if (success) {
@@ -1631,6 +1838,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         customs_percentage: Number(data.customs_percentage) || 0,
         origin_country: data.origin_country || quote?.origin_country,
         destination_country: data.destination_country || quote?.destination_country,
+        // ✅ NEW: Include tax calculation preferences
+        calculation_method_preference: quote?.calculation_method_preference || 'hsn_only',
+        valuation_method_preference: data.valuation_method_preference || 'product_value',
         calculation_data: {
           ...quote?.calculation_data,
           sales_tax_price: Number(data.sales_tax_price) || 0,
@@ -2494,7 +2704,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                                   value={item.hsn_code || ''}
                                                   displayValue={
                                                     item.hsn_code && item.category
-                                                      ? `${item.category} - ${item.hsn_code}`
+                                                      ? `${item.hsn_code} - ${item.category} (${item.customs_rate || 15}%, ${item.local_tax_rate || 0}%)`
                                                       : ''
                                                   }
                                                   onSelect={(hsnData) =>
@@ -2502,19 +2712,11 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                                   }
                                                   productName={item.product_name}
                                                   placeholder="Type to search HSN codes..."
-                                                  className="max-w-xs"
+                                                  className="w-full min-w-[300px]"
                                                 />
                                               </div>
                                             </div>
                                           </div>
-
-                                          {/* HSN Category Display */}
-                                          {item.category && (
-                                            <div className="mt-2 text-xs text-gray-600">
-                                              <Tag className="w-3 h-3 inline mr-1" />
-                                              {item.category}
-                                            </div>
-                                          )}
                                         </div>
                                       </div>
 
@@ -2682,6 +2884,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           onShowShippingDetails={() => setShowShippingDetails(true)}
                           isEditingRoute={isEditingRoute}
                           taxCalculationMethod={quote?.calculation_method_preference || 'hsn_only'}
+                          onTriggerCalculation={triggerCalculation}
                         />
                       );
                     }
@@ -2794,6 +2997,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         onShowShippingDetails={() => setShowShippingDetails(true)}
                         isEditingRoute={isEditingRoute}
                         taxCalculationMethod={quote?.calculation_method_preference || 'hsn_only'}
+                        onTriggerCalculation={triggerCalculation}
                       />
                     );
                   })()}
@@ -3365,6 +3569,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Debug Component for Tax Calculation Testing */}
+      {quote?.id === 'bbfc6b7f-c630-41be-a688-ab3bb7087520' && (
+        <TaxCalculationDebugger
+          quote={liveQuote || quote}
+          onMethodChange={(method) => {
+            // Update the quote calculation method
+            form.setValue('calculation_method_preference', method);
+            triggerCalculation();
+          }}
+        />
+      )}
     </div>
   );
 };

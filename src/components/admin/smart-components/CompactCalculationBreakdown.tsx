@@ -102,9 +102,10 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const feeBreakdown = getAdminFeeBreakdown(quote);
 
   // Calculate total taxes (combining all tax types)
-  const totalTaxes = (breakdown.taxes || quote.calculation_data?.sales_tax_price || 0) + 
-                     (breakdown.destination_tax || 0) + 
-                     (hsnCalculationData?.total_hsn_local_taxes || 0);
+  const totalTaxes =
+    (breakdown.taxes || quote.calculation_data?.sales_tax_price || 0) +
+    (breakdown.destination_tax || 0) +
+    (hsnCalculationData?.total_hsn_local_taxes || 0);
 
   // Debug logging
   console.log(`[BREAKDOWN DEBUG] Calculation breakdown analysis:`, {
@@ -129,7 +130,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
       sales_tax_price: quote.calculation_data?.sales_tax_price,
       hsn_local_taxes: hsnCalculationData?.total_hsn_local_taxes,
       total_taxes_calculated: totalTaxes,
-      
+
       // Fee breakdown
       breakdown_shipping: breakdown.shipping,
       breakdown_handling: breakdown.handling,
@@ -252,6 +253,56 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             )}
 
+          {/* Valuation Method Indicator */}
+          {quote.valuation_method_preference && (
+            <div
+              className={`rounded-lg p-3 mb-3 ${
+                quote.valuation_method_preference === 'minimum_valuation'
+                  ? 'bg-amber-50 border border-amber-200'
+                  : 'bg-blue-50 border border-blue-200'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Calculator
+                  className={`w-4 h-4 ${
+                    quote.valuation_method_preference === 'minimum_valuation'
+                      ? 'text-amber-600'
+                      : 'text-blue-600'
+                  }`}
+                />
+                <span
+                  className={`text-sm font-medium ${
+                    quote.valuation_method_preference === 'minimum_valuation'
+                      ? 'text-amber-800'
+                      : 'text-blue-800'
+                  }`}
+                >
+                  {quote.valuation_method_preference === 'minimum_valuation'
+                    ? 'Minimum Valuation Method'
+                    : 'Product Value Method'}
+                </span>
+              </div>
+              <div
+                className={`text-xs mt-1 ${
+                  quote.valuation_method_preference === 'minimum_valuation'
+                    ? 'text-amber-700'
+                    : 'text-blue-700'
+                }`}
+              >
+                {quote.valuation_method_preference === 'minimum_valuation'
+                  ? 'Using higher of minimum customs valuation vs actual product cost'
+                  : 'Using actual product cost for customs calculation basis'}
+                {hsnCalculationData?.items_with_minimum_valuation &&
+                  hsnCalculationData.items_with_minimum_valuation > 0 && (
+                    <span className="block mt-1 font-medium">
+                      {hsnCalculationData.items_with_minimum_valuation} items using minimum
+                      valuation
+                    </span>
+                  )}
+              </div>
+            </div>
+          )}
+
           {/* Detailed Breakdown */}
           <div className="space-y-3">
             {/* Items Total */}
@@ -363,21 +414,24 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="flex items-center space-x-2">
                   <Calculator className="w-4 h-4 text-orange-600" />
                   <span className="text-gray-700">Sales Tax</span>
-                  <Badge variant="outline" className="text-xs h-4 px-1 text-orange-600 border-orange-300">
+                  <Badge
+                    variant="outline"
+                    className="text-xs h-4 px-1 text-orange-600 border-orange-300"
+                  >
                     Origin
                   </Badge>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
                     {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0), 
-                      'origin'
+                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0),
+                      'origin',
                     )}
                   </div>
                   <div className="text-xs text-gray-500">
                     {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0), 
-                      'destination'
+                      Number(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0),
+                      'destination',
                     )}
                   </div>
                 </div>
@@ -390,16 +444,25 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="flex items-center space-x-2">
                   <Calculator className="w-4 h-4 text-green-600" />
                   <span className="text-gray-700">Destination Tax</span>
-                  <Badge variant="outline" className="text-xs h-4 px-1 text-green-600 border-green-300">
+                  <Badge
+                    variant="outline"
+                    className="text-xs h-4 px-1 text-green-600 border-green-300"
+                  >
                     VAT/GST
                   </Badge>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax), 'origin')}
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.destination_tax),
+                      'origin',
+                    )}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.destination_tax), 'destination')}
+                    {currencyDisplay.formatSingleAmount(
+                      Number(breakdown.destination_tax),
+                      'destination',
+                    )}
                   </div>
                 </div>
               </div>
@@ -439,14 +502,14 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 <div className="text-right">
                   <div className="font-medium">
                     {currencyDisplay.formatSingleAmount(
-                      hsnCalculationData.total_hsn_local_taxes || 0, 
-                      'origin'
+                      hsnCalculationData.total_hsn_local_taxes || 0,
+                      'origin',
                     )}
                   </div>
                   <div className="text-xs text-gray-500">
                     {currencyDisplay.formatSingleAmount(
-                      hsnCalculationData.total_hsn_local_taxes || 0, 
-                      'destination'
+                      hsnCalculationData.total_hsn_local_taxes || 0,
+                      'destination',
                     )}
                   </div>
                 </div>

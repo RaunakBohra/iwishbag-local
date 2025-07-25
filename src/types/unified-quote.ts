@@ -278,7 +278,7 @@ export interface UnifiedQuote {
   calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
   valuation_method_preference?:
     | 'auto'
-    | 'actual_price'
+    | 'product_value'
     | 'minimum_valuation'
     | 'higher_of_both'
     | 'per_item_choice';

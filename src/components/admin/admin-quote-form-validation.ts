@@ -29,6 +29,7 @@ export const adminQuoteItemSchema = z.object({
 export const adminQuoteFormSchema = z.object({
   id: z.string(),
   sales_tax_price: emptyStringToNull,
+  destination_tax: emptyStringToNull, // GST/VAT for destination country
   domestic_shipping: emptyStringToNull,
   handling_charge: emptyStringToNull,
   discount: emptyStringToNull,
@@ -38,6 +39,7 @@ export const adminQuoteFormSchema = z.object({
   origin_country: z.string().nullable(),
   destination_country: z.string().nullable(),
   customs_percentage: emptyStringToNull,
+  valuation_method_preference: z.enum(['product_value', 'minimum_valuation']).optional().default('product_value'),
   currency: z.string().default('USD'),
   destination_currency: z.string(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),

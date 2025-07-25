@@ -190,7 +190,7 @@ export const QuoteDetailForm = ({
           </h4>
         </div>
         <div className="p-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <FormField
               control={form.control}
               name="customs_percentage"
@@ -209,8 +209,7 @@ export const QuoteDetailForm = ({
                           value={field.value ?? ''}
                           onWheel={handleNumberInputWheel}
                           placeholder="15.00"
-                          className={`h-8 pr-8 ${taxCalculationMethod !== 'manual' ? 'bg-gray-50 text-gray-500' : ''}`}
-                          disabled={taxCalculationMethod !== 'manual'}
+                          className="h-8 pr-8"
                         />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
                           %
@@ -256,15 +255,138 @@ export const QuoteDetailForm = ({
                       </span>
                     </div>
                   )}
-                  {taxCalculationMethod !== 'manual' && (
-                    <div className="mt-1">
-                      <span className="text-xs text-gray-500">
-                        {taxCalculationMethod === 'hsn_only'
-                          ? 'Using HSN-based customs calculation'
-                          : 'Using country-based customs calculation'}
-                      </span>
+                  {/* ✅ NEW: Data source indicator */}
+                  <div className="mt-1">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded text-center ${
+                        taxCalculationMethod === 'manual'
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                          : taxCalculationMethod === 'hsn_only'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}
+                    >
+                      {taxCalculationMethod === 'manual'
+                        ? 'Manual Input'
+                        : taxCalculationMethod === 'hsn_only'
+                          ? 'From HSN'
+                          : 'From Country'}
+                    </span>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="valuation_method_preference"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    Valuation Basis
+                  </FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value || 'product_value'}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Trigger recalculation when valuation method changes
+                        if (onTriggerCalculation) {
+                          setTimeout(onTriggerCalculation, 100);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select basis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="product_value" className="text-xs">
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex flex-col">
+                              <span>Product Value</span>
+                              <span className="text-gray-500 text-xs">Use actual item cost</span>
+                            </div>
+                            <div className="text-right text-xs">
+                              <div className="font-medium text-blue-600">
+                                {currencyService.formatAmount(
+                                  _items?.reduce(
+                                    (sum, item) =>
+                                      sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                    0,
+                                  ) || 0,
+                                  originCurrency,
+                                )}
+                              </div>
+                              <div className="text-gray-500">Basis</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="minimum_valuation" className="text-xs">
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex flex-col">
+                              <span>Minimum Valuation</span>
+                              <span className="text-gray-500 text-xs">Use customs minimum</span>
+                            </div>
+                            <div className="text-right text-xs">
+                              <div className="font-medium text-amber-600">
+                                Est.{' '}
+                                {currencyService.formatAmount(
+                                  (_items?.reduce(
+                                    (sum, item) =>
+                                      sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                    0,
+                                  ) || 0) * 1.2,
+                                  originCurrency,
+                                )}
+                              </div>
+                              <div className="text-gray-500">Basis</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <div className="mt-1">
+                    <div
+                      className={`text-xs px-2 py-1 rounded border ${
+                        field.value === 'minimum_valuation'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">
+                          {field.value === 'minimum_valuation'
+                            ? 'Min Valuation Active'
+                            : 'Product Value Active'}
+                        </span>
+                        <span className="font-semibold">
+                          {field.value === 'minimum_valuation'
+                            ? `Est. ${currencyService.formatAmount(
+                                (_items?.reduce(
+                                  (sum, item) =>
+                                    sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                  0,
+                                ) || 0) * 1.2,
+                                originCurrency,
+                              )}`
+                            : currencyService.formatAmount(
+                                _items?.reduce(
+                                  (sum, item) =>
+                                    sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                  0,
+                                ) || 0,
+                                originCurrency,
+                              )}
+                        </span>
+                      </div>
+                      <div className="text-xs opacity-75 mt-0.5">
+                        {field.value === 'minimum_valuation'
+                          ? 'Using higher of minimum valuation vs actual cost'
+                          : 'Using actual product cost for customs calculation'}
+                      </div>
                     </div>
-                  )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -288,8 +410,7 @@ export const QuoteDetailForm = ({
                         {...field}
                         value={field.value ?? ''}
                         onWheel={handleNumberInputWheel}
-                        className={`pl-8 h-8 ${taxCalculationMethod !== 'manual' ? 'bg-gray-50 text-gray-500' : ''}`}
-                        disabled={taxCalculationMethod !== 'manual'}
+                        className="pl-8 h-8"
                         onChange={(e) => {
                           field.onChange(e);
                           // ✅ NEW: Trigger real-time calculation when sales tax changes
@@ -301,13 +422,78 @@ export const QuoteDetailForm = ({
                       />
                     </div>
                   </FormControl>
-                  {taxCalculationMethod !== 'manual' && (
-                    <div className="mt-1">
-                      <span className="text-xs text-gray-500">
-                        {taxCalculationMethod === 'hsn_only' ? 'Using HSN-based tax calculation' : 'Using country-based tax calculation'}
+                  {/* ✅ NEW: Data source indicator */}
+                  <div className="mt-1">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded text-center ${
+                        taxCalculationMethod === 'manual'
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                          : taxCalculationMethod === 'hsn_only'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}
+                    >
+                      {taxCalculationMethod === 'manual'
+                        ? 'Manual Input'
+                        : taxCalculationMethod === 'hsn_only'
+                          ? 'From HSN'
+                          : 'From Country'}
+                    </span>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="destination_tax"
+              render={({ field }) => (
+                <FormItem className="m-0">
+                  <FormLabel className="text-xs font-semibold text-gray-700 mb-1 block">
+                    {countryCode === 'IN' ? 'GST' : countryCode === 'US' ? 'Sales Tax' : 'VAT'} (
+                    {countryCode})
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        {inputCurrencySymbol}
                       </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? ''}
+                        onWheel={handleNumberInputWheel}
+                        className="pl-8 h-8"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          // ✅ NEW: Trigger real-time calculation when destination tax changes
+                          if (onTriggerCalculation) {
+                            onTriggerCalculation();
+                          }
+                        }}
+                        placeholder="0.00"
+                      />
                     </div>
-                  )}
+                  </FormControl>
+                  {/* ✅ NEW: Data source indicator */}
+                  <div className="mt-1">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded text-center ${
+                        taxCalculationMethod === 'manual'
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                          : taxCalculationMethod === 'hsn_only'
+                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                            : 'bg-green-50 text-green-700 border border-green-200'
+                      }`}
+                    >
+                      {taxCalculationMethod === 'manual'
+                        ? 'Manual Input'
+                        : taxCalculationMethod === 'hsn_only'
+                          ? 'From HSN'
+                          : 'From Country'}
+                    </span>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
