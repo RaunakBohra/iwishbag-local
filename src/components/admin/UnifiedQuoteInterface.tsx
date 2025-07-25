@@ -57,11 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
@@ -379,7 +375,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     try {
       setIsCalculating(true);
 
-      console.log(`[CALCULATION DEBUG] Starting calculation with method: ${quoteData.calculation_method_preference}`);
+      console.log(
+        `[CALCULATION DEBUG] Starting calculation with method: ${quoteData.calculation_method_preference}`,
+      );
 
       const result = await smartCalculationEngine.calculateWithShippingOptions({
         quote: quoteData,
@@ -390,15 +388,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         },
         // 🆕 CRITICAL FIX: Pass tax calculation preferences to ensure method selection works
         tax_calculation_preferences: {
-          calculation_method_preference: quoteData.calculation_method_preference || 'auto',
+          calculation_method_preference: quoteData.calculation_method_preference || 'hsn_only',
           valuation_method_preference: quoteData.valuation_method_preference || 'auto',
           admin_id: 'current_admin', // This would be replaced with actual admin ID
         },
       });
 
       console.log(`[CALCULATION DEBUG] Calculation completed successfully with updated taxes`);
-      console.log(`[CALCULATION DEBUG] Result breakdown:`, result.updated_quote.calculation_data?.breakdown);
-      console.log(`[CALCULATION DEBUG] Result final_total_usd:`, result.updated_quote.final_total_usd);
+      console.log(
+        `[CALCULATION DEBUG] Result breakdown:`,
+        result.updated_quote.calculation_data?.breakdown,
+      );
+      console.log(
+        `[CALCULATION DEBUG] Result final_total_usd:`,
+        result.updated_quote.final_total_usd,
+      );
 
       if (result.success) {
         // Preserve the calculation_method_preference from the optimistic update
@@ -417,21 +421,26 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           id: updatedQuote.id,
           method: updatedQuote.calculation_method_preference,
           breakdown: updatedQuote.calculation_data?.breakdown,
-          final_total: updatedQuote.final_total_usd
+          final_total: updatedQuote.final_total_usd,
         });
 
         setQuote(updatedQuote);
-        
+
         // Update liveQuote to ensure Cost Breakdown reflects new calculations
         if (isEditMode) {
           setLiveQuote(updatedQuote);
         }
-        
+
         setShippingOptions(result.shipping_options);
         setShippingRecommendations(result.smart_recommendations);
         setSmartSuggestions(result.optimization_suggestions);
         setOptimizationScore(result.updated_quote.optimization_score);
+
+        // Return the updated quote for further processing
+        return updatedQuote;
       }
+
+      return null;
     } catch (error) {
       const appError = createCalculationError(
         'smart features calculation',
@@ -447,6 +456,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         quoteId: quote?.id,
         userId: quote?.user_id,
       });
+
+      return null;
     } finally {
       setIsCalculating(false);
     }
@@ -588,16 +599,18 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   };
 
   // Handle tax method change with enhanced debugging and cache invalidation
-  const handleTaxMethodChange = async (method: 'auto' | 'hsn_only' | 'legacy_fallback') => {
+  const handleTaxMethodChange = async (method: 'manual' | 'hsn_only' | 'country_based') => {
     if (!quote) return;
 
-    console.log(`[TAX METHOD DEBUG] Starting method change from ${quote.calculation_method_preference} to ${method}`);
+    console.log(
+      `[TAX METHOD DEBUG] Starting method change from ${quote.calculation_method_preference} to ${method}`,
+    );
     console.log(`[TAX METHOD DEBUG] Current breakdown:`, quote.calculation_data?.breakdown);
     console.log(`[TAX METHOD DEBUG] Current final_total_usd:`, quote.final_total_usd);
 
     try {
       setIsCalculating(true);
-      
+
       // Update quote with new tax method preference
       const updatePayload = {
         calculation_method_preference: method,
@@ -610,40 +623,81 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
       if (success) {
         console.log(`[TAX METHOD DEBUG] Database update successful, updating local state`);
-        
+
         // Update local state with new method
         const updatedQuote = { ...quote, calculation_method_preference: method };
         setQuote(updatedQuote);
-        
-        const updatedLiveQuote = liveQuote ? { ...liveQuote, calculation_method_preference: method } : updatedQuote;
+
+        const updatedLiveQuote = liveQuote
+          ? { ...liveQuote, calculation_method_preference: method }
+          : updatedQuote;
         setLiveQuote(updatedLiveQuote);
 
         console.log(`[TAX METHOD DEBUG] Local state updated, invalidating React Query cache`);
-        
+
         // Invalidate React Query cache to ensure fresh data
         await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
         await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
         await queryClient.invalidateQueries({ queryKey: ['quotes'] });
         // Invalidate HSN-specific caches for real-time updates
-        await queryClient.invalidateQueries({ queryKey: HSN_QUERY_KEYS.quoteCalculation(quote.id) });
+        await queryClient.invalidateQueries({
+          queryKey: HSN_QUERY_KEYS.quoteCalculation(quote.id),
+        });
         await queryClient.invalidateQueries({ queryKey: ['hsn-tax-breakdown', quote.id] });
 
-        console.log(`[TAX METHOD DEBUG] Cache invalidated (including HSN), triggering recalculation`);
+        console.log(
+          `[TAX METHOD DEBUG] Cache invalidated (including HSN), triggering recalculation`,
+        );
 
         // Trigger recalculation with updated quote data
         console.log(`[TAX METHOD DEBUG] Calling calculateSmartFeatures with updatedLiveQuote:`, {
           id: updatedLiveQuote.id,
-          method: updatedLiveQuote.calculation_method_preference
+          method: updatedLiveQuote.calculation_method_preference,
         });
-        await calculateSmartFeatures(updatedLiveQuote);
+        const calculatedQuote = await calculateSmartFeatures(updatedLiveQuote);
 
         console.log(`[TAX METHOD DEBUG] Recalculation completed successfully`);
-        console.log(`[TAX METHOD DEBUG] New breakdown:`, liveQuote?.calculation_data?.breakdown);
-        console.log(`[TAX METHOD DEBUG] New final_total_usd:`, liveQuote?.final_total_usd);
+
+        if (calculatedQuote) {
+          console.log(
+            `[TAX METHOD DEBUG] New breakdown:`,
+            calculatedQuote.calculation_data?.breakdown,
+          );
+          console.log(`[TAX METHOD DEBUG] New final_total_usd:`, calculatedQuote.final_total_usd);
+
+          // Save the calculation results to database
+          console.log(`[TAX METHOD DEBUG] Saving calculation results to database`);
+          const calculationUpdatePayload = {
+            calculation_data: calculatedQuote.calculation_data,
+            final_total_usd: calculatedQuote.final_total_usd,
+            operational_data: calculatedQuote.operational_data,
+          };
+
+          const calcSaveSuccess = await unifiedDataEngine.updateQuote(
+            quote.id,
+            calculationUpdatePayload,
+          );
+
+          if (calcSaveSuccess) {
+            console.log(`[TAX METHOD DEBUG] Calculation results saved successfully`);
+
+            // Clear cache to ensure fresh data on next load
+            unifiedDataEngine.clearQuoteCache(quote.id);
+          } else {
+            console.error(`[TAX METHOD DEBUG] Failed to save calculation results`);
+            toast({
+              title: 'Warning',
+              description: 'Tax method updated but calculation results may not be saved',
+              variant: 'destructive',
+            });
+          }
+        } else {
+          console.error(`[TAX METHOD DEBUG] Calculation failed, no quote returned`);
+        }
 
         toast({
           title: 'Tax method updated',
-          description: `Now using ${method === 'auto' ? 'Auto (Hybrid)' : method === 'hsn_only' ? 'HSN Only' : 'Country Based'} calculation`,
+          description: `Now using ${method === 'manual' ? 'Manual Input' : method === 'hsn_only' ? 'HSN Based' : 'Country Based'} calculation`,
         });
       } else {
         console.error(`[TAX METHOD DEBUG] Database update failed`);
@@ -940,7 +994,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
               await queryClient.invalidateQueries({ queryKey: ['quotes'] });
               // Invalidate HSN-specific caches for real-time updates
-              await queryClient.invalidateQueries({ queryKey: HSN_QUERY_KEYS.quoteCalculation(quote.id) });
+              await queryClient.invalidateQueries({
+                queryKey: HSN_QUERY_KEYS.quoteCalculation(quote.id),
+              });
               await queryClient.invalidateQueries({ queryKey: ['hsn-tax-breakdown', quote.id] });
 
               // 5. Trigger quote data refresh to update sidebar components
@@ -2104,8 +2160,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               itemCount: items.length,
                               firstItem: items[0],
                               allItems: items,
-                              itemIds: items.map(i => i?.id),
-                              itemNames: items.map(i => i?.product_name),
+                              itemIds: items.map((i) => i?.id),
+                              itemNames: items.map((i) => i?.product_name),
                             });
 
                             const renderedItems = items.map((item, index) => {
@@ -2115,7 +2171,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 index,
                                 totalItems: items.length,
                               });
-                              
+
                               try {
                                 // Validate item structure
                                 if (!item || typeof item !== 'object') {
@@ -2298,7 +2354,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                           <div className="flex items-center gap-4 flex-wrap">
                                             {/* Quantity Field */}
                                             <div className="flex items-center gap-2">
-                                              <span className="text-gray-500 text-xs font-medium min-w-[30px]">QTY</span>
+                                              <span className="text-gray-500 text-xs font-medium min-w-[30px]">
+                                                QTY
+                                              </span>
                                               <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
                                                 <input
                                                   type="number"
@@ -2320,7 +2378,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                                             {/* Price Field */}
                                             <div className="flex items-center gap-2">
-                                              <span className="text-gray-500 text-xs font-medium min-w-[35px]">PRICE</span>
+                                              <span className="text-gray-500 text-xs font-medium min-w-[35px]">
+                                                PRICE
+                                              </span>
                                               <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
                                                 <DollarSign className="w-3 h-3 text-gray-400" />
                                                 <input
@@ -2339,13 +2399,17 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                                   className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                                                   placeholder="1000"
                                                 />
-                                                <span className="text-xs text-gray-400 ml-1">{currencyDisplay.currencySymbols.origin}</span>
+                                                <span className="text-xs text-gray-400 ml-1">
+                                                  {currencyDisplay.currencySymbols.origin}
+                                                </span>
                                               </div>
                                             </div>
 
                                             {/* Weight Field with Clean Badge System */}
                                             <div className="flex items-center gap-2">
-                                              <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
+                                              <span className="text-gray-500 text-xs font-medium min-w-[45px]">
+                                                WEIGHT
+                                              </span>
                                               <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
                                                 <Scale className="w-3 h-3 text-gray-400 mr-1" />
                                                 <input
@@ -2364,20 +2428,29 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                                   className="w-16 h-8 border-0 p-0 text-sm font-medium"
                                                   placeholder="0.2"
                                                 />
-                                                <span className="text-xs text-gray-400 ml-1">kg</span>
+                                                <span className="text-xs text-gray-400 ml-1">
+                                                  kg
+                                                </span>
                                               </div>
-                                              
+
                                               {/* Clean Suggestion Badges */}
                                               <div className="flex items-center gap-1">
                                                 {/* Loading indicator */}
-                                                {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
+                                                {(isEstimating[index.toString()] ||
+                                                  isLoadingHSN[index.toString()]) && (
                                                   <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                                 )}
-                                                
+
                                                 {/* HSN Badge */}
                                                 {hsnWeights[index.toString()] && (
                                                   <button
-                                                    onClick={() => handleWeightSelection(index, hsnWeights[index.toString()]!.average, 'hsn')}
+                                                    onClick={() =>
+                                                      handleWeightSelection(
+                                                        index,
+                                                        hsnWeights[index.toString()]!.average,
+                                                        'hsn',
+                                                      )
+                                                    }
                                                     className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-colors"
                                                     type="button"
                                                     title={`HSN database suggests ${hsnWeights[index.toString()]!.average}kg (${Math.round(hsnWeights[index.toString()]!.confidence * 100)}% confident)`}
@@ -2385,16 +2458,27 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                                     HSN: {hsnWeights[index.toString()]!.average}kg
                                                   </button>
                                                 )}
-                                                
+
                                                 {/* AI Badge */}
                                                 {weightEstimations[index.toString()] && (
                                                   <button
-                                                    onClick={() => handleWeightSelection(index, weightEstimations[index.toString()].estimated_weight, 'ml')}
+                                                    onClick={() =>
+                                                      handleWeightSelection(
+                                                        index,
+                                                        weightEstimations[index.toString()]
+                                                          .estimated_weight,
+                                                        'ml',
+                                                      )
+                                                    }
                                                     className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors"
                                                     type="button"
                                                     title={`AI estimates ${weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg (${Math.round(weightEstimations[index.toString()].confidence * 100)}% confident)`}
                                                   >
-                                                    AI: {weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg
+                                                    AI:{' '}
+                                                    {weightEstimations[
+                                                      index.toString()
+                                                    ].estimated_weight.toFixed(2)}
+                                                    kg
                                                   </button>
                                                 )}
                                               </div>
@@ -2402,12 +2486,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
 
                                             {/* HSN Field */}
                                             <div className="flex items-center gap-2">
-                                              <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
+                                              <span className="text-gray-500 text-xs font-medium min-w-[30px]">
+                                                HSN
+                                              </span>
                                               <div className="flex-1">
                                                 <DirectHSNInput
                                                   value={item.hsn_code || ''}
-                                                  displayValue={item.hsn_code && item.category ? `${item.category} - ${item.hsn_code}` : ''}
-                                                  onSelect={(hsnData) => handleHSNAssignment(index, hsnData)}
+                                                  displayValue={
+                                                    item.hsn_code && item.category
+                                                      ? `${item.category} - ${item.hsn_code}`
+                                                      : ''
+                                                  }
+                                                  onSelect={(hsnData) =>
+                                                    handleHSNAssignment(index, hsnData)
+                                                  }
                                                   productName={item.product_name}
                                                   placeholder="Type to search HSN codes..."
                                                   className="max-w-xs"
@@ -2415,7 +2507,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                               </div>
                                             </div>
                                           </div>
-                                          
+
                                           {/* HSN Category Display */}
                                           {item.category && (
                                             <div className="mt-2 text-xs text-gray-600">
@@ -2514,8 +2606,10 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 );
                               }
                             });
-                            
-                            console.log('🏁 [Admin Quote Edit] Finished mapping items, returning rendered items');
+
+                            console.log(
+                              '🏁 [Admin Quote Edit] Finished mapping items, returning rendered items',
+                            );
                             return renderedItems;
                           } catch (error) {
                             return (
@@ -2587,6 +2681,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                           onSelectShippingOption={handleShippingOptionSelect}
                           onShowShippingDetails={() => setShowShippingDetails(true)}
                           isEditingRoute={isEditingRoute}
+                          taxCalculationMethod={quote?.calculation_method_preference || 'hsn_only'}
                         />
                       );
                     }
@@ -2698,6 +2793,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         onSelectShippingOption={handleShippingOptionSelect}
                         onShowShippingDetails={() => setShowShippingDetails(true)}
                         isEditingRoute={isEditingRoute}
+                        taxCalculationMethod={quote?.calculation_method_preference || 'hsn_only'}
                       />
                     );
                   })()}

@@ -13,11 +13,11 @@ export interface QuoteItem {
   quantity: number;
   costprice_origin: number; // Cost price in origin country currency (INR, NPR, etc.)
   weight: number; // Weight in kg
-  
+
   // HSN Classification Fields
   hsn_code?: string;
   category?: string;
-  
+
   smart_data: {
     weight_confidence: number; // 0-1 scale
     price_confidence: number; // 0-1 scale
@@ -40,19 +40,19 @@ export interface QuoteItem {
 
 // Financial Calculation Breakdown (Transparent Tax Model)
 export interface CalculationBreakdown {
-  items_total: number;         // Base product price (before purchase tax)
-  merchant_shipping?: number;  // Merchant to hub shipping cost
-  purchase_tax?: number;       // ✅ NEW: Origin country purchase tax (transparent)
-  shipping: number;            // International shipping cost
-  customs: number;             // Customs duty (calculated on actualItemCost base)
-  destination_tax?: number;    // ✅ NEW: Destination country VAT/GST only
-  fees: number;                // Payment gateway fees
-  handling?: number;           // Handling charges (separate from fees)
-  insurance?: number;          // Insurance amount (separate from fees)
-  discount: number;            // Applied discounts
-  
+  items_total: number; // Base product price (before purchase tax)
+  merchant_shipping?: number; // Merchant to hub shipping cost
+  purchase_tax?: number; // ✅ NEW: Origin country purchase tax (transparent)
+  shipping: number; // International shipping cost
+  customs: number; // Customs duty (calculated on actualItemCost base)
+  destination_tax?: number; // ✅ NEW: Destination country VAT/GST only
+  fees: number; // Payment gateway fees
+  handling?: number; // Handling charges (separate from fees)
+  insurance?: number; // Insurance amount (separate from fees)
+  discount: number; // Applied discounts
+
   // Legacy field for backward compatibility (deprecated)
-  taxes?: number;              // @deprecated Use destination_tax instead
+  taxes?: number; // @deprecated Use destination_tax instead
 }
 
 // Exchange Rate Information
@@ -234,18 +234,18 @@ export interface OperationalData {
   payment: PaymentInfo;
   timeline: TimelineEntry[];
   admin: AdminInfo;
-  
+
   // Additional calculated fields (added dynamically by SmartCalculationEngine)
   handling_charge?: number;
   insurance_amount?: number;
   payment_gateway_fee?: number;
   domestic_shipping?: number;
   vat_amount?: number;
-  
+
   // ✅ NEW: Purchase tax tracking (Transparent Tax Model)
-  purchase_tax_amount?: number;    // Amount of purchase tax applied
-  purchase_tax_rate?: number;      // Rate used for purchase tax calculation (e.g., 8.88 for NY)
-  actual_item_cost?: number;       // items_total + purchase_tax (for debugging)
+  purchase_tax_amount?: number; // Amount of purchase tax applied
+  purchase_tax_rate?: number; // Rate used for purchase tax calculation (e.g., 8.88 for NY)
+  actual_item_cost?: number; // items_total + purchase_tax (for debugging)
 }
 
 // Smart Suggestion
@@ -273,6 +273,15 @@ export interface UnifiedQuote {
   status: string;
   origin_country: string;
   destination_country: string;
+
+  // Tax Calculation Preferences
+  calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
+  valuation_method_preference?:
+    | 'auto'
+    | 'actual_price'
+    | 'minimum_valuation'
+    | 'higher_of_both'
+    | 'per_item_choice';
 
   // iwishBag Tracking System (Phase 1)
   iwish_tracking_id?: string | null;
@@ -323,7 +332,7 @@ export interface QuoteItemInput {
   quantity: number;
   costprice_origin: number; // Cost price in origin country currency
   weight_kg: number;
-  
+
   // HSN Classification Fields (optional for input)
   hsn_code?: string;
   category?: string;

@@ -34,8 +34,13 @@ export interface EnhancedCalculationInput {
   };
   // 2-tier tax system preferences
   tax_calculation_preferences?: {
-    calculation_method_preference?: 'auto' | 'hsn_only' | 'legacy_fallback' | 'admin_choice';
-    valuation_method_preference?: 'auto' | 'actual_price' | 'minimum_valuation' | 'higher_of_both' | 'per_item_choice';
+    calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
+    valuation_method_preference?:
+      | 'auto'
+      | 'actual_price'
+      | 'minimum_valuation'
+      | 'higher_of_both'
+      | 'per_item_choice';
     admin_id?: string; // For audit logging
   };
 }
@@ -94,7 +99,6 @@ export class SmartCalculationEngine {
         0,
       );
 
-
       // ✅ SIMPLIFIED: Don't generate shipping options in sync mode
       // Just use the breakdown values that were passed in via the quote
       const calculationResult = this.calculateCompleteCostsSyncDirect({
@@ -132,18 +136,20 @@ export class SmartCalculationEngine {
       console.log(`[SMART ENGINE DEBUG] Received tax preferences:`, {
         calculation_method: input.tax_calculation_preferences?.calculation_method_preference,
         valuation_method: input.tax_calculation_preferences?.valuation_method_preference,
-        quote_method: input.quote.calculation_method_preference
+        quote_method: input.quote.calculation_method_preference,
       });
 
       const cacheKey = this.generateCacheKey(input);
       console.log(`[SMART ENGINE DEBUG] Cache key generated:`, cacheKey);
-      
+
       const cached = this.getCachedResult(cacheKey);
       if (cached) {
-        console.log(`[SMART ENGINE DEBUG] Cache HIT - returning cached result, skipping HSN calculation`);
+        console.log(
+          `[SMART ENGINE DEBUG] Cache HIT - returning cached result, skipping HSN calculation`,
+        );
         return cached;
       }
-      
+
       console.log(`[SMART ENGINE DEBUG] Cache MISS - proceeding with fresh calculation`);
 
       // Calculate base totals
@@ -159,14 +165,14 @@ export class SmartCalculationEngine {
       // 🆕 ENHANCED: HSN-based per-item tax calculation with 2-tier method selection
       console.log(`[SMART ENGINE DEBUG] About to call calculateHSNBasedTaxes with preferences:`, {
         calculation_method: input.tax_calculation_preferences?.calculation_method_preference,
-        quote_method: input.quote.calculation_method_preference
+        quote_method: input.quote.calculation_method_preference,
       });
 
       const hsnTaxResults = await this.calculateHSNBasedTaxes(input.quote, input);
 
       console.log(`[SMART ENGINE DEBUG] HSN calculation completed:`, {
         breakdown_count: hsnTaxResults.breakdown.length,
-        total_taxes: hsnTaxResults.summary.total_all_taxes
+        total_taxes: hsnTaxResults.summary.total_all_taxes,
       });
 
       // Get all available shipping options
@@ -238,7 +244,7 @@ export class SmartCalculationEngine {
    */
   private async calculateHSNBasedTaxes(
     quote: UnifiedQuote,
-    input?: EnhancedCalculationInput
+    input?: EnhancedCalculationInput,
   ): Promise<{
     breakdown: ItemTaxBreakdown[];
     summary: {
@@ -250,12 +256,11 @@ export class SmartCalculationEngine {
       currency_conversions_applied: number;
     };
   }> {
-
     try {
       console.log(`[HSN TAX DEBUG] Starting HSN calculation with input preferences:`, {
         input_method: input?.tax_calculation_preferences?.calculation_method_preference,
         quote_method: quote.calculation_method_preference,
-        quote_id: quote.id
+        quote_id: quote.id,
       });
 
       // Get effective tax method from database based on quote preferences
@@ -279,17 +284,22 @@ export class SmartCalculationEngine {
         apply_exemptions: true,
         calculation_date: new Date(),
         // 2-tier tax system preferences
-        calculation_method_preference: 
+        calculation_method_preference:
           input?.tax_calculation_preferences?.calculation_method_preference ||
           quote.calculation_method_preference ||
           effectiveTaxMethod?.calculation_method ||
-          'auto',
+          'hsn_only',
         valuation_method_preference:
           input?.tax_calculation_preferences?.valuation_method_preference ||
           quote.valuation_method_preference ||
           effectiveTaxMethod?.valuation_method ||
           'auto',
         admin_id: input?.tax_calculation_preferences?.admin_id,
+        // ✅ FIXED: Pass actual form input values for CIF calculation
+        shipping_cost: quote.calculation_data?.breakdown?.shipping || 0,
+        insurance_amount: quote.operational_data?.insurance_amount || 0,
+        handling_charge: quote.operational_data?.handling_charge || 0,
+        domestic_shipping: quote.operational_data?.domestic_shipping || 0,
       };
 
       console.log(`[HSN TAX DEBUG] Context creation values:`, {
@@ -297,7 +307,12 @@ export class SmartCalculationEngine {
         quote_method: quote.calculation_method_preference,
         effective_method: effectiveTaxMethod?.calculation_method,
         final_calculation_method: context.calculation_method_preference,
-        final_valuation_method: context.valuation_method_preference
+        final_valuation_method: context.valuation_method_preference,
+        // ✅ NEW: CIF component values
+        shipping_cost: context.shipping_cost,
+        insurance_amount: context.insurance_amount,
+        handling_charge: context.handling_charge,
+        domestic_shipping: context.domestic_shipping,
       });
 
       // Enhanced items with HSN classification and weight detection
@@ -320,8 +335,7 @@ export class SmartCalculationEngine {
                 hsnCode = classificationResult.hsnCode;
               } else {
               }
-            } catch (error) {
-            }
+            } catch (error) {}
           }
 
           // Auto-detect weight if not provided or seems incorrect
@@ -338,8 +352,7 @@ export class SmartCalculationEngine {
                 detectedWeight = weightResult.weight;
               } else {
               }
-            } catch (error) {
-            }
+            } catch (error) {}
           }
 
           return {
@@ -355,9 +368,8 @@ export class SmartCalculationEngine {
         }),
       );
 
-
       console.log(`[SMART ENGINE DEBUG] Passing context to PerItemTaxCalculator:`, {
-        full_context: context
+        full_context: context,
       });
 
       // Calculate per-item taxes
@@ -365,7 +377,6 @@ export class SmartCalculationEngine {
         enhancedItems,
         context,
       );
-
 
       // Get calculation summary
       const summary = await this.perItemTaxCalculator.getCalculationSummary(taxBreakdowns);
@@ -375,16 +386,14 @@ export class SmartCalculationEngine {
         summary,
       };
     } catch (error) {
-
       // Fallback to unified tax calculation if HSN calculation fails
-      const fallbackMethod = input?.tax_calculation_preferences?.calculation_method_preference || 'auto';
-      if (fallbackMethod === 'legacy_fallback' || fallbackMethod === 'auto') {
-        
+      const fallbackMethod =
+        input?.tax_calculation_preferences?.calculation_method_preference || 'hsn_only';
+      if (fallbackMethod === 'country_based') {
         try {
           const fallbackResults = await this.calculateUnifiedFallbackTaxes(quote, input);
           return fallbackResults;
-        } catch (fallbackError) {
-        }
+        } catch (fallbackError) {}
       }
 
       // Return empty results on complete failure to prevent breaking the main calculation
@@ -408,7 +417,7 @@ export class SmartCalculationEngine {
    */
   private async calculateUnifiedFallbackTaxes(
     quote: UnifiedQuote,
-    input?: EnhancedCalculationInput
+    input?: EnhancedCalculationInput,
   ): Promise<{
     breakdown: ItemTaxBreakdown[];
     summary: {
@@ -420,18 +429,17 @@ export class SmartCalculationEngine {
       currency_conversions_applied: number;
     };
   }> {
-
     try {
       // Get unified tax data for this route
       const unifiedTaxData = await unifiedTaxFallbackService.getUnifiedTaxData(
         quote.origin_country,
-        quote.destination_country
+        quote.destination_country,
       );
 
       // Calculate totals for traditional percentage-based calculation
       const itemsTotal = quote.items.reduce(
         (sum, item) => sum + item.costprice_origin * item.quantity,
-        0
+        0,
       );
 
       // Apply unified tax rates to total value
@@ -440,57 +448,59 @@ export class SmartCalculationEngine {
       const totalTaxes = customsAmount + localTaxAmount;
 
       // Create simplified breakdown (since this is route-level, not per-item)
-      const breakdown: ItemTaxBreakdown[] = [{
-        item_id: 'unified_fallback',
-        hsn_code: 'FALLBACK',
-        category: 'unified_calculation',
-        item_name: `${quote.items.length} items (unified calculation)`,
-        
-        // Valuation details
-        original_price_origin_currency: itemsTotal,
-        taxable_amount_origin_currency: itemsTotal,
-        valuation_method: 'original_price',
-        
-        // Calculation options (simplified for fallback)
-        calculation_options: {
-          actual_price_calculation: {
-            basis_amount: itemsTotal,
-            customs_amount: customsAmount,
-            local_tax_amount: localTaxAmount,
-            total_tax: totalTaxes
+      const breakdown: ItemTaxBreakdown[] = [
+        {
+          item_id: 'unified_fallback',
+          hsn_code: 'FALLBACK',
+          category: 'unified_calculation',
+          item_name: `${quote.items.length} items (unified calculation)`,
+
+          // Valuation details
+          original_price_origin_currency: itemsTotal,
+          taxable_amount_origin_currency: itemsTotal,
+          valuation_method: 'original_price',
+
+          // Calculation options (simplified for fallback)
+          calculation_options: {
+            actual_price_calculation: {
+              basis_amount: itemsTotal,
+              customs_amount: customsAmount,
+              local_tax_amount: localTaxAmount,
+              total_tax: totalTaxes,
+            },
+            selected_method: 'actual_price',
+            admin_can_override: true,
           },
-          selected_method: 'actual_price',
-          admin_can_override: true
+
+          // Tax calculations
+          customs_calculation: {
+            rate_percentage: unifiedTaxData.customs_percent,
+            amount_origin_currency: customsAmount,
+            basis_amount: itemsTotal,
+          },
+
+          local_tax_calculation: {
+            tax_type: 'vat', // Unified system uses VAT as local tax
+            rate_percentage: unifiedTaxData.vat_percent,
+            amount_origin_currency: localTaxAmount,
+            basis_amount: itemsTotal,
+          },
+
+          // Totals
+          total_customs: customsAmount,
+          total_local_taxes: localTaxAmount,
+          total_taxes: totalTaxes,
+
+          // Metadata
+          calculation_timestamp: new Date(),
+          admin_overrides_applied: [],
+          confidence_score: unifiedTaxData.confidence_score,
+          warnings: [
+            `Using ${unifiedTaxData.data_source} fallback calculation`,
+            unifiedTaxData.fallback_reason ? `Reason: ${unifiedTaxData.fallback_reason}` : '',
+          ].filter(Boolean),
         },
-        
-        // Tax calculations
-        customs_calculation: {
-          rate_percentage: unifiedTaxData.customs_percent,
-          amount_origin_currency: customsAmount,
-          basis_amount: itemsTotal
-        },
-        
-        local_tax_calculation: {
-          tax_type: 'vat', // Unified system uses VAT as local tax
-          rate_percentage: unifiedTaxData.vat_percent,
-          amount_origin_currency: localTaxAmount,
-          basis_amount: itemsTotal
-        },
-        
-        // Totals
-        total_customs: customsAmount,
-        total_local_taxes: localTaxAmount,
-        total_taxes: totalTaxes,
-        
-        // Metadata
-        calculation_timestamp: new Date(),
-        admin_overrides_applied: [],
-        confidence_score: unifiedTaxData.confidence_score,
-        warnings: [
-          `Using ${unifiedTaxData.data_source} fallback calculation`,
-          unifiedTaxData.fallback_reason ? `Reason: ${unifiedTaxData.fallback_reason}` : '',
-        ].filter(Boolean)
-      }];
+      ];
 
       const summary = {
         total_items: quote.items.length,
@@ -501,12 +511,10 @@ export class SmartCalculationEngine {
         currency_conversions_applied: 0, // Not applicable for unified fallback
       };
 
-
       return {
         breakdown,
         summary,
       };
-
     } catch (error) {
       throw error; // Re-throw to be handled by the caller
     }
@@ -517,7 +525,6 @@ export class SmartCalculationEngine {
    */
   async debugFreshShippingRoutes(): Promise<void> {
     try {
-
       const { data: freshRoutes, error } = await supabase
         .from('shipping_routes')
         .select('*')
@@ -528,8 +535,7 @@ export class SmartCalculationEngine {
       if (error) {
         return;
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   /**
@@ -541,8 +547,7 @@ export class SmartCalculationEngine {
         .from('shipping_routes')
         .select('*')
         .eq('is_active', true);
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   /**
@@ -646,7 +651,6 @@ export class SmartCalculationEngine {
     if (activeDeliveryOptions.length === 0) {
       return [];
     }
-
 
     // Generate options for each delivery option
     for (const deliveryOption of deliveryOptions || []) {
@@ -802,7 +806,6 @@ export class SmartCalculationEngine {
    * @returns Base shipping cost in ORIGIN COUNTRY CURRENCY (no conversion)
    */
   private calculateRouteBaseCost(route: any, weight: number, value: number): number {
-
     // Validate required route data
     if (!route.base_shipping_cost) {
       throw new Error(
@@ -815,7 +818,6 @@ export class SmartCalculationEngine {
 
     // Weight-based cost calculation - ADDITIVE MODEL
     if (route.weight_tiers && route.weight_tiers.length > 0) {
-
       const tier = route.weight_tiers.find(
         (tier: any) => weight >= tier.min && (tier.max === null || weight <= tier.max),
       );
@@ -961,7 +963,6 @@ export class SmartCalculationEngine {
     preferences?: EnhancedCalculationInput['preferences'],
     currentSelection?: string,
   ): ShippingOption {
-
     // Use current selection if valid
     if (currentSelection) {
       const existing = options.find((opt) => opt.id === currentSelection);
@@ -1029,8 +1030,21 @@ export class SmartCalculationEngine {
       quote,
     );
 
-    // Calculate customs using CIF value (Cost, Insurance, Freight) - FIXED
-    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    // Calculate customs using CIF value (Cost, Insurance, Freight) - RESPECT CALCULATION METHOD
+    let customsPercentage = 10; // Default
+    const calculationMethod = quote.calculation_method_preference || 'hsn_only';
+
+    if (calculationMethod === 'manual') {
+      // Manual mode: use customs input value
+      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    } else if (calculationMethod === 'country_based') {
+      // Country-based mode: use country tier (simplified for sync)
+      customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage || 10;
+    } else {
+      // HSN mode: use existing stored value or fallback
+      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    }
+
     const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
     const customsAmount = cifValue * (customsPercentage / 100);
 
@@ -1067,7 +1081,7 @@ export class SmartCalculationEngine {
     // Update quote data structures
     // Calculate local currency total
     const finalTotalLocal = finalTotal * exchangeRate;
-    
+
     const updatedQuote: UnifiedQuote = {
       ...quote,
       final_total_usd: Math.round(finalTotal * 100) / 100,
@@ -1140,8 +1154,21 @@ export class SmartCalculationEngine {
     const handlingFee = quote.operational_data?.handling_charge || 0;
     const insuranceAmount = quote.operational_data?.insurance_amount || 0;
 
-    // Calculate customs using CIF value (Cost, Insurance, Freight) - FIXED
-    const customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    // Calculate customs using CIF value (Cost, Insurance, Freight) - RESPECT CALCULATION METHOD
+    let customsPercentage = 10; // Default
+    const calculationMethod = quote.calculation_method_preference || 'hsn_only';
+
+    if (calculationMethod === 'manual') {
+      // Manual mode: use customs input value
+      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    } else if (calculationMethod === 'country_based') {
+      // Country-based mode: use country tier (simplified for sync)
+      customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage || 10;
+    } else {
+      // HSN mode: use existing stored value or fallback
+      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+    }
+
     const cifValue = itemsTotal + shippingCost + insuranceAmount;
     const customsAmount = cifValue * (customsPercentage / 100);
     const domesticShipping = quote.operational_data?.domestic_shipping || 0;
@@ -1172,7 +1199,7 @@ export class SmartCalculationEngine {
     // Build updated quote
     // Calculate local currency total
     const finalTotalLocal = finalTotal * exchangeRate;
-    
+
     const updatedQuote: UnifiedQuote = {
       ...quote,
       final_total_usd: finalTotal,
@@ -1232,32 +1259,57 @@ export class SmartCalculationEngine {
       quote.destination_country,
     );
 
-    // 🆕 NEW: Use HSN-based tax calculation when available
+    // 🆕 NEW: Use tax calculation based on method preference
     let customsAmount = 0;
     let localTaxesAmount = 0;
     let customsPercentage = 10; // Default fallback
     let customsTierInfo = null;
     let insuranceAmount = 0; // Declare insurance amount at function scope
 
-    if (hsnTaxSummary && hsnTaxBreakdown && hsnTaxBreakdown.length > 0) {
-      // Use HSN-based per-item tax calculations
+    const calculationMethod = quote.calculation_method_preference || 'hsn_only';
+
+    console.log(`[COMPLETE COSTS DEBUG] Calculation method: ${calculationMethod}`);
+
+    // Check calculation method
+    if (calculationMethod === 'manual') {
+      // MANUAL MODE: Use customs percentage from input box
+      console.log(`[COMPLETE COSTS DEBUG] Using MANUAL calculation with customs input`);
+      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+
+      // Calculate insurance for CIF
+      insuranceAmount = await this.calculateRouteBasedInsurance(
+        selectedShipping,
+        itemsTotal,
+        quote,
+      );
+
+      // Calculate customs on CIF value
+      const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
+      customsAmount = cifValue * (customsPercentage / 100);
+
+      // For manual mode, calculate local taxes as simple percentage
+      localTaxesAmount = 0; // Will be calculated as salesTax below
+    } else if (
+      calculationMethod === 'hsn_only' &&
+      hsnTaxSummary &&
+      hsnTaxBreakdown &&
+      hsnTaxBreakdown.length > 0
+    ) {
+      // HSN MODE: Use HSN-based per-item tax calculations
       console.log(`[COMPLETE COSTS DEBUG] Using HSN-based tax calculation:`, {
         total_customs: hsnTaxSummary.total_customs,
         total_local_taxes: hsnTaxSummary.total_local_taxes,
-        method: quote.calculation_method_preference
+        method: quote.calculation_method_preference,
       });
       customsAmount = hsnTaxSummary.total_customs;
       localTaxesAmount = hsnTaxSummary.total_local_taxes;
     } else {
-      // Fallback to traditional tier-based calculation
-      console.log(`[COMPLETE COSTS DEBUG] Using fallback tier-based calculation, method:`, quote.calculation_method_preference);
+      // COUNTRY BASED MODE: Use country-based tier calculation
+      console.log(`[COMPLETE COSTS DEBUG] Using COUNTRY-BASED tier calculation`);
 
       try {
         // Calculate total weight for customs calculation
-        const totalWeight = quote.items.reduce(
-          (sum, item) => sum + item.weight * item.quantity,
-          0,
-        );
+        const totalWeight = quote.items.reduce((sum, item) => sum + item.weight * item.quantity, 0);
 
         // Use smart customs tier calculation
         customsTierInfo = await calculateCustomsTier(
@@ -1288,15 +1340,20 @@ export class SmartCalculationEngine {
 
     // Calculate taxes and fees using route-based configuration
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
-    
+
     // For non-HSN calculations, calculate insurance here (HSN already calculated above)
     if (!hsnTaxSummary) {
-      insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
+      insuranceAmount = await this.calculateRouteBasedInsurance(
+        selectedShipping,
+        itemsTotal,
+        quote,
+      );
     }
 
     // Note: For HSN calculations, salesTax is already included in localTaxesAmount
     // For non-HSN, calculate on landed cost instead of just itemsTotal - FIXED
-    const landedCostForTax = itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee;
+    const landedCostForTax =
+      itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee;
     const salesTax = hsnTaxSummary ? 0 : landedCostForTax * 0.1;
     const paymentGatewayFee =
       (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
@@ -1334,9 +1391,9 @@ export class SmartCalculationEngine {
       localTaxes: localTaxesAmount,
       salesTax: salesTax,
       vatAmount: vatAmount,
-      method: quote.calculation_method_preference
+      method: quote.calculation_method_preference,
     });
-    
+
     const updatedCalculationData: CalculationData = {
       ...quote.calculation_data,
       breakdown: {
@@ -1434,7 +1491,7 @@ export class SmartCalculationEngine {
 
     // Calculate local currency total
     const finalTotalLocal = finalTotal * exchangeRate;
-    
+
     const updatedQuote: UnifiedQuote = {
       ...quote,
       final_total_usd: Math.round(finalTotal * 100) / 100,
@@ -1448,7 +1505,7 @@ export class SmartCalculationEngine {
       id: updatedQuote.id,
       method: updatedQuote.calculation_method_preference,
       final_total: updatedQuote.final_total_usd,
-      breakdown: updatedQuote.calculation_data?.breakdown
+      breakdown: updatedQuote.calculation_data?.breakdown,
     });
 
     return { updated_quote: updatedQuote };
@@ -1517,8 +1574,7 @@ export class SmartCalculationEngine {
 
     // Weight optimization
     const averageWeight =
-      originalQuote.items.reduce((sum, item) => sum + item.weight, 0) /
-      originalQuote.items.length;
+      originalQuote.items.reduce((sum, item) => sum + item.weight, 0) / originalQuote.items.length;
     if (averageWeight < 0.5) {
       suggestions.push({
         id: crypto.randomUUID(),
@@ -1542,7 +1598,6 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): Promise<number> {
-
     // ✅ AUTO-APPLY: Calculate default handling charge when available in backend
     const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(
       quote,
@@ -1571,16 +1626,13 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): Promise<number> {
-
     // Check customer preference for insurance
     const customerOptedIn = quote.customer_data?.preferences?.insurance_opted_in ?? false;
-
 
     // Check if shipping option has route-based insurance configuration
     const routeInsuranceConfig = (shippingOption as any).insurance_options;
 
     if (routeInsuranceConfig && routeInsuranceConfig.available) {
-
       // If customer hasn't opted in and route allows optional insurance, return 0
       if (!customerOptedIn && routeInsuranceConfig.optional !== false) {
         return 0;
@@ -1608,7 +1660,6 @@ export class SmartCalculationEngine {
       return 0;
     }
 
-
     // Return 0 instead of hardcoded values to force proper configuration
     return 0;
   }
@@ -1621,7 +1672,6 @@ export class SmartCalculationEngine {
     itemsTotal: number,
     quote: UnifiedQuote,
   ): number {
-
     // ✅ AUTO-APPLY: Use CalculationDefaultsService for consistent calculation
     const calculatedDefault = calculationDefaultsService.calculateHandlingDefault(
       quote,
@@ -1704,7 +1754,19 @@ export class SmartCalculationEngine {
    * Cache management
    */
   private generateCacheKey(input: EnhancedCalculationInput): string {
+    // Put tax method at the beginning to ensure it's included in the truncated key
+    const taxMethod =
+      input.tax_calculation_preferences?.calculation_method_preference ||
+      input.quote.calculation_method_preference ||
+      'auto';
+    const valuationMethod =
+      input.tax_calculation_preferences?.valuation_method_preference ||
+      input.quote.valuation_method_preference ||
+      'auto';
+
     const keyData = {
+      tax_method: taxMethod,
+      valuation_method: valuationMethod,
       quote_id: input.quote.id,
       items: input.quote.items.map((item) => ({
         price: item.costprice_origin,
@@ -1713,11 +1775,19 @@ export class SmartCalculationEngine {
       })),
       countries: `${input.quote.origin_country}-${input.quote.destination_country}`,
       preferences: input.preferences,
-      // Include tax calculation preferences in cache key
-      tax_method: input.tax_calculation_preferences?.calculation_method_preference || input.quote.calculation_method_preference || 'auto',
-      valuation_method: input.tax_calculation_preferences?.valuation_method_preference || input.quote.valuation_method_preference || 'auto'
     };
-    return btoa(JSON.stringify(keyData)).slice(0, 32);
+
+    // Use a hash function to ensure unique keys without length issues
+    const keyString = JSON.stringify(keyData);
+    let hash = 0;
+    for (let i = 0; i < keyString.length; i++) {
+      const char = keyString.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+
+    // Combine hash with tax method to ensure different methods have different keys
+    return `${taxMethod}_${valuationMethod}_${Math.abs(hash).toString(36)}`;
   }
 
   private getCachedResult(key: string): EnhancedCalculationResult | null {

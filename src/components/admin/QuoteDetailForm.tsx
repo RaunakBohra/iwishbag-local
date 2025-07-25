@@ -52,6 +52,7 @@ interface QuoteDetailFormProps {
   onShowShippingDetails?: () => void;
   isEditingRoute?: boolean;
   onTriggerCalculation?: () => void; // ✅ NEW: For real-time calculations
+  taxCalculationMethod?: 'manual' | 'hsn_only' | 'country_based'; // ✅ NEW: For customs input enable/disable
 }
 
 export const QuoteDetailForm = ({
@@ -72,6 +73,7 @@ export const QuoteDetailForm = ({
   onShowShippingDetails,
   isEditingRoute = false,
   onTriggerCalculation, // ✅ NEW: Extract calculation trigger
+  taxCalculationMethod = 'hsn_only', // ✅ NEW: For customs input enable/disable
 }: QuoteDetailFormProps) => {
   const { toast: _toast } = useToast();
   const { data: allCountries } = useAllCountries();
@@ -207,7 +209,8 @@ export const QuoteDetailForm = ({
                           value={field.value ?? ''}
                           onWheel={handleNumberInputWheel}
                           placeholder="15.00"
-                          className="h-8 pr-8"
+                          className={`h-8 pr-8 ${taxCalculationMethod !== 'manual' ? 'bg-gray-50 text-gray-500' : ''}`}
+                          disabled={taxCalculationMethod !== 'manual'}
                         />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
                           %
@@ -250,6 +253,15 @@ export const QuoteDetailForm = ({
                     <div className="mt-1">
                       <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200">
                         {detectedCustomsTier.name} ({detectedCustomsTier.customs_percentage}%)
+                      </span>
+                    </div>
+                  )}
+                  {taxCalculationMethod !== 'manual' && (
+                    <div className="mt-1">
+                      <span className="text-xs text-gray-500">
+                        {taxCalculationMethod === 'hsn_only'
+                          ? 'Using HSN-based customs calculation'
+                          : 'Using country-based customs calculation'}
                       </span>
                     </div>
                   )}

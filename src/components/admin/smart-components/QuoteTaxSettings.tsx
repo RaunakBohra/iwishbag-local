@@ -5,15 +5,21 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, Info, Zap, Globe, Tag } from 'lucide-react';
+import { Calculator, Info, Edit, Globe, Tag } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 interface QuoteTaxSettingsProps {
   quote: UnifiedQuote;
-  onMethodChange: (method: 'auto' | 'hsn_only' | 'legacy_fallback') => void;
+  onMethodChange: (method: 'manual' | 'hsn_only' | 'country_based') => void;
   isEditMode: boolean;
 }
 
@@ -24,29 +30,29 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
 }) => {
   if (!isEditMode) return null;
 
-  const currentMethod = quote.calculation_method_preference || 'auto';
-  
+  const currentMethod = quote.calculation_method_preference || 'hsn_only';
+
   // Calculate method impact
   const methodInfo = {
-    auto: {
-      label: 'Auto (Hybrid)',
-      description: 'Uses HSN codes when available, falls back to country rates',
-      icon: <Zap className="w-4 h-4" />,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
+    manual: {
+      label: 'Manual Input',
+      description: 'Uses customs percentage from input field',
+      icon: <Edit className="w-4 h-4" />,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-200',
     },
     hsn_only: {
-      label: 'HSN Only',
-      description: 'Precise calculation using HSN codes only',
+      label: 'HSN Based',
+      description: 'Precise calculation using HSN codes for each item',
       icon: <Tag className="w-4 h-4" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
     },
-    legacy_fallback: {
+    country_based: {
       label: 'Country Based',
-      description: 'Simplified calculation using country-wide rates',
+      description: 'Uses country-wide tax rates and tiers',
       icon: <Globe className="w-4 h-4" />,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
@@ -55,9 +61,9 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
   };
 
   const selectedInfo = methodInfo[currentMethod];
-  
+
   // Count items with HSN codes
-  const itemsWithHSN = quote.items?.filter(item => item.hsn_code)?.length || 0;
+  const itemsWithHSN = quote.items?.filter((item) => item.hsn_code)?.length || 0;
   const totalItems = quote.items?.length || 0;
   const hsnCoverage = totalItems > 0 ? Math.round((itemsWithHSN / totalItems) * 100) : 0;
 
@@ -84,19 +90,19 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">
+                <SelectItem value="manual">
                   <div className="flex items-center space-x-2">
-                    <Zap className="w-3 h-3 text-blue-600" />
-                    <span>Auto (Hybrid)</span>
+                    <Edit className="w-3 h-3 text-orange-600" />
+                    <span>Manual Input</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="hsn_only">
                   <div className="flex items-center space-x-2">
                     <Tag className="w-3 h-3 text-purple-600" />
-                    <span>HSN Only</span>
+                    <span>HSN Based</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="legacy_fallback">
+                <SelectItem value="country_based">
                   <div className="flex items-center space-x-2">
                     <Globe className="w-3 h-3 text-green-600" />
                     <span>Country Based</span>
@@ -106,19 +112,15 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
             </Select>
           </div>
         </div>
-        
+
         {/* Method Description */}
-        <div className={`flex items-start space-x-2 p-2 rounded ${selectedInfo.bgColor} border ${selectedInfo.borderColor}`}>
-          <div className={selectedInfo.color}>
-            {selectedInfo.icon}
-          </div>
+        <div
+          className={`flex items-start space-x-2 p-2 rounded ${selectedInfo.bgColor} border ${selectedInfo.borderColor}`}
+        >
+          <div className={selectedInfo.color}>{selectedInfo.icon}</div>
           <div className="flex-1">
-            <div className={`text-sm font-medium ${selectedInfo.color}`}>
-              {selectedInfo.label}
-            </div>
-            <div className="text-xs text-gray-600 mt-0.5">
-              {selectedInfo.description}
-            </div>
+            <div className={`text-sm font-medium ${selectedInfo.color}`}>{selectedInfo.label}</div>
+            <div className="text-xs text-gray-600 mt-0.5">{selectedInfo.description}</div>
           </div>
         </div>
 
@@ -127,16 +129,17 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
           <Alert className="border-amber-200 bg-amber-50">
             <Info className="h-3 w-3" />
             <AlertDescription className="text-xs">
-              {totalItems - itemsWithHSN} item{totalItems - itemsWithHSN !== 1 ? 's' : ''} without HSN codes won't have taxes calculated
+              {totalItems - itemsWithHSN} item{totalItems - itemsWithHSN !== 1 ? 's' : ''} without
+              HSN codes won't have taxes calculated
             </AlertDescription>
           </Alert>
         )}
-        
-        {currentMethod === 'auto' && itemsWithHSN > 0 && itemsWithHSN < totalItems && (
-          <Alert className="border-blue-200 bg-blue-50">
+
+        {currentMethod === 'manual' && (
+          <Alert className="border-orange-200 bg-orange-50">
             <Info className="h-3 w-3" />
             <AlertDescription className="text-xs">
-              Using HSN for {itemsWithHSN} item{itemsWithHSN !== 1 ? 's' : ''}, country rates for {totalItems - itemsWithHSN} item{totalItems - itemsWithHSN !== 1 ? 's' : ''}
+              Using customs percentage from input field. HSN codes will be ignored.
             </AlertDescription>
           </Alert>
         )}

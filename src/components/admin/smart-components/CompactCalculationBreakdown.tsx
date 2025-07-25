@@ -18,8 +18,11 @@ import {
   ChevronDown,
   ChevronUp,
   PieChart,
+  Tags,
+  AlertCircle,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 import { getAdminFeeBreakdown } from '@/utils/feeGroupingUtils';
@@ -55,6 +58,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
 
+  // Check if HSN calculation was used
+  const isHSNCalculation = quote.calculation_data?.hsn_calculation?.method === 'per_item_hsn';
+  const hsnCalculationData = quote.calculation_data?.hsn_calculation;
+  const hasHSNItems = quote.items?.some((item) => item.hsn_code) || false;
+
   // Debug logging
   console.log(`[COST BREAKDOWN DEBUG] Component rendering with quote:`, {
     id: quote.id,
@@ -62,7 +70,9 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     breakdown: breakdown,
     final_total: totalCost,
     taxes: breakdown.taxes,
-    customs: breakdown.customs
+    customs: breakdown.customs,
+    isHSNCalculation,
+    hsnCalculationData,
   });
 
   // Calculate percentages for insights
@@ -112,7 +122,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
     { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
-    { label: feeBreakdown.compactDisplay.label, amount: feeBreakdown.compactDisplay.total, color: 'text-gray-600' },
+    {
+      label: feeBreakdown.compactDisplay.label,
+      amount: feeBreakdown.compactDisplay.total,
+      color: 'text-gray-600',
+    },
   ];
 
   const keyComponents = allComponents.filter((component) => component.amount > 0);
@@ -179,6 +193,40 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
         </TabsList>
 
         <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
+          {/* HSN Calculation Indicator */}
+          {isHSNCalculation && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+              <div className="flex items-center space-x-2">
+                <Tags className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium text-purple-800">
+                  HSN Tax Calculation Active
+                </span>
+              </div>
+              <div className="text-xs text-purple-700 mt-1">
+                Customs and taxes calculated using HSN codes for{' '}
+                {hsnCalculationData?.total_items || 0} items
+              </div>
+            </div>
+          )}
+
+          {/* Warning if HSN items exist but calculation didn't use HSN */}
+          {hasHSNItems &&
+            !isHSNCalculation &&
+            quote.calculation_method_preference !== 'country_based' &&
+            quote.calculation_method_preference !== 'manual' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-800">
+                    HSN codes available but not used
+                  </span>
+                </div>
+                <div className="text-xs text-amber-700 mt-1">
+                  Consider switching to HSN calculation method for more accurate taxes
+                </div>
+              </div>
+            )}
+
           {/* Detailed Breakdown */}
           <div className="space-y-3">
             {/* Items Total */}
@@ -236,11 +284,40 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="flex items-center space-x-2">
                 <Info className="w-4 h-4 text-purple-600" />
                 <span className="text-gray-700">Customs & Duties</span>
-                {quote.operational_data?.customs?.smart_tier && (
+                {isHSNCalculation ? (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge
+                        variant="outline"
+                        className="text-xs h-4 px-1 text-purple-600 border-purple-300"
+                      >
+                        <Tags className="w-3 h-3 mr-1" />
+                        HSN
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs space-y-1">
+                        <p>Calculated using HSN codes</p>
+                        {hsnCalculationData && (
+                          <>
+                            <p>{hsnCalculationData.total_items} items with HSN</p>
+                            <p>
+                              Total:{' '}
+                              {currencyDisplay.formatSingleAmount(
+                                hsnCalculationData.total_hsn_customs,
+                                'origin',
+                              )}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : quote.operational_data?.customs?.smart_tier ? (
                   <Badge variant="outline" className="text-xs h-4 px-1">
                     Smart
                   </Badge>
-                )}
+                ) : null}
               </div>
               <div className="text-right">
                 <div className="font-medium">
@@ -260,25 +337,54 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               <div className="flex items-center space-x-2">
                 <Calculator className="w-4 h-4 text-orange-600" />
                 <span className="text-gray-700">Taxes & VAT</span>
-                {/* Display tax calculation method */}
-                {quote.calculation_method_preference && (
-                  <Badge 
-                    variant="outline" 
+                {/* Display tax calculation method with HSN indicator */}
+                {isHSNCalculation ? (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge
+                        variant="outline"
+                        className="text-xs h-4 px-1 text-purple-600 border-purple-300"
+                      >
+                        <Tags className="w-3 h-3 mr-1" />
+                        HSN
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs space-y-1">
+                        <p>Calculated using HSN codes</p>
+                        {hsnCalculationData && (
+                          <>
+                            <p>
+                              Local taxes:{' '}
+                              {currencyDisplay.formatSingleAmount(
+                                hsnCalculationData.total_hsn_local_taxes,
+                                'origin',
+                              )}
+                            </p>
+                            <p>Method: {quote.calculation_method_preference || 'auto'}</p>
+                          </>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : quote.calculation_method_preference ? (
+                  <Badge
+                    variant="outline"
                     className={`text-xs h-4 px-1 ${
-                      quote.calculation_method_preference === 'hsn_only' 
-                        ? 'text-purple-600 border-purple-300' 
-                        : quote.calculation_method_preference === 'legacy_fallback'
+                      quote.calculation_method_preference === 'country_based'
                         ? 'text-green-600 border-green-300'
-                        : 'text-blue-600 border-blue-300'
+                        : quote.calculation_method_preference === 'manual'
+                          ? 'text-orange-600 border-orange-300'
+                          : 'text-blue-600 border-blue-300'
                     }`}
                   >
-                    {quote.calculation_method_preference === 'hsn_only' 
-                      ? 'HSN' 
-                      : quote.calculation_method_preference === 'legacy_fallback'
+                    {quote.calculation_method_preference === 'country_based'
                       ? 'Country'
-                      : 'Auto'}
+                      : quote.calculation_method_preference === 'manual'
+                        ? 'Manual'
+                        : 'HSN'}
                   </Badge>
-                )}
+                ) : null}
               </div>
               <div className="text-right">
                 <div className="font-medium">
@@ -422,9 +528,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   );
 
   return (
-    <Card className="shadow-sm border-gray-200 overflow-hidden">
-      <CompactHeader />
-      {isExpanded && <ExpandedDetails />}
-    </Card>
+    <TooltipProvider>
+      <Card className="shadow-sm border-gray-200 overflow-hidden">
+        <CompactHeader />
+        {isExpanded && <ExpandedDetails />}
+      </Card>
+    </TooltipProvider>
   );
 };
