@@ -55,6 +55,16 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
 
+  // Debug logging
+  console.log(`[COST BREAKDOWN DEBUG] Component rendering with quote:`, {
+    id: quote.id,
+    method: quote.calculation_method_preference,
+    breakdown: breakdown,
+    final_total: totalCost,
+    taxes: breakdown.taxes,
+    customs: breakdown.customs
+  });
+
   // Calculate percentages for insights
   const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
 
@@ -67,11 +77,11 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
-    return quote.items?.reduce((sum, item) => sum + item.weight_kg * item.quantity, 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.weight * item.quantity, 0) || 0;
   };
 
   const getTotalValue = () => {
-    return quote.items?.reduce((sum, item) => sum + item.price_usd * item.quantity, 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0) || 0;
   };
 
   // ✅ FIXED: Show actual calculated shipping cost instead of estimates

@@ -99,3 +99,35 @@ export function getCurrencyCode(countryCode: string): string {
   
   return codes[countryCode] || 'USD';
 }
+
+/**
+ * Format currency amount with proper symbol and formatting
+ * @param amount - Amount to format
+ * @param currencyCode - Currency code (USD, INR, NPR, etc.)
+ * @returns Formatted currency string
+ */
+export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
+  const symbolMap: Record<string, string> = {
+    'USD': '$',
+    'INR': '₹',
+    'NPR': '₨',
+    'EUR': '€',
+    'GBP': '£',
+    'CNY': '¥',
+    'JPY': '¥',
+    'CAD': 'C$',
+    'AUD': 'A$',
+    'SGD': 'S$'
+  };
+
+  const symbol = symbolMap[currencyCode] || currencyCode + ' ';
+  
+  // Format with proper decimal places
+  const formatted = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
+  // Place symbol before amount
+  return `${symbol}${formatted}`;
+}

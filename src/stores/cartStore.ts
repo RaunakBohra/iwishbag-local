@@ -329,8 +329,8 @@ export const useCartStore = create<CartStore>()(
                 id: string;
                 name: string;
                 quantity: number;
-                price_usd: number;
-                weight_kg: number;
+                costprice_origin: number;
+                weight: number;
                 url?: string;
                 image_url?: string;
                 options?: string;
@@ -358,7 +358,7 @@ export const useCartStore = create<CartStore>()(
               // Calculate total quantity and weight from all items
               const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
               const totalWeight = items.reduce(
-                (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1),
+                (sum, item) => sum + (item.weight || 0) * (item.quantity || 1),
                 0,
               );
 

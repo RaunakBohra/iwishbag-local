@@ -55,16 +55,35 @@ export const usePermissions = (): UsePermissionsReturn => {
         return [];
       }
 
-      const { data, error } = await supabase.rpc('get_user_permissions_new', {
-        user_uuid: user.id,
-      });
+      try {
+        const { data, error } = await supabase.rpc('get_user_permissions_new', {
+          user_uuid: user.id,
+        });
 
-      if (error) {
-        console.error('Error fetching user permissions:', error);
-        throw new Error(`Failed to fetch permissions: ${error.message}`);
+        if (error) {
+          console.error('Error fetching user permissions:', error);
+          // Fallback: Check user_roles table directly
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('is_active', true);
+          
+          const userRole = roles?.[0]?.role || 'user';
+          return [{
+            permission_name: userRole,
+            permission_description: `${userRole} permissions`
+          }];
+        }
+
+        return data || [];
+      } catch (err) {
+        console.warn('Falling back to basic permissions check');
+        return [{
+          permission_name: 'user',
+          permission_description: 'Basic user permissions'
+        }];
       }
-
-      return data || [];
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -85,16 +104,31 @@ export const usePermissions = (): UsePermissionsReturn => {
         return [];
       }
 
-      const { data, error } = await supabase.rpc('get_user_roles_new', {
-        user_uuid: user.id,
-      });
+      try {
+        const { data, error } = await supabase.rpc('get_user_roles_new', {
+          user_uuid: user.id,
+        });
 
-      if (error) {
-        console.error('Error fetching user roles:', error);
-        throw new Error(`Failed to fetch roles: ${error.message}`);
+        if (error) {
+          console.error('Error fetching user roles:', error);
+          // Fallback: Check user_roles table directly
+          const { data: roles } = await supabase
+            .from('user_roles')
+            .select('role, created_at')
+            .eq('user_id', user.id)
+            .eq('is_active', true);
+          
+          return roles?.map(r => ({
+            role_name: r.role,
+            role_description: `${r.role} role`
+          })) || [];
+        }
+
+        return data || [];
+      } catch (err) {
+        console.warn('Falling back to empty roles');
+        return [];
       }
-
-      return data || [];
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes

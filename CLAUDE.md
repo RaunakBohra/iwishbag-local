@@ -115,6 +115,15 @@ These functions MUST exist for the system to work:
 - **Backup**: Manual script at `src/scripts/ensure-database-functions.sql`
 - **Legacy Complete**: Multi-step recovery at `src/scripts/complete-database-recovery.sql`
 
+### 7. **Post-Reset Field Renames**
+After any database reset, also run:
+```bash
+psql -h localhost -p 54322 -d postgres -U postgres -f src/scripts/post-reset-field-renames.sql
+```
+This ensures:
+- `items[].price_usd` → `items[].costprice_origin`
+- `items[].weight_kg` → `items[].weight`
+
 ## Tech Stack
 - **Frontend**: React 18, TypeScript 5, Vite, Tailwind CSS, Shadcn UI
 - **Backend**: Supabase (PostgreSQL + Auth + Storage)

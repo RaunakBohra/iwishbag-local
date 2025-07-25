@@ -102,8 +102,8 @@ export class UnifiedDataEngine {
       id: item.id || `item_${Date.now()}_${Math.random()}`,
       name: item.product_name || item.name || 'Unknown Product',
       quantity: item.quantity || 1,
-      price_usd: item.price_usd || item.price || 0,
-      weight_kg: item.weight_kg || item.weight || 0.5,
+      costprice_origin: item.costprice_origin || item.price || 0,
+      weight: item.weight || item.weight || 0.5,
       url: item.product_url || item.url || '',
       image_url: item.image_url || '',
       options: item.options || '',
@@ -375,7 +375,7 @@ export class UnifiedDataEngine {
             optimization_hints: [],
           },
         })),
-        base_total_usd: input.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0),
+        base_total_usd: input.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0),
         final_total_usd: 0, // Will be calculated
         calculation_data: this.getDefaultCalculationData(),
         customer_data: input.customer_data || this.getDefaultCustomerData(),
@@ -468,7 +468,7 @@ export class UnifiedDataEngine {
 
     const updatedItems = [...quote.items, newItem];
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price_usd * item.quantity,
+      (sum, item) => sum + item.costprice_origin * item.quantity,
       0,
     );
 
@@ -521,7 +521,7 @@ export class UnifiedDataEngine {
 
       // Recalculate totals
       const newBaseTotal = updatedItems.reduce(
-        (sum, item) => sum + item.price_usd * item.quantity,
+        (sum, item) => sum + item.costprice_origin * item.quantity,
         0,
       );
 
@@ -651,7 +651,7 @@ export class UnifiedDataEngine {
     if (updatedItems.length === 0) return false; // Don't allow empty quotes
 
     const newBaseTotal = updatedItems.reduce(
-      (sum, item) => sum + item.price_usd * item.quantity,
+      (sum, item) => sum + item.costprice_origin * item.quantity,
       0,
     );
 
@@ -669,7 +669,7 @@ export class UnifiedDataEngine {
 
     // Weight validation suggestions
     for (const item of items) {
-      if (item.weight_kg < 0.1) {
+      if (item.weight < 0.1) {
         suggestions.push({
           id: crypto.randomUUID(),
           type: 'weight',
@@ -683,7 +683,7 @@ export class UnifiedDataEngine {
     }
 
     // Price validation suggestions
-    const totalValue = items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+    const totalValue = items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
     if (totalValue > 1000) {
       suggestions.push({
         id: crypto.randomUUID(),
@@ -1109,7 +1109,7 @@ export class UnifiedDataEngine {
                 subcategory: hsnRecord.subcategory,
                 minimum_valuation_usd: hsnRecord.minimum_valuation_usd,
                 requires_currency_conversion: hsnRecord.requires_currency_conversion,
-                typical_weight_kg: hsnRecord.weight_data?.typical_weights?.per_unit?.average,
+                typical_weight: hsnRecord.weight_data?.typical_weights?.per_unit?.average,
               };
 
               // Add currency conversion data if applicable
@@ -1126,7 +1126,7 @@ export class UnifiedDataEngine {
                     origin_currency: conversion.originCurrency,
                     exchange_rate: conversion.exchangeRate,
                     valuation_method:
-                      item.price_usd >= conversion.convertedAmount
+                      item.costprice_origin >= conversion.convertedAmount
                         ? 'actual_price'
                         : 'minimum_valuation',
                   };

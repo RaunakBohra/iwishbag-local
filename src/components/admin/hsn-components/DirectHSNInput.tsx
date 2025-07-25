@@ -47,11 +47,10 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isEditing, setIsEditing] = useState(false);
-  const [justSelected, setJustSelected] = useState(false);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
-  const justSelectedTimeoutRef = useRef<NodeJS.Timeout>();
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const initializeSearch = async () => {
     try {
@@ -94,9 +93,6 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
-      }
-      if (justSelectedTimeoutRef.current) {
-        clearTimeout(justSelectedTimeoutRef.current);
       }
     };
   }, []);
@@ -151,20 +147,23 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   const handleHSNSelect = (hsn: HSNSearchResult) => {
     console.log('🎯 [DirectHSN] handleHSNSelect called:', hsn);
 
+    // Prevent any form submission
+    const event = window.event as KeyboardEvent | MouseEvent | null;
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     onSelect(hsn);
-    setIsOpen(false);
     setSearchQuery('');
     setSelectedIndex(-1);
     setIsEditing(false); // Stop editing mode
-    setJustSelected(true); // Prevent immediate reopening
     
-    // Clear the justSelected flag after a delay
-    if (justSelectedTimeoutRef.current) {
-      clearTimeout(justSelectedTimeoutRef.current);
-    }
-    justSelectedTimeoutRef.current = setTimeout(() => {
-      setJustSelected(false);
-    }, 500);
+    // Close dropdown immediately
+    setIsOpen(false);
+    
+    // Remove focus from input to prevent reopening
+    inputRef.current?.blur();
 
     toast({
       title: 'HSN Code Selected',
@@ -196,6 +195,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
         break;
       case 'Enter':
         e.preventDefault();
+        e.stopPropagation();
         if (selectedIndex >= 0 && allItems[selectedIndex]) {
           handleHSNSelect(allItems[selectedIndex]);
         }
@@ -226,12 +226,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   return (
     <div className={`hsn-input-wrapper ${className}`}>
       <Popover open={isOpen} onOpenChange={(open) => {
-        if (!justSelected) {
-          setIsOpen(open);
-          if (!open) {
-            setIsEditing(false);
-          }
-        }
+        setIsOpen(open);
       }}>
         <PopoverTrigger asChild>
           <div className="relative">
@@ -241,27 +236,12 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onClick={() => {
-                if (!isOpen && !justSelected) {
-                  setIsOpen(true);
-                }
-              }}
-              onFocus={() => {
-                if (!justSelected) {
+                if (!isOpen) {
                   setIsOpen(true);
                   setIsEditing(true);
                   if (!searchQuery && !value) {
                     handleSearch('');
                   }
-                }
-              }}
-              onBlur={(e) => {
-                // Only close if focus is moving outside the popover
-                const relatedTarget = e.relatedTarget as HTMLElement;
-                if (!relatedTarget || !relatedTarget.closest('[role="dialog"]')) {
-                  setTimeout(() => {
-                    setIsOpen(false);
-                    setIsEditing(false);
-                  }, 200);
                 }
               }}
               placeholder={placeholder}
@@ -290,22 +270,33 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
                   <X className="h-3 w-3 text-gray-400" />
                 </Button>
               )}
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-gray-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setIsOpen(!isOpen);
+                  if (!isOpen) {
+                    inputRef.current?.focus();
+                  }
+                }}
+              >
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </Button>
             </div>
           </div>
         </PopoverTrigger>
 
         <PopoverContent
+          ref={popoverRef}
           className="w-[--radix-popover-trigger-width] p-0 border border-gray-200 shadow-xl rounded-xl bg-white"
           align="start"
           sideOffset={4}
-          onInteractOutside={(e) => {
-            // Prevent closing when clicking on the input itself
-            const target = e.target as HTMLElement;
-            if (target.closest('.hsn-input-wrapper')) {
-              e.preventDefault();
-            }
-          }}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           {/* Results List */}
           <Command className="rounded-xl">

@@ -144,7 +144,7 @@ export class HSNQuoteIntegrationService {
         itemBreakdowns,
         realTimeUpdates: {
           taxRatesUpdated: taxRates.apiCallsMade > 0,
-          weightDetected: enhancedItems.some((item) => item.weight_kg > 0),
+          weightDetected: enhancedItems.some((item) => item.weight > 0),
           hsnCodesClassified: enhancedItems.filter((item) => item.hsn_code).length,
           apiCallsMade: taxRates.apiCallsMade,
           cacheHits: taxRates.cacheHits,
@@ -236,7 +236,7 @@ export class HSNQuoteIntegrationService {
         }
 
         // Auto-detect weight if missing
-        if (options.enableWeightDetection && (!item.weight_kg || item.weight_kg === 0)) {
+        if (options.enableWeightDetection && (!item.weight || item.weight === 0)) {
           const weightResult = await weightDetectionService.detectWeight({
             productName: item.name,
             productURL: item.url,
@@ -245,7 +245,7 @@ export class HSNQuoteIntegrationService {
           });
 
           if (weightResult.success && weightResult.detectedWeight > 0) {
-            enhancedItem.weight_kg = weightResult.detectedWeight;
+            enhancedItem.weight = weightResult.detectedWeight;
             console.log(
               `⚖️ [HSN-INTEGRATION] Auto-detected weight for ${item.name}: ${weightResult.detectedWeight}kg`,
             );
@@ -386,7 +386,7 @@ export class HSNQuoteIntegrationService {
           ...item,
           hsn_code: breakdown.hsnCode,
           category: breakdown.category,
-          weight_kg: item.weight_kg, // Keep existing or detected weight
+          weight: item.weight, // Keep existing or detected weight
         };
       }
       return item;

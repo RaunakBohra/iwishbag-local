@@ -17,7 +17,7 @@ interface QuoteItem {
   id: string;
   name: string;
   price_origin_currency: number;
-  weight_kg?: number;
+  weight?: number;
   hsn_code?: string;
   category?: string;
   url?: string;

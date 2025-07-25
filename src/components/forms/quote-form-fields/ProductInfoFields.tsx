@@ -13,7 +13,7 @@ interface ProductFormItem {
   productUrl: string;
   productName: string;
   options: string;
-  price_usd?: number;
+  costprice_origin?: number;
   quantity?: number;
 }
 

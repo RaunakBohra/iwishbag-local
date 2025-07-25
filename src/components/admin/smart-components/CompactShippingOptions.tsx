@@ -75,7 +75,7 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
 
   // Helper function to calculate total weight
   const getTotalWeight = () => {
-    return quote.items?.reduce((sum, item) => sum + item.weight_kg * item.quantity, 0) || 0;
+    return quote.items?.reduce((sum, item) => sum + item.weight * item.quantity, 0) || 0;
   };
 
   // NEW: Handle option selection in edit mode

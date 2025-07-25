@@ -12,7 +12,7 @@ export interface QuoteItem {
   customer_notes?: string;
   quantity: number;
   costprice_origin: number; // Cost price in origin country currency (INR, NPR, etc.)
-  weight_kg: number;
+  weight: number; // Weight in kg
   
   // HSN Classification Fields
   hsn_code?: string;

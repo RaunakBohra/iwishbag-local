@@ -98,6 +98,7 @@ import { CompactCalculationBreakdown } from './smart-components/CompactCalculati
 import { CompactHSNTaxBreakdown } from './smart-components/CompactHSNTaxBreakdown';
 import { QuoteTaxSettings } from './smart-components/QuoteTaxSettings';
 import { ShippingRouteHeader } from './smart-components/ShippingRouteHeader';
+import { SmartItemsManager } from './smart-components/SmartItemsManager';
 import { ShareQuoteButtonV2 } from './ShareQuoteButtonV2';
 import { SmartHSNSearch } from './hsn-components/SmartHSNSearch';
 import { DirectHSNInput } from './hsn-components/DirectHSNInput';
@@ -396,6 +397,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       });
 
       console.log(`[CALCULATION DEBUG] Calculation completed successfully with updated taxes`);
+      console.log(`[CALCULATION DEBUG] Result breakdown:`, result.updated_quote.calculation_data?.breakdown);
+      console.log(`[CALCULATION DEBUG] Result final_total_usd:`, result.updated_quote.final_total_usd);
 
       if (result.success) {
         // Preserve the calculation_method_preference from the optimistic update
@@ -410,7 +413,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           },
         };
 
+        console.log(`[CALCULATION DEBUG] Setting quote and liveQuote with updatedQuote:`, {
+          id: updatedQuote.id,
+          method: updatedQuote.calculation_method_preference,
+          breakdown: updatedQuote.calculation_data?.breakdown,
+          final_total: updatedQuote.final_total_usd
+        });
+
         setQuote(updatedQuote);
+        
+        // Update liveQuote to ensure Cost Breakdown reflects new calculations
+        if (isEditMode) {
+          setLiveQuote(updatedQuote);
+        }
+        
         setShippingOptions(result.shipping_options);
         setShippingRecommendations(result.smart_recommendations);
         setSmartSuggestions(result.optimization_suggestions);
@@ -576,6 +592,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     if (!quote) return;
 
     console.log(`[TAX METHOD DEBUG] Starting method change from ${quote.calculation_method_preference} to ${method}`);
+    console.log(`[TAX METHOD DEBUG] Current breakdown:`, quote.calculation_data?.breakdown);
+    console.log(`[TAX METHOD DEBUG] Current final_total_usd:`, quote.final_total_usd);
 
     try {
       setIsCalculating(true);
@@ -613,9 +631,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         console.log(`[TAX METHOD DEBUG] Cache invalidated (including HSN), triggering recalculation`);
 
         // Trigger recalculation with updated quote data
+        console.log(`[TAX METHOD DEBUG] Calling calculateSmartFeatures with updatedLiveQuote:`, {
+          id: updatedLiveQuote.id,
+          method: updatedLiveQuote.calculation_method_preference
+        });
         await calculateSmartFeatures(updatedLiveQuote);
 
         console.log(`[TAX METHOD DEBUG] Recalculation completed successfully`);
+        console.log(`[TAX METHOD DEBUG] New breakdown:`, liveQuote?.calculation_data?.breakdown);
+        console.log(`[TAX METHOD DEBUG] New final_total_usd:`, liveQuote?.final_total_usd);
 
         toast({
           title: 'Tax method updated',
@@ -703,8 +727,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           destination_country: formValues.destination_country,
           items: (formValues.items || []).map((item, index) => ({
             ...quote.items[index],
-            price_usd: Number(item.item_price) || 0,
-            weight_kg: Number(item.item_weight) || 0,
+            costprice_origin: Number(item.item_price) || 0,
+            weight: Number(item.item_weight) || 0,
             quantity: Number(item.quantity) || 1,
           })),
         };
@@ -1246,8 +1270,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         items: (formValues.items || []).map((item, index) => ({
           ...quote.items[index],
           name: item.product_name || '',
-          price_usd: Number(item.item_price) || 0,
-          weight_kg: Number(item.item_weight) || 0,
+          costprice_origin: Number(item.item_price) || 0,
+          weight: Number(item.item_weight) || 0,
           quantity: Number(item.quantity) || 1,
           url: item.product_url || '',
         })),
@@ -1386,7 +1410,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     const totalItems = activeQuote.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
     const totalWeight =
       activeQuote.items?.reduce(
-        (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 0),
+        (sum, item) => sum + (item.weight || 0) * (item.quantity || 0),
         0,
       ) || 0;
     const avgWeightConfidence =
@@ -1455,8 +1479,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // Ensure all required fields have proper defaults
       const formattedItem = {
         id: item.id || `item-${Date.now()}-${index}`, // More unique ID generation
-        item_price: Number(item.price_usd) || 0,
-        item_weight: Number(item.weight_kg) || 0,
+        item_price: Number(item.costprice_origin) || 0,
+        item_weight: Number(item.weight) || 0,
         quantity: Number(item.quantity) || 1,
         product_name: String(item.name || ''),
         options: String(item.options || ''),
@@ -1582,8 +1606,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             return {
               id: item.id,
               name: item.product_name || '',
-              price_usd: Number(item.item_price) || 0,
-              weight_kg: Number(item.item_weight) || 0,
+              costprice_origin: Number(item.item_price) || 0,
+              weight: Number(item.item_weight) || 0,
               quantity: Number(item.quantity) || 1,
               url: item.product_url || '',
               image: item.image_url || '',
@@ -2009,8 +2033,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                     <CardContent className="p-0">
                       {(() => {
                         const watchedItems = form.watch('items');
+                        console.log('🔍 [Admin Quote Edit] Watched items:', {
+                          count: watchedItems?.length || 0,
+                          items: watchedItems,
+                          isLoading,
+                          hasQuote: !!quote,
+                        });
 
-                        return null;
+                        // Remove the early return that was preventing items from rendering
+                        // return null;
                       })()}
 
                       {/* Loading state - prevent premature rendering */}
@@ -2069,7 +2100,22 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                               return null; // Handled by the "No items" section above
                             }
 
-                            return items.map((item, index) => {
+                            console.log('🎯 [Admin Quote Edit] Rendering items:', {
+                              itemCount: items.length,
+                              firstItem: items[0],
+                              allItems: items,
+                              itemIds: items.map(i => i?.id),
+                              itemNames: items.map(i => i?.product_name),
+                            });
+
+                            const renderedItems = items.map((item, index) => {
+                              console.log(`📦 [Admin Quote Edit] Rendering item ${index}:`, {
+                                itemId: item?.id,
+                                itemName: item?.product_name,
+                                index,
+                                totalItems: items.length,
+                              });
+                              
                               try {
                                 // Validate item structure
                                 if (!item || typeof item !== 'object') {
@@ -2468,6 +2514,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                 );
                               }
                             });
+                            
+                            console.log('🏁 [Admin Quote Edit] Finished mapping items, returning rendered items');
+                            return renderedItems;
                           } catch (error) {
                             return (
                               <div className="p-8 text-center text-red-500">
@@ -2876,12 +2925,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                             <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                               <span>Qty: {item.quantity}</span>
                               <span>•</span>
-                              <span>Weight: {item.weight_kg} kg each</span>
+                              <span>Weight: {item.weight} kg each</span>
                               <span>•</span>
                               <span>
                                 Unit Price:{' '}
                                 {currencyDisplay.formatSingleAmount(
-                                  Number(item.price_usd || 0),
+                                  Number(item.costprice_origin || 0),
                                   'origin',
                                 )}
                               </span>
@@ -2900,7 +2949,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                         <div className="text-right">
                           <div className="font-semibold text-gray-900">
                             {currencyDisplay.formatSingleAmount(
-                              Number(item.price_usd || 0) * item.quantity,
+                              Number(item.costprice_origin || 0) * item.quantity,
                               'origin',
                             )}
                           </div>

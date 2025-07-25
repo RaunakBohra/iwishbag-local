@@ -160,7 +160,9 @@
       "Bash(kill:*)",
       "Bash(npm:*)",
       "Bash(git stash push:*)",
-      "WebFetch(domain:airbnb.com)"
+      "WebFetch(domain:airbnb.com)",
+      "Bash(for file in /Users/raunakbohra/Desktop/global-wishlist-hub/src/components/admin/smart-components/{CompactCalculationBreakdown,CompactHSNTaxBreakdown,CompactShippingOptions,CompactStatusManager,TaxCalculationSidebar}.tsx)",
+      "Bash(for file in /Users/raunakbohra/Desktop/global-wishlist-hub/src/{components/forms/quote-form-fields/ProductInfoFields.tsx,services/CalculationDefaultsService.ts,utils/loadSampleHSNQuote.ts,stores/cartStore.ts})"
     ],
     "deny": []
   }

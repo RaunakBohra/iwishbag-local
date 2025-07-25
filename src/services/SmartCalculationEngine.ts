@@ -86,11 +86,11 @@ export class SmartCalculationEngine {
     try {
       // Calculate base totals
       const itemsTotal = input.quote.items.reduce(
-        (sum, item) => sum + item.price_usd * item.quantity,
+        (sum, item) => sum + item.costprice_origin * item.quantity,
         0,
       );
       const totalWeight = input.quote.items.reduce(
-        (sum, item) => sum + item.weight_kg * item.quantity,
+        (sum, item) => sum + item.weight * item.quantity,
         0,
       );
 
@@ -148,11 +148,11 @@ export class SmartCalculationEngine {
 
       // Calculate base totals
       const itemsTotal = input.quote.items.reduce(
-        (sum, item) => sum + item.price_usd * item.quantity,
+        (sum, item) => sum + item.costprice_origin * item.quantity,
         0,
       );
       const totalWeight = input.quote.items.reduce(
-        (sum, item) => sum + item.weight_kg * item.quantity,
+        (sum, item) => sum + item.weight * item.quantity,
         0,
       );
 
@@ -304,7 +304,7 @@ export class SmartCalculationEngine {
       const enhancedItems = await Promise.all(
         quote.items.map(async (item) => {
           let hsnCode = item.hsn_code;
-          let detectedWeight = item.weight_kg;
+          let detectedWeight = item.weight;
 
           // Auto-classify HSN code if not provided
           if (!hsnCode) {
@@ -345,8 +345,8 @@ export class SmartCalculationEngine {
           return {
             id: item.id || crypto.randomUUID(),
             name: item.name,
-            price_origin_currency: item.price_usd, // Will be converted by PerItemTaxCalculator
-            weight_kg: detectedWeight,
+            price_origin_currency: item.costprice_origin, // Will be converted by PerItemTaxCalculator
+            weight: detectedWeight,
             hsn_code: hsnCode,
             category: item.category,
             url: item.url,
@@ -430,7 +430,7 @@ export class SmartCalculationEngine {
 
       // Calculate totals for traditional percentage-based calculation
       const itemsTotal = quote.items.reduce(
-        (sum, item) => sum + item.price_usd * item.quantity,
+        (sum, item) => sum + item.costprice_origin * item.quantity,
         0
       );
 
@@ -1065,9 +1065,13 @@ export class SmartCalculationEngine {
     // 🔍 [DEBUG] Log breakdown shipping assignment
 
     // Update quote data structures
+    // Calculate local currency total
+    const finalTotalLocal = finalTotal * exchangeRate;
+    
     const updatedQuote: UnifiedQuote = {
       ...quote,
       final_total_usd: Math.round(finalTotal * 100) / 100,
+      final_total: Math.round(finalTotalLocal * 100) / 100, // Set local currency total
       calculation_data: {
         ...quote.calculation_data,
         breakdown: {
@@ -1166,9 +1170,13 @@ export class SmartCalculationEngine {
     const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // Build updated quote
+    // Calculate local currency total
+    const finalTotalLocal = finalTotal * exchangeRate;
+    
     const updatedQuote: UnifiedQuote = {
       ...quote,
       final_total_usd: finalTotal,
+      final_total: Math.round(finalTotalLocal * 100) / 100, // Set local currency total
       calculation_data: {
         ...quote.calculation_data,
         breakdown: {
@@ -1233,15 +1241,21 @@ export class SmartCalculationEngine {
 
     if (hsnTaxSummary && hsnTaxBreakdown && hsnTaxBreakdown.length > 0) {
       // Use HSN-based per-item tax calculations
+      console.log(`[COMPLETE COSTS DEBUG] Using HSN-based tax calculation:`, {
+        total_customs: hsnTaxSummary.total_customs,
+        total_local_taxes: hsnTaxSummary.total_local_taxes,
+        method: quote.calculation_method_preference
+      });
       customsAmount = hsnTaxSummary.total_customs;
       localTaxesAmount = hsnTaxSummary.total_local_taxes;
     } else {
       // Fallback to traditional tier-based calculation
+      console.log(`[COMPLETE COSTS DEBUG] Using fallback tier-based calculation, method:`, quote.calculation_method_preference);
 
       try {
         // Calculate total weight for customs calculation
         const totalWeight = quote.items.reduce(
-          (sum, item) => sum + item.weight_kg * item.quantity,
+          (sum, item) => sum + item.weight * item.quantity,
           0,
         );
 
@@ -1314,6 +1328,15 @@ export class SmartCalculationEngine {
     const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // Update quote data structures with HSN tax information
+    console.log(`[COMPLETE COSTS DEBUG] Creating breakdown with values:`, {
+      customs: customsAmount,
+      taxes: salesTax + localTaxesAmount + vatAmount,
+      localTaxes: localTaxesAmount,
+      salesTax: salesTax,
+      vatAmount: vatAmount,
+      method: quote.calculation_method_preference
+    });
+    
     const updatedCalculationData: CalculationData = {
       ...quote.calculation_data,
       breakdown: {
@@ -1409,13 +1432,24 @@ export class SmartCalculationEngine {
       vat_amount: vatAmount,
     };
 
+    // Calculate local currency total
+    const finalTotalLocal = finalTotal * exchangeRate;
+    
     const updatedQuote: UnifiedQuote = {
       ...quote,
       final_total_usd: Math.round(finalTotal * 100) / 100,
+      final_total: Math.round(finalTotalLocal * 100) / 100, // Set local currency total
       calculation_data: updatedCalculationData,
       operational_data: updatedOperationalData,
       optimization_score: this.calculateOptimizationScore(finalTotal, itemsTotal),
     };
+
+    console.log(`[COMPLETE COSTS DEBUG] Returning updated quote with:`, {
+      id: updatedQuote.id,
+      method: updatedQuote.calculation_method_preference,
+      final_total: updatedQuote.final_total_usd,
+      breakdown: updatedQuote.calculation_data?.breakdown
+    });
 
     return { updated_quote: updatedQuote };
   }
@@ -1483,7 +1517,7 @@ export class SmartCalculationEngine {
 
     // Weight optimization
     const averageWeight =
-      originalQuote.items.reduce((sum, item) => sum + item.weight_kg, 0) /
+      originalQuote.items.reduce((sum, item) => sum + item.weight, 0) /
       originalQuote.items.length;
     if (averageWeight < 0.5) {
       suggestions.push({
@@ -1673,12 +1707,15 @@ export class SmartCalculationEngine {
     const keyData = {
       quote_id: input.quote.id,
       items: input.quote.items.map((item) => ({
-        price: item.price_usd,
-        weight: item.weight_kg,
+        price: item.costprice_origin,
+        weight: item.weight,
         quantity: item.quantity,
       })),
       countries: `${input.quote.origin_country}-${input.quote.destination_country}`,
       preferences: input.preferences,
+      // Include tax calculation preferences in cache key
+      tax_method: input.tax_calculation_preferences?.calculation_method_preference || input.quote.calculation_method_preference || 'auto',
+      valuation_method: input.tax_calculation_preferences?.valuation_method_preference || input.quote.valuation_method_preference || 'auto'
     };
     return btoa(JSON.stringify(keyData)).slice(0, 32);
   }

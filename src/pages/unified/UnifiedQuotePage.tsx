@@ -11,7 +11,7 @@ import {
   Trash2,
   AlertTriangle,
   Loader2,
-  Mobile,
+  Smartphone,
   Monitor,
   Tablet,
   CheckCircle,
@@ -435,7 +435,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
             <div className="mt-2 p-2 bg-blue-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Mobile className="h-4 w-4 text-blue-600" />
+                  <Smartphone className="h-4 w-4 text-blue-600" />
                   <span className="text-sm text-blue-700">Install iwishBag App</span>
                 </div>
                 <Button
@@ -549,7 +549,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 {device.isDesktop && <Monitor className="h-4 w-4" />}
                 {device.isTablet && <Tablet className="h-4 w-4" />}
-                {device.isMobile && <Mobile className="h-4 w-4" />}
+                {device.isMobile && <Smartphone className="h-4 w-4" />}
                 <span className="hidden sm:inline">{device.deviceType}</span>
               </div>
 

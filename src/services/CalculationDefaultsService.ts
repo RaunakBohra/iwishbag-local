@@ -57,7 +57,7 @@ export class CalculationDefaultsService {
     // Use base_total_usd as primary source, fallback to calculated value from items
     const itemsValue =
       quote.base_total_usd ||
-      quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+      quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     console.log('[CalculationDefaults] Items value extracted:', {
       quoteId: quote.id,
@@ -115,7 +115,7 @@ export class CalculationDefaultsService {
     // Use base_total_usd as primary source, fallback to calculated value from items
     const itemsValue =
       quote.base_total_usd ||
-      quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+      quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     // Check if customer opted in or if it's default enabled
     const shouldCalculate = customerOptedIn || config.default_enabled;
@@ -233,7 +233,7 @@ export class CalculationDefaultsService {
     const insuranceDefault = this.calculateInsuranceDefault(quote, selectedOption, customerOptedIn);
     const itemsValue =
       quote.base_total_usd ||
-      quote.items.reduce((sum, item) => sum + item.price_usd * item.quantity, 0);
+      quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     const currentHandling = quote.operational_data?.handling_charge || 0;
     const currentInsurance = quote.operational_data?.insurance_amount || 0;

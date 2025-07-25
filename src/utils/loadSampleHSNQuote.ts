@@ -59,7 +59,7 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
           ...baseQuote.items[0], // Kurta
           id: 'low-kurta-001',
           name: 'Simple Cotton Kurta - Basic Design',
-          price_usd: 3.61, // ₹300 INR (below $10 minimum)
+          costprice_origin: 3.61, // ₹300 INR (below $10 minimum)
           options: 'Size: S, Color: White, Material: Basic Cotton',
         }
       ],
@@ -91,7 +91,7 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
           ...baseQuote.items[1], // Smartphone
           id: 'high-mobile-001',
           name: 'iPhone 15 Pro Max - 256GB Natural Titanium',
-          price_usd: 1445.78, // ₹120,000 INR (well above minimums)
+          costprice_origin: 1445.78, // ₹120,000 INR (well above minimums)
           options: '256GB Storage, Natural Titanium, AppleCare+',
         }
       ],

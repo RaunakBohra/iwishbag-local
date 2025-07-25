@@ -53,8 +53,8 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
   const [newItem, setNewItem] = useState<Partial<QuoteItem>>({
     name: '',
     quantity: 1,
-    price_usd: 0,
-    weight_kg: 0,
+    costprice_origin: 0,
+    weight: 0,
   });
 
   // HSN assignment state
@@ -189,7 +189,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
             {quote.items.length} items • Total weight:{' '}
             {quote.items
               .reduce(
-                (sum, item) => sum + Number(item.weight_kg || 0) * Number(item.quantity || 0),
+                (sum, item) => sum + Number(item.weight || 0) * Number(item.quantity || 0),
                 0,
               )
               .toFixed(2)}{' '}
@@ -230,13 +230,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                         Price ({currencyDisplay.originCurrency}):
                       </span>
                       <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(Number(item.price_usd || 0), 'origin')}
+                        {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0), 'origin')}
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Weight:</span>
                       <div className="flex items-center space-x-1">
-                        <span className="font-medium">{Number(item.weight_kg || 0)} kg</span>
+                        <span className="font-medium">{Number(item.weight || 0)} kg</span>
                         <Badge
                           {...getWeightConfidenceBadge(item.smart_data?.weight_confidence || 0)}
                         >
@@ -273,7 +273,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                       <span className="text-gray-600">Total:</span>
                       <div className="font-medium">
                         {currencyDisplay.formatSingleAmount(
-                          Number(item.price_usd || 0) * item.quantity,
+                          Number(item.costprice_origin || 0) * item.quantity,
                           'origin',
                         )}
                       </div>
@@ -424,7 +424,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
               <div className="text-2xl font-bold text-purple-600">
                 {quote.items
                   .reduce(
-                    (sum, item) => sum + Number(item.weight_kg || 0) * Number(item.quantity || 0),
+                    (sum, item) => sum + Number(item.weight || 0) * Number(item.quantity || 0),
                     0,
                   )
                   .toFixed(1)}
@@ -463,7 +463,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                 Consider verifying weights for items with low confidence scores
               </div>
             )}
-            {quote.items.some((item) => Number(item.weight_kg || 0) < 0.1) && (
+            {quote.items.some((item) => Number(item.weight || 0) < 0.1) && (
               <div className="flex items-center text-blue-700">
                 <Scale className="w-3 h-3 mr-2" />
                 Some items have very low weights - this may affect shipping calculations
@@ -527,8 +527,8 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
   const [editForm, setEditForm] = useState({
     name: item.name,
     quantity: item.quantity,
-    price_usd: item.price_usd,
-    weight_kg: item.weight_kg,
+    costprice_origin: item.costprice_origin,
+    weight: item.weight,
     options: item.options || '',
     hsn_code: item.hsn_code || '',
     category: item.category || '',
@@ -583,7 +583,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
   }, [editForm.name]);
 
   const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
-    setEditForm((prev) => ({ ...prev, weight_kg: weight }));
+    setEditForm((prev) => ({ ...prev, weight: weight }));
     setSelectedWeightSource(source);
 
     // Record the selection for analytics
@@ -605,13 +605,13 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
     // Learn from user input if different from ML estimation
     if (
       mlEstimation &&
-      Math.abs(editForm.weight_kg - mlEstimation.estimated_weight) > 0.1 &&
+      Math.abs(editForm.weight - mlEstimation.estimated_weight) > 0.1 &&
       selectedWeightSource !== 'hsn' // Don't learn if HSN was selected
     ) {
       try {
         await smartWeightEstimator.learnFromActualWeight(
           editForm.name,
-          editForm.weight_kg,
+          editForm.weight,
           undefined,
           {
             userConfirmed: true,
@@ -625,8 +625,8 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
       ...item,
       name: editForm.name,
       quantity: editForm.quantity,
-      price_usd: editForm.price_usd,
-      weight_kg: editForm.weight_kg,
+      costprice_origin: editForm.costprice_origin,
+      weight: editForm.weight,
       options: editForm.options,
       hsn_code: editForm.hsn_code,
       category: editForm.category,
@@ -693,9 +693,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                     <DollarSign className="w-3 h-3 text-gray-400" />
                     <Input
                       type="number"
-                      value={editForm.price_usd}
+                      value={editForm.costprice_origin}
                       onChange={(e) =>
-                        setEditForm((prev) => ({ ...prev, price_usd: Number(e.target.value) }))
+                        setEditForm((prev) => ({ ...prev, costprice_origin: Number(e.target.value) }))
                       }
                       className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                       step="0.01"
@@ -714,9 +714,9 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                     <Scale className="w-3 h-3 text-gray-400" />
                     <Input
                       type="number"
-                      value={editForm.weight_kg}
+                      value={editForm.weight}
                       onChange={(e) => {
-                        setEditForm((prev) => ({ ...prev, weight_kg: Number(e.target.value) }));
+                        setEditForm((prev) => ({ ...prev, weight: Number(e.target.value) }));
                         setSelectedWeightSource('manual');
                       }}
                       className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
@@ -837,8 +837,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   const [addForm, setAddForm] = useState({
     name: '',
     quantity: 1,
-    price_usd: 0,
-    weight_kg: 0,
+    costprice_origin: 0,
+    weight: 0,
     options: '',
     url: '',
     hsn_code: hsnCode || '',
@@ -896,7 +896,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
   }, [addForm.name, addForm.url]);
 
   const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
-    setAddForm((prev) => ({ ...prev, weight_kg: weight }));
+    setAddForm((prev) => ({ ...prev, weight: weight }));
     setSelectedWeightSource(source);
 
     // Record the selection for analytics
@@ -918,13 +918,13 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     // Learn from user input if different from ML estimation
     if (
       mlEstimation &&
-      Math.abs(addForm.weight_kg - mlEstimation.estimated_weight) > 0.1 &&
+      Math.abs(addForm.weight - mlEstimation.estimated_weight) > 0.1 &&
       selectedWeightSource !== 'hsn'
     ) {
       try {
         await smartWeightEstimator.learnFromActualWeight(
           addForm.name,
-          addForm.weight_kg,
+          addForm.weight,
           addForm.url || undefined,
           {
             userConfirmed: true,
@@ -938,8 +938,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       id: `item_${Date.now()}`, // Temporary ID
       name: addForm.name,
       quantity: addForm.quantity,
-      price_usd: addForm.price_usd,
-      weight_kg: addForm.weight_kg,
+      costprice_origin: addForm.costprice_origin,
+      weight: addForm.weight,
       options: addForm.options,
       url: addForm.url,
       hsn_code: addForm.hsn_code,
@@ -1019,9 +1019,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                     <DollarSign className="w-3 h-3 text-gray-400" />
                     <Input
                       type="number"
-                      value={addForm.price_usd}
+                      value={addForm.costprice_origin}
                       onChange={(e) =>
-                        setAddForm((prev) => ({ ...prev, price_usd: Number(e.target.value) }))
+                        setAddForm((prev) => ({ ...prev, costprice_origin: Number(e.target.value) }))
                       }
                       className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                       step="0.01"
@@ -1040,9 +1040,9 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                     <Scale className="w-3 h-3 text-gray-400" />
                     <Input
                       type="number"
-                      value={addForm.weight_kg}
+                      value={addForm.weight}
                       onChange={(e) => {
-                        setAddForm((prev) => ({ ...prev, weight_kg: Number(e.target.value) }));
+                        setAddForm((prev) => ({ ...prev, weight: Number(e.target.value) }));
                         setSelectedWeightSource('manual');
                       }}
                       className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"

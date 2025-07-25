@@ -47,6 +47,7 @@ const PaymentTest = React.lazy(() => import('@/pages/PaymentTest'));
 const PaypalSuccess = React.lazy(() => import('@/pages/PaypalSuccess'));
 const PaypalFailure = React.lazy(() => import('@/pages/PaypalFailure'));
 const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified'));
+const CustomerQuoteDetail = React.lazy(() => import('@/pages/dashboard/CustomerQuoteDetail'));
 const UnifiedQuotePage = React.lazy(() => import('@/pages/unified/UnifiedQuotePage'));
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
 const EmailConfirmation = React.lazy(() => import('@/pages/auth/EmailConfirmation'));
@@ -400,7 +401,7 @@ const router = createBrowserRouter([
             path: 'dashboard/quotes/:id',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
-                <UnifiedQuotePage mode="view" />
+                <QuoteDetailUnified />
               </ErrorBoundary>
             ),
           },

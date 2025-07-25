@@ -251,6 +251,11 @@ export class HSNTaxIntegrationService {
       // Step 6: Update quote with tax calculation results
       if (result.taxCalculation.success) {
         result.updatedQuote.final_total_usd = result.taxCalculation.totals.totalWithTaxes;
+        
+        // Calculate local currency total
+        const exchangeRate = result.updatedQuote.calculation_data?.exchange_rate?.rate || 1;
+        result.updatedQuote.final_total = Math.round(result.taxCalculation.totals.totalWithTaxes * exchangeRate * 100) / 100;
+        
         result.updatedQuote.calculation_data = {
           ...result.updatedQuote.calculation_data,
           breakdown: {
@@ -392,8 +397,8 @@ export class HSNTaxIntegrationService {
     if (!forceWeightDetection) {
       const needsWeightDetection = items.filter(
         (item) =>
-          !item.weight_kg ||
-          item.weight_kg === 0.5 ||
+          !item.weight ||
+          item.weight === 0.5 ||
           (item.smart_data?.weight_confidence || 0) < 0.7,
       );
 
@@ -402,7 +407,7 @@ export class HSNTaxIntegrationService {
           `📋 [HSN-INTEGRATION] All items already have weight data, skipping weight detection step`,
         );
         return items.map((item) => ({
-          weight: item.weight_kg,
+          weight: item.weight,
           confidence: item.smart_data?.weight_confidence || 0.5,
           source: 'cached' as const,
           unit: 'kg' as const,
@@ -428,7 +433,7 @@ export class HSNTaxIntegrationService {
 
       return {
         ...item,
-        weight_kg: weight.weight || item.weight_kg,
+        weight: weight.weight || item.weight,
         smart_data: {
           ...item.smart_data,
           hsn_code: classification.hsnCode || item.smart_data?.hsn_code,

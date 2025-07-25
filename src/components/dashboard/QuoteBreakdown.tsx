@@ -147,10 +147,13 @@ export function QuoteBreakdown({
 
   // Use the same currency conversion logic for both breakdown and summary
   const quoteTotal = useMemo(() => {
-    if (!quote.final_total_usd) return 0;
-    // Ensure we're using the exact same value as shown in the breakdown
-    return quote.final_total_usd;
-  }, [quote.final_total_usd]);
+    // Use the local currency total, not USD
+    if (quote.final_total !== null && quote.final_total !== undefined) {
+      return quote.final_total;
+    }
+    // Fallback to USD if local total not available
+    return quote.final_total_usd || 0;
+  }, [quote.final_total, quote.final_total_usd]);
 
   const handleApproveClick = () => {
     setApprovalDialogOpen(true);
@@ -222,6 +225,7 @@ export function QuoteBreakdown({
           onReject={(statusConfig?.allowRejection ?? false) ? handleRejectSummary : undefined}
           isProcessing={isProcessing}
           countryCode={quote.destination_country}
+          currency={quote.currency}
           renderActions={() => (
             <>
               {quote.status !== 'rejected' && (

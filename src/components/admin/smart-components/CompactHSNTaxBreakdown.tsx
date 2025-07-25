@@ -118,8 +118,8 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       const calculatorItems = itemsWithHSN.map((item) => ({
         id: item.id,
         name: item.name,
-        price_origin_currency: item.price_usd,
-        weight_kg: item.weight_kg,
+        price_origin_currency: item.costprice_origin,
+        weight: item.weight,
         hsn_code: item.hsn_code,
         category: item.category,
         url: item.url,

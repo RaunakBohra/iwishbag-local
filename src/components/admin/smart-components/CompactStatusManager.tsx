@@ -130,7 +130,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         quantity: quote.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
         itemWeight:
           quote.items?.reduce(
-            (sum, item) => sum + (item.weight_kg || 0) * (item.quantity || 1),
+            (sum, item) => sum + (item.weight || 0) * (item.quantity || 1),
             0,
           ) || 0,
         imageUrl: quote.items?.[0]?.image_url,
