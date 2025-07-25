@@ -135,12 +135,18 @@ class PerItemTaxCalculator {
   }
 
   /**
-   * ENHANCED CORE METHOD: Calculate taxes with both valuation options for admin choice
+   * ENHANCED CORE METHOD: Calculate taxes with CIF/landed cost basis following international standards
    * Provides transparency and admin override capabilities
    */
   async calculateItemTax(
     item: QuoteItem,
     context: TaxCalculationContext,
+    quoteTotals?: {
+      totalItemsValue: number;
+      totalShippingCost: number;
+      totalInsuranceAmount: number;
+      totalHandlingFee: number;
+    }
   ): Promise<ItemTaxBreakdown | null> {
     try {
       // Create placeholder breakdown for items without HSN codes
@@ -165,29 +171,48 @@ class PerItemTaxCalculator {
       // Get tax rates with admin overrides and preferences
       const taxRates = await this.getTaxRatesWithPreferences(hsnData, context, unifiedTaxData);
 
-      // Calculate both valuation options with admin preferences
+      // Use default quoteTotals if not provided (for backward compatibility)
+      const totals = quoteTotals || this.getQuoteTotals([item], context);
+
+      // Step 1: Calculate CIF value per item (Cost + Insurance + Freight)
+      const cifValue = this.calculateCIFValue(
+        item,
+        context,
+        totals.totalItemsValue,
+        totals.totalShippingCost,
+        totals.totalInsuranceAmount
+      );
+
+      // Step 2: Calculate customs duty on CIF basis (international standard)
+      const customsCalculation = this.calculateCustoms(
+        cifValue,
+        taxRates.customs_rate,
+        context,
+      );
+
+      // Step 3: Calculate landed cost (CIF + Customs + Handling)
+      const landedCost = this.calculateLandedCost(
+        cifValue,
+        customsCalculation.amount_origin_currency,
+        totals.totalHandlingFee,
+        totals.totalItemsValue,
+        item.price_origin_currency
+      );
+
+      // Step 4: Calculate local taxes on landed cost basis (international standard)
+      const localTaxCalculation = await this.calculateLocalTaxes(
+        landedCost,
+        taxRates,
+        context,
+      );
+
+      // Calculate both valuation options with the new CIF/landed cost logic
       const valuationOptions = await this.calculateBothValuationOptions(
         item,
         hsnData,
         context.route.origin_country,
         taxRates,
         context.valuation_method_preference
-      );
-
-      // Use the auto-selected amount for the main calculations (backward compatibility)
-      const selectedAmount = valuationOptions.auto_selected_amount;
-
-      // Calculate customs and local taxes based on selected amount
-      const customsCalculation = this.calculateCustoms(
-        selectedAmount,
-        taxRates.customs_rate,
-        context,
-      );
-
-      const localTaxCalculation = await this.calculateLocalTaxes(
-        selectedAmount,
-        taxRates,
-        context,
       );
 
       // Build enhanced calculation options object
@@ -198,25 +223,31 @@ class PerItemTaxCalculator {
         admin_can_override: true, // Always allow admin override
       };
 
-      // Build comprehensive breakdown with both legacy and enhanced fields
+      // Build comprehensive breakdown with CIF/landed cost transparency
       const breakdown: ItemTaxBreakdown = {
         item_id: item.id,
         hsn_code: hsnData.hsn_code,
         category: hsnData.category,
         item_name: item.name,
 
-        // Valuation details (legacy fields for backward compatibility)
+        // CIF/Landed Cost details (international standard)
         original_price_origin_currency: item.price_origin_currency,
         minimum_valuation_conversion: valuationOptions.minimum_valuation_conversion,
-        taxable_amount_origin_currency: selectedAmount,
+        taxable_amount_origin_currency: landedCost, // Now shows landed cost for transparency
         valuation_method: valuationOptions.valuation_method,
 
         // Enhanced: Both calculation options for admin choice
         calculation_options,
 
-        // Tax calculations (based on auto-selected method)
-        customs_calculation: customsCalculation,
-        local_tax_calculation: localTaxCalculation,
+        // Tax calculations (based on CIF/landed cost)
+        customs_calculation: {
+          ...customsCalculation,
+          basis_amount: cifValue, // CIF basis for customs
+        },
+        local_tax_calculation: {
+          ...localTaxCalculation,
+          basis_amount: landedCost, // Landed cost basis for local tax
+        },
 
         // Totals
         total_customs: customsCalculation.amount_origin_currency,
@@ -315,7 +346,29 @@ class PerItemTaxCalculator {
   }
 
   /**
-   * Calculate taxes for multiple items in batch
+   * Get quote-level totals needed for CIF/landed cost calculations
+   */
+  private getQuoteTotals(items: QuoteItem[], context: TaxCalculationContext) {
+    const totalItemsValue = items.reduce((sum, item) => sum + item.price_origin_currency, 0);
+    
+    // These would ideally come from the quote context, but we'll use defaults for now
+    // In a real implementation, these should be passed through the context
+    const totalShippingCost = 0; // TODO: Get from context
+    const totalInsuranceAmount = 0; // TODO: Get from context  
+    const totalHandlingFee = 0; // TODO: Get from context
+    
+    console.log(`[QUOTE TOTALS] Items: ${totalItemsValue}, Shipping: ${totalShippingCost}, Insurance: ${totalInsuranceAmount}, Handling: ${totalHandlingFee}`);
+    
+    return {
+      totalItemsValue,
+      totalShippingCost,
+      totalInsuranceAmount,
+      totalHandlingFee
+    };
+  }
+
+  /**
+   * Calculate taxes for multiple items in batch with proper CIF/landed cost
    */
   async calculateMultipleItemTaxes(
     items: QuoteItem[],
@@ -327,7 +380,10 @@ class PerItemTaxCalculator {
       items_count: items.length
     });
 
-    const promises = items.map((item) => this.calculateItemTax(item, context));
+    // Get quote-level totals for proper allocation
+    const quoteTotals = this.getQuoteTotals(items, context);
+
+    const promises = items.map((item) => this.calculateItemTax(item, context, quoteTotals));
     const results = await Promise.all(promises);
     
     // All items now get breakdown objects (real calculations or placeholders)
@@ -497,43 +553,96 @@ class PerItemTaxCalculator {
   }
 
   /**
-   * Calculate customs duty
+   * Calculate CIF value per item (Cost + Insurance + Freight)
+   * Following international customs standards
+   */
+  private calculateCIFValue(
+    item: QuoteItem,
+    context: TaxCalculationContext,
+    totalItemsValue: number,
+    totalShippingCost: number,
+    totalInsuranceAmount: number
+  ): number {
+    // Allocate shipping and insurance proportionally to item value
+    const itemProportion = item.price_origin_currency / totalItemsValue;
+    const allocatedShipping = totalShippingCost * itemProportion;
+    const allocatedInsurance = totalInsuranceAmount * itemProportion;
+    
+    const cifValue = item.price_origin_currency + allocatedShipping + allocatedInsurance;
+    
+    console.log(`[CIF DEBUG] Item: ${item.name}`);
+    console.log(`[CIF DEBUG] Item Price: ${item.price_origin_currency}`);
+    console.log(`[CIF DEBUG] Allocated Shipping: ${allocatedShipping}`);
+    console.log(`[CIF DEBUG] Allocated Insurance: ${allocatedInsurance}`);
+    console.log(`[CIF DEBUG] CIF Value: ${cifValue}`);
+    
+    return cifValue;
+  }
+
+  /**
+   * Calculate customs duty on CIF basis (international standard)
    */
   private calculateCustoms(
-    taxableAmount: number,
+    cifValue: number,
     customsRate: number,
     context: TaxCalculationContext,
   ) {
-    const customsAmount = (taxableAmount * customsRate) / 100;
+    const customsAmount = (cifValue * customsRate) / 100;
+
+    console.log(`[CUSTOMS DEBUG] CIF Value: ${cifValue}, Rate: ${customsRate}%, Amount: ${customsAmount}`);
 
     return {
       rate_percentage: customsRate,
       amount_origin_currency: Math.round(customsAmount * 100) / 100, // Round to 2 decimals
-      basis_amount: taxableAmount,
+      basis_amount: cifValue, // Now using CIF as basis
     };
   }
 
   /**
-   * Calculate local taxes (Extended: GST/VAT/Sales Tax/State Tax/Local Tax/PST/etc.)
+   * Calculate landed cost per item (CIF + Customs + Handling)
+   * Following international customs standards for local tax basis
+   */
+  private calculateLandedCost(
+    cifValue: number,
+    customsAmount: number,
+    totalHandlingFee: number,
+    totalItemsValue: number,
+    itemValue: number
+  ): number {
+    // Allocate handling fee proportionally to item value
+    const itemProportion = itemValue / totalItemsValue;
+    const allocatedHandling = totalHandlingFee * itemProportion;
+    
+    const landedCost = cifValue + customsAmount + allocatedHandling;
+    
+    console.log(`[LANDED COST DEBUG] CIF: ${cifValue}, Customs: ${customsAmount}, Allocated Handling: ${allocatedHandling}, Landed Cost: ${landedCost}`);
+    
+    return landedCost;
+  }
+
+  /**
+   * Calculate local taxes on landed cost basis (international standard)
    */
   private async calculateLocalTaxes(
-    taxableAmount: number,
+    landedCost: number,
     taxRates: any,
     context: TaxCalculationContext,
   ) {
     // Determine tax type based on destination country
     const taxType = await this.getLocalTaxType(context.route.destination_country);
     
+    console.log(`[LOCAL TAX DEBUG] Landed Cost: ${landedCost}, Tax Type: ${taxType}`);
+    
     // Handle different tax calculation methods based on type
     switch (taxType) {
       case 'state_tax':
-        return this.calculateUSStateTaxes(taxableAmount, taxRates, context);
+        return this.calculateUSStateTaxes(landedCost, taxRates, context);
       case 'pst':
-        return this.calculateCanadianTaxes(taxableAmount, taxRates, context);
+        return this.calculateCanadianTaxes(landedCost, taxRates, context);
       case 'cess':
-        return this.calculateIndiaTaxesWithCess(taxableAmount, taxRates, context);
+        return this.calculateIndiaTaxesWithCess(landedCost, taxRates, context);
       default:
-        return this.calculateStandardLocalTax(taxableAmount, taxRates, taxType, context);
+        return this.calculateStandardLocalTax(landedCost, taxRates, taxType, context);
     }
   }
 

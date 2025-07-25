@@ -424,12 +424,18 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                           </div>
                         </div>
 
-                        {/* Valuation Details */}
+                        {/* CIF/Landed Cost Details */}
                         <div className="text-xs text-gray-600 space-y-1">
                           <div className="flex justify-between">
-                            <span>Taxable Amount:</span>
+                            <span>CIF Basis (Customs):</span>
                             <span className="font-medium">
-                              {currencyDisplay.formatSingleAmount(breakdown.taxable_amount_origin_currency, 'origin')}
+                              {currencyDisplay.formatSingleAmount(breakdown.customs_calculation?.basis_amount || 0, 'origin')}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Landed Cost (Local Tax):</span>
+                            <span className="font-medium">
+                              {currencyDisplay.formatSingleAmount(breakdown.local_tax_calculation?.basis_amount || 0, 'origin')}
                             </span>
                           </div>
                           {breakdown.minimum_valuation_conversion && (

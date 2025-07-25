@@ -8,7 +8,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Search,
@@ -60,6 +59,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [autoSuggestions, setAutoSuggestions] = useState<HSNSearchResult[]>([]);
   const [currentHSNData, setCurrentHSNData] = useState<HSNSearchResult | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +151,8 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   };
 
   const handleSearch = async (query: string) => {
+    setSelectedIndex(-1); // Reset selection when search changes
+    
     if (!query.trim()) {
       // Show popular HSN codes when empty
       const popular = await enhancedHSNSearchService.searchHSN({ limit: 10 });
@@ -181,6 +183,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const handleSearchInputChange = (value: string) => {
     setSearchQuery(value);
+    setSelectedIndex(-1); // Reset selection when typing
 
     // Clear previous timeout
     if (searchTimeoutRef.current) {
@@ -191,6 +194,48 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
     searchTimeoutRef.current = setTimeout(() => {
       handleSearch(value);
     }, 300);
+  };
+
+  // Get all available items for keyboard navigation
+  const getAllSelectableItems = () => {
+    if (searchQuery) {
+      return [...autoSuggestions.slice(0, 2), ...searchResults];
+    } else {
+      return categoryGroups.slice(0, 6);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const items = getAllSelectableItems();
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        e.stopPropagation();
+        if (selectedIndex >= 0 && items[selectedIndex]) {
+          const selectedItem = items[selectedIndex];
+          if (searchQuery) {
+            // HSN item selected
+            handleHSNSelect(selectedItem as HSNSearchResult);
+          } else {
+            // Category selected
+            handleCategorySelect((selectedItem as HSNCategoryGroup).category);
+          }
+        }
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        setSelectedIndex(-1);
+        break;
+    }
   };
 
   const handleCategorySelect = async (category: string, subcategory?: string) => {
@@ -260,6 +305,9 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
         if (open) {
           setSearchQuery('');
           setSelectedCategory('');
+          setSelectedIndex(-1);
+        } else {
+          setSelectedIndex(-1);
         }
       }}>
         <PopoverTrigger asChild>
@@ -330,15 +378,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 placeholder="Search HSN codes by category, name, or code..."
                 value={searchQuery}
                 onChange={(e) => handleSearchInputChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                  if (e.key === 'Escape') {
-                    setIsOpen(false);
-                  }
-                }}
+                onKeyDown={handleKeyDown}
                 className="
                   pl-10 pr-12 h-11 w-full
                   border-0 bg-gray-50/80 rounded-lg
@@ -369,27 +409,29 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
           </div>
 
           {/* Unified Results List */}
-          <ScrollArea className="max-h-80">
-            <div className="py-2">
+          <div className="max-h-80 overflow-y-auto overscroll-contain">
+            <div className="py-1">
               {/* Smart Combined Results */}
               {searchQuery ? (
                 <>
                   {/* AI Suggestions First (if any) */}
-                  {autoSuggestions.slice(0, 2).map((hsn) => (
+                  {autoSuggestions.slice(0, 2).map((hsn, index) => (
                     <ModernHSNItem
                       key={`ai-${hsn.hsn_code}`}
                       hsn={hsn}
                       onSelect={handleHSNSelect}
                       showBadge="AI"
+                      isSelected={selectedIndex === index}
                     />
                   ))}
                   
                   {/* Regular Search Results */}
-                  {searchResults.map((hsn) => (
+                  {searchResults.map((hsn, index) => (
                     <ModernHSNItem
                       key={hsn.hsn_code}
                       hsn={hsn}
                       onSelect={handleHSNSelect}
+                      isSelected={selectedIndex === (autoSuggestions.slice(0, 2).length + index)}
                     />
                   ))}
 
@@ -434,13 +476,16 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                         key={group.category}
                         type="button"
                         onClick={() => handleCategorySelect(group.category)}
-                        className="
+                        className={`
                           w-full flex items-center px-4 py-3 text-left 
-                          hover:bg-gray-50 active:bg-gray-100
                           transition-all duration-150 ease-in-out
                           group cursor-pointer
-                          border-l-2 border-transparent hover:border-l-blue-500
-                        "
+                          border-l-2 
+                          ${selectedIndex === index 
+                            ? 'bg-blue-50 border-l-blue-500 text-blue-900' 
+                            : 'border-transparent hover:bg-gray-50 hover:border-l-blue-500 active:bg-gray-100'
+                          }
+                        `}
                         style={{
                           animationDelay: `${index * 50}ms`
                         }}
@@ -474,7 +519,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
@@ -486,12 +531,14 @@ interface ModernHSNItemProps {
   hsn: HSNSearchResult;
   onSelect: (hsn: HSNSearchResult, event?: React.MouseEvent) => void;
   showBadge?: 'AI' | 'Popular' | null;
+  isSelected?: boolean;
 }
 
 const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
   hsn,
   onSelect,
   showBadge = null,
+  isSelected = false,
 }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -520,13 +567,16 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
   return (
     <button
       type="button"
-      className="
+      className={`
         w-full flex items-center px-3 py-2.5 text-left 
-        hover:bg-gray-50 active:bg-gray-100
         transition-colors duration-150 ease-in-out
         group cursor-pointer
-        border-l-2 border-transparent hover:border-l-blue-500
-      "
+        border-l-2 
+        ${isSelected 
+          ? 'bg-blue-50 border-l-blue-500 text-blue-900' 
+          : 'border-transparent hover:bg-gray-50 hover:border-l-blue-500 active:bg-gray-100'
+        }
+      `}
       onClick={handleClick}
     >
       {/* Content Section */}

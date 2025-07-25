@@ -20,6 +20,7 @@ import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
 import { SingleLineProductFields } from '@/components/admin/ultra-compact-selectors/SingleLineProductFields';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
+import { DirectHSNInput } from '@/components/admin/hsn-components/DirectHSNInput';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -735,48 +736,28 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                 {/* HSN Field */}
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
-                  <div className="flex items-center">
-                    {editForm.hsn_code ? (
-                      <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                        <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
-                          <Tag className="w-3 h-3 mr-1" />
-                          {editForm.hsn_code}
-                        </Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 ml-2"
-                          onClick={() => {
-                            setEditForm(prev => ({
-                              ...prev,
-                              hsn_code: '',
-                              category: ''
-                            }));
-                          }}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <SmartHSNSearch
-                        onSelect={(hsn) => {
-                          setEditForm(prev => ({
-                            ...prev,
-                            hsn_code: hsn.hsn_code,
-                            category: hsn.display_name
-                          }));
-                        }}
-                        productName={editForm.name}
-                        compact={true}
-                        trigger={
-                          <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
-                            <Search className="w-3 h-3 mr-1" />
-                            Search HSN
-                          </Button>
-                        }
-                      />
-                    )}
+                  <div className="flex-1">
+                    <DirectHSNInput
+                      value={editForm.hsn_code}
+                      displayValue={editForm.hsn_code && editForm.category ? `${editForm.category} - ${editForm.hsn_code}` : ''}
+                      onSelect={(hsn) => {
+                        setEditForm(prev => ({
+                          ...prev,
+                          hsn_code: hsn.hsn_code,
+                          category: hsn.display_name
+                        }));
+                      }}
+                      onClear={() => {
+                        setEditForm(prev => ({
+                          ...prev,
+                          hsn_code: '',
+                          category: ''
+                        }));
+                      }}
+                      productName={editForm.name}
+                      placeholder="Type to search HSN codes..."
+                      className="max-w-xs"
+                    />
                   </div>
                 </div>
               </div>
@@ -1062,48 +1043,28 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                 {/* HSN Field */}
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500 text-xs font-medium min-w-[30px]">HSN</span>
-                  <div className="flex items-center">
-                    {addForm.hsn_code ? (
-                      <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                        <Badge variant="default" className="text-xs bg-green-100 text-green-800 border-green-300">
-                          <Tag className="w-3 h-3 mr-1" />
-                          {addForm.hsn_code}
-                        </Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 ml-2"
-                          onClick={() => {
-                            setAddForm(prev => ({
-                              ...prev,
-                              hsn_code: '',
-                              category: ''
-                            }));
-                          }}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <SmartHSNSearch
-                        onSelect={(hsn) => {
-                          setAddForm(prev => ({
-                            ...prev,
-                            hsn_code: hsn.hsn_code,
-                            category: hsn.display_name
-                          }));
-                        }}
-                        productName={addForm.name}
-                        compact={true}
-                        trigger={
-                          <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
-                            <Search className="w-3 h-3 mr-1" />
-                            Search HSN
-                          </Button>
-                        }
-                      />
-                    )}
+                  <div className="flex-1">
+                    <DirectHSNInput
+                      value={addForm.hsn_code}
+                      displayValue={addForm.hsn_code && addForm.category ? `${addForm.category} - ${addForm.hsn_code}` : ''}
+                      onSelect={(hsn) => {
+                        setAddForm(prev => ({
+                          ...prev,
+                          hsn_code: hsn.hsn_code,
+                          category: hsn.display_name
+                        }));
+                      }}
+                      onClear={() => {
+                        setAddForm(prev => ({
+                          ...prev,
+                          hsn_code: '',
+                          category: ''
+                        }));
+                      }}
+                      productName={addForm.name}
+                      placeholder="Type to search HSN codes..."
+                      className="max-w-xs"
+                    />
                   </div>
                 </div>
               </div>
