@@ -38,7 +38,7 @@ export interface EnhancedCalculationInput {
     calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
     valuation_method_preference?:
       | 'auto'
-      | 'actual_price'
+      | 'product_value'
       | 'minimum_valuation'
       | 'higher_of_both'
       | 'per_item_choice';
@@ -291,7 +291,7 @@ export class SmartCalculationEngine {
           input?.tax_calculation_preferences?.valuation_method_preference ||
           quote.valuation_method_preference ||
           effectiveTaxMethod?.valuation_method ||
-          'auto',
+          'product_value', // ✅ NEW: Default to product_value instead of 'auto'
         admin_id: input?.tax_calculation_preferences?.admin_id,
         // ✅ FIXED: Pass actual form input values for CIF calculation
         shipping_cost: quote.calculation_data?.breakdown?.shipping || 0,
@@ -1039,18 +1039,18 @@ export class SmartCalculationEngine {
     );
 
     // Calculate customs using CIF value (Cost, Insurance, Freight) - RESPECT CALCULATION METHOD
-    let customsPercentage = 10; // Default
+    let customsPercentage = 0; // Default to 0 (no customs) if not specified
     const calculationMethod = quote.calculation_method_preference || 'hsn_only';
 
     if (calculationMethod === 'manual') {
-      // Manual mode: use customs input value
-      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+      // Manual mode: use customs input value (allow 0)
+      customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
     } else if (calculationMethod === 'country_based') {
       // Country-based mode: use country tier (simplified for sync)
-      customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage || 10;
+      customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage ?? 0;
     } else {
       // HSN mode: use existing stored value or fallback
-      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+      customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
     }
 
     const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
@@ -1183,18 +1183,18 @@ export class SmartCalculationEngine {
     }
 
     // Calculate customs using CIF value (Cost, Insurance, Freight) - RESPECT CALCULATION METHOD
-    let customsPercentage = 10; // Default
+    let customsPercentage = 0; // Default to 0 (no customs) if not specified
     const calculationMethod = quote.calculation_method_preference || 'hsn_only';
 
     if (calculationMethod === 'manual') {
-      // Manual mode: use customs input value
-      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+      // Manual mode: use customs input value (allow 0)
+      customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
     } else if (calculationMethod === 'country_based') {
       // Country-based mode: use country tier (simplified for sync)
-      customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage || 10;
+      customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage ?? 0;
     } else {
       // HSN mode: use existing stored value or fallback
-      customsPercentage = quote.operational_data?.customs?.percentage || 10;
+      customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
     }
 
     const cifValue = itemsTotal + shippingCost + insuranceAmount;
@@ -1773,11 +1773,11 @@ export class SmartCalculationEngine {
     const taxMethod =
       input.tax_calculation_preferences?.calculation_method_preference ||
       input.quote.calculation_method_preference ||
-      'auto';
+      'hsn_only'; // ✅ NEW: Consistent with calculation context
     const valuationMethod =
       input.tax_calculation_preferences?.valuation_method_preference ||
       input.quote.valuation_method_preference ||
-      'auto';
+      'product_value'; // ✅ NEW: Consistent with calculation context
 
     const keyData = {
       tax_method: taxMethod,
