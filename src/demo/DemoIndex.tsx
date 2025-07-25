@@ -116,7 +116,13 @@ const DemoIndex = () => {
               </div>
               
               <button 
-                onClick={() => setSelectedDemo(demo.id)}
+                onClick={() => {
+                  if (demo.id === 'airbnb-style') {
+                    window.location.href = '/demo/airbnb-style';
+                  } else {
+                    setSelectedDemo(demo.id);
+                  }
+                }}
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
                 <Eye className="h-4 w-4" />

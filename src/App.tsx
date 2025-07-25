@@ -135,6 +135,7 @@ const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
 
 // Demo pages for weight recommendation designs
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex'));
+const AirbnbStyleDemo = React.lazy(() => import('@/demo/AirbnbStyleDemo'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -231,6 +232,10 @@ const router = createBrowserRouter([
   {
     path: 'demo',
     element: <DemoIndex />,
+  },
+  {
+    path: 'demo/airbnb-style',
+    element: <AirbnbStyleDemo />,
   },
   // Auth routes - No Layout wrapper
   {

@@ -260,16 +260,6 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Tax Method Indicator */}
-              <div className="flex items-center justify-between text-xs p-2 bg-blue-50 rounded border border-blue-200">
-                <span className="text-gray-600">Tax Calculation Method:</span>
-                <Badge variant="outline" className="text-xs">
-                  {quote.calculation_method_preference === 'hsn_only' ? 'HSN Only' :
-                   quote.calculation_method_preference === 'legacy_fallback' ? 'Legacy Fallback' :
-                   quote.calculation_method_preference === 'admin_choice' ? 'Admin Choice' : 'Auto (Hybrid)'}
-                </Badge>
-              </div>
-
               {/* Primary Totals - Most Important Information First */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center p-3 bg-red-50 rounded border border-red-200">
