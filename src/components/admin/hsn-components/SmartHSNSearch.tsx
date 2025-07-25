@@ -273,7 +273,6 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
               <Search className="mr-2 h-4 w-4" />
               {currentHSNData ? (
                 <span className="flex items-center truncate">
-                  <span className="mr-2">{currentHSNData.icon}</span>
                   <span className="font-medium text-gray-900">{currentHSNData.category}</span>
                   <span className="mx-2 text-gray-400">-</span>
                   <span className="font-mono font-semibold text-blue-700">{currentHSNData.hsn_code}</span>
@@ -299,11 +298,34 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
         >
           {/* Search Input */}
           <div className="p-3 border-b border-gray-100">
+            {/* Back button and category filter */}
+            {selectedCategory && (
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('');
+                      setSearchQuery('');
+                      handleSearch('');
+                    }}
+                    className="flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    <ChevronRight className="h-3 w-3 mr-1 rotate-180" />
+                    Back to Categories
+                  </button>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {selectedCategory}
+                </Badge>
+              </div>
+            )}
+            
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 ref={inputRef}
-                placeholder="Search by category, product, or HSN code..."
+                placeholder={selectedCategory ? `Search in ${selectedCategory}...` : "Search by category, product, or HSN code..."}
                 value={searchQuery}
                 onChange={(e) => handleSearchInputChange(e.target.value)}
                 onKeyDown={(e) => {
@@ -319,6 +341,19 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
               />
               {isLoading && (
                 <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+              )}
+              {/* Clear search button */}
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    handleSearch('');
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
               )}
             </div>
           </div>
@@ -354,6 +389,23 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 />
               ))}
 
+              {/* Show All Categories button when there are search results */}
+              {searchResults.length > 0 && (searchQuery || selectedCategory) && (
+                <div className="border-t border-gray-100 p-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSelectedCategory('');
+                      handleSearch('');
+                    }}
+                    className="w-full text-left text-xs text-gray-600 hover:text-gray-700 p-2 hover:bg-gray-50 rounded-md"
+                  >
+                    Browse all categories →
+                  </button>
+                </div>
+              )}
+
               {/* Category Buttons - Show when no search results */}
               {searchResults.length === 0 && !isLoading && !searchQuery && (
                 <div className="p-2">
@@ -365,7 +417,10 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       onClick={() => handleCategorySelect(group.category)}
                       className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded-md transition-colors"
                     >
-                      <span className="text-sm mr-3">{group.icon}</span>
+                      <div 
+                        className="w-3 h-3 rounded-full mr-3 flex-shrink-0"
+                        style={{ backgroundColor: group.color }}
+                      ></div>
                       <div className="flex-1">
                         <div className="font-medium text-sm text-gray-900">{group.display_name}</div>
                         <div className="text-xs text-gray-500">{group.count} codes</div>
@@ -416,13 +471,11 @@ const DropdownHSNItem: React.FC<DropdownHSNItemProps> = ({
       className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded-md transition-colors group"
       onClick={handleClick}
     >
-      {/* Icon */}
+      {/* Category Color Dot */}
       <div 
-        className="w-7 h-7 rounded-md flex items-center justify-center text-white text-sm font-medium flex-shrink-0 mr-3"
+        className="w-3 h-3 rounded-full flex-shrink-0 mr-3 mt-1"
         style={{ backgroundColor: hsn.color }}
-      >
-        {hsn.icon}
-      </div>
+      ></div>
 
       {/* Category - HSN Code Format */}
       <div className="flex-1 min-w-0">

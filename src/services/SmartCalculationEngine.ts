@@ -292,12 +292,12 @@ export class SmartCalculationEngine {
         admin_id: input?.tax_calculation_preferences?.admin_id,
       };
 
-      console.log(`[HSN TAX DEBUG] Created context:`, {
-        calculation_method_preference: context.calculation_method_preference,
-        valuation_method_preference: context.valuation_method_preference,
-        input_method: input?.tax_calculation_preferences?.calculation_method_preference,
+      console.log(`[HSN TAX DEBUG] Context creation values:`, {
+        input_tax_prefs: input?.tax_calculation_preferences?.calculation_method_preference,
         quote_method: quote.calculation_method_preference,
-        effective_method: effectiveTaxMethod?.calculation_method
+        effective_method: effectiveTaxMethod?.calculation_method,
+        final_calculation_method: context.calculation_method_preference,
+        final_valuation_method: context.valuation_method_preference
       });
 
       // Enhanced items with HSN classification and weight detection
@@ -357,10 +357,7 @@ export class SmartCalculationEngine {
 
 
       console.log(`[SMART ENGINE DEBUG] Passing context to PerItemTaxCalculator:`, {
-        calculation_method_preference: context.calculation_method_preference,
-        valuation_method_preference: context.valuation_method_preference,
-        input_method: input?.tax_calculation_preferences?.calculation_method_preference,
-        quote_method: quote.calculation_method_preference
+        full_context: context
       });
 
       // Calculate per-item taxes
