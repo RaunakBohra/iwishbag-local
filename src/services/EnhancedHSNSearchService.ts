@@ -557,20 +557,76 @@ class EnhancedHSNSearchService {
   private async performTextSearch(query: string, limit: number): Promise<HSNSearchResult[]> {
     const searchTerms = query.trim().toLowerCase();
     
-    // Use full-text search with ranking
-    const { data, error } = await supabase
-      .from('hsn_search_optimized')
-      .select('*')
-      .textSearch('search_vector', searchTerms, {
-        type: 'websearch',
-        config: 'english'
-      })
-      .order('search_priority', { ascending: true })
-      .limit(limit);
+    try {
+      // Strategy 1: Full-text search with ranking
+      const textSearchPromise = supabase
+        .from('hsn_search_optimized')
+        .select('*')
+        .textSearch('search_vector', searchTerms, {
+          type: 'websearch',
+          config: 'english'
+        })
+        .order('search_priority', { ascending: true })
+        .limit(Math.floor(limit * 0.7)); // Reserve 70% for text search
 
-    if (error) throw error;
+      // Strategy 2: Category name matching for better category discovery
+      const categorySearchPromise = supabase
+        .from('hsn_search_optimized')
+        .select('*')
+        .or(`category.ilike.%${searchTerms}%,subcategory.ilike.%${searchTerms}%,description.ilike.%${searchTerms}%`)
+        .order('search_priority', { ascending: true })
+        .limit(Math.floor(limit * 0.3)); // Reserve 30% for category matching
 
-    return data?.map((item: any) => this.mapToSearchResult(item, query)) || [];
+      const [textResult, categoryResult] = await Promise.all([
+        textSearchPromise,
+        categorySearchPromise
+      ]);
+
+      if (textResult.error) throw textResult.error;
+      if (categoryResult.error) throw categoryResult.error;
+
+      // Combine and deduplicate results
+      const textData = textResult.data || [];
+      const categoryData = categoryResult.data || [];
+      
+      const seenCodes = new Set();
+      const combinedResults = [];
+      
+      // Add text search results first (higher priority)
+      for (const item of textData) {
+        if (!seenCodes.has(item.hsn_code)) {
+          seenCodes.add(item.hsn_code);
+          combinedResults.push(this.mapToSearchResult(item, query));
+        }
+      }
+      
+      // Add category search results
+      for (const item of categoryData) {
+        if (!seenCodes.has(item.hsn_code) && combinedResults.length < limit) {
+          seenCodes.add(item.hsn_code);
+          combinedResults.push(this.mapToSearchResult(item, query));
+        }
+      }
+
+      return combinedResults;
+
+    } catch (error) {
+      console.error('Enhanced text search failed, falling back to basic search:', error);
+      
+      // Fallback to original search
+      const { data, error: fallbackError } = await supabase
+        .from('hsn_search_optimized')
+        .select('*')
+        .textSearch('search_vector', searchTerms, {
+          type: 'websearch',
+          config: 'english'
+        })
+        .order('search_priority', { ascending: true })
+        .limit(limit);
+
+      if (fallbackError) throw fallbackError;
+      return data?.map((item: any) => this.mapToSearchResult(item, query)) || [];
+    }
   }
 
   private async searchByCategory(category: string, subcategory?: string, limit: number = 20): Promise<HSNSearchResult[]> {

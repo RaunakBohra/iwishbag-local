@@ -321,6 +321,12 @@ class PerItemTaxCalculator {
     items: QuoteItem[],
     context: TaxCalculationContext,
   ): Promise<ItemTaxBreakdown[]> {
+    console.log(`[TAX CALCULATOR DEBUG] Received context:`, {
+      calculation_method_preference: context.calculation_method_preference,
+      valuation_method_preference: context.valuation_method_preference,
+      items_count: items.length
+    });
+
     const promises = items.map((item) => this.calculateItemTax(item, context));
     const results = await Promise.all(promises);
     
@@ -669,24 +675,30 @@ class PerItemTaxCalculator {
     // Determine calculation method based on admin preferences
     const calculationMethod = context.calculation_method_preference || 'auto';
     
+    console.log(`[TAX CALCULATOR DEBUG] Using calculation method: ${calculationMethod} for HSN: ${hsnData.hsn_code}`);
+    
     let baseRates;
     
     switch (calculationMethod) {
       case 'hsn_only':
         // Use only HSN-specific rates
         baseRates = this.getHSNTaxRates(hsnData);
+        console.log(`[TAX CALCULATOR DEBUG] HSN rates applied:`, baseRates);
         break;
       case 'legacy_fallback':
         // Use only unified fallback rates
         baseRates = this.getUnifiedFallbackRates(unifiedTaxData);
+        console.log(`[TAX CALCULATOR DEBUG] Legacy fallback rates applied:`, baseRates);
         break;
       case 'admin_choice':
         // Admin has manually selected rates - check for overrides
         baseRates = this.getAdminChosenRates(hsnData, unifiedTaxData, context);
+        console.log(`[TAX CALCULATOR DEBUG] Admin choice rates applied:`, baseRates);
         break;
       default:
         // 'auto' - intelligent selection between HSN and fallback
         baseRates = await this.getAutoSelectedRates(hsnData, unifiedTaxData);
+        console.log(`[TAX CALCULATOR DEBUG] Auto-selected rates applied:`, baseRates);
         break;
     }
 

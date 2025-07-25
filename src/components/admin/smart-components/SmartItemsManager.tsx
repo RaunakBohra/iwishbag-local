@@ -763,14 +763,14 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                         onSelect={(hsn) => {
                           setEditForm(prev => ({
                             ...prev,
-                            hsn_code: hsn.code,
-                            category: hsn.description
+                            hsn_code: hsn.hsn_code,
+                            category: hsn.display_name
                           }));
                         }}
                         productName={editForm.name}
                         compact={true}
                         trigger={
-                          <Button variant="outline" size="sm" className="h-8 text-xs">
+                          <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
                             <Search className="w-3 h-3 mr-1" />
                             Search HSN
                           </Button>
@@ -1090,14 +1090,14 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({ onSave, onCancel, currenc
                         onSelect={(hsn) => {
                           setAddForm(prev => ({
                             ...prev,
-                            hsn_code: hsn.code,
-                            category: hsn.description
+                            hsn_code: hsn.hsn_code,
+                            category: hsn.display_name
                           }));
                         }}
                         productName={addForm.name}
                         compact={true}
                         trigger={
-                          <Button variant="outline" size="sm" className="h-8 text-xs">
+                          <Button type="button" variant="outline" size="sm" className="h-8 text-xs">
                             <Search className="w-3 h-3 mr-1" />
                             Search HSN
                           </Button>

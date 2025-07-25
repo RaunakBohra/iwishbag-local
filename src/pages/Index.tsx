@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LazySection } from '@/components/home/LazySection';
 
 // Eagerly load critical above-the-fold content
-import HeroSection from '@/components/home/HeroSection';
+import { HomepageBanner } from '@/components/home/HomepageBanner';
 
 // Lazy load below-the-fold sections
 const EnhancedHowItWorksSection = lazy(() =>
@@ -31,8 +31,8 @@ export default function Index() {
 
   return (
     <main className="min-h-screen bg-white overflow-hidden">
-      {/* Hero Section - Always loaded immediately */}
-      <HeroSection settings={settings} />
+      {/* New Homepage Banner - Always loaded immediately */}
+      <HomepageBanner />
 
       {/* Enhanced How It Works Section - Lazy loaded */}
       <LazySection threshold={0.1} rootMargin="100px">

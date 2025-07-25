@@ -21,6 +21,12 @@ import {
 import { cn } from '@/lib/utils';
 import type { UnifiedQuote } from '@/types/unified-quote';
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { getCustomerFeeBreakdown } from '@/utils/feeGroupingUtils';
+import { 
+  applyCustomerFriendlyRounding, 
+  getRoundingExplanation,
+  formatAmountWithCustomerRounding 
+} from '@/utils/customerFriendlyRounding';
 
 interface CustomerPriceBreakdownProps {
   quote: UnifiedQuote;
@@ -38,6 +44,9 @@ export const CustomerPriceBreakdown: React.FC<CustomerPriceBreakdownProps> = ({
   // Get currency conversion for customer display
   const { displayCurrency, formatPrice, exchangeRate } = useQuoteDisplayCurrency(quote);
 
+  // Use standardized fee breakdown system
+  const feeBreakdown = getCustomerFeeBreakdown(quote);
+
   // Extract breakdown from JSONB structure - MATCHING ADMIN IMPLEMENTATION
   const breakdown = quote.calculation_data?.breakdown || {};
 
@@ -45,9 +54,6 @@ export const CustomerPriceBreakdown: React.FC<CustomerPriceBreakdownProps> = ({
   const itemsTotal = Number(breakdown.items_total || 0);
   const shippingCost = Number(breakdown.shipping || 0);
   const customsCost = Number(breakdown.customs || 0);
-  const handlingCost = Number(breakdown.handling || 0);
-  const insuranceCost = Number(breakdown.insurance || 0);
-  const paymentFees = Number(breakdown.fees || 0);
   const discountAmount = Number(breakdown.discount || 0);
 
   // ✅ TRANSPARENT TAX MODEL: Exact same logic as admin component
@@ -64,25 +70,28 @@ export const CustomerPriceBreakdown: React.FC<CustomerPriceBreakdownProps> = ({
 
   // Final total from database
   const finalTotal = quote.final_total_usd || 0;
+  
+  // Apply customer-friendly rounding to final total only
+  const roundingResult = applyCustomerFriendlyRounding(finalTotal, displayCurrency);
+  const roundingExplanation = getRoundingExplanation(finalTotal, displayCurrency);
 
-  // Key cost components - MATCH ADMIN STRUCTURE EXACTLY
-  const totalFees = handlingCost + insuranceCost + paymentFees;
+  // Use standardized fee breakdown instead of manual calculation
 
   const allComponents = [
     { label: 'Items', amount: itemsTotal, color: 'text-blue-600', icon: Package },
     { label: 'Shipping', amount: shippingCost, color: 'text-green-600', icon: Truck },
     { label: 'Customs', amount: customsCost, color: 'text-purple-600', icon: Shield },
     { label: 'Taxes', amount: totalTaxes, color: 'text-orange-600', icon: Calculator },
-    { label: 'Fees', amount: totalFees, color: 'text-gray-600', icon: DollarSign },
+    { label: 'Fees', amount: feeBreakdown.serviceFees.total + feeBreakdown.paymentFees.total, color: 'text-gray-600', icon: DollarSign },
   ];
 
   // Only show components with amounts > 0 - matching admin logic
   // const costComponents = allComponents.filter((component) => component.amount > 0);
 
-  // Main cost display - CUSTOMER SIMPLIFIED VIEW WITH COMBINED CUSTOMS
+  // Main cost display - CUSTOMER SIMPLIFIED VIEW WITH STANDARDIZED FEES
   const MainCostDisplay = () => {
-    // Calculate combined customs & duties (customs + taxes + gateway fees)
-    const combinedCustomsAndDuties = customsCost + totalTaxes + paymentFees;
+    // Calculate combined customs & duties (customs + taxes + payment gateway fees)
+    const combinedCustomsAndDuties = customsCost + totalTaxes + feeBreakdown.paymentFees.total;
     
     return (
       <div className="space-y-4">
@@ -106,12 +115,25 @@ export const CustomerPriceBreakdown: React.FC<CustomerPriceBreakdownProps> = ({
           </div>
         )}
 
-        {/* Show service fees (handling + insurance) if they exist */}
-        {(handlingCost + insuranceCost) > 0 && (
-          <div className="flex justify-between items-center">
-            <span className="text-gray-700">Service fees</span>
-            <span className="font-medium text-gray-900">{formatPrice(handlingCost + insuranceCost)}</span>
-          </div>
+        {/* Show service fees or separate fees based on standardized breakdown */}
+        {feeBreakdown.showSeparately ? (
+          <>
+            {/* Service fees (handling + insurance) */}
+            {feeBreakdown.serviceFees.total > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">{feeBreakdown.serviceFees.label}</span>
+                <span className="font-medium text-gray-900">{formatPrice(feeBreakdown.serviceFees.total)}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Combined service fees if both categories don't warrant separate display */
+          feeBreakdown.serviceFees.total > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700">{feeBreakdown.serviceFees.label}</span>
+              <span className="font-medium text-gray-900">{formatPrice(feeBreakdown.serviceFees.total)}</span>
+            </div>
+          )
         )}
 
         {/* Discount */}
@@ -200,34 +222,39 @@ export const CustomerPriceBreakdown: React.FC<CustomerPriceBreakdownProps> = ({
         </div>
       )}
 
-      {/* Payment Gateway Fee - Match admin */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-3 w-3 text-gray-500" />
-          <span className="text-gray-600">Payment Gateway Fee</span>
-        </div>
-        <span className="text-gray-700">{formatPrice(paymentFees)}</span>
-      </div>
-
-      {/* Handling Charge (if separate) - Match admin */}
-      {handlingCost > 0 && (
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-3 w-3 text-orange-500" />
-            <span className="text-gray-600">Handling Charge</span>
-          </div>
-          <span className="text-gray-700">{formatPrice(handlingCost)}</span>
-        </div>
+      {/* Standardized Fee Breakdown - Service Fees */}
+      {feeBreakdown.serviceFees.total > 0 && (
+        <>
+          {feeBreakdown.serviceFees.handling > 0 && (
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-3 w-3 text-orange-500" />
+                <span className="text-gray-600">Handling charge</span>
+              </div>
+              <span className="text-gray-700">{formatPrice(feeBreakdown.serviceFees.handling)}</span>
+            </div>
+          )}
+          
+          {feeBreakdown.serviceFees.insurance > 0 && (
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Shield className="h-3 w-3 text-purple-500" />
+                <span className="text-gray-600">Package protection</span>
+              </div>
+              <span className="text-gray-700">{formatPrice(feeBreakdown.serviceFees.insurance)}</span>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Insurance (if separate) - Match admin */}
-      {insuranceCost > 0 && (
+      {/* Payment Processing Fee */}
+      {feeBreakdown.paymentFees.total > 0 && (
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Shield className="h-3 w-3 text-purple-500" />
-            <span className="text-gray-600">Package Protection</span>
+            <DollarSign className="h-3 w-3 text-gray-500" />
+            <span className="text-gray-600">{feeBreakdown.paymentFees.label}</span>
           </div>
-          <span className="text-gray-700">{formatPrice(insuranceCost)}</span>
+          <span className="text-gray-700">{formatPrice(feeBreakdown.paymentFees.total)}</span>
         </div>
       )}
 
@@ -292,12 +319,24 @@ export const CustomerPriceBreakdown: React.FC<CustomerPriceBreakdownProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-lg font-semibold text-gray-900">Total</span>
             <div className="text-right">
-              <div className="text-xl font-bold text-gray-900">{formatPrice(finalTotal)}</div>
+              <div className="text-xl font-bold text-gray-900">
+                {formatPrice(roundingResult.roundedAmount)}
+              </div>
               {displayCurrency !== 'USD' && (
-                <div className="text-sm text-gray-500">≈ ${finalTotal.toFixed(2)} USD</div>
+                <div className="text-sm text-gray-500">≈ ${roundingResult.roundedAmount.toFixed(2)} USD</div>
               )}
             </div>
           </div>
+
+          {/* Customer-friendly rounding explanation */}
+          {roundingExplanation && (
+            <div className="mt-2 p-2 bg-green-50 rounded-lg">
+              <div className="flex items-center text-sm text-green-700">
+                <Info className="h-3 w-3 mr-1" />
+                <span>{roundingExplanation}</span>
+              </div>
+            </div>
+          )}
 
           {/* Quote validity */}
           <div className="mt-2 text-sm text-gray-600">Quote valid for 30 days from creation</div>

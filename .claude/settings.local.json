@@ -159,7 +159,8 @@
       "Bash(pip install:*)",
       "Bash(kill:*)",
       "Bash(npm:*)",
-      "Bash(git stash push:*)"
+      "Bash(git stash push:*)",
+      "WebFetch(domain:airbnb.com)"
     ],
     "deny": []
   }

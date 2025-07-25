@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
+import { formatAmountWithCustomerRounding } from '@/utils/customerFriendlyRounding';
 
 interface CheckoutButtonProps {
   selectedQuoteIds: string[];
@@ -14,7 +15,7 @@ export const CheckoutButton = ({
   disabled,
 }: CheckoutButtonProps) => {
   const navigate = useNavigate();
-  const { formatAmount } = useCurrency('USD');
+  const { currency } = useCurrency('USD');
 
   const handleCheckout = () => {
     if (selectedQuoteIds.length === 0) return;
@@ -33,7 +34,7 @@ export const CheckoutButton = ({
       variant="destructive"
     >
       <span className="flex items-center gap-2">
-        Proceed to Checkout - {formatAmount(totalAmount)}
+        Proceed to Checkout - {formatAmountWithCustomerRounding(totalAmount, currency)}
       </span>
     </Button>
   );

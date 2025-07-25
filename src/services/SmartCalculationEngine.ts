@@ -129,9 +129,22 @@ export class SmartCalculationEngine {
     input: EnhancedCalculationInput,
   ): Promise<EnhancedCalculationResult> {
     try {
+      console.log(`[SMART ENGINE DEBUG] Received tax preferences:`, {
+        calculation_method: input.tax_calculation_preferences?.calculation_method_preference,
+        valuation_method: input.tax_calculation_preferences?.valuation_method_preference,
+        quote_method: input.quote.calculation_method_preference
+      });
+
       const cacheKey = this.generateCacheKey(input);
+      console.log(`[SMART ENGINE DEBUG] Cache key generated:`, cacheKey);
+      
       const cached = this.getCachedResult(cacheKey);
-      if (cached) return cached;
+      if (cached) {
+        console.log(`[SMART ENGINE DEBUG] Cache HIT - returning cached result, skipping HSN calculation`);
+        return cached;
+      }
+      
+      console.log(`[SMART ENGINE DEBUG] Cache MISS - proceeding with fresh calculation`);
 
       // Calculate base totals
       const itemsTotal = input.quote.items.reduce(
@@ -144,7 +157,17 @@ export class SmartCalculationEngine {
       );
 
       // 🆕 ENHANCED: HSN-based per-item tax calculation with 2-tier method selection
+      console.log(`[SMART ENGINE DEBUG] About to call calculateHSNBasedTaxes with preferences:`, {
+        calculation_method: input.tax_calculation_preferences?.calculation_method_preference,
+        quote_method: input.quote.calculation_method_preference
+      });
+
       const hsnTaxResults = await this.calculateHSNBasedTaxes(input.quote, input);
+
+      console.log(`[SMART ENGINE DEBUG] HSN calculation completed:`, {
+        breakdown_count: hsnTaxResults.breakdown.length,
+        total_taxes: hsnTaxResults.summary.total_all_taxes
+      });
 
       // Get all available shipping options
       const shippingOptions = await this.calculateAllShippingOptions({
@@ -229,11 +252,18 @@ export class SmartCalculationEngine {
   }> {
 
     try {
+      console.log(`[HSN TAX DEBUG] Starting HSN calculation with input preferences:`, {
+        input_method: input?.tax_calculation_preferences?.calculation_method_preference,
+        quote_method: quote.calculation_method_preference,
+        quote_id: quote.id
+      });
+
       // Get effective tax method from database based on quote preferences
       const { data: effectiveTaxMethod } = await supabase
         .rpc('get_effective_tax_method', { quote_id_param: quote.id })
         .single();
 
+      console.log(`[HSN TAX DEBUG] Database effective method:`, effectiveTaxMethod);
 
       // Prepare enhanced tax calculation context with 2-tier preferences
       const context: TaxCalculationContext = {
@@ -261,6 +291,14 @@ export class SmartCalculationEngine {
           'auto',
         admin_id: input?.tax_calculation_preferences?.admin_id,
       };
+
+      console.log(`[HSN TAX DEBUG] Created context:`, {
+        calculation_method_preference: context.calculation_method_preference,
+        valuation_method_preference: context.valuation_method_preference,
+        input_method: input?.tax_calculation_preferences?.calculation_method_preference,
+        quote_method: quote.calculation_method_preference,
+        effective_method: effectiveTaxMethod?.calculation_method
+      });
 
       // Enhanced items with HSN classification and weight detection
       const enhancedItems = await Promise.all(
@@ -317,6 +355,13 @@ export class SmartCalculationEngine {
         }),
       );
 
+
+      console.log(`[SMART ENGINE DEBUG] Passing context to PerItemTaxCalculator:`, {
+        calculation_method_preference: context.calculation_method_preference,
+        valuation_method_preference: context.valuation_method_preference,
+        input_method: input?.tax_calculation_preferences?.calculation_method_preference,
+        quote_method: quote.calculation_method_preference
+      });
 
       // Calculate per-item taxes
       const taxBreakdowns = await this.perItemTaxCalculator.calculateMultipleItemTaxes(

@@ -2,6 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
+import { 
+  applyCustomerFriendlyRounding, 
+  getRoundingExplanation 
+} from '@/utils/customerFriendlyRounding';
+import { Info } from 'lucide-react';
 
 interface OrderReceiptProps {
   order: Tables<'quotes'> & {
@@ -10,7 +15,12 @@ interface OrderReceiptProps {
 }
 
 export const OrderReceipt = ({ order }: OrderReceiptProps) => {
-  const { formatAmount } = useQuoteCurrency(order);
+  const { formatAmount, currency } = useQuoteCurrency(order);
+  
+  // Apply customer-friendly rounding to final total only
+  const finalTotal = order.final_total_usd || 0;
+  const roundingResult = applyCustomerFriendlyRounding(finalTotal, currency);
+  const roundingExplanation = getRoundingExplanation(finalTotal, currency);
 
   const costItems = [
     { label: 'Item Price', value: order.item_price },
@@ -47,8 +57,18 @@ export const OrderReceipt = ({ order }: OrderReceiptProps) => {
         <Separator />
         <div className="flex justify-between items-center text-lg font-bold">
           <p>Total</p>
-          <p>{formatAmount(order.final_total_usd)}</p>
+          <p>{formatAmount(roundingResult.roundedAmount)}</p>
         </div>
+        
+        {/* Customer-friendly rounding explanation */}
+        {roundingExplanation && (
+          <div className="mt-3 p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center text-sm text-green-700">
+              <Info className="h-4 w-4 mr-2 shrink-0" />
+              <span>{roundingExplanation}</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

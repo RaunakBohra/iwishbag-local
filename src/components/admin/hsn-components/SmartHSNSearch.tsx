@@ -9,8 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Search,
   Grid3X3,
@@ -20,9 +19,7 @@ import {
   Tag,
   Star,
   Package,
-  Info,
   Scale,
-  CheckCircle,
 } from 'lucide-react';
 import {
   enhancedHSNSearchService,
@@ -35,18 +32,24 @@ interface SmartHSNSearchProps {
   currentHSNCode?: string;
   productName?: string;
   onHSNSelect: (hsn: HSNSearchResult) => void;
+  onSelect?: (hsn: HSNSearchResult) => void; // For compatibility with existing usage
   className?: string;
   placeholder?: string;
   size?: 'sm' | 'default' | 'lg';
+  compact?: boolean;
+  trigger?: React.ReactNode;
 }
 
 export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   currentHSNCode,
   productName,
   onHSNSelect,
+  onSelect, // For compatibility
   className = '',
   placeholder = 'Search by product name, category, or HSN code...',
   size = 'default',
+  compact = false,
+  trigger,
 }) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -57,7 +60,6 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [autoSuggestions, setAutoSuggestions] = useState<HSNSearchResult[]>([]);
   const [currentHSNData, setCurrentHSNData] = useState<HSNSearchResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'search' | 'categories' | 'suggestions'>('search');
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -125,9 +127,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
         console.log('Learning Stats:', result.learningStats);
       }
 
-      if (result.suggestions.length > 0 && activeTab !== 'search') {
-        setActiveTab('suggestions');
-      }
+      // Auto-suggestions are now handled inline, no tabs needed
     } catch (error) {
       console.error('HSN detection failed:', error);
     }
@@ -205,7 +205,6 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
       });
 
       setSearchResults(results);
-      setActiveTab('search');
     } catch (error) {
       console.error('Category search failed:', error);
     } finally {
@@ -222,14 +221,23 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
       event.stopPropagation();
     }
 
-    console.log('🎯 [HSN] Calling onHSNSelect with:', hsn);
-    onHSNSelect(hsn);
+    console.log('🎯 [HSN] Calling callback with:', hsn);
+    
+    // Support both onSelect and onHSNSelect for compatibility
+    if (onSelect) {
+      onSelect(hsn);
+    } else {
+      onHSNSelect(hsn);
+    }
+    
+    // Close dropdown and clear search  
     setIsOpen(false);
     setSearchQuery('');
+    setSelectedCategory('');
 
     toast({
       title: 'HSN Code Selected',
-      description: `${hsn.hsn_code} - ${hsn.display_name}`,
+      description: `${hsn.category} - ${hsn.hsn_code}`,
     });
   };
 
@@ -246,447 +254,209 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   return (
     <div className={className}>
-      {/* Current HSN Display */}
-      {currentHSNData && (
-        <div className="mb-2 p-3 bg-green-50 border border-green-200 rounded-md">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="text-lg">{currentHSNData.icon}</span>
-              <div>
-                <div className="font-medium text-green-800">
-                  {currentHSNData.hsn_code} - {currentHSNData.display_name}
-                </div>
-                <div className="text-sm text-green-600">
-                  Category: {currentHSNData.category} • Customs:{' '}
-                  {currentHSNData.tax_data.typical_rates.customs.common}%
-                </div>
-              </div>
-            </div>
+      {/* HSN Search Dropdown */}
+      <Popover onOpenChange={(open) => {
+        setIsOpen(open);
+        if (open) {
+          // Reset search when opening
+          setSearchQuery('');
+          setSelectedCategory('');
+        }
+      }}>
+        <PopoverTrigger asChild>
+          {trigger ? trigger : (
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              onClick={() => setIsOpen(true)}
-              className="text-green-700 border-green-300 hover:bg-green-100"
+              className={`w-full justify-start text-left font-normal ${getSizeClasses()}`}
             >
-              Change
+              <Search className="mr-2 h-4 w-4" />
+              {currentHSNData ? (
+                <span className="flex items-center truncate">
+                  <span className="mr-2">{currentHSNData.icon}</span>
+                  <span className="font-medium text-gray-900">{currentHSNData.category}</span>
+                  <span className="mx-2 text-gray-400">-</span>
+                  <span className="font-mono font-semibold text-blue-700">{currentHSNData.hsn_code}</span>
+                </span>
+              ) : currentHSNCode ? (
+                `HSN: ${currentHSNCode}`
+              ) : (
+                <span className="text-gray-500">{placeholder}</span>
+              )}
             </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Search Trigger */}
-      {!currentHSNData && (
-        <Button
-          type="button"
-          variant="outline"
-          className={`w-full justify-start text-left font-normal ${getSizeClasses()}`}
-          onClick={() => {
-            setIsOpen(true);
-            setTimeout(() => inputRef.current?.focus(), 100);
+          )}
+        </PopoverTrigger>
+        
+        <PopoverContent 
+          className="w-80 p-0 border border-gray-200 shadow-lg" 
+          align="start"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            setTimeout(() => {
+              inputRef.current?.focus();
+            }, 50);
           }}
         >
-          <Search className="mr-2 h-4 w-4" />
-          {currentHSNCode ? `HSN: ${currentHSNCode}` : placeholder}
-        </Button>
-      )}
-
-      {/* Search Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent
-          className="max-w-4xl max-h-[80vh] p-0"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-          onKeyDown={(e) => {
-            // Prevent Enter key from submitting parent form
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
-          onClick={(e) => {
-            // Prevent clicks inside dialog from bubbling to form
-            e.stopPropagation();
-          }}
-        >
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle className="flex items-center">
-              <Search className="mr-2 h-5 w-5" />
-              HSN Code Search
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="px-6">
-            <Tabs
-              value={activeTab}
-              onValueChange={(v) => setActiveTab(v as any)}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="search" className="flex items-center">
-                  <Search className="mr-1 h-4 w-4" />
-                  Search
-                </TabsTrigger>
-                <TabsTrigger value="categories" className="flex items-center">
-                  <Grid3X3 className="mr-1 h-4 w-4" />
-                  Categories
-                </TabsTrigger>
-                <TabsTrigger value="suggestions" className="flex items-center relative">
-                  <Lightbulb className="mr-1 h-4 w-4" />
-                  Suggestions
-                  {autoSuggestions.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 px-1 py-0 h-4 text-xs">
-                      {autoSuggestions.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Search Tab */}
-              <TabsContent value="search" className="mt-4">
-                <div className="space-y-4">
-                  {/* Search Input */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      ref={inputRef}
-                      placeholder={placeholder}
-                      value={searchQuery}
-                      onChange={(e) => handleSearchInputChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                      }}
-                      className="pl-10"
-                    />
-                    {isLoading && (
-                      <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                    )}
-                  </div>
-
-                  {/* Quick Category Buttons */}
-                  {!searchQuery && (
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium text-gray-700 flex items-center">
-                        <Grid3X3 className="mr-2 h-4 w-4" />
-                        Quick Categories
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {categoryGroups.slice(0, 6).map((group) => (
-                          <Button
-                            type="button"
-                            key={group.category}
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center justify-start p-3 h-auto hover:bg-gray-50 transition-colors"
-                            onClick={() => handleCategorySelect(group.category)}
-                          >
-                            <span className="text-lg mr-2">{group.icon}</span>
-                            <div className="text-left">
-                              <div className="font-medium text-sm">{group.display_name}</div>
-                              <div className="text-xs text-gray-500">{group.count} codes</div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                      {categoryGroups.length > 6 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="w-full text-blue-600 hover:text-blue-700"
-                          onClick={() => setActiveTab('categories')}
-                        >
-                          View all {categoryGroups.length} categories →
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Selected Category Filter */}
-                  {selectedCategory && (
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className="flex items-center">
-                        <Tag className="mr-1 h-3 w-3" />
-                        {selectedCategory}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="ml-1 h-4 w-4 p-0"
-                          onClick={() => {
-                            setSelectedCategory('');
-                            handleSearch(searchQuery);
-                          }}
-                        >
-                          ×
-                        </Button>
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* Search Results */}
-                  <ScrollArea className="h-64">
-                    <div className="space-y-2">
-                      {searchResults.map((hsn) => (
-                        <HSNResultCard
-                          key={hsn.hsn_code}
-                          hsn={hsn}
-                          onSelect={(hsn, event) => handleHSNSelect(hsn, event)}
-                          showMatchReason={!!searchQuery}
-                        />
-                      ))}
-
-                      {searchResults.length === 0 && !isLoading && (
-                        <div className="text-center py-8 text-gray-500">
-                          <Package className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                          <p>No HSN codes found</p>
-                          <p className="text-sm">Try different keywords or browse categories</p>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </TabsContent>
-
-              {/* Categories Tab */}
-              <TabsContent value="categories" className="mt-4">
-                <ScrollArea className="h-80">
-                  <div className="space-y-3">
-                    {categoryGroups.map((group) => (
-                      <Card
-                        key={group.category}
-                        className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4"
-                        style={{ borderLeftColor: group.color }}
-                      >
-                        <CardContent className="p-4">
-                          <div
-                            className="flex items-center justify-between"
-                            onClick={() => handleCategorySelect(group.category)}
-                          >
-                            <div className="flex items-center space-x-4">
-                              {/* Enhanced Icon with Background */}
-                              <div
-                                className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-semibold text-xl shadow-sm"
-                                style={{ backgroundColor: group.color }}
-                              >
-                                {group.icon}
-                              </div>
-                              <div>
-                                <div className="font-semibold text-gray-900 text-lg">
-                                  {group.display_name}
-                                </div>
-                                <div className="text-sm text-gray-600 flex items-center">
-                                  <Package className="h-3 w-3 mr-1" />
-                                  {group.count} HSN code{group.count > 1 ? 's' : ''} available
-                                </div>
-                              </div>
-                            </div>
-                            <ChevronRight className="h-6 w-6 text-gray-400 hover:text-blue-500 transition-colors" />
-                          </div>
-
-                          {/* Subcategories */}
-                          {group.subcategories.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {group.subcategories.slice(0, 4).map((subcat) => (
-                                <button
-                                  type="button"
-                                  key={subcat.name}
-                                  className="cursor-pointer hover:bg-gray-200 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCategorySelect(group.category, subcat.name);
-                                  }}
-                                >
-                                  {subcat.name} ({subcat.count})
-                                </button>
-                              ))}
-                              {group.subcategories.length > 4 && (
-                                <Badge variant="outline">
-                                  +{group.subcategories.length - 4} more
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-
-              {/* Suggestions Tab */}
-              <TabsContent value="suggestions" className="mt-4">
-                <div className="space-y-4">
-                  {productName && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                      <div className="flex items-center space-x-2">
-                        <Info className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-800">
-                          AI suggestions for: "{productName}"
-                        </span>
-                      </div>
-                      <div className="mt-2 text-xs text-blue-600">
-                        Using contextual learning from existing quotes and brand recognition
-                      </div>
-                    </div>
-                  )}
-
-                  <ScrollArea className="h-64">
-                    <div className="space-y-2">
-                      {autoSuggestions.map((hsn) => (
-                        <HSNResultCard
-                          key={hsn.hsn_code}
-                          hsn={hsn}
-                          onSelect={(hsn, event) => handleHSNSelect(hsn, event)}
-                          showConfidence={true}
-                          showMatchReason={true}
-                        />
-                      ))}
-
-                      {autoSuggestions.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <Lightbulb className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                          <p>No suggestions available</p>
-                          <p className="text-sm">
-                            {productName
-                              ? 'Try using the search or category tabs'
-                              : 'Enter a product name to get AI suggestions'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-// HSN Result Card Component
-interface HSNResultCardProps {
-  hsn: HSNSearchResult;
-  onSelect: (hsn: HSNSearchResult, event?: React.MouseEvent) => void;
-  showConfidence?: boolean;
-  showMatchReason?: boolean;
-}
-
-const HSNResultCard: React.FC<HSNResultCardProps> = ({
-  hsn,
-  onSelect,
-  showConfidence = false,
-  showMatchReason = false,
-}) => {
-  const handleCardClick = (e: React.MouseEvent) => {
-    console.log('🎯 [HSN] Card clicked:', { hsnCode: hsn.hsn_code, hsnName: hsn.display_name });
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Call onSelect with the HSN data
-    console.log('🎯 [HSN] Calling onSelect from card');
-    onSelect(hsn, e);
-  };
-
-  return (
-    <Card
-      className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-400 border-l-4 hover:bg-blue-50/30"
-      style={{ borderLeftColor: hsn.color }}
-      onClick={handleCardClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          e.stopPropagation();
-          handleCardClick(e as any);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-3">
-            {/* Enhanced Icon with Background */}
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-lg shadow-sm"
-              style={{ backgroundColor: hsn.color }}
-            >
-              {hsn.icon}
-            </div>
-
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="font-mono font-bold text-blue-700 text-lg">{hsn.hsn_code}</span>
-                {showConfidence && (
-                  <Badge
-                    variant={hsn.confidence >= 0.8 ? 'default' : 'secondary'}
-                    className="text-xs"
-                  >
-                    {Math.round(hsn.confidence * 100)}% match
-                  </Badge>
-                )}
-                {hsn.search_priority <= 2 && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200"
-                  >
-                    <Star className="h-3 w-3 mr-1" />
-                    Popular
-                  </Badge>
-                )}
-              </div>
-
-              <div className="font-semibold text-gray-900 mb-1 text-base">{hsn.display_name}</div>
-              <div className="text-sm text-gray-600 mb-3 line-clamp-2">{hsn.description}</div>
-
-              {/* Enhanced Info Section */}
-              <div className="flex items-center flex-wrap gap-3 text-xs">
-                <div className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded-md">
-                  <Scale className="h-3 w-3 text-gray-500" />
-                  <span className="font-medium">
-                    Customs: {hsn.tax_data.typical_rates.customs.common}%
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-1 bg-blue-100 px-2 py-1 rounded-md">
-                  <Package className="h-3 w-3 text-blue-500" />
-                  <span className="font-medium text-blue-700">{hsn.category}</span>
-                </div>
-
-                {showMatchReason && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs py-1 bg-green-50 text-green-700 border-green-200"
-                  >
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    {hsn.match_reason}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Common Brands Section */}
-              {hsn.common_brands && hsn.common_brands.length > 0 && (
-                <div className="mt-2 text-xs text-gray-500">
-                  <span className="font-medium">Popular brands: </span>
-                  {hsn.common_brands.slice(0, 3).join(', ')}
-                  {hsn.common_brands.length > 3 && ` +${hsn.common_brands.length - 3} more`}
-                </div>
+          {/* Search Input */}
+          <div className="p-3 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                ref={inputRef}
+                placeholder="Search by category, product, or HSN code..."
+                value={searchQuery}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                  if (e.key === 'Escape') {
+                    setIsOpen(false);
+                  }
+                }}
+                className="pl-10 h-9 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              {isLoading && (
+                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
               )}
             </div>
           </div>
 
-          {/* Action Arrow */}
-          <div className="flex flex-center">
-            <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-          </div>
+          {/* Results */}
+          <ScrollArea className="max-h-64">
+            <div className="p-1">
+              {/* AI Suggestions */}
+              {autoSuggestions.length > 0 && (
+                <div className="p-2">
+                  <div className="flex items-center space-x-1 mb-2">
+                    <Lightbulb className="h-3 w-3 text-amber-500" />
+                    <span className="text-xs font-medium text-gray-700">AI Suggestions</span>
+                  </div>
+                  {autoSuggestions.slice(0, 2).map((hsn) => (
+                    <DropdownHSNItem
+                      key={hsn.hsn_code}
+                      hsn={hsn}
+                      onSelect={handleHSNSelect}
+                      showConfidence={true}
+                    />
+                  ))}
+                  {autoSuggestions.length > 2 && <div className="border-b border-gray-100 my-2" />}
+                </div>
+              )}
+
+              {/* Search Results */}
+              {searchResults.map((hsn) => (
+                <DropdownHSNItem
+                  key={hsn.hsn_code}
+                  hsn={hsn}
+                  onSelect={handleHSNSelect}
+                />
+              ))}
+
+              {/* Category Buttons - Show when no search results */}
+              {searchResults.length === 0 && !isLoading && !searchQuery && (
+                <div className="p-2">
+                  <div className="text-xs font-medium text-gray-700 mb-2">Browse by Category</div>
+                  {categoryGroups.slice(0, 4).map((group) => (
+                    <button
+                      key={group.category}
+                      type="button"
+                      onClick={() => handleCategorySelect(group.category)}
+                      className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <span className="text-sm mr-3">{group.icon}</span>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm text-gray-900">{group.display_name}</div>
+                        <div className="text-xs text-gray-500">{group.count} codes</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* No Results */}
+              {searchResults.length === 0 && !isLoading && searchQuery && (
+                <div className="p-4 text-center text-gray-500">
+                  <Package className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-sm">No HSN codes found</p>
+                  <p className="text-xs">Try different keywords</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
+
+// Dropdown HSN Item - Clean Category - HSN Code Format
+interface DropdownHSNItemProps {
+  hsn: HSNSearchResult;
+  onSelect: (hsn: HSNSearchResult, event?: React.MouseEvent) => void;
+  showConfidence?: boolean;
+}
+
+const DropdownHSNItem: React.FC<DropdownHSNItemProps> = ({
+  hsn,
+  onSelect,
+  showConfidence = false,
+}) => {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect(hsn, e);
+  };
+
+  return (
+    <button
+      type="button"
+      className="w-full flex items-center p-2 text-left hover:bg-gray-50 rounded-md transition-colors group"
+      onClick={handleClick}
+    >
+      {/* Icon */}
+      <div 
+        className="w-7 h-7 rounded-md flex items-center justify-center text-white text-sm font-medium flex-shrink-0 mr-3"
+        style={{ backgroundColor: hsn.color }}
+      >
+        {hsn.icon}
+      </div>
+
+      {/* Category - HSN Code Format */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2">
+          <span className="font-medium text-gray-900 text-sm">
+            {hsn.category}
+          </span>
+          <span className="text-gray-400">-</span>
+          <span className="font-mono font-semibold text-blue-700 text-sm">
+            {hsn.hsn_code}
+          </span>
+          {showConfidence && (
+            <Badge variant="secondary" className="text-xs h-4 px-1">
+              {Math.round(hsn.confidence * 100)}%
+            </Badge>
+          )}
+          {hsn.search_priority <= 2 && (
+            <Badge variant="outline" className="text-xs h-4 px-1 bg-yellow-50 text-yellow-700 border-yellow-200">
+              <Star className="h-2 w-2 mr-1" />
+              Popular
+            </Badge>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div className="text-xs text-gray-500 mt-0.5 truncate">
+          {hsn.display_name}
+        </div>
+        <div className="text-xs text-gray-400 mt-0.5">
+          {hsn.tax_data.typical_rates.customs.common}% customs duty
+        </div>
+      </div>
+
+      {/* Subtle arrow on hover */}
+      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
   );
 };
 

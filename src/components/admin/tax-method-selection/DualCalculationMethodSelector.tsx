@@ -225,9 +225,13 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
    * Handle method selection with audit logging
    */
   const handleMethodSelection = async (methodId: string) => {
-    if (isLoading || isAnalyzing) return;
+    if (isLoading || isAnalyzing) {
+      console.log(`[METHOD SELECTOR DEBUG] Skipping selection - isLoading: ${isLoading}, isAnalyzing: ${isAnalyzing}`);
+      return;
+    }
 
     const previousMethod = selectedMethod;
+    console.log(`[METHOD SELECTOR DEBUG] Selecting method: ${methodId} (previous: ${previousMethod})`);
     setSelectedMethod(methodId);
 
     try {
@@ -268,6 +272,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       }
 
       // Notify parent component
+      console.log(`[METHOD SELECTOR DEBUG] Notifying parent component of method change`);
       onMethodChange(methodId, {
         previousMethod,
         methodAnalysis,
@@ -279,6 +284,8 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
         title: "Method Updated",
         description: `Tax calculation method changed to ${calculationMethods.find(m => m.id === methodId)?.name}`,
       });
+
+      console.log(`[METHOD SELECTOR DEBUG] Method selection completed successfully`);
 
     } catch (error) {
       console.error('Error updating calculation method:', error);

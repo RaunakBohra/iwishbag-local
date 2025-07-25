@@ -22,6 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
 import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
+import { getAdminFeeBreakdown } from '@/utils/feeGroupingUtils';
 
 interface CompactCalculationBreakdownProps {
   quote: UnifiedQuote;
@@ -93,16 +94,15 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
 
   // ✅ REMOVED: Misleading estimate functions replaced with actual data display
 
+  // Use standardized fee breakdown system
+  const feeBreakdown = getAdminFeeBreakdown(quote);
+
   // Key cost components for compact view
-  const totalFees = (breakdown.fees || 0) + (breakdown.handling || 0) + (breakdown.insurance || 0);
-
-  // Debug logging removed - handling and insurance properly hidden when 0
-
   const allComponents = [
     { label: 'Items', amount: breakdown.items_total || 0, color: 'text-blue-600' },
     { label: 'Shipping', amount: breakdown.shipping || 0, color: 'text-green-600' },
     { label: 'Customs', amount: breakdown.customs || 0, color: 'text-purple-600' },
-    { label: 'Fees', amount: totalFees, color: 'text-gray-600' },
+    { label: feeBreakdown.compactDisplay.label, amount: feeBreakdown.compactDisplay.total, color: 'text-gray-600' },
   ];
 
   const keyComponents = allComponents.filter((component) => component.amount > 0);
@@ -280,63 +280,27 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             </div>
 
-            {/* Payment Gateway Fee */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-gray-600" />
-                <span className="text-gray-700">Payment Gateway Fee</span>
-              </div>
-              <div className="text-right">
-                <div className="font-medium">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'origin')}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.fees || 0), 'destination')}
-                </div>
-              </div>
-            </div>
-
-            {/* Handling Charge (if separate) */}
-            {!!(breakdown.handling && Number(breakdown.handling) > 0) && (
-              <div className="flex items-center justify-between text-sm">
+            {/* Standardized Fee Components */}
+            {feeBreakdown.expandedDisplay.map((feeComponent, index) => (
+              <div key={index} className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-orange-600" />
-                  <span className="text-gray-700">Handling Charge</span>
+                  {feeComponent.category === 'service' ? (
+                    <Zap className="w-4 h-4 text-orange-600" />
+                  ) : (
+                    <DollarSign className="w-4 h-4 text-gray-600" />
+                  )}
+                  <span className="text-gray-700">{feeComponent.label}</span>
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.handling || 0), 'origin')}
+                    {currencyDisplay.formatSingleAmount(feeComponent.amount, 'origin')}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.handling || 0),
-                      'destination',
-                    )}
+                    {currencyDisplay.formatSingleAmount(feeComponent.amount, 'destination')}
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Insurance (if separate) */}
-            {!!(breakdown.insurance && Number(breakdown.insurance) > 0) && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-purple-600" />
-                  <span className="text-gray-700">Package Protection</span>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.insurance || 0), 'origin')}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.insurance || 0),
-                      'destination',
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            ))}
 
             {/* Discount */}
             {(breakdown.discount || 0) > 0 && (

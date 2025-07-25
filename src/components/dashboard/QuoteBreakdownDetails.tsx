@@ -2,9 +2,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Plane, MapPin, CreditCard, Package, Calculator, Building2, Home, Globe } from 'lucide-react';
+import { DollarSign, Plane, MapPin, CreditCard, Package, Calculator, Building2, Home, Globe, Info } from 'lucide-react';
 import { Tables } from '@/integrations/supabase/types';
 import { useQuoteDisplayCurrency } from '@/hooks/useQuoteDisplayCurrency';
+import { getDashboardFeeBreakdown } from '@/utils/feeGroupingUtils';
+import { 
+  applyCustomerFriendlyRounding, 
+  getRoundingExplanation 
+} from '@/utils/customerFriendlyRounding';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
 type Quote = Tables<'quotes'>;
@@ -30,12 +35,15 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
     (quote.domestic_shipping || 0) + 
     (quote.merchant_shipping_price || 0);
   const customsTotal = breakdown.customs || quote.customs_and_ecs || 0;
-  const feesTotal = breakdown.fees || 
-    (quote.handling_charge || 0) + 
-    (quote.insurance_amount || 0) + 
-    (quote.payment_gateway_fee || 0);
   const discount = breakdown.discount || quote.discount || 0;
+  
+  // Use standardized fee breakdown system
+  const feeBreakdown = getDashboardFeeBreakdown(quote);
   const finalTotal = quote.final_total_usd || 0;
+  
+  // Apply customer-friendly rounding to final total only
+  const roundingResult = applyCustomerFriendlyRounding(finalTotal, displayCurrency);
+  const roundingExplanation = getRoundingExplanation(finalTotal, displayCurrency);
 
   // Enhanced tax breakdown with detailed categories
   const getDetailedTaxBreakdown = () => {
@@ -215,13 +223,14 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
       color: 'text-orange-600'
     },
     ...getDetailedTaxBreakdown(), // Insert detailed tax breakdown
-    {
-      label: 'Processing Fees',
-      amount: feesTotal,
+    // Use standardized fee breakdown components
+    ...feeBreakdown.components.map(feeComponent => ({
+      label: feeComponent.label,
+      amount: feeComponent.amount,
       icon: CreditCard,
-      description: 'Payment processing and handling charges',
+      description: feeComponent.description,
       color: 'text-gray-600'
-    }
+    }))
   ];
 
   // Filter out zero amounts for cleaner display
@@ -291,15 +300,25 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold text-primary">
-              {formatPrice(finalTotal)}
+              {formatPrice(roundingResult.roundedAmount)}
             </p>
             {displayCurrency !== 'USD' && (
               <p className="text-sm text-gray-500">
-                ≈ ${finalTotal.toFixed(2)} USD
+                ≈ ${roundingResult.roundedAmount.toFixed(2)} USD
               </p>
             )}
           </div>
         </div>
+
+        {/* Customer-friendly rounding explanation */}
+        {roundingExplanation && (
+          <div className="mt-4 p-3 bg-green-50 rounded-lg">
+            <div className="flex items-center text-sm text-green-700">
+              <Info className="h-4 w-4 mr-2" />
+              <span>{roundingExplanation}</span>
+            </div>
+          </div>
+        )}
 
         {/* Additional Information */}
         {displayCurrency !== 'USD' && exchangeRate && exchangeRate !== 1 && (

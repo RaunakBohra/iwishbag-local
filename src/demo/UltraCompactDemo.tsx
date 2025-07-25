@@ -2,12 +2,22 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StripeWeightSelector } from '@/components/admin/ultra-compact-selectors/StripeWeightSelector';
-import { StripeHSNSelector } from '@/components/admin/ultra-compact-selectors/StripeHSNSelector';
+import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { ShopifyWeightSelector } from '@/components/admin/ultra-compact-selectors/ShopifyWeightSelector';
-import { ShopifyHSNSelector } from '@/components/admin/ultra-compact-selectors/ShopifyHSNSelector';
 import { ModernWeightSelector } from '@/components/admin/ultra-compact-selectors/ModernWeightSelector';
-import { ModernHSNSelector } from '@/components/admin/ultra-compact-selectors/ModernHSNSelector';
 import { Smartphone, Package, Headphones, Star, Zap, Palette } from 'lucide-react';
+
+// Simple adapter to make SmartHSNSearch work with demo interface
+const HSNDemoAdapter = ({ currentHSN, onHSNSelect, onHSNRemove, suggestions }) => {
+  return (
+    <SmartHSNSearch
+      currentHSNCode={currentHSN?.code}
+      onHSNSelect={(hsn) => onHSNSelect({ code: hsn.hsn_code, description: hsn.display_name })}
+      compact={true}
+      size="sm"
+    />
+  );
+};
 
 const UltraCompactDemo = () => {
   // State for Stripe design
@@ -61,7 +71,7 @@ const UltraCompactDemo = () => {
       setHSN1: setStripeHSN1,
       setHSN2: setStripeHSN2,
       WeightComponent: StripeWeightSelector,
-      HSNComponent: StripeHSNSelector
+      HSNComponent: HSNDemoAdapter
     },
     {
       name: 'Shopify Inspired',
@@ -79,7 +89,7 @@ const UltraCompactDemo = () => {
       setHSN1: setShopifyHSN1,
       setHSN2: setShopifyHSN2,
       WeightComponent: ShopifyWeightSelector,
-      HSNComponent: ShopifyHSNSelector
+      HSNComponent: HSNDemoAdapter
     },
     {
       name: 'Modern Hybrid',
@@ -97,7 +107,7 @@ const UltraCompactDemo = () => {
       setHSN1: setModernHSN1,
       setHSN2: setModernHSN2,
       WeightComponent: ModernWeightSelector,
-      HSNComponent: ModernHSNSelector
+      HSNComponent: HSNDemoAdapter
     }
   ];
 

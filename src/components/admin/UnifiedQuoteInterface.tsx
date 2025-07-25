@@ -376,6 +376,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     try {
       setIsCalculating(true);
 
+      console.log(`[CALCULATION DEBUG] Starting calculation with method: ${quoteData.calculation_method_preference}`);
+
       const result = await smartCalculationEngine.calculateWithShippingOptions({
         quote: quoteData,
         preferences: {
@@ -383,7 +385,15 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           cost_priority: 'medium',
           show_all_options: showAllShippingOptions,
         },
+        // 🆕 CRITICAL FIX: Pass tax calculation preferences to ensure method selection works
+        tax_calculation_preferences: {
+          calculation_method_preference: quoteData.calculation_method_preference || 'auto',
+          valuation_method_preference: quoteData.valuation_method_preference || 'auto',
+          admin_id: 'current_admin', // This would be replaced with actual admin ID
+        },
       });
+
+      console.log(`[CALCULATION DEBUG] Calculation completed successfully with updated taxes`);
 
       if (result.success) {
         // Preserve the calculation_method_preference from the optimistic update
@@ -559,35 +569,55 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     setSmartSuggestions(updatedSuggestions);
   };
 
-  // Handle tax method change
+  // Handle tax method change with enhanced debugging and cache invalidation
   const handleTaxMethodChange = async (method: 'auto' | 'hsn_only' | 'legacy_fallback') => {
     if (!quote) return;
 
+    console.log(`[TAX METHOD DEBUG] Starting method change from ${quote.calculation_method_preference} to ${method}`);
+
     try {
+      setIsCalculating(true);
+      
       // Update quote with new tax method preference
       const updatePayload = {
         calculation_method_preference: method,
+        updated_at: new Date().toISOString(), // Force timestamp update
       };
+
+      console.log(`[TAX METHOD DEBUG] Updating quote ${quote.id} with payload:`, updatePayload);
 
       const success = await unifiedDataEngine.updateQuote(quote.id, updatePayload);
 
       if (success) {
-        // Update local state
-        setQuote((prev) => (prev ? { ...prev, calculation_method_preference: method } : null));
-        if (liveQuote) {
-          setLiveQuote((prev) =>
-            prev ? { ...prev, calculation_method_preference: method } : null,
-          );
-        }
+        console.log(`[TAX METHOD DEBUG] Database update successful, updating local state`);
+        
+        // Update local state with new method
+        const updatedQuote = { ...quote, calculation_method_preference: method };
+        setQuote(updatedQuote);
+        
+        const updatedLiveQuote = liveQuote ? { ...liveQuote, calculation_method_preference: method } : updatedQuote;
+        setLiveQuote(updatedLiveQuote);
 
-        // Trigger recalculation with new method
-        await calculateSmartFeatures(liveQuote || quote);
+        console.log(`[TAX METHOD DEBUG] Local state updated, invalidating React Query cache`);
+        
+        // Invalidate React Query cache to ensure fresh data
+        await queryClient.invalidateQueries({ queryKey: ['unified-quote', quote.id] });
+        await queryClient.invalidateQueries({ queryKey: ['quote', quote.id] });
+        await queryClient.invalidateQueries({ queryKey: ['quotes'] });
+
+        console.log(`[TAX METHOD DEBUG] Cache invalidated, triggering recalculation`);
+
+        // Trigger recalculation with updated quote data
+        await calculateSmartFeatures(updatedLiveQuote);
+
+        console.log(`[TAX METHOD DEBUG] Recalculation completed successfully`);
 
         toast({
           title: 'Tax method updated',
           description: `Now using ${method === 'auto' ? 'Auto (Hybrid)' : method === 'hsn_only' ? 'HSN Only' : 'Country Based'} calculation`,
         });
       } else {
+        console.error(`[TAX METHOD DEBUG] Database update failed`);
         toast({
           title: 'Update failed',
           description: 'Failed to update tax calculation method',
@@ -595,11 +625,14 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         });
       }
     } catch (error) {
+      console.error(`[TAX METHOD DEBUG] Error during method change:`, error);
       toast({
         title: 'Error',
         description: 'Failed to update tax calculation method',
         variant: 'destructive',
       });
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -678,6 +711,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
               speed_priority: 'medium',
               cost_priority: 'medium',
               show_all_options: true,
+            },
+            // Include tax calculation preferences for consistent calculation
+            tax_calculation_preferences: {
+              calculation_method_preference: tempQuote.calculation_method_preference || 'auto',
+              valuation_method_preference: tempQuote.valuation_method_preference || 'auto',
+              admin_id: 'current_admin',
             },
           });
 
@@ -2250,86 +2289,60 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                               </div>
                                             </div>
 
-                                            {/* Weight Field with Dropdown - Stripe Style */}
+                                            {/* Weight Field with Clean Badge System */}
                                             <div className="flex items-center gap-2">
                                               <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
-                                              <div className="relative flex items-center">
-                                                <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                                                  <Scale className="w-3 h-3 text-gray-400 mr-1" />
-                                                  <input
-                                                    type="number"
-                                                    step="0.001"
-                                                    min="0"
-                                                    value={item.item_weight || ''}
-                                                    onChange={(e) => {
-                                                      const items = form.getValues('items') || [];
-                                                      items[index] = {
-                                                        ...items[index],
-                                                        item_weight: parseFloat(e.target.value) || 0,
-                                                      };
-                                                      form.setValue('items', items);
-                                                    }}
-                                                    className="w-16 h-8 border-0 p-0 text-sm font-medium pr-8"
-                                                    placeholder="0.2"
-                                                  />
-                                                  <span className="absolute right-8 text-xs text-gray-400 pointer-events-none">kg</span>
-                                                  
-                                                  {/* Dropdown Arrow for Weight Suggestions */}
-                                                  {(hsnWeights[index.toString()] || weightEstimations[index.toString()]) && (
-                                                    <Popover>
-                                                      <PopoverTrigger asChild>
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="sm"
-                                                          className="absolute right-0 h-8 w-8 p-0 hover:bg-gray-50"
-                                                          type="button"
-                                                        >
-                                                          <ChevronDown className="w-3 h-3 text-gray-500" />
-                                                        </Button>
-                                                      </PopoverTrigger>
-                                                      <PopoverContent className="w-56 p-2" align="start">
-                                                        <div className="space-y-1">
-                                                          <div className="text-xs font-medium text-gray-900 px-2 py-1">
-                                                            Weight Suggestions
-                                                          </div>
-                                                          {hsnWeights[index.toString()] && (
-                                                            <button
-                                                              onClick={() => handleWeightSelection(index, hsnWeights[index.toString()]!.average, 'hsn')}
-                                                              className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-gray-50 transition-colors"
-                                                            >
-                                                              <div className="flex items-center gap-2">
-                                                                <span className="font-medium">{hsnWeights[index.toString()]!.average}kg</span>
-                                                                <span className="text-xs text-gray-500 uppercase">HSN</span>
-                                                              </div>
-                                                              <div className="text-xs text-green-600">
-                                                                {Math.round(hsnWeights[index.toString()]!.confidence * 100)}% confident
-                                                              </div>
-                                                            </button>
-                                                          )}
-                                                          {weightEstimations[index.toString()] && (
-                                                            <button
-                                                              onClick={() => handleWeightSelection(index, weightEstimations[index.toString()].estimated_weight, 'ml')}
-                                                              className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-gray-50 transition-colors"
-                                                            >
-                                                              <div className="flex items-center gap-2">
-                                                                <span className="font-medium">{weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg</span>
-                                                                <span className="text-xs text-gray-500 uppercase">AI</span>
-                                                              </div>
-                                                              <div className="text-xs text-blue-600">
-                                                                {Math.round(weightEstimations[index.toString()].confidence * 100)}% confident
-                                                              </div>
-                                                            </button>
-                                                          )}
-                                                        </div>
-                                                      </PopoverContent>
-                                                    </Popover>
-                                                  )}
-                                                  
-                                                  {/* Loading indicator */}
-                                                  {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
-                                                    <div className="absolute right-8 w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                                  )}
-                                                </div>
+                                              <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
+                                                <Scale className="w-3 h-3 text-gray-400 mr-1" />
+                                                <input
+                                                  type="number"
+                                                  step="0.001"
+                                                  min="0"
+                                                  value={item.item_weight || ''}
+                                                  onChange={(e) => {
+                                                    const items = form.getValues('items') || [];
+                                                    items[index] = {
+                                                      ...items[index],
+                                                      item_weight: parseFloat(e.target.value) || 0,
+                                                    };
+                                                    form.setValue('items', items);
+                                                  }}
+                                                  className="w-16 h-8 border-0 p-0 text-sm font-medium"
+                                                  placeholder="0.2"
+                                                />
+                                                <span className="text-xs text-gray-400 ml-1">kg</span>
+                                              </div>
+                                              
+                                              {/* Clean Suggestion Badges */}
+                                              <div className="flex items-center gap-1">
+                                                {/* Loading indicator */}
+                                                {(isEstimating[index.toString()] || isLoadingHSN[index.toString()]) && (
+                                                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                                )}
+                                                
+                                                {/* HSN Badge */}
+                                                {hsnWeights[index.toString()] && (
+                                                  <button
+                                                    onClick={() => handleWeightSelection(index, hsnWeights[index.toString()]!.average, 'hsn')}
+                                                    className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-colors"
+                                                    type="button"
+                                                    title={`HSN database suggests ${hsnWeights[index.toString()]!.average}kg (${Math.round(hsnWeights[index.toString()]!.confidence * 100)}% confident)`}
+                                                  >
+                                                    HSN: {hsnWeights[index.toString()]!.average}kg
+                                                  </button>
+                                                )}
+                                                
+                                                {/* AI Badge */}
+                                                {weightEstimations[index.toString()] && (
+                                                  <button
+                                                    onClick={() => handleWeightSelection(index, weightEstimations[index.toString()].estimated_weight, 'ml')}
+                                                    className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors"
+                                                    type="button"
+                                                    title={`AI estimates ${weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg (${Math.round(weightEstimations[index.toString()].confidence * 100)}% confident)`}
+                                                  >
+                                                    AI: {weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg
+                                                  </button>
+                                                )}
                                               </div>
                                             </div>
 
