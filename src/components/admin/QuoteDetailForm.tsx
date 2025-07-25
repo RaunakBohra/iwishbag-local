@@ -288,6 +288,8 @@ export const QuoteDetailForm = ({
                         {...field}
                         value={field.value ?? ''}
                         onWheel={handleNumberInputWheel}
+                        className={`pl-8 h-8 ${taxCalculationMethod !== 'manual' ? 'bg-gray-50 text-gray-500' : ''}`}
+                        disabled={taxCalculationMethod !== 'manual'}
                         onChange={(e) => {
                           field.onChange(e);
                           // ✅ NEW: Trigger real-time calculation when sales tax changes
@@ -295,11 +297,18 @@ export const QuoteDetailForm = ({
                             onTriggerCalculation();
                           }
                         }}
-                        className="h-8 pl-6"
                         placeholder="0.00"
                       />
                     </div>
                   </FormControl>
+                  {taxCalculationMethod !== 'manual' && (
+                    <div className="mt-1">
+                      <span className="text-xs text-gray-500">
+                        {taxCalculationMethod === 'hsn_only' ? 'Using HSN-based tax calculation' : 'Using country-based tax calculation'}
+                      </span>
+                    </div>
+                  )}
+                  <FormMessage />
                 </FormItem>
               )}
             />
