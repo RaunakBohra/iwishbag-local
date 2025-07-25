@@ -2004,24 +2004,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     );
   }
 
-  // Enhanced error handling with recovery
-  if (quoteError) {
-    return (
-      <div className="max-w-2xl mx-auto p-6 space-y-6">
-        <QuoteErrorRecovery
-          error={quoteError instanceof Error ? quoteError : new Error(String(quoteError))}
-          quote={quote}
-          onRetry={refetchQuote}
-          onIgnore={() => {
-            // Allow continuing without quote for testing
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('Ignoring quote error in development mode');
-            }
-          }}
-        />
-      </div>
-    );
-  }
+  // Note: Error handling is managed by ErrorBoundary wrapper
 
   if (!quote) {
     return (
