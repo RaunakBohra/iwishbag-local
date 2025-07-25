@@ -391,7 +391,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         // 🆕 CRITICAL FIX: Pass tax calculation preferences to ensure method selection works
         tax_calculation_preferences: {
           calculation_method_preference: quoteData.calculation_method_preference || 'hsn_only',
-          valuation_method_preference: quoteData.valuation_method_preference || 'product_value',
+          valuation_method_preference: quoteData.valuation_method_preference || 'higher_of_both',
           admin_id: 'current_admin', // This would be replaced with actual admin ID
         },
       });
@@ -477,7 +477,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     // Create updated quote with current form values including valuation preference
     const updatedQuote: UnifiedQuote = {
       ...quote,
-      valuation_method_preference: formValues.valuation_method_preference || 'product_value',
+      valuation_method_preference: formValues.valuation_method_preference || 'higher_of_both',
       calculation_method_preference: quote.calculation_method_preference || 'hsn_only',
       // Include other relevant form data
       operational_data: {
@@ -662,6 +662,20 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
             sum + (item.costprice_origin || 0) * (item.quantity || 1), 0
           );
 
+          // ✅ NEW: Get origin country settings for sales tax calculation
+          let originCountrySettings = null;
+          if (quoteData.origin_country) {
+            try {
+              const { data: settings } = await supabase
+                .from('country_settings')
+                .select('sales_tax')
+                .eq('code', quoteData.origin_country)
+                .single();
+              originCountrySettings = settings;
+            } catch (error) {
+              console.warn(`[PREFILL DEBUG] Could not fetch origin country settings for ${quoteData.origin_country}:`, error);
+            }
+          }
 
           // Process each item to get HSN-specific rates
           for (const item of quoteData.items) {
@@ -675,14 +689,19 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   .eq('hsn_code', item.hsn_code)
                   .single();
 
+                const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
 
                 if (hsnData?.tax_data?.typical_rates) {
-                  const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
-                  
                   // Customs percentage from HSN
                   const customsRate = hsnData.tax_data.typical_rates.customs?.common || 0;
                   const itemCustoms = (itemValue * customsRate) / 100;
                   totalCustomsAmount += itemCustoms;
+
+                  // ✅ FIXED: Sales tax calculation from origin country
+                  if (originCountrySettings?.sales_tax > 0) {
+                    const itemSalesTax = (itemValue * originCountrySettings.sales_tax) / 100;
+                    totalSalesTax += itemSalesTax;
+                  }
 
                   // Destination tax based on country
                   let destinationTaxRate = 0;
@@ -701,35 +720,62 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                   const itemDestinationTax = (itemValue * destinationTaxRate) / 100;
                   totalDestinationTax += itemDestinationTax;
 
+                } else {
+                  // ✅ NEW: Fallback when HSN data is incomplete - still calculate sales tax from origin country
+                  console.warn(`[PREFILL DEBUG] HSN ${item.hsn_code} missing tax_data.typical_rates, using fallbacks`);
+                  if (originCountrySettings?.sales_tax > 0) {
+                    const itemSalesTax = (itemValue * originCountrySettings.sales_tax) / 100;
+                    totalSalesTax += itemSalesTax;
+                  }
                 }
               } catch (error) {
                 console.error(`[PREFILL DEBUG] Error getting HSN data for ${item.hsn_code}:`, error);
+                // ✅ NEW: Even on error, calculate sales tax from origin country if available
+                const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+                if (originCountrySettings?.sales_tax > 0) {
+                  const itemSalesTax = (itemValue * originCountrySettings.sales_tax) / 100;
+                  totalSalesTax += itemSalesTax;
+                }
               }
             } else {
               console.warn(`[PREFILL DEBUG] Item missing HSN code:`, item);
+              // ✅ NEW: For items without HSN, still calculate sales tax from origin country
+              const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+              if (originCountrySettings?.sales_tax > 0) {
+                const itemSalesTax = (itemValue * originCountrySettings.sales_tax) / 100;
+                totalSalesTax += itemSalesTax;
+              }
             }
           }
 
           // Calculate weighted average customs percentage
           const avgCustomsPercentage = totalValue > 0 ? (totalCustomsAmount / totalValue) * 100 : 0;
           
-          console.log(`[PREFILL DEBUG] Final calculations:`, {
+          console.log(`[PREFILL DEBUG] Final HSN calculations:`, {
             totalCustomsAmount,
+            totalSalesTax,
             totalDestinationTax,
             avgCustomsPercentage,
-            totalValue
+            totalValue,
+            originCountrySettings
           });
 
-          // Prefill the form fields
+          // ✅ ENHANCED: Always prefill all form fields, even with 0 values
           form.setValue('customs_percentage', Math.round(avgCustomsPercentage * 100) / 100, { shouldDirty: true });
           form.setValue('sales_tax_price', Math.round(totalSalesTax * 100) / 100, { shouldDirty: true });
           form.setValue('destination_tax', Math.round(totalDestinationTax * 100) / 100, { shouldDirty: true });
 
-          console.log(`[PREFILL DEBUG] Form values set:`, {
+          console.log(`[PREFILL DEBUG] HSN form values set:`, {
             customs_percentage: Math.round(avgCustomsPercentage * 100) / 100,
             sales_tax_price: Math.round(totalSalesTax * 100) / 100,
             destination_tax: Math.round(totalDestinationTax * 100) / 100
           });
+        } else {
+          // ✅ NEW: Fallback when no items - ensure fields are populated with 0
+          console.log(`[PREFILL DEBUG] No items found, setting HSN fields to 0`);
+          form.setValue('customs_percentage', 0, { shouldDirty: true });
+          form.setValue('sales_tax_price', 0, { shouldDirty: true });
+          form.setValue('destination_tax', 0, { shouldDirty: true });
         }
       }
 
@@ -1840,7 +1886,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         destination_country: data.destination_country || quote?.destination_country,
         // ✅ NEW: Include tax calculation preferences
         calculation_method_preference: quote?.calculation_method_preference || 'hsn_only',
-        valuation_method_preference: data.valuation_method_preference || 'product_value',
+        valuation_method_preference: data.valuation_method_preference || 'higher_of_both',
         calculation_data: {
           ...quote?.calculation_data,
           sales_tax_price: Number(data.sales_tax_price) || 0,

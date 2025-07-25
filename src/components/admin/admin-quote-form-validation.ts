@@ -39,7 +39,7 @@ export const adminQuoteFormSchema = z.object({
   origin_country: z.string().nullable(),
   destination_country: z.string().nullable(),
   customs_percentage: emptyStringToNull,
-  valuation_method_preference: z.enum(['product_value', 'minimum_valuation']).optional().default('product_value'),
+  valuation_method_preference: z.enum(['product_value', 'minimum_valuation', 'higher_of_both']).optional().default('higher_of_both'),
   currency: z.string().default('USD'),
   destination_currency: z.string(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),

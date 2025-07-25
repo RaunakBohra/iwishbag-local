@@ -19,6 +19,7 @@ import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-valida
 import type { ShippingOption } from '@/types/unified-quote';
 import { BarChart3, Truck, CreditCard, Brain } from 'lucide-react';
 import { currencyService } from '@/services/CurrencyService';
+import { SmartCalculationEngine } from '@/services/SmartCalculationEngine';
 
 interface CustomsTier {
   name?: string;
@@ -118,6 +119,13 @@ export const QuoteDetailForm = ({
   });
 
   const [_originCountry, countryCode, _items] = watchedValues;
+  
+  // Also watch items directly to ensure we have the latest data
+  const watchedItems = useWatch({
+    control: form.control,
+    name: 'items'
+  });
+  
 
   // Get destination country currency and name from country settings
   const destinationCurrency = useMemo(() => {
@@ -158,6 +166,61 @@ export const QuoteDetailForm = ({
 
   const handleNumberInputWheel = (e: React.WheelEvent<HTMLInputElement>) => {
     e.currentTarget.blur();
+  };
+
+  // Calculate customs for each valuation method
+  const calculateCustomsForMethod = (method: string): number => {
+    try {
+      // Use watchedItems if _items is empty
+      const items = (_items && _items.length > 0) ? _items : watchedItems;
+      
+      if (!items || items.length === 0) {
+        return 0;
+      }
+      
+      const customsPercentage = form.getValues('customs_percentage') || 0;
+      if (customsPercentage === 0) {
+        return 0;
+      }
+      
+      const shippingCost = form.getValues('international_shipping') || 0;
+      const insuranceAmount = form.getValues('insurance_amount') || 0;
+      
+      // Use item_price field (form uses item_price, not costprice_origin)
+      const itemsTotal = items.reduce(
+        (sum, item) => sum + ((item.item_price || item.costprice_origin || 0) * (item.quantity || 1)),
+        0
+      );
+      
+      
+      // Determine customs calculation base based on method
+      let customsCalculationBase = itemsTotal;
+      
+      if (method === 'minimum_valuation' || method === 'higher_of_both') {
+        // For minimum valuation, we need to look at the actual HSN data
+        // In the dropdown, we'll use a simple estimation since we don't have async access to HSN
+        // The actual calculation during form submission will use the real HSN minimum values
+        
+        // Simple estimation: minimum valuation is typically 20-50% higher than product cost
+        // This is just for display purposes in the dropdown
+        const estimatedMinimumBase = itemsTotal * 1.3; // 30% higher as a reasonable estimate
+        
+        if (method === 'minimum_valuation') {
+          customsCalculationBase = estimatedMinimumBase;
+        } else if (method === 'higher_of_both') {
+          customsCalculationBase = Math.max(itemsTotal, estimatedMinimumBase);
+        }
+      }
+      
+      // Calculate CIF and customs
+      const cifValue = customsCalculationBase + shippingCost + insuranceAmount;
+      const customsAmount = cifValue * (customsPercentage / 100);
+      
+      return customsAmount;
+    } catch (error) {
+      console.error('Error calculating customs for method:', method, error);
+      return 0;
+    }
   };
 
   // Get appropriate statuses based on whether this is an order or quote
@@ -208,43 +271,50 @@ export const QuoteDetailForm = ({
                           {...field}
                           value={field.value ?? ''}
                           onWheel={handleNumberInputWheel}
-                          placeholder="15.00"
-                          className="h-8 pr-8"
+                          placeholder={taxCalculationMethod !== 'manual' ? 'Auto-calculated' : '15.00'}
+                          className={`h-8 pr-8 ${
+                            taxCalculationMethod !== 'manual'
+                              ? 'bg-gray-50 text-gray-600 cursor-not-allowed'
+                              : ''
+                          }`}
+                          readOnly={taxCalculationMethod !== 'manual'}
                         />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
                           %
                         </span>
                       </div>
                     </FormControl>
-                    {onCalculateSmartCustoms ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={onCalculateSmartCustoms}
-                        disabled={isCalculatingCustoms}
-                        className="h-8 px-2 text-xs bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                      >
-                        {isCalculatingCustoms ? (
-                          <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <Brain className="w-3 h-3" />
-                        )}
-                      </Button>
-                    ) : (
-                      typeof detectedCustomsPercentage === 'number' &&
-                      detectedCustomsPercentage !== Number(field.value) && (
+                    {taxCalculationMethod === 'manual' && (
+                      onCalculateSmartCustoms ? (
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            form.setValue('customs_percentage', detectedCustomsPercentage)
-                          }
-                          className="h-8 px-2 text-xs"
+                          onClick={onCalculateSmartCustoms}
+                          disabled={isCalculatingCustoms}
+                          className="h-8 px-2 text-xs bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
                         >
-                          Apply
+                          {isCalculatingCustoms ? (
+                            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Brain className="w-3 h-3" />
+                          )}
                         </Button>
+                      ) : (
+                        typeof detectedCustomsPercentage === 'number' &&
+                        detectedCustomsPercentage !== Number(field.value) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              form.setValue('customs_percentage', detectedCustomsPercentage)
+                            }
+                            className="h-8 px-2 text-xs"
+                          >
+                            Apply
+                          </Button>
+                        )
                       )
                     )}
                   </div>
@@ -267,10 +337,10 @@ export const QuoteDetailForm = ({
                       }`}
                     >
                       {taxCalculationMethod === 'manual'
-                        ? 'Manual Input'
+                        ? '✏️ Manual Input - Editable'
                         : taxCalculationMethod === 'hsn_only'
-                          ? 'From HSN'
-                          : 'From Country'}
+                          ? '🔒 Auto: From HSN + Origin'
+                          : '🔒 Auto: From Country Settings'}
                     </span>
                   </div>
                   <FormMessage />
@@ -287,7 +357,7 @@ export const QuoteDetailForm = ({
                   </FormLabel>
                   <FormControl>
                     <Select
-                      value={field.value || 'product_value'}
+                      value={field.value || 'higher_of_both'}
                       onValueChange={(value) => {
                         field.onChange(value);
                         // Trigger recalculation when valuation method changes
@@ -308,16 +378,12 @@ export const QuoteDetailForm = ({
                             </div>
                             <div className="text-right text-xs">
                               <div className="font-medium text-blue-600">
-                                {currencyService.formatAmount(
-                                  _items?.reduce(
-                                    (sum, item) =>
-                                      sum + (item.costprice_origin || 0) * (item.quantity || 1),
-                                    0,
-                                  ) || 0,
-                                  originCurrency,
-                                )}
+                                {(() => {
+                                  const customs = calculateCustomsForMethod('product_value');
+                                  return currencyService.formatAmount(customs, originCurrency);
+                                })()}
                               </div>
-                              <div className="text-gray-500">Basis</div>
+                              <div className="text-gray-500">customs</div>
                             </div>
                           </div>
                         </SelectItem>
@@ -329,46 +395,31 @@ export const QuoteDetailForm = ({
                             </div>
                             <div className="text-right text-xs">
                               <div className="font-medium text-amber-600">
-                                Est.{' '}
-                                {currencyService.formatAmount(
-                                  (_items?.reduce(
-                                    (sum, item) =>
-                                      sum + (item.costprice_origin || 0) * (item.quantity || 1),
-                                    0,
-                                  ) || 0) * 1.2,
-                                  originCurrency,
-                                )}
+                                {(() => {
+                                  const customs = calculateCustomsForMethod('minimum_valuation');
+                                  return currencyService.formatAmount(customs, originCurrency);
+                                })()}
                               </div>
-                              <div className="text-gray-500">Basis</div>
+                              <div className="text-gray-500">customs</div>
                             </div>
                           </div>
                         </SelectItem>
                         <SelectItem value="higher_of_both" className="text-xs">
                           <div className="flex justify-between items-center w-full">
                             <div className="flex flex-col">
-                              <span>Higher of Both</span>
-                              <span className="text-gray-500 text-xs">Use whichever is higher</span>
+                              <span>Auto (Recommended)</span>
+                              <span className="text-gray-500 text-xs">Use higher customs amount</span>
                             </div>
                             <div className="text-right text-xs">
                               <div className="font-medium text-green-600">
-                                Auto{' '}
-                                {currencyService.formatAmount(
-                                  Math.max(
-                                    _items?.reduce(
-                                      (sum, item) =>
-                                        sum + (item.costprice_origin || 0) * (item.quantity || 1),
-                                      0,
-                                    ) || 0,
-                                    (_items?.reduce(
-                                      (sum, item) =>
-                                        sum + (item.costprice_origin || 0) * (item.quantity || 1),
-                                      0,
-                                    ) || 0) * 1.2,
-                                  ),
-                                  originCurrency,
-                                )}
+                                {(() => {
+                                  const productCustoms = calculateCustomsForMethod('product_value');
+                                  const minimumCustoms = calculateCustomsForMethod('minimum_valuation');
+                                  const higherCustoms = Math.max(productCustoms, minimumCustoms);
+                                  return currencyService.formatAmount(higherCustoms, originCurrency);
+                                })()}
                               </div>
-                              <div className="text-gray-500">Basis</div>
+                              <div className="text-gray-500">customs</div>
                             </div>
                           </div>
                         </SelectItem>
@@ -461,7 +512,12 @@ export const QuoteDetailForm = ({
                         {...field}
                         value={field.value ?? ''}
                         onWheel={handleNumberInputWheel}
-                        className="pl-8 h-8"
+                        className={`pl-8 h-8 ${
+                          taxCalculationMethod !== 'manual'
+                            ? 'bg-gray-50 text-gray-600 cursor-not-allowed'
+                            : ''
+                        }`}
+                        readOnly={taxCalculationMethod !== 'manual'}
                         onChange={(e) => {
                           field.onChange(e);
                           // ✅ NEW: Trigger real-time calculation when sales tax changes
@@ -469,7 +525,7 @@ export const QuoteDetailForm = ({
                             onTriggerCalculation();
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder={taxCalculationMethod !== 'manual' ? 'Auto-calculated' : '0.00'}
                       />
                     </div>
                   </FormControl>
@@ -485,10 +541,10 @@ export const QuoteDetailForm = ({
                       }`}
                     >
                       {taxCalculationMethod === 'manual'
-                        ? 'Manual Input'
+                        ? '✏️ Manual Input - Editable'
                         : taxCalculationMethod === 'hsn_only'
-                          ? 'From HSN'
-                          : 'From Country'}
+                          ? '🔒 Auto: From HSN + Origin'
+                          : '🔒 Auto: From Country Settings'}
                     </span>
                   </div>
                   <FormMessage />
@@ -515,7 +571,12 @@ export const QuoteDetailForm = ({
                         {...field}
                         value={field.value ?? ''}
                         onWheel={handleNumberInputWheel}
-                        className="pl-8 h-8"
+                        className={`pl-8 h-8 ${
+                          taxCalculationMethod !== 'manual'
+                            ? 'bg-gray-50 text-gray-600 cursor-not-allowed'
+                            : ''
+                        }`}
+                        readOnly={taxCalculationMethod !== 'manual'}
                         onChange={(e) => {
                           field.onChange(e);
                           // ✅ NEW: Trigger real-time calculation when destination tax changes
@@ -523,7 +584,7 @@ export const QuoteDetailForm = ({
                             onTriggerCalculation();
                           }
                         }}
-                        placeholder="0.00"
+                        placeholder={taxCalculationMethod !== 'manual' ? 'Auto-calculated' : '0.00'}
                       />
                     </div>
                   </FormControl>
@@ -539,10 +600,10 @@ export const QuoteDetailForm = ({
                       }`}
                     >
                       {taxCalculationMethod === 'manual'
-                        ? 'Manual Input'
+                        ? '✏️ Manual Input - Editable'
                         : taxCalculationMethod === 'hsn_only'
-                          ? 'From HSN'
-                          : 'From Country'}
+                          ? '🔒 Auto: From HSN + Origin'
+                          : '🔒 Auto: From Country Settings'}
                     </span>
                   </div>
                   <FormMessage />

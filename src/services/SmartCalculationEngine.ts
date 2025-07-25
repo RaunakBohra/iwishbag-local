@@ -1191,6 +1191,40 @@ export class SmartCalculationEngine {
       destinationTax = quote.calculation_data?.breakdown?.destination_tax || 0;
     }
 
+    // ✅ CRITICAL FIX: Create separate customs calculation base - ONLY affects customs, not all calculations
+    const valuationMethod = quote.valuation_method_preference || 'product_value';
+    let customsCalculationBase = itemsTotal; // Default to actual product prices
+    
+    
+    // Determine customs calculation base based on valuation method (for CUSTOMS ONLY)
+    if (valuationMethod === 'minimum_valuation' || valuationMethod === 'higher_of_both') {
+      // For sync calculation, check if HSN calculation data with minimum valuation is available
+      const hsnCalculationData = quote.calculation_data?.hsn_calculation;
+      if (hsnCalculationData && hsnCalculationData.items_with_minimum_valuation > 0) {
+        // Use the recalculated total from HSN calculation that respects valuation method
+        const hsnTotal = hsnCalculationData.recalculated_items_total || itemsTotal;
+        
+        if (valuationMethod === 'higher_of_both') {
+          // Use whichever is higher FOR CUSTOMS ONLY
+          customsCalculationBase = Math.max(itemsTotal, hsnTotal);
+        } else {
+          // Use minimum valuation FOR CUSTOMS ONLY
+          customsCalculationBase = hsnTotal;
+        }
+      } else {
+        // Fallback: estimate minimum valuation as 20% higher (rough approximation for sync mode)
+        const estimatedMinimum = itemsTotal * 1.2;
+        
+        if (valuationMethod === 'higher_of_both') {
+          // Use whichever is higher FOR CUSTOMS ONLY
+          customsCalculationBase = Math.max(itemsTotal, estimatedMinimum);
+        } else {
+          // Use minimum valuation FOR CUSTOMS ONLY
+          customsCalculationBase = estimatedMinimum;
+        }
+      }
+    }
+
     // Calculate customs using CIF value (Cost, Insurance, Freight) - RESPECT CALCULATION METHOD
     let customsPercentage = 0; // Default to 0 (no customs) if not specified
     const calculationMethod = quote.calculation_method_preference || 'hsn_only';
@@ -1206,21 +1240,23 @@ export class SmartCalculationEngine {
       customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
     }
 
-    const cifValue = itemsTotal + shippingCost + insuranceAmount;
+    // ✅ CRITICAL FIX: Use actual itemsTotal for CIF, but customsCalculationBase for customs calculation
+    const cifValue = customsCalculationBase + shippingCost + insuranceAmount; // Use customs basis for CIF
     const customsAmount = cifValue * (customsPercentage / 100);
     const domesticShipping = quote.operational_data?.domestic_shipping || 0;
     const discount = quote.calculation_data?.discount || 0;
 
+    // ✅ FIXED: Payment gateway fee uses ACTUAL product prices, not customs basis
     const paymentGatewayFee =
       quote.operational_data?.payment_gateway_fee ||
       (itemsTotal + shippingCost + customsAmount) * 0.029 + 0.3;
 
-    // Calculate VAT on landed cost (CIF + Customs + Handling) - FIXED
+    // ✅ FIXED: VAT calculated on landed cost using ACTUAL product prices
     const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
-    const landedCost = cifValue + customsAmount + handlingFee;
-    const vatAmount = vatPercentage > 0 ? landedCost * (vatPercentage / 100) : 0;
+    const actualLandedCost = itemsTotal + shippingCost + insuranceAmount + customsAmount + handlingFee;
+    const vatAmount = vatPercentage > 0 ? actualLandedCost * (vatPercentage / 100) : 0;
 
-    // Calculate totals
+    // ✅ FIXED: Calculate totals using ACTUAL product prices (itemsTotal)
     const subtotal =
       itemsTotal +
       shippingCost +
@@ -1245,9 +1281,9 @@ export class SmartCalculationEngine {
       calculation_data: {
         ...quote.calculation_data,
         breakdown: {
-          items_total: itemsTotal,
+          items_total: itemsTotal, // ✅ FIXED: Use ACTUAL product prices, not adjusted
           shipping: shippingCost, // ✅ Use the provided value directly
-          customs: customsAmount,
+          customs: customsAmount, // Calculated using customsCalculationBase (but stored customs amount is result)
           taxes: salesTax, // Local taxes only (legacy field)
           destination_tax: destinationTax, // Destination tax as separate field
           fees: paymentGatewayFee,
@@ -1258,6 +1294,19 @@ export class SmartCalculationEngine {
         exchange_rate: {
           rate: exchangeRate,
           source: 'direct',
+        },
+        // ✅ FIXED: Track valuation method and customs calculation basis separately
+        valuation_applied: {
+          method: valuationMethod,
+          original_items_total: itemsTotal, // Always actual product prices
+          customs_calculation_base: customsCalculationBase, // Only affects customs calculation
+          adjustment_applied: customsCalculationBase !== itemsTotal,
+          calculation_type: 'sync',
+          basis_explanation: valuationMethod === 'minimum_valuation' 
+            ? 'Customs calculated on HSN minimum valuation' 
+            : valuationMethod === 'higher_of_both'
+            ? 'Customs calculated on higher of product value vs HSN minimum'
+            : 'Customs calculated on actual product value'
         },
       },
       operational_data: {
@@ -1319,19 +1368,63 @@ export class SmartCalculationEngine {
     // ✅ SIMPLIFIED TAX CALCULATION: Read directly from input fields
     const customsPercentage = quote.operational_data?.customs?.percentage || 0;
 
-    // Calculate insurance for CIF
+    // ✅ CRITICAL FIX: Create separate customs calculation base for ASYNC - ONLY affects customs
+    const valuationMethod = quote.valuation_method_preference || 'product_value';
+    let customsCalculationBase = itemsTotal; // Default to actual product prices
+    
+    // For HSN calculations, use the HSN summary data which already respects valuation methods
+    if (hsnTaxSummary && hsnTaxSummary.items_with_minimum_valuation > 0) {
+      // HSN calculation already handled valuation method - use for CUSTOMS ONLY
+      if (hsnTaxBreakdown && hsnTaxBreakdown.length > 0) {
+        customsCalculationBase = hsnTaxBreakdown.reduce((sum, item) => sum + item.taxable_amount_origin_currency, 0);
+        console.log(`[VALUATION ASYNC] Customs basis from HSN calculation: ${itemsTotal} → ${customsCalculationBase}`);
+      }
+    } else if (valuationMethod === 'minimum_valuation' || valuationMethod === 'higher_of_both') {
+      // Non-HSN calculation: check if minimum valuation data is available
+      const hsnCalculationData = quote.calculation_data?.hsn_calculation;
+      if (hsnCalculationData && hsnCalculationData.items_with_minimum_valuation > 0) {
+        const hsnTotal = hsnCalculationData.recalculated_items_total || itemsTotal;
+        
+        if (valuationMethod === 'higher_of_both') {
+          // Use whichever is higher FOR CUSTOMS ONLY
+          customsCalculationBase = Math.max(itemsTotal, hsnTotal);
+          console.log(`[VALUATION ASYNC] Customs basis - higher of both (cached): product=${itemsTotal}, hsn=${hsnTotal} → ${customsCalculationBase}`);
+        } else {
+          // Use minimum valuation FOR CUSTOMS ONLY
+          customsCalculationBase = hsnTotal;
+          console.log(`[VALUATION ASYNC] Customs basis - cached minimum valuation: ${itemsTotal} → ${customsCalculationBase}`);
+        }
+      } else {
+        // Fallback: estimate minimum valuation as 20% higher (rough approximation)
+        const estimatedMinimum = itemsTotal * 1.2;
+        
+        if (valuationMethod === 'higher_of_both') {
+          // Use whichever is higher FOR CUSTOMS ONLY
+          customsCalculationBase = Math.max(itemsTotal, estimatedMinimum);
+          console.log(`[VALUATION ASYNC] Customs basis - higher of both (est.): product=${itemsTotal}, min=${estimatedMinimum} → ${customsCalculationBase}`);
+        } else {
+          // Use minimum valuation FOR CUSTOMS ONLY
+          customsCalculationBase = estimatedMinimum;
+          console.log(`[VALUATION ASYNC] Customs basis - estimating minimum valuation: ${itemsTotal} → ${customsCalculationBase} (est.)`);
+        }
+      }
+    }
+    
+    console.log(`[VALUATION ASYNC] Product total: ${itemsTotal} (unchanged), Customs basis: ${customsCalculationBase} (method: ${valuationMethod})`);
+
+    // ✅ FIXED: Calculate insurance using ACTUAL product prices, not customs basis
     insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
 
-    // Calculate customs using CIF value if percentage is provided
+    // ✅ FIXED: Calculate customs using CIF value with customs calculation base
     if (customsPercentage > 0) {
-      const cifValue = itemsTotal + selectedShipping.cost_usd + insuranceAmount;
+      const cifValue = customsCalculationBase + selectedShipping.cost_usd + insuranceAmount;
       customsAmount = cifValue * (customsPercentage / 100);
     }
 
     // Read sales tax from input fields
     localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
 
-    // Calculate taxes and fees using route-based configuration
+    // ✅ FIXED: Calculate handling using ACTUAL product prices, not customs basis
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
 
     // ✅ CALCULATE DESTINATION TAX: Get VAT/GST rate for destination country
@@ -1342,7 +1435,7 @@ export class SmartCalculationEngine {
       );
 
       if (vatResult.percentage > 0) {
-        // Calculate destination tax on landed cost (CIF + Customs + Handling + Local Taxes)
+        // ✅ FIXED: Calculate destination tax on landed cost using ACTUAL product prices
         const landedCost =
           itemsTotal +
           selectedShipping.cost_usd +
@@ -1375,7 +1468,7 @@ export class SmartCalculationEngine {
       destination_tax: destinationTaxAmount,
     });
 
-    // For non-HSN calculations, calculate insurance here (HSN already calculated above)
+    // ✅ FIXED: For non-HSN calculations, calculate insurance using ACTUAL product prices
     if (!hsnTaxSummary) {
       insuranceAmount = await this.calculateRouteBasedInsurance(
         selectedShipping,
@@ -1384,8 +1477,8 @@ export class SmartCalculationEngine {
       );
     }
 
-    // Note: For HSN calculations, salesTax is already included in localTaxesAmount
-    // For non-HSN, calculate on landed cost instead of just itemsTotal - FIXED
+    // ✅ FIXED: For HSN calculations, salesTax is already included in localTaxesAmount
+    // For non-HSN, calculate on landed cost using ACTUAL product prices
     const landedCostForTax =
       itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee;
     const salesTax = hsnTaxSummary ? 0 : landedCostForTax * 0.1;
@@ -1402,7 +1495,7 @@ export class SmartCalculationEngine {
       vatAmount = 0; // Deprecated - destination tax is calculated separately
     }
 
-    // Calculate totals
+    // ✅ FIXED: Calculate totals using ACTUAL product prices (itemsTotal)
     const subtotal =
       itemsTotal +
       selectedShipping.cost_usd +
@@ -1432,7 +1525,7 @@ export class SmartCalculationEngine {
     const updatedCalculationData: CalculationData = {
       ...quote.calculation_data,
       breakdown: {
-        items_total: itemsTotal,
+        items_total: itemsTotal, // ✅ FIXED: Use ACTUAL product prices, not adjusted
         shipping: selectedShipping.cost_usd,
         customs: customsAmount,
         taxes: salesTax + localTaxesAmount + vatAmount, // Local taxes only (legacy field)
@@ -1457,13 +1550,29 @@ export class SmartCalculationEngine {
             total_hsn_customs: hsnTaxSummary.total_customs,
             total_hsn_local_taxes: hsnTaxSummary.total_local_taxes,
             calculation_timestamp: new Date().toISOString(),
+            recalculated_items_total: customsCalculationBase, // ✅ FIXED: Track customs basis only
           }
         : {
             method: 'traditional_tier',
             customs_percentage: customsPercentage,
             tier_info: 'manual_calculation',
             calculation_timestamp: new Date().toISOString(),
+            recalculated_items_total: customsCalculationBase, // ✅ FIXED: Track customs basis only
           },
+      // ✅ FIXED: Track valuation method and customs calculation basis separately
+      valuation_applied: {
+        method: valuationMethod,
+        original_items_total: itemsTotal, // Always actual product prices
+        customs_calculation_base: customsCalculationBase, // Only affects customs calculation
+        adjustment_applied: customsCalculationBase !== itemsTotal,
+        calculation_type: 'async',
+        hsn_calculation_used: !!hsnTaxSummary,
+        basis_explanation: valuationMethod === 'minimum_valuation' 
+          ? 'Customs calculated on HSN minimum valuation' 
+          : valuationMethod === 'higher_of_both'
+          ? 'Customs calculated on higher of product value vs HSN minimum'
+          : 'Customs calculated on actual product value'
+      },
     };
 
     const updatedOperationalData: OperationalData = {
