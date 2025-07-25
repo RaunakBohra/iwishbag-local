@@ -253,13 +253,15 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             )}
 
-          {/* Valuation Method Indicator */}
+          {/* Enhanced Valuation Method Indicator */}
           {quote.valuation_method_preference && (
             <div
               className={`rounded-lg p-3 mb-3 ${
                 quote.valuation_method_preference === 'minimum_valuation'
                   ? 'bg-amber-50 border border-amber-200'
-                  : 'bg-blue-50 border border-blue-200'
+                  : quote.valuation_method_preference === 'higher_of_both'
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-blue-50 border border-blue-200'
               }`}
             >
               <div className="flex items-center space-x-2">
@@ -267,31 +269,77 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                   className={`w-4 h-4 ${
                     quote.valuation_method_preference === 'minimum_valuation'
                       ? 'text-amber-600'
-                      : 'text-blue-600'
+                      : quote.valuation_method_preference === 'higher_of_both'
+                        ? 'text-green-600'
+                        : 'text-blue-600'
                   }`}
                 />
                 <span
                   className={`text-sm font-medium ${
                     quote.valuation_method_preference === 'minimum_valuation'
                       ? 'text-amber-800'
-                      : 'text-blue-800'
+                      : quote.valuation_method_preference === 'higher_of_both'
+                        ? 'text-green-800'
+                        : 'text-blue-800'
                   }`}
                 >
                   {quote.valuation_method_preference === 'minimum_valuation'
                     ? 'Minimum Valuation Method'
-                    : 'Product Value Method'}
+                    : quote.valuation_method_preference === 'higher_of_both'
+                      ? 'Auto Selection Method'
+                      : 'Product Value Method'}
                 </span>
               </div>
               <div
                 className={`text-xs mt-1 ${
                   quote.valuation_method_preference === 'minimum_valuation'
                     ? 'text-amber-700'
-                    : 'text-blue-700'
+                    : quote.valuation_method_preference === 'higher_of_both'
+                      ? 'text-green-700'
+                      : 'text-blue-700'
                 }`}
               >
                 {quote.valuation_method_preference === 'minimum_valuation'
-                  ? 'Using higher of minimum customs valuation vs actual product cost'
-                  : 'Using actual product cost for customs calculation basis'}
+                  ? 'Using minimum valuation from HSN database for customs calculation'
+                  : quote.valuation_method_preference === 'higher_of_both'
+                    ? 'Using higher of minimum valuation vs actual product cost'
+                    : 'Using actual product cost for customs calculation basis'}
+                
+                {/* Show calculation results if available */}
+                {quote.calculation_data?.valuation_applied && (
+                  <div className="mt-2 pt-2 border-t border-current/20">
+                    <div className="flex justify-between items-center text-xs">
+                      <span>Original Total:</span>
+                      <span className="font-mono">
+                        {currencyDisplay.formatSingleAmount(
+                          quote.calculation_data.valuation_applied.original_items_total,
+                          'origin'
+                        )}
+                      </span>
+                    </div>
+                    {quote.calculation_data.valuation_applied.adjustment_applied && (
+                      <div className="flex justify-between items-center text-xs font-medium">
+                        <span>Adjusted Total:</span>
+                        <span className="font-mono">
+                          {currencyDisplay.formatSingleAmount(
+                            quote.calculation_data.valuation_applied.adjusted_items_total,
+                            'origin'
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    <div className="text-xs opacity-75 mt-1">
+                      {quote.calculation_data.valuation_applied.adjustment_applied
+                        ? `+${currencyDisplay.formatSingleAmount(
+                            quote.calculation_data.valuation_applied.adjusted_items_total - 
+                            quote.calculation_data.valuation_applied.original_items_total,
+                            'origin'
+                          )} valuation adjustment applied`
+                        : 'No adjustment needed - product value used'}
+                    </div>
+                  </div>
+                )}
+                
                 {hsnCalculationData?.items_with_minimum_valuation &&
                   hsnCalculationData.items_with_minimum_valuation > 0 && (
                     <span className="block mt-1 font-medium">

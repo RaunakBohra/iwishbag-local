@@ -343,6 +343,35 @@ export const QuoteDetailForm = ({
                             </div>
                           </div>
                         </SelectItem>
+                        <SelectItem value="higher_of_both" className="text-xs">
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex flex-col">
+                              <span>Higher of Both</span>
+                              <span className="text-gray-500 text-xs">Use whichever is higher</span>
+                            </div>
+                            <div className="text-right text-xs">
+                              <div className="font-medium text-green-600">
+                                Auto{' '}
+                                {currencyService.formatAmount(
+                                  Math.max(
+                                    _items?.reduce(
+                                      (sum, item) =>
+                                        sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                      0,
+                                    ) || 0,
+                                    (_items?.reduce(
+                                      (sum, item) =>
+                                        sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                      0,
+                                    ) || 0) * 1.2,
+                                  ),
+                                  originCurrency,
+                                )}
+                              </div>
+                              <div className="text-gray-500">Basis</div>
+                            </div>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </FormControl>
@@ -351,14 +380,18 @@ export const QuoteDetailForm = ({
                       className={`text-xs px-2 py-1 rounded border ${
                         field.value === 'minimum_valuation'
                           ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                          : field.value === 'higher_of_both'
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
                       }`}
                     >
                       <div className="flex justify-between items-center">
                         <span className="font-medium">
                           {field.value === 'minimum_valuation'
                             ? 'Min Valuation Active'
-                            : 'Product Value Active'}
+                            : field.value === 'higher_of_both'
+                              ? 'Auto Selection Active'
+                              : 'Product Value Active'}
                         </span>
                         <span className="font-semibold">
                           {field.value === 'minimum_valuation'
@@ -370,20 +403,38 @@ export const QuoteDetailForm = ({
                                 ) || 0) * 1.2,
                                 originCurrency,
                               )}`
-                            : currencyService.formatAmount(
-                                _items?.reduce(
-                                  (sum, item) =>
-                                    sum + (item.costprice_origin || 0) * (item.quantity || 1),
-                                  0,
-                                ) || 0,
-                                originCurrency,
-                              )}
+                            : field.value === 'higher_of_both'
+                              ? `Auto ${currencyService.formatAmount(
+                                  Math.max(
+                                    _items?.reduce(
+                                      (sum, item) =>
+                                        sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                      0,
+                                    ) || 0,
+                                    (_items?.reduce(
+                                      (sum, item) =>
+                                        sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                      0,
+                                    ) || 0) * 1.2,
+                                  ),
+                                  originCurrency,
+                                )}`
+                              : currencyService.formatAmount(
+                                  _items?.reduce(
+                                    (sum, item) =>
+                                      sum + (item.costprice_origin || 0) * (item.quantity || 1),
+                                    0,
+                                  ) || 0,
+                                  originCurrency,
+                                )}
                         </span>
                       </div>
                       <div className="text-xs opacity-75 mt-0.5">
                         {field.value === 'minimum_valuation'
-                          ? 'Using higher of minimum valuation vs actual cost'
-                          : 'Using actual product cost for customs calculation'}
+                          ? 'Using minimum valuation from HSN database'
+                          : field.value === 'higher_of_both'
+                            ? 'Using higher of minimum valuation vs actual cost'
+                            : 'Using actual product cost for customs calculation'}
                       </div>
                     </div>
                   </div>
