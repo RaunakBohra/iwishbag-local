@@ -78,7 +78,6 @@ import {
   Plus,
   Minus,
   ChevronUp,
-  Trash2,
   Upload,
   Save,
   Lightbulb,
@@ -1639,12 +1638,11 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="border rounded-lg">
                       <table className="w-full table-fixed">
                         <colgroup>
-                          <col style={{ width: '30%' }} />  {/* Product */}
-                          <col style={{ width: '15%' }} />  {/* Price & Qty */}
-                          <col style={{ width: '22%' }} />  {/* Weight & HSN */}
-                          <col style={{ width: '17%' }} />  {/* Tax & Valuation */}
+                          <col style={{ width: '35%' }} />  {/* Product */}
+                          <col style={{ width: '18%' }} />  {/* Price & Qty */}
+                          <col style={{ width: '25%' }} />  {/* Weight & HSN */}
+                          <col style={{ width: orderMode ? '17%' : '22%' }} />  {/* Tax & Valuation */}
                           {orderMode && <col style={{ width: '10%' }} />}  {/* Variance */}
-                          <col style={{ width: orderMode ? '6%' : '16%' }} />  {/* Actions */}
                         </colgroup>
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
@@ -1655,7 +1653,6 @@ export default function UnifiedQuoteOrderSystem({
                             {orderMode && (
                               <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Variance</th>
                             )}
-                            <th className="text-center px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -2441,76 +2438,6 @@ export default function UnifiedQuoteOrderSystem({
                                   )}
                                 </td>
                               )}
-                              <td className="px-4 py-4">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="ghost" size="sm" title="View tax breakdown">
-                                        <Calculator className="w-4 h-4" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                      <div className="space-y-3">
-                                        <h4 className="font-medium text-sm flex items-center gap-2">
-                                          <Calculator className="w-4 h-4" />
-                                          Tax Breakdown
-                                        </h4>
-                                        <div className="space-y-2 text-sm">
-                                          <div className="flex justify-between">
-                                            <span className="text-gray-600">Product Value</span>
-                                            <span>${(safeNumber(item.price) * safeNumber(item.quantity, 1)).toFixed(2)}</span>
-                                          </div>
-                                          {item.customs_amount > 0 && (
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-600">Customs</span>
-                                              <span>${safeNumber(item.customs_amount).toFixed(2)}</span>
-                                            </div>
-                                          )}
-                                          {item.sales_tax_amount > 0 && (
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-600">Sales Tax</span>
-                                              <span>${safeNumber(item.sales_tax_amount).toFixed(2)}</span>
-                                            </div>
-                                          )}
-                                          {item.destination_tax_amount > 0 && (
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-600">VAT/GST</span>
-                                              <span>${safeNumber(item.destination_tax_amount).toFixed(2)}</span>
-                                            </div>
-                                          )}
-                                          <Separator />
-                                          <div className="flex justify-between font-medium">
-                                            <span>Total Tax</span>
-                                            <span>
-                                              ${(
-                                                safeNumber(item.customs_amount) + 
-                                                safeNumber(item.sales_tax_amount) + 
-                                                safeNumber(item.destination_tax_amount)
-                                              ).toFixed(2)}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => {
-                                      // Delete item
-                                      const updatedItems = items.filter(i => i.id !== item.id);
-                                      setItems(updatedItems);
-                                      recalculateQuote(updatedItems);
-                                      toast({
-                                        title: "Item Removed",
-                                        description: "Item has been removed from the quote."
-                                      });
-                                    }}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </div>
-                              </td>
                             </tr>
                           ))}
                         </tbody>
