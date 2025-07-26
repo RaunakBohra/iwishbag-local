@@ -6,6 +6,7 @@
 export interface Env {
   CF_API_TOKEN: string;
   CF_ZONE_ID: string;
+  CF_ACCOUNT_ID: string;
   SYNC_API_KEY: string;
 }
 
@@ -171,7 +172,7 @@ async function handleFeatureStatus(
         headers: { 'Authorization': `Bearer ${env.CF_API_TOKEN}` },
       }).then(r => r.json()),
       
-      fetch(`${CLOUDFLARE_API_BASE}/zones/${env.CF_ZONE_ID}/access/apps`, {
+      fetch(`${CLOUDFLARE_API_BASE}/accounts/610762493d34333f1a6d72a037b345cf/access/apps`, {
         headers: { 'Authorization': `Bearer ${env.CF_API_TOKEN}` },
       }).then(r => r.json()),
     ]);
@@ -313,7 +314,7 @@ async function setupLoadBalancing(env: Env) {
       timeout: 10,
       follow_redirects: true,
       allow_insecure: false,
-      description: 'iwishBag health monitor',
+      description: 'whyteclub health monitor',
     }),
   }).then(r => r.json());
 
@@ -325,8 +326,8 @@ async function setupLoadBalancing(env: Env) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: 'iwishbag-main-pool',
-      description: 'Main iwishBag application pool',
+      name: 'whyteclub-main-pool',
+      description: 'Main whyteclub application pool',
       enabled: true,
       minimum_origins: 1,
       monitor: monitor.result.id,
@@ -339,7 +340,7 @@ async function setupLoadBalancing(env: Env) {
         },
         {
           name: 'pages-backup',
-          address: 'iwishbag.pages.dev',
+          address: 'whyteclub.pages.dev',
           enabled: true,
           weight: 0.8,
         },
@@ -356,8 +357,8 @@ async function setupLoadBalancing(env: Env) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: 'iwishbag-main-lb',
-      description: 'Main iwishBag load balancer',
+      name: 'whyteclub-main-lb',
+      description: 'Main whyteclub load balancer',
       enabled: true,
       proxied: true,
       fallback_pool: pool.result.id,

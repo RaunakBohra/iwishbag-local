@@ -1,6 +1,6 @@
 // ============================================================================
 // CLOUDFLARE FEATURE SERVICE - Comprehensive Feature Management
-// Manages all Cloudflare free tier features for iwishBag platform
+// Manages all Cloudflare free tier features for whyteclub platform
 // ============================================================================
 
 export interface CloudflareConfig {
@@ -140,12 +140,12 @@ export class CloudflareFeatureService {
       monitor: monitor.result.id,
       origins: poolConfig.origins,
       check_regions: poolConfig.check_regions,
-      notification_email: 'admin@iwishbag.com',
+      notification_email: 'admin@whyteclub.com',
     });
 
     // 3. Create Load Balancer
     const loadBalancer = await this.makeRequest('/load_balancers', 'POST', {
-      name: `iwishbag-${poolConfig.name}`,
+      name: `whyteclub-${poolConfig.name}`,
       description: `Load balancer for ${poolConfig.description}`,
       enabled: true,
       proxied: true,
@@ -182,7 +182,8 @@ export class CloudflareFeatureService {
   async setupZeroTrustApplication(app: ZeroTrustApplication) {
     console.log('🔐 Setting up Zero Trust Application:', app.name);
     
-    const application = await this.makeRequest('/zones/access/apps', 'POST', {
+    // Zero Trust applications are created at account level, not zone level
+    const application = await this.makeRequest('/accounts/610762493d34333f1a6d72a037b345cf/access/apps', 'POST', {
       name: app.name,
       domain: app.domain,
       type: app.type,
@@ -204,7 +205,7 @@ export class CloudflareFeatureService {
   }
 
   async createAccessPolicy(appId: string, policy: any) {
-    return this.makeRequest(`/zones/access/apps/${appId}/policies`, 'POST', policy);
+    return this.makeRequest(`/accounts/610762493d34333f1a6d72a037b345cf/access/apps/${appId}/policies`, 'POST', policy);
   }
 
   // ============================================================================
@@ -314,7 +315,7 @@ export class CloudflareFeatureService {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>iwishBag - Please Wait</title>
+    <title>whyteclub - Please Wait</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -330,7 +331,7 @@ export class CloudflareFeatureService {
 </head>
 <body>
     <div class="container">
-        <div class="logo">iwishBag</div>
+        <div class="logo">whyteclub</div>
         <h2>You're in line!</h2>
         <p class="message">We're experiencing high traffic. You'll be automatically redirected when it's your turn.</p>
         <div class="progress"><div class="progress-bar"></div></div>
@@ -383,7 +384,7 @@ export class CloudflareFeatureService {
         action: 'rewrite',
         action_parameters: {
           headers: {
-            'X-iwishBag-Version': {
+            'X-whyteclub-Version': {
               operation: 'set',
               value: '2.0',
             },
@@ -398,7 +399,7 @@ export class CloudflareFeatureService {
     const results = [];
     for (const rule of rules) {
       const result = await this.makeRequest(`/zones/${this.config.zoneId}/rulesets`, 'POST', {
-        name: 'iwishBag Transform Rules',
+        name: 'whyteclub Transform Rules',
         kind: 'zone',
         phase: 'http_request_transform',
         rules: [rule],
@@ -454,7 +455,7 @@ export const cloudflareFeatures = {
   iwishbag: {
     zoneId: '2cd502a70fa04ec1619df21d7eb5e17c',
     apiToken: '4Y_WjuGIEtTpK85hmE6XrGwbi85d8zN5Me0T_45l',
-    domain: window.location.hostname === 'localhost' ? 'localhost:8082' : 'iwishbag.com',
+    domain: window.location.hostname === 'localhost' ? 'localhost:8082' : 'whyteclub.com',
   },
 };
 

@@ -24,11 +24,26 @@ import TurnstileDemo from '../pages/demo/TurnstileDemo';
 import EnhancedWeightFieldDemo from '../pages/demo/EnhancedWeightFieldDemo';
 import CloudflareFeaturesDemo from '../pages/demo/CloudflareFeaturesDemo';
 import ZeroTrustSetup from '../pages/demo/ZeroTrustSetup';
+import CloudflareSetupSummary from '../pages/demo/CloudflareSetupSummary';
+import ZeroTrustManualSetup from '../pages/demo/ZeroTrustManualSetup';
 
 const DemoIndex = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
 
   const demos = [
+    {
+      id: 'cloudflare-summary',
+      title: '📊 Cloudflare Setup Summary',
+      description:
+        'View the complete status of all Cloudflare features - See what\'s been configured and what requires manual setup',
+      features: [
+        'Complete setup progress overview',
+        'Status of all features at a glance',
+        'Manual setup instructions',
+        'Direct links to Cloudflare dashboard',
+      ],
+      component: CloudflareSetupSummary,
+    },
     {
       id: 'cloudflare-features',
       title: '☁️ Cloudflare Features Configuration',
@@ -41,6 +56,19 @@ const DemoIndex = () => {
         'Cache Reserve & Waiting Room',
       ],
       component: CloudflareFeaturesDemo,
+    },
+    {
+      id: 'zero-trust-manual',
+      title: '🛡️ Zero Trust Manual Setup Guide',
+      description:
+        'Complete step-by-step guide to manually configure Zero Trust Access for admin.whyteclub.com',
+      features: [
+        'DNS configuration instructions',
+        'Manual dashboard setup steps',
+        'Optional redirect code',
+        'No auth changes required',
+      ],
+      component: ZeroTrustManualSetup,
     },
     {
       id: 'zero-trust-setup',

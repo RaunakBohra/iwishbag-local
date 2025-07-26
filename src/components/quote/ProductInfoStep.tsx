@@ -61,6 +61,9 @@ import {
   LogIn,
   ChevronDown,
   ChevronUp,
+  Shield,
+  Lock,
+  HelpCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
@@ -82,6 +85,17 @@ function isValidUrl(url) {
     return false;
   }
 }
+
+// Add CSS animation for fade-in effect
+const fadeInStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+`;
 
 export default function ProductInfoStep({
   products,
@@ -364,7 +378,25 @@ export default function ProductInfoStep({
   const quoteTypeMessage = getQuoteTypeMessage();
 
   return (
-    <div className="space-y-6">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: fadeInStyles }} />
+      <div className="space-y-6">
+        {/* Trust Signals Bar */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 flex items-center justify-center gap-6 text-xs sm:text-sm">
+        <div className="flex items-center gap-2 text-gray-600">
+          <Shield className="h-4 w-4 text-green-600" />
+          <span className="font-medium">SSL Secured</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-600">
+          <Lock className="h-4 w-4 text-blue-600" />
+          <span className="font-medium">Your data is safe</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-600">
+          <CheckCircle className="h-4 w-4 text-teal-600" />
+          <span className="font-medium">No hidden fees</span>
+        </div>
+      </div>
+
       {/* Clear Quote Type Selection */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="mb-6">
@@ -547,10 +579,10 @@ export default function ProductInfoStep({
 
         <div className="space-y-4">
           {products.map((product, index) => (
-            <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  <div className="w-6 h-6 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs font-bold animate-fade-in">
                     {index + 1}
                   </div>
                   <span className="font-medium text-gray-900 text-sm sm:text-base">
@@ -561,7 +593,8 @@ export default function ProductInfoStep({
                   <button
                     type="button"
                     onClick={() => removeProduct(index)}
-                    className="text-red-500 hover:text-red-700 p-1 rounded transition-colors"
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-all duration-150"
+                    title="Remove product"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -572,39 +605,52 @@ export default function ProductInfoStep({
               <div className="flex gap-2 sm:gap-3">
                 {/* Purchase Country - 18% on all screen sizes */}
                 <div className="w-[18%] min-w-[100px]">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                    Country *
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <span>Country *</span>
+                    <div className="group relative inline-block">
+                      <HelpCircle className="h-3 w-3 text-gray-400 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                        Where you're buying from
+                      </div>
+                    </div>
                     {quoteType === 'combined' && index > 0 && (
                       <span className="text-teal-600 ml-1 text-xs font-normal">
                         (Auto)
                       </span>
                     )}
                   </label>
-                  <select
-                    value={product.country}
-                    onChange={(e) => updateProduct(index, 'country', e.target.value)}
-                    className={`w-full h-[40px] sm:h-[48px] border rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
-                      quoteType === 'combined' && index > 0
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'border-gray-200 bg-white'
-                    }`}
-                    disabled={quoteType === 'combined' && index > 0}
-                  >
-                    <option value="">Select</option>
-                    {isLoading ? (
-                      <option>Loading...</option>
-                    ) : countryError ? (
-                      <option>Error</option>
-                    ) : Array.isArray(countries) ? (
-                      countries.map((country) => (
-                        <option key={country.code} value={country.code}>
-                          {country.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option>No countries</option>
+                  <div className="relative">
+                    <select
+                      value={product.country}
+                      onChange={(e) => updateProduct(index, 'country', e.target.value)}
+                      className={`w-full h-[40px] sm:h-[48px] border rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
+                        quoteType === 'combined' && index > 0
+                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          : 'border-gray-200 bg-white'
+                      } ${isLoading ? 'pr-8' : ''}`}
+                      disabled={quoteType === 'combined' && index > 0 || isLoading}
+                    >
+                      <option value="">Select</option>
+                      {isLoading ? (
+                        <option>Loading countries...</option>
+                      ) : countryError ? (
+                        <option>Error loading countries</option>
+                      ) : Array.isArray(countries) ? (
+                        countries.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option>No countries available</option>
+                      )}
+                    </select>
+                    {isLoading && (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                      </div>
                     )}
-                  </select>
+                  </div>
                   {errors[`country-${index}`] && (
                     <p className="text-red-500 text-xs mt-1">
                       {errors[`country-${index}`]}
@@ -629,11 +675,17 @@ export default function ProductInfoStep({
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
+                    aria-label={`Product ${index + 1} URL`}
+                    aria-required={!product.files?.length}
+                    aria-invalid={!!errors[`url-${index}`]}
+                    aria-describedby={errors[`url-${index}`] ? `url-error-${index}` : undefined}
                     className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                     placeholder="Paste product URL (Amazon, eBay, etc.) or upload files below"
                   />
                   {errors[`url-${index}`] && (
-                    <p className="text-red-500 text-xs mt-1">{errors[`url-${index}`]}</p>
+                    <p id={`url-error-${index}`} className="text-red-500 text-xs mt-1" role="alert">
+                      {errors[`url-${index}`]}
+                    </p>
                   )}
                 </div>
               </div>
@@ -648,6 +700,7 @@ export default function ProductInfoStep({
                     </label>
                     <input
                       type="number"
+                      inputMode="numeric"
                       min="1"
                       value={product.quantity}
                       onChange={(e) =>
@@ -670,6 +723,7 @@ export default function ProductInfoStep({
                     </label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       value={product.price}
                       onChange={(e) => updateProduct(index, 'price', e.target.value)}
@@ -685,6 +739,7 @@ export default function ProductInfoStep({
                     </label>
                     <input
                       type="number"
+                      inputMode="decimal"
                       step="0.01"
                       value={product.weight}
                       onChange={(e) => updateProduct(index, 'weight', e.target.value)}
@@ -750,13 +805,21 @@ export default function ProductInfoStep({
                   {/* Upload Files - 30% on mobile, 25% on desktop - Only show if files exist or user is authenticated */}
                   {(product.files && product.files.length > 0) || (user && !user.is_anonymous) ? (
                     <div className="w-[30%] sm:w-[25%] min-w-[100px] sm:min-w-[120px]">
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                        Files
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                        <span>Files</span>
+                        <div className="group relative inline-block">
+                          <HelpCircle className="h-3 w-3 text-gray-400 cursor-help" />
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                            Max 10MB per file • 5 files max
+                          </div>
+                        </div>
                       </label>
                       {(!user || user.is_anonymous) ? (
-                        <div 
-                          className="h-[40px] sm:h-[48px] flex items-center justify-center border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                        <button
+                          type="button"
+                          className="w-full h-[40px] sm:h-[48px] flex items-center justify-center border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
                           onClick={() => setShowSignInPrompt(true)}
+                          aria-label="Sign in to upload files"
                         >
                           <div className="flex items-center gap-1 sm:gap-2">
                             <LogIn className="h-4 w-4 text-blue-600" />
@@ -764,7 +827,7 @@ export default function ProductInfoStep({
                               Sign In
                             </span>
                           </div>
-                        </div>
+                        </button>
                       ) : (
                         <InlineFileUploadZone
                           onFilesChange={(files) => handleFilesChange(index, files)}
@@ -784,6 +847,38 @@ export default function ProductInfoStep({
         </div>
 
       </div>
+
+      {/* Smart Shipping Preview - Only show when we have destination and at least one product with country */}
+      {destinationCountry && products.some(p => p.country) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 animate-fade-in">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-blue-900 mb-1">Shipping Preview</h4>
+              <div className="text-xs text-blue-700 space-y-1">
+                {products.filter(p => p.country).map((product, index) => {
+                  const fromCountry = countries?.find(c => c.code === product.country)?.name || product.country;
+                  const toCountry = shippingCountries?.find(c => c.code === destinationCountry)?.name || destinationCountry;
+                  return (
+                    <div key={index} className="flex items-center gap-2">
+                      <span className="font-medium">Product {index + 1}:</span>
+                      <span>{fromCountry} → {toCountry}</span>
+                      {product.weight && (
+                        <span className="text-blue-600">({product.weight}kg)</span>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="mt-2 pt-2 border-t border-blue-200">
+                  <span className="text-blue-800 font-medium">
+                    💡 Tip: Adding weight helps us calculate accurate shipping costs
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons - Centered Add + Right Continue */}
       <div className="relative flex items-center justify-center mt-4 pt-4 border-t border-gray-100">
@@ -827,6 +922,7 @@ export default function ProductInfoStep({
         </DialogContent>
       </Dialog>
 
-    </div>
+      </div>
+    </>
   );
 }

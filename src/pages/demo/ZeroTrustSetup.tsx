@@ -27,9 +27,9 @@ export default function ZeroTrustSetup() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [config, setConfig] = useState({
-    appName: 'iwishBag Admin Dashboard',
-    domain: 'admin.iwishbag.com',
-    emailDomains: ['iwishbag.com', 'gmail.com'],
+    appName: 'whyteclub Admin Dashboard',
+    domain: 'whyteclub.cloudflareaccess.com/admin',
+    emailDomains: ['whyteclub.com', 'gmail.com'],
     sessionDuration: '24h',
     requireMFA: true,
   });
@@ -132,7 +132,7 @@ export default function ZeroTrustSetup() {
                       id="app-name"
                       value={config.appName}
                       onChange={(e) => setConfig(prev => ({ ...prev, appName: e.target.value }))}
-                      placeholder="iwishBag Admin Dashboard"
+                      placeholder="whyteclub Admin Dashboard"
                     />
                   </div>
 
@@ -142,7 +142,7 @@ export default function ZeroTrustSetup() {
                       id="domain"
                       value={config.domain}
                       onChange={(e) => setConfig(prev => ({ ...prev, domain: e.target.value }))}
-                      placeholder="admin.iwishbag.com"
+                      placeholder="whyteclub.cloudflareaccess.com/admin"
                     />
                   </div>
 
@@ -155,7 +155,7 @@ export default function ZeroTrustSetup() {
                         ...prev, 
                         emailDomains: e.target.value.split(',').map(d => d.trim()) 
                       }))}
-                      placeholder="iwishbag.com, gmail.com"
+                      placeholder="whyteclub.com, gmail.com"
                     />
                     <p className="text-xs text-gray-500">
                       Comma-separated list of email domains that can access the admin dashboard
@@ -328,27 +328,24 @@ export default function ZeroTrustSetup() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>DNS Configuration</CardTitle>
+                  <CardTitle>Path-Based Configuration</CardTitle>
                   <CardDescription>
-                    Add a DNS record for your admin subdomain
+                    Zero Trust will protect the /admin path on your domain
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
-                    <div className="grid grid-cols-3 gap-4 font-semibold text-gray-700 border-b pb-2 mb-2">
-                      <span>Type</span>
-                      <span>Name</span>
-                      <span>Target</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <span>CNAME</span>
-                      <span>admin</span>
-                      <span>iwishbag.com</span>
-                    </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-2">How it works:</h4>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li>• Access to whyteclub.com/admin will require authentication</li>
+                      <li>• Users will be redirected to Cloudflare login</li>
+                      <li>• After authentication, they'll access the admin dashboard</li>
+                      <li>• No DNS changes required - uses existing domain</li>
+                    </ul>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>Make sure proxy status is enabled (orange cloud)</span>
+                  <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>No DNS configuration needed for path-based access</span>
                   </div>
                 </CardContent>
               </Card>

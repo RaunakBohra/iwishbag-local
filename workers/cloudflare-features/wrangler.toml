@@ -1,4 +1,4 @@
-name = "iwishbag-cloudflare-features"
+name = "whyteclub-cloudflare-features"
 main = "index.ts"
 compatibility_date = "2023-12-01"
 account_id = "610762493d34333f1a6d72a037b345cf"
@@ -6,7 +6,8 @@ account_id = "610762493d34333f1a6d72a037b345cf"
 [vars]
 CF_API_TOKEN = "4Y_WjuGIEtTpK85hmE6XrGwbi85d8zN5Me0T_45l"
 CF_ZONE_ID = "2cd502a70fa04ec1619df21d7eb5e17c"
-SYNC_API_KEY = "iwishbag-cloudflare-features-2024"
+CF_ACCOUNT_ID = "610762493d34333f1a6d72a037b345cf"
+SYNC_API_KEY = "whyteclub-cloudflare-features-2024"
 
 [[routes]]
 pattern = "whyteclub.com/api/cloudflare/*"

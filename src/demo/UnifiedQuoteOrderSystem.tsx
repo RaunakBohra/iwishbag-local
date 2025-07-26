@@ -274,10 +274,10 @@ export default function UnifiedQuoteOrderSystem({
       try {
         setIsLoadingHSN(true);
         
-        // Fetch HSN codes directly from database with keywords for enhanced search
+        // Fetch HSN codes directly from database with keywords and category for enhanced search
         const { data: hsnRecords, error } = await supabase
           .from('hsn_master')
-          .select('hsn_code, description, tax_data, keywords')
+          .select('hsn_code, description, category, subcategory, tax_data, keywords')
           .eq('is_active', true)
           .order('hsn_code');
         
@@ -289,6 +289,8 @@ export default function UnifiedQuoteOrderSystem({
         const transformedCodes = (hsnRecords || []).map((record: any) => ({
           code: record.hsn_code,
           description: record.description,
+          category: record.category,
+          subcategory: record.subcategory,
           keywords: record.keywords || [], // Include keywords for enhanced search
           rate: record.tax_data?.typical_rates?.customs?.common || 
                 record.tax_data?.typical_rates?.gst?.standard || 
@@ -389,6 +391,33 @@ export default function UnifiedQuoteOrderSystem({
   const daysUntilExpiry = quote.expires_at ? Math.ceil(
     (new Date(quote.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   ) : null;
+
+  // Populate HSN categories for existing items
+  useEffect(() => {
+    if (hsnCodes.length > 0 && items.length > 0) {
+      const updatedItems = items.map(item => {
+        if (item.hsn_code && !item.hsn_category) {
+          const hsnData = hsnCodes.find(hsn => hsn.code === item.hsn_code);
+          if (hsnData && hsnData.category) {
+            return {
+              ...item,
+              hsn_category: hsnData.category
+            };
+          }
+        }
+        return item;
+      });
+      
+      // Only update if categories were added
+      const hasChanges = updatedItems.some((item, index) => 
+        items[index].hsn_category !== item.hsn_category
+      );
+      
+      if (hasChanges) {
+        setItems(updatedItems);
+      }
+    }
+  }, [hsnCodes]); // Only run when hsnCodes are loaded
 
 
   // Recalculate quote when items change
@@ -1607,7 +1636,7 @@ export default function UnifiedQuoteOrderSystem({
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border rounded-lg">
                       <table className="w-full table-fixed">
                         <colgroup>
                           <col style={{ width: '25%' }} />  {/* Product */}
@@ -1618,43 +1647,74 @@ export default function UnifiedQuoteOrderSystem({
                           {orderMode && <col style={{ width: '10%' }} />}  {/* Variance */}
                           <col style={{ width: orderMode ? '6%' : '16%' }} />  {/* Actions */}
                         </colgroup>
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
-                            <th className="text-left px-3 py-3 font-medium text-gray-900 text-sm">Product</th>
-                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Price & Qty</th>
-                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Weight & HSN</th>
-                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Tax Method</th>
-                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Valuation</th>
+                            <th className="text-left px-6 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Product</th>
+                            <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Price</th>
+                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Weight & HSN</th>
+                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Tax</th>
+                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Valuation</th>
                             {orderMode && (
-                              <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Variance</th>
+                              <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Variance</th>
                             )}
-                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Actions</th>
+                            <th className="text-center px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y">
+                        <tbody className="divide-y divide-gray-100">
                           {items.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                              <td className="px-3 py-3">
-                                <div className="flex items-center gap-2">
+                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-4 py-4 relative">
+                                <div className="flex items-center gap-2 min-w-0">
                                   {item.image_url && (
                                     <img 
                                       src={item.image_url} 
                                       alt={item.product_name}
-                                      className="w-10 h-10 object-cover rounded"
+                                      className="w-10 h-10 object-cover rounded flex-shrink-0"
                                     />
                                   )}
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <InlineEdit
-                                        fieldId={`product_name-${item.id}`}
-                                        value={item.product_name}
-                                        className="w-full max-w-xs"
-                                        itemId={item.id}
-                                      />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className="flex-1 min-w-0">
+                                        <InlineEdit
+                                          fieldId={`product_name-${item.id}`}
+                                          value={item.product_name}
+                                          className="w-full text-sm"
+                                          itemId={item.id}
+                                          customDisplay={(value, isEditing, startEdit) => {
+                                            if (isEditing) return null;
+                                            return (
+                                              <div 
+                                                onClick={startEdit}
+                                                className="cursor-pointer hover:bg-blue-50 px-2 py-1 -mx-2 -my-1 rounded group flex items-center gap-1"
+                                                onMouseEnter={(e) => {
+                                                  const rect = e.currentTarget.getBoundingClientRect();
+                                                  const tooltip = e.currentTarget.querySelector('.tooltip-content');
+                                                  if (tooltip) {
+                                                    tooltip.style.position = 'fixed';
+                                                    tooltip.style.left = `${rect.left}px`;
+                                                    tooltip.style.top = `${rect.bottom + 4}px`;
+                                                    tooltip.style.zIndex = '9999';
+                                                  }
+                                                }}
+                                              >
+                                                <span className="truncate block">{value || '-'}</span>
+                                                <div 
+                                                  className="tooltip-content opacity-0 group-hover:opacity-100 bg-gray-900 text-white shadow-xl border border-gray-700 rounded px-3 py-2 whitespace-nowrap text-sm pointer-events-none transition-opacity duration-0"
+                                                  style={{ position: 'fixed' }}
+                                                >
+                                                  {value || '-'}
+                                                  <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
+                                                </div>
+                                                <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-50 flex-shrink-0" />
+                                              </div>
+                                            );
+                                          }}
+                                        />
+                                      </div>
                                       {item.customer_notes && (
                                         <Popover open={notesPopoverOpen === item.id} onOpenChange={(open) => setNotesPopoverOpen(open ? item.id : null)}>
                                           <PopoverTrigger>
-                                            <Badge variant="secondary" className="cursor-pointer">
+                                            <Badge variant="secondary" className="cursor-pointer flex-shrink-0">
                                               <MessageCircle className="w-3 h-3" />
                                             </Badge>
                                           </PopoverTrigger>
@@ -1683,20 +1743,26 @@ export default function UnifiedQuoteOrderSystem({
                                           }
                                           // Show blue domain box + edit button
                                           return (
-                                            <div className="flex items-center gap-1">
-                                              <div className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-200 text-xs font-medium">
+                                            <div className="group flex items-center gap-1">
+                                              <a 
+                                                href={value}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded-md border border-blue-200 hover:border-blue-300 transition-all duration-200 text-xs font-medium"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
                                                 {(() => {
                                                   try {
-                                                    const domain = new URL(value).hostname.replace('www.', '');
+                                                    const domain = new URL(value).hostname;
                                                     return domain;
                                                   } catch {
                                                     return 'Link';
                                                   }
                                                 })()}
-                                              </div>
+                                              </a>
                                               <button 
                                                 onClick={startEdit}
-                                                className="w-6 h-6 p-1 hover:bg-gray-100 rounded transition-colors text-gray-600 hover:text-gray-800"
+                                                className="w-6 h-6 p-1 hover:bg-gray-100 rounded transition-all duration-200 text-gray-600 hover:text-gray-800 opacity-0 group-hover:opacity-100"
                                                 title="Edit URL"
                                               >
                                                 <Edit2 className="w-4 h-4" />
@@ -1751,30 +1817,31 @@ export default function UnifiedQuoteOrderSystem({
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-2 py-3 text-center">
-                                <div className="space-y-1">
+                              <td className="px-4 py-4 text-right">
+                                <div className="space-y-2">
                                   <InlineEdit
                                     fieldId={`price-${item.id}`}
                                     value={item.price}
                                     type="number"
                                     prefix="$"
-                                    className="w-20"
+                                    className="font-semibold text-gray-900 text-base inline-block text-right"
                                     itemId={item.id}
                                   />
-                                  <div className="text-xs text-gray-500">
-                                    × <InlineEdit
+                                  <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
+                                    <span>×</span>
+                                    <InlineEdit
                                       fieldId={`quantity-${item.id}`}
                                       value={item.quantity}
                                       type="number"
-                                      className="w-12"
+                                      className="w-12 text-right"
                                       itemId={item.id}
                                     />
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-2 py-3">
-                                <div className="space-y-2">
-                                  <div className="w-full">
+                              <td className="px-4 py-4">
+                                <div className="space-y-2 overflow-hidden">
+                                  <div className="w-full min-w-0">
                                     <SmartDualWeightField
                                       value={item.weight || 0}
                                       onChange={(weight) => {
@@ -1936,8 +2003,19 @@ export default function UnifiedQuoteOrderSystem({
                                   </div>
                                   <Popover open={hsnSearchOpen === item.id} onOpenChange={(open) => setHsnSearchOpen(open ? item.id : null)}>
                                     <PopoverTrigger>
-                                      <Badge variant="outline" className="cursor-pointer text-xs w-full justify-center truncate">
-                                        {item.hsn_code || 'No HSN'}
+                                      <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">
+                                        {item.hsn_code ? (
+                                          <div className="text-center">
+                                            <div className="font-medium">{item.hsn_code}</div>
+                                            {item.hsn_category && (
+                                              <div className="text-gray-500 text-[10px] capitalize mt-0.5">
+                                                {item.hsn_category}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          'No HSN'
+                                        )}
                                       </Badge>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-80">
@@ -2069,8 +2147,12 @@ export default function UnifiedQuoteOrderSystem({
                                               key={hsn.code}
                                               className="p-2 hover:bg-gray-100 rounded cursor-pointer border-l-2 border-transparent hover:border-blue-300"
                                               onClick={async () => {
-                                                // Update HSN code
-                                                let updatedItem = { ...item, hsn_code: hsn.code };
+                                                // Update HSN code and category
+                                                let updatedItem = { 
+                                                  ...item, 
+                                                  hsn_code: hsn.code,
+                                                  hsn_category: hsn.category || hsn.subcategory || ''
+                                                };
                                                 
                                                 // Fetch weight data from HSN
                                                 try {
@@ -2122,6 +2204,11 @@ export default function UnifiedQuoteOrderSystem({
                                               <div className="flex-1">
                                                 <div className="flex items-center gap-2">
                                                   <p className="font-medium text-sm">{hsn.code}</p>
+                                                  {hsn.category && (
+                                                    <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 capitalize">
+                                                      {hsn.category}
+                                                    </Badge>
+                                                  )}
                                                   <WeightPreview />
                                                 </div>
                                                 <p className="text-xs text-gray-500">{hsn.description}</p>
