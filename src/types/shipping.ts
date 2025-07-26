@@ -149,8 +149,6 @@ export interface ShippingRouteFormData {
   originCountry: string; // Purchase country (all costs below are in this currency)
   destinationCountry: string;
   exchangeRate: number; // Exchange rate from origin to destination currency
-  vatPercentage?: number; // Route-specific VAT override (% for destination country)
-  customsPercentage?: number; // Route-specific customs override (% for destination country)
   baseShippingCost: number; // In origin country currency
   shippingPerKg: number; // In origin country currency (replaces costPerKg)
   costPercentage: number; // In origin country currency

@@ -18,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '../../hooks/use-toast';
 import { useCountryUtils } from '../../lib/countryUtils';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import type {
   ShippingRouteFormData,
   DeliveryOption,
@@ -42,7 +42,7 @@ interface ShippingRouteFormProps {
 }
 
 function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFormProps) {
-  const { data: countries = [] } = useAllCountries();
+  const { data: countries = [], isLoading: countriesLoading } = useAllCountries();
   const [formData, setFormData] = useState<ShippingRouteFormData>({
     id: initialData?.id,
     originCountry: initialData?.originCountry || '',
@@ -94,8 +94,6 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
     requiresDocumentation: initialData?.requiresDocumentation || false,
     isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
     exchangeRate: initialData?.exchangeRate ?? 1,
-    vatPercentage: initialData?.vatPercentage,
-    customsPercentage: initialData?.customsPercentage,
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -132,7 +130,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         if (!initialData?.exchangeRate) {
           toast({
             title: 'Exchange Rate Updated',
-            description: `Calculated rate: 1 ${currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(originCountry))} = ${calculatedRate} ${currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(destinationCountry))}`,
+            description: `Calculated rate: 1 ${optimizedCurrencyService.getCurrencySymbol(optimizedCurrencyService.getCurrencyForCountrySync(originCountry))} = ${calculatedRate} ${optimizedCurrencyService.getCurrencySymbol(optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry))}`,
           });
         }
       }
@@ -248,11 +246,17 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
               <SelectValue placeholder="Select origin country" />
             </SelectTrigger>
             <SelectContent>
-              {countries.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
-                  {country.name} ({country.code})
-                </SelectItem>
-              ))}
+              {countriesLoading ? (
+                <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+              ) : countries.length > 0 ? (
+                countries.map((country: any) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    {country.name} ({country.code})
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -272,11 +276,17 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
               <SelectValue placeholder="Select destination country" />
             </SelectTrigger>
             <SelectContent>
-              {countries.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
-                  {country.name} ({country.code})
-                </SelectItem>
-              ))}
+              {countriesLoading ? (
+                <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+              ) : countries.length > 0 ? (
+                countries.map((country: any) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    {country.name} ({country.code})
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -288,8 +298,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         {formData.originCountry && (
           <div className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">
             <strong>Currency:</strong> All costs below should be entered in{' '}
-            {currencyService.getCurrencySymbol(
-              currencyService.getCurrencyForCountrySync(formData.originCountry),
+            {optimizedCurrencyService.getCurrencySymbol(
+              optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry),
             )}{' '}
             ({formData.originCountry} currency)
           </div>
@@ -368,12 +378,12 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
             {formData.originCountry && formData.destinationCountry && (
               <div className="text-xs text-gray-500 mt-1">
                 1{' '}
-                {currencyService.getCurrencySymbol(
-                  currencyService.getCurrencyForCountrySync(formData.originCountry),
+                {optimizedCurrencyService.getCurrencySymbol(
+                  optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry),
                 )}{' '}
                 = {formData.exchangeRate}{' '}
-                {currencyService.getCurrencySymbol(
-                  currencyService.getCurrencyForCountrySync(formData.destinationCountry),
+                {optimizedCurrencyService.getCurrencySymbol(
+                  optimizedCurrencyService.getCurrencyForCountrySync(formData.destinationCountry),
                 )}
                 {formData.exchangeRate !== 1 && (
                   <span className="ml-2 text-green-600 font-medium">✓ Auto-calculated</span>
@@ -385,56 +395,6 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       </div>
 
       {/* VAT & Customs Configuration */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Tax Configuration</h3>
-        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-          <strong>VAT Hierarchy:</strong> Configure route-specific VAT and customs rates. If left empty, system will fallback to destination country defaults.
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="vatPercentage">VAT Percentage (%)</Label>
-            <Input
-              id="vatPercentage"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              value={formData.vatPercentage || ''}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  vatPercentage: e.target.value ? parseFloat(e.target.value) : undefined,
-                }))
-              }
-              placeholder="e.g., 13.00 (leave empty for country default)"
-            />
-            <div className="text-xs text-gray-500 mt-1">
-              Route-specific VAT override for {formData.destinationCountry || 'destination country'}
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="customsPercentage">Customs Percentage (%)</Label>
-            <Input
-              id="customsPercentage"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              value={formData.customsPercentage || ''}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  customsPercentage: e.target.value ? parseFloat(e.target.value) : undefined,
-                }))
-              }
-              placeholder="e.g., 5.00 (leave empty for country default)"
-            />
-            <div className="text-xs text-gray-500 mt-1">
-              Route-specific customs duty override for {formData.destinationCountry || 'destination country'}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Processing Times */}
       <div className="space-y-4">
@@ -561,8 +521,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         onUpdateDeliveryOptions={(options) =>
           setFormData((prev) => ({ ...prev, deliveryOptions: options }))
         }
-        currencySymbol={currencyService.getCurrencySymbol(
-          currencyService.getCurrencyForCountrySync(formData.originCountry),
+        currencySymbol={optimizedCurrencyService.getCurrencySymbol(
+          optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry),
         )}
       />
 
@@ -671,8 +631,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
                 className="w-24"
               />
               <span className="text-xs text-gray-500">
-                {currencyService.getCurrencySymbol(
-                  currencyService.getCurrencyForCountrySync(formData.originCountry || 'US'),
+                {optimizedCurrencyService.getCurrencySymbol(
+                  optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry || 'US'),
                 )}
               </span>
             </div>
@@ -704,7 +664,7 @@ export function ShippingRouteManager() {
     'routes' | 'customs' | 'rates' | 'countries' | 'markups'
   >('routes');
   const { routes, loading, error, createRoute, updateRoute, removeRoute } = useShippingRoutes();
-  const { data: _countries = [] } = useAllCountries();
+  const { data: _countries = [], isLoading: _countriesLoading } = useAllCountries();
   const [editingRoute, setEditingRoute] = useState<Tables<'shipping_routes'> | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -743,7 +703,7 @@ export function ShippingRouteManager() {
     originCountry: route.origin_country,
     destinationCountry: route.destination_country,
     baseShippingCost: route.base_shipping_cost,
-    shippingPerKg: route.shipping_per_kg || route.cost_per_kg || 0,
+    shippingPerKg: route.shipping_per_kg || 0,
     costPercentage: route.cost_percentage || 0,
     processingDays: route.processing_days || 2,
     customsClearanceDays: route.customs_clearance_days || 3,
@@ -756,8 +716,6 @@ export function ShippingRouteManager() {
     requiresDocumentation: route.requires_documentation || false,
     isActive: route.is_active !== undefined ? route.is_active : true,
     exchangeRate: route.exchange_rate ?? 1,
-    vatPercentage: route.vat_percentage,
-    customsPercentage: route.customs_percentage,
   });
 
   if (loading) {
@@ -896,25 +854,25 @@ export function ShippingRouteManager() {
                       </CardTitle>
                       <CardDescription>
                         Base:{' '}
-                        {currencyService.getCurrencySymbol(
-                          currencyService.getCurrencyForCountrySync(route.origin_country),
+                        {optimizedCurrencyService.getCurrencySymbol(
+                          optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                         )}
                         {route.base_shipping_cost} +{' '}
-                        {currencyService.getCurrencySymbol(
-                          currencyService.getCurrencyForCountrySync(route.origin_country),
+                        {optimizedCurrencyService.getCurrencySymbol(
+                          optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                         )}
-                        {route.shipping_per_kg || route.cost_per_kg || 0}/
+                        {route.shipping_per_kg || 0}/
                         {route.weight_unit || 'kg'}
                         {route.cost_percentage > 0 && ` + ${route.cost_percentage}% of price`}
                         {route.exchange_rate && route.exchange_rate !== 1 && (
                           <span className="text-xs text-teal-600 block mt-1">
                             Rate: 1{' '}
-                            {currencyService.getCurrencySymbol(
-                              currencyService.getCurrencyForCountrySync(route.origin_country),
+                            {optimizedCurrencyService.getCurrencySymbol(
+                              optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                             )}{' '}
                             = {route.exchange_rate}{' '}
-                            {currencyService.getCurrencySymbol(
-                              currencyService.getCurrencyForCountrySync(route.destination_country),
+                            {optimizedCurrencyService.getCurrencySymbol(
+                              optimizedCurrencyService.getCurrencyForCountrySync(route.destination_country),
                             )}
                           </span>
                         )}
@@ -956,8 +914,8 @@ export function ShippingRouteManager() {
                             <li key={index}>
                               {tier.min}-{tier.max || '∞'}
                               {route.weight_unit || 'kg'}:{' '}
-                              {currencyService.getCurrencySymbol(
-                                currencyService.getCurrencyForCountrySync(route.origin_country),
+                              {optimizedCurrencyService.getCurrencySymbol(
+                                optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                               )}
                               {tier.cost}
                             </li>
@@ -1028,7 +986,10 @@ export function ShippingRouteManager() {
             </div>
           </div>
           <div className="grid gap-4">
-            {_countries.map((country) => (
+            {_countriesLoading ? (
+              <div className="text-center py-8">Loading countries...</div>
+            ) : _countries.length > 0 ? (
+              _countries.map((country: any) => (
               <Card key={country.code}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1041,8 +1002,8 @@ export function ShippingRouteManager() {
                       </CardTitle>
                       <CardDescription>
                         Exchange Rate: {country.rate_from_usd} {country.currency}/USD
-                        {country.customs_percent > 0 && ` • Customs: ${country.customs_percent}%`}
-                        {country.vat_percent > 0 && ` • VAT: ${country.vat_percent}%`}
+                        {country.sales_tax > 0 && ` • Sales Tax: ${country.sales_tax}%`}
+                        {country.vat > 0 && ` • VAT: ${country.vat}%`}
                       </CardDescription>
                     </div>
                     <div className="flex space-x-2">
@@ -1068,43 +1029,15 @@ export function ShippingRouteManager() {
                     <div>
                       <strong>Payment Gateway:</strong>
                       <div className="mt-1 space-y-1">
-                        {country.payment_gateway_fixed_fee > 0 && (
-                          <div>
-                            Fixed Fee:{' '}
-                            {currencyService.getCurrencySymbol(
-                              currencyService.getCurrencyForCountrySync(country.code),
-                            )}
-                            {country.payment_gateway_fixed_fee}
-                          </div>
-                        )}
-                        {country.payment_gateway_percent_fee > 0 && (
-                          <div>Percent Fee: {country.payment_gateway_percent_fee}%</div>
-                        )}
-                        {country.payment_gateway_fixed_fee === 0 &&
-                          country.payment_gateway_percent_fee === 0 && (
-                            <div className="text-gray-500">No gateway fees</div>
-                          )}
+                        <div>Gateway: {country.payment_gateway || 'stripe'}</div>
+                        <div>Default: {country.default_gateway || 'bank_transfer'}</div>
                       </div>
                     </div>
                     <div>
-                      <strong>Markups:</strong>
+                      <strong>Shipping:</strong>
                       <div className="mt-1 space-y-1">
-                        {country.country_markup_percentage > 0 && (
-                          <div>Country Markup: {country.country_markup_percentage}%</div>
-                        )}
-                        {country.country_markup_fixed > 0 && (
-                          <div>
-                            Fixed Markup:{' '}
-                            {currencyService.getCurrencySymbol(
-                              currencyService.getCurrencyForCountrySync(country.code),
-                            )}
-                            {country.country_markup_fixed}
-                          </div>
-                        )}
-                        {country.country_markup_percentage === 0 &&
-                          country.country_markup_fixed === 0 && (
-                            <div className="text-gray-500">No markups</div>
-                          )}
+                        <div>Min Shipping: {country.min_shipping || 0}</div>
+                        <div>Additional: {country.additional_shipping || 0}</div>
                       </div>
                     </div>
                   </div>
@@ -1129,9 +1062,12 @@ export function ShippingRouteManager() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ))
+            ) : (
+              <div className="text-center py-8">No countries available</div>
+            )}
           </div>
-          {_countries.length === 0 && (
+          {!_countriesLoading && _countries.length === 0 && (
             <Card>
               <CardContent className="text-center py-8">
                 <p className="text-gray-600">No countries configured yet.</p>
