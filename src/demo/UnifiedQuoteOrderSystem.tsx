@@ -930,10 +930,43 @@ export default function UnifiedQuoteOrderSystem({
     prefix = '', 
     suffix = '',
     className = '',
-    itemId
+    itemId,
+    placeholder = '',
+    customDisplay
   }: any) => {
     const isEditing = editingField === fieldId;
+    const startEditFn = () => startEdit(fieldId, value);
 
+    // If customDisplay is provided, use it for rendering
+    if (customDisplay) {
+      const rendered = customDisplay(value, isEditing, startEditFn);
+      // If customDisplay returns something in edit mode, show input
+      if (isEditing && rendered === null) {
+        return (
+          <div className="flex items-center gap-1">
+            {prefix && <span className="text-gray-500">{prefix}</span>}
+            <Input
+              type={type}
+              value={tempValues[fieldId] || value}
+              onChange={(e) => setTempValues({ ...tempValues, [fieldId]: e.target.value })}
+              className={cn("h-7", className)}
+              placeholder={placeholder}
+              autoFocus
+              onBlur={() => saveEdit(fieldId, itemId)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEdit(fieldId, itemId);
+                if (e.key === 'Escape') cancelEdit();
+              }}
+            />
+            {suffix && <span className="text-gray-500">{suffix}</span>}
+          </div>
+        );
+      }
+      // Otherwise show custom display
+      return rendered;
+    }
+
+    // Default behavior without customDisplay
     if (isEditing) {
       return (
         <div className="flex items-center gap-1">
@@ -943,6 +976,7 @@ export default function UnifiedQuoteOrderSystem({
             value={tempValues[fieldId] || value}
             onChange={(e) => setTempValues({ ...tempValues, [fieldId]: e.target.value })}
             className={cn("h-7 w-20", className)}
+            placeholder={placeholder}
             autoFocus
             onBlur={() => saveEdit(fieldId, itemId)}
             onKeyDown={(e) => {
@@ -961,7 +995,7 @@ export default function UnifiedQuoteOrderSystem({
         onClick={() => startEdit(fieldId, value)}
       >
         {prefix && <span className="text-gray-500">{prefix}</span>}
-        <span>{value || '-'}</span>
+        <span>{value || placeholder || '-'}</span>
         {suffix && <span className="text-gray-500">{suffix}</span>}
         <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-50" />
       </div>
@@ -1633,19 +1667,44 @@ export default function UnifiedQuoteOrderSystem({
                                         </Popover>
                                       )}
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                       <InlineEdit
                                         fieldId={`product_url-${item.id}`}
                                         value={item.product_url || ''}
-                                        placeholder="https://amazon.com/..."
+                                        placeholder="Click to add URL..."
                                         className="flex-1 max-w-xs text-xs"
                                         itemId={item.id}
+                                        customDisplay={(value, isEditing, startEdit) => {
+                                          if (!value && !isEditing) {
+                                            return null; // Will show placeholder
+                                          }
+                                          if (isEditing) {
+                                            return null; // Will show input
+                                          }
+                                          // Show blue domain box + edit button
+                                          return (
+                                            <div className="flex items-center gap-1">
+                                              <div className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-200 text-xs font-medium">
+                                                {(() => {
+                                                  try {
+                                                    const domain = new URL(value).hostname.replace('www.', '');
+                                                    return domain;
+                                                  } catch {
+                                                    return 'Link';
+                                                  }
+                                                })()}
+                                              </div>
+                                              <button 
+                                                onClick={startEdit}
+                                                className="w-6 h-6 p-1 hover:bg-gray-100 rounded transition-colors text-gray-600 hover:text-gray-800"
+                                                title="Edit URL"
+                                              >
+                                                <Edit2 className="w-4 h-4" />
+                                              </button>
+                                            </div>
+                                          );
+                                        }}
                                       />
-                                      {item.product_url && (
-                                        <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                                          <ExternalLink className="w-3 h-3" />
-                                        </a>
-                                      )}
                                     </div>
                                     
                                     {/* Files Section - Admin can manage customer uploaded files */}

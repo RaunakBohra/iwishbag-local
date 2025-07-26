@@ -747,34 +747,36 @@ export default function ProductInfoStep({
                     )}
                   </div>
 
-                  {/* Upload Files - 30% on mobile, 25% on desktop */}
-                  <div className="w-[30%] sm:w-[25%] min-w-[100px] sm:min-w-[120px]">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                      Files
-                    </label>
-                    {(!user || user.is_anonymous) ? (
-                      <div 
-                        className="h-[40px] sm:h-[48px] flex items-center justify-center border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
-                        onClick={() => setShowSignInPrompt(true)}
-                      >
-                        <div className="flex items-center gap-1 sm:gap-2">
-                          <LogIn className="h-4 w-4 text-blue-600" />
-                          <span className="text-blue-700 text-xs sm:text-sm font-medium hidden sm:inline">
-                            Sign In
-                          </span>
+                  {/* Upload Files - 30% on mobile, 25% on desktop - Only show if files exist or user is authenticated */}
+                  {(product.files && product.files.length > 0) || (user && !user.is_anonymous) ? (
+                    <div className="w-[30%] sm:w-[25%] min-w-[100px] sm:min-w-[120px]">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        Files
+                      </label>
+                      {(!user || user.is_anonymous) ? (
+                        <div 
+                          className="h-[40px] sm:h-[48px] flex items-center justify-center border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                          onClick={() => setShowSignInPrompt(true)}
+                        >
+                          <div className="flex items-center gap-1 sm:gap-2">
+                            <LogIn className="h-4 w-4 text-blue-600" />
+                            <span className="text-blue-700 text-xs sm:text-sm font-medium hidden sm:inline">
+                              Sign In
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <InlineFileUploadZone
-                        onFilesChange={(files) => handleFilesChange(index, files)}
-                        onFileUpload={(file) => handleFileUpload(index, file)}
-                        uploadedFiles={product.files || []}
-                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                        maxSize={10 * 1024 * 1024} // 10MB
-                        maxFiles={5}
-                      />
-                    )}
-                  </div>
+                      ) : (
+                        <InlineFileUploadZone
+                          onFilesChange={(files) => handleFilesChange(index, files)}
+                          onFileUpload={(file) => handleFileUpload(index, file)}
+                          uploadedFiles={product.files || []}
+                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                          maxSize={10 * 1024 * 1024} // 10MB
+                          maxFiles={5}
+                        />
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

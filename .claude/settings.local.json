@@ -187,7 +187,8 @@
       "Bash(wrangler logout:*)",
       "Bash(wrangler login:*)",
       "Bash(git reset:*)",
-      "Bash(npx wrangler deploy:*)"
+      "Bash(npx wrangler deploy:*)",
+      "Bash(npx wrangler dev:*)"
     ],
     "deny": []
   }
