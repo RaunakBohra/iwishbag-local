@@ -1837,23 +1837,109 @@ export default function UnifiedQuoteOrderSystem({
                               <td className="px-4 py-4">
                                 <div className="space-y-2 overflow-hidden">
                                   <div className="w-full min-w-0">
-                                    <div className="flex items-center gap-1">
-                                      <input
-                                        type="number"
-                                        value={item.weight || 0}
-                                        onChange={(e) => {
-                                          const weight = parseFloat(e.target.value) || 0;
-                                          const updatedItems = items.map(i => 
-                                            i.id === item.id ? { ...i, weight } : i
-                                          );
-                                          setItems(updatedItems);
-                                          recalculateQuote(updatedItems);
-                                        }}
-                                        className="w-16 px-2 py-1 text-xs text-center border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
-                                        step="0.001"
-                                        min="0"
-                                      />
-                                      <span className="text-xs text-gray-600">kg</span>
+                                    {/* Weight Method Tabs */}
+                                    <div>
+                                      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Weight</label>
+                                      <div className="inline-flex items-end gap-3 border-b border-gray-200">
+                                        <button
+                                          onClick={() => {
+                                            const updatedItems = items.map(i => 
+                                              i.id === item.id ? { ...i, weight_source: 'manual' } : i
+                                            );
+                                            setItems(updatedItems);
+                                          }}
+                                          className={cn(
+                                            "pb-1 px-1 text-xs transition-all relative flex items-center gap-1",
+                                            (item.weight_source === 'manual' || !item.weight_source)
+                                              ? "text-gray-700 font-medium" 
+                                              : "text-gray-500 hover:text-gray-700"
+                                          )}
+                                        >
+                                          Manual
+                                          {(item.weight_source === 'manual' || !item.weight_source) && (
+                                            <>
+                                              <span className="text-gray-600">:</span>
+                                              <input
+                                                type="number"
+                                                value={item.weight || 0}
+                                                onChange={(e) => {
+                                                  e.stopPropagation();
+                                                  const weight = parseFloat(e.target.value) || 0;
+                                                  const updatedItems = items.map(i => 
+                                                    i.id === item.id ? { ...i, weight, weight_source: 'manual' } : i
+                                                  );
+                                                  setItems(updatedItems);
+                                                  recalculateQuote(updatedItems);
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="w-12 px-1 text-xs text-center text-gray-700 font-medium bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
+                                                step="0.001"
+                                                min="0"
+                                              />
+                                              <span className="text-xs text-gray-600">kg</span>
+                                            </>
+                                          )}
+                                          {(item.weight_source === 'manual' || !item.weight_source) && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-600" />
+                                          )}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            // TODO: Fetch HSN weight and update
+                                            const hsnWeight = 0.75; // Mock HSN weight
+                                            const updatedItems = items.map(i => 
+                                              i.id === item.id ? { ...i, weight: hsnWeight, weight_source: 'hsn' } : i
+                                            );
+                                            setItems(updatedItems);
+                                            recalculateQuote(updatedItems);
+                                          }}
+                                          className={cn(
+                                            "pb-1 px-1 text-xs transition-all relative",
+                                            item.weight_source === 'hsn'
+                                              ? "text-green-600 font-medium" 
+                                              : "text-gray-500 hover:text-gray-700"
+                                          )}
+                                        >
+                                          HSN
+                                          {item.weight_source === 'hsn' && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500" />
+                                          )}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            // TODO: Fetch ML weight and update
+                                            const mlWeight = 0.68; // Mock ML weight
+                                            const updatedItems = items.map(i => 
+                                              i.id === item.id ? { ...i, weight: mlWeight, weight_source: 'ml' } : i
+                                            );
+                                            setItems(updatedItems);
+                                            recalculateQuote(updatedItems);
+                                          }}
+                                          className={cn(
+                                            "pb-1 px-1 text-xs transition-all relative",
+                                            item.weight_source === 'ml'
+                                              ? "text-blue-600 font-medium" 
+                                              : "text-gray-500 hover:text-gray-700"
+                                          )}
+                                        >
+                                          ML
+                                          {item.weight_source === 'ml' && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />
+                                          )}
+                                        </button>
+                                      </div>
+                                      
+                                      {/* Display current weight value below tabs */}
+                                      {item.weight_source && item.weight_source !== 'manual' && (
+                                        <div className="mt-1 text-xs">
+                                          {item.weight_source === 'hsn' && (
+                                            <span className="text-green-600 font-medium">{item.weight} kg (HSN data)</span>
+                                          )}
+                                          {item.weight_source === 'ml' && (
+                                            <span className="text-blue-600 font-medium">{item.weight} kg (ML prediction)</span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                     {item.weight_source && (
                                       <Popover>
