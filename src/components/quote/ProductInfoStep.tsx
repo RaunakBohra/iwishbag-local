@@ -517,67 +517,6 @@ export default function ProductInfoStep({
           )}
         </div>
 
-        {/* Location Detection Debug Info */}
-        {(locationDebug.isDetecting || locationDebug.detectionMethod || locationDebug.error) && (
-          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs">
-            <div className="flex items-center gap-2 mb-2">
-              <Globe className="h-4 w-4 text-gray-500" />
-              <span className="font-medium text-gray-700">Location Detection</span>
-            </div>
-            
-            {locationDebug.isDetecting ? (
-              <div className="flex items-center gap-2 text-blue-600">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span>Detecting your location...</span>
-              </div>
-            ) : locationDebug.error ? (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-red-600">
-                  <AlertCircle className="h-3 w-3" />
-                  <span>Detection failed: {locationDebug.error}</span>
-                </div>
-                <div className="text-gray-500">Please select your country manually</div>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-600" />
-                  <span className="text-gray-700">
-                    Detected via {locationDebug.detectionMethod === 'ip' ? 'IP address' : 
-                                locationDebug.detectionMethod === 'timezone' ? 'browser timezone' : 'manual selection'}
-                  </span>
-                </div>
-                
-                {locationDebug.detectedLocation && (
-                  <div className="text-gray-600 pl-5">
-                    {locationDebug.detectedLocation.city && (
-                      <div>📍 {locationDebug.detectedLocation.city}, {locationDebug.detectedLocation.country}</div>
-                    )}
-                    {locationDebug.detectedLocation.timezone && (
-                      <div>🕐 Timezone: {locationDebug.detectedLocation.timezone}</div>
-                    )}
-                    {locationDebug.detectionMethod === 'ip' && (
-                      <div className="text-orange-600 mt-1">
-                        💡 Using VPN? Location might be inaccurate
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {locationDebug.detectedCountry && (
-                  <div className="text-gray-600 pl-5">
-                    Country: {locationDebug.detectedCountry} 
-                    {locationDebug.isSupported ? (
-                      <span className="text-green-600 ml-1">✓ Shipping available</span>
-                    ) : (
-                      <span className="text-red-600 ml-1">✗ Shipping not available</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Country Validation Error */}
@@ -629,10 +568,10 @@ export default function ProductInfoStep({
                 )}
               </div>
 
-              {/* Row 1: Purchase Country + Product URL */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                {/* Purchase Country - 18% on desktop (40% less than 30%) */}
-                <div className="sm:w-[18%] sm:min-w-[100px]">
+              {/* Row 1: Purchase Country + Product URL - Always inline */}
+              <div className="flex gap-2 sm:gap-3">
+                {/* Purchase Country - 18% on all screen sizes */}
+                <div className="w-[18%] min-w-[100px]">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Country *
                     {quoteType === 'combined' && index > 0 && (
@@ -644,7 +583,7 @@ export default function ProductInfoStep({
                   <select
                     value={product.country}
                     onChange={(e) => updateProduct(index, 'country', e.target.value)}
-                    className={`w-full border rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
+                    className={`w-full h-[40px] sm:h-[48px] border rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
                       quoteType === 'combined' && index > 0
                         ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                         : 'border-gray-200 bg-white'
@@ -681,8 +620,8 @@ export default function ProductInfoStep({
                   )}
                 </div>
 
-                {/* Product URL - 82% on desktop (increased to compensate) */}
-                <div className="flex-1 sm:w-[82%]">
+                {/* Product URL - 82% on all screen sizes */}
+                <div className="flex-1 w-[82%]">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Product URL {!product.url && !product.files?.length && '*'}
                   </label>
@@ -690,7 +629,7 @@ export default function ProductInfoStep({
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                     placeholder="Paste product URL (Amazon, eBay, etc.) or upload files below"
                   />
                   {errors[`url-${index}`] && (
@@ -699,11 +638,11 @@ export default function ProductInfoStep({
                 </div>
               </div>
 
-              {/* Row 2: Quantity + Price + Weight + Upload Files */}
+              {/* Row 2: Quantity + Price + Weight - Always inline */}
               <div className="mt-4">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  {/* Quantity - ~20% */}
-                  <div className="sm:w-[20%] sm:min-w-[80px]">
+                <div className="flex gap-2 sm:gap-3">
+                  {/* Quantity - ~30% on mobile, ~20% on desktop */}
+                  <div className="w-[30%] sm:w-[20%] min-w-[70px] sm:min-w-[80px]">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                       Qty *
                     </label>
@@ -714,7 +653,7 @@ export default function ProductInfoStep({
                       onChange={(e) =>
                         updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
                       }
-                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                      className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                       placeholder="1"
                     />
                     {errors[`quantity-${index}`] && (
@@ -724,8 +663,8 @@ export default function ProductInfoStep({
                     )}
                   </div>
 
-                  {/* Price - ~25% */}
-                  <div className="sm:w-[25%] sm:min-w-[100px]">
+                  {/* Price - ~35% on mobile, ~25% on desktop */}
+                  <div className="flex-1 w-[35%] sm:w-[25%] min-w-[80px] sm:min-w-[100px]">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                       Price
                     </label>
@@ -734,13 +673,13 @@ export default function ProductInfoStep({
                       step="0.01"
                       value={product.price}
                       onChange={(e) => updateProduct(index, 'price', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                      className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                       placeholder="0.00"
                     />
                   </div>
 
-                  {/* Weight - ~25% */}
-                  <div className="sm:w-[25%] sm:min-w-[100px]">
+                  {/* Weight - ~35% on mobile, ~25% on desktop */}
+                  <div className="flex-1 w-[35%] sm:w-[25%] min-w-[80px] sm:min-w-[100px]">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                       Weight (kg)
                     </label>
@@ -749,13 +688,67 @@ export default function ProductInfoStep({
                       step="0.01"
                       value={product.weight}
                       onChange={(e) => updateProduct(index, 'weight', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                      className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                       placeholder="0.00"
                     />
                   </div>
 
-                  {/* Upload Files - ~30% */}
-                  <div className="flex-1 sm:w-[30%] sm:min-w-[120px]">
+                </div>
+              </div>
+
+              {/* Row 3: Notes + Upload Files */}
+              <div className="mt-4">
+                <div className="flex gap-2 sm:gap-3">
+                  {/* Notes Field - 70% on mobile, 75% on desktop */}
+                  <div className="flex-1 w-[70%] sm:w-[75%]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Notes (optional)
+                    </label>
+                    
+                    {expandedNotes[index] ? (
+                      // Expanded textarea
+                      <div className="relative">
+                        <textarea
+                          value={product.notes}
+                          onChange={(e) => handleNotesChange(index, e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[80px] resize-vertical transition-all duration-200"
+                          placeholder="Add detailed notes about size, color, specific model, special instructions, or any other product details..."
+                          rows={3}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleNotesExpansion(index)}
+                          className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                          title="Collapse notes"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      // Collapsed single-line input
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={product.notes}
+                          onChange={(e) => handleNotesChange(index, e.target.value)}
+                          className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 pr-10"
+                          placeholder="Add notes (size, color, special instructions)..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleNotesExpansion(index)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                          title="Expand notes"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Files - 30% on mobile, 25% on desktop */}
+                  <div className="w-[30%] sm:w-[25%] min-w-[100px] sm:min-w-[120px]">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                       Files
                     </label>
@@ -764,9 +757,9 @@ export default function ProductInfoStep({
                         className="h-[40px] sm:h-[48px] flex items-center justify-center border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
                         onClick={() => setShowSignInPrompt(true)}
                       >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <LogIn className="h-4 w-4 text-blue-600" />
-                          <span className="text-blue-700 text-sm font-medium hidden sm:inline">
+                          <span className="text-blue-700 text-xs sm:text-sm font-medium hidden sm:inline">
                             Sign In
                           </span>
                         </div>
@@ -784,72 +777,35 @@ export default function ProductInfoStep({
                   </div>
                 </div>
               </div>
-
-              {/* Row 3: Adaptive Notes Field */}
-              <div className="mt-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                  Notes (optional)
-                </label>
-                
-                {expandedNotes[index] ? (
-                  // Expanded textarea
-                  <div className="relative">
-                    <textarea
-                      value={product.notes}
-                      onChange={(e) => handleNotesChange(index, e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[80px] resize-vertical transition-all duration-200"
-                      placeholder="Add detailed notes about size, color, specific model, special instructions, or any other product details..."
-                      rows={3}
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleNotesExpansion(index)}
-                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                      title="Collapse notes"
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  // Collapsed single-line input
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={product.notes}
-                      onChange={(e) => handleNotesChange(index, e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 pr-10"
-                      placeholder="Add notes (size, color, special instructions)..."
-                    />
-                    <button
-                      type="button"
-                      onClick={() => toggleNotesExpansion(index)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                      title="Expand notes"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
           ))}
         </div>
 
-        {/* Add Product Button - Streamlined */}
+      </div>
+
+      {/* Action Buttons - Centered Add + Right Continue */}
+      <div className="relative flex items-center justify-center mt-4 pt-4 border-t border-gray-100">
+        {/* Add Product Button - Centered */}
         {products.length < 10 && (
-          <div className="flex justify-center mt-6 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={addProduct}
-              className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 hover:border-teal-300 transition-all duration-200 font-medium text-sm sm:text-base"
-            >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Add Another Product</span>
-              <span className="sm:hidden">Add Product</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={addProduct}
+            className="flex items-center gap-2 px-4 py-2 text-orange-600 hover:text-orange-700 border border-orange-200 hover:border-orange-300 rounded-lg hover:bg-orange-50 transition-all duration-200 text-sm font-medium"
+          >
+            <Plus className="h-4 w-4 transition-colors" />
+            <span>Add Product</span>
+          </button>
         )}
+
+        {/* Continue Button - Absolute positioned to right */}
+        <button
+          type="button"
+          onClick={handleNext}
+          className="absolute right-0 flex items-center gap-2 px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition-colors duration-200 text-sm font-medium shadow-sm"
+        >
+          <span>Continue</span>
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Sign-In Prompt Modal */}
@@ -869,18 +825,6 @@ export default function ProductInfoStep({
         </DialogContent>
       </Dialog>
 
-      {/* Continue Button */}
-      <div className="flex justify-end pt-2">
-        <button
-          type="button"
-          onClick={handleNext}
-          className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-lg hover:from-teal-700 hover:to-cyan-700 transition-all duration-200 text-sm sm:text-base lg:text-lg font-medium shadow-sm flex items-center justify-center gap-2"
-        >
-          <span className="hidden sm:inline">Continue to Contact</span>
-          <span className="sm:hidden">Continue</span>
-          <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-        </button>
-      </div>
     </div>
   );
 }
