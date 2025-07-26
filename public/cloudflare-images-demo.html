@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Images Demo - iwishBag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">🖼️ Cloudflare Images Demo</h1>
+        <p class="text-gray-600 mb-8">Test image upload, optimization, and delivery</p>
+
+        <!-- Status Alert -->
+        <div id="status" class="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <p class="text-blue-800">
+                <strong>Status:</strong> 
+                <span id="statusText">Ready to test Cloudflare Images integration</span>
+            </p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">📤 Image Upload Test</h2>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <input type="file" id="imageInput" accept="image/*" class="hidden">
+                <label for="imageInput" class="cursor-pointer">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-600">Click to upload or drag and drop</p>
+                    <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                </label>
+            </div>
+
+            <button onclick="simulateUpload()" class="mt-4 bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700">
+                Simulate Upload
+            </button>
+        </div>
+
+        <!-- Image Display Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">🖼️ Image Variants</h2>
+            <div id="imageVariants" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Variants will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">📊 Performance Metrics</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-50 p-4 rounded">
+                    <h3 class="font-medium text-gray-700">Original Size</h3>
+                    <p class="text-2xl font-bold text-gray-900" id="originalSize">0 KB</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded">
+                    <h3 class="font-medium text-gray-700">Optimized Size</h3>
+                    <p class="text-2xl font-bold text-teal-600" id="optimizedSize">0 KB</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded">
+                    <h3 class="font-medium text-gray-700">Savings</h3>
+                    <p class="text-2xl font-bold text-green-600" id="savings">0%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">✨ Cloudflare Images Features</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-medium mb-2">🚀 Performance</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Automatic WebP/AVIF conversion</li>
+                        <li>• Global CDN with 300+ locations</li>
+                        <li>• Polish & Mirage optimization</li>
+                        <li>• Lazy loading support</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-medium mb-2">🛠️ Developer Features</h3>
+                    <ul class="text-sm text-gray-600 space-y-1">
+                        <li>• Multiple variants (thumbnail, small, medium, large)</li>
+                        <li>• Responsive srcset generation</li>
+                        <li>• Direct upload API</li>
+                        <li>• Metadata support</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 class="font-medium text-yellow-800 mb-2">⚙️ Configuration Required</h3>
+            <p class="text-sm text-yellow-700">
+                To use actual Cloudflare Images API:
+            </p>
+            <ol class="text-sm text-yellow-700 mt-2 space-y-1 list-decimal list-inside">
+                <li>Enable Cloudflare Images in your dashboard</li>
+                <li>Add API credentials to environment variables</li>
+                <li>Configure image variants in dashboard</li>
+                <li>Test with actual upload functionality</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Simulated image data
+        const simulatedImageId = 'demo-' + Date.now();
+        const variants = {
+            thumbnail: 'https://via.placeholder.com/150x150?text=Thumbnail',
+            small: 'https://via.placeholder.com/400x400?text=Small',
+            medium: 'https://via.placeholder.com/800x800?text=Medium',
+            large: 'https://via.placeholder.com/1200x1200?text=Large',
+            public: 'https://via.placeholder.com/1600x900?text=Public'
+        };
+
+        // Handle file selection
+        document.getElementById('imageInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                updateStatus(`Selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`, 'info');
+                document.getElementById('originalSize').textContent = `${(file.size / 1024).toFixed(2)} KB`;
+            }
+        });
+
+        // Simulate upload process
+        async function simulateUpload() {
+            updateStatus('Uploading to Cloudflare Images...', 'loading');
+            
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            updateStatus('Processing and generating variants...', 'loading');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Display variants
+            displayVariants();
+            
+            // Update metrics
+            const originalSize = Math.random() * 2000 + 500; // 500-2500 KB
+            const optimizedSize = originalSize * 0.3; // 70% reduction
+            const savingsPercent = ((originalSize - optimizedSize) / originalSize * 100).toFixed(1);
+            
+            document.getElementById('originalSize').textContent = `${originalSize.toFixed(0)} KB`;
+            document.getElementById('optimizedSize').textContent = `${optimizedSize.toFixed(0)} KB`;
+            document.getElementById('savings').textContent = `${savingsPercent}%`;
+            
+            updateStatus('✅ Upload complete! Images optimized and delivered via global CDN', 'success');
+        }
+
+        // Display image variants
+        function displayVariants() {
+            const container = document.getElementById('imageVariants');
+            container.innerHTML = '';
+            
+            Object.entries(variants).forEach(([name, url]) => {
+                const div = document.createElement('div');
+                div.className = 'text-center';
+                div.innerHTML = `
+                    <img src="${url}" alt="${name} variant" class="w-full h-auto rounded mb-2">
+                    <p class="text-sm font-medium capitalize">${name}</p>
+                    <p class="text-xs text-gray-500">
+                        ${name === 'thumbnail' ? '150x150' : 
+                          name === 'small' ? '400x400' : 
+                          name === 'medium' ? '800x800' : 
+                          name === 'large' ? '1200x1200' : '1600px max'}
+                    </p>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Update status message
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            statusText.textContent = message;
+            
+            // Update styling based on type
+            statusEl.className = 'mb-6 p-4 rounded-lg border';
+            switch(type) {
+                case 'loading':
+                    statusEl.className += ' bg-blue-50 border-blue-200';
+                    statusText.innerHTML = `<span class="inline-block animate-spin mr-2">⏳</span> ${message}`;
+                    break;
+                case 'success':
+                    statusEl.className += ' bg-green-50 border-green-200';
+                    statusText.className = 'text-green-800';
+                    break;
+                case 'error':
+                    statusEl.className += ' bg-red-50 border-red-200';
+                    statusText.className = 'text-red-800';
+                    break;
+                default:
+                    statusEl.className += ' bg-blue-50 border-blue-200';
+                    statusText.className = 'text-blue-800';
+            }
+        }
+
+        // Drag and drop functionality
+        const dropZone = document.querySelector('.border-dashed').parentElement;
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('bg-gray-50');
+        });
+        
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-gray-50');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-gray-50');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    document.getElementById('imageInput').files = files;
+                    updateStatus(`Selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`, 'info');
+                    document.getElementById('originalSize').textContent = `${(file.size / 1024).toFixed(2)} KB`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

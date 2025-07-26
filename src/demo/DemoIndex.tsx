@@ -19,11 +19,25 @@ import UnifiedQuoteOrderSystem from './UnifiedQuoteOrderSystem';
 import { R2StorageDemo } from '../components/demo/R2StorageDemo';
 import { KVCacheDemo } from '../components/demo/KVCacheDemo';
 import AIProductClassifierDemo from './AIProductClassifierDemo';
+import { LeanWeightDemo } from './LeanWeightDemo';
 
 const DemoIndex = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
 
   const demos = [
+    {
+      id: 'lean-weight',
+      title: '🎯 Lean Weight Service Demo',
+      description:
+        'Intelligent weight prediction combining HSN database with ML predictions while staying within Supabase free tier limits',
+      features: [
+        'HSN + ML hybrid predictions',
+        'Dual source display with confidence',
+        'Pattern matching without DB storage',
+        'Analytics tracking < 10MB total',
+      ],
+      component: LeanWeightDemo,
+    },
     {
       id: 'kv-cache',
       title: '⚡ Optimized Currency Cache Demo',

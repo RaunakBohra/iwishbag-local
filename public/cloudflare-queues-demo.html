@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Queues Demo - Async Task Processing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">📧 Cloudflare Queues Demo</h1>
+        <p class="text-gray-600 mb-8">Async task processing for emails, webhooks, and background jobs</p>
+
+        <!-- Queue Status -->
+        <div id="queueStatus" class="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <p class="text-blue-800">
+                <strong>Queue Status:</strong> 
+                <span id="statusText">Checking connection...</span>
+            </p>
+        </div>
+
+        <!-- Queue Statistics -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">📊 Queue Statistics</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-blue-50 rounded">
+                    <div class="text-2xl font-bold text-blue-600" id="pendingCount">0</div>
+                    <div class="text-sm text-gray-600">Pending</div>
+                </div>
+                <div class="text-center p-4 bg-yellow-50 rounded">
+                    <div class="text-2xl font-bold text-yellow-600" id="processingCount">0</div>
+                    <div class="text-sm text-gray-600">Processing</div>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded">
+                    <div class="text-2xl font-bold text-green-600" id="completedCount">0</div>
+                    <div class="text-sm text-gray-600">Completed</div>
+                </div>
+                <div class="text-center p-4 bg-red-50 rounded">
+                    <div class="text-2xl font-bold text-red-600" id="failedCount">0</div>
+                    <div class="text-sm text-gray-600">Failed</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Messages -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-lg font-semibold mb-4">📬 Email Messages</h2>
+                <div class="space-y-2">
+                    <button onclick="queueEmail('order_confirmation')" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Queue Order Confirmation
+                    </button>
+                    <button onclick="queueEmail('quote_ready')" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Queue Quote Ready
+                    </button>
+                    <button onclick="queueEmail('payment_received')" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Queue Payment Confirmation
+                    </button>
+                    <button onclick="queueEmail('shipping_update')" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Queue Shipping Update
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-lg font-semibold mb-4">🔗 Webhooks & Events</h2>
+                <div class="space-y-2">
+                    <button onclick="queueWebhook('order_created')" 
+                            class="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700">
+                        Queue Order Webhook
+                    </button>
+                    <button onclick="queueWebhook('payment_completed')" 
+                            class="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700">
+                        Queue Payment Webhook
+                    </button>
+                    <button onclick="queueAnalytics()" 
+                            class="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700">
+                        Queue Analytics Event
+                    </button>
+                    <button onclick="queueCacheInvalidation()" 
+                            class="w-full bg-orange-600 text-white p-2 rounded hover:bg-orange-700">
+                        Queue Cache Invalidation
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Operations -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">📦 Batch Operations</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="queueOrderWorkflow()" 
+                        class="bg-green-600 text-white p-4 rounded hover:bg-green-700">
+                    🛒 Complete Order Workflow
+                    <div class="text-xs mt-1">Email + Webhook + Analytics</div>
+                </button>
+                <button onclick="queueQuoteWorkflow()" 
+                        class="bg-blue-600 text-white p-4 rounded hover:bg-blue-700">
+                    💰 Quote Workflow
+                    <div class="text-xs mt-1">Notification + Tracking</div>
+                </button>
+                <button onclick="queuePaymentWorkflow()" 
+                        class="bg-emerald-600 text-white p-4 rounded hover:bg-emerald-700">
+                    💳 Payment Workflow
+                    <div class="text-xs mt-1">Confirmation + Processing</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Queue Activity Log -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">📋 Queue Activity Log</h2>
+            <div id="activityLog" class="bg-gray-50 rounded p-4 h-64 overflow-y-auto font-mono text-sm">
+                <div class="text-gray-500">Waiting for queue activity...</div>
+            </div>
+            <button onclick="clearLog()" class="mt-2 text-sm text-gray-600 hover:text-gray-800">
+                Clear Log
+            </button>
+        </div>
+
+        <!-- Message Priorities -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">⚡ Message Priorities</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 border border-red-200 rounded">
+                    <h3 class="font-medium text-red-800 mb-2">🔴 High Priority</h3>
+                    <ul class="text-sm text-red-700 space-y-1">
+                        <li>• Order confirmations</li>
+                        <li>• Payment notifications</li>
+                        <li>• Critical webhooks</li>
+                        <li>• Cache invalidations</li>
+                    </ul>
+                </div>
+                <div class="p-4 border border-yellow-200 rounded">
+                    <h3 class="font-medium text-yellow-800 mb-2">🟡 Normal Priority</h3>
+                    <ul class="text-sm text-yellow-700 space-y-1">
+                        <li>• Quote notifications</li>
+                        <li>• Shipping updates</li>
+                        <li>• Standard webhooks</li>
+                        <li>• Data sync operations</li>
+                    </ul>
+                </div>
+                <div class="p-4 border border-green-200 rounded">
+                    <h3 class="font-medium text-green-800 mb-2">🟢 Low Priority</h3>
+                    <ul class="text-sm text-green-700 space-y-1">
+                        <li>• Analytics events</li>
+                        <li>• Cleanup tasks</li>
+                        <li>• Report generation</li>
+                        <li>• Background updates</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="bg-teal-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-teal-800 mb-3">✨ Cloudflare Queues Features</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-teal-700">
+                <ul class="space-y-1">
+                    <li>• Automatic retries with exponential backoff</li>
+                    <li>• Dead letter queue for failed messages</li>
+                    <li>• Message batching for efficiency</li>
+                    <li>• Priority-based processing</li>
+                </ul>
+                <ul class="space-y-1">
+                    <li>• Global distribution</li>
+                    <li>• At-least-once delivery</li>
+                    <li>• Message deduplication</li>
+                    <li>• Built-in monitoring</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated queue API
+        const QUEUE_API = '/api/queue'; // In production: https://iwishbag-queue-producer.workers.dev
+        
+        let activityCount = 0;
+        let stats = {
+            pending: 0,
+            processing: 0,
+            completed: 0,
+            failed: 0
+        };
+
+        // Initialize
+        function initialize() {
+            updateStatus('✓ Connected to Cloudflare Queues', 'success');
+            updateStats();
+            
+            // Simulate periodic stats updates
+            setInterval(updateStats, 5000);
+        }
+
+        // Update status
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('queueStatus');
+            const textEl = document.getElementById('statusText');
+            
+            textEl.textContent = message;
+            
+            switch(type) {
+                case 'success':
+                    statusEl.className = 'mb-6 p-4 rounded-lg bg-green-50 border border-green-200';
+                    textEl.className = 'text-green-800';
+                    break;
+                case 'error':
+                    statusEl.className = 'mb-6 p-4 rounded-lg bg-red-50 border border-red-200';
+                    textEl.className = 'text-red-800';
+                    break;
+                default:
+                    statusEl.className = 'mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200';
+                    textEl.className = 'text-blue-800';
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            // Simulate stats changes
+            stats.pending = Math.max(0, stats.pending + Math.floor(Math.random() * 3) - 1);
+            stats.processing = Math.max(0, stats.processing + Math.floor(Math.random() * 2) - 1);
+            stats.completed += Math.floor(Math.random() * 5);
+            stats.failed += Math.random() > 0.95 ? 1 : 0; // Occasional failures
+            
+            document.getElementById('pendingCount').textContent = stats.pending;
+            document.getElementById('processingCount').textContent = stats.processing;
+            document.getElementById('completedCount').textContent = stats.completed;
+            document.getElementById('failedCount').textContent = stats.failed;
+        }
+
+        // Log activity
+        function logActivity(type, message, priority = 'normal') {
+            activityCount++;
+            const log = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const priorityColor = {
+                'high': 'text-red-600',
+                'normal': 'text-blue-600',
+                'low': 'text-green-600'
+            }[priority] || 'text-blue-600';
+            
+            const entry = document.createElement('div');
+            entry.className = 'mb-1';
+            entry.innerHTML = `
+                <span class="text-gray-500">${timestamp}</span> 
+                <span class="${priorityColor}">[${type}]</span> 
+                ${message}
+            `;
+            
+            if (activityCount === 1) {
+                log.innerHTML = '';
+            }
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            
+            // Update stats
+            stats.pending++;
+            setTimeout(() => {
+                stats.pending = Math.max(0, stats.pending - 1);
+                stats.processing++;
+                setTimeout(() => {
+                    stats.processing = Math.max(0, stats.processing - 1);
+                    stats.completed++;
+                    updateStats();
+                }, 1000 + Math.random() * 2000);
+                updateStats();
+            }, 100);
+            updateStats();
+        }
+
+        // Queue email
+        async function queueEmail(type) {
+            const emailTypes = {
+                'order_confirmation': {
+                    message: 'Order #IWB20251001 confirmation queued',
+                    priority: 'high'
+                },
+                'quote_ready': {
+                    message: 'Quote ready notification queued',
+                    priority: 'normal'
+                },
+                'payment_received': {
+                    message: 'Payment confirmation queued',
+                    priority: 'high'
+                },
+                'shipping_update': {
+                    message: 'Shipping update notification queued',
+                    priority: 'normal'
+                }
+            };
+            
+            const config = emailTypes[type];
+            logActivity(`EMAIL:${type.toUpperCase()}`, config.message, config.priority);
+        }
+
+        // Queue webhook
+        async function queueWebhook(type) {
+            const webhookTypes = {
+                'order_created': {
+                    message: 'Order created webhook queued → external system',
+                    priority: 'normal'
+                },
+                'payment_completed': {
+                    message: 'Payment webhook queued → payment processor',
+                    priority: 'high'
+                }
+            };
+            
+            const config = webhookTypes[type];
+            logActivity(`WEBHOOK:${type.toUpperCase()}`, config.message, config.priority);
+        }
+
+        // Queue analytics
+        async function queueAnalytics() {
+            const events = [
+                'user_checkout_completed',
+                'product_viewed',
+                'quote_generated',
+                'page_visit_tracked'
+            ];
+            
+            const event = events[Math.floor(Math.random() * events.length)];
+            logActivity('ANALYTICS', `Event "${event}" queued for processing`, 'low');
+        }
+
+        // Queue cache invalidation
+        async function queueCacheInvalidation() {
+            const cacheTypes = [
+                'currency rates cache',
+                'popular products cache',
+                'user session cache',
+                'HSN tax rates cache'
+            ];
+            
+            const cache = cacheTypes[Math.floor(Math.random() * cacheTypes.length)];
+            logActivity('CACHE', `Invalidation queued for ${cache}`, 'high');
+        }
+
+        // Queue complete order workflow
+        async function queueOrderWorkflow() {
+            const orderId = 'IWB' + Math.floor(Math.random() * 10000);
+            logActivity('WORKFLOW', `Order ${orderId} - Complete workflow started`, 'high');
+            
+            // Simulate multiple messages
+            setTimeout(() => logActivity('EMAIL', `Order ${orderId} confirmation queued`, 'high'), 200);
+            setTimeout(() => logActivity('WEBHOOK', `Order ${orderId} webhook queued`, 'normal'), 400);
+            setTimeout(() => logActivity('ANALYTICS', `Order ${orderId} conversion tracked`, 'low'), 600);
+            setTimeout(() => logActivity('SYNC', `Order ${orderId} data synced to edge`, 'normal'), 800);
+        }
+
+        // Queue quote workflow
+        async function queueQuoteWorkflow() {
+            const quoteId = 'Q' + Math.floor(Math.random() * 10000);
+            logActivity('WORKFLOW', `Quote ${quoteId} - Workflow started`, 'normal');
+            
+            setTimeout(() => logActivity('EMAIL', `Quote ${quoteId} ready notification queued`, 'normal'), 200);
+            setTimeout(() => logActivity('ANALYTICS', `Quote ${quoteId} generation tracked`, 'low'), 400);
+        }
+
+        // Queue payment workflow
+        async function queuePaymentWorkflow() {
+            const paymentId = 'PAY' + Math.floor(Math.random() * 10000);
+            logActivity('WORKFLOW', `Payment ${paymentId} - Workflow started`, 'high');
+            
+            setTimeout(() => logActivity('EMAIL', `Payment ${paymentId} confirmation queued`, 'high'), 200);
+            setTimeout(() => logActivity('WEBHOOK', `Payment ${paymentId} webhook queued`, 'high'), 400);
+            setTimeout(() => logActivity('ANALYTICS', `Payment ${paymentId} revenue tracked`, 'low'), 600);
+        }
+
+        // Clear log
+        function clearLog() {
+            document.getElementById('activityLog').innerHTML = 
+                '<div class="text-gray-500">Activity log cleared...</div>';
+            activityCount = 0;
+        }
+
+        // Initialize on load
+        initialize();
+    </script>
+</body>
+</html>

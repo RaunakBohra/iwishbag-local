@@ -12,6 +12,8 @@ import {
   Mail,
   CheckCircle,
   CreditCard,
+  Shield,
+  Clock,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +26,7 @@ import { SystemHealthCheck } from '@/components/admin/SystemHealthCheck';
 import { PermissionsTestCard } from '@/components/admin/PermissionsTestCard';
 import { HSNManagementQuickAction } from '@/components/admin/HSNManagementQuickAction';
 import { ErrorMonitoringDashboard } from '@/components/admin/ErrorMonitoringDashboard';
+import { D1SyncManager } from '@/components/admin/D1SyncManager';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -156,6 +159,20 @@ const AdminDashboard = () => {
       href: '/admin/payment-management',
       color: 'bg-teal-500/10 text-teal-600',
     },
+    {
+      title: 'WAF Security',
+      description: 'Configure firewall rules',
+      icon: Shield,
+      href: '/admin/waf-management',
+      color: 'bg-purple-500/10 text-purple-600',
+    },
+    {
+      title: 'Rate Limiting',
+      description: 'Manage API rate limits',
+      icon: Clock,
+      href: '/admin/rate-limit-management',
+      color: 'bg-orange-500/10 text-orange-600',
+    },
   ];
 
   // Show skeleton while loading
@@ -286,11 +303,12 @@ const AdminDashboard = () => {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Dashboard Overview</TabsTrigger>
           <TabsTrigger value="health-check">System Health Check</TabsTrigger>
           <TabsTrigger value="permissions-test">Permissions Test</TabsTrigger>
           <TabsTrigger value="error-monitoring">Error Monitoring</TabsTrigger>
+          <TabsTrigger value="d1-sync">D1 Edge Sync</TabsTrigger>
         </TabsList>
 
         <TabsContent value="health-check" className="space-y-6">
@@ -303,6 +321,10 @@ const AdminDashboard = () => {
 
         <TabsContent value="error-monitoring" className="space-y-6">
           <ErrorMonitoringDashboard />
+        </TabsContent>
+
+        <TabsContent value="d1-sync" className="space-y-6">
+          <D1SyncManager />
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">

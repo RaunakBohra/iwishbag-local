@@ -29,8 +29,10 @@ import {
   FileText,
   MessageSquare,
   ChevronRight,
+  Upload,
 } from 'lucide-react';
 import { QuoteBreakdownDetails } from '@/components/dashboard/QuoteBreakdownDetails';
+import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { useQuoteState } from '@/hooks/useQuoteState';
 import { useToast } from '@/hooks/use-toast';
@@ -373,6 +375,24 @@ const CustomerQuoteDetail: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Uploaded Files */}
+            {quote.customer_data?.sessionId && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5" />
+                    Uploaded Files
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <UploadedFilesDisplay 
+                    sessionId={quote.customer_data.sessionId} 
+                    isAdmin={false} 
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             {/* Additional Information */}
             {quote.notes && (

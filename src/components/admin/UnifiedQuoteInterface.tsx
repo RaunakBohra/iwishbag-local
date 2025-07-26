@@ -67,6 +67,7 @@ import { calculationDefaultsService } from '@/services/CalculationDefaultsServic
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
 import { DualWeightSuggestions } from '@/components/admin/smart-weight-field/DualWeightSuggestions';
+import { SmartDualWeightField } from '@/components/admin/SmartDualWeightField';
 import { normalizeShippingOptionId } from '@/utils/shippingOptionUtils';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 
@@ -2078,7 +2079,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   return (
     <div
       ref={containerRef}
-      className={`max-w-7xl mx-auto p-6 space-y-6 rounded-lg transition-all duration-200 ${
+      className={`max-w-[1600px] mx-auto p-6 space-y-6 rounded-lg transition-all duration-200 ${
         isEditMode
           ? 'border border-teal-200 bg-teal-50/20 shadow-sm'
           : 'border border-blue-200 bg-blue-50/20 shadow-sm'
@@ -2661,83 +2662,37 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                                               </div>
                                             </div>
 
-                                            {/* Weight Field with Clean Badge System */}
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-gray-500 text-xs font-medium min-w-[45px]">
-                                                WEIGHT
-                                              </span>
-                                              <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                                                <Scale className="w-3 h-3 text-gray-400 mr-1" />
-                                                <input
-                                                  type="number"
-                                                  step="0.001"
-                                                  min="0"
-                                                  value={item.item_weight || ''}
-                                                  onChange={(e) => {
-                                                    const items = form.getValues('items') || [];
-                                                    items[index] = {
-                                                      ...items[index],
-                                                      item_weight: parseFloat(e.target.value) || 0,
-                                                    };
-                                                    form.setValue('items', items);
-                                                  }}
-                                                  className="w-16 h-8 border-0 p-0 text-sm font-medium"
-                                                  placeholder="0.2"
-                                                />
-                                                <span className="text-xs text-gray-400 ml-1">
-                                                  kg
-                                                </span>
-                                              </div>
-
-                                              {/* Clean Suggestion Badges */}
-                                              <div className="flex items-center gap-1">
-                                                {/* Loading indicator */}
-                                                {(isEstimating[index.toString()] ||
-                                                  isLoadingHSN[index.toString()]) && (
-                                                  <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                                                )}
-
-                                                {/* HSN Badge */}
-                                                {hsnWeights[index.toString()] && (
-                                                  <button
-                                                    onClick={() =>
-                                                      handleWeightSelection(
-                                                        index,
-                                                        hsnWeights[index.toString()]!.average,
-                                                        'hsn',
-                                                      )
-                                                    }
-                                                    className="text-xs px-2 py-1 rounded bg-green-100 text-green-800 border border-green-300 hover:bg-green-200 transition-colors"
-                                                    type="button"
-                                                    title={`HSN database suggests ${hsnWeights[index.toString()]!.average}kg (${Math.round(hsnWeights[index.toString()]!.confidence * 100)}% confident)`}
-                                                  >
-                                                    HSN: {hsnWeights[index.toString()]!.average}kg
-                                                  </button>
-                                                )}
-
-                                                {/* AI Badge */}
-                                                {weightEstimations[index.toString()] && (
-                                                  <button
-                                                    onClick={() =>
-                                                      handleWeightSelection(
-                                                        index,
-                                                        weightEstimations[index.toString()]
-                                                          .estimated_weight,
-                                                        'ml',
-                                                      )
-                                                    }
-                                                    className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors"
-                                                    type="button"
-                                                    title={`AI estimates ${weightEstimations[index.toString()].estimated_weight.toFixed(2)}kg (${Math.round(weightEstimations[index.toString()].confidence * 100)}% confident)`}
-                                                  >
-                                                    AI:{' '}
-                                                    {weightEstimations[
-                                                      index.toString()
-                                                    ].estimated_weight.toFixed(2)}
-                                                    kg
-                                                  </button>
-                                                )}
-                                              </div>
+                                            {/* Weight Field with Smart Dual Suggestions */}
+                                            <div className="flex-1 min-w-[200px]">
+                                              <SmartDualWeightField
+                                                value={item.item_weight || 0}
+                                                onChange={(weight) => {
+                                                  const items = form.getValues('items') || [];
+                                                  items[index] = {
+                                                    ...items[index],
+                                                    item_weight: weight,
+                                                  };
+                                                  form.setValue('items', items);
+                                                }}
+                                                productName={item.product_name || ''}
+                                                hsnCode={item.hsn_code || quote?.hsn_code}
+                                                productUrl={item.product_url}
+                                                onSourceSelected={(source) => {
+                                                  console.log(`Weight source selected for item ${index}:`, source);
+                                                  // Update item's smart_data with weight source
+                                                  const items = form.getValues('items') || [];
+                                                  items[index] = {
+                                                    ...items[index],
+                                                    smart_data: {
+                                                      ...items[index].smart_data,
+                                                      weight_source: source,
+                                                    },
+                                                  };
+                                                  form.setValue('items', items);
+                                                }}
+                                                label=""
+                                                className="compact-mode"
+                                              />
                                             </div>
 
                                             {/* HSN Field */}

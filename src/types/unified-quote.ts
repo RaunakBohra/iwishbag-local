@@ -158,6 +158,14 @@ export interface ShippingOption {
   // Route-based configuration (optional)
   handling_charge?: RouteHandlingCharge;
   insurance_options?: RouteInsuranceOptions;
+  // Route calculation data for breakdown display
+  route_data?: {
+    base_shipping_cost: number;
+    weight_tier_used: string;
+    weight_rate_per_kg: number;
+    weight_cost: number;
+    delivery_premium: number;
+  };
 }
 
 // Shipping Tracking Information

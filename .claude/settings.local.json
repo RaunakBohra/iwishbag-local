@@ -170,7 +170,24 @@
       "Bash(pip3 search:*)",
       "Bash(cp:*)",
       "Bash(graphiti up:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(wrangler d1 list:*)",
+      "Bash(wrangler whoami:*)",
+      "Bash(wrangler kv:namespace:*)",
+      "Bash(wrangler kv namespace:*)",
+      "Bash(wrangler deployments:*)",
+      "Bash(wrangler queues:*)",
+      "Bash(wrangler pages project:*)",
+      "Bash(wrangler r2 bucket:*)",
+      "Bash(wrangler d1 create:*)",
+      "Bash(wrangler deploy:*)",
+      "Bash(wrangler kv key put:*)",
+      "Bash(wrangler ai models:*)",
+      "Bash(wrangler d1 execute:*)",
+      "Bash(wrangler logout:*)",
+      "Bash(wrangler login:*)",
+      "Bash(git reset:*)",
+      "Bash(npx wrangler deploy:*)"
     ],
     "deny": []
   }

@@ -15,9 +15,22 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { PurchaseItemDialog } from '@/components/admin/PurchaseItemDialog';
+import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
+import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
 import { currencyService } from '@/services/CurrencyService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
+import { unifiedDataEngine, type HSNMasterRecord } from '@/services/UnifiedDataEngine';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Package,
   User,
@@ -99,11 +112,13 @@ import {
   Loader2,
   Circle,
   Calculator,
-  Plane
+  Plane,
+  Scale
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { ShareQuoteButtonV2 } from '@/components/admin/ShareQuoteButtonV2';
+import { SmartDualWeightField } from '@/components/admin/SmartDualWeightField';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -116,15 +131,7 @@ interface UnifiedQuoteOrderSystemProps {
 
 // Mock quote data removed - component now requires proper quote data from parent
 
-// HSN code database
-const hsnCodes = [
-  { code: '8517', description: 'Telephone sets, including smartphones', rate: 22 },
-  { code: '8518', description: 'Microphones, headphones, earphones', rate: 20 },
-  { code: '8471', description: 'Automatic data processing machines', rate: 18 },
-  { code: '6204', description: "Women's suits, dresses, skirts", rate: 12 },
-  { code: '6109', description: 'T-shirts, singlets and vests', rate: 12 },
-  { code: '4202', description: 'Trunks, suitcases, vanity cases', rate: 18 }
-];
+// HSN codes will be fetched from database
 
 // Status configurations
 const statusConfig = {
@@ -261,6 +268,56 @@ export default function UnifiedQuoteOrderSystem({
     }
   }, []); // Run only once on mount
   
+  // Fetch HSN codes from database
+  useEffect(() => {
+    const fetchHSNCodes = async () => {
+      try {
+        setIsLoadingHSN(true);
+        
+        // Fetch HSN codes directly from database with keywords for enhanced search
+        const { data: hsnRecords, error } = await supabase
+          .from('hsn_master')
+          .select('hsn_code, description, tax_data, keywords')
+          .eq('is_active', true)
+          .order('hsn_code');
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Transform HSN records to match the expected format
+        const transformedCodes = (hsnRecords || []).map((record: any) => ({
+          code: record.hsn_code,
+          description: record.description,
+          keywords: record.keywords || [], // Include keywords for enhanced search
+          rate: record.tax_data?.typical_rates?.customs?.common || 
+                record.tax_data?.typical_rates?.gst?.standard || 
+                18 // Default GST rate
+        }));
+        
+        setHsnCodes(transformedCodes);
+        console.log(`✅ Loaded ${transformedCodes.length} HSN codes from database:`, transformedCodes.map(c => c.code));
+      } catch (error) {
+        console.error('❌ Failed to fetch HSN codes:', error);
+        toast({
+          title: 'Failed to load HSN codes',
+          description: 'Using fallback HSN data. Please refresh the page.',
+          variant: 'destructive'
+        });
+        
+        // Fallback to basic HSN codes if fetch fails
+        setHsnCodes([
+          { code: '8517', description: 'Telephone sets, including smartphones', rate: 22 },
+          { code: '8471', description: 'Automatic data processing machines', rate: 18 },
+        ]);
+      } finally {
+        setIsLoadingHSN(false);
+      }
+    };
+    
+    fetchHSNCodes();
+  }, []); // Run once on mount
+  
   console.log('Tax rates debug:', {
     customs_rate: quote?.tax_rates?.customs,
     destination_tax_rate: quote?.tax_rates?.destination_tax,
@@ -284,8 +341,25 @@ export default function UnifiedQuoteOrderSystem({
   
   const [items, setItems] = useState(quote?.items || []);
   const [hsnSearchOpen, setHsnSearchOpen] = useState<string | null>(null);
+  const [hsnSearchQuery, setHsnSearchQuery] = useState<Record<string, string>>({});
   const [notesPopoverOpen, setNotesPopoverOpen] = useState<string | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [showHSNCreateModal, setShowHSNCreateModal] = useState(false);
+  const [newHSNData, setNewHSNData] = useState<any>(null);
+  const [hsnCodes, setHsnCodes] = useState<Array<{code: string, description: string, rate: number}>>([]);
+  const [showCategoryCreateModal, setShowCategoryCreateModal] = useState(false);
+  const [newCategoryData, setNewCategoryData] = useState<any>(null);
+  const [categories, setCategories] = useState<Array<{value: string, label: string}>>([
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'clothing', label: 'Clothing' },
+    { value: 'beauty', label: 'Beauty & Personal Care' },
+    { value: 'home', label: 'Home & Kitchen' },
+    { value: 'sports', label: 'Sports & Outdoors' },
+    { value: 'books', label: 'Books & Media' },
+    { value: 'toys', label: 'Toys & Games' },
+    { value: 'other', label: 'Other' }
+  ]);
+  const [isLoadingHSN, setIsLoadingHSN] = useState(true);
   const [adminNotes, setAdminNotes] = useState(quote.admin_notes || '');
   const [internalNotes, setInternalNotes] = useState(quote.internal_notes || '');
   const [insuranceAmount, setInsuranceAmount] = useState(safeNumber(quote.insurance));
@@ -566,7 +640,15 @@ export default function UnifiedQuoteOrderSystem({
             weight: totalWeight,
             total_cost_usd: selectedShippingOption.cost_usd,
             days: selectedShippingOption.days,
-            explanation: `Shipping cost calculated by SmartCalculationEngine based on route configuration and weight`
+            explanation: `Shipping cost calculated by SmartCalculationEngine based on route configuration and weight`,
+            // Add breakdown data if available
+            breakdown: selectedShippingOption.route_data ? {
+              base_cost: selectedShippingOption.route_data.base_shipping_cost || 0,
+              weight_tier: selectedShippingOption.route_data.weight_tier_used || 'N/A',
+              weight_rate: selectedShippingOption.route_data.weight_rate_per_kg || 0,
+              weight_cost: selectedShippingOption.route_data.weight_cost || 0,
+              delivery_premium: selectedShippingOption.route_data.delivery_premium || 0,
+            } : undefined
           } : { formula: 'No shipping option selected', total: 0 },
           
           handling: selectedShippingOption?.handling_charge ? {
@@ -890,7 +972,7 @@ export default function UnifiedQuoteOrderSystem({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm">
@@ -964,7 +1046,7 @@ export default function UnifiedQuoteOrderSystem({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-[1600px] mx-auto px-6 py-6">
         {/* Debug Panel for Empty Calculation Data */}
         {(!quote.calculation_data || Object.keys(quote.calculation_data).length === 0) && (
           <Alert className="mb-6 border-orange-200 bg-orange-50">
@@ -1421,6 +1503,27 @@ export default function UnifiedQuoteOrderSystem({
                   </CardContent>
                 </Card>
 
+                {/* Customer Uploaded Files */}
+                {quote.customer_data?.sessionId && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Upload className="h-5 w-5" />
+                        Customer Uploaded Files
+                      </CardTitle>
+                      <CardDescription>
+                        Files uploaded by customer during quote request - review for accurate pricing
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <UploadedFilesDisplay 
+                        sessionId={quote.customer_data.sessionId} 
+                        isAdmin={true} 
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Items Management */}
                 <Card>
                   <CardHeader>
@@ -1549,14 +1652,166 @@ export default function UnifiedQuoteOrderSystem({
                               </td>
                               <td className="px-4 py-4 text-center">
                                 <div className="space-y-1">
-                                  <InlineEdit
-                                    fieldId={`weight-${item.id}`}
-                                    value={item.weight}
-                                    type="number"
-                                    suffix="kg"
-                                    className="w-16"
-                                    itemId={item.id}
-                                  />
+                                  <div className="relative">
+                                    <SmartDualWeightField
+                                      value={item.weight || 0}
+                                      onChange={(weight) => {
+                                        const updatedItems = items.map(i => 
+                                          i.id === item.id ? { ...i, weight } : i
+                                        );
+                                        setItems(updatedItems);
+                                        recalculateQuote(updatedItems);
+                                      }}
+                                      productName={item.product_name || ''}
+                                      hsnCode={item.hsn_code || ''}
+                                      productUrl={item.product_url}
+                                      onSourceSelected={(source) => {
+                                        console.log(`Weight source selected for item ${item.id}:`, source);
+                                        // Update item's smart_data with weight source
+                                        const updatedItems = items.map(i => 
+                                          i.id === item.id ? { 
+                                            ...i, 
+                                            smart_data: {
+                                              ...i.smart_data,
+                                              weight_source: source
+                                            }
+                                          } : i
+                                        );
+                                        setItems(updatedItems);
+                                      }}
+                                      label=""
+                                      className="compact-mode w-16"
+                                    />
+                                    {item.weight_source && (
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <button className="absolute -right-5 top-1/2 -translate-y-1/2">
+                                            <Info className={cn(
+                                              "w-3 h-3",
+                                              item.weight_source === 'HSN Database' && "text-green-600",
+                                              item.weight_source === 'AI Prediction' && "text-yellow-600",
+                                              item.weight_source === 'Category Average' && "text-orange-600",
+                                              !item.weight_source && "text-gray-400"
+                                            )} />
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-64 p-3" side="left">
+                                          <div className="space-y-2 text-xs">
+                                            <div className="font-medium flex items-center gap-2">
+                                              <Scale className="w-3 h-3" />
+                                              Weight Source
+                                            </div>
+                                            <div className="space-y-1">
+                                              <div className="flex justify-between">
+                                                <span className="text-gray-600">Source:</span>
+                                                <span className="font-medium">{item.weight_source || 'Manual Entry'}</span>
+                                              </div>
+                                              {item.weight_confidence && (
+                                                <div className="flex justify-between">
+                                                  <span className="text-gray-600">Confidence:</span>
+                                                  <span className="font-medium">{Math.round(item.weight_confidence * 100)}%</span>
+                                                </div>
+                                              )}
+                                              {item.weight_source === 'HSN Database' && (
+                                                <div className="text-green-600 text-xs mt-2">
+                                                  <div>Weight from official HSN database</div>
+                                                  {item.hsn_weight_range && (
+                                                    <div className="mt-1 p-2 bg-green-50 rounded border-green-200 border">
+                                                      <div className="text-xs text-green-700">
+                                                        <div><strong>Range:</strong> {item.hsn_weight_range.min}kg - {item.hsn_weight_range.max}kg</div>
+                                                        <div><strong>Average:</strong> {item.hsn_weight_range.average}kg</div>
+                                                        {item.hsn_weight_range.packaging && (
+                                                          <div><strong>Packaging:</strong> +{item.hsn_weight_range.packaging}kg</div>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                              {/* Weight range validation for any source with HSN range data */}
+                                              {item.hsn_weight_range && item.weight && (
+                                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                                  <div className="text-xs">
+                                                    <div className="font-medium text-gray-700 mb-1">HSN Weight Range Validation:</div>
+                                                    {item.weight >= item.hsn_weight_range.min && item.weight <= item.hsn_weight_range.max ? (
+                                                      <div className="text-green-600 flex items-center gap-1">
+                                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                        Within normal range ({item.hsn_weight_range.min}-{item.hsn_weight_range.max}kg)
+                                                      </div>
+                                                    ) : (
+                                                      <div className="text-red-600 flex items-center gap-1">
+                                                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                        Outside range ({item.hsn_weight_range.min}-{item.hsn_weight_range.max}kg)
+                                                        {item.weight < item.hsn_weight_range.min && (
+                                                          <span className="ml-1">- too light</span>
+                                                        )}
+                                                        {item.weight > item.hsn_weight_range.max && (
+                                                          <span className="ml-1">- too heavy</span>
+                                                        )}
+                                                      </div>
+                                                    )}
+                                                    <div className="flex gap-1 mt-2">
+                                                      <button
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          const updatedItems = items.map(i => 
+                                                            i.id === item.id ? { 
+                                                              ...i, 
+                                                              weight: item.hsn_weight_range.min,
+                                                              weight_source: 'HSN Minimum'
+                                                            } : i
+                                                          );
+                                                          setItems(updatedItems);
+                                                          recalculateQuote(updatedItems);
+                                                        }}
+                                                        className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                                                      >
+                                                        Use Min ({item.hsn_weight_range.min}kg)
+                                                      </button>
+                                                      <button
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          const updatedItems = items.map(i => 
+                                                            i.id === item.id ? { 
+                                                              ...i, 
+                                                              weight: item.hsn_weight_range.average,
+                                                              weight_source: 'HSN Average'
+                                                            } : i
+                                                          );
+                                                          setItems(updatedItems);
+                                                          recalculateQuote(updatedItems);
+                                                        }}
+                                                        className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                                                      >
+                                                        Use Avg ({item.hsn_weight_range.average}kg)
+                                                      </button>
+                                                      <button
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          const updatedItems = items.map(i => 
+                                                            i.id === item.id ? { 
+                                                              ...i, 
+                                                              weight: item.hsn_weight_range.max,
+                                                              weight_source: 'HSN Maximum'
+                                                            } : i
+                                                          );
+                                                          setItems(updatedItems);
+                                                          recalculateQuote(updatedItems);
+                                                        }}
+                                                        className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+                                                      >
+                                                        Use Max ({item.hsn_weight_range.max}kg)
+                                                      </button>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    )}
+                                  </div>
                                   <Popover open={hsnSearchOpen === item.id} onOpenChange={(open) => setHsnSearchOpen(open ? item.id : null)}>
                                     <PopoverTrigger>
                                       <Badge variant="outline" className="cursor-pointer text-xs">
@@ -1568,32 +1823,231 @@ export default function UnifiedQuoteOrderSystem({
                                         <div className="flex items-center gap-2 pb-2">
                                           <Search className="w-4 h-4 text-gray-500" />
                                           <Input 
-                                            placeholder="Search HSN code or description..." 
+                                            placeholder="Search HSN code, description, or keywords..." 
                                             className="h-8 flex-1"
                                             autoFocus
+                                            value={hsnSearchQuery[item.id] || ''}
+                                            onChange={(e) => setHsnSearchQuery({
+                                              ...hsnSearchQuery,
+                                              [item.id]: e.target.value
+                                            })}
                                           />
                                         </div>
                                         <div className="space-y-1 max-h-64 overflow-y-auto">
-                                          {hsnCodes.map((hsn) => (
+                                          {isLoadingHSN ? (
+                                            <div className="flex items-center justify-center py-4">
+                                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                              <span className="text-sm text-gray-500">Loading HSN codes...</span>
+                                            </div>
+                                          ) : (() => {
+                                            const query = hsnSearchQuery[item.id]?.toLowerCase() || '';
+                                            console.log(`🔍 [HSN Search Debug] Query: "${query}", Total HSN codes: ${hsnCodes.length}`);
+                                            const filtered = hsnCodes.filter(hsn => {
+                                              // Search in HSN code
+                                              if (hsn.code.toLowerCase().includes(query)) return true;
+                                              
+                                              // Search in description
+                                              if (hsn.description.toLowerCase().includes(query)) return true;
+                                              
+                                              // Search in keywords array
+                                              if (hsn.keywords && Array.isArray(hsn.keywords)) {
+                                                return hsn.keywords.some(keyword => 
+                                                  keyword.toLowerCase().includes(query)
+                                                );
+                                              }
+                                              
+                                              return false;
+                                            });
+                                            
+                                            console.log(`🔍 [HSN Search Debug] Filtered results: ${filtered.length}, Show button condition: ${filtered.length === 0}`);
+                                            
+                                            if (filtered.length === 0) {
+                                              return (
+                                                <div className="text-center py-6 px-4">
+                                                  <div className="mb-3">
+                                                    <Package className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                                                    <p className="text-sm text-gray-600 font-medium mb-1">No HSN code found</p>
+                                                    <p className="text-xs text-gray-500">
+                                                      {query ? `No results for "${hsnSearchQuery[item.id]}"` : 'Start typing to search HSN codes'}
+                                                    </p>
+                                                  </div>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="default"
+                                                    className="bg-blue-600 hover:bg-blue-700"
+                                                    onClick={() => {
+                                                      setNewHSNData({
+                                                        code: hsnSearchQuery[item.id] || '',
+                                                        product_name: item.product_name,
+                                                        weight: item.weight,
+                                                        category: item.category
+                                                      });
+                                                      setShowHSNCreateModal(true);
+                                                      setHsnSearchOpen(null);
+                                                    }}
+                                                  >
+                                                    <Plus className="w-4 h-4 mr-2" />
+                                                    Add New HSN Code
+                                                  </Button>
+                                                  <p className="text-xs text-gray-500 mt-2">
+                                                    Create a new HSN entry for this product
+                                                  </p>
+                                                </div>
+                                              );
+                                            }
+                                            
+                                            return filtered.map((hsn) => {
+                                              // Find matching keywords for display
+                                              const matchingKeywords = hsn.keywords ? 
+                                                hsn.keywords.filter(keyword => 
+                                                  keyword.toLowerCase().includes(query)
+                                                ) : [];
+                                              
+                                              // Create inline component for weight preview
+                                              const WeightPreview = () => {
+                                                const [weightData, setWeightData] = React.useState(null);
+                                                const [loading, setLoading] = React.useState(true);
+                                                
+                                                React.useEffect(() => {
+                                                  hsnWeightService.getHSNWeight(hsn.code)
+                                                    .then(data => {
+                                                      setWeightData(data);
+                                                      setLoading(false);
+                                                    })
+                                                    .catch(() => {
+                                                      setLoading(false);
+                                                    });
+                                                }, []);
+                                                
+                                                if (loading) {
+                                                  return (
+                                                    <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
+                                                      ⏳ Loading...
+                                                    </span>
+                                                  );
+                                                }
+                                                
+                                                if (weightData && weightData.average > 0) {
+                                                  return (
+                                                    <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                                      📦 {weightData.min}-{weightData.max}kg (avg: {weightData.average}kg)
+                                                    </span>
+                                                  );
+                                                }
+                                                
+                                                return (
+                                                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
+                                                    📦 No weight data
+                                                  </span>
+                                                );
+                                              };
+                                              
+                                              return (
                                             <div
                                               key={hsn.code}
-                                              className="flex items-center justify-between p-2 hover:bg-gray-100 rounded cursor-pointer"
-                                              onClick={() => {
+                                              className="p-2 hover:bg-gray-100 rounded cursor-pointer border-l-2 border-transparent hover:border-blue-300"
+                                              onClick={async () => {
+                                                // Update HSN code
+                                                let updatedItem = { ...item, hsn_code: hsn.code };
+                                                
+                                                // Fetch weight data from HSN
+                                                try {
+                                                  const weightData = await hsnWeightService.getHSNWeight(hsn.code);
+                                                  if (weightData && weightData.average > 0) {
+                                                    // Store additional weight context for validation
+                                                    updatedItem = {
+                                                      ...updatedItem,
+                                                      weight: weightData.average,
+                                                      weight_source: 'HSN Database',
+                                                      weight_confidence: weightData.confidence,
+                                                      // Add HSN weight range for validation
+                                                      hsn_weight_range: {
+                                                        min: weightData.min,
+                                                        max: weightData.max,
+                                                        average: weightData.average,
+                                                        packaging: weightData.packaging
+                                                      }
+                                                    };
+                                                    
+                                                    // Enhanced toast notification with range
+                                                    const totalWeight = weightData.average + (weightData.packaging || 0);
+                                                    const rangeDisplay = `Range: ${weightData.min}-${weightData.max}kg`;
+                                                    const packagingDisplay = weightData.packaging ? ` + ${weightData.packaging}kg packaging` : '';
+                                                    
+                                                    toast({
+                                                      title: 'Weight Auto-filled from HSN',
+                                                      description: `Set to ${weightData.average}kg (${rangeDisplay})${packagingDisplay}. Total: ${totalWeight}kg`,
+                                                      variant: 'default'
+                                                    });
+                                                  }
+                                                } catch (error) {
+                                                  console.error('Failed to fetch HSN weight:', error);
+                                                }
+                                                
                                                 setItems(items.map(i => 
-                                                  i.id === item.id ? { ...i, hsn_code: hsn.code } : i
+                                                  i.id === item.id ? updatedItem : i
                                                 ));
                                                 setHsnSearchOpen(null);
+                                                
+                                                // Trigger recalculation if weight changed
+                                                if (updatedItem.weight !== item.weight) {
+                                                  await recalculateQuote(items.map(i => 
+                                                    i.id === item.id ? updatedItem : i
+                                                  ));
+                                                }
                                               }}
                                             >
-                                              <div>
-                                                <p className="font-medium text-sm">{hsn.code}</p>
+                                              <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                  <p className="font-medium text-sm">{hsn.code}</p>
+                                                  <WeightPreview />
+                                                </div>
                                                 <p className="text-xs text-gray-500">{hsn.description}</p>
+                                                {matchingKeywords.length > 0 && (
+                                                  <div className="flex gap-1 mt-1">
+                                                    <span className="text-xs text-blue-600">Keywords:</span>
+                                                    {matchingKeywords.slice(0, 3).map((keyword, idx) => (
+                                                      <Badge key={idx} variant="outline" className="text-xs px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
+                                                        {keyword}
+                                                      </Badge>
+                                                    ))}
+                                                    {matchingKeywords.length > 3 && (
+                                                      <span className="text-xs text-blue-600">+{matchingKeywords.length - 3} more</span>
+                                                    )}
+                                                  </div>
+                                                )}
                                               </div>
                                               <Badge variant="secondary" className="text-xs">
                                                 {hsn.rate}%
                                               </Badge>
                                             </div>
-                                          ))}
+                                            );
+                                            });
+                                          })()}
+                                          
+                                          {/* Always show Add New HSN Code button at bottom */}
+                                          {!isLoadingHSN && (
+                                            <div className="border-t pt-2 mt-2">
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                onClick={() => {
+                                                  setNewHSNData({
+                                                    code: hsnSearchQuery[item.id] || '',
+                                                    product_name: item.product_name,
+                                                    weight: item.weight,
+                                                    category: item.category
+                                                  });
+                                                  setShowHSNCreateModal(true);
+                                                  setHsnSearchOpen(null);
+                                                }}
+                                              >
+                                                <Plus className="w-3 h-3 mr-2" />
+                                                Add New HSN Code
+                                              </Button>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     </PopoverContent>
@@ -2737,6 +3191,37 @@ export default function UnifiedQuoteOrderSystem({
                                 <div><strong>Service:</strong> {debugData.detailed_calculations.shipping.name}</div>
                                 <div><strong>Weight:</strong> {debugData.detailed_calculations.shipping.weight}kg</div>
                                 <div><strong>Delivery Days:</strong> {debugData.detailed_calculations.shipping.days}</div>
+                                
+                                {/* Detailed Breakdown - Calculate if not available */}
+                                <div className="bg-gray-50 p-2 rounded mt-2 space-y-1">
+                                  <div className="font-semibold text-gray-700">📊 Cost Breakdown:</div>
+                                  {debugData.detailed_calculations.shipping.breakdown ? (
+                                    <>
+                                      <div><strong>Base Cost:</strong> {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.base_cost || 0}</div>
+                                      <div><strong>Weight Tier:</strong> {debugData.detailed_calculations.shipping.breakdown.weight_tier || 'N/A'}</div>
+                                      <div><strong>Weight Cost:</strong> {debugData.detailed_calculations.shipping.weight}kg × {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.weight_rate || 0}/kg = {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.weight_cost || 0}</div>
+                                      <div><strong>Delivery Premium:</strong> {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.delivery_premium || 0}</div>
+                                      <div className="border-t pt-1 mt-1 font-semibold">
+                                        <strong>Formula:</strong> {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.base_cost || 0} + {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.weight_cost || 0} + {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.breakdown.delivery_premium || 0} = {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.total_cost_usd}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="text-sm text-gray-600">For weight: {debugData.detailed_calculations.shipping.weight}kg on {debugData.route} route</div>
+                                      <div className="text-sm text-gray-600">Total shipping cost: {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.total_cost_usd}</div>
+                                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                        <p className="text-xs text-yellow-800">
+                                          Detailed breakdown requires recalculation. The current calculation shows a total of {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.total_cost_usd} 
+                                          for {debugData.detailed_calculations.shipping.weight}kg using {debugData.detailed_calculations.shipping.carrier}.
+                                        </p>
+                                        <p className="text-xs text-yellow-800 mt-1">
+                                          Based on typical IN→NP rates: Base ₹25 + Weight ({debugData.detailed_calculations.shipping.weight}kg × ₹45/kg) + Delivery Premium
+                                        </p>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                
                                 <div className="bg-blue-50 p-2 rounded mt-1">
                                   <strong>Total Cost:</strong> {debugData?.currency_symbol || '$'}{debugData.detailed_calculations.shipping.total_cost_usd}
                                 </div>
@@ -2904,6 +3389,148 @@ export default function UnifiedQuoteOrderSystem({
           }}
         />
       )}
+      
+      {/* HSN Creation Modal */}
+      <HSNCreationModal
+        open={showHSNCreateModal}
+        onOpenChange={setShowHSNCreateModal}
+        initialData={newHSNData ? {
+          hsn_code: newHSNData.code || newHSNData.hsn_code || '',
+          product_name: newHSNData.product_name,
+          weight: newHSNData.weight,
+          category: newHSNData.category
+        } : undefined}
+        onSuccess={async (hsnData) => {
+          toast({
+            title: 'HSN Code Created',
+            description: 'The HSN code has been created successfully.',
+          });
+          
+          // Apply weight to current item if available
+          if (hsnData.weight_data?.typical_weights?.per_unit?.average) {
+            const weight_avg = hsnData.weight_data.typical_weights.per_unit.average;
+            const itemId = Object.keys(hsnSearchQuery).find(id => hsnSearchQuery[id] === hsnData.hsn_code);
+            if (itemId) {
+              setItems(items.map(item => 
+                item.id === itemId 
+                  ? { 
+                      ...item, 
+                      weight: weight_avg,
+                      weight_source: 'HSN Database',
+                      weight_confidence: 1.0,
+                      hsn_code: hsnData.hsn_code 
+                    } 
+                  : item
+              ));
+            }
+          }
+          
+          // Refresh HSN codes list
+          const allRecords = await unifiedDataEngine.getAllHSNRecords(200);
+          setHsnCodes(allRecords.map(hsn => ({
+            code: hsn.hsn_code,
+            description: hsn.description,
+            rate: hsn.tax_data?.typical_rates?.customs?.common || 0
+          })));
+          
+          setNewHSNData(null);
+        }}
+      />
+
+      {/* Category Creation Modal */}
+      <Dialog open={showCategoryCreateModal} onOpenChange={setShowCategoryCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Add New Category
+            </DialogTitle>
+            <DialogDescription>
+              Create a new product category. This will be added to the category list for future use.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="category_name">Category Name</Label>
+              <Input 
+                id="category_name"
+                value={newCategoryData?.name || ''}
+                onChange={(e) => setNewCategoryData({...newCategoryData, name: e.target.value})}
+                placeholder="e.g., Automotive, Pet Supplies"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="category_description">Description (Optional)</Label>
+              <Input 
+                id="category_description"
+                value={newCategoryData?.description || ''}
+                onChange={(e) => setNewCategoryData({...newCategoryData, description: e.target.value})}
+                placeholder="Brief description of this category"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="category_keywords">Keywords (Optional)</Label>
+              <Input 
+                id="category_keywords"
+                value={newCategoryData?.keywords?.join(', ') || ''}
+                onChange={(e) => {
+                  const keywordsList = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                  setNewCategoryData({...newCategoryData, keywords: keywordsList});
+                }}
+                placeholder="keyword1, keyword2, keyword3"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Comma-separated keywords to help classify products
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (!newCategoryData?.name?.trim()) {
+                toast({
+                  title: 'Category name required',
+                  description: 'Please enter a name for the category.',
+                  variant: 'destructive'
+                });
+                return;
+              }
+              
+              // Create category value from name
+              const categoryValue = newCategoryData.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+              
+              // Add to categories list
+              const newCategory = {
+                value: categoryValue,
+                label: newCategoryData.name
+              };
+              setCategories([...categories, newCategory]);
+              
+              // Auto-select the new category in HSN modal
+              if (newHSNData) {
+                setNewHSNData({...newHSNData, category: categoryValue});
+              }
+              
+              toast({
+                title: 'Category Added',
+                description: `"${newCategoryData.name}" has been added to the category list.`,
+                variant: 'default'
+              });
+              
+              setShowCategoryCreateModal(false);
+              setNewCategoryData(null);
+            }}>
+              Add Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

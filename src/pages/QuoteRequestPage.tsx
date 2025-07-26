@@ -223,6 +223,9 @@ export default function QuoteRequestPage() {
           originCurrency = 'USD';
         }
 
+        // Get session ID for linking uploaded files
+        const sessionId = localStorage.getItem('anonymous_session_id');
+
         // Submit combined quote to Supabase using unified structure
         const { data: quote, error: quoteError } = await supabase
           .from('quotes')
@@ -250,6 +253,7 @@ export default function QuoteRequestPage() {
               preferences: {
                 insurance_opted_in: submissionData?.insuranceOptedIn || false,
               },
+              sessionId: sessionId, // Store session ID for linking uploaded files
             },
             // ✅ FIX: Prices are now in origin currency, store original values
             // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
@@ -341,6 +345,9 @@ export default function QuoteRequestPage() {
             productOriginCurrency = 'USD';
           }
 
+          // Get session ID for linking uploaded files
+          const sessionId = localStorage.getItem('anonymous_session_id');
+
           // Submit individual quote to Supabase using unified structure
           const { data: quote, error: quoteError } = await supabase
             .from('quotes')
@@ -370,6 +377,7 @@ export default function QuoteRequestPage() {
                 preferences: {
                   insurance_opted_in: submissionData?.insuranceOptedIn || false,
                 },
+                sessionId: sessionId, // Store session ID for linking uploaded files
               },
               // ✅ FIX: Prices are now in origin currency, store original values
               // Note: costprice_total_usd will be properly converted by SmartCalculationEngine

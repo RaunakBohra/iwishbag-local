@@ -813,6 +813,11 @@ export class SmartCalculationEngine {
           ? `${totalMinDays} days (by ${format(estimatedDeliveryMin, 'MMM do')})`
           : `${totalMinDays}-${totalMaxDays} days (${format(estimatedDeliveryMin, 'MMM do')}-${format(estimatedDeliveryMax, 'MMM do')})`;
 
+      // Get weight tier info for breakdown
+      const weightTier = route.weight_tiers?.find(
+        (tier: any) => params.weight >= tier.min && (tier.max === null || params.weight <= tier.max),
+      );
+      
       options.push({
         id: `${route.id}_delivery_${deliveryOption.id}`,
         carrier: deliveryOption.carrier,
@@ -829,6 +834,14 @@ export class SmartCalculationEngine {
         // 🔧 FIX: Include handling/insurance configs from delivery options
         handling_charge: deliveryOption.handling_charge,
         insurance_options: deliveryOption.insurance_options,
+        // 📊 Add route calculation data for breakdown display
+        route_data: {
+          base_shipping_cost: route.base_shipping_cost,
+          weight_tier_used: weightTier ? `${weightTier.min}-${weightTier.max || '∞'}kg` : 'N/A',
+          weight_rate_per_kg: weightTier?.cost || 0,
+          weight_cost: weightTier ? (params.weight * weightTier.cost) : 0,
+          delivery_premium: deliveryPremium,
+        },
       });
     }
 

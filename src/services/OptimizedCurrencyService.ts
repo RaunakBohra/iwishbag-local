@@ -1,9 +1,13 @@
 import { currencyService, Currency } from './CurrencyService';
+import { logger } from '@/lib/logger';
+
+// Edge API URL - can be configured via environment variable
+const EDGE_API_URL = import.meta.env.VITE_EDGE_API_URL || 'https://iwishbag-edge-api.rnkbohra.workers.dev';
 
 /**
- * Browser-Optimized Currency Service
- * Uses intelligent client-side caching for instant performance
- * No external API calls - pure browser optimization
+ * Browser-Optimized Currency Service with D1 Edge Cache
+ * 3-tier caching: Memory → D1 Edge → localStorage → Database
+ * Provides global edge performance with automatic fallback
  */
 class OptimizedCurrencyService {
   private static instance: OptimizedCurrencyService;
@@ -24,12 +28,13 @@ class OptimizedCurrencyService {
   }
 
   /**
-   * Smart 2-tier caching: Memory → localStorage → Database
+   * Smart 3-tier caching: Memory → D1 Edge → localStorage → Database
    */
   private async getCachedData<T>(
     key: string,
     fetcher: () => Promise<T>,
-    ttl: number = this.STORAGE_TTL
+    ttl: number = this.STORAGE_TTL,
+    d1Endpoint?: string
   ): Promise<T> {
     // Tier 1: Memory cache (instant access)
     const memoryCached = this.memoryCache.get(key);
@@ -38,7 +43,41 @@ class OptimizedCurrencyService {
       return memoryCached.data;
     }
 
-    // Tier 2: localStorage cache (very fast)
+    // Tier 2: D1 Edge cache (global, <10ms)
+    if (d1Endpoint) {
+      try {
+        const response = await fetch(`${EDGE_API_URL}${d1Endpoint}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`[OptimizedCurrency] D1 edge cache hit: ${key}`);
+          
+          // Cache in memory
+          this.memoryCache.set(key, {
+            data,
+            expires: Date.now() + this.MEMORY_TTL
+          });
+          
+          // Also cache in localStorage
+          try {
+            const storageKey = `iwishbag_currency_${key}`;
+            localStorage.setItem(storageKey, JSON.stringify({
+              data,
+              expires: Date.now() + ttl,
+              cached_at: Date.now(),
+              source: 'd1_edge'
+            }));
+          } catch (err) {
+            // Storage might be full
+          }
+          
+          return data;
+        }
+      } catch (error) {
+        logger.warn('D1 edge cache error, falling back', { error, key });
+      }
+    }
+
+    // Tier 3: localStorage cache (very fast)
     try {
       const storageKey = `iwishbag_currency_${key}`;
       const storedData = localStorage.getItem(storageKey);
@@ -61,7 +100,7 @@ class OptimizedCurrencyService {
       console.warn(`[OptimizedCurrency] Storage cache error for ${key}:`, error);
     }
 
-    // Tier 3: Database/API call
+    // Tier 4: Database/API call
     console.log(`[OptimizedCurrency] Fetching from database: ${key}`);
     const data = await fetcher();
     
@@ -86,16 +125,26 @@ class OptimizedCurrencyService {
   }
 
   /**
-   * Get exchange rate with smart caching
+   * Get exchange rate with smart caching and D1 edge
    */
   async getExchangeRate(originCountry: string, destinationCountry: string): Promise<number> {
     const cacheKey = `rate_${originCountry}_${destinationCountry}`;
     
+    // Try to get from D1 edge cache first
+    const d1Endpoint = `/api/currency/rates?from=${originCountry}&to=${destinationCountry}`;
+    
     return this.getCachedData(
       cacheKey,
       () => currencyService.getExchangeRate(originCountry, destinationCountry),
-      6 * 60 * 60 * 1000 // 6 hours - exchange rates are relatively stable
-    );
+      6 * 60 * 60 * 1000, // 6 hours - exchange rates are relatively stable
+      d1Endpoint
+    ).then(result => {
+      // Handle D1 response format
+      if (typeof result === 'object' && 'rate' in result) {
+        return result.rate;
+      }
+      return result;
+    });
   }
 
   /**
@@ -112,18 +161,31 @@ class OptimizedCurrencyService {
   }
 
   /**
-   * Get all currencies with caching
+   * Get all currencies with caching and D1 edge
    */
   async getAllCurrencies(): Promise<Currency[]> {
     return this.getCachedData(
       'all_currencies',
       () => currencyService.getAllCurrencies(),
-      24 * 60 * 60 * 1000 // 24 hours - currencies don't change often
-    );
+      24 * 60 * 60 * 1000, // 24 hours - currencies don't change often
+      '/api/countries' // D1 endpoint
+    ).then(result => {
+      // Handle D1 response format
+      if (result && 'countries' in result) {
+        // Convert country data to Currency format
+        return result.countries.map(country => ({
+          code: country.currency,
+          name: country.currency,
+          symbol: country.symbol,
+          exchange_rate: country.exchange_rate
+        }));
+      }
+      return result;
+    });
   }
 
   /**
-   * Get currency for country with caching
+   * Get currency for country with caching and D1 edge
    */
   async getCurrencyForCountry(countryCode: string): Promise<string> {
     const cacheKey = `country_currency_${countryCode}`;
@@ -131,8 +193,15 @@ class OptimizedCurrencyService {
     return this.getCachedData(
       cacheKey,
       () => currencyService.getCurrencyForCountry(countryCode),
-      24 * 60 * 60 * 1000 // 24 hours
-    );
+      24 * 60 * 60 * 1000, // 24 hours
+      `/api/countries/${countryCode}` // D1 endpoint
+    ).then(result => {
+      // Handle D1 response format
+      if (result && 'country' in result && result.country) {
+        return result.country.currency;
+      }
+      return result;
+    });
   }
 
   /**

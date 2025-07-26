@@ -1,10 +1,15 @@
-name = "iwishbag-hybrid-worker"
-main = "workers/hybrid-worker.js"
+name = "iwishbag-rate-limit-worker"
+main = "test-worker/index.js"
 compatibility_date = "2023-12-01"
 account_id = "610762493d34333f1a6d72a037b345cf"
 
+[vars]
+CF_API_TOKEN = "4Y_WjuGIEtTpK85hmE6XrGwbi85d8zN5Me0T_45l"
+CF_ZONE_ID = "2cd502a70fa04ec1619df21d7eb5e17c"
+SYNC_API_KEY = "iwishbag-d1-sync-2024"
+
 [env.production]
-vars = { R2_PUBLIC_DOMAIN = "r2.iwishbag.com" }
+vars = { R2_PUBLIC_DOMAIN = "r2.whyteclub.com" }
 
 [[r2_buckets]]
 binding = "IWISHBAG_NEW"
@@ -13,3 +18,8 @@ bucket_name = "iwishbag-new"
 [[kv_namespaces]]
 binding = "IWISHBAG_CACHE"
 id = "6f5087b9d89146dfbeb8efa92a9b4756"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "iwishbag-edge-cache"
+database_id = "3c663e4c-cad7-4262-a73d-f1ec9a4367a9"

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D1 Edge Cache Performance Test - IWishBag</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">D1 Edge Cache Performance Test</h1>
+      <p class="text-gray-600 mb-8">Compare speed between D1 Edge Cache and direct Supabase queries</p>
+
+      <!-- Test Controls -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Performance Tests</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <button onclick="testD1Performance()" class="bg-blue-500 text-white px-6 py-3 rounded hover:bg-blue-600 transition">
+            Test D1 Edge Cache
+          </button>
+          <button onclick="testSupabasePerformance()" class="bg-green-500 text-white px-6 py-3 rounded hover:bg-green-600 transition">
+            Test Direct Supabase
+          </button>
+        </div>
+
+        <button onclick="runBenchmark()" class="w-full bg-purple-500 text-white px-6 py-3 rounded hover:bg-purple-600 transition">
+          Run Full Benchmark (10 requests each)
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- D1 Results -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold mb-4 text-blue-600">D1 Edge Cache Results</h3>
+          <div id="d1-results" class="space-y-2">
+            <p class="text-gray-500">Click "Test D1 Edge Cache" to start</p>
+          </div>
+        </div>
+
+        <!-- Supabase Results -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold mb-4 text-green-600">Supabase Direct Results</h3>
+          <div id="supabase-results" class="space-y-2">
+            <p class="text-gray-500">Click "Test Direct Supabase" to start</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmark Summary -->
+      <div id="benchmark-summary" class="mt-6 bg-gray-800 text-white rounded-lg p-6 hidden">
+        <h3 class="text-xl font-semibold mb-4">Benchmark Summary</h3>
+        <div id="summary-content"></div>
+      </div>
+
+      <!-- Live Data Display -->
+      <div class="mt-6 bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold mb-4">Live Data</h3>
+        <div id="live-data" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-50 p-4 rounded">
+            <p class="text-sm text-gray-500">USD → INR Rate</p>
+            <p id="usd-inr" class="text-2xl font-bold">-</p>
+          </div>
+          <div class="bg-gray-50 p-4 rounded">
+            <p class="text-sm text-gray-500">Countries Loaded</p>
+            <p id="countries-count" class="text-2xl font-bold">-</p>
+          </div>
+          <div class="bg-gray-50 p-4 rounded">
+            <p class="text-sm text-gray-500">Edge Location</p>
+            <p id="edge-location" class="text-2xl font-bold">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const D1_API_URL = 'https://iwishbag-edge-api.rnkbohra.workers.dev';
+    const SUPABASE_URL = 'http://127.0.0.1:54321';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+    // Test D1 Performance
+    async function testD1Performance() {
+      const resultsDiv = document.getElementById('d1-results');
+      resultsDiv.innerHTML = '<p class="text-gray-500">Testing...</p>';
+      
+      const tests = [
+        { name: 'Get Exchange Rate', url: '/api/currency/rates?from=USD&to=INR' },
+        { name: 'Get All Countries', url: '/api/countries' },
+        { name: 'Get Country (US)', url: '/api/countries/US' },
+        { name: 'Health Check', url: '/api/health' }
+      ];
+      
+      const results = [];
+      
+      for (const test of tests) {
+        const start = performance.now();
+        try {
+          const response = await fetch(D1_API_URL + test.url);
+          const data = await response.json();
+          const duration = performance.now() - start;
+          
+          results.push({
+            name: test.name,
+            duration: duration.toFixed(2),
+            success: true
+          });
+          
+          // Update live data
+          if (test.name === 'Get Exchange Rate' && data.rate) {
+            document.getElementById('usd-inr').textContent = data.rate;
+          }
+          if (test.name === 'Get All Countries' && data.countries) {
+            document.getElementById('countries-count').textContent = data.countries.length;
+          }
+          if (test.name === 'Health Check' && data.location) {
+            document.getElementById('edge-location').textContent = data.location;
+          }
+        } catch (error) {
+          results.push({
+            name: test.name,
+            duration: (performance.now() - start).toFixed(2),
+            success: false,
+            error: error.message
+          });
+        }
+      }
+      
+      displayResults(resultsDiv, results, 'blue');
+    }
+
+    // Test Supabase Performance
+    async function testSupabasePerformance() {
+      const resultsDiv = document.getElementById('supabase-results');
+      resultsDiv.innerHTML = '<p class="text-gray-500">Testing...</p>';
+      
+      const results = [];
+      
+      // Test 1: Get exchange rate
+      const start1 = performance.now();
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/country_settings?code=eq.IN&select=exchange_rate`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        const data = await response.json();
+        results.push({
+          name: 'Get Exchange Rate',
+          duration: (performance.now() - start1).toFixed(2),
+          success: true
+        });
+      } catch (error) {
+        results.push({
+          name: 'Get Exchange Rate',
+          duration: (performance.now() - start1).toFixed(2),
+          success: false
+        });
+      }
+      
+      // Test 2: Get all countries
+      const start2 = performance.now();
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/country_settings?select=*`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        const data = await response.json();
+        results.push({
+          name: 'Get All Countries',
+          duration: (performance.now() - start2).toFixed(2),
+          success: true
+        });
+      } catch (error) {
+        results.push({
+          name: 'Get All Countries',
+          duration: (performance.now() - start2).toFixed(2),
+          success: false
+        });
+      }
+      
+      displayResults(resultsDiv, results, 'green');
+    }
+
+    // Run full benchmark
+    async function runBenchmark() {
+      const summaryDiv = document.getElementById('benchmark-summary');
+      const summaryContent = document.getElementById('summary-content');
+      
+      summaryDiv.classList.remove('hidden');
+      summaryContent.innerHTML = '<p class="text-gray-300">Running benchmark...</p>';
+      
+      const d1Times = [];
+      const supabaseTimes = [];
+      
+      // Run 10 tests for each
+      for (let i = 0; i < 10; i++) {
+        // D1 test
+        const d1Start = performance.now();
+        await fetch(D1_API_URL + '/api/currency/rates?from=USD&to=INR');
+        d1Times.push(performance.now() - d1Start);
+        
+        // Supabase test
+        const supStart = performance.now();
+        await fetch(`${SUPABASE_URL}/rest/v1/country_settings?code=eq.IN&select=exchange_rate`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        supabaseTimes.push(performance.now() - supStart);
+        
+        // Small delay between tests
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // Calculate statistics
+      const d1Avg = d1Times.reduce((a, b) => a + b, 0) / d1Times.length;
+      const d1Min = Math.min(...d1Times);
+      const d1Max = Math.max(...d1Times);
+      
+      const supAvg = supabaseTimes.reduce((a, b) => a + b, 0) / supabaseTimes.length;
+      const supMin = Math.min(...supabaseTimes);
+      const supMax = Math.max(...supabaseTimes);
+      
+      const improvement = ((supAvg - d1Avg) / supAvg * 100).toFixed(1);
+      
+      summaryContent.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-semibold text-blue-400 mb-2">D1 Edge Cache</h4>
+            <p>Average: <span class="font-bold">${d1Avg.toFixed(2)}ms</span></p>
+            <p>Min: ${d1Min.toFixed(2)}ms</p>
+            <p>Max: ${d1Max.toFixed(2)}ms</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-green-400 mb-2">Supabase Direct</h4>
+            <p>Average: <span class="font-bold">${supAvg.toFixed(2)}ms</span></p>
+            <p>Min: ${supMin.toFixed(2)}ms</p>
+            <p>Max: ${supMax.toFixed(2)}ms</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-gray-700">
+          <p class="text-xl">D1 is <span class="font-bold text-yellow-400">${improvement}%</span> faster! 🚀</p>
+          <p class="text-sm text-gray-400 mt-2">Based on 10 requests each</p>
+        </div>
+      `;
+    }
+
+    // Display results
+    function displayResults(container, results, color) {
+      container.innerHTML = results.map(r => `
+        <div class="flex justify-between items-center py-2 border-b">
+          <span class="text-sm">${r.name}</span>
+          <span class="font-mono text-sm ${r.success ? `text-${color}-600` : 'text-red-600'}">
+            ${r.duration}ms ${r.success ? '✓' : '✗'}
+          </span>
+        </div>
+      `).join('');
+    }
+
+    // Auto-run D1 test on load
+    window.addEventListener('load', () => {
+      setTimeout(testD1Performance, 500);
+    });
+  </script>
+</body>
+</html>

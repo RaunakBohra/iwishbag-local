@@ -785,6 +785,14 @@ export class UnifiedDataEngine {
   }
 
   /**
+   * Clear all cache entries
+   */
+  public clearAllCache(): void {
+    this.cache.clear();
+    console.log('🧹 UnifiedDataEngine: All cache cleared');
+  }
+
+  /**
    * Bulk operations for efficiency
    */
   async bulkUpdateStatus(quoteIds: string[], status: string): Promise<boolean> {
@@ -953,6 +961,66 @@ export class UnifiedDataEngine {
       this.setCache(cacheKey, records);
       return records;
     } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Get ALL HSN records from database
+   */
+  async getAllHSNRecords(limit: number = 100): Promise<HSNMasterRecord[]> {
+    const cacheKey = `hsn_all_${limit}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('hsn_master')
+        .select('*')
+        .eq('is_active', true)
+        .order('hsn_code')
+        .limit(limit);
+
+      if (error) throw error;
+      
+      const records = data || [];
+      this.setCache(cacheKey, records);
+      return records;
+    } catch (error) {
+      console.error('Failed to fetch all HSN records:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all unique categories from HSN database
+   */
+  async getAllCategories(): Promise<Array<{value: string, label: string}>> {
+    const cacheKey = 'hsn_categories_all';
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('hsn_master')
+        .select('category')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      // Get unique categories and format them
+      const uniqueCategories = [...new Set(data.map(item => item.category))]
+        .filter(Boolean)
+        .sort()
+        .map(category => ({
+          value: category,
+          label: category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ')
+        }));
+
+      this.setCache(cacheKey, uniqueCategories);
+      return uniqueCategories;
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
       return [];
     }
   }

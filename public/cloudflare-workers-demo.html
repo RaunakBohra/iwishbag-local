@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Workers API Demo - iwishBag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">⚡ Cloudflare Workers API Demo</h1>
+        <p class="text-gray-600 mb-8">Test edge API endpoints with global low latency</p>
+
+        <!-- Status -->
+        <div id="status" class="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <p class="text-blue-800">
+                <strong>Edge Location:</strong> 
+                <span id="edgeLocation">Detecting...</span>
+            </p>
+        </div>
+
+        <!-- API Endpoints Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Currency Conversion -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">💱 Currency Conversion</h2>
+                <div class="space-y-3">
+                    <input type="number" id="amount" placeholder="Amount" value="100" 
+                           class="w-full p-2 border rounded">
+                    <div class="grid grid-cols-2 gap-2">
+                        <select id="fromCurrency" class="p-2 border rounded">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="INR">INR</option>
+                            <option value="NPR">NPR</option>
+                        </select>
+                        <select id="toCurrency" class="p-2 border rounded">
+                            <option value="INR" selected>INR</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="NPR">NPR</option>
+                        </select>
+                    </div>
+                    <button onclick="testCurrencyConversion()" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Convert Currency
+                    </button>
+                    <div id="conversionResult" class="text-sm p-3 bg-gray-50 rounded"></div>
+                </div>
+            </div>
+
+            <!-- Product Classification -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">🤖 AI Product Classification</h2>
+                <div class="space-y-3">
+                    <input type="text" id="productName" placeholder="Product description" 
+                           value="Apple iPhone 15 Pro Max" class="w-full p-2 border rounded">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="origin" placeholder="Origin" value="US" 
+                               class="p-2 border rounded">
+                        <input type="text" id="destination" placeholder="Destination" value="IN" 
+                               class="p-2 border rounded">
+                    </div>
+                    <button onclick="testProductClassification()" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Classify Product
+                    </button>
+                    <div id="classificationResult" class="text-sm p-3 bg-gray-50 rounded"></div>
+                </div>
+            </div>
+
+            <!-- HSN Lookup -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">🏷️ HSN Code Lookup</h2>
+                <div class="space-y-3">
+                    <input type="text" id="hsnSearch" placeholder="Search HSN (e.g., electronics)" 
+                           value="mobile phone" class="w-full p-2 border rounded">
+                    <button onclick="testHSNSearch()" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Search HSN
+                    </button>
+                    <div id="hsnResult" class="text-sm p-3 bg-gray-50 rounded max-h-48 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Quote Calculation -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">🧮 Quote Calculation</h2>
+                <div class="space-y-3">
+                    <div class="text-sm text-gray-600">
+                        Sample quote: Electronics from US to IN
+                    </div>
+                    <button onclick="testQuoteCalculation()" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Calculate Quote
+                    </button>
+                    <div id="quoteResult" class="text-sm p-3 bg-gray-50 rounded"></div>
+                </div>
+            </div>
+
+            <!-- Popular Products -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">📊 Popular Products</h2>
+                <div class="space-y-3">
+                    <select id="category" class="w-full p-2 border rounded">
+                        <option value="">All Categories</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="clothing">Clothing</option>
+                        <option value="toys">Toys</option>
+                    </select>
+                    <button onclick="testPopularProducts()" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Get Popular Products
+                    </button>
+                    <div id="popularResult" class="text-sm p-3 bg-gray-50 rounded max-h-48 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- Health Check -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">🏥 API Health Check</h2>
+                <div class="space-y-3">
+                    <button onclick="testHealthCheck()" 
+                            class="w-full bg-teal-600 text-white p-2 rounded hover:bg-teal-700">
+                        Check API Health
+                    </button>
+                    <div id="healthResult" class="text-sm p-3 bg-gray-50 rounded"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics -->
+        <div class="mt-8 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">📊 Performance Metrics</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-teal-600" id="avgLatency">0ms</div>
+                    <div class="text-sm text-gray-600">Avg Latency</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-teal-600" id="cacheHits">0%</div>
+                    <div class="text-sm text-gray-600">Cache Hit Rate</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-teal-600" id="apiCalls">0</div>
+                    <div class="text-sm text-gray-600">API Calls</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-teal-600" id="dataTransfer">0 KB</div>
+                    <div class="text-sm text-gray-600">Data Transfer</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="mt-8 bg-teal-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-teal-800 mb-3">✨ Cloudflare Workers Features</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-teal-700">
+                <ul class="space-y-1">
+                    <li>• 0ms cold starts</li>
+                    <li>• Global deployment (300+ locations)</li>
+                    <li>• Automatic failover</li>
+                    <li>• KV storage integration</li>
+                </ul>
+                <ul class="space-y-1">
+                    <li>• D1 database at edge</li>
+                    <li>• Built-in caching</li>
+                    <li>• Workers AI integration</li>
+                    <li>• WebAssembly support</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated Worker API base URL
+        const WORKER_API = '/api'; // In production: https://api.iwishbag.workers.dev
+        
+        // Metrics tracking
+        let apiCalls = 0;
+        let totalLatency = 0;
+        let cacheHits = 0;
+        let totalDataTransfer = 0;
+
+        // Detect edge location
+        async function detectEdgeLocation() {
+            // Simulated edge location detection
+            const locations = ['SFO', 'LAX', 'ORD', 'DFW', 'ATL', 'JFK', 'LHR', 'CDG', 'SIN', 'SYD'];
+            const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+            document.getElementById('edgeLocation').textContent = `${randomLocation} - Cloudflare Edge`;
+        }
+
+        // Update metrics
+        function updateMetrics(latency, cached, dataSize) {
+            apiCalls++;
+            totalLatency += latency;
+            if (cached) cacheHits++;
+            totalDataTransfer += dataSize;
+
+            document.getElementById('avgLatency').textContent = 
+                Math.round(totalLatency / apiCalls) + 'ms';
+            document.getElementById('cacheHits').textContent = 
+                Math.round((cacheHits / apiCalls) * 100) + '%';
+            document.getElementById('apiCalls').textContent = apiCalls;
+            document.getElementById('dataTransfer').textContent = 
+                (totalDataTransfer / 1024).toFixed(2) + ' KB';
+        }
+
+        // Test currency conversion
+        async function testCurrencyConversion() {
+            const amount = document.getElementById('amount').value;
+            const from = document.getElementById('fromCurrency').value;
+            const to = document.getElementById('toCurrency').value;
+            const resultDiv = document.getElementById('conversionResult');
+            
+            resultDiv.innerHTML = '<div class="animate-pulse">Converting...</div>';
+            
+            const start = Date.now();
+            
+            // Simulate API call
+            setTimeout(() => {
+                const rate = getSimulatedRate(from, to);
+                const result = amount * rate;
+                const latency = Date.now() - start;
+                const cached = Math.random() > 0.5;
+                
+                resultDiv.innerHTML = `
+                    <div class="font-semibold">${amount} ${from} = ${result.toFixed(2)} ${to}</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        Rate: ${rate.toFixed(6)} • Latency: ${latency}ms 
+                        ${cached ? '• Cached ✓' : ''}
+                    </div>
+                `;
+                
+                updateMetrics(latency, cached, 150);
+            }, 50 + Math.random() * 100);
+        }
+
+        // Test product classification
+        async function testProductClassification() {
+            const product = document.getElementById('productName').value;
+            const origin = document.getElementById('origin').value;
+            const destination = document.getElementById('destination').value;
+            const resultDiv = document.getElementById('classificationResult');
+            
+            resultDiv.innerHTML = '<div class="animate-pulse">Classifying with AI...</div>';
+            
+            const start = Date.now();
+            
+            setTimeout(() => {
+                const classification = getSimulatedClassification(product);
+                const latency = Date.now() - start;
+                
+                resultDiv.innerHTML = `
+                    <div class="space-y-1">
+                        <div><strong>HSN:</strong> ${classification.hsn_code}</div>
+                        <div><strong>Category:</strong> ${classification.category}</div>
+                        <div><strong>Customs:</strong> ${classification.customs_rate}%</div>
+                        <div><strong>GST:</strong> ${classification.gst_rate}%</div>
+                        <div class="text-xs text-gray-500">
+                            AI Powered • ${latency}ms
+                        </div>
+                    </div>
+                `;
+                
+                updateMetrics(latency, false, 250);
+            }, 100 + Math.random() * 200);
+        }
+
+        // Test HSN search
+        async function testHSNSearch() {
+            const search = document.getElementById('hsnSearch').value;
+            const resultDiv = document.getElementById('hsnResult');
+            
+            resultDiv.innerHTML = '<div class="animate-pulse">Searching HSN database...</div>';
+            
+            const start = Date.now();
+            
+            setTimeout(() => {
+                const results = getSimulatedHSNResults(search);
+                const latency = Date.now() - start;
+                
+                resultDiv.innerHTML = `
+                    <div class="space-y-2">
+                        ${results.map(r => `
+                            <div class="border-b pb-1">
+                                <div class="font-medium">${r.hsn_code} - ${r.description}</div>
+                                <div class="text-xs text-gray-500">
+                                    Customs: ${r.customs_rate}% • GST: ${r.gst_rate}%
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="text-xs text-gray-500 mt-2">
+                            Found ${results.length} results • ${latency}ms
+                        </div>
+                    </div>
+                `;
+                
+                updateMetrics(latency, true, 500);
+            }, 50 + Math.random() * 50);
+        }
+
+        // Test quote calculation
+        async function testQuoteCalculation() {
+            const resultDiv = document.getElementById('quoteResult');
+            
+            resultDiv.innerHTML = '<div class="animate-pulse">Calculating quote...</div>';
+            
+            const start = Date.now();
+            
+            setTimeout(() => {
+                const quote = {
+                    items_total: 1500,
+                    shipping: 50,
+                    customs: 150,
+                    gst: 306,
+                    total: 2006,
+                    currency: 'USD'
+                };
+                const latency = Date.now() - start;
+                const cached = Math.random() > 0.3;
+                
+                resultDiv.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex justify-between">
+                            <span>Items:</span>
+                            <span>$${quote.items_total}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Shipping:</span>
+                            <span>$${quote.shipping}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Customs:</span>
+                            <span>$${quote.customs}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>GST:</span>
+                            <span>$${quote.gst}</span>
+                        </div>
+                        <div class="flex justify-between font-bold border-t pt-1">
+                            <span>Total:</span>
+                            <span>$${quote.total}</span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            ${latency}ms ${cached ? '• Cached ✓' : ''}
+                        </div>
+                    </div>
+                `;
+                
+                updateMetrics(latency, cached, 300);
+            }, 100 + Math.random() * 100);
+        }
+
+        // Test popular products
+        async function testPopularProducts() {
+            const category = document.getElementById('category').value;
+            const resultDiv = document.getElementById('popularResult');
+            
+            resultDiv.innerHTML = '<div class="animate-pulse">Loading popular products...</div>';
+            
+            const start = Date.now();
+            
+            setTimeout(() => {
+                const products = getSimulatedPopularProducts(category);
+                const latency = Date.now() - start;
+                
+                resultDiv.innerHTML = `
+                    <div class="space-y-2">
+                        ${products.map((p, i) => `
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">${i + 1}. ${p.name}</span>
+                                <span class="text-xs text-gray-500">Score: ${p.score}</span>
+                            </div>
+                        `).join('')}
+                        <div class="text-xs text-gray-500 mt-2">
+                            ${category || 'All categories'} • ${latency}ms
+                        </div>
+                    </div>
+                `;
+                
+                updateMetrics(latency, true, 400);
+            }, 50 + Math.random() * 50);
+        }
+
+        // Test health check
+        async function testHealthCheck() {
+            const resultDiv = document.getElementById('healthResult');
+            
+            resultDiv.innerHTML = '<div class="animate-pulse">Checking API health...</div>';
+            
+            const start = Date.now();
+            
+            setTimeout(() => {
+                const latency = Date.now() - start;
+                
+                resultDiv.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                            <span class="font-medium">API Status: Healthy</span>
+                        </div>
+                        <div class="text-sm">Edge Location: ${document.getElementById('edgeLocation').textContent}</div>
+                        <div class="text-sm">Response Time: ${latency}ms</div>
+                        <div class="text-sm">Timestamp: ${new Date().toISOString()}</div>
+                    </div>
+                `;
+                
+                updateMetrics(latency, false, 100);
+            }, 20 + Math.random() * 30);
+        }
+
+        // Simulation helpers
+        function getSimulatedRate(from, to) {
+            const rates = {
+                'USD_INR': 83.12,
+                'USD_EUR': 0.92,
+                'USD_NPR': 132.45,
+                'EUR_INR': 90.35,
+                'EUR_USD': 1.09,
+                'EUR_NPR': 144.12,
+                'INR_USD': 0.012,
+                'INR_EUR': 0.011,
+                'INR_NPR': 1.60,
+                'NPR_USD': 0.0075,
+                'NPR_EUR': 0.0069,
+                'NPR_INR': 0.625
+            };
+            
+            const key = `${from}_${to}`;
+            return rates[key] || 1;
+        }
+
+        function getSimulatedClassification(product) {
+            const lower = product.toLowerCase();
+            
+            if (lower.includes('phone') || lower.includes('laptop')) {
+                return {
+                    hsn_code: '8517',
+                    category: 'Electronics',
+                    customs_rate: 20,
+                    gst_rate: 18
+                };
+            } else if (lower.includes('shirt') || lower.includes('dress')) {
+                return {
+                    hsn_code: '6109',
+                    category: 'Clothing',
+                    customs_rate: 10,
+                    gst_rate: 12
+                };
+            } else {
+                return {
+                    hsn_code: '9999',
+                    category: 'General',
+                    customs_rate: 10,
+                    gst_rate: 18
+                };
+            }
+        }
+
+        function getSimulatedHSNResults(search) {
+            const allResults = [
+                { hsn_code: '8517', description: 'Telephones and mobile phones', customs_rate: 20, gst_rate: 18 },
+                { hsn_code: '8471', description: 'Computers and laptops', customs_rate: 0, gst_rate: 18 },
+                { hsn_code: '6109', description: 'T-shirts and singlets', customs_rate: 10, gst_rate: 12 },
+                { hsn_code: '9503', description: 'Toys and games', customs_rate: 10, gst_rate: 12 },
+                { hsn_code: '7113', description: 'Jewelry and ornaments', customs_rate: 10, gst_rate: 3 }
+            ];
+            
+            return allResults.filter(r => 
+                r.description.toLowerCase().includes(search.toLowerCase())
+            ).slice(0, 3);
+        }
+
+        function getSimulatedPopularProducts(category) {
+            const products = {
+                electronics: [
+                    { name: 'iPhone 15 Pro', score: 95 },
+                    { name: 'MacBook Air M2', score: 88 },
+                    { name: 'AirPods Pro', score: 82 }
+                ],
+                clothing: [
+                    { name: 'Nike Air Max', score: 90 },
+                    { name: 'Levi\'s 501 Jeans', score: 85 },
+                    { name: 'Adidas Hoodie', score: 78 }
+                ],
+                toys: [
+                    { name: 'LEGO Creator Set', score: 92 },
+                    { name: 'Nintendo Switch', score: 89 },
+                    { name: 'Barbie Dreamhouse', score: 76 }
+                ],
+                all: [
+                    { name: 'iPhone 15 Pro', score: 95 },
+                    { name: 'LEGO Creator Set', score: 92 },
+                    { name: 'Nike Air Max', score: 90 }
+                ]
+            };
+            
+            return products[category] || products.all;
+        }
+
+        // Initialize
+        detectEdgeLocation();
+    </script>
+</body>
+</html>

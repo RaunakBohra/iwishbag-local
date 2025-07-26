@@ -15,6 +15,10 @@ import { Toaster } from '@/components/ui/toaster';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
+import CloudflareAnalytics from '@/components/analytics/CloudflareAnalytics';
+import CloudflareBrowserInsights from '@/components/analytics/CloudflareBrowserInsights';
+import { CloudflareRUM } from '@/components/analytics/CloudflareRUM';
+import { PerformanceDashboard } from '@/components/analytics/PerformanceDashboard';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
@@ -108,6 +112,8 @@ const UnifiedQuoteInterface = React.lazy(() => import('@/components/admin/Unifie
 //   })),
 // );
 const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement'));
+const WAFManagement = React.lazy(() => import('@/pages/admin/WAFManagement'));
+const RateLimitManagement = React.lazy(() => import('@/pages/admin/RateLimitManagement'));
 const BankAccountSettings = React.lazy(() =>
   import('@/components/admin/BankAccountSettings').then((m) => ({
     default: m.BankAccountSettings,
@@ -212,6 +218,8 @@ const router = createBrowserRouter([
           { path: 'shipping-routes', element: <ShippingRoutesPage /> },
           { path: 'status-management', element: <StatusManagementPage /> },
           { path: 'payment-proofs', element: <PaymentManagementPageNew /> },
+          { path: 'waf-management', element: <WAFManagement /> },
+          { path: 'rate-limit-management', element: <RateLimitManagement /> },
           { path: 'debug/status', element: <StatusDebug /> },
           { path: 'cleanup/duplicates', element: <DuplicateComponentsPreview /> },
           { path: 'debug/payu', element: <PayUDebugPage /> },
@@ -476,6 +484,10 @@ function App() {
     <ErrorBoundary>
       <QueryProvider>
         <AuthProvider>
+          <CloudflareAnalytics />
+          <CloudflareBrowserInsights />
+          <CloudflareRUM />
+          {import.meta.env.DEV && <PerformanceDashboard />}
           <UserRoleEnsurer />
           <PermissionsProvider>
             <AccessibilityProvider>

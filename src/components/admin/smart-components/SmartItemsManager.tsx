@@ -21,6 +21,7 @@ import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightServic
 import { DirectHSNInput } from '@/components/admin/hsn-components/DirectHSNInput';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import { useToast } from '@/hooks/use-toast';
+import { SmartDualWeightField } from '@/components/admin/SmartDualWeightField';
 import {
   Package,
   Plus,
@@ -533,95 +534,12 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
     hsn_code: item.hsn_code || '',
     category: item.category || '',
   });
-  const [mlEstimation, setMlEstimation] = useState<any>(null);
-  const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [isLoadingHSN, setIsLoadingHSN] = useState(false);
   const [selectedWeightSource, setSelectedWeightSource] = useState<'hsn' | 'ml' | 'manual' | null>(
     null,
   );
 
-  // Fetch HSN weight when component mounts or HSN code changes
-  useEffect(() => {
-    const fetchHSNWeight = async () => {
-      const currentHSN = editForm.hsn_code || hsnCode;
-      if (!currentHSN) {
-        setHsnWeight(null);
-        return;
-      }
-
-      setIsLoadingHSN(true);
-      try {
-        const weight = await hsnWeightService.getHSNWeight(currentHSN);
-        setHsnWeight(weight);
-      } catch (error) {
-        setHsnWeight(null);
-      } finally {
-        setIsLoadingHSN(false);
-      }
-    };
-
-    fetchHSNWeight();
-  }, [editForm.hsn_code, hsnCode]);
-
-  // Auto-estimate ML weight when name changes
-  useEffect(() => {
-    if (editForm.name) {
-      const timeoutId = setTimeout(async () => {
-        setIsEstimating(true);
-        try {
-          const estimation = await smartWeightEstimator.estimateWeight(editForm.name);
-          setMlEstimation(estimation);
-        } catch (error) {
-        } finally {
-          setIsEstimating(false);
-        }
-      }, 800);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [editForm.name]);
-
-  const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
-    setEditForm((prev) => ({ ...prev, weight: weight }));
-    setSelectedWeightSource(source);
-
-    // Record the selection for analytics
-    if (editForm.name) {
-      await smartWeightEstimator.recordWeightSelection(
-        editForm.name,
-        hsnWeight?.average || null,
-        mlEstimation?.estimated_weight || 0,
-        weight,
-        source,
-        undefined, // url
-        undefined, // category
-        hsnCode,
-      );
-    }
-  };
-
   const handleSave = async () => {
-    // Learn from user input if different from ML estimation
-    if (
-      mlEstimation &&
-      Math.abs(editForm.weight - mlEstimation.estimated_weight) > 0.1 &&
-      selectedWeightSource !== 'hsn' // Don't learn if HSN was selected
-    ) {
-      try {
-        await smartWeightEstimator.learnFromActualWeight(
-          editForm.name,
-          editForm.weight,
-          undefined,
-          {
-            userConfirmed: true,
-            originalEstimate: mlEstimation.estimated_weight,
-          },
-        );
-      } catch (error) {}
-    }
-
-    const updatedItem: QuoteItem & { weight_source?: 'hsn' | 'ml' | 'manual' } = {
+    const updatedItem: QuoteItem = {
       ...item,
       name: editForm.name,
       quantity: editForm.quantity,
@@ -630,7 +548,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
       options: editForm.options,
       hsn_code: editForm.hsn_code,
       category: editForm.category,
-      weight_source: selectedWeightSource || 'manual',
+      smart_data: {
+        ...item.smart_data,
+        weight_source: selectedWeightSource || 'manual',
+      },
     };
 
     onSave(updatedItem);
@@ -710,52 +631,22 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                   </div>
                 </div>
 
-                {/* Weight Field with Suggestions */}
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
-                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                    <Scale className="w-3 h-3 text-gray-400" />
-                    <Input
-                      type="number"
-                      value={editForm.weight}
-                      onChange={(e) => {
-                        setEditForm((prev) => ({ ...prev, weight: Number(e.target.value) }));
-                        setSelectedWeightSource('manual');
-                      }}
-                      className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
-                      step="0.01"
-                      min="0"
-                    />
-                    <span className="text-xs text-gray-400 ml-1">kg</span>
-                  </div>
-
-                  {/* Weight Suggestions */}
-                  {(hsnWeight || mlEstimation) && (
-                    <div className="flex gap-1">
-                      {hsnWeight && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleSelectWeight(hsnWeight.average, 'hsn')}
-                        >
-                          HSN: {hsnWeight.average}kg
-                        </Button>
-                      )}
-                      {mlEstimation && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleSelectWeight(mlEstimation.estimated_weight, 'ml')}
-                        >
-                          AI: {mlEstimation.estimated_weight.toFixed(2)}kg
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                {/* Weight Field with Smart Dual Suggestions */}
+                <div className="flex-1">
+                  <SmartDualWeightField
+                    value={editForm.weight}
+                    onChange={(weight) => {
+                      setEditForm((prev) => ({ ...prev, weight }));
+                    }}
+                    productName={editForm.name}
+                    hsnCode={editForm.hsn_code || hsnCode}
+                    productUrl={item.url}
+                    onSourceSelected={(source) => {
+                      setSelectedWeightSource(source);
+                    }}
+                    label=""
+                    className="compact-mode"
+                  />
                 </div>
 
                 {/* HSN Field */}
@@ -779,6 +670,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                         }));
                       }}
                       onClear={() => {
+                        console.log('SmartItemsManager: Clearing HSN from edit form');
                         setEditForm((prev) => ({
                           ...prev,
                           hsn_code: '',
@@ -844,97 +736,12 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
     hsn_code: hsnCode || '',
     category: '',
   });
-  const [mlEstimation, setMlEstimation] = useState<any>(null);
-  const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [isLoadingHSN, setIsLoadingHSN] = useState(false);
   const [selectedWeightSource, setSelectedWeightSource] = useState<'hsn' | 'ml' | 'manual' | null>(
     null,
   );
 
-  // Fetch HSN weight when component mounts or HSN code changes
-  useEffect(() => {
-    const fetchHSNWeight = async () => {
-      if (!hsnCode) {
-        setHsnWeight(null);
-        return;
-      }
-
-      setIsLoadingHSN(true);
-      try {
-        const weight = await hsnWeightService.getHSNWeight(hsnCode);
-        setHsnWeight(weight);
-      } catch (error) {
-        setHsnWeight(null);
-      } finally {
-        setIsLoadingHSN(false);
-      }
-    };
-
-    fetchHSNWeight();
-  }, [hsnCode]);
-
-  // Auto-estimate ML weight when name or URL changes
-  useEffect(() => {
-    if (addForm.name) {
-      const timeoutId = setTimeout(async () => {
-        setIsEstimating(true);
-        try {
-          const estimation = await smartWeightEstimator.estimateWeight(
-            addForm.name,
-            addForm.url || undefined,
-          );
-          setMlEstimation(estimation);
-        } catch (error) {
-        } finally {
-          setIsEstimating(false);
-        }
-      }, 800);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [addForm.name, addForm.url]);
-
-  const handleSelectWeight = async (weight: number, source: 'hsn' | 'ml') => {
-    setAddForm((prev) => ({ ...prev, weight: weight }));
-    setSelectedWeightSource(source);
-
-    // Record the selection for analytics
-    if (addForm.name) {
-      await smartWeightEstimator.recordWeightSelection(
-        addForm.name,
-        hsnWeight?.average || null,
-        mlEstimation?.estimated_weight || 0,
-        weight,
-        source,
-        addForm.url || undefined,
-        undefined, // category
-        hsnCode,
-      );
-    }
-  };
-
   const handleSave = async () => {
-    // Learn from user input if different from ML estimation
-    if (
-      mlEstimation &&
-      Math.abs(addForm.weight - mlEstimation.estimated_weight) > 0.1 &&
-      selectedWeightSource !== 'hsn'
-    ) {
-      try {
-        await smartWeightEstimator.learnFromActualWeight(
-          addForm.name,
-          addForm.weight,
-          addForm.url || undefined,
-          {
-            userConfirmed: true,
-            originalEstimate: mlEstimation.estimated_weight,
-          },
-        );
-      } catch (error) {}
-    }
-
-    const newItem: Partial<QuoteItem> & { weight_source?: 'hsn' | 'ml' | 'manual' } = {
+    const newItem: Partial<QuoteItem> = {
       id: `item_${Date.now()}`, // Temporary ID
       name: addForm.name,
       quantity: addForm.quantity,
@@ -944,7 +751,14 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
       url: addForm.url,
       hsn_code: addForm.hsn_code,
       category: addForm.category,
-      weight_source: selectedWeightSource || 'manual',
+      smart_data: {
+        weight_source: selectedWeightSource || 'manual',
+        weight_confidence: 0.8,
+        price_confidence: 0.9,
+        category_detected: addForm.category || '',
+        customs_suggestions: [],
+        optimization_hints: [],
+      },
     };
 
     onSave(newItem);
@@ -1036,52 +850,22 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                   </div>
                 </div>
 
-                {/* Weight Field with Suggestions */}
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-xs font-medium min-w-[45px]">WEIGHT</span>
-                  <div className="flex items-center bg-white border border-gray-200 rounded px-2 py-1">
-                    <Scale className="w-3 h-3 text-gray-400" />
-                    <Input
-                      type="number"
-                      value={addForm.weight}
-                      onChange={(e) => {
-                        setAddForm((prev) => ({ ...prev, weight: Number(e.target.value) }));
-                        setSelectedWeightSource('manual');
-                      }}
-                      className="w-16 h-8 border-0 p-0 text-sm font-medium ml-1"
-                      step="0.01"
-                      min="0"
-                    />
-                    <span className="text-xs text-gray-400 ml-1">kg</span>
-                  </div>
-
-                  {/* Weight Suggestions */}
-                  {(hsnWeight || mlEstimation) && (
-                    <div className="flex gap-1">
-                      {hsnWeight && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleSelectWeight(hsnWeight.average, 'hsn')}
-                        >
-                          HSN: {hsnWeight.average}kg
-                        </Button>
-                      )}
-                      {mlEstimation && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleSelectWeight(mlEstimation.estimated_weight, 'ml')}
-                        >
-                          AI: {mlEstimation.estimated_weight.toFixed(2)}kg
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                {/* Weight Field with Smart Dual Suggestions */}
+                <div className="flex-1">
+                  <SmartDualWeightField
+                    value={addForm.weight}
+                    onChange={(weight) => {
+                      setAddForm((prev) => ({ ...prev, weight }));
+                    }}
+                    productName={addForm.name}
+                    hsnCode={addForm.hsn_code || hsnCode}
+                    productUrl={addForm.url}
+                    onSourceSelected={(source) => {
+                      setSelectedWeightSource(source);
+                    }}
+                    label=""
+                    className="compact-mode"
+                  />
                 </div>
 
                 {/* HSN Field */}

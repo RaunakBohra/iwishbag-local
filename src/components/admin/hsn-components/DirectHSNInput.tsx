@@ -172,6 +172,7 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
   };
 
   const handleClear = () => {
+    console.log('DirectHSNInput: Clearing HSN code');
     if (onClear) {
       onClear();
     }
@@ -221,7 +222,14 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
     return searchQuery;
   };
 
-  const showClearButton = value || searchQuery;
+  const showClearButton = value || searchQuery || displayValue;
+  console.log('DirectHSNInput Debug:', { 
+    value, 
+    displayValue, 
+    searchQuery, 
+    showClearButton,
+    isEditing 
+  });
 
   return (
     <div className={`hsn-input-wrapper ${className}`}>
@@ -256,21 +264,22 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
             />
 
             {/* Right side icons */}
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 z-10" style={{ background: 'rgba(255,0,0,0.1)' }}>
               {isLoading && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
-              {showClearButton && (
+              {(value || displayValue) && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 hover:bg-gray-100"
+                  className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-gray-700 bg-gray-50 border border-gray-200"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
                     handleClear();
                   }}
+                  title="Clear HSN code"
                 >
-                  <X className="h-3 w-3 text-gray-400" />
+                  <X className="h-3 w-3 text-gray-600" />
                 </Button>
               )}
               <Button

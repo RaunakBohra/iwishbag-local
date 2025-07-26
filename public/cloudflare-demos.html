@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Features Demo Hub - iwishBag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .demo-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .demo-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: #0ea5e9;
+        }
+        .status-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-active { background: #10b981; color: white; }
+        .status-demo { background: #3b82f6; color: white; }
+        .status-pending { background: #f59e0b; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">☁️ Cloudflare Features Demo Hub</h1>
+            <p class="text-xl text-gray-600">Explore all integrated Cloudflare services for iwishBag</p>
+            <div class="mt-4 flex justify-center gap-4">
+                <span class="status-badge status-active">Active</span>
+                <span class="status-badge status-demo">Demo Available</span>
+                <span class="status-badge status-pending">Coming Soon</span>
+            </div>
+        </div>
+
+        <!-- Demo Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- Pages Hosting -->
+            <a href="/" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">📄 Cloudflare Pages</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Frontend hosting with automatic deployments</p>
+                <div class="text-xs text-teal-600">
+                    • Git integration • Preview deployments • Edge functions
+                </div>
+            </a>
+
+            <!-- Web Analytics -->
+            <div class="demo-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">📊 Web Analytics</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Privacy-first analytics without cookies</p>
+                <div class="text-xs text-teal-600">
+                    • Token: fbad6f749c344af78ea683c274e5b19d
+                </div>
+            </div>
+
+            <!-- D1 Database -->
+            <a href="/d1-performance-test.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">💾 D1 Edge Database</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">SQL database at the edge with <10ms queries</p>
+                <div class="text-xs text-teal-600">
+                    • Global replication • Zero cold starts • SQLite compatible
+                </div>
+            </a>
+
+            <!-- Images -->
+            <a href="/cloudflare-images-demo.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🖼️ Cloudflare Images</h3>
+                    <span class="status-badge status-demo">Demo</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Automatic image optimization & delivery</p>
+                <div class="text-xs text-teal-600">
+                    • WebP/AVIF • Multiple variants • Global CDN
+                </div>
+            </a>
+
+            <!-- Workers AI -->
+            <a href="/ai-product-classifier-demo.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🤖 Workers AI</h3>
+                    <span class="status-badge status-demo">Demo</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">AI product classification at the edge</p>
+                <div class="text-xs text-teal-600">
+                    • 10,000 neurons/day free • HSN classification • <100ms
+                </div>
+            </a>
+
+            <!-- Currency Service -->
+            <a href="/test-currency.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">💱 Optimized Currency</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">99.3% faster currency operations</p>
+                <div class="text-xs text-teal-600">
+                    • In-memory cache • Batch operations • <0.01ms lookups
+                </div>
+            </a>
+
+            <!-- Quote Cache -->
+            <a href="/test-quote-cache.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🧮 Smart Quote Cache</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">>95% cache hit rate for calculations</p>
+                <div class="text-xs text-teal-600">
+                    • Dependency tracking • Auto-invalidation • 15min TTL
+                </div>
+            </a>
+
+            <!-- WAF -->
+            <a href="/cloudflare-waf-demo.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🛡️ WAF</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Web Application Firewall protection</p>
+                <div class="text-xs text-teal-600">
+                    • OWASP protection • SQL/XSS blocking • Custom rules
+                </div>
+            </a>
+
+            <!-- Bot Fight Mode -->
+            <div class="demo-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🤖 Bot Fight Mode</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Protection against malicious bots</p>
+                <div class="text-xs text-teal-600">
+                    • ML-based detection • Zero configuration • No CAPTCHAs
+                </div>
+            </div>
+
+            <!-- Page Rules -->
+            <div class="demo-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">⚡ Page Rules</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Custom caching & optimization rules</p>
+                <div class="text-xs text-teal-600">
+                    • API: 1 hour cache • Static: 1 month • Images: 1 year
+                </div>
+            </div>
+
+            <!-- Auto Minify -->
+            <div class="demo-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">📦 Auto Minify</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Automatic JS, CSS, HTML minification</p>
+                <div class="text-xs text-teal-600">
+                    • 20-30% size reduction • No build step needed
+                </div>
+            </div>
+
+            <!-- Browser Insights -->
+            <div class="demo-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🔍 Browser Insights</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Real user monitoring & error tracking</p>
+                <div class="text-xs text-teal-600">
+                    • Core Web Vitals • JS errors • Performance metrics
+                </div>
+            </div>
+
+            <!-- Real User Monitoring -->
+            <a href="/cloudflare-rum-demo.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">📊 RUM</h3>
+                    <span class="status-badge status-demo">Demo</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Real User Monitoring with Web Vitals</p>
+                <div class="text-xs text-teal-600">
+                    • LCP, FID, CLS • User interactions • API tracking
+                </div>
+            </a>
+
+            <!-- Polish & Mirage -->
+            <div class="demo-card bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">✨ Polish & Mirage</h3>
+                    <span class="status-badge status-active">Active</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Advanced image optimization</p>
+                <div class="text-xs text-teal-600">
+                    • Lossy compression • Lazy loading • WebP conversion
+                </div>
+            </div>
+
+            <!-- Workers -->
+            <a href="/cloudflare-workers-demo.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">⚡ Workers</h3>
+                    <span class="status-badge status-demo">Demo</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Serverless edge functions</p>
+                <div class="text-xs text-teal-600">
+                    • API endpoints • 0ms cold starts • Global deployment
+                </div>
+            </a>
+
+            <!-- Queues -->
+            <a href="/cloudflare-queues-demo.html" class="demo-card bg-white rounded-lg shadow-md p-6 block hover:no-underline">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">📧 Queues</h3>
+                    <span class="status-badge status-demo">Demo</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Message queuing for async tasks</p>
+                <div class="text-xs text-teal-600">
+                    • Email notifications • Order processing • Webhooks
+                </div>
+            </a>
+
+            <div class="demo-card bg-white rounded-lg shadow-md p-6 opacity-75">
+                <div class="flex justify-between items-start mb-3">
+                    <h3 class="text-lg font-semibold text-gray-800">🛡️ WAF</h3>
+                    <span class="status-badge status-pending">Soon</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">Web Application Firewall</p>
+                <div class="text-xs text-gray-500">
+                    • OWASP protection • Custom rules • Rate limiting
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="mt-12 bg-white rounded-lg shadow-md p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">📈 Performance Impact</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-teal-600">99.3%</div>
+                    <div class="text-sm text-gray-600">Currency Service Speed</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-teal-600">>95%</div>
+                    <div class="text-sm text-gray-600">Quote Cache Hit Rate</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-teal-600"><10ms</div>
+                    <div class="text-sm text-gray-600">Edge Database Queries</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl font-bold text-teal-600">80%</div>
+                    <div class="text-sm text-gray-600">Image Bandwidth Saved</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-8 text-center text-sm text-gray-500">
+            <p>Powered by Cloudflare's global network of 300+ data centers</p>
+            <p class="mt-2">Domain: whyteclub.com | Account ID: 610762493d34333f1a6d72a037b345cf</p>
+        </div>
+    </div>
+
+    <!-- Cloudflare Web Analytics -->
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "fbad6f749c344af78ea683c274e5b19d"}'></script>
+</body>
+</html>

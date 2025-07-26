@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 interface R2Config {
   accountId: string;
   bucketName: string;
@@ -22,7 +24,7 @@ export class R2StorageService {
       accountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '610762493d34333f1a6d72a037b345cf',
       bucketName: 'iwishbag-new',
       publicUrl: 'https://r2.whyteclub.com',
-      workerUrl: import.meta.env.VITE_R2_WORKER_URL || 'https://r2-uploads.iwishbag.workers.dev'
+      workerUrl: import.meta.env.VITE_R2_WORKER_URL || 'https://r2-uploads.rnkbohra.workers.dev'
     };
   }
 
@@ -84,6 +86,35 @@ export class R2StorageService {
       }
     } catch (error) {
       console.error('R2 delete error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get uploaded files for a specific quote session
+   */
+  async getQuoteFiles(sessionId: string): Promise<Array<{ 
+    key: string; 
+    url: string; 
+    size: number; 
+    uploaded: string;
+    metadata?: Record<string, any>;
+    originalName?: string;
+    productIndex?: string;
+  }>> {
+    try {
+      const response = await fetch(`${this.config.workerUrl}/quote/${sessionId}/files`, {
+        method: 'GET'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch quote files');
+      }
+
+      const result = await response.json();
+      return result.files || [];
+    } catch (error) {
+      console.error('R2 getQuoteFiles error:', error);
       throw error;
     }
   }

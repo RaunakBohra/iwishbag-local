@@ -24,7 +24,7 @@ export default {
     try {
       // Upload quote file
       if (url.pathname === "/upload/quote" && request.method === "POST") {
-        return await handleQuoteUpload(request, env);
+        return await handleQuoteUpload(request, env, ctx);
       }
       
       // Get file (with caching)
@@ -57,7 +57,7 @@ export default {
   },
 };
 
-async function handleQuoteUpload(request, env) {
+async function handleQuoteUpload(request, env, ctx) {
   const formData = await request.formData();
   const file = formData.get("file");
   const sessionId = formData.get("sessionId") || crypto.randomUUID();
@@ -195,16 +195,20 @@ async function handleListQuoteFiles(request, env) {
   const pathParts = url.pathname.split('/');
   const sessionId = pathParts[2];
   
-  const prefix = `quote-requests/${sessionId}/`;
-  const list = await env.IWISHBAG_NEW.list({ prefix, limit: 100 });
+  // List all files under quote-requests and filter by sessionId
+  // Since files are stored as: quote-requests/{year}/{month}/{day}/{sessionId}/product-{index}/{file}
+  const list = await env.IWISHBAG_NEW.list({ prefix: 'quote-requests/', limit: 1000 });
   
-  const files = list.objects.map(obj => ({
-    key: obj.key,
-    url: `https://r2.whyteclub.com/${obj.key}`,
-    size: obj.size,
-    uploaded: obj.uploaded,
-    metadata: obj.customMetadata,
-  }));
+  // Filter files that contain the sessionId in their path
+  const files = list.objects
+    .filter(obj => obj.key.includes(`/${sessionId}/`))
+    .map(obj => ({
+      key: obj.key,
+      url: `https://r2.whyteclub.com/${obj.key}`,
+      size: obj.size,
+      uploaded: obj.uploaded,
+      metadata: obj.customMetadata,
+    }));
   
   return new Response(JSON.stringify({ files }), {
     headers: {

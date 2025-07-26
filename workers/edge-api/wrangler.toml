@@ -1,0 +1,19 @@
+name = "iwishbag-edge-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "iwishbag-edge-cache"
+database_id = "3c663e4c-cad7-4262-a73d-f1ec9a4367a9"
+
+# Environment variables
+[vars]
+SYNC_API_KEY = "your-secure-sync-api-key-here"
+
+# Routes
+[[routes]]
+pattern = "api.whyteclub.com/*"
+zone_name = "whyteclub.com"
+custom_domain = true

@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
 import {
   Tags,
   Plus,
@@ -65,6 +66,7 @@ import { useToast } from '@/hooks/use-toast';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import type { HSNMasterRecord } from '@/services/UnifiedDataEngine';
 import { autoProductClassifier } from '@/services/AutoProductClassifier';
+import { HSNImportExport } from '@/components/admin/HSNImportExport';
 
 interface HSNManagementInterfaceProps {
   className?: string;
@@ -98,9 +100,13 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
   const [testProductName, setTestProductName] = useState('');
   const [testResults, setTestResults] = useState<any>(null);
   const [isTesting, setIsTesting] = useState(false);
+  // Category management state
+  const [categories, setCategories] = useState<Array<{value: string, label: string}>>([]);
+  const [showCategoryCreateModal, setShowCategoryCreateModal] = useState(false);
+  const [newCategoryData, setNewCategoryData] = useState<any>(null);
 
-  // Form state for creating/editing HSN records
-  const [formData, setFormData] = useState<HSNFormData>({
+  // Helper function to get empty form data
+  const getEmptyFormData = (): HSNFormData => ({
     hsn_code: '',
     description: '',
     category: '',
@@ -133,6 +139,9 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
     is_active: true,
   });
 
+  // Form state for creating/editing HSN records
+  const [formData, setFormData] = useState<HSNFormData>(getEmptyFormData());
+
   // Load HSN records
   useEffect(() => {
     loadHSNRecords();
@@ -163,21 +172,21 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
   const loadHSNRecords = async () => {
     setIsLoading(true);
     try {
-      // For now, we'll load by category since we don't have a loadAll method
-      const categories = ['clothing', 'electronics', 'books', 'jewelry', 'cosmetics'];
-      const allRecords: HSNMasterRecord[] = [];
-
-      for (const category of categories) {
-        const records = await unifiedDataEngine.getHSNByCategory(category, 50);
-        allRecords.push(...records);
-      }
-
+      // Load all HSN records from database
+      const allRecords = await unifiedDataEngine.getAllHSNRecords(200);
+      console.log(`✅ Loaded ${allRecords.length} HSN records from database`);
       setHsnRecords(allRecords);
+      
+      // Also load categories dynamically
+      const loadedCategories = await unifiedDataEngine.getAllCategories();
+      console.log(`✅ Loaded ${loadedCategories.length} categories from database`);
+      setCategories(loadedCategories);
+      
     } catch (error) {
       console.error('Failed to load HSN records:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load HSN records',
+        description: 'Failed to load HSN records from database',
         variant: 'destructive',
       });
     } finally {
@@ -290,38 +299,7 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
   };
 
   const resetForm = () => {
-    setFormData({
-      hsn_code: '',
-      description: '',
-      category: '',
-      subcategory: '',
-      keywords: [],
-      minimum_valuation_usd: undefined,
-      requires_currency_conversion: false,
-      weight_data: {
-        typical_weights: {
-          per_unit: { min: 0, max: 0, average: 0 },
-          packaging: { additional_weight: 0 },
-        },
-      },
-      tax_data: {
-        typical_rates: {
-          customs: { common: 0 },
-          gst: { standard: 0 },
-          vat: { common: 0 },
-          sales_tax: { state: 0, local: 0 },
-          pst: { provincial: 0 },
-          excise_tax: { federal: 0 },
-          import_duty: { standard: 0 },
-          service_tax: { standard: 0 },
-          cess: { additional: 0 },
-        },
-      },
-      classification_data: {
-        auto_classification: { confidence: 0.8 },
-      },
-      is_active: true,
-    });
+    setFormData(getEmptyFormData());
   };
 
   const getUniqueCategories = () => {
@@ -376,29 +354,15 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add HSN Code
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New HSN Record</DialogTitle>
-                <DialogDescription>
-                  Add a new HSN code with tax rates and classification data
-                </DialogDescription>
-              </DialogHeader>
-              <HSNRecordForm
-                formData={formData}
-                setFormData={setFormData}
-                onSubmit={handleCreateRecord}
-                onCancel={() => setShowCreateDialog(false)}
-                isEditing={false}
-              />
-            </DialogContent>
-          </Dialog>
+          <Button 
+            onClick={() => {
+              setFormData(getEmptyFormData());
+              setShowCreateDialog(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add HSN Code
+          </Button>
         </div>
       </div>
 
@@ -452,10 +416,11 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="browse">Browse HSN Codes</TabsTrigger>
           <TabsTrigger value="test">Test Classification</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="import-export">Import/Export</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -714,6 +679,10 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
           </div>
         </TabsContent>
 
+        <TabsContent value="import-export" className="space-y-4">
+          <HSNImportExport />
+        </TabsContent>
+
         <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>
@@ -726,7 +695,7 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  HSN system settings and bulk operations will be available in a future update.
+                  Advanced HSN system settings will be available in a future update.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -734,22 +703,130 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
         </TabsContent>
       </Tabs>
 
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+
+      {/* Category Creation Modal */}
+      <Dialog open={showCategoryCreateModal} onOpenChange={setShowCategoryCreateModal}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit HSN Record</DialogTitle>
-            <DialogDescription>Update HSN code information and tax rates</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Tags className="w-5 h-5" />
+              Add New Category
+            </DialogTitle>
+            <DialogDescription>
+              Create a new product category. This will be added to the category list for future use.
+            </DialogDescription>
           </DialogHeader>
-          <HSNRecordForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleUpdateRecord}
-            onCancel={() => setShowEditDialog(false)}
-            isEditing={true}
-          />
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="category_name">Category Name</Label>
+              <Input 
+                id="category_name"
+                value={newCategoryData?.name || ''}
+                onChange={(e) => setNewCategoryData({...newCategoryData, name: e.target.value})}
+                placeholder="e.g., Automotive, Pet Supplies"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="category_description">Description (Optional)</Label>
+              <Input 
+                id="category_description"
+                value={newCategoryData?.description || ''}
+                onChange={(e) => setNewCategoryData({...newCategoryData, description: e.target.value})}
+                placeholder="Brief description of this category"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="category_keywords">Keywords (Optional)</Label>
+              <Input 
+                id="category_keywords"
+                value={newCategoryData?.keywords?.join(', ') || ''}
+                onChange={(e) => {
+                  const keywordsList = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                  setNewCategoryData({...newCategoryData, keywords: keywordsList});
+                }}
+                placeholder="keyword1, keyword2, keyword3"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Comma-separated keywords to help classify products
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCategoryCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => {
+              if (!newCategoryData?.name?.trim()) {
+                toast({
+                  title: 'Category name required',
+                  description: 'Please enter a name for the category.',
+                  variant: 'destructive'
+                });
+                return;
+              }
+              
+              // Create category value from name
+              const categoryValue = newCategoryData.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+              
+              // Add to categories list
+              const newCategory = {
+                value: categoryValue,
+                label: newCategoryData.name
+              };
+              setCategories([...categories, newCategory]);
+              
+              // Auto-select the new category in form if form is open
+              if (showCreateDialog || showEditDialog) {
+                setFormData({...formData, category: categoryValue});
+              }
+              
+              toast({
+                title: 'Category Added',
+                description: `"${newCategoryData.name}" has been added to the category list.`,
+                variant: 'default'
+              });
+              
+              setShowCategoryCreateModal(false);
+              setNewCategoryData(null);
+            }}>
+              Add Category
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* HSN Creation Modal */}
+      <HSNCreationModal
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={async () => {
+          toast({
+            title: 'Success',
+            description: 'HSN code has been created successfully',
+          });
+          loadHSNRecords();
+        }}
+      />
+
+      {/* HSN Edit Modal */}
+      <HSNCreationModal
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        mode="edit"
+        editingHSN={editingRecord}
+        onSuccess={async () => {
+          toast({
+            title: 'Success',
+            description: 'HSN code has been updated successfully',
+          });
+          setEditingRecord(null);
+          loadHSNRecords();
+        }}
+      />
     </div>
   );
 };
@@ -761,6 +838,8 @@ interface HSNRecordFormProps {
   onSubmit: () => void;
   onCancel: () => void;
   isEditing: boolean;
+  categories: Array<{value: string, label: string}>;
+  onAddCategory: () => void;
 }
 
 const HSNRecordForm: React.FC<HSNRecordFormProps> = ({
@@ -769,6 +848,8 @@ const HSNRecordForm: React.FC<HSNRecordFormProps> = ({
   onSubmit,
   onCancel,
   isEditing,
+  categories,
+  onAddCategory,
 }) => {
   const [keywordInput, setKeywordInput] = useState('');
 
@@ -799,7 +880,7 @@ const HSNRecordForm: React.FC<HSNRecordFormProps> = ({
             id="hsn_code"
             value={formData.hsn_code}
             onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-            placeholder="e.g., 6204"
+            placeholder="e.g., 620442"
             disabled={isEditing}
             className="font-mono"
           />
@@ -814,13 +895,24 @@ const HSNRecordForm: React.FC<HSNRecordFormProps> = ({
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="clothing">Clothing</SelectItem>
-              <SelectItem value="electronics">Electronics</SelectItem>
-              <SelectItem value="books">Books</SelectItem>
-              <SelectItem value="jewelry">Jewelry</SelectItem>
-              <SelectItem value="cosmetics">Cosmetics</SelectItem>
-              <SelectItem value="sports">Sports</SelectItem>
-              <SelectItem value="home">Home & Garden</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
+                </SelectItem>
+              ))}
+              <div className="border-t border-gray-200 mt-1 pt-1">
+                <button
+                  className="w-full px-2 py-1.5 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2 rounded"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAddCategory();
+                  }}
+                >
+                  <Plus className="w-3 h-3" />
+                  Add New Category
+                </button>
+              </div>
             </SelectContent>
           </Select>
         </div>
