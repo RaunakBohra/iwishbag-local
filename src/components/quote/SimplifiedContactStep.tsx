@@ -10,6 +10,7 @@ import {
   User,
   UserPlus,
   X,
+  Shield,
 } from 'lucide-react';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { QuoteRequestContactForm } from './QuoteRequestContactForm';
@@ -20,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function SimplifiedContactStep({
   contactInfo,
@@ -40,6 +42,9 @@ export default function SimplifiedContactStep({
   const [flowChoice, setFlowChoice] = useState(null); // 'guest' | 'member' | null
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
+  
+  // Insurance preference state
+  const [insuranceOptedIn, setInsuranceOptedIn] = useState(false);
 
   // Get purchase country from first product
   const purchaseCountry = products && products[0]?.country;
@@ -62,7 +67,7 @@ export default function SimplifiedContactStep({
     };
 
     setContactInfo(updatedContactInfo);
-    next({ email: guestEmail, name: '' });
+    next({ email: guestEmail, name: '', insuranceOptedIn });
   };
 
   // Handle successful authentication
@@ -85,7 +90,7 @@ export default function SimplifiedContactStep({
     };
 
     setContactInfo(updatedContactInfo);
-    next({ email: emailData.email, name: emailData.name || '' });
+    next({ email: emailData.email, name: emailData.name || '', insuranceOptedIn });
   };
 
   // Auto-populate contact info for authenticated users (only once when user loads)
@@ -161,6 +166,31 @@ export default function SimplifiedContactStep({
             />
           )}
 
+          {/* Insurance Option */}
+          <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 my-6">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="insurance-option-auth"
+                checked={insuranceOptedIn}
+                onCheckedChange={(checked) => setInsuranceOptedIn(checked as boolean)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <Label 
+                  htmlFor="insurance-option-auth" 
+                  className="text-base font-medium text-gray-900 cursor-pointer flex items-center gap-2"
+                >
+                  <Shield className="h-4 w-4 text-blue-600" />
+                  Package Protection Insurance
+                </Label>
+                <p className="text-sm text-gray-600 mt-1">
+                  Add insurance to protect your package against loss, damage, or theft during shipping.
+                  Typically 1-2% of item value.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Submit Button */}
           <div className="space-y-4">
             {submitError && (
@@ -177,6 +207,7 @@ export default function SimplifiedContactStep({
                 next({
                   email: user.email,
                   name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                  insuranceOptedIn,
                 })
               }
               disabled={isSubmitting}
@@ -433,6 +464,31 @@ export default function SimplifiedContactStep({
               <p className="text-sm text-gray-500 mt-2">
                 We'll send your quote to this email address
               </p>
+            </div>
+
+            {/* Insurance Option */}
+            <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="insurance-option"
+                  checked={insuranceOptedIn}
+                  onCheckedChange={(checked) => setInsuranceOptedIn(checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <Label 
+                    htmlFor="insurance-option" 
+                    className="text-base font-medium text-gray-900 cursor-pointer flex items-center gap-2"
+                  >
+                    <Shield className="h-4 w-4 text-blue-600" />
+                    Package Protection Insurance
+                  </Label>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Add insurance to protect your package against loss, damage, or theft during shipping.
+                    Typically 1-2% of item value.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {submitError && (

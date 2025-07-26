@@ -38,6 +38,8 @@ import { useAuth } from '@/contexts/AuthContext';
 // import { useGuestCurrency } from '@/contexts/GuestCurrencyContext'; // Not needed for authenticated users
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import { formatCurrency } from '@/utils/currencyConversion';
+import { InsuranceToggle } from '@/components/customer/InsuranceToggle';
+import { useShippingRoutes } from '@/hooks/useShippingRoutes';
 
 const CustomerQuoteDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -46,19 +48,25 @@ const CustomerQuoteDetail: React.FC = () => {
   const { getStatusConfig } = useStatusManagement();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isUpdatingInsurance, setIsUpdatingInsurance] = useState(false);
 
   // Initialize quote state hook
   const quoteStateHook = useQuoteState(id || '');
 
   // Fetch quote data with all relations
-  const { data: quote, isLoading, error } = useQuery({
+  const {
+    data: quote,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['customer-quote-detail', id],
     queryFn: async () => {
       if (!id) throw new Error('No quote ID provided');
 
       const { data, error } = await supabase
         .from('quotes')
-        .select(`
+        .select(
+          `
           *,
           profiles!quotes_user_id_fkey(
             id,
@@ -73,7 +81,8 @@ const CustomerQuoteDetail: React.FC = () => {
             status,
             created_at
           )
-        `)
+        `,
+        )
         .eq('id', id)
         .single();
 
@@ -88,27 +97,78 @@ const CustomerQuoteDetail: React.FC = () => {
 
   // Get status configuration
   const statusConfig = quote ? getStatusConfig(quote.status, 'quote') : null;
+  
+  // Fetch shipping routes for insurance calculation
+  const { data: shippingRoutes } = useShippingRoutes(
+    quote?.origin_country || 'US',
+    quote?.destination_country || 'US'
+  );
+  
+  // Get selected shipping option
+  const selectedShippingOption = shippingRoutes?.shippingOptions?.find(
+    option => option.id === quote?.operational_data?.shipping?.selected_option
+  );
 
   // Calculate totals
-  const itemsTotal = quote?.items?.reduce(
-    (sum: number, item: any) => sum + (item.price * item.quantity),
-    0
-  ) || 0;
+  const itemsTotal =
+    quote?.items?.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0) || 0;
 
   const handleAddToCart = async () => {
     try {
       await quoteStateHook.addToCart();
       toast({
-        title: "Added to Cart",
-        description: "Quote has been added to your cart.",
+        title: 'Added to Cart',
+        description: 'Quote has been added to your cart.',
       });
       navigate('/cart');
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to add quote to cart. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to add quote to cart. Please try again.',
+        variant: 'destructive',
       });
+    }
+  };
+
+  const handleInsuranceToggle = async (enabled: boolean) => {
+    if (!quote) return;
+    
+    setIsUpdatingInsurance(true);
+    try {
+      // Update the quote's insurance preference
+      const { error } = await supabase
+        .from('quotes')
+        .update({
+          customer_data: {
+            ...quote.customer_data,
+            preferences: {
+              ...quote.customer_data?.preferences,
+              insurance_opted_in: enabled,
+            },
+          },
+        })
+        .eq('id', quote.id);
+
+      if (error) throw error;
+
+      toast({
+        title: enabled ? 'Insurance Added' : 'Insurance Removed',
+        description: enabled
+          ? 'Package protection has been added to your quote'
+          : 'Package protection has been removed from your quote',
+      });
+      
+      // Refresh the quote data
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to update insurance:', error);
+      toast({
+        title: 'Update Failed',
+        description: 'Could not update insurance preference. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingInsurance(false);
     }
   };
 
@@ -169,7 +229,7 @@ const CustomerQuoteDetail: React.FC = () => {
                   </h1>
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
                     <Badge
-                      variant={statusConfig?.variant as any || "outline"}
+                      variant={(statusConfig?.variant as any) || 'outline'}
                       className={statusConfig?.className}
                     >
                       {statusConfig?.icon && <statusConfig.icon className="h-3 w-3 mr-1" />}
@@ -256,8 +316,8 @@ const CustomerQuoteDetail: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500">Address</p>
                       <p className="font-medium text-sm">
-                        {quote.shipping_address.formatted || 
-                         `${quote.shipping_address.street}, ${quote.shipping_address.city}, ${quote.shipping_address.state} ${quote.shipping_address.postalCode}`}
+                        {quote.shipping_address.formatted ||
+                          `${quote.shipping_address.street}, ${quote.shipping_address.city}, ${quote.shipping_address.state} ${quote.shipping_address.postalCode}`}
                       </p>
                     </div>
                   )}
@@ -290,12 +350,13 @@ const CustomerQuoteDetail: React.FC = () => {
                         <div className="flex-1">
                           <h4 className="font-medium">{item.name}</h4>
                           <p className="text-sm text-gray-500 mt-1">
-                            Quantity: {item.quantity} × {formatCurrency(item.price, displayCurrency)}
+                            Quantity: {item.quantity} ×{' '}
+                            {formatCurrency(item.price, displayCurrency)}
                           </p>
                           {item.product_url && (
-                            <a 
-                              href={item.product_url} 
-                              target="_blank" 
+                            <a
+                              href={item.product_url}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm text-blue-600 hover:underline mt-1 inline-block"
                             >
@@ -360,7 +421,10 @@ const CustomerQuoteDetail: React.FC = () => {
                 <CardContent>
                   <div className="space-y-3">
                     {quote.payment_transactions.map((payment: any) => (
-                      <div key={payment.id} className="flex justify-between items-center py-2 border-b last:border-0">
+                      <div
+                        key={payment.id}
+                        className="flex justify-between items-center py-2 border-b last:border-0"
+                      >
                         <div>
                           <p className="font-medium">
                             {formatCurrency(parseFloat(payment.amount), payment.currency)}
@@ -369,9 +433,7 @@ const CustomerQuoteDetail: React.FC = () => {
                             {new Date(payment.created_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <Badge
-                          variant={payment.status === 'completed' ? 'success' : 'secondary'}
-                        >
+                        <Badge variant={payment.status === 'completed' ? 'success' : 'secondary'}>
                           {payment.status}
                         </Badge>
                       </div>
@@ -442,21 +504,31 @@ const CustomerQuoteDetail: React.FC = () => {
 
             {/* Actions */}
             {quote.status === 'approved' && (
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                    <p className="font-medium text-green-900">Quote Approved</p>
-                  </div>
-                  <p className="text-sm text-green-800 mb-4">
-                    Your quote has been approved and is ready for checkout.
-                  </p>
-                  <Button className="w-full" size="lg" onClick={handleAddToCart}>
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    Add to Cart
-                  </Button>
-                </CardContent>
-              </Card>
+              <>
+                {/* Insurance Option */}
+                <InsuranceToggle
+                  quote={quote}
+                  selectedShippingOption={selectedShippingOption}
+                  onToggle={handleInsuranceToggle}
+                  isLoading={isUpdatingInsurance}
+                />
+
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-4">
+                      <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                      <p className="font-medium text-green-900">Quote Approved</p>
+                    </div>
+                    <p className="text-sm text-green-800 mb-4">
+                      Your quote has been approved and is ready for checkout.
+                    </p>
+                    <Button className="w-full" size="lg" onClick={handleAddToCart}>
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Add to Cart
+                    </Button>
+                  </CardContent>
+                </Card>
+              </>
             )}
 
             {quote.status === 'pending' && (
@@ -481,7 +553,8 @@ const CustomerQuoteDetail: React.FC = () => {
                     <p className="font-medium text-red-900">Quote Rejected</p>
                   </div>
                   <p className="text-sm text-red-800">
-                    {quote.rejection_reason || 'This quote has been rejected. Please contact support for more information.'}
+                    {quote.rejection_reason ||
+                      'This quote has been rejected. Please contact support for more information.'}
                   </p>
                 </CardContent>
               </Card>

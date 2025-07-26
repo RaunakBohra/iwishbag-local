@@ -36,7 +36,7 @@
 import React, { useState, useEffect } from 'react';
 import { ImageUpload } from '@/components/ui/image-upload';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
-import { useAllCountries } from '@/hooks/useAllCountries';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
 import {
   Upload,
   X,
@@ -59,6 +59,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
+import { locationDetectionService } from '@/services/LocationDetectionService';
 
 function isValidUrl(url) {
   try {
@@ -79,24 +80,80 @@ export default function ProductInfoStep({
   next,
 }) {
   const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
-  const { data: allCountries, isLoading: allCountriesLoading } = useAllCountries();
+  const { data: shippingCountries, isLoading: shippingCountriesLoading } = useShippingCountries();
   const [errors, setErrors] = useState({});
   const [countryValidationError, setCountryValidationError] = useState('');
   const [destinationCountryError, setDestinationCountryError] = useState('');
   const [uploadStates, setUploadStates] = useState({}); // Track upload states for each product
+  
+  // Location detection debug state
+  const [locationDebug, setLocationDebug] = useState({
+    isDetecting: false,
+    detectionMethod: null, // 'ip', 'timezone', 'manual'
+    detectedCountry: null,
+    detectedLocation: null,
+    isSupported: null,
+    error: null,
+    timestamp: null
+  });
 
-  // Smart default country selection (no external API calls to avoid CORS/rate limit issues)
+  // Smart IP-based country detection with user choice fallback
   useEffect(() => {
-    if (!destinationCountry && allCountries) {
-      // Set a reasonable default based on your primary markets
-      // India and Nepal are mentioned as primary markets in CLAUDE.md
-      const defaultCountry = allCountries.find((c) => c.code === 'IN'); // India as default
-      if (defaultCountry) {
-        setDestinationCountry('IN');
-        console.log('Set default destination country to India (IN)');
-      }
+    if (!destinationCountry && Array.isArray(shippingCountries)) {
+      setLocationDebug(prev => ({ ...prev, isDetecting: true, timestamp: new Date().toISOString() }));
+      
+      // Get detailed location data for debug info
+      Promise.all([
+        locationDetectionService.detectLocation(),
+        locationDetectionService.getSmartCountry()
+      ])
+        .then(([locationData, detectedCountry]) => {
+          // Validate detected country exists in our supported shipping destinations
+          const countryExists = shippingCountries.find(c => c.code === detectedCountry);
+          
+          // Determine detection method
+          let detectionMethod = 'manual';
+          if (locationData) {
+            detectionMethod = locationData.city ? 'ip' : 'timezone';
+          }
+          
+          const debugInfo = {
+            isDetecting: false,
+            detectionMethod,
+            detectedCountry,
+            detectedLocation: locationData,
+            isSupported: !!countryExists,
+            error: null,
+            timestamp: new Date().toISOString()
+          };
+          
+          setLocationDebug(debugInfo);
+          
+          if (countryExists) {
+            setDestinationCountry(detectedCountry);
+            console.log('✅ Auto-detected destination country:', detectedCountry, debugInfo);
+          } else {
+            console.log('❌ Detected country not supported for shipping:', detectedCountry, debugInfo);
+            // Don't set any default - let user choose from available shipping destinations
+          }
+        })
+        .catch(error => {
+          const debugInfo = {
+            isDetecting: false,
+            detectionMethod: 'manual',
+            detectedCountry: null,
+            detectedLocation: null,
+            isSupported: null,
+            error: error.message || 'Detection failed',
+            timestamp: new Date().toISOString()
+          };
+          
+          setLocationDebug(debugInfo);
+          console.log('❌ Country detection failed, user will choose manually:', error, debugInfo);
+          // Don't set any default - let user choose
+        });
     }
-  }, [destinationCountry, allCountries, setDestinationCountry]);
+  }, [destinationCountry, shippingCountries, setDestinationCountry]);
 
   // Auto-sync countries for both combined and separate quotes (initial sync)
   useEffect(() => {
@@ -134,7 +191,7 @@ export default function ProductInfoStep({
 
   const removeProduct = (idx) => {
     setProducts(products.filter((_, i) => i !== idx));
-    setUploadStates(prev => {
+    setUploadStates((prev) => {
       const newStates = { ...prev };
       delete newStates[idx];
       return newStates;
@@ -157,42 +214,50 @@ export default function ProductInfoStep({
     setProducts(newProducts);
   };
 
-
   const handleFileUpload = async (index, file) => {
     if (!file) return;
 
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      setUploadStates(prev => ({
+      setUploadStates((prev) => ({
         ...prev,
-        [index]: { status: 'error', message: 'File size must be less than 10MB' }
+        [index]: { status: 'error', message: 'File size must be less than 10MB' },
       }));
       return;
     }
 
     // Validate file type
     const allowedTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-      'application/pdf', 'application/msword', 
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/svg+xml',
+      'application/pdf',
+      'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain', 'text/csv'
+      'text/plain',
+      'text/csv',
     ];
-    
+
     if (!allowedTypes.includes(file.type)) {
-      setUploadStates(prev => ({
+      setUploadStates((prev) => ({
         ...prev,
-        [index]: { status: 'error', message: 'File type not supported. Please upload images, PDFs, or documents.' }
+        [index]: {
+          status: 'error',
+          message: 'File type not supported. Please upload images, PDFs, or documents.',
+        },
       }));
       return;
     }
 
     // Set uploading state
-    setUploadStates(prev => ({
+    setUploadStates((prev) => ({
       ...prev,
-      [index]: { status: 'uploading', message: 'Uploading...' }
+      [index]: { status: 'uploading', message: 'Uploading...' },
     }));
 
     try {
@@ -204,9 +269,9 @@ export default function ProductInfoStep({
 
       if (error) {
         console.error('Error uploading file:', error);
-        setUploadStates(prev => ({
+        setUploadStates((prev) => ({
           ...prev,
-          [index]: { status: 'error', message: 'Upload failed. Please try again.' }
+          [index]: { status: 'error', message: 'Upload failed. Please try again.' },
         }));
         return;
       }
@@ -225,7 +290,7 @@ export default function ProductInfoStep({
           p_file_name: file.name,
           p_file_size: file.size,
           p_file_type: file.type,
-          p_session_id: sessionId
+          p_session_id: sessionId,
         });
 
         if (trackError) {
@@ -242,16 +307,15 @@ export default function ProductInfoStep({
       updateProduct(index, 'imageUrl', data.publicUrl);
 
       // Set success state
-      setUploadStates(prev => ({
+      setUploadStates((prev) => ({
         ...prev,
-        [index]: { status: 'success', message: 'Upload successful' }
+        [index]: { status: 'success', message: 'Upload successful' },
       }));
-
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadStates(prev => ({
+      setUploadStates((prev) => ({
         ...prev,
-        [index]: { status: 'error', message: 'Upload failed. Please try again.' }
+        [index]: { status: 'error', message: 'Upload failed. Please try again.' },
       }));
     }
   };
@@ -259,13 +323,12 @@ export default function ProductInfoStep({
   const handleDeleteFile = (index) => {
     updateProduct(index, 'file', null);
     updateProduct(index, 'imageUrl', '');
-    setUploadStates(prev => {
+    setUploadStates((prev) => {
       const newStates = { ...prev };
       delete newStates[index];
       return newStates;
     });
   };
-
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -277,30 +340,30 @@ export default function ProductInfoStep({
 
   const getFileIcon = (file) => {
     if (!file) return File;
-    
+
     const type = file.type.toLowerCase();
     const name = file.name.toLowerCase();
-    
+
     // Images
     if (type.startsWith('image/')) {
       return Image;
     }
-    
+
     // PDFs
     if (type === 'application/pdf' || name.endsWith('.pdf')) {
       return FileText;
     }
-    
+
     // Excel files
     if (type.includes('spreadsheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
       return FileSpreadsheet;
     }
-    
+
     // Word documents
     if (type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) {
       return FileText;
     }
-    
+
     // Default
     return File;
   };
@@ -312,17 +375,13 @@ export default function ProductInfoStep({
   const FileChip = ({ file, onDelete, onView, index }) => {
     const FileIcon = getFileIcon(file);
     const isImage = file.type.startsWith('image/');
-    
+
     return (
       <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 max-w-xs">
         <FileIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-green-800 truncate">
-            {file.name}
-          </p>
-          <p className="text-xs text-green-600">
-            {formatFileSize(file.size)}
-          </p>
+          <p className="text-sm font-medium text-green-800 truncate">{file.name}</p>
+          <p className="text-xs text-green-600">{formatFileSize(file.size)}</p>
         </div>
         <div className="flex gap-1">
           {isImage && (
@@ -542,20 +601,32 @@ export default function ProductInfoStep({
           <div className="flex-1 max-w-xs">
             <select
               value={destinationCountry}
-              onChange={(e) => setDestinationCountry(e.target.value)}
+              onChange={(e) => {
+                setDestinationCountry(e.target.value);
+                // Update debug info for manual selection
+                if (e.target.value && locationDebug.detectionMethod !== 'manual') {
+                  setLocationDebug(prev => ({
+                    ...prev,
+                    detectionMethod: 'manual',
+                    timestamp: new Date().toISOString()
+                  }));
+                }
+              }}
               className={`w-full border rounded-lg p-2 sm:p-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors bg-white ${
                 destinationCountryError ? 'border-red-300 bg-red-50' : 'border-gray-200'
               }`}
             >
               <option value="">🌍 Select country</option>
-              {allCountriesLoading ? (
+              {shippingCountriesLoading ? (
                 <option>Loading...</option>
-              ) : (
-                allCountries?.map((country) => (
+              ) : Array.isArray(shippingCountries) ? (
+                shippingCountries.map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
                   </option>
                 ))
+              ) : (
+                <option>No shipping destinations available</option>
               )}
             </select>
           </div>
@@ -567,6 +638,68 @@ export default function ProductInfoStep({
             </div>
           )}
         </div>
+
+        {/* Location Detection Debug Info */}
+        {(locationDebug.isDetecting || locationDebug.detectionMethod || locationDebug.error) && (
+          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs">
+            <div className="flex items-center gap-2 mb-2">
+              <Globe className="h-4 w-4 text-gray-500" />
+              <span className="font-medium text-gray-700">Location Detection</span>
+            </div>
+            
+            {locationDebug.isDetecting ? (
+              <div className="flex items-center gap-2 text-blue-600">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Detecting your location...</span>
+              </div>
+            ) : locationDebug.error ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-red-600">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>Detection failed: {locationDebug.error}</span>
+                </div>
+                <div className="text-gray-500">Please select your country manually</div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-green-600" />
+                  <span className="text-gray-700">
+                    Detected via {locationDebug.detectionMethod === 'ip' ? 'IP address' : 
+                                locationDebug.detectionMethod === 'timezone' ? 'browser timezone' : 'manual selection'}
+                  </span>
+                </div>
+                
+                {locationDebug.detectedLocation && (
+                  <div className="text-gray-600 pl-5">
+                    {locationDebug.detectedLocation.city && (
+                      <div>📍 {locationDebug.detectedLocation.city}, {locationDebug.detectedLocation.country}</div>
+                    )}
+                    {locationDebug.detectedLocation.timezone && (
+                      <div>🕐 Timezone: {locationDebug.detectedLocation.timezone}</div>
+                    )}
+                    {locationDebug.detectionMethod === 'ip' && (
+                      <div className="text-orange-600 mt-1">
+                        💡 Using VPN? Location might be inaccurate
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {locationDebug.detectedCountry && (
+                  <div className="text-gray-600 pl-5">
+                    Country: {locationDebug.detectedCountry} 
+                    {locationDebug.isSupported ? (
+                      <span className="text-green-600 ml-1">✓ Shipping available</span>
+                    ) : (
+                      <span className="text-red-600 ml-1">✗ Shipping not available</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Country Validation Error */}
@@ -643,12 +776,14 @@ export default function ProductInfoStep({
                       <option>Loading countries...</option>
                     ) : countryError ? (
                       <option>Failed to load countries</option>
-                    ) : (
-                      countries?.map((country) => (
+                    ) : Array.isArray(countries) ? (
+                      countries.map((country) => (
                         <option key={country.code} value={country.code}>
                           {country.name}
                         </option>
                       ))
+                    ) : (
+                      <option>No countries available</option>
                     )}
                   </select>
                   {errors[`country-${index}`] && (
@@ -692,7 +827,7 @@ export default function ProductInfoStep({
                     className="flex-1 border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                     placeholder="Paste product URL (Amazon, eBay, etc.)"
                   />
-                  
+
                   {/* Enhanced Upload Button - Show when no file uploaded */}
                   {!product.file && uploadStates[index]?.status !== 'uploading' && (
                     <label className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white border border-teal-600 rounded-lg cursor-pointer hover:bg-teal-700 hover:border-teal-700 transition-all duration-200 shadow-sm">
@@ -711,16 +846,23 @@ export default function ProductInfoStep({
                   {uploadStates[index]?.status === 'uploading' && (
                     <div className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-50 border border-blue-300 rounded-lg">
                       <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin text-blue-600" />
-                      <span className="text-xs sm:text-sm font-medium text-blue-700">Uploading...</span>
+                      <span className="text-xs sm:text-sm font-medium text-blue-700">
+                        Uploading...
+                      </span>
                     </div>
                   )}
 
                   {/* File Management Buttons - Show when file uploaded */}
                   {product.file && uploadStates[index]?.status !== 'uploading' && (
                     <div className="flex gap-2">
-                      <label className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors" title="Change file">
+                      <label
+                        className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+                        title="Change file"
+                      >
                         <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">Change</span>
+                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">
+                          Change
+                        </span>
                         <input
                           type="file"
                           className="hidden"
@@ -735,16 +877,18 @@ export default function ProductInfoStep({
                         title="Delete file"
                       >
                         <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">Delete</span>
+                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">
+                          Delete
+                        </span>
                       </button>
                     </div>
                   )}
                 </div>
-                
+
                 {/* File Display - Enhanced chip when file is uploaded */}
                 {product.file && (
                   <div className="mt-2">
-                    <FileChip 
+                    <FileChip
                       file={product.file}
                       onDelete={() => handleDeleteFile(index)}
                       onView={() => window.open(product.imageUrl, '_blank')}
@@ -752,7 +896,7 @@ export default function ProductInfoStep({
                     />
                   </div>
                 )}
-                
+
                 {/* Upload Error State */}
                 {uploadStates[index]?.status === 'error' && (
                   <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -764,7 +908,7 @@ export default function ProductInfoStep({
                     </div>
                   </div>
                 )}
-                
+
                 {/* URL Validation Error */}
                 {errors[`url-${index}`] && (
                   <p className="text-red-500 text-xs sm:text-sm mt-2">{errors[`url-${index}`]}</p>

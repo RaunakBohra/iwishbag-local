@@ -39,7 +39,7 @@ import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield } from 'lucid
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
 import { notificationService } from '@/services/NotificationService';
 import { NOTIFICATION_TYPES } from '@/types/NotificationTypes';
@@ -152,7 +152,7 @@ export default function QuoteRequestPage() {
     }
   };
 
-  const handleSubmit = async (submissionData?: { email?: string; name?: string }) => {
+  const handleSubmit = async (submissionData?: { email?: string; name?: string; insuranceOptedIn?: boolean }) => {
     setIsSubmitting(true);
     setSubmitError('');
 
@@ -198,13 +198,17 @@ export default function QuoteRequestPage() {
         // CRITICAL FIX: Ensure origin_country is properly captured
         const originCountry = products[0]?.country;
         if (!originCountry) {
-          setSubmitError('Origin country is required. Please select the purchase country for your products.');
+          setSubmitError(
+            'Origin country is required. Please select the purchase country for your products.',
+          );
           setIsSubmitting(false);
           return;
         }
 
         if (!destinationCountry) {
-          setSubmitError('Destination country is required. Please select where you want the products delivered.');
+          setSubmitError(
+            'Destination country is required. Please select where you want the products delivered.',
+          );
           setIsSubmitting(false);
           return;
         }
@@ -212,7 +216,7 @@ export default function QuoteRequestPage() {
         // ✅ FIX: Get the correct currency for the origin country
         let originCurrency = 'USD';
         try {
-          originCurrency = await currencyService.getCurrencyForCountry(originCountry);
+          originCurrency = await optimizedCurrencyService.getCurrencyForCountry(originCountry);
         } catch (error) {
           console.error('Error getting currency for origin country:', error);
           // Fallback to USD if currency service fails
@@ -243,6 +247,9 @@ export default function QuoteRequestPage() {
                 email: emailToUse,
               },
               shipping_address: shippingAddressData,
+              preferences: {
+                insurance_opted_in: submissionData?.insuranceOptedIn || false,
+              },
             },
             // ✅ FIX: Prices are now in origin currency, store original values
             // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
@@ -295,7 +302,7 @@ export default function QuoteRequestPage() {
               if (fileName) {
                 await supabase.rpc('mark_file_as_used', {
                   p_file_path: fileName,
-                  p_quote_id: quote.id
+                  p_quote_id: quote.id,
                 });
               }
             }
@@ -309,13 +316,17 @@ export default function QuoteRequestPage() {
         for (const product of products) {
           // CRITICAL FIX: Ensure origin_country is properly captured for each product
           if (!product.country) {
-            setSubmitError(`Origin country is required for "${product.name || 'one of your products'}". Please select the purchase country.`);
+            setSubmitError(
+              `Origin country is required for "${product.name || 'one of your products'}". Please select the purchase country.`,
+            );
             setIsSubmitting(false);
             return;
           }
 
           if (!destinationCountry) {
-            setSubmitError('Destination country is required. Please select where you want the products delivered.');
+            setSubmitError(
+              'Destination country is required. Please select where you want the products delivered.',
+            );
             setIsSubmitting(false);
             return;
           }
@@ -323,7 +334,7 @@ export default function QuoteRequestPage() {
           // ✅ FIX: Get the correct currency for each product's origin country
           let productOriginCurrency = 'USD';
           try {
-            productOriginCurrency = await currencyService.getCurrencyForCountry(product.country);
+            productOriginCurrency = await optimizedCurrencyService.getCurrencyForCountry(product.country);
           } catch (error) {
             console.error('Error getting currency for product origin country:', error);
             // Fallback to USD if currency service fails
@@ -356,8 +367,11 @@ export default function QuoteRequestPage() {
                   email: emailToUse,
                 },
                 shipping_address: shippingAddressData,
+                preferences: {
+                  insurance_opted_in: submissionData?.insuranceOptedIn || false,
+                },
               },
-              // ✅ FIX: Prices are now in origin currency, store original values  
+              // ✅ FIX: Prices are now in origin currency, store original values
               // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
               costprice_total_usd: (product.price || 0) * (product.quantity || 1),
               final_total_usd: (product.price || 0) * (product.quantity || 1),
@@ -380,7 +394,7 @@ export default function QuoteRequestPage() {
               if (fileName) {
                 await supabase.rpc('mark_file_as_used', {
                   p_file_path: fileName,
-                  p_quote_id: quote.id
+                  p_quote_id: quote.id,
                 });
               }
             }
@@ -415,7 +429,7 @@ export default function QuoteRequestPage() {
           let destinationCurrency = 'USD';
           if (destCountry) {
             try {
-              destinationCurrency = await currencyService.getCurrencyForCountry(destCountry);
+              destinationCurrency = await optimizedCurrencyService.getCurrencyForCountry(destCountry);
             } catch (error) {
               console.error('Error getting currency for country:', error);
               // Fall back to USD if there's an error
@@ -468,7 +482,7 @@ export default function QuoteRequestPage() {
               subtitle: `${products.length} item${products.length > 1 ? 's' : ''} • ${destinationCountry}`,
               product_count: products.length,
               destination_country: destinationCountry,
-            }
+            },
           );
         } catch (error) {
           console.error('Error creating quote submission notification:', error);
