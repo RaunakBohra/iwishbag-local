@@ -69,6 +69,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { locationDetectionService } from '@/services/LocationDetectionService';
 import { R2StorageService } from '@/services/R2StorageService';
+import { urlAnalysisService } from '@/services/UrlAnalysisService';
+import { productDataFetchService } from '@/services/ProductDataFetchService';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
 import {
   Dialog,
@@ -115,6 +117,9 @@ export default function ProductInfoStep({
   const [uploadStates, setUploadStates] = useState({}); // Track upload states for each product
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState({}); // Track expanded state for notes per product
+  const [urlMismatchNotifications, setUrlMismatchNotifications] = useState({}); // Track URL country mismatches
+  const [autoFillLoading, setAutoFillLoading] = useState({}); // Track auto-fill loading state per product
+  const [autoFillStatus, setAutoFillStatus] = useState({}); // Track auto-fill success/error messages
   
   // Location detection debug state
   const [locationDebug, setLocationDebug] = useState({
@@ -207,6 +212,7 @@ export default function ProductInfoStep({
   const addProduct = () => {
     const newProduct = {
       url: '',
+      title: '', // Product title field
       files: [], // Array of uploaded files with metadata
       quantity: 1,
       price: '',
@@ -293,6 +299,159 @@ export default function ProductInfoStep({
     }
   };
 
+  const handleUrlChange = async (productIndex, url) => {
+    updateProduct(productIndex, 'url', url);
+    
+    if (!url) {
+      // Clear any notifications when URL is cleared
+      setUrlMismatchNotifications(prev => {
+        const newNotifications = { ...prev };
+        delete newNotifications[productIndex];
+        return newNotifications;
+      });
+      setAutoFillStatus(prev => {
+        const newStatus = { ...prev };
+        delete newStatus[productIndex];
+        return newStatus;
+      });
+      return;
+    }
+    
+    // Only proceed if valid URL
+    if (!isValidUrl(url)) {
+      return;
+    }
+    
+    // Start auto-fill process
+    setAutoFillLoading(prev => ({ ...prev, [productIndex]: true }));
+    setAutoFillStatus(prev => {
+      const newStatus = { ...prev };
+      delete newStatus[productIndex];
+      return newStatus;
+    });
+    
+    try {
+      // Fetch product data
+      const result = await productDataFetchService.fetchProductData(url);
+      
+      if (result.success && result.data) {
+        const productData = result.data;
+        
+        // Auto-fill the fields
+        if (productData.title && !products[productIndex].title) {
+          updateProduct(productIndex, 'title', productData.title);
+        }
+        
+        if (productData.price && !products[productIndex].price) {
+          updateProduct(productIndex, 'price', productData.price.toString());
+        }
+        
+        if (productData.weight && !products[productIndex].weight) {
+          updateProduct(productIndex, 'weight', productData.weight.toFixed(2));
+        }
+        
+        // Set success status
+        const filledFields = [];
+        if (productData.title) filledFields.push('title');
+        if (productData.price) filledFields.push('price');
+        if (productData.weight) filledFields.push('weight');
+        
+        if (filledFields.length > 0) {
+          setAutoFillStatus(prev => ({
+            ...prev,
+            [productIndex]: {
+              type: 'success',
+              message: `Auto-filled: ${filledFields.join(', ')}`,
+              source: result.source
+            }
+          }));
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setAutoFillStatus(prev => {
+              const newStatus = { ...prev };
+              delete newStatus[productIndex];
+              return newStatus;
+            });
+          }, 3000);
+        }
+      } else if (result.source === 'mock') {
+        // Don't show error for mock data, just silently continue
+      } else {
+        // Show error status
+        setAutoFillStatus(prev => ({
+          ...prev,
+          [productIndex]: {
+            type: 'error',
+            message: 'Could not fetch product details',
+            source: result.source
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Auto-fill error:', error);
+      setAutoFillStatus(prev => ({
+        ...prev,
+        [productIndex]: {
+          type: 'error',
+          message: 'Failed to auto-fill product details',
+          source: 'error'
+        }
+      }));
+    } finally {
+      setAutoFillLoading(prev => ({ ...prev, [productIndex]: false }));
+    }
+    
+    // Analyze URL
+    const analysis = urlAnalysisService.analyzeUrl(url);
+    
+    // Update notes placeholder based on category
+    if (analysis.category && analysis.categoryPrompts) {
+      // This will trigger a re-render with new placeholder
+      // The placeholder is handled in the JSX directly
+    }
+    
+    // Check country match
+    const currentCountry = products[productIndex].country;
+    if (currentCountry && analysis.suggestedCountry) {
+      const countryMatch = urlAnalysisService.checkCountryMatch(url, currentCountry);
+      
+      if (!countryMatch.matches) {
+        // Auto-correct country
+        updateProduct(productIndex, 'country', analysis.suggestedCountry);
+        
+        // Set notification
+        const countryName = countries?.find(c => c.code === analysis.suggestedCountry)?.name || analysis.suggestedCountry;
+        const notification = {
+          type: 'warning',
+          message: `Country updated to ${countryName} to match ${analysis.domain}`,
+          alternativeDomain: countryMatch.alternativeDomain
+        };
+        
+        setUrlMismatchNotifications(prev => ({
+          ...prev,
+          [productIndex]: notification
+        }));
+        
+        // Auto-clear notification after 5 seconds
+        setTimeout(() => {
+          setUrlMismatchNotifications(prev => {
+            const newNotifications = { ...prev };
+            delete newNotifications[productIndex];
+            return newNotifications;
+          });
+        }, 5000);
+      } else {
+        // Clear any existing notification
+        setUrlMismatchNotifications(prev => {
+          const newNotifications = { ...prev };
+          delete newNotifications[productIndex];
+          return newNotifications;
+        });
+      }
+    }
+  };
+
 
 
 
@@ -373,6 +532,20 @@ export default function ProductInfoStep({
       className:
         'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500',
     };
+  };
+
+  const getNotesPlaceholder = (productIndex) => {
+    const product = products[productIndex];
+    if (!product?.url) {
+      return "Add notes (size, color, special instructions)...";
+    }
+    
+    const analysis = urlAnalysisService.analyzeUrl(product.url);
+    if (analysis.categoryPrompts) {
+      return analysis.categoryPrompts.notesPlaceholder;
+    }
+    
+    return "Size, color, variant, or any specific requirements";
   };
 
   const quoteTypeMessage = getQuoteTypeMessage();
@@ -670,28 +843,108 @@ export default function ProductInfoStep({
                 <div className="flex-1 w-[82%]">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Product URL {!product.url && !product.files?.length && '*'}
+                    {autoFillLoading[index] && (
+                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                        <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
+                        Fetching details...
+                      </span>
+                    )}
                   </label>
-                  <input
-                    type="url"
-                    value={product.url}
-                    onChange={(e) => updateProduct(index, 'url', e.target.value)}
-                    aria-label={`Product ${index + 1} URL`}
-                    aria-required={!product.files?.length}
-                    aria-invalid={!!errors[`url-${index}`]}
-                    aria-describedby={errors[`url-${index}`] ? `url-error-${index}` : undefined}
-                    className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                    placeholder="Paste product URL (Amazon, eBay, etc.) or upload files below"
-                  />
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={product.url}
+                      onChange={(e) => handleUrlChange(index, e.target.value)}
+                      aria-label={`Product ${index + 1} URL`}
+                      aria-required={!product.files?.length}
+                      aria-invalid={!!errors[`url-${index}`]}
+                      aria-describedby={errors[`url-${index}`] ? `url-error-${index}` : undefined}
+                      className={`w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
+                        autoFillLoading[index] ? 'pr-10' : ''
+                      }`}
+                      placeholder="Paste product URL (Amazon, eBay, etc.) or upload files below"
+                    />
+                    {autoFillLoading[index] && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      </div>
+                    )}
+                  </div>
                   {errors[`url-${index}`] && (
                     <p id={`url-error-${index}`} className="text-red-500 text-xs mt-1" role="alert">
                       {errors[`url-${index}`]}
                     </p>
                   )}
+                  {urlMismatchNotifications[index] && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg animate-fade-in">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <div className="text-xs">
+                          <p className="text-yellow-800 font-medium">
+                            {urlMismatchNotifications[index].message}
+                          </p>
+                          {urlMismatchNotifications[index].alternativeDomain && (
+                            <p className="text-yellow-700 mt-1">
+                              Tip: Use {urlMismatchNotifications[index].alternativeDomain} for local shopping
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {autoFillStatus[index] && (
+                    <div className={`mt-2 p-2 rounded-lg animate-fade-in ${
+                      autoFillStatus[index].type === 'success' 
+                        ? 'bg-green-50 border border-green-200' 
+                        : 'bg-red-50 border border-red-200'
+                    }`}>
+                      <div className="flex items-start gap-2">
+                        {autoFillStatus[index].type === 'success' ? (
+                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                        )}
+                        <div className="text-xs">
+                          <p className={`font-medium ${
+                            autoFillStatus[index].type === 'success' ? 'text-green-800' : 'text-red-800'
+                          }`}>
+                            {autoFillStatus[index].message}
+                          </p>
+                          {autoFillStatus[index].source === 'mock' && (
+                            <p className="text-gray-600 mt-0.5 text-xs">
+                              Using sample data
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Row 2: Quantity + Price + Weight - Always inline */}
-              <div className="mt-4">
+              {/* Row 2: Product Title - Full width */}
+              <div className="mt-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Product Title (optional)
+                  <div className="group relative inline-block ml-1">
+                    <HelpCircle className="h-3 w-3 text-gray-400 cursor-help inline" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-10">
+                      Helps us identify your product accurately
+                    </div>
+                  </div>
+                </label>
+                <input
+                  type="text"
+                  value={product.title || ''}
+                  onChange={(e) => updateProduct(index, 'title', e.target.value)}
+                  className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                  placeholder="Product name (e.g., Nike Air Max 270, iPhone 15 Pro)"
+                  aria-label={`Product ${index + 1} title`}
+                />
+              </div>
+
+              {/* Row 3: Quantity + Price + Weight - Always inline */}
+              <div className="mt-3">
                 <div className="flex gap-2 sm:gap-3">
                   {/* Quantity - ~30% on mobile, ~20% on desktop */}
                   <div className="w-[30%] sm:w-[20%] min-w-[70px] sm:min-w-[80px]">
@@ -767,7 +1020,7 @@ export default function ProductInfoStep({
                           value={product.notes}
                           onChange={(e) => handleNotesChange(index, e.target.value)}
                           className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[80px] resize-vertical transition-all duration-200"
-                          placeholder="Add detailed notes about size, color, specific model, special instructions, or any other product details..."
+                          placeholder={getNotesPlaceholder(index)}
                           rows={3}
                           autoFocus
                         />
@@ -788,7 +1041,7 @@ export default function ProductInfoStep({
                           value={product.notes}
                           onChange={(e) => handleNotesChange(index, e.target.value)}
                           className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 pr-10"
-                          placeholder="Add notes (size, color, special instructions)..."
+                          placeholder={getNotesPlaceholder(index).split('(')[0].trim() + '...'}
                         />
                         <button
                           type="button"
@@ -854,14 +1107,17 @@ export default function ProductInfoStep({
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <h4 className="text-sm font-medium text-blue-900 mb-1">Shipping Preview</h4>
-              <div className="text-xs text-blue-700 space-y-1">
+              <h4 className="text-sm font-medium text-blue-900 mb-2">Shipping Routes & Quick Tips</h4>
+              
+              {/* Shipping Routes */}
+              <div className="text-xs text-blue-700 space-y-1 mb-3">
                 {products.filter(p => p.country).map((product, index) => {
                   const fromCountry = countries?.find(c => c.code === product.country)?.name || product.country;
                   const toCountry = shippingCountries?.find(c => c.code === destinationCountry)?.name || destinationCountry;
                   return (
                     <div key={index} className="flex items-center gap-2">
-                      <span className="font-medium">Product {index + 1}:</span>
+                      <CheckCircle className="h-3 w-3 text-blue-600" />
+                      <span className="font-medium">{product.title || `Product ${index + 1}`}:</span>
                       <span>{fromCountry} → {toCountry}</span>
                       {product.weight && (
                         <span className="text-blue-600">({product.weight}kg)</span>
@@ -869,10 +1125,36 @@ export default function ProductInfoStep({
                     </div>
                   );
                 })}
-                <div className="mt-2 pt-2 border-t border-blue-200">
-                  <span className="text-blue-800 font-medium">
-                    💡 Tip: Adding weight helps us calculate accurate shipping costs
-                  </span>
+              </div>
+              
+              {/* Enhanced Tips */}
+              <div className="space-y-1 pt-2 border-t border-blue-200">
+                <h5 className="text-xs font-medium text-blue-900 mb-1">For faster & accurate quotes:</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                  <div className="flex items-start gap-1">
+                    <span className="text-blue-600 font-medium">•</span>
+                    <span className="text-xs text-blue-700">
+                      <strong>Price:</strong> Helps calculate customs instantly
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-1">
+                    <span className="text-blue-600 font-medium">•</span>
+                    <span className="text-xs text-blue-700">
+                      <strong>Weight:</strong> Ensures accurate shipping costs
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-1">
+                    <span className="text-blue-600 font-medium">•</span>
+                    <span className="text-xs text-blue-700">
+                      <strong>Title:</strong> Easy tracking of your items
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-1">
+                    <span className="text-blue-600 font-medium">•</span>
+                    <span className="text-xs text-blue-700">
+                      <strong>Notes:</strong> Correct variant delivery
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

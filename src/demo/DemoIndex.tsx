@@ -26,11 +26,25 @@ import CloudflareFeaturesDemo from '../pages/demo/CloudflareFeaturesDemo';
 import ZeroTrustSetup from '../pages/demo/ZeroTrustSetup';
 import CloudflareSetupSummary from '../pages/demo/CloudflareSetupSummary';
 import ZeroTrustManualSetup from '../pages/demo/ZeroTrustManualSetup';
+import UrlAutoFillDemo from '../pages/demo/UrlAutoFillDemo';
 
 const DemoIndex = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
 
   const demos = [
+    {
+      id: 'url-autofill',
+      title: '🔮 URL Auto-Fill Demo',
+      description:
+        'Smart product data extraction from e-commerce URLs - Automatically fills product details like title, price, and weight',
+      features: [
+        'Instant product data extraction',
+        'Supports Amazon, eBay, Nike & more',
+        'Auto-fills title, price & weight',
+        'Real-time loading feedback',
+      ],
+      component: UrlAutoFillDemo,
+    },
     {
       id: 'cloudflare-summary',
       title: '📊 Cloudflare Setup Summary',

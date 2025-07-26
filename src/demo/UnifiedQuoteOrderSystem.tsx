@@ -1639,11 +1639,10 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="border rounded-lg">
                       <table className="w-full table-fixed">
                         <colgroup>
-                          <col style={{ width: '25%' }} />  {/* Product */}
-                          <col style={{ width: '12%' }} />  {/* Price & Qty */}
-                          <col style={{ width: '20%' }} />  {/* Weight & HSN */}
-                          <col style={{ width: '12%' }} />  {/* Tax Method */}
-                          <col style={{ width: '15%' }} />  {/* Valuation */}
+                          <col style={{ width: '30%' }} />  {/* Product */}
+                          <col style={{ width: '15%' }} />  {/* Price & Qty */}
+                          <col style={{ width: '22%' }} />  {/* Weight & HSN */}
+                          <col style={{ width: '17%' }} />  {/* Tax & Valuation */}
                           {orderMode && <col style={{ width: '10%' }} />}  {/* Variance */}
                           <col style={{ width: orderMode ? '6%' : '16%' }} />  {/* Actions */}
                         </colgroup>
@@ -1652,8 +1651,7 @@ export default function UnifiedQuoteOrderSystem({
                             <th className="text-left px-6 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Product</th>
                             <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Price</th>
                             <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Weight & HSN</th>
-                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Tax</th>
-                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Valuation</th>
+                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Tax & Valuation</th>
                             {orderMode && (
                               <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Variance</th>
                             )}
@@ -2263,47 +2261,133 @@ export default function UnifiedQuoteOrderSystem({
                                   </Popover>
                                 </div>
                               </td>
-                              <td className="px-2 py-3 text-center">
-                                <Select 
-                                  value={item.tax_method || 'hsn'}
-                                  onValueChange={(value) => {
-                                    const updatedItems = items.map(i => 
-                                      i.id === item.id ? { ...i, tax_method: value } : i
-                                    );
-                                    setItems(updatedItems);
-                                    recalculateQuote(updatedItems);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="hsn">HSN</SelectItem>
-                                    <SelectItem value="country">Country</SelectItem>
-                                    <SelectItem value="manual">Manual</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                              <td className="px-2 py-3 text-center">
-                                <Select 
-                                  value={item.valuation_method || 'actual_price'}
-                                  onValueChange={(value) => {
-                                    const updatedItems = items.map(i => 
-                                      i.id === item.id ? { ...i, valuation_method: value } : i
-                                    );
-                                    setItems(updatedItems);
-                                    recalculateQuote(updatedItems);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="actual_price">Product</SelectItem>
-                                    <SelectItem value="minimum_valuation">Minimum</SelectItem>
-                                    <SelectItem value="higher_of_both">Higher</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                              <td className="px-4 py-4">
+                                <div className="space-y-2 flex flex-col items-start">
+                                  {/* Tab Style Tax Method Selector */}
+                                  <div className="inline-flex items-end gap-4 border-b-2 border-gray-200">
+                                    <button
+                                      onClick={() => {
+                                        const updatedItems = items.map(i => 
+                                          i.id === item.id ? { ...i, tax_method: 'hsn' } : i
+                                        );
+                                        setItems(updatedItems);
+                                        recalculateQuote(updatedItems);
+                                      }}
+                                      className={cn(
+                                        "pb-2 text-xs transition-all relative",
+                                        item.tax_method === 'hsn' || !item.tax_method
+                                          ? "text-orange-600 font-medium" 
+                                          : "text-gray-600 hover:text-gray-900"
+                                      )}
+                                    >
+                                      HSN
+                                      {(item.tax_method === 'hsn' || !item.tax_method) && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const updatedItems = items.map(i => 
+                                          i.id === item.id ? { ...i, tax_method: 'country' } : i
+                                        );
+                                        setItems(updatedItems);
+                                        recalculateQuote(updatedItems);
+                                      }}
+                                      className={cn(
+                                        "pb-2 text-xs transition-all relative",
+                                        item.tax_method === 'country' 
+                                          ? "text-turquoise-600 font-medium" 
+                                          : "text-gray-600 hover:text-gray-900"
+                                      )}
+                                    >
+                                      Country
+                                      {item.tax_method === 'country' && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-500" />
+                                      )}
+                                    </button>
+                                    
+                                    {item.tax_method === 'manual' ? (
+                                      <div className="relative pb-2 animate-in slide-in-from-right-2 fade-in duration-200">
+                                        <div className="flex items-center gap-1">
+                                          <input
+                                            type="number"
+                                            value={item.manual_tax_rate || 0}
+                                            onChange={(e) => {
+                                              const value = parseFloat(e.target.value) || 0;
+                                              const updatedItems = items.map(i => 
+                                                i.id === item.id ? { ...i, manual_tax_rate: value } : i
+                                              );
+                                              setItems(updatedItems);
+                                              recalculateQuote(updatedItems);
+                                            }}
+                                            className="w-12 px-1 text-xs text-center text-purple-600 font-medium bg-transparent border-none focus:outline-none"
+                                            min="0"
+                                            max="100"
+                                            step="0.1"
+                                          />
+                                          <span className="text-xs text-purple-600 font-medium">%</span>
+                                        </div>
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500" />
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => {
+                                          const updatedItems = items.map(i => 
+                                            i.id === item.id ? { ...i, tax_method: 'manual' } : i
+                                          );
+                                          setItems(updatedItems);
+                                          recalculateQuote(updatedItems);
+                                        }}
+                                        className={cn(
+                                          "pb-2 text-xs transition-all relative",
+                                          "text-gray-600 hover:text-gray-900"
+                                        )}
+                                      >
+                                        Manual
+                                      </button>
+                                    )}
+                                  </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        let newMethod = 'actual_price';
+                                        if (item.valuation_method === 'actual_price' || !item.valuation_method) {
+                                          newMethod = 'minimum_valuation';
+                                        } else if (item.valuation_method === 'minimum_valuation') {
+                                          newMethod = 'higher_of_both';
+                                        }
+                                        const updatedItems = items.map(i => 
+                                          i.id === item.id ? { ...i, valuation_method: newMethod } : i
+                                        );
+                                        setItems(updatedItems);
+                                        recalculateQuote(updatedItems);
+                                      }}
+                                      className="absolute inset-0 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                                    />
+                                    <span
+                                      className={cn(
+                                        "absolute h-5 w-5 transform rounded-full transition-all duration-200",
+                                        "shadow-sm"
+                                      )}
+                                      style={{
+                                        backgroundColor: (() => {
+                                          if (item.valuation_method === 'minimum_valuation') return '#14B8A6'; // Turquoise
+                                          if (item.valuation_method === 'higher_of_both') return '#8B5CF6'; // Purple
+                                          return '#FB923C'; // Orange
+                                        })(),
+                                        transform: (() => {
+                                          if (item.valuation_method === 'minimum_valuation') return 'translateX(20px)';
+                                          if (item.valuation_method === 'higher_of_both') return 'translateX(40px)';
+                                          return 'translateX(0)';
+                                        })()
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="ml-2 text-xs text-gray-600">
+                                    {item.valuation_method === 'minimum_valuation' ? 'Min' : 
+                                     item.valuation_method === 'higher_of_both' ? 'Higher' : 'Product'}
+                                  </span>
+                                </div>
                               </td>
                               {orderMode && (
                                 <td className="px-2 py-3 text-center">
@@ -2327,8 +2411,8 @@ export default function UnifiedQuoteOrderSystem({
                                   )}
                                 </td>
                               )}
-                              <td className="px-2 py-3 text-center">
-                                <div className="flex items-center justify-center gap-1">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center justify-end gap-1">
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button variant="ghost" size="sm" title="View tax breakdown">

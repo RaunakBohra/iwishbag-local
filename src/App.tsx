@@ -142,6 +142,9 @@ const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
 
 // Demo pages for weight recommendation designs
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex'));
+const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns'));
+const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns'));
+const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -239,7 +242,24 @@ const router = createBrowserRouter([
   // Demo routes (public access for design review)
   {
     path: 'demo',
-    element: <DemoIndex />,
+    children: [
+      {
+        index: true,
+        element: <DemoIndex />,
+      },
+      {
+        path: 'manual-tax-designs',
+        element: <ManualTaxInputDesigns />,
+      },
+      {
+        path: 'toggle-designs',
+        element: <ToggleDesigns />,
+      },
+      {
+        path: 'url-autofill',
+        element: <UrlAutoFillDemo />,
+      },
+    ],
   },
   // Auth routes - No Layout wrapper
   {
