@@ -1,0 +1,15 @@
+name = "r2-uploads"
+main = "./r2-quote-uploads.js"
+compatibility_date = "2023-12-01"
+account_id = "610762493d34333f1a6d72a037b345cf"
+
+[[r2_buckets]]
+binding = "IWISHBAG_NEW"
+bucket_name = "iwishbag-new"
+
+[[kv_namespaces]]
+binding = "IWISHBAG_CACHE"
+id = "6f5087b9d89146dfbeb8efa92a9b4756"
+
+[env.production]
+vars = { R2_PUBLIC_DOMAIN = "r2.whyteclub.com" }

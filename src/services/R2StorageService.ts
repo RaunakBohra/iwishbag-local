@@ -1,16 +1,16 @@
-import { supabase } from '../integrations/supabase/client';
-
 interface R2Config {
   accountId: string;
   bucketName: string;
   publicUrl: string;
-  apiToken?: string;
+  workerUrl: string;
 }
 
 interface UploadOptions {
   folder?: string;
   contentType?: string;
   metadata?: Record<string, string>;
+  sessionId?: string;
+  productIndex?: string | number;
 }
 
 export class R2StorageService {
@@ -21,8 +21,8 @@ export class R2StorageService {
     this.config = {
       accountId: import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '610762493d34333f1a6d72a037b345cf',
       bucketName: 'iwishbag-new',
-      publicUrl: `https://pub-${import.meta.env.VITE_CLOUDFLARE_ACCOUNT_ID || '610762493d34333f1a6d72a037b345cf'}.r2.dev`,
-      apiToken: import.meta.env.VITE_CLOUDFLARE_API_TOKEN
+      publicUrl: 'https://r2.whyteclub.com',
+      workerUrl: import.meta.env.VITE_R2_WORKER_URL || 'https://r2-uploads.iwishbag.workers.dev'
     };
   }
 
@@ -37,48 +37,54 @@ export class R2StorageService {
    * Upload a file directly to R2 using a Worker endpoint
    */
   async uploadFile(file: File, options: UploadOptions = {}): Promise<{ url: string; key: string }> {
-    const { folder = 'uploads', contentType, metadata } = options;
+    const formData = new FormData();
+    formData.append('file', file);
     
-    // Generate unique filename
-    const timestamp = Date.now();
-    const uniqueId = Math.random().toString(36).substring(2, 9);
-    const extension = file.name.split('.').pop();
-    const key = `${folder}/${timestamp}-${uniqueId}.${extension}`;
-
-    // For now, we'll use Supabase storage as a fallback
-    // In production, this would upload to R2 via a Worker endpoint
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(key, file, {
-        contentType: contentType || file.type,
-        upsert: false
-      });
-
-    if (error) {
-      throw new Error(`Upload failed: ${error.message}`);
+    // Add metadata
+    if (options.sessionId) {
+      formData.append('sessionId', options.sessionId);
+    }
+    if (options.productIndex !== undefined) {
+      formData.append('productIndex', String(options.productIndex));
     }
 
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(key);
+    try {
+      const response = await fetch(`${this.config.workerUrl}/upload/quote`, {
+        method: 'POST',
+        body: formData
+      });
 
-    return {
-      url: publicUrl,
-      key
-    };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      return {
+        url: result.url,
+        key: result.key
+      };
+    } catch (error) {
+      console.error('R2 upload error:', error);
+      throw error;
+    }
   }
 
   /**
    * Delete a file from R2
    */
   async deleteFile(key: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from('product-images')
-      .remove([key]);
+    try {
+      const response = await fetch(`${this.config.workerUrl}/files/${key}`, {
+        method: 'DELETE'
+      });
 
-    if (error) {
-      throw new Error(`Delete failed: ${error.message}`);
+      if (!response.ok) {
+        throw new Error('Delete failed');
+      }
+    } catch (error) {
+      console.error('R2 delete error:', error);
+      throw error;
     }
   }
 

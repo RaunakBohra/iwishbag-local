@@ -60,6 +60,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { locationDetectionService } from '@/services/LocationDetectionService';
+import { R2StorageService } from '@/services/R2StorageService';
 
 function isValidUrl(url) {
   try {
@@ -180,6 +181,7 @@ export default function ProductInfoStep({
       url: '',
       file: null,
       imageUrl: '', // Separate field for uploaded image URL
+      fileKey: null, // R2 storage key for deletion
       quantity: 1,
       price: '',
       weight: '',
@@ -261,50 +263,23 @@ export default function ProductInfoStep({
     }));
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error } = await supabase.storage.from('quote-requests').upload(filePath, file);
-
-      if (error) {
-        console.error('Error uploading file:', error);
-        setUploadStates((prev) => ({
-          ...prev,
-          [index]: { status: 'error', message: 'Upload failed. Please try again.' },
-        }));
-        return;
+      // Get or create session ID
+      const sessionId = localStorage.getItem('anonymous_session_id') || crypto.randomUUID();
+      if (!localStorage.getItem('anonymous_session_id')) {
+        localStorage.setItem('anonymous_session_id', sessionId);
       }
 
-      const { data } = supabase.storage.from('quote-requests').getPublicUrl(filePath);
-
-      // Track the uploaded file in database for cleanup
-      try {
-        const sessionId = localStorage.getItem('anonymous_session_id') || crypto.randomUUID();
-        if (!localStorage.getItem('anonymous_session_id')) {
-          localStorage.setItem('anonymous_session_id', sessionId);
-        }
-
-        const { error: trackError } = await supabase.rpc('track_uploaded_file', {
-          p_file_path: filePath,
-          p_file_name: file.name,
-          p_file_size: file.size,
-          p_file_type: file.type,
-          p_session_id: sessionId,
-        });
-
-        if (trackError) {
-          console.warn('Failed to track uploaded file:', trackError);
-          // Continue anyway - tracking is not critical for user experience
-        }
-      } catch (trackError) {
-        console.warn('Error tracking uploaded file:', trackError);
-        // Continue anyway - tracking is not critical for user experience
-      }
+      // Upload to R2 via worker
+      const r2Service = R2StorageService.getInstance();
+      const { url, key } = await r2Service.uploadFile(file, {
+        sessionId: sessionId,
+        productIndex: index
+      });
 
       // Update product with file info
       updateProduct(index, 'file', file);
-      updateProduct(index, 'imageUrl', data.publicUrl);
+      updateProduct(index, 'imageUrl', url);
+      updateProduct(index, 'fileKey', key); // Store the key for deletion
 
       // Set success state
       setUploadStates((prev) => ({
@@ -320,9 +295,23 @@ export default function ProductInfoStep({
     }
   };
 
-  const handleDeleteFile = (index) => {
+  const handleDeleteFile = async (index) => {
+    const product = products[index];
+    
+    // Delete from R2 if we have a key
+    if (product.fileKey) {
+      try {
+        const r2Service = R2StorageService.getInstance();
+        await r2Service.deleteFile(product.fileKey);
+      } catch (error) {
+        console.warn('Failed to delete file from R2:', error);
+        // Continue with local cleanup even if R2 delete fails
+      }
+    }
+    
     updateProduct(index, 'file', null);
     updateProduct(index, 'imageUrl', '');
+    updateProduct(index, 'fileKey', null);
     setUploadStates((prev) => {
       const newStates = { ...prev };
       delete newStates[index];
