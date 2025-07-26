@@ -72,7 +72,13 @@ export const useEnsureUserRole = () => {
 
   // Auto-create role if user exists but has no role (only attempt once)
   useEffect(() => {
-    if (user?.id && !isLoading && !userRole && !createRoleMutation.isPending && !hasAttemptedCreate) {
+    if (
+      user?.id &&
+      !isLoading &&
+      !userRole &&
+      !createRoleMutation.isPending &&
+      !hasAttemptedCreate
+    ) {
       console.log('Creating missing user role for:', user.id);
       createRoleMutation.mutate();
     }

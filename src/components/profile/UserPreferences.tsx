@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, DollarSign, Globe, Settings, User, Phone, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface UserPreferencesProps {
   showEditButton?: boolean;
@@ -47,7 +47,7 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
 
   const getCurrencyName = (currencyCode: string) => {
     // Use CurrencyService for consistent currency names
-    return currencyService.getCurrencyName(currencyCode);
+    return optimizedCurrencyService.getCurrencyName(currencyCode);
   };
 
   const getAvailablePaymentMethods = (countryCode: string) => {

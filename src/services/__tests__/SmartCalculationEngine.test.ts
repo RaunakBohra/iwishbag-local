@@ -664,9 +664,9 @@ describe('SmartCalculationEngine', () => {
       // OLD MODEL would have calculated:
       // - Customs on $500 + shipping = ~$80.25
       // - VAT on $500 only = $25
-      
+
       // NEW TRANSPARENT MODEL calculates:
-      const actualItemCost = 500 + (500 * 0.0888); // $544.40
+      const actualItemCost = 500 + 500 * 0.0888; // $544.40
       const shipping = breakdown?.shipping || 0;
       const expectedCustoms = (actualItemCost + shipping) * 0.15;
       const vatBase = actualItemCost + shipping + expectedCustoms + 12 + 5;
@@ -675,7 +675,7 @@ describe('SmartCalculationEngine', () => {
       // Verify higher, more accurate calculations
       expect(breakdown?.customs).toBeGreaterThan(80.25); // Higher than old model
       expect(breakdown?.destination_tax).toBeGreaterThan(25); // Higher than old model
-      expect(breakdown?.purchase_tax).toBe(44.40); // Transparent purchase cost
+      expect(breakdown?.purchase_tax).toBe(44.4); // Transparent purchase cost
 
       console.log('Transparent Tax Model Results:', {
         oldCustomsBase: 500 + shipping,

@@ -188,10 +188,7 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
           <p className="text-sm text-gray-600">
             {quote.items.length} items • Total weight:{' '}
             {quote.items
-              .reduce(
-                (sum, item) => sum + Number(item.weight || 0) * Number(item.quantity || 0),
-                0,
-              )
+              .reduce((sum, item) => sum + Number(item.weight || 0) * Number(item.quantity || 0), 0)
               .toFixed(2)}{' '}
             kg
           </p>
@@ -230,7 +227,10 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
                         Price ({currencyDisplay.originCurrency}):
                       </span>
                       <div className="font-medium">
-                        {currencyDisplay.formatSingleAmount(Number(item.costprice_origin || 0), 'origin')}
+                        {currencyDisplay.formatSingleAmount(
+                          Number(item.costprice_origin || 0),
+                          'origin',
+                        )}
                       </div>
                     </div>
                     <div>
@@ -695,7 +695,10 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                       type="number"
                       value={editForm.costprice_origin}
                       onChange={(e) =>
-                        setEditForm((prev) => ({ ...prev, costprice_origin: Number(e.target.value) }))
+                        setEditForm((prev) => ({
+                          ...prev,
+                          costprice_origin: Number(e.target.value),
+                        }))
                       }
                       className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                       step="0.01"
@@ -763,7 +766,7 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                       value={editForm.hsn_code}
                       displayValue={
                         editForm.hsn_code && editForm.category
-                          ? `${editForm.category} - ${editForm.hsn_code}`
+                          ? `${editForm.hsn_code} - ${editForm.category} (${editForm.customs_rate || 15}%, ${editForm.local_tax_rate || 0}%)`
                           : ''
                       }
                       onSelect={(hsn) => {
@@ -771,6 +774,8 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                           ...prev,
                           hsn_code: hsn.hsn_code,
                           category: hsn.display_name,
+                          customs_rate: hsn.tax_data?.typical_rates?.customs?.common || 15,
+                          local_tax_rate: hsn.tax_data?.typical_rates?.gst?.standard || hsn.tax_data?.typical_rates?.vat?.common || 0,
                         }));
                       }}
                       onClear={() => {
@@ -778,23 +783,18 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                           ...prev,
                           hsn_code: '',
                           category: '',
+                          customs_rate: undefined,
+                          local_tax_rate: undefined,
                         }));
                       }}
                       productName={editForm.name}
                       placeholder="Type to search HSN codes..."
-                      className="max-w-xs"
+                      className="w-full min-w-[300px]"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* HSN Category Display */}
-              {editForm.category && (
-                <div className="mt-2 text-xs text-gray-600">
-                  <Tag className="w-3 h-3 inline mr-1" />
-                  {editForm.category}
-                </div>
-              )}
             </div>
           </div>
 
@@ -1021,7 +1021,10 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       type="number"
                       value={addForm.costprice_origin}
                       onChange={(e) =>
-                        setAddForm((prev) => ({ ...prev, costprice_origin: Number(e.target.value) }))
+                        setAddForm((prev) => ({
+                          ...prev,
+                          costprice_origin: Number(e.target.value),
+                        }))
                       }
                       className="w-20 h-8 border-0 p-0 text-sm font-medium ml-1"
                       step="0.01"
@@ -1089,7 +1092,7 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                       value={addForm.hsn_code}
                       displayValue={
                         addForm.hsn_code && addForm.category
-                          ? `${addForm.category} - ${addForm.hsn_code}`
+                          ? `${addForm.hsn_code} - ${addForm.category} (${addForm.customs_rate || 15}%, ${addForm.local_tax_rate || 0}%)`
                           : ''
                       }
                       onSelect={(hsn) => {
@@ -1097,6 +1100,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                           ...prev,
                           hsn_code: hsn.hsn_code,
                           category: hsn.display_name,
+                          customs_rate: hsn.tax_data?.typical_rates?.customs?.common || 15,
+                          local_tax_rate: hsn.tax_data?.typical_rates?.gst?.standard || hsn.tax_data?.typical_rates?.vat?.common || 0,
                         }));
                       }}
                       onClear={() => {
@@ -1104,23 +1109,18 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                           ...prev,
                           hsn_code: '',
                           category: '',
+                          customs_rate: undefined,
+                          local_tax_rate: undefined,
                         }));
                       }}
                       productName={addForm.name}
                       placeholder="Type to search HSN codes..."
-                      className="max-w-xs"
+                      className="w-full min-w-[300px]"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* HSN Category Display */}
-              {addForm.category && (
-                <div className="mt-2 text-xs text-gray-600">
-                  <Tag className="w-3 h-3 inline mr-1" />
-                  {addForm.category}
-                </div>
-              )}
             </div>
           </div>
 

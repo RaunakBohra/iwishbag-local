@@ -60,21 +60,17 @@ class VATService {
         };
       }
 
-      // Priority 1: Check shipping routes for route-specific VAT (highest priority)
-      const { data: shippingRoute, error: routeError } = await supabase
-        .from('shipping_routes')
-        .select('vat_percentage')
-        .eq('origin_country', originCountry)
-        .eq('destination_country', destinationCountry)
-        .not('vat_percentage', 'is', null)
-        .single();
-
-      if (!routeError && shippingRoute?.vat_percentage !== null) {
+      // Priority 1: Check shipping routes for route-specific VAT (disabled until column exists)
+      // TODO: Re-enable when shipping_routes.vat_percentage column is available
+      console.log(`[VATService] Skipping shipping routes VAT lookup - column doesn't exist yet`);
+      
+      // Skip shipping routes check for now
+      if (false) {
         console.log(
-          `[VATService] Using shipping route VAT: ${originCountry}→${destinationCountry} = ${shippingRoute.vat_percentage}%`,
+          `[VATService] Using shipping route VAT: ${originCountry}→${destinationCountry} = 0%`,
         );
         return {
-          percentage: Number(shippingRoute.vat_percentage),
+          percentage: 0,
           source: 'shipping_route',
           confidence: 0.95,
           route: `${originCountry}→${destinationCountry}`,

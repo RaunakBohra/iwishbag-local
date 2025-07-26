@@ -34,7 +34,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
-import { getCustomerDisplayData, shouldShowEmailSeparately } from '@/lib/customerDisplayUtils';
+import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { Body, BodySmall } from '@/components/ui/typography';
 
@@ -74,39 +74,81 @@ export const CompactQuoteListItem = ({
   // Get suggested categories for auto-classification
   const getSuggestedCategories = (items: any[]) => {
     const HSN_CATEGORIES = [
-      { value: 'electronics', label: 'Electronics', keywords: ['phone', 'mobile', 'laptop', 'computer', 'headphone', 'speaker', 'camera', 'tablet', 'electronic'] },
-      { value: 'clothing', label: 'Clothing', keywords: ['shirt', 't-shirt', 'dress', 'kurta', 'jeans', 'jacket', 'clothing', 'apparel', 'fashion'] },
-      { value: 'books', label: 'Books', keywords: ['book', 'textbook', 'manual', 'guide', 'educational', 'learning'] },
-      { value: 'toys', label: 'Toys', keywords: ['toy', 'game', 'puzzle', 'doll', 'action', 'figure', 'lego'] },
-      { value: 'cosmetics', label: 'Cosmetics', keywords: ['makeup', 'cream', 'lotion', 'shampoo', 'soap', 'skincare'] },
+      {
+        value: 'electronics',
+        label: 'Electronics',
+        keywords: [
+          'phone',
+          'mobile',
+          'laptop',
+          'computer',
+          'headphone',
+          'speaker',
+          'camera',
+          'tablet',
+          'electronic',
+        ],
+      },
+      {
+        value: 'clothing',
+        label: 'Clothing',
+        keywords: [
+          'shirt',
+          't-shirt',
+          'dress',
+          'kurta',
+          'jeans',
+          'jacket',
+          'clothing',
+          'apparel',
+          'fashion',
+        ],
+      },
+      {
+        value: 'books',
+        label: 'Books',
+        keywords: ['book', 'textbook', 'manual', 'guide', 'educational', 'learning'],
+      },
+      {
+        value: 'toys',
+        label: 'Toys',
+        keywords: ['toy', 'game', 'puzzle', 'doll', 'action', 'figure', 'lego'],
+      },
+      {
+        value: 'cosmetics',
+        label: 'Cosmetics',
+        keywords: ['makeup', 'cream', 'lotion', 'shampoo', 'soap', 'skincare'],
+      },
     ];
 
-    return items.map(item => {
-      const itemNameLower = (item.name || '').toLowerCase();
-      
-      // Find best matching category
-      let bestMatch = null;
-      let bestScore = 0;
-      
-      for (const category of HSN_CATEGORIES) {
-        const matchCount = category.keywords.filter(keyword => 
-          itemNameLower.includes(keyword.toLowerCase())
-        ).length;
-        
-        if (matchCount > bestScore) {
-          bestScore = matchCount;
-          bestMatch = category;
+    return items
+      .map((item) => {
+        const itemNameLower = (item.name || '').toLowerCase();
+
+        // Find best matching category
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const category of HSN_CATEGORIES) {
+          const matchCount = category.keywords.filter((keyword) =>
+            itemNameLower.includes(keyword.toLowerCase()),
+          ).length;
+
+          if (matchCount > bestScore) {
+            bestScore = matchCount;
+            bestMatch = category;
+          }
         }
-      }
-      
-      return {
-        itemId: item.id,
-        itemName: item.name,
-        suggestedCategory: bestMatch ? bestMatch.value : null,
-        suggestedLabel: bestMatch ? bestMatch.label : 'Unknown',
-        confidence: bestScore > 0 ? 'high' : 'low'
-      };
-    }).filter(suggestion => suggestion.suggestedCategory);
+
+        return {
+          itemId: item.id,
+          itemName: item.name,
+          suggestedCategory: bestMatch ? bestMatch.value : null,
+          suggestedLabel: bestMatch ? bestMatch.label : 'Unknown',
+          confidence: bestScore > 0 ? 'high' : 'low',
+        };
+      })
+      .filter((suggestion) => suggestion.suggestedCategory);
   };
 
   // HSN Classification Analysis with Auto-Classification for Legacy Quotes
@@ -116,38 +158,40 @@ export const CompactQuoteListItem = ({
     }
 
     const totalItems = quote.items.length;
-    const classifiedItems = quote.items.filter(item => 
-      item.hsn_code && item.category && item.category !== 'uncategorized'
+    const classifiedItems = quote.items.filter(
+      (item) => item.hsn_code && item.category && item.category !== 'uncategorized',
     ).length;
 
     // Check if items can be auto-classified (have names but no HSN data)
-    const itemsWithNames = quote.items.filter(item => item.name && item.name.trim().length > 0).length;
+    const itemsWithNames = quote.items.filter(
+      (item) => item.name && item.name.trim().length > 0,
+    ).length;
     const canAutoClassify = classifiedItems === 0 && itemsWithNames > 0;
-    
+
     if (classifiedItems === 0) {
-      return { 
-        status: 'unclassified', 
+      return {
+        status: 'unclassified',
         message: canAutoClassify ? 'Can auto-classify' : 'No HSN classification',
-        count: 0, 
+        count: 0,
         total: totalItems,
         canAutoClassify,
-        suggestedCategories: canAutoClassify ? getSuggestedCategories(quote.items) : []
+        suggestedCategories: canAutoClassify ? getSuggestedCategories(quote.items) : [],
       };
     } else if (classifiedItems === totalItems) {
-      return { 
-        status: 'complete', 
-        message: 'Fully classified', 
-        count: classifiedItems, 
+      return {
+        status: 'complete',
+        message: 'Fully classified',
+        count: classifiedItems,
         total: totalItems,
-        canAutoClassify: false
+        canAutoClassify: false,
       };
     } else {
-      return { 
-        status: 'partial', 
-        message: `${classifiedItems}/${totalItems} classified`, 
-        count: classifiedItems, 
+      return {
+        status: 'partial',
+        message: `${classifiedItems}/${totalItems} classified`,
+        count: classifiedItems,
         total: totalItems,
-        canAutoClassify: false
+        canAutoClassify: false,
       };
     }
   }, [quote.items]);
@@ -191,11 +235,9 @@ export const CompactQuoteListItem = ({
   }, [quote]);
 
   // Use unified customer display logic
-  const customerDisplayData = getCustomerDisplayData(quote, customerProfile);
+  const customerDisplayData = customerDisplayUtils.getCustomerDisplayData(quote, customerProfile);
   const displayName = customerDisplayData.name;
-  const customerEmail = shouldShowEmailSeparately(quote, displayName, customerDisplayData.email)
-    ? customerDisplayData.email
-    : null;
+  const customerEmail = customerDisplayData.email;
 
   // Helper function to get status color for circular indicator
   const getStatusColor = (status: string) => {
@@ -285,7 +327,7 @@ export const CompactQuoteListItem = ({
             {/* HSN Classification Indicator */}
             <div className="hidden lg:flex items-center gap-1">
               {hsnStatus.status === 'complete' && (
-                <div 
+                <div
                   className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium"
                   title={`${hsnStatus.message} - All items have HSN codes`}
                 >
@@ -294,24 +336,26 @@ export const CompactQuoteListItem = ({
                 </div>
               )}
               {hsnStatus.status === 'partial' && (
-                <div 
+                <div
                   className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-medium"
                   title={`${hsnStatus.message} - Some items need HSN classification`}
                 >
                   <AlertCircle className="h-3 w-3" />
-                  <span>{hsnStatus.count}/{hsnStatus.total}</span>
+                  <span>
+                    {hsnStatus.count}/{hsnStatus.total}
+                  </span>
                 </div>
               )}
               {hsnStatus.status === 'unclassified' && (
-                <div 
+                <div
                   className={cn(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                    hsnStatus.canAutoClassify 
-                      ? "bg-amber-50 text-amber-700" 
-                      : "bg-red-50 text-red-700"
+                    'flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+                    hsnStatus.canAutoClassify
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-red-50 text-red-700',
                   )}
                   title={
-                    hsnStatus.canAutoClassify 
+                    hsnStatus.canAutoClassify
                       ? `${hsnStatus.message} - Click to view auto-classification suggestions`
                       : `${hsnStatus.message} - Items need HSN classification for customs`
                   }
@@ -444,7 +488,7 @@ export const CompactQuoteListItem = ({
             {/* HSN Status - Mobile friendly */}
             <div className="flex lg:hidden items-center gap-1">
               {hsnStatus.status === 'complete' && (
-                <div 
+                <div
                   className="flex items-center gap-1 text-green-600"
                   title={`${hsnStatus.message} - All items have HSN codes`}
                 >
@@ -453,28 +497,32 @@ export const CompactQuoteListItem = ({
                 </div>
               )}
               {hsnStatus.status === 'partial' && (
-                <div 
+                <div
                   className="flex items-center gap-1 text-amber-600"
                   title={`${hsnStatus.message} - Some items need HSN classification`}
                 >
                   <AlertCircle className="h-4 w-4" />
-                  <span className="text-sm">{hsnStatus.count}/{hsnStatus.total}</span>
+                  <span className="text-sm">
+                    {hsnStatus.count}/{hsnStatus.total}
+                  </span>
                 </div>
               )}
               {hsnStatus.status === 'unclassified' && (
-                <div 
+                <div
                   className={cn(
-                    "flex items-center gap-1",
-                    hsnStatus.canAutoClassify ? "text-amber-600" : "text-red-600"
+                    'flex items-center gap-1',
+                    hsnStatus.canAutoClassify ? 'text-amber-600' : 'text-red-600',
                   )}
                   title={
-                    hsnStatus.canAutoClassify 
+                    hsnStatus.canAutoClassify
                       ? `${hsnStatus.message} - Tap to auto-classify`
                       : `${hsnStatus.message} - Items need HSN classification for customs`
                   }
                 >
                   <FileText className="h-4 w-4" />
-                  <span className="text-sm">{hsnStatus.canAutoClassify ? 'Auto-classify' : 'No HSN'}</span>
+                  <span className="text-sm">
+                    {hsnStatus.canAutoClassify ? 'Auto-classify' : 'No HSN'}
+                  </span>
                 </div>
               )}
             </div>

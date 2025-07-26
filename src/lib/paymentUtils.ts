@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 export interface PaymentSummary {
   finalTotal: number; // Local currency amount (for display)
@@ -37,8 +37,9 @@ export async function calculatePaymentSummary(
 ): Promise<PaymentSummary> {
   try {
     // Get current exchange rate for calculations
-    const currencyInfo = await currencyService.getCurrency(currency);
-    const exchangeRate = currencyInfo?.rate_from_usd || 1;
+    const currencyInfo = await optimizedCurrencyService.getAllCurrencies();
+    const targetCurrency = currencyInfo.find(c => c.code === currency);
+    const exchangeRate = targetCurrency?.rate_from_usd || 1;
 
     // Fetch payment ledger with USD equivalents
     const { data: paymentLedger, error } = await supabase
@@ -278,8 +279,9 @@ export async function recordPaymentWithUsdEquivalent(
 ): Promise<{ success: boolean; usdEquivalent?: number; error?: string }> {
   try {
     // Get exchange rate for USD equivalent
-    const currencyInfo = await currencyService.getCurrency(currency);
-    const exchangeRate = currencyInfo?.rate_from_usd || 1;
+    const currencyInfo = await optimizedCurrencyService.getAllCurrencies();
+    const targetCurrency = currencyInfo.find(c => c.code === currency);
+    const exchangeRate = targetCurrency?.rate_from_usd || 1;
     const usdEquivalent = amount / exchangeRate;
 
     // Record in payment_transactions with USD equivalent
@@ -288,7 +290,7 @@ export async function recordPaymentWithUsdEquivalent(
       amount: amount.toString(),
       currency,
       usd_equivalent: usdEquivalent,
-      exchange_rate_at_payment: exchangeRateResult.rate,
+      exchange_rate_at_payment: exchangeRate,
       local_currency: currency,
       payment_method: paymentMethod,
       transaction_id: transactionId,
@@ -307,7 +309,7 @@ export async function recordPaymentWithUsdEquivalent(
       amount: amount.toString(),
       currency,
       usd_equivalent: usdEquivalent,
-      exchange_rate_at_payment: exchangeRateResult.rate,
+      exchange_rate_at_payment: exchangeRate,
       transaction_type: 'customer_payment',
       payment_method: paymentMethod,
       transaction_id: transactionId,

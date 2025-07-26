@@ -110,7 +110,7 @@ export const QuoteManagementPage = () => {
 
   // Calculate country counts from quotes
   const availableCountries: CountryOption[] = useMemo(() => {
-    if (!allCountries || !quotes) return [];
+    if (!allCountries || !quotes || !Array.isArray(quotes)) return [];
 
     // Count quotes per destination country
     const countryCounts = quotes.reduce(
@@ -125,7 +125,10 @@ export const QuoteManagementPage = () => {
     );
 
     // Map countries from database with counts
-    return allCountries
+    // Ensure allCountries is an array before filtering
+    const countriesArray = Array.isArray(allCountries) ? allCountries : [];
+    
+    return countriesArray
       .filter((country) => countryCounts[country.code] > 0) // Only show countries with quotes
       .map((country) => ({
         code: country.code,

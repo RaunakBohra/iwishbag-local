@@ -12,30 +12,69 @@ const CompactWeightDemo = () => {
   const [hsn2, setHsn2] = useState(undefined);
 
   const weightSuggestions1 = [
-    { value: 1.5, source: 'hsn' as const, confidence: 0.95, label: 'HSN', description: 'Range: 1.3-1.7kg' },
-    { value: 0.2, source: 'ml' as const, confidence: 0.90, label: 'AI', description: 'iPhone 15 Pro match found' },
-    { value: weight1, source: 'manual' as const, confidence: 0.5, label: 'Manual', description: 'User entered' }
+    {
+      value: 1.5,
+      source: 'hsn' as const,
+      confidence: 0.95,
+      label: 'HSN',
+      description: 'Range: 1.3-1.7kg',
+    },
+    {
+      value: 0.2,
+      source: 'ml' as const,
+      confidence: 0.9,
+      label: 'AI',
+      description: 'iPhone 15 Pro match found',
+    },
+    {
+      value: weight1,
+      source: 'manual' as const,
+      confidence: 0.5,
+      label: 'Manual',
+      description: 'User entered',
+    },
   ];
 
   const weightSuggestions2 = [
-    { value: 0.8, source: 'hsn' as const, confidence: 0.85, label: 'HSN', description: 'Range: 0.6-1.0kg' },
-    { value: 1.1, source: 'ml' as const, confidence: 0.75, label: 'AI', description: 'Laptop accessory detected' },
-    { value: weight2, source: 'manual' as const, confidence: 0.5, label: 'Manual', description: 'User entered' }
+    {
+      value: 0.8,
+      source: 'hsn' as const,
+      confidence: 0.85,
+      label: 'HSN',
+      description: 'Range: 0.6-1.0kg',
+    },
+    {
+      value: 1.1,
+      source: 'ml' as const,
+      confidence: 0.75,
+      label: 'AI',
+      description: 'Laptop accessory detected',
+    },
+    {
+      value: weight2,
+      source: 'manual' as const,
+      confidence: 0.5,
+      label: 'Manual',
+      description: 'User entered',
+    },
   ];
 
   const hsnSuggestions = [
     { code: '8517', description: 'Telephone sets, mobile phones', confidence: 0.92 },
     { code: '8471', description: 'Electronics and computers', confidence: 0.88 },
-    { code: '8504', description: 'Electrical transformers and chargers', confidence: 0.75 }
+    { code: '8504', description: 'Electrical transformers and chargers', confidence: 0.75 },
   ];
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">Compact Weight & HSN Selector Demo</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Compact Weight & HSN Selector Demo
+          </h1>
           <p className="text-lg text-gray-600">
-            Ultra-compact design that reduces space usage by 80% while maintaining full functionality
+            Ultra-compact design that reduces space usage by 80% while maintaining full
+            functionality
           </p>
         </div>
 
@@ -46,7 +85,9 @@ const CompactWeightDemo = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Smartphone className="w-5 h-5 text-blue-600" />
                 iPhone 15 Pro
-                <Badge variant="success" className="ml-auto">₹2,222.00</Badge>
+                <Badge variant="success" className="ml-auto">
+                  ₹2,222.00
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -97,7 +138,9 @@ const CompactWeightDemo = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Package className="w-5 h-5 text-green-600" />
                 MacBook Pro Charger
-                <Badge variant="info" className="ml-auto">₹8,999.00</Badge>
+                <Badge variant="info" className="ml-auto">
+                  ₹8,999.00
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -169,11 +212,12 @@ const CompactWeightDemo = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg p-4 border border-green-200">
               <p className="text-sm text-green-800">
-                <strong>World-class design:</strong> Following patterns from Apple, Google, and top e-commerce sites - 
-                button-based selection, chip filters, and inline validation for optimal user experience.
+                <strong>World-class design:</strong> Following patterns from Apple, Google, and top
+                e-commerce sites - button-based selection, chip filters, and inline validation for
+                optimal user experience.
               </p>
             </div>
           </CardContent>

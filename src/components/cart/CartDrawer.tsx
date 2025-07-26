@@ -4,7 +4,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Package, ArrowRight, Trash2, ShieldCheck, Heart, Star, Truck, Plus, Minus } from 'lucide-react';
+import {
+  ShoppingCart,
+  Package,
+  ArrowRight,
+  Trash2,
+  ShieldCheck,
+  Heart,
+  Star,
+  Truck,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -107,7 +118,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
 
       // Use React Router navigation instead of window.location
       navigate(`/checkout?quotes=${quoteIds}`);
-      
+
       toast({
         title: 'Proceeding to checkout',
         description: `Processing ${itemsToCheckout.length} item(s) for checkout.`,
@@ -148,7 +159,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
             <h3 className="text-lg font-medium">Your cart is empty</h3>
             <p className="text-sm text-gray-500">Add some quotes to get started</p>
           </div>
-          <Button 
+          <Button
             className="bg-black hover:bg-gray-800 text-white"
             onClick={() => {
               setIsOpen(false);
@@ -175,7 +186,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                 />
               )}
             </div>
-            
+
             {/* Product Details */}
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-start mb-2">
@@ -186,9 +197,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                   <p className="text-xs text-gray-500 mt-1">
                     {item.purchaseCountryCode} → {item.destinationCountryCode}
                   </p>
-                  <p className="text-xs text-green-600 font-medium mt-1">
-                    FREE shipping
-                  </p>
+                  <p className="text-xs text-green-600 font-medium mt-1">FREE shipping</p>
                 </div>
                 <button
                   onClick={() => handleRemoveFromCart(item.id)}
@@ -197,7 +206,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              
+
               {/* Price and Quantity */}
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2">
@@ -209,9 +218,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span className="px-3 py-1 text-sm font-medium border-x">
-                      {item.quantity}
-                    </span>
+                    <span className="px-3 py-1 text-sm font-medium border-x">{item.quantity}</span>
                     <button
                       onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                       className="p-1 hover:bg-gray-50"
@@ -220,7 +227,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="text-right">
                   <div className="font-medium text-gray-900">
                     <CartItemPrice item={item} quantity={item.quantity} />
@@ -301,13 +308,13 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                 {/* Action Buttons */}
                 <div className="flex gap-3">
                   {/* Go to Cart Button */}
-                  <Button 
+                  <Button
                     onClick={() => {
                       setIsOpen(false);
                       navigate('/cart');
-                    }} 
+                    }}
                     variant="outline"
-                    className="flex-1 h-12 font-medium" 
+                    className="flex-1 h-12 font-medium"
                     disabled={!hasCartItems}
                   >
                     <ShoppingCart className="mr-2 h-4 w-4" />
@@ -315,9 +322,9 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                   </Button>
 
                   {/* Checkout Button */}
-                  <Button 
-                    onClick={handleCheckout} 
-                    className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-medium" 
+                  <Button
+                    onClick={handleCheckout}
+                    className="flex-1 h-12 bg-black hover:bg-gray-800 text-white font-medium"
                     disabled={!hasCartItems}
                   >
                     Checkout
@@ -325,9 +332,7 @@ export const CartDrawer = ({ children }: CartDrawerProps) => {
                 </div>
 
                 <div className="text-center">
-                  <p className="text-xs text-gray-500">
-                    Secure checkout powered by iwishBag
-                  </p>
+                  <p className="text-xs text-gray-500">Secure checkout powered by iwishBag</p>
                 </div>
               </div>
             )}

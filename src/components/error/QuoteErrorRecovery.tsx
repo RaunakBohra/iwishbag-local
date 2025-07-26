@@ -190,7 +190,10 @@ export function QuoteErrorRecovery({
             label: 'Attempting auto-fix',
             action: async () => {
               // Try to fix common validation issues
-              if (appError.context?.field === 'customs_percentage' && appError.context?.value > 100) {
+              if (
+                appError.context?.field === 'customs_percentage' &&
+                appError.context?.value > 100
+              ) {
                 // Fix percentage values
                 return true;
               }
@@ -239,7 +242,7 @@ export function QuoteErrorRecovery({
       try {
         const success = await updatedSteps[i].action();
         updatedSteps[i].status = success ? 'success' : 'failed';
-        
+
         if (!success) {
           allSuccess = false;
           // Skip remaining steps if critical step fails
@@ -258,9 +261,9 @@ export function QuoteErrorRecovery({
 
       setRecoverySteps([...updatedSteps]);
       setRecoveryProgress(((i + 1) / updatedSteps.length) * 100);
-      
+
       // Add small delay for UI feedback
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     setIsRecovering(false);
@@ -294,26 +297,26 @@ export function QuoteErrorRecovery({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertCircle className="h-5 w-5 text-destructive" />
-          {errorType === ErrorType.NETWORK ? 'Connection Error' :
-           errorType === ErrorType.CALCULATION ? 'Calculation Error' :
-           errorType === ErrorType.DATABASE ? 'Save Error' :
-           errorType === ErrorType.VALIDATION ? 'Validation Error' :
-           'Error Occurred'}
+          {errorType === ErrorType.NETWORK
+            ? 'Connection Error'
+            : errorType === ErrorType.CALCULATION
+              ? 'Calculation Error'
+              : errorType === ErrorType.DATABASE
+                ? 'Save Error'
+                : errorType === ErrorType.VALIDATION
+                  ? 'Validation Error'
+                  : 'Error Occurred'}
         </CardTitle>
-        <CardDescription>
-          {appError.userMessage || appError.message}
-        </CardDescription>
+        <CardDescription>{appError.userMessage || appError.message}</CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Error details for high severity */}
         {severity === ErrorSeverity.HIGH || severity === ErrorSeverity.CRITICAL ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error Details</AlertTitle>
-            <AlertDescription className="mt-2 font-mono text-xs">
-              {error.message}
-            </AlertDescription>
+            <AlertDescription className="mt-2 font-mono text-xs">{error.message}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -322,7 +325,7 @@ export function QuoteErrorRecovery({
           <div className="space-y-3">
             <div className="text-sm font-medium">Recovery Progress</div>
             <Progress value={recoveryProgress} className="h-2" />
-            
+
             <div className="space-y-2">
               {recoverySteps.map((step, index) => (
                 <div
@@ -343,24 +346,14 @@ export function QuoteErrorRecovery({
         {!isRecovering && (
           <div className="flex gap-2">
             {isRecoverable && (
-              <Button
-                onClick={startRecovery}
-                disabled={isRecovering}
-                variant="default"
-                size="sm"
-              >
+              <Button onClick={startRecovery} disabled={isRecovering} variant="default" size="sm">
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {recoveryProgress > 0 ? 'Retry Recovery' : 'Start Recovery'}
               </Button>
             )}
-            
+
             {onIgnore && (
-              <Button
-                onClick={onIgnore}
-                variant="outline"
-                size="sm"
-                disabled={isRecovering}
-              >
+              <Button onClick={onIgnore} variant="outline" size="sm" disabled={isRecovering}>
                 Continue Anyway
               </Button>
             )}
@@ -370,7 +363,10 @@ export function QuoteErrorRecovery({
         {/* Help text based on error type */}
         <div className="text-xs text-muted-foreground">
           {errorType === ErrorType.NETWORK && (
-            <p>Check your internet connection and try again. If the problem persists, contact support.</p>
+            <p>
+              Check your internet connection and try again. If the problem persists, contact
+              support.
+            </p>
           )}
           {errorType === ErrorType.CALCULATION && (
             <p>The calculation couldn't be completed. Verify your input data and try again.</p>

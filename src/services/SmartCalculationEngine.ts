@@ -5,8 +5,9 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
+import { smartQuoteCacheService } from '@/services/SmartQuoteCacheService';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import { addBusinessDays, format } from 'date-fns';
 import PerItemTaxCalculator, {
@@ -70,9 +71,11 @@ export interface EnhancedCalculationResult {
  */
 export class SmartCalculationEngine {
   private static instance: SmartCalculationEngine;
+  private perItemTaxCalculator: PerItemTaxCalculator;
+  
+  // Legacy cache for backward compatibility (will be deprecated)
   private calculationCache = new Map<string, { result: any; timestamp: number }>();
   private readonly CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-  private perItemTaxCalculator: PerItemTaxCalculator;
 
   private constructor() {
     this.perItemTaxCalculator = PerItemTaxCalculator.getInstance();
@@ -90,9 +93,18 @@ export class SmartCalculationEngine {
    */
   calculateLiveSync(input: EnhancedCalculationInput): EnhancedCalculationResult {
     try {
-      // Calculate base totals
+      // Calculate base totals with NaN protection
       const itemsTotal = input.quote.items.reduce(
-        (sum, item) => sum + item.costprice_origin * item.quantity,
+        (sum, item) => {
+          const price = typeof item.costprice_origin === 'number' && !isNaN(item.costprice_origin) ? item.costprice_origin : 0;
+          const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
+          
+          if (price !== item.costprice_origin || quantity !== item.quantity) {
+            console.warn(`[SMART ENGINE] Invalid values for item "${item.name}": price=${item.costprice_origin} (using ${price}), quantity=${item.quantity} (using ${quantity})`);
+          }
+          
+          return sum + price * quantity;
+        },
         0,
       );
       const totalWeight = input.quote.items.reduce(
@@ -140,23 +152,46 @@ export class SmartCalculationEngine {
         quote_method: input.quote.calculation_method_preference,
       });
 
-      const cacheKey = this.generateCacheKey(input);
-
-      const cached = this.getCachedResult(cacheKey);
-      if (cached) {
+      // 🚀 NEW: Check smart cache first
+      const cachedResult = await smartQuoteCacheService.getCachedCalculation(input);
+      if (cachedResult) {
         console.log(
-          `[SMART ENGINE DEBUG] Cache HIT - returning cached result, skipping HSN calculation`,
+          `[SMART ENGINE DEBUG] Smart Cache HIT - returning cached result, skipping all calculations`,
         );
-        return cached;
+        return cachedResult;
       }
 
-      // Calculate base totals
+      // Legacy cache check for backward compatibility
+      const legacyCacheKey = this.generateCacheKey(input);
+      const legacyCached = this.getCachedResult(legacyCacheKey);
+      if (legacyCached) {
+        console.log(
+          `[SMART ENGINE DEBUG] Legacy Cache HIT - returning cached result`,
+        );
+        return legacyCached;
+      }
+
+      // Calculate base totals with NaN protection
       const itemsTotal = input.quote.items.reduce(
-        (sum, item) => sum + item.costprice_origin * item.quantity,
+        (sum, item) => {
+          const price = typeof item.costprice_origin === 'number' && !isNaN(item.costprice_origin) ? item.costprice_origin : 0;
+          const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
+          
+          if (price !== item.costprice_origin || quantity !== item.quantity) {
+            console.warn(`[SMART ENGINE FULL] Invalid values for item "${item.name}": price=${item.costprice_origin} (using ${price}), quantity=${item.quantity} (using ${quantity})`);
+          }
+          
+          return sum + price * quantity;
+        },
         0,
       );
       const totalWeight = input.quote.items.reduce(
-        (sum, item) => sum + item.weight * item.quantity,
+        (sum, item) => {
+          const weight = typeof item.weight === 'number' && !isNaN(item.weight) ? item.weight : 0;
+          const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
+          
+          return sum + weight * quantity;
+        },
         0,
       );
 
@@ -173,19 +208,49 @@ export class SmartCalculationEngine {
         total_taxes: hsnTaxResults.summary.total_all_taxes,
       });
 
-      // Get all available shipping options
-      const shippingOptions = await this.calculateAllShippingOptions({
-        originCountry: input.quote.origin_country,
-        destinationCountry: input.quote.destination_country,
-        weight: totalWeight,
-        value: itemsTotal,
-      });
-
-      // Generate smart recommendations
-      const smartRecommendations = this.generateShippingRecommendations(
-        shippingOptions,
-        input.preferences,
+      // 🚀 NEW: Check for cached shipping options first
+      let shippingOptions: ShippingOption[] = [];
+      const cachedShipping = await smartQuoteCacheService.getCachedShippingOptions(
+        input.quote.origin_country,
+        input.quote.destination_country,
+        totalWeight
       );
+      
+      if (cachedShipping) {
+        console.log(`[SMART ENGINE DEBUG] Shipping options cache HIT`);
+        shippingOptions = cachedShipping.options;
+      } else {
+        console.log(`[SMART ENGINE DEBUG] Shipping options cache MISS - calculating fresh`);
+        // Get all available shipping options
+        shippingOptions = await this.calculateAllShippingOptions({
+          originCountry: input.quote.origin_country,
+          destinationCountry: input.quote.destination_country,
+          weight: totalWeight,
+          value: itemsTotal,
+        });
+      }
+
+      // Generate smart recommendations (use cached if available)
+      let smartRecommendations: ShippingRecommendation[] = [];
+      if (cachedShipping) {
+        console.log(`[SMART ENGINE DEBUG] Using cached shipping recommendations`);
+        smartRecommendations = cachedShipping.recommendations;
+      } else {
+        console.log(`[SMART ENGINE DEBUG] Generating fresh shipping recommendations`);
+        smartRecommendations = this.generateShippingRecommendations(
+          shippingOptions,
+          input.preferences,
+        );
+        
+        // 🚀 NEW: Cache shipping options and recommendations for future use
+        await smartQuoteCacheService.setCachedShippingOptions(
+          input.quote.origin_country,
+          input.quote.destination_country,
+          totalWeight,
+          shippingOptions,
+          smartRecommendations
+        );
+      }
 
       // Select optimal shipping option (or use existing selection)
       const selectedOption = this.selectOptimalShippingOption(
@@ -221,7 +286,13 @@ export class SmartCalculationEngine {
         hsn_calculation_summary: hsnTaxResults.summary,
       };
 
-      this.setCachedResult(cacheKey, result);
+      // 🚀 NEW: Cache result in smart cache system
+      await smartQuoteCacheService.setCachedCalculation(input, result);
+      
+      // Legacy cache for backward compatibility
+      this.setCachedResult(legacyCacheKey, result);
+      
+      console.log(`[SMART ENGINE DEBUG] Result cached in both smart cache and legacy cache`);
       return result;
     } catch (error) {
       return {
@@ -361,10 +432,19 @@ export class SmartCalculationEngine {
             } catch (error) {}
           }
 
+          // ✅ FIXED: Add validation for price_origin_currency transformation
+          const safePrice = typeof item.costprice_origin === 'number' && !isNaN(item.costprice_origin) 
+            ? item.costprice_origin 
+            : 0;
+          
+          if (safePrice !== item.costprice_origin) {
+            console.warn(`[SMART ENGINE TRANSFORM] Invalid costprice_origin for item "${item.name}": ${item.costprice_origin}, using 0 instead`);
+          }
+
           return {
             id: item.id || crypto.randomUUID(),
             name: item.name,
-            price_origin_currency: item.costprice_origin, // Will be converted by PerItemTaxCalculator
+            price_origin_currency: safePrice, // Will be converted by PerItemTaxCalculator
             weight: detectedWeight,
             hsn_code: hsnCode,
             category: item.category,
@@ -442,9 +522,18 @@ export class SmartCalculationEngine {
         quote.destination_country,
       );
 
-      // Calculate totals for traditional percentage-based calculation
+      // Calculate totals for traditional percentage-based calculation with NaN protection
       const itemsTotal = quote.items.reduce(
-        (sum, item) => sum + item.costprice_origin * item.quantity,
+        (sum, item) => {
+          const price = typeof item.costprice_origin === 'number' && !isNaN(item.costprice_origin) ? item.costprice_origin : 0;
+          const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
+          
+          if (price !== item.costprice_origin || quantity !== item.quantity) {
+            console.warn(`[UNIFIED FALLBACK] Invalid values for item "${item.name}": price=${item.costprice_origin} (using ${price}), quantity=${item.quantity} (using ${quantity})`);
+          }
+          
+          return sum + price * quantity;
+        },
         0,
       );
 
@@ -645,6 +734,20 @@ export class SmartCalculationEngine {
       max_days: number;
       price: number;
       active: boolean;
+      handling_charge?: {
+        base_fee: number;
+        percentage_of_value: number;
+        min_fee: number;
+        max_fee: number;
+      };
+      insurance_options?: {
+        available: boolean;
+        default_enabled: boolean;
+        coverage_percentage: number;
+        min_fee?: number;
+        max_coverage: number;
+        customer_description?: string;
+      };
     }>;
 
     // Validate that route has delivery options
@@ -716,6 +819,9 @@ export class SmartCalculationEngine {
           params.value,
         ),
         tracking: true,
+        // 🔧 FIX: Include handling/insurance configs from delivery options
+        handling_charge: deliveryOption.handling_charge,
+        insurance_options: deliveryOption.insurance_options,
       });
     }
 
@@ -796,6 +902,9 @@ export class SmartCalculationEngine {
 
   /**
    * Calculate route-specific base cost
+   * 
+   * 🌍 IMPORTANT: All shipping rates are in ORIGIN COUNTRY CURRENCY
+   * IN→NP = INR, US→NP = USD, AU→GB = AUD (no conversion needed)
    *
    * 🚨 CRITICAL BUSINESS RULE: ALL COSTS IN ORIGIN COUNTRY CURRENCY
    *
@@ -1342,7 +1451,7 @@ export class SmartCalculationEngine {
     const { quote, selectedShipping, itemsTotal, hsnTaxBreakdown, hsnTaxSummary } = params;
 
     // Get exchange rate
-    const exchangeRate = await currencyService.getExchangeRate(
+    const exchangeRate = await optimizedCurrencyService.getExchangeRate(
       quote.origin_country,
       quote.destination_country,
     );
@@ -1769,9 +1878,27 @@ export class SmartCalculationEngine {
     // Check if shipping option has route-based insurance configuration
     const routeInsuranceConfig = (shippingOption as any).insurance_options;
 
+    console.log('[SmartCalculationEngine ASYNC] Insurance calculation debug:', {
+      quoteId: quote.id,
+      customerOptedIn,
+      hasInsuranceConfig: !!routeInsuranceConfig,
+      configAvailable: routeInsuranceConfig?.available,
+      defaultEnabled: routeInsuranceConfig?.default_enabled,
+      coveragePercentage: routeInsuranceConfig?.coverage_percentage,
+      itemsTotal
+    });
+
     if (routeInsuranceConfig && routeInsuranceConfig.available) {
-      // If customer hasn't opted in and route allows optional insurance, return 0
-      if (!customerOptedIn && routeInsuranceConfig.optional !== false) {
+      // Check if customer opted in OR if route has default_enabled
+      const shouldCalculate = customerOptedIn || routeInsuranceConfig.default_enabled;
+      
+      console.log('[SmartCalculationEngine ASYNC] Insurance shouldCalculate:', shouldCalculate, {
+        customerOptedIn,
+        defaultEnabled: routeInsuranceConfig.default_enabled
+      });
+      
+      if (!shouldCalculate) {
+        console.log('[SmartCalculationEngine] Insurance not enabled - customer opt-in required and not default enabled');
         return 0;
       }
 
@@ -1782,6 +1909,14 @@ export class SmartCalculationEngine {
       const minFee = routeInsuranceConfig.min_fee || 0;
       const maxCoverage = routeInsuranceConfig.max_coverage || Infinity;
       const finalInsurance = Math.max(minFee, Math.min(maxCoverage, calculatedInsurance));
+
+      console.log('[SmartCalculationEngine ASYNC] Insurance calculation result:', {
+        coveragePercentage,
+        calculatedInsurance,
+        minFee,
+        maxCoverage,
+        finalInsurance
+      });
 
       return finalInsurance;
     }
@@ -1843,9 +1978,27 @@ export class SmartCalculationEngine {
     // Check if shipping option has route-based insurance configuration
     const routeInsuranceConfig = (shippingOption as any).insurance_options;
 
+    console.log('[SmartCalculationEngine SYNC] Insurance calculation debug:', {
+      quoteId: quote.id,
+      customerOptedIn,
+      hasInsuranceConfig: !!routeInsuranceConfig,
+      configAvailable: routeInsuranceConfig?.available,
+      defaultEnabled: routeInsuranceConfig?.default_enabled,
+      coveragePercentage: routeInsuranceConfig?.coverage_percentage,
+      itemsTotal
+    });
+
     if (routeInsuranceConfig && routeInsuranceConfig.available) {
-      // If customer hasn't opted in and route allows optional insurance, return 0
-      if (!customerOptedIn && routeInsuranceConfig.optional !== false) {
+      // Check if customer opted in OR if route has default_enabled
+      const shouldCalculate = customerOptedIn || routeInsuranceConfig.default_enabled;
+      
+      console.log('[SmartCalculationEngine SYNC] Insurance shouldCalculate:', shouldCalculate, {
+        customerOptedIn,
+        defaultEnabled: routeInsuranceConfig.default_enabled
+      });
+      
+      if (!shouldCalculate) {
+        console.log('[SmartCalculationEngine] Insurance not enabled - customer opt-in required and not default enabled');
         return 0;
       }
 
@@ -1855,7 +2008,17 @@ export class SmartCalculationEngine {
       // Apply min/max bounds
       const minFee = routeInsuranceConfig.min_fee || 0;
       const maxCoverage = routeInsuranceConfig.max_coverage || Infinity;
-      return Math.max(minFee, Math.min(maxCoverage, calculatedInsurance));
+      const finalInsurance = Math.max(minFee, Math.min(maxCoverage, calculatedInsurance));
+
+      console.log('[SmartCalculationEngine SYNC] Insurance calculation result:', {
+        coveragePercentage,
+        calculatedInsurance,
+        minFee,
+        maxCoverage,
+        finalInsurance
+      });
+      
+      return finalInsurance;
     }
 
     // Fallback to existing operational data
@@ -1938,6 +2101,45 @@ export class SmartCalculationEngine {
 
   private setCachedResult(key: string, result: EnhancedCalculationResult): void {
     this.calculationCache.set(key, { result, timestamp: Date.now() });
+  }
+
+  /**
+   * 🚀 NEW: Invalidate caches when quote data changes
+   */
+  async invalidateQuoteCache(quoteId: string): Promise<void> {
+    // Clear smart cache
+    await smartQuoteCacheService.invalidateQuoteCache(quoteId);
+    
+    // Clear legacy cache entries for this quote
+    const keysToRemove = Array.from(this.calculationCache.keys()).filter(key => 
+      key.includes(quoteId)
+    );
+    keysToRemove.forEach(key => this.calculationCache.delete(key));
+    
+    console.log(`[SMART ENGINE] Invalidated caches for quote: ${quoteId}`);
+  }
+
+  /**
+   * 🚀 NEW: Get cache performance statistics
+   */
+  getCacheStats() {
+    return {
+      smartCache: smartQuoteCacheService.getCacheStats(),
+      legacyCache: {
+        size: this.calculationCache.size,
+        oldestEntry: this.getOldestCacheEntry()
+      }
+    };
+  }
+
+  private getOldestCacheEntry(): number | null {
+    let oldest = Date.now();
+    for (const [_, entry] of this.calculationCache) {
+      if (entry.timestamp < oldest) {
+        oldest = entry.timestamp;
+      }
+    }
+    return this.calculationCache.size > 0 ? oldest : null;
   }
 }
 

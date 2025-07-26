@@ -112,7 +112,7 @@ class SearchService {
           userId: searchUserId,
           errorMessage: error?.message,
           errorCode: error?.code,
-          errorDetails: error?.details
+          errorDetails: error?.details,
         });
         // Return fallback results instead of throwing to prevent UI crashes
         return this.getFallbackResults(query);
@@ -191,7 +191,7 @@ class SearchService {
           userId: searchUserId,
           errorMessage: error?.message,
           errorCode: error?.code,
-          errorDetails: error?.details
+          errorDetails: error?.details,
         });
         return [];
       }

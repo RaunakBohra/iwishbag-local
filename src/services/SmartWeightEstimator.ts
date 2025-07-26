@@ -808,23 +808,27 @@ export class SmartWeightEstimator {
     selectedSource: 'hsn' | 'ml' | 'manual',
     url?: string,
     category?: string,
-    hsnCode?: string
+    hsnCode?: string,
   ): Promise<void> {
     try {
       // Determine if HSN was available
       const hsnAvailable = hsnWeight !== null && hsnWeight > 0;
-      
+
       // Calculate accuracy if ML weight was tested
-      const mlAccuracy = selectedSource === 'ml' || selectedSource === 'manual' 
-        ? (1 - Math.abs(mlWeight - selectedWeight) / selectedWeight) * 100 
-        : 0;
+      const mlAccuracy =
+        selectedSource === 'ml' || selectedSource === 'manual'
+          ? (1 - Math.abs(mlWeight - selectedWeight) / selectedWeight) * 100
+          : 0;
 
       // Create extended training record
       const trainingRecord = {
         name: productName,
         estimated_weight: mlWeight,
         actual_weight: selectedWeight,
-        confidence: this.calculateConfidenceScore({ min: 0, max: 0, avg: mlWeight }, { name: productName }).confidence,
+        confidence: this.calculateConfidenceScore(
+          { min: 0, max: 0, avg: mlWeight },
+          { name: productName },
+        ).confidence,
         accuracy: Math.max(0, Math.min(100, mlAccuracy)),
         url: url,
         category: category,
@@ -836,33 +840,40 @@ export class SmartWeightEstimator {
           hsn_weight_available: hsnAvailable,
           hsn_weight: hsnWeight,
           selected_source: selectedSource,
-          weight_difference_from_hsn: hsnAvailable ? Math.abs((hsnWeight || 0) - selectedWeight) : null,
+          weight_difference_from_hsn: hsnAvailable
+            ? Math.abs((hsnWeight || 0) - selectedWeight)
+            : null,
           weight_difference_from_ml: Math.abs(mlWeight - selectedWeight),
-        }
+        },
       };
 
       // Save to training history
-      const { error } = await supabase
-        .from('ml_training_history')
-        .insert(trainingRecord);
+      const { error } = await supabase.from('ml_training_history').insert(trainingRecord);
 
       if (error) {
         console.error('Error saving weight selection:', error);
       } else {
-        console.log(`📊 [Weight Selection] Recorded: ${selectedSource} selected for "${productName}"`);
-        
+        console.log(
+          `📊 [Weight Selection] Recorded: ${selectedSource} selected for "${productName}"`,
+        );
+
         // Log analytics
         if (hsnAvailable) {
-          const hsnAccuracy = (1 - Math.abs((hsnWeight || 0) - selectedWeight) / selectedWeight) * 100;
-          console.log(`📊 [Analytics] HSN accuracy: ${hsnAccuracy.toFixed(1)}%, ML accuracy: ${mlAccuracy.toFixed(1)}%`);
+          const hsnAccuracy =
+            (1 - Math.abs((hsnWeight || 0) - selectedWeight) / selectedWeight) * 100;
+          console.log(
+            `📊 [Analytics] HSN accuracy: ${hsnAccuracy.toFixed(1)}%, ML accuracy: ${mlAccuracy.toFixed(1)}%`,
+          );
         }
       }
 
       // If manual weight was selected, learn from it
-      if (selectedSource === 'manual' || (selectedSource === 'ml' && Math.abs(mlWeight - selectedWeight) > 0.1)) {
+      if (
+        selectedSource === 'manual' ||
+        (selectedSource === 'ml' && Math.abs(mlWeight - selectedWeight) > 0.1)
+      ) {
         await this.learn(productName, selectedWeight, 0.8, url, category);
       }
-
     } catch (error) {
       console.error('Error recording weight selection:', error);
     }

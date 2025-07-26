@@ -64,9 +64,16 @@ export const customerDisplayUtils = {
     };
 
     // Determine final values with priority
-    const name = fromShipping.name || fromCustomerData.name || fromProfile.name || fromQuote.name || 'Guest User';
-    const email = fromShipping.email || fromCustomerData.email || fromProfile.email || fromQuote.email || '';
-    const phone = fromShipping.phone || fromCustomerData.phone || fromProfile.phone || fromQuote.phone || '';
+    const name =
+      fromShipping.name ||
+      fromCustomerData.name ||
+      fromProfile.name ||
+      fromQuote.name ||
+      'Guest User';
+    const email =
+      fromShipping.email || fromCustomerData.email || fromProfile.email || fromQuote.email || '';
+    const phone =
+      fromShipping.phone || fromCustomerData.phone || fromProfile.phone || fromQuote.phone || '';
 
     // Determine user type
     const isGuest = !profile?.id && !quote.user?.id;
@@ -98,13 +105,15 @@ export const customerDisplayUtils = {
     if (email) {
       const emailName = email.split('@')[0];
       // Clean up email-based names
-      return emailName
-        .replace(/[._-]/g, ' ')
-        .replace(/\d+/g, '')
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ')
-        .trim() || 'Guest User';
+      return (
+        emailName
+          .replace(/[._-]/g, ' ')
+          .replace(/\d+/g, '')
+          .split(' ')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ')
+          .trim() || 'Guest User'
+      );
     }
 
     return isGuest ? 'Guest User' : 'Anonymous User';
@@ -115,10 +124,10 @@ export const customerDisplayUtils = {
    */
   generateInitials(displayName: string): string {
     const parts = displayName.split(' ').filter(Boolean);
-    
+
     if (parts.length === 0) return 'GU';
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    
+
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   },
 
@@ -129,7 +138,7 @@ export const customerDisplayUtils = {
     if (data.isGuest) {
       return data.email || 'Guest Checkout';
     }
-    
+
     return `${data.displayName}${data.email ? ` • ${data.email}` : ''}`;
   },
 

@@ -1,15 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Package, 
-  ShoppingCart, 
-  CheckCircle, 
-  Clock, 
+import {
+  Package,
+  ShoppingCart,
+  CheckCircle,
+  Clock,
   DollarSign,
   Truck,
   Mail,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,9 +42,9 @@ interface ActivityTimelineProps {
   viewAllLink?: string;
 }
 
-const ActivityEventCard: React.FC<{ activity: ActivityItem; index: number }> = ({ 
-  activity, 
-  index 
+const ActivityEventCard: React.FC<{ activity: ActivityItem; index: number }> = ({
+  activity,
+  index,
 }) => {
   const getIcon = () => {
     switch (activity.type) {
@@ -98,18 +98,18 @@ const ActivityEventCard: React.FC<{ activity: ActivityItem; index: number }> = (
               <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center group-hover:bg-teal-50 transition-colors">
                 {getIcon()}
               </div>
-              
+
               {/* Product image if available */}
               {activity.image && (
                 <div className="flex-shrink-0">
-                  <img 
-                    src={activity.image} 
+                  <img
+                    src={activity.image}
                     alt={activity.title}
                     className="w-12 h-12 rounded-lg object-cover border border-gray-200"
                   />
                 </div>
               )}
-              
+
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between mb-2">
@@ -121,18 +121,15 @@ const ActivityEventCard: React.FC<{ activity: ActivityItem; index: number }> = (
                       {activity.description}
                     </p>
                   </div>
-                  
+
                   {/* Status badge */}
-                  <Badge 
-                    className={cn(
-                      'ml-2 text-xs font-medium',
-                      getStatusColor(activity.status)
-                    )}
+                  <Badge
+                    className={cn('ml-2 text-xs font-medium', getStatusColor(activity.status))}
                   >
                     {activity.status}
                   </Badge>
                 </div>
-                
+
                 {/* Metadata row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -143,7 +140,7 @@ const ActivityEventCard: React.FC<{ activity: ActivityItem; index: number }> = (
                       </span>
                     )}
                   </div>
-                  
+
                   {/* Action buttons */}
                   {activity.actions && activity.actions.length > 0 && (
                     <div className="flex gap-2">
@@ -166,7 +163,7 @@ const ActivityEventCard: React.FC<{ activity: ActivityItem; index: number }> = (
                   )}
                 </div>
               </div>
-              
+
               {/* Arrow indicator */}
               <div className="flex-shrink-0">
                 <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
@@ -183,7 +180,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   activities,
   maxItems = 5,
   showViewAll = true,
-  viewAllLink = '/dashboard/quotes'
+  viewAllLink = '/dashboard/quotes',
 }) => {
   const displayedActivities = activities.slice(0, maxItems);
 
@@ -212,17 +209,11 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
             <div className="text-center py-8">
               <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
               <p className="text-gray-500 text-sm">No recent activity yet.</p>
-              <p className="text-gray-400 text-xs mt-1">
-                Your quotes and orders will appear here.
-              </p>
+              <p className="text-gray-400 text-xs mt-1">Your quotes and orders will appear here.</p>
             </div>
           ) : (
             displayedActivities.map((activity, index) => (
-              <ActivityEventCard 
-                key={activity.id} 
-                activity={activity} 
-                index={index}
-              />
+              <ActivityEventCard key={activity.id} activity={activity} index={index} />
             ))
           )}
         </div>

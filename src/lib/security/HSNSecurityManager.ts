@@ -156,7 +156,8 @@ export class HSNSecurityManager {
           key: this.encryptAPIKey(apiKey),
           provider: config.provider,
           encrypted: true,
-          environment: import.meta.env.VITE_NODE_ENV === 'production' ? 'production' : 'development',
+          environment:
+            import.meta.env.VITE_NODE_ENV === 'production' ? 'production' : 'development',
           rateLimits: config.rateLimits,
           isActive: true,
         });

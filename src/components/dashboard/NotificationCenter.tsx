@@ -29,10 +29,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
@@ -41,10 +41,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/design-system';
 import { useNotifications, useUnreadNotifications } from '@/hooks/useNotifications';
 import { NotificationRecord } from '@/services/NotificationService';
-import { 
-  getNotificationConfig, 
+import {
+  getNotificationConfig,
   NOTIFICATION_CATEGORIES,
-  NotificationCategory 
+  NotificationCategory,
 } from '@/types/NotificationTypes';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -67,10 +67,10 @@ const NotificationItem: React.FC<{
 }> = ({ notification, onRead, onDismiss, compact = false }) => {
   const [isActioning, setIsActioning] = useState(false);
   const config = getNotificationConfig(notification.type);
-  
+
   const handleRead = async () => {
     if (notification.is_read) return;
-    
+
     setIsActioning(true);
     try {
       await onRead(notification.id);
@@ -83,7 +83,7 @@ const NotificationItem: React.FC<{
 
   const handleDismiss = async () => {
     if (!notification.allow_dismiss) return;
-    
+
     setIsActioning(true);
     try {
       await onDismiss(notification.id);
@@ -98,7 +98,7 @@ const NotificationItem: React.FC<{
     if (notification.data.action_url) {
       window.location.href = notification.data.action_url;
     }
-    
+
     // Mark as read when taking action
     if (!notification.is_read) {
       handleRead();
@@ -125,7 +125,7 @@ const NotificationItem: React.FC<{
   const getIcon = () => {
     const iconName = config.icon || 'Bell';
     const iconProps = { className: 'w-4 h-4' };
-    
+
     switch (iconName) {
       case 'CheckCircle':
         return <Check {...iconProps} className="w-4 h-4 text-green-600" />;
@@ -154,7 +154,7 @@ const NotificationItem: React.FC<{
         getPriorityColor(),
         !notification.is_read && 'shadow-sm',
         notification.is_read && 'opacity-75',
-        compact ? 'p-3' : 'p-4'
+        compact ? 'p-3' : 'p-4',
       )}
     >
       {/* Unread indicator */}
@@ -164,48 +164,42 @@ const NotificationItem: React.FC<{
 
       <div className="flex items-start gap-3">
         {/* Icon */}
-        <div className="flex-shrink-0 mt-0.5">
-          {getIcon()}
-        </div>
+        <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               {/* Message */}
-              <p className={cn(
-                'text-gray-900 leading-relaxed',
-                compact ? 'text-sm' : 'text-base',
-                !notification.is_read && 'font-medium'
-              )}>
+              <p
+                className={cn(
+                  'text-gray-900 leading-relaxed',
+                  compact ? 'text-sm' : 'text-base',
+                  !notification.is_read && 'font-medium',
+                )}
+              >
                 {notification.message}
               </p>
 
               {/* Subtitle/Additional info */}
               {notification.data.subtitle && (
-                <p className={cn(
-                  'text-gray-600 mt-1',
-                  compact ? 'text-xs' : 'text-sm'
-                )}>
+                <p className={cn('text-gray-600 mt-1', compact ? 'text-xs' : 'text-sm')}>
                   {notification.data.subtitle}
                 </p>
               )}
 
               {/* Metadata */}
               <div className="flex items-center gap-2 mt-2">
-                <span className={cn(
-                  'text-gray-500',
-                  compact ? 'text-xs' : 'text-sm'
-                )}>
+                <span className={cn('text-gray-500', compact ? 'text-xs' : 'text-sm')}>
                   {timeAgo}
                 </span>
-                
+
                 {notification.priority === 'urgent' && (
                   <Badge variant="destructive" className="text-xs">
                     Urgent
                   </Badge>
                 )}
-                
+
                 {notification.priority === 'high' && (
                   <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">
                     High Priority
@@ -291,12 +285,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const [isExpanded, setIsExpanded] = useState(true);
 
   // Hooks for different notification views
-  const unreadNotifications = useUnreadNotifications({ 
+  const unreadNotifications = useUnreadNotifications({
     limit: 50,
     refetchInterval: 15000, // 15 seconds for real-time feel
   });
-  
-  const allNotifications = useNotifications({ 
+
+  const allNotifications = useNotifications({
     limit: 100,
     enabled: activeTab === 'all',
   });
@@ -325,7 +319,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       [NOTIFICATION_CATEGORIES.ACCOUNT]: [],
     };
 
-    notifications.forEach(notification => {
+    notifications.forEach((notification) => {
       const config = getNotificationConfig(notification.type);
       groups[config.category].push(notification);
     });
@@ -358,8 +352,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   <Bell className="w-5 h-5 text-gray-600" />
                 )}
                 {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs flex items-center justify-center"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
@@ -398,10 +392,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuItem 
-                    onClick={handleMarkAllAsRead}
-                    disabled={unreadCount === 0}
-                  >
+                  <DropdownMenuItem onClick={handleMarkAllAsRead} disabled={unreadCount === 0}>
                     <CheckCheck className="w-4 h-4 mr-2" />
                     Mark All as Read
                   </DropdownMenuItem>
@@ -444,7 +435,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <AnimatePresence>
         {isExpanded && (
           <CardContent className="pt-0">
-            <div 
+            <div
               className="space-y-3 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
               style={{ maxHeight }}
             >
@@ -470,16 +461,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <div className="text-center py-8">
                   <Bell className="w-12 h-12 mx-auto text-gray-300 mb-3" />
                   <p className="text-gray-600 text-sm">
-                    {activeTab === 'unread' 
-                      ? "No unread notifications" 
-                      : "No notifications yet"
-                    }
+                    {activeTab === 'unread' ? 'No unread notifications' : 'No notifications yet'}
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
-                    {activeTab === 'unread' 
+                    {activeTab === 'unread'
                       ? "You're all caught up!"
-                      : "Notifications will appear here when you have them"
-                    }
+                      : 'Notifications will appear here when you have them'}
                   </p>
                 </div>
               ) : (

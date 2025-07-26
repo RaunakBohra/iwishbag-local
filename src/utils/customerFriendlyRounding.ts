@@ -4,39 +4,42 @@
 // Follows user-friendly rounding patterns for better customer experience
 // ============================================================================
 
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 /**
  * Customer-friendly rounding rules by currency
  * Applied ONLY to final totals, not individual line items
  */
-const CUSTOMER_ROUNDING_RULES: Record<string, {
-  roundTo: number; // Round to nearest X units
-  description: string;
-}> = {
+const CUSTOMER_ROUNDING_RULES: Record<
+  string,
+  {
+    roundTo: number; // Round to nearest X units
+    description: string;
+  }
+> = {
   // US Dollar: Round to nearest dollar
   USD: { roundTo: 1, description: 'Rounded to nearest dollar' },
-  
+
   // Indian Rupee: Round to nearest ₹10
   INR: { roundTo: 10, description: 'Rounded to nearest ₹10' },
-  
-  // Nepalese Rupee: Round to nearest ₹10  
+
+  // Nepalese Rupee: Round to nearest ₹10
   NPR: { roundTo: 10, description: 'Rounded to nearest ₹10' },
-  
+
   // European currencies: Round to nearest 0.50
   EUR: { roundTo: 0.5, description: 'Rounded to nearest €0.50' },
   GBP: { roundTo: 0.5, description: 'Rounded to nearest £0.50' },
-  
+
   // Asian currencies: Round to nearest 5 or 10 units
   JPY: { roundTo: 10, description: 'Rounded to nearest ¥10' },
   KRW: { roundTo: 100, description: 'Rounded to nearest ₩100' },
   CNY: { roundTo: 1, description: 'Rounded to nearest ¥1' },
   SGD: { roundTo: 0.5, description: 'Rounded to nearest S$0.50' },
-  
+
   // Middle Eastern currencies
   AED: { roundTo: 1, description: 'Rounded to nearest د.إ1' },
   SAR: { roundTo: 1, description: 'Rounded to nearest ر.س1' },
-  
+
   // Other major currencies
   CAD: { roundTo: 0.5, description: 'Rounded to nearest C$0.50' },
   AUD: { roundTo: 0.5, description: 'Rounded to nearest A$0.50' },
@@ -48,7 +51,10 @@ const CUSTOMER_ROUNDING_RULES: Record<string, {
  * @param currencyCode - Currency code (e.g., 'USD', 'INR', 'NPR')
  * @returns Object with rounded amount, original amount, and rounding info
  */
-export function applyCustomerFriendlyRounding(amount: number, currencyCode: string): {
+export function applyCustomerFriendlyRounding(
+  amount: number,
+  currencyCode: string,
+): {
   roundedAmount: number;
   originalAmount: number;
   roundingApplied: boolean;
@@ -67,17 +73,17 @@ export function applyCustomerFriendlyRounding(amount: number, currencyCode: stri
   }
 
   // Get rounding rule for currency (default to nearest 0.01 if not specified)
-  const rule = CUSTOMER_ROUNDING_RULES[currencyCode] || { 
-    roundTo: 0.01, 
-    description: 'Standard rounding' 
+  const rule = CUSTOMER_ROUNDING_RULES[currencyCode] || {
+    roundTo: 0.01,
+    description: 'Standard rounding',
   };
 
   // Apply rounding
   const roundedAmount = Math.round(amount / rule.roundTo) * rule.roundTo;
-  
+
   // Calculate savings (positive = customer saves money)
   const savingsAmount = amount - roundedAmount;
-  
+
   // Check if rounding was actually applied (difference > 0.001 to handle floating point precision)
   const roundingApplied = Math.abs(savingsAmount) > 0.001;
 
@@ -98,7 +104,7 @@ export function applyCustomerFriendlyRounding(amount: number, currencyCode: stri
  */
 export function formatAmountWithCustomerRounding(amount: number, currencyCode: string): string {
   const rounded = applyCustomerFriendlyRounding(amount, currencyCode);
-  return currencyService.formatAmount(rounded.roundedAmount, currencyCode);
+  return optimizedCurrencyService.formatAmount(rounded.roundedAmount, currencyCode);
 }
 
 /**
@@ -109,15 +115,15 @@ export function formatAmountWithCustomerRounding(amount: number, currencyCode: s
  */
 export function getRoundingExplanation(amount: number, currencyCode: string): string | null {
   const rounded = applyCustomerFriendlyRounding(amount, currencyCode);
-  
+
   if (!rounded.roundingApplied) {
     return null;
   }
 
-  const symbol = currencyService.getCurrencySymbol(currencyCode);
+  const symbol = optimizedCurrencyService.getCurrencySymbol(currencyCode);
   const savings = Math.abs(rounded.savingsAmount);
-  const formattedSavings = currencyService.formatAmount(savings, currencyCode);
-  
+  const formattedSavings = optimizedCurrencyService.formatAmount(savings, currencyCode);
+
   if (rounded.savingsAmount > 0) {
     return `${rounded.roundingDescription} - You save ${formattedSavings}`;
   } else {

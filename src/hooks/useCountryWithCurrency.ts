@@ -1,5 +1,5 @@
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 /**
  * Hook to get country information with currency details
@@ -15,7 +15,7 @@ export const useCountryWithCurrency = () => {
     return {
       ...country,
       currency: country.currency || 'USD',
-      currencySymbol: currencyService.getCurrencySymbol(country.currency || 'USD'),
+      currencySymbol: optimizedCurrencyService.getCurrencySymbol(country.currency || 'USD'),
     };
   };
 

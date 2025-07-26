@@ -19,7 +19,7 @@ const mockABTestService = {
   isUserInTest: vi.fn(),
   getTestConfig: vi.fn(),
   assignUserToVariant: vi.fn(),
-  recordExposure: vi.fn()
+  recordExposure: vi.fn(),
 };
 
 // Mock Analytics Service
@@ -28,19 +28,19 @@ const mockAnalyticsService = {
   identify: vi.fn(),
   page: vi.fn(),
   group: vi.fn(),
-  alias: vi.fn()
+  alias: vi.fn(),
 };
 
 // Mock Google Analytics (gtag)
 Object.defineProperty(window, 'gtag', {
   value: vi.fn(),
-  configurable: true
+  configurable: true,
 });
 
 // Mock Facebook Pixel
 Object.defineProperty(window, 'fbq', {
   value: vi.fn(),
-  configurable: true
+  configurable: true,
 });
 
 // Mock experiment configurations
@@ -58,8 +58,8 @@ const mockExperiments = {
         config: {
           primary_color: '#3b82f6',
           secondary_color: '#1e40af',
-          button_style: 'solid'
-        }
+          button_style: 'solid',
+        },
       },
       {
         id: 'variant_a',
@@ -68,10 +68,10 @@ const mockExperiments = {
         config: {
           primary_color: '#10b981',
           secondary_color: '#047857',
-          button_style: 'solid'
-        }
-      }
-    ]
+          button_style: 'solid',
+        },
+      },
+    ],
   },
   quote_form_layout: {
     id: 'quote_form_layout',
@@ -85,8 +85,8 @@ const mockExperiments = {
         allocation: 0.33,
         config: {
           layout: 'single_column',
-          fields_per_row: 1
-        }
+          fields_per_row: 1,
+        },
       },
       {
         id: 'variant_a',
@@ -94,8 +94,8 @@ const mockExperiments = {
         allocation: 0.33,
         config: {
           layout: 'two_column',
-          fields_per_row: 2
-        }
+          fields_per_row: 2,
+        },
       },
       {
         id: 'variant_b',
@@ -103,10 +103,10 @@ const mockExperiments = {
         allocation: 0.34,
         config: {
           layout: 'progressive',
-          show_fields_gradually: true
-        }
-      }
-    ]
+          show_fields_gradually: true,
+        },
+      },
+    ],
   },
   quote_list_density: {
     id: 'quote_list_density',
@@ -121,8 +121,8 @@ const mockExperiments = {
         config: {
           density: 'standard',
           show_breakdown: false,
-          compact_view: false
-        }
+          compact_view: false,
+        },
       },
       {
         id: 'variant_a',
@@ -131,11 +131,11 @@ const mockExperiments = {
         config: {
           density: 'high',
           show_breakdown: true,
-          compact_view: true
-        }
-      }
-    ]
-  }
+          compact_view: true,
+        },
+      },
+    ],
+  },
 };
 
 // Mock user segmentation
@@ -143,16 +143,16 @@ const mockUserSegments = {
   new_user: { days_since_signup: 0 },
   returning_user: { days_since_signup: 30 },
   power_user: { quotes_created: 50, conversion_rate: 0.8 },
-  enterprise_user: { company_size: 'large', plan: 'enterprise' }
+  enterprise_user: { company_size: 'large', plan: 'enterprise' },
 };
 
 // Mock dependencies
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { 
-      id: 'ab-test-user-id', 
+    user: {
+      id: 'ab-test-user-id',
       email: 'abtest@example.com',
-      created_at: '2024-01-01T00:00:00Z'
+      created_at: '2024-01-01T00:00:00Z',
     },
   }),
 }));
@@ -174,16 +174,16 @@ const abTestQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 399.99,
   item_price: 329.99,
-  sales_tax_price: 26.40,
+  sales_tax_price: 26.4,
   merchant_shipping_price: 19.99,
   international_shipping: 29.99,
-  customs_and_ecs: 16.50,
+  customs_and_ecs: 16.5,
   domestic_shipping: 9.99,
-  handling_charge: 7.50,
+  handling_charge: 7.5,
   insurance_amount: 3.99,
   payment_gateway_fee: 4.99,
-  vat: 0.00,
-  discount: 15.00,
+  vat: 0.0,
+  discount: 15.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -191,26 +191,28 @@ const abTestQuote: UnifiedQuote = {
     info: {
       name: 'A/B Test User',
       email: 'abtest@example.com',
-      phone: '+91-9876543210'
-    }
+      phone: '+91-9876543210',
+    },
   },
   shipping_address: {
-    formatted: '123 Test Street, Bangalore, Karnataka 560001, India'
+    formatted: '123 Test Street, Bangalore, Karnataka 560001, India',
   },
-  items: [{
-    id: 'ab-test-item',
-    name: 'Smart Watch Pro',
-    description: 'Advanced fitness tracking smartwatch',
-    quantity: 1,
-    price: 329.99,
-    product_url: 'https://amazon.com/smart-watch-pro',
-    image_url: 'https://example.com/smartwatch.jpg'
-  }],
+  items: [
+    {
+      id: 'ab-test-item',
+      name: 'Smart Watch Pro',
+      description: 'Advanced fitness tracking smartwatch',
+      quantity: 1,
+      price: 329.99,
+      product_url: 'https://amazon.com/smart-watch-pro',
+      image_url: 'https://example.com/smartwatch.jpg',
+    },
+  ],
   notes: 'A/B test quote',
   admin_notes: '',
   priority: 'high',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
@@ -225,11 +227,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -244,7 +244,7 @@ describe('A/B Testing System Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset A/B test service mocks
-    Object.values(mockABTestService).forEach(mock => mock.mockReset());
+    Object.values(mockABTestService).forEach((mock) => mock.mockReset());
   });
 
   afterEach(() => {
@@ -269,7 +269,7 @@ describe('A/B Testing System Integration Tests', () => {
           const assignVariant = async () => {
             const variant = mockABTestService.assignUserToVariant(
               'quote_approval_colors',
-              'ab-test-user-id'
+              'ab-test-user-id',
             );
             setUserVariant(variant);
 
@@ -281,7 +281,7 @@ describe('A/B Testing System Integration Tests', () => {
             window.gtag('event', 'ab_test_exposure', {
               experiment_id: 'quote_approval_colors',
               variant_id: variant,
-              user_id: 'ab-test-user-id'
+              user_id: 'ab-test-user-id',
             });
           };
 
@@ -292,11 +292,7 @@ describe('A/B Testing System Integration Tests', () => {
           <div>
             <div data-testid="user-variant">{userVariant}</div>
             <div data-testid="exposure-logged">{exposureLogged ? 'logged' : 'not-logged'}</div>
-            <UnifiedQuoteCard
-              quote={abTestQuote}
-              viewMode="customer"
-              variant={userVariant}
-            />
+            <UnifiedQuoteCard quote={abTestQuote} viewMode="customer" variant={userVariant} />
           </div>
         );
       };
@@ -311,12 +307,16 @@ describe('A/B Testing System Integration Tests', () => {
 
       expect(mockABTestService.assignUserToVariant).toHaveBeenCalledWith(
         'quote_approval_colors',
-        'ab-test-user-id'
+        'ab-test-user-id',
       );
       expect(mockABTestService.recordExposure).toHaveBeenCalled();
-      expect(window.gtag).toHaveBeenCalledWith('event', 'ab_test_exposure', expect.objectContaining({
-        experiment_id: 'quote_approval_colors'
-      }));
+      expect(window.gtag).toHaveBeenCalledWith(
+        'event',
+        'ab_test_exposure',
+        expect.objectContaining({
+          experiment_id: 'quote_approval_colors',
+        }),
+      );
     });
 
     it('should handle traffic allocation correctly', async () => {
@@ -330,13 +330,13 @@ describe('A/B Testing System Integration Tests', () => {
             const random = Math.random();
             const experiment = mockExperiments.quote_form_layout;
             const isEligible = random < experiment.traffic_allocation;
-            
+
             setInTest(isEligible);
-            
+
             if (isEligible) {
               const assignedVariant = mockABTestService.assignUserToVariant(
                 'quote_form_layout',
-                'ab-test-user-id'
+                'ab-test-user-id',
               );
               setVariant(assignedVariant);
             } else {
@@ -376,11 +376,13 @@ describe('A/B Testing System Integration Tests', () => {
   describe('Quote Approval Button Color Test', () => {
     it('should render different button colors based on variant', async () => {
       const ButtonColorTest = ({ variant }: { variant: string }) => {
-        const config = mockExperiments.quote_approval_colors.variants.find(v => v.id === variant)?.config;
-        
+        const config = mockExperiments.quote_approval_colors.variants.find(
+          (v) => v.id === variant,
+        )?.config;
+
         const buttonStyle = {
           backgroundColor: config?.primary_color,
-          borderColor: config?.secondary_color
+          borderColor: config?.secondary_color,
         };
 
         return (
@@ -396,7 +398,7 @@ describe('A/B Testing System Integration Tests', () => {
                   'quote_approval_colors',
                   variant,
                   'ab-test-user-id',
-                  action
+                  action,
                 );
 
                 window.gtag('event', 'ab_test_conversion', {
@@ -404,15 +406,11 @@ describe('A/B Testing System Integration Tests', () => {
                   variant: variant,
                   action: `action_${action}`,
                   value: 1,
-                  user_id: 'ab-test-user-id'
+                  user_id: 'ab-test-user-id',
                 });
               }}
             />
-            <button 
-              data-testid="test-button"
-              style={buttonStyle}
-              className="color-variant-control"
-            >
+            <button data-testid="test-button" style={buttonStyle} className="color-variant-control">
               Approve Quote
             </button>
           </div>
@@ -423,10 +421,10 @@ describe('A/B Testing System Integration Tests', () => {
       const { rerender } = renderWithProviders(<ButtonColorTest variant="control" />);
 
       expect(screen.getByTestId('variant-id')).toHaveTextContent('control');
-      
+
       const controlButton = screen.getByTestId('test-button');
       expect(controlButton).toHaveStyle({
-        backgroundColor: '#3b82f6' // Blue
+        backgroundColor: '#3b82f6', // Blue
       });
 
       // Test variant A
@@ -437,14 +435,14 @@ describe('A/B Testing System Integration Tests', () => {
               <ButtonColorTest variant="variant_a" />
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       expect(screen.getByTestId('variant-id')).toHaveTextContent('variant_a');
-      
+
       const variantButton = screen.getByTestId('test-button');
       expect(variantButton).toHaveStyle({
-        backgroundColor: '#10b981' // Green
+        backgroundColor: '#10b981', // Green
       });
     });
 
@@ -454,13 +452,13 @@ describe('A/B Testing System Integration Tests', () => {
       const ConversionTrackingTest = () => {
         const handleApproval = async () => {
           const variant = mockABTestService.getVariant('quote_approval_colors');
-          
+
           // Track conversion
           mockABTestService.trackConversion(
             'quote_approval_colors',
             variant,
             'ab-test-user-id',
-            'approve'
+            'approve',
           );
 
           // Track in Google Analytics
@@ -469,7 +467,7 @@ describe('A/B Testing System Integration Tests', () => {
             variant: variant,
             action: 'quote_approved',
             value: abTestQuote.final_total_usd,
-            user_id: 'ab-test-user-id'
+            user_id: 'ab-test-user-id',
           });
 
           // Track in Facebook Pixel
@@ -477,7 +475,7 @@ describe('A/B Testing System Integration Tests', () => {
             experiment: 'quote_approval_colors',
             variant: variant,
             action: 'approve',
-            value: abTestQuote.final_total_usd
+            value: abTestQuote.final_total_usd,
           });
         };
 
@@ -503,7 +501,7 @@ describe('A/B Testing System Integration Tests', () => {
           'quote_approval_colors',
           'variant_a',
           'ab-test-user-id',
-          'approve'
+          'approve',
         );
 
         expect(window.gtag).toHaveBeenCalledWith('event', 'ab_test_conversion', {
@@ -511,14 +509,14 @@ describe('A/B Testing System Integration Tests', () => {
           variant: 'variant_a',
           action: 'quote_approved',
           value: 399.99,
-          user_id: 'ab-test-user-id'
+          user_id: 'ab-test-user-id',
         });
 
         expect(window.fbq).toHaveBeenCalledWith('trackCustom', 'ABTestConversion', {
           experiment: 'quote_approval_colors',
           variant: 'variant_a',
           action: 'approve',
-          value: 399.99
+          value: 399.99,
         });
       });
     });
@@ -527,10 +525,12 @@ describe('A/B Testing System Integration Tests', () => {
   describe('Quote Form Layout Test', () => {
     it('should render different form layouts based on variant', async () => {
       const FormLayoutTest = ({ variant }: { variant: string }) => {
-        const config = mockExperiments.quote_form_layout.variants.find(v => v.id === variant)?.config;
-        
+        const config = mockExperiments.quote_form_layout.variants.find(
+          (v) => v.id === variant,
+        )?.config;
+
         const formClassName = `form-layout-${config?.layout}`;
-        
+
         return (
           <div>
             <div data-testid="layout-variant">{variant}</div>
@@ -546,14 +546,14 @@ describe('A/B Testing System Integration Tests', () => {
                     'quote_form_layout',
                     variant,
                     'ab-test-user-id',
-                    'form_submit'
+                    'form_submit',
                   );
 
                   window.gtag('event', 'ab_test_conversion', {
                     test_name: 'quote_form_layout',
                     variant: variant,
                     action: 'form_submitted',
-                    value: 1
+                    value: 1,
                   });
                 }}
               />
@@ -576,7 +576,7 @@ describe('A/B Testing System Integration Tests', () => {
               <FormLayoutTest variant="variant_a" />
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       expect(screen.getByTestId('layout-variant')).toHaveTextContent('variant_a');
@@ -590,7 +590,7 @@ describe('A/B Testing System Integration Tests', () => {
               <FormLayoutTest variant="variant_b" />
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       expect(screen.getByTestId('layout-variant')).toHaveTextContent('variant_b');
@@ -607,21 +607,21 @@ describe('A/B Testing System Integration Tests', () => {
           const abandonTimer = setTimeout(() => {
             if (fieldsFilled > 0 && fieldsFilled < 5) {
               setAbandoned(true);
-              
+
               // Track abandonment
               mockABTestService.trackEvent(
                 'quote_form_layout',
                 variant,
                 'ab-test-user-id',
                 'form_abandoned',
-                { fields_completed: fieldsFilled }
+                { fields_completed: fieldsFilled },
               );
 
               window.gtag('event', 'ab_test_abandonment', {
                 test_name: 'quote_form_layout',
                 variant: variant,
                 fields_completed: fieldsFilled,
-                user_id: 'ab-test-user-id'
+                user_id: 'ab-test-user-id',
               });
             }
           }, 5000);
@@ -630,20 +630,20 @@ describe('A/B Testing System Integration Tests', () => {
         }, [fieldsFilled]);
 
         const handleFieldChange = () => {
-          setFieldsFilled(prev => prev + 1);
+          setFieldsFilled((prev) => prev + 1);
         };
 
         return (
           <div>
             <div data-testid="fields-filled">{fieldsFilled}</div>
             <div data-testid="abandoned">{abandoned ? 'yes' : 'no'}</div>
-            <input 
+            <input
               data-testid="test-field-1"
               onChange={handleFieldChange}
               placeholder="Product URL"
             />
-            <input 
-              data-testid="test-field-2" 
+            <input
+              data-testid="test-field-2"
               onChange={handleFieldChange}
               placeholder="Product Name"
             />
@@ -659,16 +659,19 @@ describe('A/B Testing System Integration Tests', () => {
       await user.type(screen.getByTestId('test-field-2'), 'Test Product');
 
       // Wait for abandonment tracking
-      await waitFor(() => {
-        expect(screen.getByTestId('abandoned')).toHaveTextContent('yes');
-      }, { timeout: 6000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('abandoned')).toHaveTextContent('yes');
+        },
+        { timeout: 6000 },
+      );
 
       expect(mockABTestService.trackEvent).toHaveBeenCalledWith(
         'quote_form_layout',
         'variant_a',
         'ab-test-user-id',
         'form_abandoned',
-        { fields_completed: 2 }
+        { fields_completed: 2 },
       );
     });
   });
@@ -676,8 +679,10 @@ describe('A/B Testing System Integration Tests', () => {
   describe('Quote List Density Test', () => {
     it('should render different list densities based on variant', async () => {
       const ListDensityTest = ({ variant }: { variant: string }) => {
-        const config = mockExperiments.quote_list_density.variants.find(v => v.id === variant)?.config;
-        
+        const config = mockExperiments.quote_list_density.variants.find(
+          (v) => v.id === variant,
+        )?.config;
+
         return (
           <div>
             <div data-testid="density-variant">{variant}</div>
@@ -685,7 +690,7 @@ describe('A/B Testing System Integration Tests', () => {
             <div data-testid="show-breakdown">{config?.show_breakdown ? 'yes' : 'no'}</div>
             <UnifiedQuoteList
               quotes={[abTestQuote]}
-              viewMode="customer" 
+              viewMode="customer"
               layout={config?.compact_view ? 'compact' : 'list'}
               variant={variant}
               onItemAction={async (action, quote) => {
@@ -695,7 +700,7 @@ describe('A/B Testing System Integration Tests', () => {
                   variant,
                   'ab-test-user-id',
                   `list_${action}`,
-                  { quote_id: quote.id }
+                  { quote_id: quote.id },
                 );
               }}
             />
@@ -718,7 +723,7 @@ describe('A/B Testing System Integration Tests', () => {
               <ListDensityTest variant="variant_a" />
             </QuoteThemeProvider>
           </BrowserRouter>
-        </QueryClientProvider>
+        </QueryClientProvider>,
       );
 
       expect(screen.getByTestId('density-variant')).toHaveTextContent('variant_a');
@@ -733,7 +738,7 @@ describe('A/B Testing System Integration Tests', () => {
 
         React.useEffect(() => {
           const startTime = Date.now();
-          
+
           // Track time spent
           const timeTracker = setInterval(() => {
             const elapsed = Date.now() - startTime;
@@ -742,7 +747,7 @@ describe('A/B Testing System Integration Tests', () => {
 
           return () => {
             clearInterval(timeTracker);
-            
+
             // Track final engagement metrics
             mockABTestService.trackEvent(
               'quote_list_density',
@@ -751,32 +756,25 @@ describe('A/B Testing System Integration Tests', () => {
               'session_end',
               {
                 time_spent: timeSpent,
-                interactions: interactions
-              }
+                interactions: interactions,
+              },
             );
           };
         }, []);
 
         const handleInteraction = (type: string) => {
-          setInteractions(prev => prev + 1);
-          
-          mockABTestService.trackEvent(
-            'quote_list_density',
-            variant,
-            'ab-test-user-id',
-            type,
-            { interaction_number: interactions + 1 }
-          );
+          setInteractions((prev) => prev + 1);
+
+          mockABTestService.trackEvent('quote_list_density', variant, 'ab-test-user-id', type, {
+            interaction_number: interactions + 1,
+          });
         };
 
         return (
           <div>
             <div data-testid="interactions">{interactions}</div>
             <div data-testid="time-spent">{Math.floor(timeSpent / 1000)}</div>
-            <button 
-              onClick={() => handleInteraction('click')}
-              data-testid="interaction-button"
-            >
+            <button onClick={() => handleInteraction('click')} data-testid="interaction-button">
               Click Me
             </button>
           </div>
@@ -799,7 +797,7 @@ describe('A/B Testing System Integration Tests', () => {
         'variant_a',
         'ab-test-user-id',
         'click',
-        { interaction_number: 1 }
+        { interaction_number: 1 },
       );
     });
   });
@@ -813,10 +811,10 @@ describe('A/B Testing System Integration Tests', () => {
         React.useEffect(() => {
           const determineSegment = () => {
             // Mock user segmentation logic
-            const user = { 
-              days_since_signup: 5, 
-              quotes_created: 2, 
-              conversion_rate: 0.0 
+            const user = {
+              days_since_signup: 5,
+              quotes_created: 2,
+              conversion_rate: 0.0,
             };
 
             let segment = 'new_user';
@@ -853,7 +851,9 @@ describe('A/B Testing System Integration Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('user-segment')).toHaveTextContent('new_user');
-        expect(screen.getByTestId('eligible-tests')).toHaveTextContent('quote_form_layout,quote_approval_colors');
+        expect(screen.getByTestId('eligible-tests')).toHaveTextContent(
+          'quote_form_layout,quote_approval_colors',
+        );
       });
     });
 
@@ -870,7 +870,7 @@ describe('A/B Testing System Integration Tests', () => {
               has_active_subscription: true,
               browser: 'chrome',
               device_type: 'mobile',
-              country: 'IN'
+              country: 'IN',
             };
 
             // Exclude admins from all tests
@@ -897,7 +897,9 @@ describe('A/B Testing System Integration Tests', () => {
 
         return (
           <div>
-            <div data-testid="excluded">{isExcluded === null ? 'checking' : isExcluded ? 'yes' : 'no'}</div>
+            <div data-testid="excluded">
+              {isExcluded === null ? 'checking' : isExcluded ? 'yes' : 'no'}
+            </div>
             <div data-testid="exclusion-reason">{exclusionReason}</div>
           </div>
         );
@@ -923,13 +925,13 @@ describe('A/B Testing System Integration Tests', () => {
             const experimentSamples = {
               quote_approval_colors: {
                 control: 1250,
-                variant_a: 1180
+                variant_a: 1180,
               },
               quote_form_layout: {
                 control: 890,
                 variant_a: 920,
-                variant_b: 880
-              }
+                variant_b: 880,
+              },
             };
 
             setSampleSizes(experimentSamples);
@@ -943,7 +945,7 @@ describe('A/B Testing System Integration Tests', () => {
                 window.gtag('event', 'ab_test_ready_for_analysis', {
                   experiment_id: experimentId,
                   total_samples: totalSamples,
-                  variants: Object.keys(variants).length
+                  variants: Object.keys(variants).length,
                 });
               }
             });
@@ -958,7 +960,10 @@ describe('A/B Testing System Integration Tests', () => {
               {sampleSizes.quote_approval_colors?.control || 0}
             </div>
             <div data-testid="form-test-samples">
-              {Object.values(sampleSizes.quote_form_layout || {}).reduce((sum, count) => sum + count, 0)}
+              {Object.values(sampleSizes.quote_form_layout || {}).reduce(
+                (sum, count) => sum + count,
+                0,
+              )}
             </div>
           </div>
         );
@@ -971,10 +976,14 @@ describe('A/B Testing System Integration Tests', () => {
         expect(screen.getByTestId('form-test-samples')).toHaveTextContent('2690');
       });
 
-      expect(window.gtag).toHaveBeenCalledWith('event', 'ab_test_ready_for_analysis', expect.objectContaining({
-        experiment_id: 'quote_approval_colors',
-        total_samples: 2430
-      }));
+      expect(window.gtag).toHaveBeenCalledWith(
+        'event',
+        'ab_test_ready_for_analysis',
+        expect.objectContaining({
+          experiment_id: 'quote_approval_colors',
+          total_samples: 2430,
+        }),
+      );
     });
 
     it('should calculate and report conversion rates', async () => {
@@ -987,8 +996,8 @@ describe('A/B Testing System Integration Tests', () => {
             const experimentData = {
               quote_approval_colors: {
                 control: { exposures: 1250, conversions: 125 }, // 10%
-                variant_a: { exposures: 1180, conversions: 142 } // 12%
-              }
+                variant_a: { exposures: 1180, conversions: 142 }, // 12%
+              },
             };
 
             const rates: Record<string, number> = {};
@@ -1006,12 +1015,13 @@ describe('A/B Testing System Integration Tests', () => {
             const variantRate = rates.quote_approval_colors_variant_a;
             const lift = ((variantRate - controlRate) / controlRate) * 100;
 
-            if (Math.abs(lift) > 5) { // 5% significance threshold
+            if (Math.abs(lift) > 5) {
+              // 5% significance threshold
               window.gtag('event', 'ab_test_significant_result', {
                 experiment_id: 'quote_approval_colors',
                 winning_variant: variantRate > controlRate ? 'variant_a' : 'control',
                 lift_percentage: lift.toFixed(2),
-                statistical_significance: 'yes'
+                statistical_significance: 'yes',
               });
             }
           };
@@ -1042,7 +1052,7 @@ describe('A/B Testing System Integration Tests', () => {
         experiment_id: 'quote_approval_colors',
         winning_variant: 'variant_a',
         lift_percentage: '20.00',
-        statistical_significance: 'yes'
+        statistical_significance: 'yes',
       });
     });
   });
@@ -1066,12 +1076,12 @@ describe('A/B Testing System Integration Tests', () => {
             } catch (err) {
               setError((err as Error).message);
               setVariant('control'); // Fallback to control
-              
+
               // Log error
               window.gtag('event', 'ab_test_error', {
                 error_type: 'service_unavailable',
                 experiment_id: 'quote_approval_colors',
-                fallback_variant: 'control'
+                fallback_variant: 'control',
               });
             }
           };
@@ -1097,7 +1107,7 @@ describe('A/B Testing System Integration Tests', () => {
       expect(window.gtag).toHaveBeenCalledWith('event', 'ab_test_error', {
         error_type: 'service_unavailable',
         experiment_id: 'quote_approval_colors',
-        fallback_variant: 'control'
+        fallback_variant: 'control',
       });
     });
 
@@ -1113,11 +1123,11 @@ describe('A/B Testing System Integration Tests', () => {
               setConfig(experimentConfig);
             } catch (err) {
               setHasError(true);
-              
+
               // Use default configuration
               setConfig({
                 id: 'default',
-                variants: [{ id: 'control', config: {} }]
+                variants: [{ id: 'control', config: {} }],
               });
             }
           };

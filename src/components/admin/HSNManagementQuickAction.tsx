@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
+import {
   Settings,
   TrendingUp,
   AlertTriangle,
@@ -9,7 +9,7 @@ import {
   FileText,
   RefreshCw,
   ChevronRight,
-  Database
+  Database,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -99,7 +99,9 @@ export function HSNManagementQuickAction() {
             onClick={() => setIsExpanded(!isExpanded)}
             className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-100"
           >
-            <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+            <ChevronRight
+              className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            />
           </Button>
         </div>
         <CardDescription className="text-blue-700">
@@ -157,12 +159,14 @@ export function HSNManagementQuickAction() {
                     <span className="text-sm text-blue-800">{category.category}</span>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-blue-600">{category.count}</span>
-                      <TrendingUp 
+                      <TrendingUp
                         className={`h-3 w-3 ${
-                          category.trend === 'up' ? 'text-green-500' : 
-                          category.trend === 'down' ? 'text-red-500' : 
-                          'text-gray-400'
-                        }`} 
+                          category.trend === 'up'
+                            ? 'text-green-500'
+                            : category.trend === 'down'
+                              ? 'text-red-500'
+                              : 'text-gray-400'
+                        }`}
                       />
                     </div>
                   </div>

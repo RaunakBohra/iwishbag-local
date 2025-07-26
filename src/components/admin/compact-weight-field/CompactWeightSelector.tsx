@@ -2,11 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CompactConfidenceIndicator } from './CompactConfidenceIndicator';
 import { Scale, ChevronDown, Check, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,7 +28,7 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
   suggestions,
   onWeightChange,
   className,
-  disabled = false
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -40,8 +36,9 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Find current source based on weight value
-  const currentSource = suggestions.find(s => Math.abs(s.value - currentWeight) < 0.01)?.source || 'manual';
-  const currentSuggestion = suggestions.find(s => s.source === currentSource);
+  const currentSource =
+    suggestions.find((s) => Math.abs(s.value - currentWeight) < 0.01)?.source || 'manual';
+  const currentSuggestion = suggestions.find((s) => s.source === currentSource);
 
   useEffect(() => {
     setInputValue(currentWeight.toString());
@@ -79,7 +76,7 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
 
   // Filter out manual suggestions and current weight from quick suggestions
   const quickSuggestions = suggestions
-    .filter(s => s.source !== 'manual' && Math.abs(s.value - currentWeight) >= 0.01)
+    .filter((s) => s.source !== 'manual' && Math.abs(s.value - currentWeight) >= 0.01)
     .slice(0, 2);
 
   return (
@@ -88,7 +85,7 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
       <div className="flex items-center gap-1">
         <Scale className="w-4 h-4 text-gray-500" />
         <span className="text-sm font-medium text-gray-700">Weight:</span>
-        
+
         {isEditing ? (
           <Input
             ref={inputRef}
@@ -116,10 +113,7 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
 
         {/* Confidence Indicator */}
         {currentSuggestion && (
-          <CompactConfidenceIndicator 
-            confidence={currentSuggestion.confidence}
-            className="ml-1"
-          />
+          <CompactConfidenceIndicator confidence={currentSuggestion.confidence} className="ml-1" />
         )}
       </div>
 
@@ -137,10 +131,7 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
             >
               <span className="font-medium">{suggestion.label}:</span>
               <span className="ml-1">{suggestion.value}kg</span>
-              <CompactConfidenceIndicator 
-                confidence={suggestion.confidence}
-                className="ml-1"
-              />
+              <CompactConfidenceIndicator confidence={suggestion.confidence} className="ml-1" />
             </Button>
           ))}
         </div>
@@ -164,47 +155,46 @@ export const CompactWeightSelector: React.FC<CompactWeightSelectorProps> = ({
               <Scale className="w-4 h-4" />
               Weight Options
             </div>
-            
+
             {suggestions.map((suggestion) => {
               const isSelected = Math.abs(suggestion.value - currentWeight) < 0.01;
-              
+
               return (
                 <div
                   key={suggestion.source}
                   className={cn(
                     'flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors',
-                    isSelected 
-                      ? 'border-teal-200 bg-teal-50' 
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    isSelected
+                      ? 'border-teal-200 bg-teal-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
                   )}
                   onClick={() => handleSuggestionSelect(suggestion)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <Badge 
-                        variant={suggestion.source === 'hsn' ? 'success' : suggestion.source === 'ml' ? 'info' : 'secondary'}
+                      <Badge
+                        variant={
+                          suggestion.source === 'hsn'
+                            ? 'success'
+                            : suggestion.source === 'ml'
+                              ? 'info'
+                              : 'secondary'
+                        }
                         className="text-xs"
                       >
                         {suggestion.label}
                       </Badge>
-                      <span className="font-semibold text-gray-900">
-                        {suggestion.value} kg
-                      </span>
+                      <span className="font-semibold text-gray-900">{suggestion.value} kg</span>
                     </div>
-                    
-                    <CompactConfidenceIndicator 
-                      confidence={suggestion.confidence}
-                      showPercentage
-                    />
+
+                    <CompactConfidenceIndicator confidence={suggestion.confidence} showPercentage />
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {suggestion.description && (
                       <Info className="w-3 h-3 text-gray-400" title={suggestion.description} />
                     )}
-                    {isSelected && (
-                      <Check className="w-4 h-4 text-teal-600" />
-                    )}
+                    {isSelected && <Check className="w-4 h-4 text-teal-600" />}
                   </div>
                 </div>
               );

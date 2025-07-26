@@ -5,7 +5,7 @@
 // ============================================================================
 
 import React, { useState, useEffect } from 'react';
-import { getCustomerDisplayData, getCustomerTypeLabel } from '@/lib/customerDisplayUtils';
+import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -352,8 +352,8 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   };
 
   // Use unified customer display system
-  const customerDisplayData = getCustomerDisplayData(quote, null);
-  const customerTypeLabel = getCustomerTypeLabel(customerDisplayData.type);
+  const customerDisplayData = customerDisplayUtils.getCustomerDisplayData(quote, null);
+  const customerTypeLabel = customerDisplayData.type || 'Guest';
 
   // Helper functions using unified system
   const getCustomerName = () => customerDisplayData.name;

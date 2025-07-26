@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CompactConfidenceIndicator } from './CompactConfidenceIndicator';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { Tag, ChevronDown, Search, Check } from 'lucide-react';
@@ -30,7 +26,7 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
   suggestions = [],
   onHSNChange,
   className,
-  disabled = false
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -47,9 +43,7 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
   };
 
   // Get top 2 suggestions for quick apply
-  const quickSuggestions = suggestions
-    .filter(s => s.code !== currentHSN?.code)
-    .slice(0, 2);
+  const quickSuggestions = suggestions.filter((s) => s.code !== currentHSN?.code).slice(0, 2);
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
@@ -57,7 +51,7 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
       <div className="flex items-center gap-1">
         <Tag className="w-4 h-4 text-gray-500" />
         <span className="text-sm font-medium text-gray-700">HSN:</span>
-        
+
         {currentHSN ? (
           <div className="flex items-center gap-1">
             <Badge variant="success" className="text-xs font-medium">
@@ -67,10 +61,7 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
               {currentHSN.description}
             </span>
             {currentHSN.confidence && (
-              <CompactConfidenceIndicator 
-                confidence={currentHSN.confidence}
-                className="ml-1"
-              />
+              <CompactConfidenceIndicator confidence={currentHSN.confidence} className="ml-1" />
             )}
           </div>
         ) : (
@@ -94,10 +85,7 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
             >
               <span className="font-medium">{suggestion.code}</span>
               {suggestion.confidence && (
-                <CompactConfidenceIndicator 
-                  confidence={suggestion.confidence}
-                  className="ml-1"
-                />
+                <CompactConfidenceIndicator confidence={suggestion.confidence} className="ml-1" />
               )}
             </Button>
           ))}
@@ -135,18 +123,18 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
                 <Tag className="w-4 h-4" />
                 HSN Suggestions
               </div>
-              
+
               {suggestions.map((suggestion, index) => {
                 const isSelected = suggestion.code === currentHSN?.code;
-                
+
                 return (
                   <div
                     key={`${suggestion.code}-${index}`}
                     className={cn(
                       'flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors',
-                      isSelected 
-                        ? 'border-green-200 bg-green-50' 
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      isSelected
+                        ? 'border-green-200 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
                     )}
                     onClick={() => handleHSNSelect(suggestion)}
                   >
@@ -156,20 +144,16 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
                           {suggestion.code}
                         </Badge>
                         {suggestion.confidence && (
-                          <CompactConfidenceIndicator 
+                          <CompactConfidenceIndicator
                             confidence={suggestion.confidence}
                             showPercentage
                           />
                         )}
                       </div>
-                      <p className="text-sm text-gray-700 truncate">
-                        {suggestion.description}
-                      </p>
+                      <p className="text-sm text-gray-700 truncate">{suggestion.description}</p>
                     </div>
-                    
-                    {isSelected && (
-                      <Check className="w-4 h-4 text-green-600 ml-2 flex-shrink-0" />
-                    )}
+
+                    {isSelected && <Check className="w-4 h-4 text-green-600 ml-2 flex-shrink-0" />}
                   </div>
                 );
               })}
@@ -199,7 +183,7 @@ export const CompactHSNSelector: React.FC<CompactHSNSelectorProps> = ({
             handleHSNSelect({
               code: hsnData.code,
               description: hsnData.description,
-              confidence: 1.0
+              confidence: 1.0,
             });
           }}
           productName=""

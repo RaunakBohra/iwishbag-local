@@ -6,7 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Trash2, ShoppingCart, Package, ShieldCheck, Truck, Heart, Star, Plus, Minus } from 'lucide-react';
+import {
+  Trash2,
+  ShoppingCart,
+  Package,
+  ShieldCheck,
+  Truck,
+  Heart,
+  Star,
+  Plus,
+  Minus,
+} from 'lucide-react';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/hooks/useCart';
@@ -124,11 +134,10 @@ export const Cart = () => {
       return (
         <Card className="p-12 text-center border-0 shadow-sm">
           <h3 className="text-xl font-semibold mb-2">Your cart is empty</h3>
-          <p className="text-gray-600 mb-6">Looks like you haven't added anything to your cart yet.</p>
-          <Button 
-            className="bg-black hover:bg-gray-800 text-white"
-            onClick={() => navigate('/')}
-          >
+          <p className="text-gray-600 mb-6">
+            Looks like you haven't added anything to your cart yet.
+          </p>
+          <Button className="bg-black hover:bg-gray-800 text-white" onClick={() => navigate('/')}>
             Continue shopping
           </Button>
         </Card>
@@ -151,20 +160,16 @@ export const Cart = () => {
                     />
                   )}
                 </div>
-                
+
                 {/* Product Details */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <h3 className="font-semibold text-gray-900 text-lg">
-                        {item.productName}
-                      </h3>
+                      <h3 className="font-semibold text-gray-900 text-lg">{item.productName}</h3>
                       <p className="text-sm text-gray-600 mt-1">
                         Shipping: {item.purchaseCountryCode} → {item.destinationCountryCode}
                       </p>
-                      <p className="text-sm text-green-600 font-medium mt-1">
-                        FREE shipping
-                      </p>
+                      <p className="text-sm text-green-600 font-medium mt-1">FREE shipping</p>
                     </div>
                     <button
                       onClick={() => handleRemoveFromCart(item.id)}
@@ -173,14 +178,16 @@ export const Cart = () => {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  
+
                   {/* Price and Quantity */}
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-gray-600">Quantity</span>
                       <div className="flex items-center border border-gray-300 rounded-lg">
                         <button
-                          onClick={() => handleQuantityChange(item.id, Math.max(1, item.quantity - 1))}
+                          onClick={() =>
+                            handleQuantityChange(item.id, Math.max(1, item.quantity - 1))
+                          }
                           className="p-2 hover:bg-gray-50 rounded-l-lg"
                         >
                           <Minus className="h-3 w-3" />
@@ -196,7 +203,7 @@ export const Cart = () => {
                         </button>
                       </div>
                     </div>
-                    
+
                     <div className="text-right">
                       <span className="text-lg font-semibold text-gray-900">
                         <CartItemPrice item={item} quantity={item.quantity} />
@@ -240,16 +247,14 @@ export const Cart = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Cart Items - Shopify Style */}
-          <div className="lg:col-span-2">
-            {renderCartContent()}
-          </div>
+          <div className="lg:col-span-2">{renderCartContent()}</div>
 
           {/* Order Summary - Shopify Style */}
           <div className="lg:col-span-1">
             <Card className="sticky top-4 border-0 shadow-sm">
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Order summary</h2>
-                
+
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
@@ -266,9 +271,9 @@ export const Cart = () => {
                     <span className="text-gray-600">Calculated at checkout</span>
                   </div>
                 </div>
-                
+
                 <Separator className="my-4" />
-                
+
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-lg font-semibold">Total</span>
                   <span className="text-2xl font-bold">
@@ -287,8 +292,8 @@ export const Cart = () => {
                     <span>Fast delivery</span>
                   </div>
                 </div>
-                
-                <Button 
+
+                <Button
                   className="w-full h-12 bg-black hover:bg-gray-800 text-white font-semibold text-base"
                   disabled={!hasCartItems}
                   onClick={() => {
@@ -296,10 +301,10 @@ export const Cart = () => {
                       // Navigate to checkout with selected items or all items
                       const itemsToCheckout = hasSelectedItems ? getSelectedItems() : cartItems;
                       const quoteIds = itemsToCheckout.map((item) => item.quoteId).join(',');
-                      
+
                       // Use React Router navigation instead of window.location
                       navigate(`/checkout?quotes=${quoteIds}`);
-                      
+
                       toast({
                         title: 'Proceeding to checkout',
                         description: `Processing ${itemsToCheckout.length} item(s) for checkout.`,
@@ -316,11 +321,9 @@ export const Cart = () => {
                 >
                   Checkout
                 </Button>
-                
+
                 <div className="text-center mt-4">
-                  <p className="text-xs text-gray-500">
-                    Secure checkout powered by iwishBag
-                  </p>
+                  <p className="text-xs text-gray-500">Secure checkout powered by iwishBag</p>
                 </div>
               </CardContent>
             </Card>

@@ -162,7 +162,15 @@
       "Bash(git stash push:*)",
       "WebFetch(domain:airbnb.com)",
       "Bash(for file in /Users/raunakbohra/Desktop/global-wishlist-hub/src/components/admin/smart-components/{CompactCalculationBreakdown,CompactHSNTaxBreakdown,CompactShippingOptions,CompactStatusManager,TaxCalculationSidebar}.tsx)",
-      "Bash(for file in /Users/raunakbohra/Desktop/global-wishlist-hub/src/{components/forms/quote-form-fields/ProductInfoFields.tsx,services/CalculationDefaultsService.ts,utils/loadSampleHSNQuote.ts,stores/cartStore.ts})"
+      "Bash(for file in /Users/raunakbohra/Desktop/global-wishlist-hub/src/{components/forms/quote-form-fields/ProductInfoFields.tsx,services/CalculationDefaultsService.ts,utils/loadSampleHSNQuote.ts,stores/cartStore.ts})",
+      "Bash(pipx install:*)",
+      "Bash(export:*)",
+      "Bash(graphiti compose:*)",
+      "Bash(pipx uninstall:*)",
+      "Bash(pip3 search:*)",
+      "Bash(cp:*)",
+      "Bash(graphiti up:*)",
+      "Bash(docker compose:*)"
     ],
     "deny": []
   }

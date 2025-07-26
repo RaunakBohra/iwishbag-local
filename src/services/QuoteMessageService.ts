@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fileUploadService } from './FileUploadService';
 import { notificationService, Message } from './NotificationService';
 import { UnifiedQuote } from '@/types/unified-quote';
-import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
+import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 
 export interface SendMessageRequest {
   quoteId: string;
@@ -372,7 +372,7 @@ export class QuoteMessageService {
     try {
       if (quote) {
         // Get customer info using unified display logic
-        const customerData = getCustomerDisplayData(quote);
+        const customerData = customerDisplayUtils.getCustomerDisplayData(quote);
         participants.customer = {
           id: quote.user_id || '',
           name: customerData.name,
@@ -392,7 +392,7 @@ export class QuoteMessageService {
 
         if (!error && admins) {
           participants.admins = admins
-            .filter(admin => admin.profiles) // Only include admins with profiles
+            .filter((admin) => admin.profiles) // Only include admins with profiles
             .map((admin) => ({
               id: admin.user_id,
               name: (admin.profiles as any)?.full_name || 'Admin',
@@ -401,11 +401,13 @@ export class QuoteMessageService {
         } else if (error) {
           console.error('Error fetching admin users:', error);
           // Fallback admin user
-          participants.admins = [{
-            id: 'system',
-            name: 'Admin',
-            email: 'admin@iwishbag.com'
-          }];
+          participants.admins = [
+            {
+              id: 'system',
+              name: 'Admin',
+              email: 'admin@iwishbag.com',
+            },
+          ];
         }
       }
     } catch (error) {

@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 // SIMPLIFIED: Use CurrencyService directly instead of utility functions
 import type { UnifiedQuote } from '@/types/unified-quote';
 
@@ -53,25 +53,28 @@ export const useAdminQuoteCurrency = (
     const destinationCountry = quote.destination_country || 'US';
 
     // Get currencies for countries (sync versions for consistency)
-    const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
-    const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
+    const originCurrency = optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
+    const destinationCurrency = optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
 
     // Get exchange rate from quote data
     const exchangeRate = quote.calculation_data?.exchange_rate?.rate || quote.exchange_rate || 1;
 
     // Get currency symbols
-    const originSymbol = currencyService.getCurrencySymbolSync(originCurrency);
-    const destinationSymbol = currencyService.getCurrencySymbolSync(destinationCurrency);
+    const originSymbol = optimizedCurrencyService.getCurrencySymbolSync(originCurrency);
+    const destinationSymbol = optimizedCurrencyService.getCurrencySymbolSync(destinationCurrency);
 
     // Format dual amount function with CurrencyService for consistent symbols
     const formatDualAmount = (amount: number) => {
-      // Format in origin currency using CurrencyService
-      const originFormatted = currencyService.formatAmount(amount, originCurrency);
+      // Format in origin currency using OptimizedCurrencyService
+      const originFormatted = optimizedCurrencyService.formatAmount(amount, originCurrency);
 
       // Convert and format in destination currency if different
       if (exchangeRate && exchangeRate !== 1) {
         const convertedAmount = amount * exchangeRate;
-        const destinationFormatted = currencyService.formatAmount(convertedAmount, destinationCurrency);
+        const destinationFormatted = optimizedCurrencyService.formatAmount(
+          convertedAmount,
+          destinationCurrency,
+        );
 
         return {
           origin: originFormatted,
@@ -88,16 +91,16 @@ export const useAdminQuoteCurrency = (
       };
     };
 
-    // Format single amount in specified currency using CurrencyService
+    // Format single amount in specified currency using OptimizedCurrencyService
     const formatSingleAmount = (
       amount: number,
       currency: 'origin' | 'destination' = 'destination',
     ) => {
       if (currency === 'origin') {
-        return currencyService.formatAmount(amount, originCurrency);
+        return optimizedCurrencyService.formatAmount(amount, originCurrency);
       } else {
         const convertedAmount = exchangeRate !== 1 ? amount * exchangeRate : amount;
-        return currencyService.formatAmount(convertedAmount, destinationCurrency);
+        return optimizedCurrencyService.formatAmount(convertedAmount, destinationCurrency);
       }
     };
 

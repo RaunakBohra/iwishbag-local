@@ -19,7 +19,9 @@ export async function calculateCustomsTier(
   itemPrice: number,
   itemWeight: number,
 ): Promise<CustomsTierResult> {
-  console.log(`🔄 [SIMPLIFIED] Getting customs from shipping route: ${originCountry} → ${destinationCountry}`);
+  console.log(
+    `🔄 [SIMPLIFIED] Getting customs from shipping route: ${originCountry} → ${destinationCountry}`,
+  );
 
   try {
     // ✅ SIMPLE: Get customs directly from shipping route
@@ -32,7 +34,9 @@ export async function calculateCustomsTier(
       .single();
 
     if (!error && route?.customs_percentage != null) {
-      console.log(`✅ [SIMPLIFIED] Found customs: ${route.customs_percentage}%, VAT: ${route.vat_percentage || 0}%`);
+      console.log(
+        `✅ [SIMPLIFIED] Found customs: ${route.customs_percentage}%, VAT: ${route.vat_percentage || 0}%`,
+      );
       return {
         customs_percentage: Number(route.customs_percentage),
         vat_percentage: Number(route.vat_percentage || 0),
@@ -64,7 +68,9 @@ export async function getCustomsTiersForRoute(
   originCountry: string,
   destinationCountry: string,
 ): Promise<Array<Tables<'route_customs_tiers'>>> {
-  console.warn('⚠️ getCustomsTiersForRoute is deprecated - use shipping route customs_percentage instead');
+  console.warn(
+    '⚠️ getCustomsTiersForRoute is deprecated - use shipping route customs_percentage instead',
+  );
   return [];
 }
 

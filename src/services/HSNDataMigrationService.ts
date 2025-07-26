@@ -571,10 +571,10 @@ class HSNDataMigrationService {
       });
 
       // Check if item was found and updated
-      const wasUpdated = updatedItems.some(item => 
-        item.id === itemId && item.hsn_code === hsnCode
+      const wasUpdated = updatedItems.some(
+        (item) => item.id === itemId && item.hsn_code === hsnCode,
       );
-      
+
       if (!wasUpdated) {
         throw new Error(`Item ${itemId} not found in quote ${quoteId}`);
       }
@@ -594,7 +594,9 @@ class HSNDataMigrationService {
         throw new Error(`Failed to update quote ${quoteId} with HSN data for item ${itemId}`);
       }
 
-      console.log(`✅ Successfully updated item ${itemId} with HSN code ${hsnCode} (confidence: ${confidence})`);
+      console.log(
+        `✅ Successfully updated item ${itemId} with HSN code ${hsnCode} (confidence: ${confidence})`,
+      );
     } catch (error) {
       console.error(`❌ Error updating item ${itemId} with HSN:`, error);
       throw error;
@@ -620,7 +622,7 @@ class HSNDataMigrationService {
           calculation_method: 'per_item_hsn',
           hsn_migration_completed: true,
           hsn_items_total: quote.items.length,
-          hsn_items_classified: quote.items.filter(item => item.hsn_code).length,
+          hsn_items_classified: quote.items.filter((item) => item.hsn_code).length,
         },
       });
 
@@ -805,7 +807,9 @@ class HSNDataMigrationService {
         throw new Error(`Failed to restore quote ${quoteId} from snapshot`);
       }
 
-      console.log(`✅ Successfully restored quote ${quoteId} from snapshot (${originalQuote.items?.length || 0} items)`);
+      console.log(
+        `✅ Successfully restored quote ${quoteId} from snapshot (${originalQuote.items?.length || 0} items)`,
+      );
     } catch (error) {
       console.error(`❌ Error restoring quote ${quoteId} from snapshot:`, error);
       throw error;

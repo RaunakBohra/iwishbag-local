@@ -31,16 +31,20 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
   // Determine the quote ID and whether we're using a share token
   const quoteId = shareToken || id;
   const isSharedQuote = Boolean(shareToken);
-  
+
   // Initialize quote state hook for operations (only if we have a valid quote ID)
   const quoteStateHook = useQuoteState(quoteId || '');
 
   // Fetch quote data
-  const { data: quote, isLoading, error } = useQuery({
+  const {
+    data: quote,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['unified-quote', quoteId, isSharedQuote],
     queryFn: async () => {
       if (!quoteId) throw new Error('No quote ID provided');
-      
+
       // For shared quotes, use a different endpoint that doesn't require auth
       if (isSharedQuote) {
         const { data, error } = await supabase
@@ -113,14 +117,14 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
     try {
       await quoteStateHook.approveQuote();
       toast({
-        title: "Quote Approved",
-        description: "Your quote has been approved successfully.",
+        title: 'Quote Approved',
+        description: 'Your quote has been approved successfully.',
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to approve quote. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to approve quote. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -129,14 +133,14 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
     try {
       await quoteStateHook.rejectQuote(reason);
       toast({
-        title: "Quote Rejected",
-        description: "Your quote has been rejected.",
+        title: 'Quote Rejected',
+        description: 'Your quote has been rejected.',
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to reject quote. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to reject quote. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -145,15 +149,15 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
     try {
       await quoteStateHook.addToCart();
       toast({
-        title: "Added to Cart",
-        description: "Quote has been added to your cart.",
+        title: 'Added to Cart',
+        description: 'Quote has been added to your cart.',
       });
       navigate('/cart');
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to add quote to cart. Please try again.",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to add quote to cart. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -175,9 +179,7 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
                 Back
               </Button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Quote #{quote.display_id}
-                </h1>
+                <h1 className="text-xl font-semibold text-gray-900">Quote #{quote.display_id}</h1>
                 <p className="text-sm text-gray-500">
                   {statusConfig?.label || quote.status} • {quote.destination_country}
                 </p>
@@ -229,10 +231,13 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
                 </div>
               </div>
             )}
-            
+
             {showHSNEducation && (
               <div className="space-y-4">
-                <TaxBreakdownEducation originCountry={quote.origin_country} destinationCountry={quote.destination_country} />
+                <TaxBreakdownEducation
+                  originCountry={quote.origin_country}
+                  destinationCountry={quote.destination_country}
+                />
               </div>
             )}
           </div>

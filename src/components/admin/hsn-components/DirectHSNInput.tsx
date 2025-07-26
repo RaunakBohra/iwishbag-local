@@ -158,10 +158,10 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
     setSearchQuery('');
     setSelectedIndex(-1);
     setIsEditing(false); // Stop editing mode
-    
+
     // Close dropdown immediately
     setIsOpen(false);
-    
+
     // Remove focus from input to prevent reopening
     inputRef.current?.blur();
 
@@ -225,9 +225,12 @@ export const DirectHSNInput: React.FC<DirectHSNInputProps> = ({
 
   return (
     <div className={`hsn-input-wrapper ${className}`}>
-      <Popover open={isOpen} onOpenChange={(open) => {
-        setIsOpen(open);
-      }}>
+      <Popover
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+        }}
+      >
         <PopoverTrigger asChild>
           <div className="relative">
             <Input

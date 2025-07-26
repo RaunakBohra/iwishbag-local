@@ -289,8 +289,13 @@ export default function UnifiedQuoteOrderSystem({
   const [handlingMode, setHandlingMode] = useState<'auto' | 'manual'>('auto');
   const [showCalculatedValues, setShowCalculatedValues] = useState(false);
   const [domesticShipping, setDomesticShipping] = useState(safeNumber(quote.calculation_metadata?.domestic_shipping));
+  const [internationalShipping, setInternationalShipping] = useState(safeNumber(quote.shipping));
+  const [selectedShippingOptionId, setSelectedShippingOptionId] = useState<string | null>(
+    quote.operational_data?.shipping?.selected_option || null
+  );
   const [discountAmount, setDiscountAmount] = useState(safeNumber(quote.discount));
   const [debugData, setDebugData] = useState<any>(null);
+  const [availableShippingOptions, setAvailableShippingOptions] = useState<any[]>([]);
 
   const StatusIcon = statusConfig[quote.status as keyof typeof statusConfig]?.icon || FileText;
   const statusColor = statusConfig[quote.status as keyof typeof statusConfig]?.color || 'bg-gray-500';
@@ -653,6 +658,24 @@ export default function UnifiedQuoteOrderSystem({
       };
 
       setDebugData(calculationDebugData);
+      
+      // Store available shipping options
+      if (calculationResult.shipping_options && calculationResult.shipping_options.length > 0) {
+        setAvailableShippingOptions(calculationResult.shipping_options);
+        
+        // If no shipping option is selected, select the first one
+        if (!selectedShippingOptionId) {
+          const firstOption = calculationResult.shipping_options[0];
+          setSelectedShippingOptionId(firstOption.id);
+          setInternationalShipping(firstOption.cost_usd);
+        } else {
+          // Update shipping cost based on selected option
+          const selectedOption = calculationResult.shipping_options.find(opt => opt.id === selectedShippingOptionId);
+          if (selectedOption) {
+            setInternationalShipping(selectedOption.cost_usd);
+          }
+        }
+      }
 
       // Update calculated values for input fields
       const calculatedHandlingValue = calculationResult.updated_quote?.calculation_data?.breakdown?.handling || 0;
@@ -1680,13 +1703,66 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="grid grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
+                          <div className="flex items-center justify-between">
+                            <Label>International Shipping</Label>
+                            {availableShippingOptions.length > 0 && (
+                              <Select 
+                                value={selectedShippingOptionId || ''} 
+                                onValueChange={(value) => {
+                                  setSelectedShippingOptionId(value);
+                                  const option = availableShippingOptions.find(opt => opt.id === value);
+                                  if (option) {
+                                    setInternationalShipping(option.cost_usd);
+                                    // Trigger recalculation with new shipping option
+                                    recalculateQuote(items);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-48 h-7">
+                                  <SelectValue placeholder="Select shipping method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableShippingOptions.map((option) => (
+                                    <SelectItem key={option.id} value={option.id}>
+                                      <div className="flex items-center justify-between w-full">
+                                        <span>{option.name} ({option.carrier})</span>
+                                        <span className="text-xs text-gray-500 ml-2">{option.days}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                          <div className="relative mt-2">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <Input 
+                              type="number" 
+                              className="pl-10 bg-blue-50 border-blue-200"
+                              value={internationalShipping}
+                              onChange={(e) => setInternationalShipping(Number(e.target.value))}
+                              readOnly={availableShippingOptions.length > 0}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs text-gray-500">International carrier shipping</p>
+                            {selectedShippingOptionId && availableShippingOptions.length > 0 && (
+                              <p className="text-xs text-blue-600">
+                                {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.name || 'Selected'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div>
                           <Label>Domestic Shipping</Label>
                           <div className="relative mt-2">
                             <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                             <Input 
                               type="number" 
                               className="pl-10"
-                              defaultValue={quote.calculation_metadata?.domestic_shipping || 0}
+                              value={domesticShipping}
+                              onChange={(e) => setDomesticShipping(Number(e.target.value))}
                             />
                           </div>
                           <p className="text-xs text-gray-500 mt-1">Last mile delivery cost</p>
@@ -1828,9 +1904,10 @@ export default function UnifiedQuoteOrderSystem({
                           </p>
                         </div>
                         <div>
-                          <p className="text-gray-500">Additional Costs</p>
+                          <p className="text-gray-500">Shipping & Fees</p>
                           <p className="font-medium">
                             ${(
+                              safeNumber(internationalShipping) +
                               safeNumber(domesticShipping) + 
                               safeNumber(handlingAmount) + 
                               safeNumber(insuranceAmount)

@@ -222,19 +222,10 @@ export class UnifiedDataEngine {
       this.clearCache(cacheKey);
     }
 
-    // Query the unified structure (quotes table with JSONB fields) and join with profiles for customer name and avatar
+    // Query the unified structure (quotes table with JSONB fields) - simplified to avoid JOIN issues
     const { data: quoteData, error: quoteError } = await supabase
       .from('quotes')
-      .select(
-        `
-        *,
-        profiles:user_id (
-          full_name,
-          email,
-          avatar_url
-        )
-      `,
-      )
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -375,7 +366,10 @@ export class UnifiedDataEngine {
             optimization_hints: [],
           },
         })),
-        base_total_usd: input.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0),
+        base_total_usd: input.items.reduce(
+          (sum, item) => sum + item.costprice_origin * item.quantity,
+          0,
+        ),
         final_total_usd: 0, // Will be calculated
         calculation_data: this.getDefaultCalculationData(),
         customer_data: input.customer_data || this.getDefaultCustomerData(),
@@ -413,7 +407,6 @@ export class UnifiedDataEngine {
    * Update quote with smart validation
    */
   async updateQuote(id: string, updates: Partial<UnifiedQuote>): Promise<boolean> {
-
     try {
       // Transform updates for database
       const dbUpdates: any = { updated_at: new Date().toISOString() };
@@ -431,13 +424,11 @@ export class UnifiedDataEngine {
       if (updates.optimization_score !== undefined)
         dbUpdates.optimization_score = updates.optimization_score;
 
-
       const { error } = await supabase.from('quotes').update(dbUpdates).eq('id', id);
 
       if (error) {
         throw error;
       }
-
 
       // Clear cache aggressively for status updates
       this.clearCache(`quote_${id}`);
@@ -486,7 +477,7 @@ export class UnifiedDataEngine {
       }
 
       // Find the item to update
-      const existingItem = quote.items.find(item => item.id === itemId);
+      const existingItem = quote.items.find((item) => item.id === itemId);
       if (!existingItem) {
         return false;
       }
@@ -503,7 +494,7 @@ export class UnifiedDataEngine {
       const updatedItems = quote.items.map((item) => {
         if (item.id === itemId) {
           const updatedItem = { ...item, ...updates };
-          
+
           // Enhanced smart_data handling for HSN updates
           if (updates.hsn_code || updates.category) {
             updatedItem.smart_data = {
@@ -513,7 +504,7 @@ export class UnifiedDataEngine {
               hsn_validation_status: 'validated',
             };
           }
-          
+
           return updatedItem;
         }
         return item;
@@ -532,7 +523,7 @@ export class UnifiedDataEngine {
         const previousCategory = existingItem.category;
         const newHsnCode = updates.hsn_code ?? existingItem.hsn_code;
         const newCategory = updates.category ?? existingItem.category;
-        
+
         // Determine the type of HSN modification
         let modificationType = 'update';
         if (!previousHsnCode && newHsnCode) {
@@ -542,7 +533,7 @@ export class UnifiedDataEngine {
         } else if (previousHsnCode !== newHsnCode) {
           modificationType = 'change';
         }
-        
+
         // Create detailed admin override log entry
         const overrideLogEntry = {
           timestamp: new Date().toISOString(),
@@ -556,22 +547,29 @@ export class UnifiedDataEngine {
           admin_source: 'unified_quote_interface',
           validation_passed: true,
         };
-        
+
         // Update operational data with enhanced tracking
         const existingOverrides = quote.operational_data?.admin_hsn_overrides || [];
         operationalUpdates.operational_data = {
           ...quote.operational_data,
           last_hsn_modification: new Date().toISOString(),
-          hsn_items_count: updatedItems.filter(item => item.hsn_code).length,
+          hsn_items_count: updatedItems.filter((item) => item.hsn_code).length,
           admin_override_count: (quote.operational_data?.admin_override_count || 0) + 1,
           // Enhanced admin override tracking
           admin_hsn_overrides: [...existingOverrides, overrideLogEntry].slice(-50), // Keep last 50 modifications
           last_admin_override: overrideLogEntry,
           admin_modification_summary: {
-            total_modifications: (quote.operational_data?.admin_modification_summary?.total_modifications || 0) + 1,
-            assignments: (quote.operational_data?.admin_modification_summary?.assignments || 0) + (modificationType === 'assign' ? 1 : 0),
-            changes: (quote.operational_data?.admin_modification_summary?.changes || 0) + (modificationType === 'change' ? 1 : 0),
-            clears: (quote.operational_data?.admin_modification_summary?.clears || 0) + (modificationType === 'clear' ? 1 : 0),
+            total_modifications:
+              (quote.operational_data?.admin_modification_summary?.total_modifications || 0) + 1,
+            assignments:
+              (quote.operational_data?.admin_modification_summary?.assignments || 0) +
+              (modificationType === 'assign' ? 1 : 0),
+            changes:
+              (quote.operational_data?.admin_modification_summary?.changes || 0) +
+              (modificationType === 'change' ? 1 : 0),
+            clears:
+              (quote.operational_data?.admin_modification_summary?.clears || 0) +
+              (modificationType === 'clear' ? 1 : 0),
             last_activity: new Date().toISOString(),
           },
         };
@@ -598,8 +596,8 @@ export class UnifiedDataEngine {
    * Validate HSN fields for data integrity
    */
   private async validateHSNFields(
-    updates: Partial<QuoteItem>, 
-    existingItem: QuoteItem
+    updates: Partial<QuoteItem>,
+    existingItem: QuoteItem,
   ): Promise<{ isValid: boolean; errors: string[] }> {
     const errors: string[] = [];
     const hsnCode = updates.hsn_code ?? existingItem.hsn_code;
@@ -1077,7 +1075,6 @@ export class UnifiedDataEngine {
    * Enhance quote items with HSN classification and currency conversion data
    */
   async enhanceQuoteWithHSNData(quote: UnifiedQuote): Promise<UnifiedQuote> {
-
     try {
       const enhancedItems = await Promise.all(
         quote.items.map(async (item) => {
@@ -1095,8 +1092,7 @@ export class UnifiedDataEngine {
               if (classificationResult.hsnCode && classificationResult.confidence > 0.6) {
                 enhancedItem.hsn_code = classificationResult.hsnCode;
               }
-            } catch (error) {
-            }
+            } catch (error) {}
           }
 
           // Add HSN metadata if HSN code is available
@@ -1130,8 +1126,7 @@ export class UnifiedDataEngine {
                         ? 'actual_price'
                         : 'minimum_valuation',
                   };
-                } catch (error) {
-                }
+                } catch (error) {}
               }
             }
           }
@@ -1156,7 +1151,6 @@ export class UnifiedDataEngine {
           },
         },
       };
-
 
       return enhancedQuote;
     } catch (error) {
@@ -1192,7 +1186,7 @@ export class UnifiedDataEngine {
     const recentActivity = overrides
       .slice(-10)
       .reverse()
-      .map(override => ({
+      .map((override) => ({
         ...override,
         time_ago: this.getTimeAgo(override.timestamp),
         action_description: this.getOverrideActionDescription(override),
@@ -1210,7 +1204,7 @@ export class UnifiedDataEngine {
    */
   private getOverrideActionDescription(override: any): string {
     const { modification_type, item_name, previous_hsn_code, new_hsn_code } = override;
-    
+
     switch (modification_type) {
       case 'assign':
         return `Assigned HSN ${new_hsn_code} to "${item_name}"`;

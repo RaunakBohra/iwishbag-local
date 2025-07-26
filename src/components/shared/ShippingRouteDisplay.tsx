@@ -69,7 +69,7 @@ export function ShippingRouteDisplay({
           {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
           <span>Origin:</span>
           <span className="font-medium text-foreground">
-            {countries.find((c) => c.code === origin)?.name || origin}
+            {Array.isArray(countries) ? countries.find((c) => c.code === origin)?.name || origin : origin}
             {showCodes && ` (${origin})`}
           </span>
         </div>
@@ -77,7 +77,7 @@ export function ShippingRouteDisplay({
           {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
           <span>Destination:</span>
           <span className="font-medium text-foreground">
-            {countries.find((c) => c.code === destination)?.name || destination}
+            {Array.isArray(countries) ? countries.find((c) => c.code === destination)?.name || destination : destination}
             {showCodes && ` (${destination})`}
           </span>
         </div>

@@ -24,45 +24,45 @@ const rejectionReasons = [
   {
     id: 'price_too_high',
     label: 'Price is too high',
-    description: 'The total cost exceeds my budget'
+    description: 'The total cost exceeds my budget',
   },
   {
     id: 'shipping_too_expensive',
     label: 'Shipping costs too much',
-    description: 'International shipping fees are too high'
+    description: 'International shipping fees are too high',
   },
   {
     id: 'taxes_too_high',
     label: 'Taxes and duties too high',
-    description: 'Customs duties and local taxes are excessive'
+    description: 'Customs duties and local taxes are excessive',
   },
   {
     id: 'delivery_too_slow',
     label: 'Delivery time too long',
-    description: 'Takes too long to receive the items'
+    description: 'Takes too long to receive the items',
   },
   {
     id: 'changed_mind',
     label: 'Changed my mind',
-    description: 'No longer need these items'
+    description: 'No longer need these items',
   },
   {
     id: 'found_better_deal',
     label: 'Found a better deal',
-    description: 'Found the same items at a better price elsewhere'
+    description: 'Found the same items at a better price elsewhere',
   },
   {
     id: 'other',
     label: 'Other reason',
-    description: 'Please specify in the details below'
-  }
+    description: 'Please specify in the details below',
+  },
 ];
 
 export const CustomerRejectQuoteDialog: React.FC<CustomerRejectQuoteDialogProps> = ({
   isOpen,
   onOpenChange,
   onConfirm,
-  isPending = false
+  isPending = false,
 }) => {
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [details, setDetails] = useState<string>('');
@@ -70,7 +70,7 @@ export const CustomerRejectQuoteDialog: React.FC<CustomerRejectQuoteDialogProps>
 
   const handleSubmit = async () => {
     if (!selectedReason) return;
-    
+
     setIsSubmitting(true);
     try {
       await onConfirm(selectedReason, details.trim() || undefined);
@@ -82,7 +82,7 @@ export const CustomerRejectQuoteDialog: React.FC<CustomerRejectQuoteDialogProps>
     }
   };
 
-  const selectedReasonData = rejectionReasons.find(r => r.id === selectedReason);
+  const selectedReasonData = rejectionReasons.find((r) => r.id === selectedReason);
   const showDetailsField = selectedReason === 'other' || details.length > 0;
 
   return (
@@ -94,8 +94,8 @@ export const CustomerRejectQuoteDialog: React.FC<CustomerRejectQuoteDialogProps>
             Reject Quote
           </DialogTitle>
           <DialogDescription>
-            We're sorry this quote doesn't meet your needs. Please let us know why you're rejecting it 
-            so we can improve our service.
+            We're sorry this quote doesn't meet your needs. Please let us know why you're rejecting
+            it so we can improve our service.
           </DialogDescription>
         </DialogHeader>
 
@@ -105,7 +105,10 @@ export const CustomerRejectQuoteDialog: React.FC<CustomerRejectQuoteDialogProps>
             <Label className="text-sm font-medium">Reason for rejection:</Label>
             <RadioGroup value={selectedReason} onValueChange={setSelectedReason}>
               {rejectionReasons.map((reason) => (
-                <div key={reason.id} className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-gray-50">
+                <div
+                  key={reason.id}
+                  className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-gray-50"
+                >
                   <RadioGroupItem value={reason.id} id={reason.id} className="mt-0.5" />
                   <div className="flex-1">
                     <Label htmlFor={reason.id} className="font-medium text-sm cursor-pointer">
@@ -127,9 +130,9 @@ export const CustomerRejectQuoteDialog: React.FC<CustomerRejectQuoteDialogProps>
               <Textarea
                 id="details"
                 placeholder={
-                  selectedReason === 'other' 
+                  selectedReason === 'other'
                     ? 'Please tell us more about your reason...'
-                    : 'Any additional feedback you\'d like to share...'
+                    : "Any additional feedback you'd like to share..."
                 }
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}

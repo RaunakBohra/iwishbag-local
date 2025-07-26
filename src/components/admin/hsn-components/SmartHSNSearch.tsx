@@ -152,7 +152,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const handleSearch = async (query: string) => {
     setSelectedIndex(-1); // Reset selection when search changes
-    
+
     if (!query.trim()) {
       // Show popular HSN codes when empty
       const popular = await enhancedHSNSearchService.searchHSN({ limit: 10 });
@@ -207,15 +207,15 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const items = getAllSelectableItems();
-    
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => (prev < items.length - 1 ? prev + 1 : 0));
+        setSelectedIndex((prev) => (prev < items.length - 1 ? prev + 1 : 0));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : items.length - 1));
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : items.length - 1));
         break;
       case 'Enter':
         e.preventDefault();
@@ -267,15 +267,15 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
     }
 
     console.log('🎯 [HSN] Calling callback with:', hsn);
-    
+
     // Support both onSelect and onHSNSelect for compatibility
     if (onSelect) {
       onSelect(hsn);
     } else {
       onHSNSelect(hsn);
     }
-    
-    // Close dropdown and clear search  
+
+    // Close dropdown and clear search
     setIsOpen(false);
     setSearchQuery('');
     setSelectedCategory('');
@@ -300,18 +300,22 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   return (
     <div className={className}>
       {/* World-Class HSN Search Dropdown */}
-      <Popover onOpenChange={(open) => {
-        setIsOpen(open);
-        if (open) {
-          setSearchQuery('');
-          setSelectedCategory('');
-          setSelectedIndex(-1);
-        } else {
-          setSelectedIndex(-1);
-        }
-      }}>
+      <Popover
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (open) {
+            setSearchQuery('');
+            setSelectedCategory('');
+            setSelectedIndex(-1);
+          } else {
+            setSelectedIndex(-1);
+          }
+        }}
+      >
         <PopoverTrigger asChild>
-          {trigger ? trigger : (
+          {trigger ? (
+            trigger
+          ) : (
             <button
               type="button"
               className={`
@@ -329,7 +333,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 <Search className="mr-2.5 h-4 w-4 text-gray-400 group-hover:text-gray-500 flex-shrink-0 transition-colors duration-150" />
                 {currentHSNData ? (
                   <div className="flex items-center min-w-0 flex-1">
-                    <div 
+                    <div
                       className="w-2 h-2 rounded-full mr-2 flex-shrink-0"
                       style={{ backgroundColor: currentHSNData.color }}
                     />
@@ -342,9 +346,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                     </span>
                   </div>
                 ) : (
-                  <span className="text-gray-500 truncate font-medium">
-                    Search HSN codes...
-                  </span>
+                  <span className="text-gray-500 truncate font-medium">Search HSN codes...</span>
                 )}
               </div>
               <div className="flex items-center ml-2 flex-shrink-0">
@@ -353,14 +355,14 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
             </button>
           )}
         </PopoverTrigger>
-        
-        <PopoverContent 
+
+        <PopoverContent
           className="
             w-96 p-0 border border-gray-200/60 
             shadow-2xl rounded-xl bg-white
             animate-in fade-in-0 zoom-in-95 duration-200
             data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95
-          " 
+          "
           align="start"
           sideOffset={8}
           onOpenAutoFocus={(e) => {
@@ -394,7 +396,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Search Hints - GitHub style */}
             {!searchQuery && (
               <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
@@ -424,14 +426,14 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       isSelected={selectedIndex === index}
                     />
                   ))}
-                  
+
                   {/* Regular Search Results */}
                   {searchResults.map((hsn, index) => (
                     <ModernHSNItem
                       key={hsn.hsn_code}
                       hsn={hsn}
                       onSelect={handleHSNSelect}
-                      isSelected={selectedIndex === (autoSuggestions.slice(0, 2).length + index)}
+                      isSelected={selectedIndex === autoSuggestions.slice(0, 2).length + index}
                     />
                   ))}
 
@@ -441,7 +443,9 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
                         <Search className="h-5 w-5 text-gray-400" />
                       </div>
-                      <div className="text-sm font-medium text-gray-900 mb-1">No HSN codes found</div>
+                      <div className="text-sm font-medium text-gray-900 mb-1">
+                        No HSN codes found
+                      </div>
                       <div className="text-xs text-gray-500 mb-4">
                         Try different keywords or browse categories below
                       </div>
@@ -465,10 +469,12 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                   <div className="px-4 py-3 border-b border-gray-50">
                     <div className="flex items-center gap-2">
                       <Grid3X3 className="h-4 w-4 text-gray-400" />
-                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Browse Categories</span>
+                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                        Browse Categories
+                      </span>
                     </div>
                   </div>
-                  
+
                   {/* Category List */}
                   <div className="py-1">
                     {categoryGroups.slice(0, 6).map((group, index) => (
@@ -481,16 +487,17 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                           transition-all duration-150 ease-in-out
                           group cursor-pointer
                           border-l-2 
-                          ${selectedIndex === index 
-                            ? 'bg-blue-50 border-l-blue-500 text-blue-900' 
-                            : 'border-transparent hover:bg-gray-50 hover:border-l-blue-500 active:bg-gray-100'
+                          ${
+                            selectedIndex === index
+                              ? 'bg-blue-50 border-l-blue-500 text-blue-900'
+                              : 'border-transparent hover:bg-gray-50 hover:border-l-blue-500 active:bg-gray-100'
                           }
                         `}
                         style={{
-                          animationDelay: `${index * 50}ms`
+                          animationDelay: `${index * 50}ms`,
                         }}
                       >
-                        <div 
+                        <div
                           className="w-2.5 h-2.5 rounded-full mr-3 flex-shrink-0 ring-2 ring-white shadow-sm"
                           style={{ backgroundColor: group.color }}
                         />
@@ -507,12 +514,14 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                             {group.count} HSN codes available
                           </div>
                         </div>
-                        <ChevronRight className="
+                        <ChevronRight
+                          className="
                           h-4 w-4 text-gray-300 group-hover:text-gray-500 
                           flex-shrink-0 ml-2
                           transition-all duration-150 ease-in-out
                           group-hover:translate-x-0.5
-                        " />
+                        "
+                        />
                       </button>
                     ))}
                   </div>
@@ -550,13 +559,13 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
     if (showBadge === 'AI') {
       return {
         text: 'AI',
-        className: 'bg-purple-100 text-purple-700 border-purple-200'
+        className: 'bg-purple-100 text-purple-700 border-purple-200',
       };
     }
     if (showBadge === 'Popular' || hsn.search_priority <= 2) {
       return {
         text: 'Popular',
-        className: 'bg-blue-50 text-blue-700 border-blue-200'
+        className: 'bg-blue-50 text-blue-700 border-blue-200',
       };
     }
     return null;
@@ -572,9 +581,10 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
         transition-colors duration-150 ease-in-out
         group cursor-pointer
         border-l-2 
-        ${isSelected 
-          ? 'bg-blue-50 border-l-blue-500 text-blue-900' 
-          : 'border-transparent hover:bg-gray-50 hover:border-l-blue-500 active:bg-gray-100'
+        ${
+          isSelected
+            ? 'bg-blue-50 border-l-blue-500 text-blue-900'
+            : 'border-transparent hover:bg-gray-50 hover:border-l-blue-500 active:bg-gray-100'
         }
       `}
       onClick={handleClick}
@@ -583,32 +593,28 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
       <div className="flex-1 min-w-0">
         {/* Main Line: Category - HSN Code */}
         <div className="flex items-center gap-2 mb-1">
-          <div 
+          <div
             className="w-2 h-2 rounded-full flex-shrink-0"
             style={{ backgroundColor: hsn.color }}
           />
-          <span className="font-medium text-gray-900 text-sm truncate">
-            {hsn.category}
-          </span>
+          <span className="font-medium text-gray-900 text-sm truncate">{hsn.category}</span>
           <span className="text-gray-400 text-sm">-</span>
-          <span className="font-mono font-semibold text-blue-600 text-sm">
-            {hsn.hsn_code}
-          </span>
+          <span className="font-mono font-semibold text-blue-600 text-sm">{hsn.hsn_code}</span>
           {badgeConfig && (
-            <span className={`
+            <span
+              className={`
               inline-flex items-center px-1.5 py-0.5 text-xs font-medium 
               rounded-md border ${badgeConfig.className}
-            `}>
+            `}
+            >
               {badgeConfig.text}
             </span>
           )}
         </div>
-        
+
         {/* Description Line */}
-        <div className="text-xs text-gray-600 truncate mb-0.5">
-          {hsn.display_name}
-        </div>
-        
+        <div className="text-xs text-gray-600 truncate mb-0.5">{hsn.display_name}</div>
+
         {/* Tax Info Line */}
         <div className="text-xs text-gray-500">
           {hsn.tax_data.typical_rates.customs.common}% customs duty
@@ -616,12 +622,14 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
       </div>
 
       {/* Right Arrow - GitHub/Stripe style */}
-      <ChevronRight className="
+      <ChevronRight
+        className="
         h-4 w-4 text-gray-300 group-hover:text-gray-500 
         flex-shrink-0 ml-2
         transition-all duration-150 ease-in-out
         group-hover:translate-x-0.5
-      " />
+      "
+      />
     </button>
   );
 };

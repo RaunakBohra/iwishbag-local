@@ -140,7 +140,8 @@ export const useUnifiedQuote = ({
         try {
           console.log('💾 [HOOK-FIX] Persisting async calculation results to database:', {
             quoteId: quoteData.id,
-            vatPercentage: result.updated_quote.operational_data?.customs?.smart_tier?.vat_percentage,
+            vatPercentage:
+              result.updated_quote.operational_data?.customs?.smart_tier?.vat_percentage,
           });
 
           const success = await unifiedDataEngine.updateQuote(quoteData.id, {
@@ -151,7 +152,9 @@ export const useUnifiedQuote = ({
           });
 
           if (success) {
-            console.log('✅ [HOOK-FIX] Successfully persisted async calculation results to database');
+            console.log(
+              '✅ [HOOK-FIX] Successfully persisted async calculation results to database',
+            );
           } else {
             console.error('❌ [HOOK-FIX] Failed to persist async calculation results to database');
           }

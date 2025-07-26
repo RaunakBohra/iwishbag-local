@@ -39,7 +39,7 @@ export class AppError extends Error {
       userMessage?: string;
       recoverable?: boolean;
       cause?: Error;
-    } = {}
+    } = {},
   ) {
     super(message);
     this.name = 'AppError';
@@ -164,7 +164,7 @@ export function handleError(
     additionalData?: Record<string, any>;
     showToast?: boolean;
     toastDuration?: number;
-  }
+  },
 ): void {
   const {
     component = 'Unknown',
@@ -175,15 +175,13 @@ export function handleError(
   } = context || {};
 
   // Convert to AppError if needed
-  const appError = error instanceof AppError
-    ? error
-    : new AppError(
-        error instanceof Error ? error.message : String(error),
-        {
+  const appError =
+    error instanceof AppError
+      ? error
+      : new AppError(error instanceof Error ? error.message : String(error), {
           type: detectErrorType(error),
           context: contextData,
-        }
-      );
+        });
 
   // Log to console in development
   if (process.env.NODE_ENV === 'development') {
@@ -215,7 +213,7 @@ export function handleError(
   // Show user notification
   if (showToast) {
     const userMessage = getUserMessage(appError);
-    
+
     switch (appError.severity) {
       case ErrorSeverity.CRITICAL:
         toast.error(userMessage, {
@@ -255,7 +253,7 @@ function mapSeverityToSentryLevel(severity: ErrorSeverity): Sentry.SeverityLevel
 // Async error wrapper
 export async function withErrorHandling<T>(
   fn: () => Promise<T>,
-  context?: Parameters<typeof handleError>[1]
+  context?: Parameters<typeof handleError>[1],
 ): Promise<T | null> {
   try {
     return await fn();
@@ -266,23 +264,16 @@ export async function withErrorHandling<T>(
 }
 
 // React hook for error handling
-export function useErrorHandler(
-  context?: Omit<Parameters<typeof handleError>[1], 'showToast'>
-) {
+export function useErrorHandler(context?: Omit<Parameters<typeof handleError>[1], 'showToast'>) {
   return {
     handleError: (error: unknown, showToast = true) =>
       handleError(error, { ...context, showToast }),
-    withErrorHandling: <T,>(fn: () => Promise<T>) =>
-      withErrorHandling(fn, context),
+    withErrorHandling: <T>(fn: () => Promise<T>) => withErrorHandling(fn, context),
   };
 }
 
 // Validation error builder
-export function createValidationError(
-  field: string,
-  message: string,
-  value?: any
-): AppError {
+export function createValidationError(field: string, message: string, value?: any): AppError {
   return new AppError(`Validation failed for ${field}: ${message}`, {
     type: ErrorType.VALIDATION,
     severity: ErrorSeverity.LOW,
@@ -292,11 +283,7 @@ export function createValidationError(
 }
 
 // Network error builder
-export function createNetworkError(
-  action: string,
-  statusCode?: number,
-  response?: any
-): AppError {
+export function createNetworkError(action: string, statusCode?: number, response?: any): AppError {
   return new AppError(`Network error during ${action}`, {
     type: ErrorType.NETWORK,
     severity: ErrorSeverity.HIGH,
@@ -306,11 +293,7 @@ export function createNetworkError(
 }
 
 // Database error builder
-export function createDatabaseError(
-  operation: string,
-  table?: string,
-  details?: any
-): AppError {
+export function createDatabaseError(operation: string, table?: string, details?: any): AppError {
   return new AppError(`Database error during ${operation}`, {
     type: ErrorType.DATABASE,
     severity: ErrorSeverity.HIGH,
@@ -320,10 +303,7 @@ export function createDatabaseError(
 }
 
 // Permission error builder
-export function createPermissionError(
-  action: string,
-  resource?: string
-): AppError {
+export function createPermissionError(action: string, resource?: string): AppError {
   return new AppError(`Permission denied for ${action}`, {
     type: ErrorType.PERMISSION,
     severity: ErrorSeverity.MEDIUM,
@@ -337,7 +317,7 @@ export function createPermissionError(
 export function createCalculationError(
   calculation: string,
   input?: any,
-  details?: string
+  details?: string,
 ): AppError {
   return new AppError(`Calculation error in ${calculation}: ${details}`, {
     type: ErrorType.CALCULATION,

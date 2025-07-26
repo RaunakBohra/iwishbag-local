@@ -39,26 +39,41 @@ const UltraCompactDemo = () => {
   const [modernHSN2, setModernHSN2] = useState(undefined);
 
   const weightSuggestions1 = [
-    { value: 1.5, source: 'hsn' as const, confidence: 0.95, description: 'Official database range: 1.3-1.7kg' },
-    { value: 0.2, source: 'ai' as const, confidence: 0.90, description: 'iPhone 15 Pro match detected' }
+    {
+      value: 1.5,
+      source: 'hsn' as const,
+      confidence: 0.95,
+      description: 'Official database range: 1.3-1.7kg',
+    },
+    {
+      value: 0.2,
+      source: 'ai' as const,
+      confidence: 0.9,
+      description: 'iPhone 15 Pro match detected',
+    },
   ];
 
   const weightSuggestions2 = [
-    { value: 0.8, source: 'hsn' as const, confidence: 0.85, description: 'Standard laptop accessory weight' },
-    { value: 1.1, source: 'ai' as const, confidence: 0.75, description: 'Gaming headset category' }
+    {
+      value: 0.8,
+      source: 'hsn' as const,
+      confidence: 0.85,
+      description: 'Standard laptop accessory weight',
+    },
+    { value: 1.1, source: 'ai' as const, confidence: 0.75, description: 'Gaming headset category' },
   ];
 
   const hsnSuggestions = [
     { code: '8517', description: 'Telephone sets, mobile phones', confidence: 0.92 },
     { code: '8471', description: 'Electronics and computers', confidence: 0.88 },
-    { code: '8518', description: 'Audio equipment and headphones', confidence: 0.85 }
+    { code: '8518', description: 'Audio equipment and headphones', confidence: 0.85 },
   ];
 
   const designs = [
     {
       name: 'Stripe Inspired',
       icon: Star,
-      description: 'Minimal, clean, subtle - following Stripe\'s design philosophy',
+      description: "Minimal, clean, subtle - following Stripe's design philosophy",
       color: 'from-gray-500 to-slate-600',
       bgColor: 'bg-gray-50',
       borderColor: 'border-gray-200',
@@ -71,12 +86,12 @@ const UltraCompactDemo = () => {
       setHSN1: setStripeHSN1,
       setHSN2: setStripeHSN2,
       WeightComponent: StripeWeightSelector,
-      HSNComponent: HSNDemoAdapter
+      HSNComponent: HSNDemoAdapter,
     },
     {
       name: 'Shopify Inspired',
       icon: Zap,
-      description: 'Professional with green accents - Shopify\'s signature style',
+      description: "Professional with green accents - Shopify's signature style",
       color: 'from-green-500 to-emerald-600',
       bgColor: 'bg-green-50',
       borderColor: 'border-green-200',
@@ -89,7 +104,7 @@ const UltraCompactDemo = () => {
       setHSN1: setShopifyHSN1,
       setHSN2: setShopifyHSN2,
       WeightComponent: ShopifyWeightSelector,
-      HSNComponent: HSNDemoAdapter
+      HSNComponent: HSNDemoAdapter,
     },
     {
       name: 'Modern Hybrid',
@@ -107,18 +122,21 @@ const UltraCompactDemo = () => {
       setHSN1: setModernHSN1,
       setHSN2: setModernHSN2,
       WeightComponent: ModernWeightSelector,
-      HSNComponent: HSNDemoAdapter
-    }
+      HSNComponent: HSNDemoAdapter,
+    },
   ];
 
   return (
     <div className="p-6 bg-gradient-to-br from-slate-50 to-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">Ultra-Compact Weight & HSN Selectors</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            Ultra-Compact Weight & HSN Selectors
+          </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Three world-class designs inspired by Stripe, Shopify, and modern UI patterns. 
-            Each follows your exact specification: <strong>input + arrow</strong> for weight, <strong>HSN number or search button</strong> for classification.
+            Three world-class designs inspired by Stripe, Shopify, and modern UI patterns. Each
+            follows your exact specification: <strong>input + arrow</strong> for weight,{' '}
+            <strong>HSN number or search button</strong> for classification.
           </p>
         </div>
 
@@ -127,7 +145,7 @@ const UltraCompactDemo = () => {
             const Icon = design.icon;
             const WeightComponent = design.WeightComponent;
             const HSNComponent = design.HSNComponent;
-            
+
             return (
               <div key={design.name} className="space-y-6">
                 {/* Design Header */}
@@ -153,7 +171,9 @@ const UltraCompactDemo = () => {
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Smartphone className="w-5 h-5 text-blue-600" />
                       iPhone 15 Pro
-                      <Badge variant="info" className="ml-auto">₹2,222.00</Badge>
+                      <Badge variant="info" className="ml-auto">
+                        ₹2,222.00
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -201,7 +221,9 @@ const UltraCompactDemo = () => {
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Headphones className="w-5 h-5 text-purple-600" />
                       Gaming Headset Pro
-                      <Badge variant="success" className="ml-auto">₹8,999.00</Badge>
+                      <Badge variant="success" className="ml-auto">
+                        ₹8,999.00
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -260,37 +282,61 @@ const UltraCompactDemo = () => {
               <div>
                 <h4 className="font-semibold text-blue-900 mb-3">🎯 Weight Selector Pattern</h4>
                 <ul className="text-sm text-blue-800 space-y-2">
-                  <li>• <strong>Input box</strong> for direct weight entry</li>
-                  <li>• <strong>Arrow button</strong> reveals AI & HSN suggestions</li>
-                  <li>• <strong>Confidence indicators</strong> show reliability</li>
-                  <li>• <strong>One-click apply</strong> from dropdown</li>
+                  <li>
+                    • <strong>Input box</strong> for direct weight entry
+                  </li>
+                  <li>
+                    • <strong>Arrow button</strong> reveals AI & HSN suggestions
+                  </li>
+                  <li>
+                    • <strong>Confidence indicators</strong> show reliability
+                  </li>
+                  <li>
+                    • <strong>One-click apply</strong> from dropdown
+                  </li>
                 </ul>
               </div>
               <div>
                 <h4 className="font-semibold text-blue-900 mb-3">🏷️ HSN Selector Pattern</h4>
                 <ul className="text-sm text-blue-800 space-y-2">
-                  <li>• <strong>HSN number badge</strong> when code is selected</li>
-                  <li>• <strong>Search button</strong> when no code assigned</li>
-                  <li>• <strong>Smart suggestions</strong> based on product</li>
-                  <li>• <strong>Full search interface</strong> with autocomplete</li>
+                  <li>
+                    • <strong>HSN number badge</strong> when code is selected
+                  </li>
+                  <li>
+                    • <strong>Search button</strong> when no code assigned
+                  </li>
+                  <li>
+                    • <strong>Smart suggestions</strong> based on product
+                  </li>
+                  <li>
+                    • <strong>Full search interface</strong> with autocomplete
+                  </li>
                 </ul>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg p-6 border border-blue-200">
               <h4 className="font-semibold text-blue-900 mb-3">🚀 Perfect for Your Platform</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div>
                   <strong className="text-blue-900">Stripe:</strong>
-                  <div className="text-blue-700">Minimal, clean, focuses on functionality. Perfect for professional admin interfaces.</div>
+                  <div className="text-blue-700">
+                    Minimal, clean, focuses on functionality. Perfect for professional admin
+                    interfaces.
+                  </div>
                 </div>
                 <div>
                   <strong className="text-blue-900">Shopify:</strong>
-                  <div className="text-blue-700">Green accents, more visual hierarchy. Great for e-commerce focused workflows.</div>
+                  <div className="text-blue-700">
+                    Green accents, more visual hierarchy. Great for e-commerce focused workflows.
+                  </div>
                 </div>
                 <div>
                   <strong className="text-blue-900">Modern:</strong>
-                  <div className="text-blue-700">Contemporary gradients and animations. Best user experience with sophisticated interactions.</div>
+                  <div className="text-blue-700">
+                    Contemporary gradients and animations. Best user experience with sophisticated
+                    interactions.
+                  </div>
                 </div>
               </div>
             </div>

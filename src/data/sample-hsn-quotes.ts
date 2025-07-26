@@ -113,7 +113,7 @@ export const sampleHSNQuotes: UnifiedQuote[] = [
         id: 'item-mobile-1',
         name: 'Samsung Galaxy A54 5G',
         quantity: 1,
-        price_usd: 301.20, // ₹25,000 INR converted to USD
+        price_usd: 301.2, // ₹25,000 INR converted to USD
         weight_kg: 0.2,
         url: 'https://example.com/galaxy-a54',
         image_url: '',
@@ -128,7 +128,7 @@ export const sampleHSNQuotes: UnifiedQuote[] = [
         },
       },
     ],
-    base_total_usd: 301.20,
+    base_total_usd: 301.2,
     final_total_usd: 0,
     calculation_data: {
       breakdown: {
@@ -317,7 +317,7 @@ export const sampleHSNQuotes: UnifiedQuote[] = [
         id: 'item-multi-2',
         name: 'Bluetooth Earbuds',
         quantity: 1,
-        price_usd: 24.10, // ₹2,000 INR
+        price_usd: 24.1, // ₹2,000 INR
         weight_kg: 0.1,
         url: 'https://example.com/earbuds',
         image_url: '',

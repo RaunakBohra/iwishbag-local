@@ -1,0 +1,15 @@
+name = "iwishbag-hybrid-worker"
+main = "workers/hybrid-worker.js"
+compatibility_date = "2023-12-01"
+account_id = "610762493d34333f1a6d72a037b345cf"
+
+[env.production]
+vars = { R2_PUBLIC_DOMAIN = "r2.iwishbag.com" }
+
+[[r2_buckets]]
+binding = "IWISHBAG_NEW"
+bucket_name = "iwishbag-new"
+
+[[kv_namespaces]]
+binding = "IWISHBAG_CACHE"
+id = "6f5087b9d89146dfbeb8efa92a9b4756"

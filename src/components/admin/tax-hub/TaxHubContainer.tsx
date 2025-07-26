@@ -1,16 +1,16 @@
 /**
  * TAX HUB CONTAINER
- * 
+ *
  * Main container implementing the Hub and Spoke navigation pattern.
  * Replaces the cramped tabbed interface with a professional, scalable
  * design that prioritizes user experience and information hierarchy.
- * 
+ *
  * Architecture:
  * - Hub: TaxOverviewHub (central dashboard)
  * - Spokes: TaxDetailPanel (contextual slide-in panels)
  * - Responsive: Adapts layout based on screen size
  * - State Management: Coordinates between hub and spokes
- * 
+ *
  * Features:
  * - Intelligent layout switching (sidebar vs overlay)
  * - Smooth transitions between views
@@ -46,19 +46,19 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
   onUpdateQuote,
   className = '',
   compact = false,
-  editMode = true
+  editMode = true,
 }) => {
   // State
   const [activePanelType, setActivePanelType] = useState<PanelType | null>(null);
   const [currentMethod, setCurrentMethod] = useState<string>(
-    quote?.calculation_method_preference || 'auto'
+    quote?.calculation_method_preference || 'auto',
   );
   const [itemValuationMethods, setItemValuationMethods] = useState<Record<string, string>>({});
-  
+
   // Responsive behavior
   const breakpoint = useBreakpoint();
   const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
-  
+
   // Panel state
   const isPanelOpen = activePanelType !== null;
 
@@ -68,7 +68,7 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
   useEffect(() => {
     if (quote) {
       setCurrentMethod(quote.calculation_method_preference || 'auto');
-      
+
       // Load item valuation methods from operational data
       if (quote.operational_data?.item_valuation_preferences) {
         setItemValuationMethods(quote.operational_data.item_valuation_preferences);
@@ -93,44 +93,50 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
   /**
    * Handle tax method changes with state synchronization
    */
-  const handleMethodChange = useCallback(async (method: string, metadata?: any) => {
-    try {
-      setCurrentMethod(method);
-      await onMethodChange(method, metadata);
-      
-      // Close panel on mobile after successful change
-      if (isMobile && activePanelType === 'methods') {
-        setActivePanelType(null);
+  const handleMethodChange = useCallback(
+    async (method: string, metadata?: any) => {
+      try {
+        setCurrentMethod(method);
+        await onMethodChange(method, metadata);
+
+        // Close panel on mobile after successful change
+        if (isMobile && activePanelType === 'methods') {
+          setActivePanelType(null);
+        }
+      } catch (error) {
+        console.error('Method change error:', error);
+        // Revert state on error
+        setCurrentMethod(quote?.calculation_method_preference || 'auto');
       }
-    } catch (error) {
-      console.error('Method change error:', error);
-      // Revert state on error
-      setCurrentMethod(quote?.calculation_method_preference || 'auto');
-    }
-  }, [onMethodChange, isMobile, activePanelType, quote?.calculation_method_preference]);
+    },
+    [onMethodChange, isMobile, activePanelType, quote?.calculation_method_preference],
+  );
 
   /**
    * Handle valuation method changes with state synchronization
    */
-  const handleValuationChange = useCallback(async (itemId: string, method: string, amount?: number) => {
-    try {
-      setItemValuationMethods(prev => ({ ...prev, [itemId]: method }));
-      await onValuationChange(itemId, method, amount);
-      
-      // Close panel on mobile after successful change
-      if (isMobile && activePanelType === 'valuations') {
-        setActivePanelType(null);
+  const handleValuationChange = useCallback(
+    async (itemId: string, method: string, amount?: number) => {
+      try {
+        setItemValuationMethods((prev) => ({ ...prev, [itemId]: method }));
+        await onValuationChange(itemId, method, amount);
+
+        // Close panel on mobile after successful change
+        if (isMobile && activePanelType === 'valuations') {
+          setActivePanelType(null);
+        }
+      } catch (error) {
+        console.error('Valuation change error:', error);
+        // Revert state on error
+        setItemValuationMethods((prev) => {
+          const reverted = { ...prev };
+          delete reverted[itemId];
+          return reverted;
+        });
       }
-    } catch (error) {
-      console.error('Valuation change error:', error);
-      // Revert state on error
-      setItemValuationMethods(prev => {
-        const reverted = { ...prev };
-        delete reverted[itemId];
-        return reverted;
-      });
-    }
-  }, [onValuationChange, isMobile, activePanelType]);
+    },
+    [onValuationChange, isMobile, activePanelType],
+  );
 
   /**
    * Handle recalculation with panel management
@@ -138,7 +144,7 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
   const handleRecalculate = useCallback(async () => {
     try {
       await onRecalculate();
-      
+
       // On mobile, close panel after recalculation to show results
       if (isMobile && activePanelType) {
         setTimeout(() => setActivePanelType(null), 500);
@@ -159,7 +165,7 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
           onOpenDetailPanel={handleOpenDetailPanel}
           onRecalculate={handleRecalculate}
         />
-        
+
         {/* Detail panel for compact mode */}
         {isPanelOpen && (
           <TaxDetailPanel
@@ -194,7 +200,7 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
               onRecalculate={handleRecalculate}
             />
           </div>
-          
+
           {/* Spoke: Contextual detail panel */}
           <div>
             <TaxDetailPanel
@@ -231,7 +237,7 @@ export const TaxHubContainer: React.FC<TaxHubContainerProps> = ({
           />
         </Stack>
       </Container>
-      
+
       {/* Overlay Detail Panel */}
       {isPanelOpen && (
         <TaxDetailPanel

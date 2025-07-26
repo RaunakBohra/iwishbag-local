@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Globe } from 'lucide-react';
 import { useGuestCurrency } from '@/contexts/GuestCurrencyContext';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface GuestCurrencySelectorProps {
   defaultCurrency?: string; // Fallback country code or currency code
@@ -29,7 +29,7 @@ export function GuestCurrencySelector({
         setIsLoading(true);
 
         // Get all currencies from CurrencyService
-        const currencies = await currencyService.getAllCurrencies();
+        const currencies = await optimizedCurrencyService.getAllCurrencies();
 
         // Format for display
         const formatted = currencies.map((currency) => ({
@@ -66,7 +66,7 @@ export function GuestCurrencySelector({
         // If defaultCurrency looks like a country code (2 letters), get its currency
         if (defaultCurrency.length === 2) {
           try {
-            const countryCurrency = await currencyService.getCurrencyForCountry(defaultCurrency);
+            const countryCurrency = await optimizedCurrencyService.getCurrencyForCountry(defaultCurrency);
             if (countryCurrency) {
               currencyToSet = countryCurrency;
             }

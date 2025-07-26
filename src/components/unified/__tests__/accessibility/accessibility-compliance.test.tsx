@@ -27,12 +27,12 @@ const mockSpeechSynthesis = {
   pending: false,
   paused: false,
   addEventListener: vi.fn(),
-  removeEventListener: vi.fn()
+  removeEventListener: vi.fn(),
 };
 
 Object.defineProperty(window, 'speechSynthesis', {
   value: mockSpeechSynthesis,
-  configurable: true
+  configurable: true,
 });
 
 // Mock Media Query for reduced motion
@@ -47,7 +47,7 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-  configurable: true
+  configurable: true,
 });
 
 // Mock Intersection Observer for lazy loading accessibility
@@ -55,13 +55,15 @@ const mockIntersectionObserver = vi.fn().mockImplementation((callback) => ({
   observe: vi.fn((target) => {
     // Simulate visibility change for screen reader announcements
     setTimeout(() => {
-      callback([{
-        target,
-        isIntersecting: true,
-        intersectionRatio: 1,
-        boundingClientRect: { top: 0, bottom: 100, height: 100 },
-        rootBounds: { top: 0, bottom: 800, height: 800 }
-      }]);
+      callback([
+        {
+          target,
+          isIntersecting: true,
+          intersectionRatio: 1,
+          boundingClientRect: { top: 0, bottom: 100, height: 100 },
+          rootBounds: { top: 0, bottom: 800, height: 800 },
+        },
+      ]);
     }, 100);
   }),
   unobserve: vi.fn(),
@@ -94,16 +96,16 @@ const accessibilityTestQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 399.99,
   item_price: 329.99,
-  sales_tax_price: 26.40,
-  merchant_shipping_price: 15.00,
+  sales_tax_price: 26.4,
+  merchant_shipping_price: 15.0,
   international_shipping: 29.99,
-  customs_and_ecs: 16.50,
+  customs_and_ecs: 16.5,
   domestic_shipping: 8.99,
   handling_charge: 4.99,
   insurance_amount: 3.99,
   payment_gateway_fee: 4.99,
-  vat: 0.00,
-  discount: 15.00,
+  vat: 0.0,
+  discount: 15.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -111,26 +113,28 @@ const accessibilityTestQuote: UnifiedQuote = {
     info: {
       name: 'Accessibility Test User',
       email: 'accessibility@example.com',
-      phone: '+91-9876543210'
-    }
+      phone: '+91-9876543210',
+    },
   },
   shipping_address: {
-    formatted: '123 Accessibility Street, Mumbai, Maharashtra 400001, India'
+    formatted: '123 Accessibility Street, Mumbai, Maharashtra 400001, India',
   },
-  items: [{
-    id: 'accessibility-item',
-    name: 'High-Contrast Gaming Monitor',
-    description: 'Professional gaming monitor with accessibility features',
-    quantity: 1,
-    price: 329.99,
-    product_url: 'https://amazon.com/gaming-monitor',
-    image_url: 'https://example.com/monitor.jpg'
-  }],
+  items: [
+    {
+      id: 'accessibility-item',
+      name: 'High-Contrast Gaming Monitor',
+      description: 'Professional gaming monitor with accessibility features',
+      quantity: 1,
+      price: 329.99,
+      product_url: 'https://amazon.com/gaming-monitor',
+      image_url: 'https://example.com/monitor.jpg',
+    },
+  ],
   notes: 'Accessibility compliance test quote',
   admin_notes: 'WCAG 2.2 AA testing',
   priority: 'high',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
@@ -145,11 +149,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -158,7 +160,7 @@ const simulateScreenReaderAnnouncement = (element: HTMLElement) => {
   const ariaLive = element.getAttribute('aria-live');
   const ariaLabel = element.getAttribute('aria-label');
   const textContent = element.textContent;
-  
+
   if (ariaLive || ariaLabel || textContent) {
     mockSpeechSynthesis.speak(new SpeechSynthesisUtterance(ariaLabel || textContent || ''));
   }
@@ -176,11 +178,7 @@ describe('Accessibility Compliance Tests', () => {
   describe('WCAG 2.2 AA Compliance', () => {
     it('should pass axe accessibility audit for UnifiedQuoteCard', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />,
       );
 
       const results = await axe(container);
@@ -189,11 +187,7 @@ describe('Accessibility Compliance Tests', () => {
 
     it('should pass axe accessibility audit for UnifiedQuoteForm', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={vi.fn()}
-        />
+        <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />,
       );
 
       const results = await axe(container);
@@ -202,11 +196,7 @@ describe('Accessibility Compliance Tests', () => {
 
     it('should pass axe accessibility audit for UnifiedQuoteList', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteList
-          quotes={[accessibilityTestQuote]}
-          viewMode="customer"
-          layout="list"
-        />
+        <UnifiedQuoteList quotes={[accessibilityTestQuote]} viewMode="customer" layout="list" />,
       );
 
       const results = await axe(container);
@@ -215,10 +205,7 @@ describe('Accessibility Compliance Tests', () => {
 
     it('should pass axe accessibility audit for UnifiedQuoteBreakdown', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteBreakdown
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-        />
+        <UnifiedQuoteBreakdown quote={accessibilityTestQuote} viewMode="customer" />,
       );
 
       const results = await axe(container);
@@ -231,7 +218,7 @@ describe('Accessibility Compliance Tests', () => {
           quote={accessibilityTestQuote}
           viewMode="customer"
           onAction={vi.fn()}
-        />
+        />,
       );
 
       const results = await axe(container);
@@ -245,11 +232,7 @@ describe('Accessibility Compliance Tests', () => {
       const mockSubmit = vi.fn();
 
       renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={mockSubmit}
-        />
+        <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={mockSubmit} />,
       );
 
       // Tab through form fields
@@ -273,9 +256,9 @@ describe('Accessibility Compliance Tests', () => {
       await user.type(screen.getByLabelText(/product url/i), 'https://amazon.com/test');
       await user.type(screen.getByLabelText(/your name/i), 'Test User');
       await user.type(screen.getByLabelText(/email address/i), 'test@example.com');
-      
+
       await user.keyboard('{Enter}');
-      
+
       await waitFor(() => {
         expect(mockSubmit).toHaveBeenCalled();
       });
@@ -290,13 +273,13 @@ describe('Accessibility Compliance Tests', () => {
           quote={accessibilityTestQuote}
           viewMode="customer"
           onAction={mockAction}
-        />
+        />,
       );
 
       // Test keyboard activation of approve button
       const approveButton = screen.getByText('Approve Quote');
       approveButton.focus();
-      
+
       await user.keyboard('{Enter}');
       expect(mockAction).toHaveBeenCalledWith('approve');
 
@@ -311,20 +294,16 @@ describe('Accessibility Compliance Tests', () => {
       const user = userEvent.setup();
 
       renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />,
       );
 
       // Tab to focusable elements and check focus indicators
       await user.tab();
       const focusedElement = document.activeElement;
-      
+
       // Check that focused element has focus-visible styles
       expect(focusedElement).toHaveClass('focus:ring-2');
-      
+
       // Check focus outline
       const computedStyle = window.getComputedStyle(focusedElement!);
       expect(computedStyle.outline).not.toBe('none');
@@ -332,7 +311,7 @@ describe('Accessibility Compliance Tests', () => {
 
     it('should trap focus in modal dialogs', async () => {
       const user = userEvent.setup();
-      
+
       const ModalTest = () => {
         const [showModal, setShowModal] = React.useState(false);
 
@@ -376,16 +355,14 @@ describe('Accessibility Compliance Tests', () => {
   describe('Screen Reader Support', () => {
     it('should provide appropriate ARIA labels and descriptions', async () => {
       renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />,
       );
 
       // Check ARIA labels
-      expect(screen.getByRole('article')).toHaveAttribute('aria-label', 
-        expect.stringContaining('Quote QT-ACC001'));
+      expect(screen.getByRole('article')).toHaveAttribute(
+        'aria-label',
+        expect.stringContaining('Quote QT-ACC001'),
+      );
 
       // Check price information has proper labeling
       const priceElement = screen.getByText('$399.99');
@@ -393,8 +370,10 @@ describe('Accessibility Compliance Tests', () => {
 
       // Check status has proper semantic meaning
       const statusElement = screen.getByText('sent');
-      expect(statusElement).toHaveAttribute('aria-label', 
-        expect.stringContaining('Quote status: sent'));
+      expect(statusElement).toHaveAttribute(
+        'aria-label',
+        expect.stringContaining('Quote status: sent'),
+      );
     });
 
     it('should announce dynamic content changes', async () => {
@@ -405,11 +384,11 @@ describe('Accessibility Compliance Tests', () => {
         const updateStatus = (newStatus: string) => {
           setStatus(newStatus);
           setAnnouncement(`Quote status updated to ${newStatus}`);
-          
+
           // Simulate screen reader announcement
           setTimeout(() => {
             simulateScreenReaderAnnouncement(
-              document.querySelector('[aria-live="polite"]') as HTMLElement
+              document.querySelector('[aria-live="polite"]') as HTMLElement,
             );
           }, 100);
         };
@@ -420,7 +399,7 @@ describe('Accessibility Compliance Tests', () => {
               {announcement}
             </div>
             <UnifiedQuoteCard
-              quote={{...accessibilityTestQuote, status: status as any}}
+              quote={{ ...accessibilityTestQuote, status: status as any }}
               viewMode="admin"
               layout="detail"
             />
@@ -439,18 +418,15 @@ describe('Accessibility Compliance Tests', () => {
       await waitFor(() => {
         expect(mockSpeechSynthesis.speak).toHaveBeenCalledWith(
           expect.objectContaining({
-            text: expect.stringContaining('Quote status updated to approved')
-          })
+            text: expect.stringContaining('Quote status updated to approved'),
+          }),
         );
       });
     });
 
     it('should provide proper heading hierarchy', async () => {
       renderWithProviders(
-        <UnifiedQuoteBreakdown
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-        />
+        <UnifiedQuoteBreakdown quote={accessibilityTestQuote} viewMode="customer" />,
       );
 
       // Check heading levels
@@ -462,20 +438,16 @@ describe('Accessibility Compliance Tests', () => {
 
       // Verify no heading levels are skipped
       const allHeadings = screen.getAllByRole('heading');
-      const headingLevels = allHeadings.map(h => parseInt(h.tagName.slice(1)));
-      
+      const headingLevels = allHeadings.map((h) => parseInt(h.tagName.slice(1)));
+
       for (let i = 1; i < headingLevels.length; i++) {
-        expect(headingLevels[i] - headingLevels[i-1]).toBeLessThanOrEqual(1);
+        expect(headingLevels[i] - headingLevels[i - 1]).toBeLessThanOrEqual(1);
       }
     });
 
     it('should support screen reader table navigation', async () => {
       renderWithProviders(
-        <UnifiedQuoteList
-          quotes={[accessibilityTestQuote]}
-          viewMode="admin"
-          layout="table"
-        />
+        <UnifiedQuoteList quotes={[accessibilityTestQuote]} viewMode="admin" layout="table" />,
       );
 
       // Check table structure
@@ -485,14 +457,14 @@ describe('Accessibility Compliance Tests', () => {
       // Check column headers
       const columnHeaders = screen.getAllByRole('columnheader');
       expect(columnHeaders.length).toBeGreaterThan(0);
-      
-      columnHeaders.forEach(header => {
+
+      columnHeaders.forEach((header) => {
         expect(header).toHaveAttribute('scope', 'col');
       });
 
       // Check row headers
       const rowHeaders = screen.getAllByRole('rowheader');
-      rowHeaders.forEach(header => {
+      rowHeaders.forEach((header) => {
         expect(header).toHaveAttribute('scope', 'row');
       });
 
@@ -504,18 +476,14 @@ describe('Accessibility Compliance Tests', () => {
   describe('Color Contrast and Visual Accessibility', () => {
     it('should meet WCAG AA color contrast requirements', async () => {
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />,
       );
 
       // Test critical color combinations
       const statusBadge = container.querySelector('[data-testid="quote-status"]');
       if (statusBadge) {
         const computedStyle = window.getComputedStyle(statusBadge);
-        
+
         // Simulate color contrast check (in real implementation, use color-contrast library)
         expect(computedStyle.color).not.toBe(computedStyle.backgroundColor);
       }
@@ -529,7 +497,7 @@ describe('Accessibility Compliance Tests', () => {
           addListener: vi.fn(),
           removeListener: vi.fn(),
         })),
-        configurable: true
+        configurable: true,
       });
 
       // Component should adapt to high contrast mode
@@ -539,19 +507,18 @@ describe('Accessibility Compliance Tests', () => {
     it('should not rely solely on color to convey information', async () => {
       renderWithProviders(
         <UnifiedQuoteActions
-          quote={{...accessibilityTestQuote, priority: 'urgent'}}
+          quote={{ ...accessibilityTestQuote, priority: 'urgent' }}
           viewMode="admin"
           onAction={vi.fn()}
-        />
+        />,
       );
 
       // Priority should be indicated by icon AND color
       const priorityIndicator = screen.getByTitle('Urgent priority');
       expect(priorityIndicator).toBeInTheDocument();
-      
+
       // Should have both visual (icon) and text indicators
-      expect(priorityIndicator).toHaveAttribute('aria-label', 
-        expect.stringContaining('Urgent'));
+      expect(priorityIndicator).toHaveAttribute('aria-label', expect.stringContaining('Urgent'));
     });
 
     it('should support reduced motion preferences', async () => {
@@ -564,20 +531,16 @@ describe('Accessibility Compliance Tests', () => {
           addListener: vi.fn(),
           removeListener: vi.fn(),
         })),
-        configurable: true
+        configurable: true,
       });
 
       const { container } = renderWithProviders(
-        <UnifiedQuoteList
-          quotes={[accessibilityTestQuote]}
-          viewMode="customer"
-          layout="list"
-        />
+        <UnifiedQuoteList quotes={[accessibilityTestQuote]} viewMode="customer" layout="list" />,
       );
 
       // Animations should be disabled
       const animatedElements = container.querySelectorAll('[class*="animate-"]');
-      animatedElements.forEach(element => {
+      animatedElements.forEach((element) => {
         expect(element).toHaveClass('motion-reduce:animate-none');
       });
     });
@@ -587,17 +550,11 @@ describe('Accessibility Compliance Tests', () => {
     it('should provide clear form labels and error messages', async () => {
       const user = userEvent.setup();
 
-      renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={vi.fn()}
-        />
-      );
+      renderWithProviders(<UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />);
 
       // All inputs should have labels
       const inputs = screen.getAllByRole('textbox');
-      inputs.forEach(input => {
+      inputs.forEach((input) => {
         expect(input).toHaveAccessibleName();
       });
 
@@ -609,22 +566,14 @@ describe('Accessibility Compliance Tests', () => {
       await waitFor(() => {
         expect(emailInput).toHaveAttribute('aria-invalid', 'true');
         expect(emailInput).toHaveAttribute('aria-describedby');
-        
-        const errorMessage = document.getElementById(
-          emailInput.getAttribute('aria-describedby')!
-        );
+
+        const errorMessage = document.getElementById(emailInput.getAttribute('aria-describedby')!);
         expect(errorMessage).toHaveTextContent(/valid email/i);
       });
     });
 
     it('should group related form fields', async () => {
-      renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={vi.fn()}
-        />
-      );
+      renderWithProviders(<UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />);
 
       // Address fields should be grouped
       const addressFieldset = screen.getByRole('group', { name: /shipping address/i });
@@ -636,20 +585,12 @@ describe('Accessibility Compliance Tests', () => {
     });
 
     it('should provide help text and instructions', async () => {
-      renderWithProviders(
-        <UnifiedQuoteForm
-          mode="create"
-          viewMode="guest"
-          onSubmit={vi.fn()}
-        />
-      );
+      renderWithProviders(<UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />);
 
       const productUrlInput = screen.getByLabelText(/product url/i);
       expect(productUrlInput).toHaveAttribute('aria-describedby');
-      
-      const helpText = document.getElementById(
-        productUrlInput.getAttribute('aria-describedby')!
-      );
+
+      const helpText = document.getElementById(productUrlInput.getAttribute('aria-describedby')!);
       expect(helpText).toHaveTextContent(/paste the full product page URL/i);
     });
   });
@@ -661,16 +602,12 @@ describe('Accessibility Compliance Tests', () => {
       document.documentElement.setAttribute('lang', 'ar');
 
       const { container } = renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />,
       );
 
       // Layout should adapt to RTL
       expect(container.firstChild).toHaveClass('rtl:flex-row-reverse');
-      
+
       // Cleanup
       document.documentElement.setAttribute('dir', 'ltr');
       document.documentElement.setAttribute('lang', 'en');
@@ -681,15 +618,17 @@ describe('Accessibility Compliance Tests', () => {
         <UnifiedQuoteCard
           quote={{
             ...accessibilityTestQuote,
-            items: [{
-              ...accessibilityTestQuote.items[0],
-              name: 'モニター', // Japanese text
-              description: 'ゲーミングモニター'
-            }]
+            items: [
+              {
+                ...accessibilityTestQuote.items[0],
+                name: 'モニター', // Japanese text
+                description: 'ゲーミングモニター',
+              },
+            ],
           }}
           viewMode="customer"
           layout="detail"
-        />
+        />,
       );
 
       // Foreign language content should have lang attribute
@@ -699,10 +638,7 @@ describe('Accessibility Compliance Tests', () => {
 
     it('should handle currency and number formatting for accessibility', async () => {
       renderWithProviders(
-        <UnifiedQuoteBreakdown
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-        />
+        <UnifiedQuoteBreakdown quote={accessibilityTestQuote} viewMode="customer" />,
       );
 
       // Price should be announced properly by screen readers
@@ -722,12 +658,12 @@ describe('Accessibility Compliance Tests', () => {
           quote={accessibilityTestQuote}
           viewMode="customer"
           onAction={vi.fn()}
-        />
+        />,
       );
 
       // Buttons should meet minimum touch target size (44px)
       const buttons = container.querySelectorAll('button');
-      buttons.forEach(button => {
+      buttons.forEach((button) => {
         const computedStyle = window.getComputedStyle(button);
         const minSize = parseInt(computedStyle.minHeight) || parseInt(computedStyle.height);
         expect(minSize).toBeGreaterThanOrEqual(44);
@@ -736,17 +672,12 @@ describe('Accessibility Compliance Tests', () => {
 
     it('should support voice control and voice navigation', async () => {
       renderWithProviders(
-        <UnifiedQuoteCard
-          quote={accessibilityTestQuote}
-          viewMode="customer"
-          layout="detail"
-        />
+        <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />,
       );
 
       // Elements should have voice-friendly labels
       const approveButton = screen.getByText('Approve Quote');
-      expect(approveButton).toHaveAttribute('aria-label', 
-        expect.stringMatching(/approve.*quote/i));
+      expect(approveButton).toHaveAttribute('aria-label', expect.stringMatching(/approve.*quote/i));
 
       // Voice commands should work with proper labeling
       expect(approveButton.getAttribute('aria-label')).not.toContain('button');
@@ -783,11 +714,7 @@ describe('Accessibility Compliance Tests', () => {
             <button onClick={triggerError} data-testid="trigger-error">
               Trigger Error
             </button>
-            <UnifiedQuoteCard
-              quote={accessibilityTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -831,11 +758,7 @@ describe('Accessibility Compliance Tests', () => {
         }
 
         return (
-          <UnifiedQuoteCard
-            quote={accessibilityTestQuote}
-            viewMode="customer"
-            layout="detail"
-          />
+          <UnifiedQuoteCard quote={accessibilityTestQuote} viewMode="customer" layout="detail" />
         );
       };
 
@@ -844,14 +767,17 @@ describe('Accessibility Compliance Tests', () => {
       // Loading state should be announced
       const loadingStatus = screen.getByRole('status');
       expect(loadingStatus).toHaveAttribute('aria-label', 'Loading quote details');
-      
+
       // Parent should indicate busy state
       expect(loadingStatus.parentElement).toHaveAttribute('aria-busy', 'true');
 
       // Wait for content to load
-      await waitFor(() => {
-        expect(screen.getByRole('article')).toBeInTheDocument();
-      }, { timeout: 1500 });
+      await waitFor(
+        () => {
+          expect(screen.getByRole('article')).toBeInTheDocument();
+        },
+        { timeout: 1500 },
+      );
 
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });

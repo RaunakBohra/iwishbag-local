@@ -21,7 +21,7 @@ export interface ActivityRecord {
     product_name?: string;
     product_url?: string;
     product_price?: number;
-    
+
     // Quote-specific fields
     quote_id?: string;
     quote_status?: string;
@@ -29,15 +29,15 @@ export interface ActivityRecord {
     quote_type?: string;
     products_count?: number;
     destination_country?: string;
-    
+
     // Order-specific fields
     order_id?: string;
     order_status?: string;
     order_value?: number;
-    
+
     // Category and classification
     category?: string;
-    
+
     // Metadata
     page_url?: string;
     referrer?: string;
@@ -62,7 +62,7 @@ export interface ActivityPattern {
     lastViewed: string;
     confidence: number;
   }[];
-  
+
   // Category preferences based on quotes/orders
   preferredCategories: {
     category: string;
@@ -70,7 +70,7 @@ export interface ActivityPattern {
     averageValue: number;
     confidence: number;
   }[];
-  
+
   // Quote completion patterns
   quoteCompletionHistory: {
     product_name?: string;
@@ -79,7 +79,7 @@ export interface ActivityPattern {
     destination_country?: string;
     completion_date: string;
   }[];
-  
+
   // Price range preferences
   priceRangePreference: {
     min: number;
@@ -87,7 +87,7 @@ export interface ActivityPattern {
     average: number;
     confidence: number;
   };
-  
+
   // Shopping behavior insights
   shoppingBehavior: {
     averageQuotesPerMonth: number;
@@ -115,7 +115,7 @@ export const useUserActivities = (
     limit?: number;
     enabled?: boolean;
     staleTime?: number;
-  } = {}
+  } = {},
 ) => {
   const { user } = useAuth();
   const {
@@ -128,7 +128,7 @@ export const useUserActivities = (
     queryKey: activityKeys.list(user?.id || '', { activityTypes, limit }),
     queryFn: async (): Promise<ActivityRecord[]> => {
       if (!user?.id) return [];
-      
+
       try {
         const activities = await userActivityService.getRecentActivities(activityTypes, limit);
         return activities as ActivityRecord[];
@@ -171,11 +171,11 @@ export const useActivityPatterns = (options: { enabled?: boolean } = {}) => {
       try {
         // Fetch comprehensive activity data
         const allActivities = await userActivityService.getRecentActivities(undefined, 200);
-        
+
         return analyzeActivityPatterns(allActivities as ActivityRecord[]);
       } catch (error) {
         console.warn('User activity analytics not available yet, using fallback data:', error);
-        
+
         // Return default pattern for new users when table doesn't exist
         return {
           recentlyViewedProducts: [],
@@ -208,10 +208,9 @@ export const useRecentProductViews = (limit: number = 20) => {
  * Hook for quote completion activities
  */
 export const useQuoteHistory = (limit: number = 50) => {
-  return useUserActivities([
-    ACTIVITY_TYPES.QUOTE_CREATE_COMPLETE,
-    ACTIVITY_TYPES.QUOTE_APPROVE,
-  ], { limit });
+  return useUserActivities([ACTIVITY_TYPES.QUOTE_CREATE_COMPLETE, ACTIVITY_TYPES.QUOTE_APPROVE], {
+    limit,
+  });
 };
 
 /**
@@ -226,23 +225,26 @@ export const useOrderHistory = (limit: number = 50) => {
  */
 function analyzeActivityPatterns(activities: ActivityRecord[]): ActivityPattern {
   // 1. Recently viewed products analysis
-  const productViews = activities.filter(a => a.activity_type === ACTIVITY_TYPES.PRODUCT_VIEW);
-  const productViewMap = new Map<string, {
-    product_name: string;
-    product_url?: string;
-    product_price?: number;
-    category?: string;
-    viewCount: number;
-    lastViewed: string;
-  }>();
+  const productViews = activities.filter((a) => a.activity_type === ACTIVITY_TYPES.PRODUCT_VIEW);
+  const productViewMap = new Map<
+    string,
+    {
+      product_name: string;
+      product_url?: string;
+      product_price?: number;
+      category?: string;
+      viewCount: number;
+      lastViewed: string;
+    }
+  >();
 
-  productViews.forEach(view => {
+  productViews.forEach((view) => {
     const { product_name, product_url, product_price, category } = view.activity_data;
     if (!product_name) return;
 
     const key = product_name.toLowerCase();
     const existing = productViewMap.get(key);
-    
+
     if (existing) {
       existing.viewCount++;
       if (new Date(view.created_at) > new Date(existing.lastViewed)) {
@@ -263,24 +265,26 @@ function analyzeActivityPatterns(activities: ActivityRecord[]): ActivityPattern 
   const recentlyViewedProducts = Array.from(productViewMap.values())
     .sort((a, b) => new Date(b.lastViewed).getTime() - new Date(a.lastViewed).getTime())
     .slice(0, 10)
-    .map(product => ({
+    .map((product) => ({
       ...product,
-      confidence: Math.min(95, 60 + (product.viewCount * 10)), // Higher confidence for repeated views
+      confidence: Math.min(95, 60 + product.viewCount * 10), // Higher confidence for repeated views
     }));
 
   // 2. Category preferences from quotes and orders
-  const categoryMap = new Map<string, { frequency: number; totalValue: number; }>();
-  
-  const quoteActivities = activities.filter(a => 
-    a.activity_type === ACTIVITY_TYPES.QUOTE_CREATE_COMPLETE ||
-    a.activity_type === ACTIVITY_TYPES.QUOTE_APPROVE
+  const categoryMap = new Map<string, { frequency: number; totalValue: number }>();
+
+  const quoteActivities = activities.filter(
+    (a) =>
+      a.activity_type === ACTIVITY_TYPES.QUOTE_CREATE_COMPLETE ||
+      a.activity_type === ACTIVITY_TYPES.QUOTE_APPROVE,
   );
-  
-  quoteActivities.forEach(activity => {
+
+  quoteActivities.forEach((activity) => {
     const { category, quote_value, product_price, products_count } = activity.activity_data;
-    const activityCategory = category || inferCategoryFromProductName(activity.activity_data.product_name) || 'General';
-    const value = quote_value || (product_price * (products_count || 1)) || 0;
-    
+    const activityCategory =
+      category || inferCategoryFromProductName(activity.activity_data.product_name) || 'General';
+    const value = quote_value || product_price * (products_count || 1) || 0;
+
     const existing = categoryMap.get(activityCategory);
     if (existing) {
       existing.frequency++;
@@ -295,16 +299,18 @@ function analyzeActivityPatterns(activities: ActivityRecord[]): ActivityPattern 
       category,
       frequency: data.frequency,
       averageValue: data.totalValue / data.frequency,
-      confidence: Math.min(90, 40 + (data.frequency * 15)), // Higher confidence for frequent categories
+      confidence: Math.min(90, 40 + data.frequency * 15), // Higher confidence for frequent categories
     }))
     .sort((a, b) => b.frequency - a.frequency)
     .slice(0, 5);
 
   // 3. Quote completion history
   const quoteCompletionHistory = quoteActivities
-    .map(activity => ({
+    .map((activity) => ({
       product_name: activity.activity_data.product_name,
-      category: activity.activity_data.category || inferCategoryFromProductName(activity.activity_data.product_name),
+      category:
+        activity.activity_data.category ||
+        inferCategoryFromProductName(activity.activity_data.product_name),
       value: activity.activity_data.quote_value || activity.activity_data.product_price,
       destination_country: activity.activity_data.destination_country,
       completion_date: activity.created_at,
@@ -314,35 +320,35 @@ function analyzeActivityPatterns(activities: ActivityRecord[]): ActivityPattern 
 
   // 4. Price range analysis
   const pricePoints = activities
-    .map(a => a.activity_data.product_price || a.activity_data.quote_value)
-    .filter(price => price && price > 0);
-    
+    .map((a) => a.activity_data.product_price || a.activity_data.quote_value)
+    .filter((price) => price && price > 0);
+
   const priceRangePreference = {
     min: pricePoints.length > 0 ? Math.min(...pricePoints) : 0,
     max: pricePoints.length > 0 ? Math.max(...pricePoints) : 1000,
-    average: pricePoints.length > 0 ? pricePoints.reduce((a, b) => a + b, 0) / pricePoints.length : 100,
+    average:
+      pricePoints.length > 0 ? pricePoints.reduce((a, b) => a + b, 0) / pricePoints.length : 100,
     confidence: Math.min(80, pricePoints.length * 5), // Higher confidence with more data points
   };
 
   // 5. Shopping behavior insights
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
-  const recentQuotes = quoteActivities.filter(a => 
-    new Date(a.created_at) > thirtyDaysAgo
+
+  const recentQuotes = quoteActivities.filter((a) => new Date(a.created_at) > thirtyDaysAgo);
+
+  const destinations = activities.map((a) => a.activity_data.destination_country).filter(Boolean);
+
+  const destinationCounts = destinations.reduce(
+    (acc, dest) => {
+      acc[dest] = (acc[dest] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
   );
-  
-  const destinations = activities
-    .map(a => a.activity_data.destination_country)
-    .filter(Boolean);
-    
-  const destinationCounts = destinations.reduce((acc, dest) => {
-    acc[dest] = (acc[dest] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
+
   const preferredDestinations = Object.entries(destinationCounts)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([dest]) => dest);
 
@@ -367,41 +373,116 @@ function analyzeActivityPatterns(activities: ActivityRecord[]): ActivityPattern 
  */
 function inferCategoryFromProductName(productName?: string): string | null {
   if (!productName) return null;
-  
+
   const name = productName.toLowerCase();
-  
+
   // Category mapping based on keywords
   const categoryKeywords = {
-    'Electronics': [
-      'iphone', 'ipad', 'macbook', 'laptop', 'computer', 'phone', 'smartphone',
-      'headphones', 'earbuds', 'speaker', 'camera', 'tablet', 'monitor',
-      'keyboard', 'mouse', 'gaming', 'console', 'tv', 'watch', 'fitbit'
+    Electronics: [
+      'iphone',
+      'ipad',
+      'macbook',
+      'laptop',
+      'computer',
+      'phone',
+      'smartphone',
+      'headphones',
+      'earbuds',
+      'speaker',
+      'camera',
+      'tablet',
+      'monitor',
+      'keyboard',
+      'mouse',
+      'gaming',
+      'console',
+      'tv',
+      'watch',
+      'fitbit',
     ],
-    'Fashion': [
-      'shirt', 't-shirt', 'dress', 'jeans', 'pants', 'shoes', 'sneakers',
-      'jacket', 'coat', 'hoodie', 'sweater', 'blouse', 'skirt', 'shorts',
-      'boots', 'sandals', 'handbag', 'wallet', 'belt', 'jewelry', 'watch'
+    Fashion: [
+      'shirt',
+      't-shirt',
+      'dress',
+      'jeans',
+      'pants',
+      'shoes',
+      'sneakers',
+      'jacket',
+      'coat',
+      'hoodie',
+      'sweater',
+      'blouse',
+      'skirt',
+      'shorts',
+      'boots',
+      'sandals',
+      'handbag',
+      'wallet',
+      'belt',
+      'jewelry',
+      'watch',
     ],
     'Home & Garden': [
-      'furniture', 'chair', 'table', 'bed', 'sofa', 'lamp', 'curtains',
-      'kitchen', 'cookware', 'dishes', 'plant', 'garden', 'tools', 'decor'
+      'furniture',
+      'chair',
+      'table',
+      'bed',
+      'sofa',
+      'lamp',
+      'curtains',
+      'kitchen',
+      'cookware',
+      'dishes',
+      'plant',
+      'garden',
+      'tools',
+      'decor',
     ],
     'Sports & Outdoors': [
-      'fitness', 'gym', 'exercise', 'running', 'cycling', 'swimming',
-      'outdoor', 'camping', 'hiking', 'sports', 'ball', 'equipment'
+      'fitness',
+      'gym',
+      'exercise',
+      'running',
+      'cycling',
+      'swimming',
+      'outdoor',
+      'camping',
+      'hiking',
+      'sports',
+      'ball',
+      'equipment',
     ],
     'Beauty & Health': [
-      'skincare', 'makeup', 'cosmetics', 'perfume', 'shampoo', 'lotion',
-      'cream', 'serum', 'health', 'vitamins', 'supplements'
+      'skincare',
+      'makeup',
+      'cosmetics',
+      'perfume',
+      'shampoo',
+      'lotion',
+      'cream',
+      'serum',
+      'health',
+      'vitamins',
+      'supplements',
     ],
     'Books & Media': [
-      'book', 'novel', 'textbook', 'ebook', 'magazine', 'dvd', 'blu-ray',
-      'music', 'vinyl', 'game', 'board game'
-    ]
+      'book',
+      'novel',
+      'textbook',
+      'ebook',
+      'magazine',
+      'dvd',
+      'blu-ray',
+      'music',
+      'vinyl',
+      'game',
+      'board game',
+    ],
   };
 
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some(keyword => name.includes(keyword))) {
+    if (keywords.some((keyword) => name.includes(keyword))) {
       return category;
     }
   }

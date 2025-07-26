@@ -1,5 +1,5 @@
 import React from 'react';
-import { 
+import {
   Package,
   Calculator,
   Globe,
@@ -12,14 +12,14 @@ import {
   Percent,
   FileText,
   Shield,
-  Settings
+  Settings,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   DisclosureProvider,
   DisclosureLevelControl,
   DisclosureContainer,
@@ -27,7 +27,7 @@ import {
   ShowAtLevel,
   DisclosureLevelBadge,
   DisclosureExpandToggle,
-  DisclosureLevel
+  DisclosureLevel,
 } from '@/components/ui/progressive-disclosure';
 import { UnifiedQuote } from '@/types/quote';
 import { formatCurrency } from '@/utils/currency';
@@ -42,11 +42,14 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
   const breakdown = quote.calculation_data?.breakdown;
   if (!breakdown) return null;
 
-  const hasHSN = quote.items.some(item => item.hsn_code);
+  const hasHSN = quote.items.some((item) => item.hsn_code);
   const taxMethod = quote.calculation_method_preference || 'auto';
 
   return (
-    <DisclosureProvider defaultLevel={DisclosureLevel.ESSENTIAL} persistKey={`tax-breakdown-${quote.id}`}>
+    <DisclosureProvider
+      defaultLevel={DisclosureLevel.ESSENTIAL}
+      persistKey={`tax-breakdown-${quote.id}`}
+    >
       <Card className={className}>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -56,9 +59,7 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                 Tax & Customs Breakdown
                 <DisclosureLevelBadge />
               </CardTitle>
-              <CardDescription>
-                Progressive view of all taxes and fees
-              </CardDescription>
+              <CardDescription>Progressive view of all taxes and fees</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <DisclosureExpandToggle />
@@ -75,31 +76,34 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                 <span className="text-lg font-semibold">Total Tax & Customs</span>
                 <span className="text-2xl font-bold text-blue-600">
                   {formatCurrency(
-                    (breakdown.customs || 0) + 
-                    (breakdown.destination_tax || 0) + 
-                    (breakdown.purchase_tax || 0),
-                    quote.currency
+                    (breakdown.customs || 0) +
+                      (breakdown.destination_tax || 0) +
+                      (breakdown.purchase_tax || 0),
+                    quote.currency,
                   )}
                 </span>
               </div>
-              
+
               <ShowAtLevel minLevel={DisclosureLevel.ESSENTIAL}>
-                <Progress 
+                <Progress
                   value={
-                    ((breakdown.customs || 0) + 
-                     (breakdown.destination_tax || 0) + 
-                     (breakdown.purchase_tax || 0)) / 
-                    breakdown.final_total * 100
+                    (((breakdown.customs || 0) +
+                      (breakdown.destination_tax || 0) +
+                      (breakdown.purchase_tax || 0)) /
+                      breakdown.final_total) *
+                    100
                   }
                   className="h-2 mt-2"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   {Math.round(
-                    ((breakdown.customs || 0) + 
-                     (breakdown.destination_tax || 0) + 
-                     (breakdown.purchase_tax || 0)) / 
-                    breakdown.final_total * 100
-                  )}% of total order value
+                    (((breakdown.customs || 0) +
+                      (breakdown.destination_tax || 0) +
+                      (breakdown.purchase_tax || 0)) /
+                      breakdown.final_total) *
+                      100,
+                  )}
+                  % of total order value
                 </p>
               </ShowAtLevel>
             </div>
@@ -147,11 +151,15 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Customs Rate</span>
-                        <p className="font-medium">{quote.operational_data?.customs?.percentage || 0}%</p>
+                        <p className="font-medium">
+                          {quote.operational_data?.customs?.percentage || 0}%
+                        </p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Applied To</span>
-                        <p className="font-medium">{formatCurrency(breakdown.items_total, quote.currency)}</p>
+                        <p className="font-medium">
+                          {formatCurrency(breakdown.items_total, quote.currency)}
+                        </p>
                       </div>
                     </div>
 
@@ -162,9 +170,11 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                           Calculation Method
                         </h5>
                         <p className="text-xs text-muted-foreground">
-                          {taxMethod === 'hsn_based' ? 'HSN-based classification' :
-                           taxMethod === 'country_settings' ? 'Country default rates' :
-                           'Smart auto-detection'}
+                          {taxMethod === 'hsn_based'
+                            ? 'HSN-based classification'
+                            : taxMethod === 'country_settings'
+                              ? 'Country default rates'
+                              : 'Smart auto-detection'}
                         </p>
                       </div>
                     </ShowAtLevel>
@@ -194,7 +204,7 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                         <p className="font-medium">
                           {formatCurrency(
                             breakdown.items_total + breakdown.customs,
-                            quote.currency
+                            quote.currency,
                           )}
                         </p>
                       </div>
@@ -251,9 +261,7 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                       <div>
                         <p className="font-medium text-sm">{item.name}</p>
                         {item.hsn_code && (
-                          <p className="text-xs text-muted-foreground">
-                            HSN: {item.hsn_code}
-                          </p>
+                          <p className="text-xs text-muted-foreground">HSN: {item.hsn_code}</p>
                         )}
                       </div>
                       <Badge variant="outline" className="text-xs">
@@ -267,9 +275,11 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                           <span className="text-muted-foreground">Customs</span>
                           <p className="font-medium">
                             {formatCurrency(
-                              item.costprice_origin * item.quantity * 
-                              (quote.operational_data?.customs?.percentage || 0) / 100,
-                              quote.currency
+                              (item.costprice_origin *
+                                item.quantity *
+                                (quote.operational_data?.customs?.percentage || 0)) /
+                                100,
+                              quote.currency,
                             )}
                           </p>
                         </div>
@@ -277,9 +287,12 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                           <span className="text-muted-foreground">VAT/GST</span>
                           <p className="font-medium">
                             {formatCurrency(
-                              item.costprice_origin * item.quantity * 
-                              (quote.operational_data?.customs?.smart_tier?.vat_percentage || 0) / 100,
-                              quote.currency
+                              (item.costprice_origin *
+                                item.quantity *
+                                (quote.operational_data?.customs?.smart_tier?.vat_percentage ||
+                                  0)) /
+                                100,
+                              quote.currency,
                             )}
                           </p>
                         </div>
@@ -287,10 +300,13 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                           <span className="text-muted-foreground">Total Tax</span>
                           <p className="font-medium text-blue-600">
                             {formatCurrency(
-                              item.costprice_origin * item.quantity * 
-                              ((quote.operational_data?.customs?.percentage || 0) + 
-                               (quote.operational_data?.customs?.smart_tier?.vat_percentage || 0)) / 100,
-                              quote.currency
+                              (item.costprice_origin *
+                                item.quantity *
+                                ((quote.operational_data?.customs?.percentage || 0) +
+                                  (quote.operational_data?.customs?.smart_tier?.vat_percentage ||
+                                    0))) /
+                                100,
+                              quote.currency,
                             )}
                           </p>
                         </div>
@@ -319,12 +335,34 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                   <div className="space-y-1">
                     <p>Items Total: {formatCurrency(breakdown.items_total, quote.currency)}</p>
                     <p>+ Shipping: {formatCurrency(breakdown.shipping || 0, quote.currency)}</p>
-                    <p>= CIF Value: {formatCurrency(breakdown.items_total + (breakdown.shipping || 0), quote.currency)}</p>
-                    <p className="mt-2">Customs ({quote.operational_data?.customs?.percentage}%): {formatCurrency(breakdown.customs, quote.currency)}</p>
-                    <p>VAT Base: CIF + Customs = {formatCurrency(breakdown.items_total + (breakdown.shipping || 0) + breakdown.customs, quote.currency)}</p>
-                    <p>VAT ({quote.operational_data?.customs?.smart_tier?.vat_percentage}%): {formatCurrency(breakdown.destination_tax, quote.currency)}</p>
+                    <p>
+                      = CIF Value:{' '}
+                      {formatCurrency(
+                        breakdown.items_total + (breakdown.shipping || 0),
+                        quote.currency,
+                      )}
+                    </p>
+                    <p className="mt-2">
+                      Customs ({quote.operational_data?.customs?.percentage}%):{' '}
+                      {formatCurrency(breakdown.customs, quote.currency)}
+                    </p>
+                    <p>
+                      VAT Base: CIF + Customs ={' '}
+                      {formatCurrency(
+                        breakdown.items_total + (breakdown.shipping || 0) + breakdown.customs,
+                        quote.currency,
+                      )}
+                    </p>
+                    <p>
+                      VAT ({quote.operational_data?.customs?.smart_tier?.vat_percentage}%):{' '}
+                      {formatCurrency(breakdown.destination_tax, quote.currency)}
+                    </p>
                     <p className="mt-2 font-semibold border-t pt-2">
-                      Total Tax: {formatCurrency(breakdown.customs + breakdown.destination_tax, quote.currency)}
+                      Total Tax:{' '}
+                      {formatCurrency(
+                        breakdown.customs + breakdown.destination_tax,
+                        quote.currency,
+                      )}
                     </p>
                   </div>
                 </div>
@@ -339,11 +377,15 @@ export function ProgressiveTaxBreakdown({ quote, className }: ProgressiveTaxBrea
                     </div>
                     <div className="bg-muted/20 rounded p-2">
                       <span className="text-muted-foreground">HSN Items:</span>
-                      <p className="font-medium">{quote.items.filter(i => i.hsn_code).length}/{quote.items.length}</p>
+                      <p className="font-medium">
+                        {quote.items.filter((i) => i.hsn_code).length}/{quote.items.length}
+                      </p>
                     </div>
                     <div className="bg-muted/20 rounded p-2">
                       <span className="text-muted-foreground">Route:</span>
-                      <p className="font-medium">{quote.origin_country} → {quote.destination_country}</p>
+                      <p className="font-medium">
+                        {quote.origin_country} → {quote.destination_country}
+                      </p>
                     </div>
                     <div className="bg-muted/20 rounded p-2">
                       <span className="text-muted-foreground">Exchange Rate:</span>

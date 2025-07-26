@@ -15,7 +15,7 @@ export interface FeeBreakdown {
     label: string;
     description: string;
   };
-  
+
   // Payment processing fees
   paymentFees: {
     total: number;
@@ -23,7 +23,7 @@ export interface FeeBreakdown {
     label: string;
     description: string;
   };
-  
+
   // Combined total for compact display
   allFees: {
     total: number;
@@ -38,17 +38,17 @@ export interface FeeBreakdown {
  */
 export function getStandardizedFeeBreakdown(quote: UnifiedQuote): FeeBreakdown {
   const breakdown = quote.calculation_data?.breakdown || {};
-  
+
   // Extract individual fee components
   const handlingFee = Number(breakdown.handling || quote.handling_charge || 0);
   const insuranceFee = Number(breakdown.insurance || quote.insurance_amount || 0);
   const gatewayFee = Number(breakdown.fees || quote.payment_gateway_fee || 0);
-  
+
   // Calculate totals
   const serviceFeeTotal = handlingFee + insuranceFee;
   const paymentFeeTotal = gatewayFee;
   const allFeesTotal = serviceFeeTotal + paymentFeeTotal;
-  
+
   return {
     serviceFees: {
       total: serviceFeeTotal,
@@ -57,14 +57,14 @@ export function getStandardizedFeeBreakdown(quote: UnifiedQuote): FeeBreakdown {
       label: 'Service fees',
       description: 'Package handling and protection insurance',
     },
-    
+
     paymentFees: {
       total: paymentFeeTotal,
       gatewayFee: gatewayFee,
       label: 'Payment processing',
       description: 'Payment gateway and transaction fees',
     },
-    
+
     allFees: {
       total: allFeesTotal,
       label: 'Processing fees',
@@ -87,9 +87,9 @@ export function getAdminFeeBreakdown(quote: UnifiedQuote): {
   }>;
 } {
   const standardBreakdown = getStandardizedFeeBreakdown(quote);
-  
+
   const expandedDisplay = [];
-  
+
   // Add handling fee if present
   if (standardBreakdown.serviceFees.handling > 0) {
     expandedDisplay.push({
@@ -99,7 +99,7 @@ export function getAdminFeeBreakdown(quote: UnifiedQuote): {
       category: 'service' as const,
     });
   }
-  
+
   // Add insurance fee if present
   if (standardBreakdown.serviceFees.insurance > 0) {
     expandedDisplay.push({
@@ -109,7 +109,7 @@ export function getAdminFeeBreakdown(quote: UnifiedQuote): {
       category: 'service' as const,
     });
   }
-  
+
   // Add payment gateway fee if present
   if (standardBreakdown.paymentFees.gatewayFee > 0) {
     expandedDisplay.push({
@@ -119,7 +119,7 @@ export function getAdminFeeBreakdown(quote: UnifiedQuote): {
       category: 'payment' as const,
     });
   }
-  
+
   return {
     compactDisplay: standardBreakdown.allFees,
     expandedDisplay,
@@ -136,12 +136,11 @@ export function getCustomerFeeBreakdown(quote: UnifiedQuote): {
   showSeparately: boolean; // Whether to show service and payment fees separately
 } {
   const standardBreakdown = getStandardizedFeeBreakdown(quote);
-  
+
   // Show separately only if both categories have meaningful amounts
-  const showSeparately = 
-    standardBreakdown.serviceFees.total > 0 && 
-    standardBreakdown.paymentFees.total > 0;
-  
+  const showSeparately =
+    standardBreakdown.serviceFees.total > 0 && standardBreakdown.paymentFees.total > 0;
+
   return {
     serviceFees: standardBreakdown.serviceFees,
     paymentFees: standardBreakdown.paymentFees,
@@ -163,7 +162,7 @@ export function getDashboardFeeBreakdown(quote: UnifiedQuote): {
   }>;
 } {
   const standardBreakdown = getStandardizedFeeBreakdown(quote);
-  
+
   const components = [
     {
       label: 'Service fees',
@@ -178,9 +177,9 @@ export function getDashboardFeeBreakdown(quote: UnifiedQuote): {
       isSignificant: standardBreakdown.paymentFees.total > 0,
     },
   ];
-  
+
   return {
     totalFees: standardBreakdown.allFees.total,
-    components: components.filter(comp => comp.isSignificant),
+    components: components.filter((comp) => comp.isSignificant),
   };
 }

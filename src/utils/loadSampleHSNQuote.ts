@@ -29,8 +29,8 @@ export const getSampleHSNQuoteURL = (): string => {
  */
 export const simulateHSNQuoteLoad = async (): Promise<UnifiedQuote> => {
   // Simulate API delay for realistic testing
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
   // Return the sample quote with current timestamp
   return {
     ...sampleHSNQuote,
@@ -44,11 +44,11 @@ export const simulateHSNQuoteLoad = async (): Promise<UnifiedQuote> => {
  */
 export const generateTestHSNQuotes = (): UnifiedQuote[] => {
   const baseQuote = sampleHSNQuote;
-  
+
   return [
     // Original mixed categories quote
     baseQuote,
-    
+
     // Low-value quote (minimum valuation will apply)
     {
       ...baseQuote,
@@ -61,7 +61,7 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
           name: 'Simple Cotton Kurta - Basic Design',
           costprice_origin: 3.61, // ₹300 INR (below $10 minimum)
           options: 'Size: S, Color: White, Material: Basic Cotton',
-        }
+        },
       ],
       base_total_usd: 3.61,
       calculation_data: {
@@ -69,7 +69,7 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
         breakdown: {
           ...baseQuote.calculation_data.breakdown,
           items_total: 300, // ₹300 INR
-        }
+        },
       },
       operational_data: {
         ...baseQuote.operational_data,
@@ -77,10 +77,10 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
           ...baseQuote.operational_data.admin,
           notes: 'Low-value test - minimum valuation should apply',
           flags: ['hsn_test', 'minimum_valuation_test'],
-        }
-      }
+        },
+      },
     },
-    
+
     // High-value quote (actual price will be used)
     {
       ...baseQuote,
@@ -93,7 +93,7 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
           name: 'iPhone 15 Pro Max - 256GB Natural Titanium',
           costprice_origin: 1445.78, // ₹120,000 INR (well above minimums)
           options: '256GB Storage, Natural Titanium, AppleCare+',
-        }
+        },
       ],
       base_total_usd: 1445.78,
       calculation_data: {
@@ -101,7 +101,7 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
         breakdown: {
           ...baseQuote.calculation_data.breakdown,
           items_total: 120000, // ₹120,000 INR
-        }
+        },
       },
       operational_data: {
         ...baseQuote.operational_data,
@@ -109,9 +109,9 @@ export const generateTestHSNQuotes = (): UnifiedQuote[] => {
           ...baseQuote.operational_data.admin,
           notes: 'High-value test - actual price should be used',
           flags: ['hsn_test', 'high_value_test'],
-        }
-      }
-    }
+        },
+      },
+    },
   ];
 };
 
@@ -123,10 +123,10 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
   (window as any).loadSampleHSNQuote = loadSampleHSNQuote;
   (window as any).getSampleHSNQuoteURL = getSampleHSNQuoteURL;
   (window as any).generateTestHSNQuotes = generateTestHSNQuotes;
-  
+
   console.log('🧪 HSN Development Utils Available:');
   console.log('- loadSampleHSNQuote(): Load sample quote data');
-  console.log('- getSampleHSNQuoteURL(): Get admin URL for sample quote');  
+  console.log('- getSampleHSNQuoteURL(): Get admin URL for sample quote');
   console.log('- generateTestHSNQuotes(): Generate multiple test scenarios');
 }
 

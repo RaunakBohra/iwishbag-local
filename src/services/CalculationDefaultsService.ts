@@ -5,7 +5,7 @@
 // ============================================================================
 
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface HandlingChargeConfig {
   base_fee: number;
@@ -54,18 +54,16 @@ export class CalculationDefaultsService {
     }
 
     const config: HandlingChargeConfig = selectedOption.handling_charge;
-    // Use base_total_usd as primary source, fallback to calculated value from items
-    const itemsValue =
-      quote.base_total_usd ||
-      quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
+    // Always calculate from items to ensure accuracy in origin currency
+    const itemsValue = quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     console.log('[CalculationDefaults] Items value extracted:', {
       quoteId: quote.id,
-      base_total_usd: quote.base_total_usd,
       itemsValue,
       itemsCount: quote.items?.length,
       originCountry: quote.origin_country,
       currency: quote.currency,
+      itemBreakdown: quote.items.map(item => ({ name: item.name, cost: item.costprice_origin, qty: item.quantity, total: item.costprice_origin * item.quantity }))
     });
 
     // Calculate: base fee + percentage of value
@@ -112,10 +110,8 @@ export class CalculationDefaultsService {
     }
 
     const config: InsuranceConfig = selectedOption.insurance_options;
-    // Use base_total_usd as primary source, fallback to calculated value from items
-    const itemsValue =
-      quote.base_total_usd ||
-      quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
+    // Always calculate from items to ensure accuracy in origin currency
+    const itemsValue = quote.items.reduce((sum, item) => sum + item.costprice_origin * item.quantity, 0);
 
     // Check if customer opted in or if it's default enabled
     const shouldCalculate = customerOptedIn || config.default_enabled;
@@ -160,8 +156,8 @@ export class CalculationDefaultsService {
     originCountry: string = 'US',
   ): string {
     // Get currency symbol for origin country (amounts are calculated in origin currency)
-    const countryCurrency = currencyService.getCurrencyForCountrySync(originCountry);
-    const currencySymbol = currencyService.getCurrencySymbol(countryCurrency);
+    const countryCurrency = optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
+    const currencySymbol = optimizedCurrencyService.getCurrencySymbol(countryCurrency);
 
     if (!selectedOption) return `Default ${type}: ${currencySymbol}${amount.toFixed(2)}`;
 

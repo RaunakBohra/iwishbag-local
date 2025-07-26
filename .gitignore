@@ -77,3 +77,6 @@ yarn.lock
 
 *storybook.log
 storybook-static
+
+# Cloudflare credentials
+.env.cloudflare

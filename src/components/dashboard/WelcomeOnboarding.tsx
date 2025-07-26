@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Sparkles, 
-  ArrowRight, 
-  Play, 
-  Gift, 
-  Globe, 
+import {
+  Sparkles,
+  ArrowRight,
+  Play,
+  Gift,
+  Globe,
   ShieldCheck,
   X,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,10 +25,10 @@ interface WelcomeOnboardingProps {
 export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
   userName,
   onDismiss,
-  showDismiss = true
+  showDismiss = true,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  
+
   const onboardingSteps = [
     {
       id: 'welcome',
@@ -37,8 +37,8 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
       icon: <Sparkles className="w-8 h-8 text-teal-600" />,
       action: {
         label: 'Get Started',
-        onClick: () => setCurrentStep(1)
-      }
+        onClick: () => setCurrentStep(1),
+      },
     },
     {
       id: 'howItWorks',
@@ -48,31 +48,31 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
       steps: [
         '1. Request a quote for any product',
         '2. We calculate all costs (shipping, customs, taxes)',
-        '3. Approve and we handle everything else!'
+        '3. Approve and we handle everything else!',
       ],
       action: {
         label: 'Request My First Quote',
-        link: '/quote'
-      }
-    }
+        link: '/quote',
+      },
+    },
   ];
 
   const benefits = [
     {
       icon: <Globe className="w-5 h-5 text-blue-600" />,
       title: 'Global Shopping',
-      description: 'Shop from Amazon, eBay, Alibaba and more'
+      description: 'Shop from Amazon, eBay, Alibaba and more',
     },
     {
       icon: <ShieldCheck className="w-5 h-5 text-green-600" />,
       title: 'No Hidden Fees',
-      description: 'Transparent pricing with all costs upfront'
+      description: 'Transparent pricing with all costs upfront',
     },
     {
       icon: <Gift className="w-5 h-5 text-purple-600" />,
       title: 'Expert Handling',
-      description: 'We manage customs, shipping, and delivery'
-    }
+      description: 'We manage customs, shipping, and delivery',
+    },
   ];
 
   const currentStepData = onboardingSteps[currentStep];
@@ -113,9 +113,7 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <Badge className="bg-teal-100 text-teal-700 border-teal-200">
-                        New User
-                      </Badge>
+                      <Badge className="bg-teal-100 text-teal-700 border-teal-200">New User</Badge>
                       <span className="text-sm text-gray-600">
                         Step {currentStep + 1} of {onboardingSteps.length}
                       </span>
@@ -123,9 +121,7 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
                     <h2 className="text-2xl font-bold text-gray-900 mb-1">
                       {currentStep === 0 ? `Welcome, ${userName}!` : currentStepData.title}
                     </h2>
-                    <p className="text-gray-700 text-lg">
-                      {currentStepData.description}
-                    </p>
+                    <p className="text-gray-700 text-lg">{currentStepData.description}</p>
                   </div>
                 </div>
               </div>
@@ -177,8 +173,8 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
               <div className="flex flex-col sm:flex-row gap-3">
                 {currentStepData.action.link ? (
                   <Link to={currentStepData.action.link}>
-                    <Button 
-                      size="lg" 
+                    <Button
+                      size="lg"
                       className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 shadow-lg group"
                     >
                       {currentStepData.action.label}
@@ -186,8 +182,8 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
                     </Button>
                   </Link>
                 ) : (
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     onClick={currentStepData.action.onClick}
                     className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 shadow-lg group"
                   >
@@ -197,9 +193,9 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
                 )}
 
                 {currentStep === 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="lg" 
+                  <Button
+                    variant="outline"
+                    size="lg"
                     className="w-full sm:w-auto bg-white/80 backdrop-blur-sm border-white/50 hover:bg-white"
                   >
                     <Play className="w-4 h-4 mr-2" />
@@ -208,9 +204,9 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
                 )}
 
                 {currentStep > 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="lg" 
+                  <Button
+                    variant="outline"
+                    size="lg"
                     onClick={() => setCurrentStep(0)}
                     className="w-full sm:w-auto bg-white/80 backdrop-blur-sm border-white/50 hover:bg-white"
                   >
@@ -228,9 +224,9 @@ export const WelcomeOnboarding: React.FC<WelcomeOnboardingProps> = ({
                       onClick={() => setCurrentStep(index)}
                       className={cn(
                         'w-3 h-3 rounded-full transition-all duration-200',
-                        index === currentStep 
-                          ? 'bg-teal-600 scale-110' 
-                          : 'bg-white/60 hover:bg-white/80'
+                        index === currentStep
+                          ? 'bg-teal-600 scale-110'
+                          : 'bg-white/60 hover:bg-white/80',
                       )}
                     />
                   ))}

@@ -15,19 +15,19 @@ import type { UnifiedQuote } from '@/types/unified-quote';
 // Mock Google Analytics (gtag)
 Object.defineProperty(window, 'gtag', {
   value: vi.fn(),
-  configurable: true
+  configurable: true,
 });
 
 // Mock Google Tag Manager (dataLayer)
 Object.defineProperty(window, 'dataLayer', {
   value: [],
-  configurable: true
+  configurable: true,
 });
 
 // Mock Facebook Pixel
 Object.defineProperty(window, 'fbq', {
   value: vi.fn(),
-  configurable: true
+  configurable: true,
 });
 
 // Mock Mixpanel
@@ -37,18 +37,18 @@ Object.defineProperty(window, 'mixpanel', {
     identify: vi.fn(),
     people: {
       set: vi.fn(),
-      increment: vi.fn()
+      increment: vi.fn(),
     },
     register: vi.fn(),
-    time_event: vi.fn()
+    time_event: vi.fn(),
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock Hotjar
 Object.defineProperty(window, 'hj', {
   value: vi.fn(),
-  configurable: true
+  configurable: true,
 });
 
 // Mock custom analytics service
@@ -59,14 +59,14 @@ const mockAnalyticsService = {
   group: vi.fn(),
   alias: vi.fn(),
   flush: vi.fn(),
-  reset: vi.fn()
+  reset: vi.fn(),
 };
 
 // Mock performance observer
 const mockPerformanceObserver = vi.fn();
 Object.defineProperty(window, 'PerformanceObserver', {
   value: mockPerformanceObserver,
-  configurable: true
+  configurable: true,
 });
 
 // Mock intersection observer for viewport tracking
@@ -74,13 +74,15 @@ const mockIntersectionObserver = vi.fn().mockImplementation((callback) => ({
   observe: vi.fn((target) => {
     // Simulate viewport entry
     setTimeout(() => {
-      callback([{
-        target,
-        isIntersecting: true,
-        intersectionRatio: 1,
-        boundingClientRect: { top: 0, bottom: 100, height: 100 },
-        rootBounds: { top: 0, bottom: 800, height: 800 }
-      }]);
+      callback([
+        {
+          target,
+          isIntersecting: true,
+          intersectionRatio: 1,
+          boundingClientRect: { top: 0, bottom: 100, height: 100 },
+          rootBounds: { top: 0, bottom: 800, height: 800 },
+        },
+      ]);
     }, 100);
   }),
   unobserve: vi.fn(),
@@ -91,19 +93,22 @@ global.IntersectionObserver = mockIntersectionObserver;
 
 // Mock user agent for device detection
 const mockUserAgents = {
-  desktop: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-  mobile: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
-  tablet: 'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1'
+  desktop:
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  mobile:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+  tablet:
+    'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
 };
 
 // Mock dependencies
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { 
-      id: 'analytics-user-id', 
+    user: {
+      id: 'analytics-user-id',
       email: 'analytics@example.com',
       created_at: '2024-01-01T00:00:00Z',
-      subscription_plan: 'premium'
+      subscription_plan: 'premium',
     },
   }),
 }));
@@ -125,16 +130,16 @@ const analyticsTestQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 599.99,
   item_price: 499.99,
-  sales_tax_price: 40.00,
-  merchant_shipping_price: 25.00,
+  sales_tax_price: 40.0,
+  merchant_shipping_price: 25.0,
   international_shipping: 39.99,
   customs_and_ecs: 24.99,
   domestic_shipping: 12.99,
   handling_charge: 9.99,
   insurance_amount: 5.99,
   payment_gateway_fee: 7.99,
-  vat: 0.00,
-  discount: 25.00,
+  vat: 0.0,
+  discount: 25.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -142,26 +147,28 @@ const analyticsTestQuote: UnifiedQuote = {
     info: {
       name: 'Analytics Test User',
       email: 'analytics@example.com',
-      phone: '+91-9876543210'
-    }
+      phone: '+91-9876543210',
+    },
   },
   shipping_address: {
-    formatted: '123 Analytics Street, Mumbai, Maharashtra 400001, India'
+    formatted: '123 Analytics Street, Mumbai, Maharashtra 400001, India',
   },
-  items: [{
-    id: 'analytics-item',
-    name: 'Professional Camera',
-    description: 'High-end DSLR camera for professionals',
-    quantity: 1,
-    price: 499.99,
-    product_url: 'https://amazon.com/professional-camera',
-    image_url: 'https://example.com/camera.jpg'
-  }],
+  items: [
+    {
+      id: 'analytics-item',
+      name: 'Professional Camera',
+      description: 'High-end DSLR camera for professionals',
+      quantity: 1,
+      price: 499.99,
+      product_url: 'https://amazon.com/professional-camera',
+      image_url: 'https://example.com/camera.jpg',
+    },
+  ],
   notes: 'Analytics test quote',
   admin_notes: 'High-value customer',
   priority: 'high',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
@@ -176,11 +183,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -188,7 +193,7 @@ const renderWithProviders = (component: React.ReactNode) => {
 const setUserAgent = (userAgent: string) => {
   Object.defineProperty(navigator, 'userAgent', {
     value: userAgent,
-    configurable: true
+    configurable: true,
   });
 };
 
@@ -218,8 +223,8 @@ describe('Analytics Tracking Integration Tests', () => {
               quote_status: 'sent',
               quote_value: 599.99,
               destination_country: 'IN',
-              user_segment: 'premium'
-            }
+              user_segment: 'premium',
+            },
           };
 
           // Google Analytics 4
@@ -228,8 +233,8 @@ describe('Analytics Tracking Integration Tests', () => {
             page_location: pageData.page_location,
             custom_map: {
               custom_parameter_1: 'quote_id',
-              custom_parameter_2: 'quote_value'
-            }
+              custom_parameter_2: 'quote_value',
+            },
           });
 
           window.gtag('event', 'page_view', pageData);
@@ -237,55 +242,53 @@ describe('Analytics Tracking Integration Tests', () => {
           // Google Tag Manager
           window.dataLayer.push({
             event: 'page_view',
-            page_data: pageData
+            page_data: pageData,
           });
 
           // Mixpanel
           window.mixpanel.track('Page View', {
             page: 'quote_details',
             quote_id: 'analytics-quote-001',
-            user_type: 'premium'
+            user_type: 'premium',
           });
 
           // Custom analytics
           mockAnalyticsService.page('Quote Details', pageData);
         }, []);
 
-        return (
-          <UnifiedQuoteCard
-            quote={analyticsTestQuote}
-            viewMode="customer"
-            layout="detail"
-          />
-        );
+        return <UnifiedQuoteCard quote={analyticsTestQuote} viewMode="customer" layout="detail" />;
       };
 
       renderWithProviders(<PageViewTrackingTest />);
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'page_view', expect.objectContaining({
-          page_title: 'Quote Details - QT-ANALYTICS001',
-          user_id: 'analytics-user-id',
-          custom_parameters: expect.objectContaining({
-            quote_id: 'analytics-quote-001'
-          })
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'page_view',
+          expect.objectContaining({
+            page_title: 'Quote Details - QT-ANALYTICS001',
+            user_id: 'analytics-user-id',
+            custom_parameters: expect.objectContaining({
+              quote_id: 'analytics-quote-001',
+            }),
+          }),
+        );
 
         expect(window.dataLayer).toEqual(
           expect.arrayContaining([
             expect.objectContaining({
               event: 'page_view',
               page_data: expect.objectContaining({
-                quote_id: 'analytics-quote-001'
-              })
-            })
-          ])
+                quote_id: 'analytics-quote-001',
+              }),
+            }),
+          ]),
         );
 
         expect(window.mixpanel.track).toHaveBeenCalledWith('Page View', {
           page: 'quote_details',
           quote_id: 'analytics-quote-001',
-          user_type: 'premium'
+          user_type: 'premium',
         });
 
         expect(mockAnalyticsService.page).toHaveBeenCalledWith('Quote Details', expect.any(Object));
@@ -300,7 +303,7 @@ describe('Analytics Tracking Integration Tests', () => {
         React.useEffect(() => {
           const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           const startTime = Date.now();
-          
+
           setSessionId(sessionId);
           setSessionStart(startTime);
 
@@ -311,31 +314,31 @@ describe('Analytics Tracking Integration Tests', () => {
             user_id: 'analytics-user-id',
             device_category: 'desktop',
             source: 'direct',
-            medium: 'none'
+            medium: 'none',
           });
 
           // Track session data periodically
           const sessionTracker = setInterval(() => {
             const duration = Date.now() - startTime;
-            
+
             window.gtag('event', 'session_ping', {
               session_id: sessionId,
               session_duration: duration,
-              user_id: 'analytics-user-id'
+              user_id: 'analytics-user-id',
             });
           }, 10000); // Every 10 seconds
 
           // Cleanup on unmount
           return () => {
             clearInterval(sessionTracker);
-            
+
             const endTime = Date.now();
             const totalDuration = endTime - startTime;
-            
+
             window.gtag('event', 'session_end', {
               session_id: sessionId,
               session_duration: totalDuration,
-              user_id: 'analytics-user-id'
+              user_id: 'analytics-user-id',
             });
           };
         }, []);
@@ -344,11 +347,7 @@ describe('Analytics Tracking Integration Tests', () => {
           <div>
             <div data-testid="session-id">{sessionId}</div>
             <div data-testid="session-start">{sessionStart}</div>
-            <UnifiedQuoteList
-              quotes={[analyticsTestQuote]}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={[analyticsTestQuote]} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -360,19 +359,27 @@ describe('Analytics Tracking Integration Tests', () => {
         expect(screen.getByTestId('session-start')).not.toHaveTextContent('0');
       });
 
-      expect(window.gtag).toHaveBeenCalledWith('event', 'session_start', expect.objectContaining({
-        session_id: expect.stringMatching(/^session_\d+_[a-z0-9]+$/),
-        user_id: 'analytics-user-id'
-      }));
+      expect(window.gtag).toHaveBeenCalledWith(
+        'event',
+        'session_start',
+        expect.objectContaining({
+          session_id: expect.stringMatching(/^session_\d+_[a-z0-9]+$/),
+          user_id: 'analytics-user-id',
+        }),
+      );
 
       // Unmount to trigger session end
       unmount();
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'session_end', expect.objectContaining({
-          session_id: expect.any(String),
-          session_duration: expect.any(Number)
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'session_end',
+          expect.objectContaining({
+            session_id: expect.any(String),
+            session_duration: expect.any(Number),
+          }),
+        );
       });
     });
   });
@@ -392,8 +399,8 @@ describe('Analytics Tracking Integration Tests', () => {
               quote_status: analyticsTestQuote.status,
               destination_country: analyticsTestQuote.destination_country,
               click_timestamp: Date.now(),
-              page_location: window.location.href
-            }
+              page_location: window.location.href,
+            },
           };
 
           // Google Analytics
@@ -405,7 +412,7 @@ describe('Analytics Tracking Integration Tests', () => {
             quote_value: analyticsTestQuote.final_total_usd,
             currency: 'USD',
             content_category: 'International Shopping',
-            content_ids: [analyticsTestQuote.id]
+            content_ids: [analyticsTestQuote.id],
           });
 
           // Mixpanel
@@ -413,7 +420,7 @@ describe('Analytics Tracking Integration Tests', () => {
             quote_id: analyticsTestQuote.id,
             quote_value: analyticsTestQuote.final_total_usd,
             status: analyticsTestQuote.status,
-            country: analyticsTestQuote.destination_country
+            country: analyticsTestQuote.destination_country,
           });
 
           // Hotjar event
@@ -436,26 +443,37 @@ describe('Analytics Tracking Integration Tests', () => {
       await user.click(approveButton);
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'approve', expect.objectContaining({
-          event_category: 'Quote Actions',
-          event_action: 'approve',
-          event_label: 'QT-ANALYTICS001',
-          value: 599.99,
-          custom_parameters: expect.objectContaining({
-            quote_id: 'analytics-quote-001'
-          })
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'approve',
+          expect.objectContaining({
+            event_category: 'Quote Actions',
+            event_action: 'approve',
+            event_label: 'QT-ANALYTICS001',
+            value: 599.99,
+            custom_parameters: expect.objectContaining({
+              quote_id: 'analytics-quote-001',
+            }),
+          }),
+        );
 
-        expect(window.fbq).toHaveBeenCalledWith('track', 'CustomEvent', expect.objectContaining({
-          event_name: 'quote_approve',
-          quote_value: 599.99,
-          currency: 'USD'
-        }));
+        expect(window.fbq).toHaveBeenCalledWith(
+          'track',
+          'CustomEvent',
+          expect.objectContaining({
+            event_name: 'quote_approve',
+            quote_value: 599.99,
+            currency: 'USD',
+          }),
+        );
 
-        expect(window.mixpanel.track).toHaveBeenCalledWith('Quote Approve', expect.objectContaining({
-          quote_id: 'analytics-quote-001',
-          quote_value: 599.99
-        }));
+        expect(window.mixpanel.track).toHaveBeenCalledWith(
+          'Quote Approve',
+          expect.objectContaining({
+            quote_id: 'analytics-quote-001',
+            quote_value: 599.99,
+          }),
+        );
 
         expect(window.hj).toHaveBeenCalledWith('event', 'quote_approve');
       });
@@ -467,32 +485,32 @@ describe('Analytics Tracking Integration Tests', () => {
           fieldsCompleted: 0,
           fieldsTotal: 5,
           timeSpent: 0,
-          interactions: 0
+          interactions: 0,
         });
 
         React.useEffect(() => {
           const startTime = Date.now();
-          
+
           // Track form start
           window.gtag('event', 'form_start', {
             form_id: 'quote_creation_form',
             form_name: 'Quote Request Form',
-            user_id: 'analytics-user-id'
+            user_id: 'analytics-user-id',
           });
 
           const timeTracker = setInterval(() => {
             const elapsed = Date.now() - startTime;
-            setFormData(prev => ({ ...prev, timeSpent: elapsed }));
+            setFormData((prev) => ({ ...prev, timeSpent: elapsed }));
           }, 1000);
 
           return () => clearInterval(timeTracker);
         }, []);
 
         const handleFieldInteraction = (fieldName: string, value: string) => {
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             interactions: prev.interactions + 1,
-            fieldsCompleted: value ? prev.fieldsCompleted + 1 : prev.fieldsCompleted
+            fieldsCompleted: value ? prev.fieldsCompleted + 1 : prev.fieldsCompleted,
           }));
 
           // Track field interaction
@@ -500,14 +518,14 @@ describe('Analytics Tracking Integration Tests', () => {
             field_name: fieldName,
             field_value_length: value.length,
             form_completion_rate: (formData.fieldsCompleted / formData.fieldsTotal) * 100,
-            time_to_interaction: formData.timeSpent
+            time_to_interaction: formData.timeSpent,
           });
 
           // Mixpanel funnel tracking
           window.mixpanel.track('Form Field Completed', {
             field_name: fieldName,
             completion_percentage: (formData.fieldsCompleted / formData.fieldsTotal) * 100,
-            form_type: 'quote_request'
+            form_type: 'quote_request',
           });
         };
 
@@ -518,20 +536,22 @@ describe('Analytics Tracking Integration Tests', () => {
             completion_rate: 100,
             time_spent: formData.timeSpent,
             total_interactions: formData.interactions,
-            user_id: 'analytics-user-id'
+            user_id: 'analytics-user-id',
           });
 
           // E-commerce tracking
           window.gtag('event', 'begin_checkout', {
             currency: 'USD',
             value: data.estimatedPrice || 0,
-            items: [{
-              item_id: 'quote_request',
-              item_name: data.productName,
-              category: 'International Shopping',
-              quantity: data.quantity || 1,
-              price: data.estimatedPrice || 0
-            }]
+            items: [
+              {
+                item_id: 'quote_request',
+                item_name: data.productName,
+                category: 'International Shopping',
+                quantity: data.quantity || 1,
+                price: data.estimatedPrice || 0,
+              },
+            ],
           });
         };
 
@@ -558,14 +578,22 @@ describe('Analytics Tracking Integration Tests', () => {
       await user.type(screen.getByLabelText(/your name/i), 'Test User');
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'form_start', expect.objectContaining({
-          form_id: 'quote_creation_form'
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'form_start',
+          expect.objectContaining({
+            form_id: 'quote_creation_form',
+          }),
+        );
 
-        expect(window.gtag).toHaveBeenCalledWith('event', 'form_field_interaction', expect.objectContaining({
-          field_name: expect.any(String),
-          field_value_length: expect.any(Number)
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'form_field_interaction',
+          expect.objectContaining({
+            field_name: expect.any(String),
+            field_value_length: expect.any(Number),
+          }),
+        );
       });
     });
   });
@@ -575,18 +603,18 @@ describe('Analytics Tracking Integration Tests', () => {
       const PerformanceTrackingTest = () => {
         React.useEffect(() => {
           const startTime = performance.now();
-          
+
           // Simulate component render completion
           setTimeout(() => {
             const endTime = performance.now();
             const renderTime = endTime - startTime;
-            
+
             // Track render performance
             window.gtag('event', 'component_render', {
               component_name: 'UnifiedQuoteCard',
               render_time: renderTime,
               user_id: 'analytics-user-id',
-              device_type: 'desktop'
+              device_type: 'desktop',
             });
 
             // Track Core Web Vitals if available
@@ -597,12 +625,12 @@ describe('Analytics Tracking Integration Tests', () => {
                     window.gtag('event', 'web_vitals', {
                       metric_name: 'LCP',
                       metric_value: entry.startTime,
-                      metric_rating: entry.startTime < 2500 ? 'good' : 'needs_improvement'
+                      metric_rating: entry.startTime < 2500 ? 'good' : 'needs_improvement',
                     });
                   }
                 });
               });
-              
+
               observer.observe({ entryTypes: ['largest-contentful-paint'] });
             }
           }, 50);
@@ -620,12 +648,19 @@ describe('Analytics Tracking Integration Tests', () => {
 
       renderWithProviders(<PerformanceTrackingTest />);
 
-      await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'component_render', expect.objectContaining({
-          component_name: 'UnifiedQuoteCard',
-          render_time: expect.any(Number)
-        }));
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(window.gtag).toHaveBeenCalledWith(
+            'event',
+            'component_render',
+            expect.objectContaining({
+              component_name: 'UnifiedQuoteCard',
+              render_time: expect.any(Number),
+            }),
+          );
+        },
+        { timeout: 1000 },
+      );
     });
 
     it('should track scroll depth and engagement', async () => {
@@ -638,20 +673,20 @@ describe('Analytics Tracking Integration Tests', () => {
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             const docHeight = document.documentElement.scrollHeight - window.innerHeight;
             const scrollPercent = Math.round((scrollTop / docHeight) * 100);
-            
+
             setScrollDepth(scrollPercent);
-            setMaxScroll(prev => Math.max(prev, scrollPercent));
+            setMaxScroll((prev) => Math.max(prev, scrollPercent));
 
             // Track scroll milestones
             const milestones = [25, 50, 75, 90];
-            milestones.forEach(milestone => {
+            milestones.forEach((milestone) => {
               if (scrollPercent >= milestone && maxScroll < milestone) {
                 window.gtag('event', 'scroll', {
                   event_category: 'Engagement',
                   event_action: 'Scroll',
                   event_label: `${milestone}%`,
                   value: milestone,
-                  user_id: 'analytics-user-id'
+                  user_id: 'analytics-user-id',
                 });
               }
             });
@@ -664,10 +699,7 @@ describe('Analytics Tracking Integration Tests', () => {
         return (
           <div style={{ height: '2000px' }}>
             <div data-testid="scroll-depth">{scrollDepth}%</div>
-            <UnifiedQuoteBreakdown
-              quote={analyticsTestQuote}
-              viewMode="customer"
-            />
+            <UnifiedQuoteBreakdown quote={analyticsTestQuote} viewMode="customer" />
             <div style={{ height: '1500px', backgroundColor: '#f0f0f0' }}>
               Long content to enable scrolling
             </div>
@@ -680,19 +712,29 @@ describe('Analytics Tracking Integration Tests', () => {
       // Simulate scrolling
       act(() => {
         Object.defineProperty(window, 'pageYOffset', { value: 500, configurable: true });
-        Object.defineProperty(document.documentElement, 'scrollTop', { value: 500, configurable: true });
-        Object.defineProperty(document.documentElement, 'scrollHeight', { value: 2000, configurable: true });
+        Object.defineProperty(document.documentElement, 'scrollTop', {
+          value: 500,
+          configurable: true,
+        });
+        Object.defineProperty(document.documentElement, 'scrollHeight', {
+          value: 2000,
+          configurable: true,
+        });
         Object.defineProperty(window, 'innerHeight', { value: 800, configurable: true });
-        
+
         fireEvent.scroll(window);
       });
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'scroll', expect.objectContaining({
-          event_category: 'Engagement',
-          event_action: 'Scroll',
-          event_label: '25%'
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'scroll',
+          expect.objectContaining({
+            event_category: 'Engagement',
+            event_action: 'Scroll',
+            event_label: '25%',
+          }),
+        );
       });
     });
   });
@@ -704,17 +746,19 @@ describe('Analytics Tracking Integration Tests', () => {
           const cartData = {
             currency: 'USD',
             value: analyticsTestQuote.final_total_usd,
-            items: [{
-              item_id: analyticsTestQuote.id,
-              item_name: analyticsTestQuote.items[0].name,
-              item_category: 'Electronics',
-              item_category2: 'Cameras',
-              item_brand: 'Professional',
-              price: analyticsTestQuote.final_total_usd,
-              quantity: 1,
-              index: 0,
-              item_variant: 'International'
-            }]
+            items: [
+              {
+                item_id: analyticsTestQuote.id,
+                item_name: analyticsTestQuote.items[0].name,
+                item_category: 'Electronics',
+                item_category2: 'Cameras',
+                item_brand: 'Professional',
+                price: analyticsTestQuote.final_total_usd,
+                quantity: 1,
+                index: 0,
+                item_variant: 'International',
+              },
+            ],
           };
 
           // Google Analytics Enhanced Ecommerce
@@ -726,11 +770,13 @@ describe('Analytics Tracking Integration Tests', () => {
             currency: cartData.currency,
             content_ids: [analyticsTestQuote.id],
             content_type: 'product',
-            contents: [{
-              id: analyticsTestQuote.id,
-              quantity: 1,
-              item_price: cartData.value
-            }]
+            contents: [
+              {
+                id: analyticsTestQuote.id,
+                quantity: 1,
+                item_price: cartData.value,
+              },
+            ],
           });
 
           // Mixpanel
@@ -739,17 +785,13 @@ describe('Analytics Tracking Integration Tests', () => {
             product_name: analyticsTestQuote.items[0].name,
             price: cartData.value,
             category: 'Electronics',
-            source: 'quote_approval'
+            source: 'quote_approval',
           });
         };
 
         return (
           <div>
-            <UnifiedQuoteCard
-              quote={analyticsTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={analyticsTestQuote} viewMode="customer" layout="detail" />
             <button onClick={handleAddToCart} data-testid="add-to-cart">
               Add to Cart
             </button>
@@ -764,27 +806,38 @@ describe('Analytics Tracking Integration Tests', () => {
       await user.click(addToCartButton);
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'add_to_cart', expect.objectContaining({
-          currency: 'USD',
-          value: 599.99,
-          items: expect.arrayContaining([
-            expect.objectContaining({
-              item_id: 'analytics-quote-001',
-              item_name: 'Professional Camera'
-            })
-          ])
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'add_to_cart',
+          expect.objectContaining({
+            currency: 'USD',
+            value: 599.99,
+            items: expect.arrayContaining([
+              expect.objectContaining({
+                item_id: 'analytics-quote-001',
+                item_name: 'Professional Camera',
+              }),
+            ]),
+          }),
+        );
 
-        expect(window.fbq).toHaveBeenCalledWith('track', 'AddToCart', expect.objectContaining({
-          value: 599.99,
-          currency: 'USD',
-          content_ids: ['analytics-quote-001']
-        }));
+        expect(window.fbq).toHaveBeenCalledWith(
+          'track',
+          'AddToCart',
+          expect.objectContaining({
+            value: 599.99,
+            currency: 'USD',
+            content_ids: ['analytics-quote-001'],
+          }),
+        );
 
-        expect(window.mixpanel.track).toHaveBeenCalledWith('Product Added', expect.objectContaining({
-          product_id: 'analytics-quote-001',
-          price: 599.99
-        }));
+        expect(window.mixpanel.track).toHaveBeenCalledWith(
+          'Product Added',
+          expect.objectContaining({
+            product_id: 'analytics-quote-001',
+            price: 599.99,
+          }),
+        );
       });
     });
 
@@ -796,21 +849,24 @@ describe('Analytics Tracking Integration Tests', () => {
             value: analyticsTestQuote.final_total_usd,
             currency: 'USD',
             tax: analyticsTestQuote.sales_tax_price,
-            shipping: analyticsTestQuote.international_shipping + analyticsTestQuote.domestic_shipping,
-            items: [{
-              item_id: analyticsTestQuote.id,
-              item_name: analyticsTestQuote.items[0].name,
-              item_category: 'Electronics',
-              price: analyticsTestQuote.item_price,
-              quantity: 1
-            }],
+            shipping:
+              analyticsTestQuote.international_shipping + analyticsTestQuote.domestic_shipping,
+            items: [
+              {
+                item_id: analyticsTestQuote.id,
+                item_name: analyticsTestQuote.items[0].name,
+                item_category: 'Electronics',
+                price: analyticsTestQuote.item_price,
+                quantity: 1,
+              },
+            ],
             user_id: 'analytics-user-id',
             custom_parameters: {
               payment_method: 'credit_card',
               shipping_method: 'international',
               destination_country: analyticsTestQuote.destination_country,
-              quote_conversion_time: Date.now() - new Date(analyticsTestQuote.created_at).getTime()
-            }
+              quote_conversion_time: Date.now() - new Date(analyticsTestQuote.created_at).getTime(),
+            },
           };
 
           // Google Analytics Purchase
@@ -822,13 +878,13 @@ describe('Analytics Tracking Integration Tests', () => {
             currency: transactionData.currency,
             content_ids: [analyticsTestQuote.id],
             content_type: 'product',
-            num_items: 1
+            num_items: 1,
           });
 
           // Mixpanel Revenue Tracking
           window.mixpanel.track('Order Completed', {
             ...transactionData,
-            revenue: transactionData.value
+            revenue: transactionData.value,
           });
 
           window.mixpanel.people.increment('total_revenue', transactionData.value);
@@ -837,10 +893,7 @@ describe('Analytics Tracking Integration Tests', () => {
 
         return (
           <div>
-            <UnifiedQuoteBreakdown
-              quote={analyticsTestQuote}
-              viewMode="customer"
-            />
+            <UnifiedQuoteBreakdown quote={analyticsTestQuote} viewMode="customer" />
             <button onClick={handlePurchase} data-testid="complete-purchase">
               Complete Purchase
             </button>
@@ -855,21 +908,32 @@ describe('Analytics Tracking Integration Tests', () => {
       await user.click(purchaseButton);
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'purchase', expect.objectContaining({
-          transaction_id: expect.stringMatching(/^txn_\d+$/),
-          value: 599.99,
-          currency: 'USD',
-          tax: 40.00
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'purchase',
+          expect.objectContaining({
+            transaction_id: expect.stringMatching(/^txn_\d+$/),
+            value: 599.99,
+            currency: 'USD',
+            tax: 40.0,
+          }),
+        );
 
-        expect(window.fbq).toHaveBeenCalledWith('track', 'Purchase', expect.objectContaining({
-          value: 599.99,
-          currency: 'USD'
-        }));
+        expect(window.fbq).toHaveBeenCalledWith(
+          'track',
+          'Purchase',
+          expect.objectContaining({
+            value: 599.99,
+            currency: 'USD',
+          }),
+        );
 
-        expect(window.mixpanel.track).toHaveBeenCalledWith('Order Completed', expect.objectContaining({
-          revenue: 599.99
-        }));
+        expect(window.mixpanel.track).toHaveBeenCalledWith(
+          'Order Completed',
+          expect.objectContaining({
+            revenue: 599.99,
+          }),
+        );
 
         expect(window.mixpanel.people.increment).toHaveBeenCalledWith('total_revenue', 599.99);
       });
@@ -886,7 +950,7 @@ describe('Analytics Tracking Integration Tests', () => {
               fatal: false,
               error_stack: error.error?.stack,
               user_id: 'analytics-user-id',
-              page_location: window.location.href
+              page_location: window.location.href,
             });
 
             // Mixpanel error tracking
@@ -894,7 +958,7 @@ describe('Analytics Tracking Integration Tests', () => {
               error_message: error.message,
               error_stack: error.error?.stack,
               user_agent: navigator.userAgent,
-              url: window.location.href
+              url: window.location.href,
             });
           };
 
@@ -902,7 +966,7 @@ describe('Analytics Tracking Integration Tests', () => {
             window.gtag('event', 'exception', {
               description: `Unhandled Promise Rejection: ${event.reason}`,
               fatal: false,
-              user_id: 'analytics-user-id'
+              user_id: 'analytics-user-id',
             });
           };
 
@@ -925,11 +989,7 @@ describe('Analytics Tracking Integration Tests', () => {
             <button onClick={triggerError} data-testid="trigger-error">
               Trigger Error
             </button>
-            <UnifiedQuoteCard
-              quote={analyticsTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={analyticsTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -939,7 +999,7 @@ describe('Analytics Tracking Integration Tests', () => {
 
       // Trigger error
       const errorButton = screen.getByTestId('trigger-error');
-      
+
       try {
         await user.click(errorButton);
       } catch (error) {
@@ -949,17 +1009,23 @@ describe('Analytics Tracking Integration Tests', () => {
       // Error tracking would be called by the error handler
       // This is difficult to test directly, so we'll mock the behavior
       act(() => {
-        window.dispatchEvent(new ErrorEvent('error', {
-          message: 'Test analytics error',
-          error: new Error('Test analytics error')
-        }));
+        window.dispatchEvent(
+          new ErrorEvent('error', {
+            message: 'Test analytics error',
+            error: new Error('Test analytics error'),
+          }),
+        );
       });
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'exception', expect.objectContaining({
-          description: 'Test analytics error',
-          fatal: false
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'exception',
+          expect.objectContaining({
+            description: 'Test analytics error',
+            fatal: false,
+          }),
+        );
       });
     });
 
@@ -976,14 +1042,14 @@ describe('Analytics Tracking Integration Tests', () => {
               event_action: 'Request Failed',
               event_label: 'quote_submission',
               error_message: (error as Error).message,
-              user_id: 'analytics-user-id'
+              user_id: 'analytics-user-id',
             });
 
             window.mixpanel.track('API Error', {
               endpoint: 'quote_submission',
               error_message: (error as Error).message,
               error_type: 'server_error',
-              status_code: 500
+              status_code: 500,
             });
           }
         };
@@ -1004,16 +1070,23 @@ describe('Analytics Tracking Integration Tests', () => {
       await user.click(apiErrorButton);
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('event', 'api_error', expect.objectContaining({
-          event_category: 'API',
-          event_action: 'Request Failed',
-          error_message: 'API request failed: 500 Internal Server Error'
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'event',
+          'api_error',
+          expect.objectContaining({
+            event_category: 'API',
+            event_action: 'Request Failed',
+            error_message: 'API request failed: 500 Internal Server Error',
+          }),
+        );
 
-        expect(window.mixpanel.track).toHaveBeenCalledWith('API Error', expect.objectContaining({
-          endpoint: 'quote_submission',
-          status_code: 500
-        }));
+        expect(window.mixpanel.track).toHaveBeenCalledWith(
+          'API Error',
+          expect.objectContaining({
+            endpoint: 'quote_submission',
+            status_code: 500,
+          }),
+        );
       });
     });
   });
@@ -1023,50 +1096,52 @@ describe('Analytics Tracking Integration Tests', () => {
       const DeviceTrackingTest = () => {
         React.useEffect(() => {
           const deviceInfo = {
-            device_category: /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+            device_category: /Mobile|Android|iPhone/i.test(navigator.userAgent)
+              ? 'mobile'
+              : 'desktop',
             browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other',
             operating_system: navigator.platform,
             screen_resolution: `${screen.width}x${screen.height}`,
             viewport_size: `${window.innerWidth}x${window.innerHeight}`,
-            user_agent: navigator.userAgent.substring(0, 100) // Truncated for storage
+            user_agent: navigator.userAgent.substring(0, 100), // Truncated for storage
           };
 
           // Track device information
           window.gtag('config', 'GA_MEASUREMENT_ID', {
             custom_map: {
-              device_info: JSON.stringify(deviceInfo)
-            }
+              device_info: JSON.stringify(deviceInfo),
+            },
           });
 
           window.mixpanel.register({
             device_type: deviceInfo.device_category,
             browser: deviceInfo.browser,
-            screen_resolution: deviceInfo.screen_resolution
+            screen_resolution: deviceInfo.screen_resolution,
           });
         }, []);
 
-        return (
-          <UnifiedQuoteList
-            quotes={[analyticsTestQuote]}
-            viewMode="customer"
-            layout="list"
-          />
-        );
+        return <UnifiedQuoteList quotes={[analyticsTestQuote]} viewMode="customer" layout="list" />;
       };
 
       renderWithProviders(<DeviceTrackingTest />);
 
       await waitFor(() => {
-        expect(window.gtag).toHaveBeenCalledWith('config', 'GA_MEASUREMENT_ID', expect.objectContaining({
-          custom_map: {
-            device_info: expect.stringContaining('desktop')
-          }
-        }));
+        expect(window.gtag).toHaveBeenCalledWith(
+          'config',
+          'GA_MEASUREMENT_ID',
+          expect.objectContaining({
+            custom_map: {
+              device_info: expect.stringContaining('desktop'),
+            },
+          }),
+        );
 
-        expect(window.mixpanel.register).toHaveBeenCalledWith(expect.objectContaining({
-          device_type: 'desktop',
-          browser: expect.any(String)
-        }));
+        expect(window.mixpanel.register).toHaveBeenCalledWith(
+          expect.objectContaining({
+            device_type: 'desktop',
+            browser: expect.any(String),
+          }),
+        );
       });
     });
   });

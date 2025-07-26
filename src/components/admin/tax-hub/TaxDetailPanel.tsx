@@ -1,16 +1,16 @@
 /**
  * TAX DETAIL PANEL
- * 
+ *
  * Contextual slide-in panel that serves as the "Spoke" component in our
  * Hub and Spoke navigation pattern. Provides detailed configuration options
  * based on the selected context (methods, valuations, or breakdown).
- * 
+ *
  * Design Principles:
  * - Contextual content: Shows only relevant information
  * - Smooth animations: Professional slide-in/out transitions
  * - Breadcrumb navigation: Clear path back to overview
  * - Responsive layout: Adapts to screen size
- * 
+ *
  * Features:
  * - Sliding panel animation with backdrop
  * - Dynamic content based on panel type
@@ -22,15 +22,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  X, 
-  ArrowLeft, 
-  Settings, 
-  DollarSign, 
-  BarChart3,
-  ChevronRight,
-  Home
-} from 'lucide-react';
+import { X, ArrowLeft, Settings, DollarSign, BarChart3, ChevronRight, Home } from 'lucide-react';
 import { LayoutCard, Flex, Stack, Heading, Text } from '@/components/ui/layout-system';
 import { DualCalculationMethodSelector } from '../tax-method-selection/DualCalculationMethodSelector';
 import { PerItemValuationSelector } from '../tax-method-selection/PerItemValuationSelector';
@@ -71,7 +63,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
   currentMethod = 'auto',
   itemValuationMethods = {},
   isCalculating = false,
-  className = ''
+  className = '',
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [contentKey, setContentKey] = useState(0); // Force re-render when panel type changes
@@ -82,20 +74,20 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
       title: 'Tax Calculation Methods',
       description: 'Configure how taxes are calculated for this quote',
       icon: <Settings className="h-5 w-5" />,
-      breadcrumb: ['Tax Overview', 'Methods']
+      breadcrumb: ['Tax Overview', 'Methods'],
     },
     valuations: {
       title: 'Item Valuations',
       description: 'Configure valuation methods for individual items',
       icon: <DollarSign className="h-5 w-5" />,
-      breadcrumb: ['Tax Overview', 'Valuations']
+      breadcrumb: ['Tax Overview', 'Valuations'],
     },
     breakdown: {
       title: 'Tax Breakdown',
       description: 'Detailed breakdown of tax calculations',
       icon: <BarChart3 className="h-5 w-5" />,
-      breadcrumb: ['Tax Overview', 'Breakdown']
-    }
+      breadcrumb: ['Tax Overview', 'Breakdown'],
+    },
   };
 
   const currentConfig = panelConfigs[panelType];
@@ -104,7 +96,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      setContentKey(prev => prev + 1); // Force content refresh
+      setContentKey((prev) => prev + 1); // Force content refresh
       // Prevent body scroll when panel is open
       document.body.style.overflow = 'hidden';
     } else {
@@ -158,7 +150,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
             className="border-0 shadow-none bg-transparent p-0"
           />
         );
-        
+
       case 'valuations':
         return quote.items ? (
           <PerItemValuationSelector
@@ -181,7 +173,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
             <Text color="muted">No items found in this quote</Text>
           </div>
         );
-        
+
       case 'breakdown':
         return (
           <CompactHSNTaxBreakdown
@@ -192,7 +184,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
             onUpdateQuote={() => {}} // Would be connected to quote update handler
           />
         );
-        
+
       default:
         return (
           <div className="flex items-center justify-center h-64">
@@ -215,7 +207,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
         }`}
         onClick={handleBackdropClick}
       />
-      
+
       {/* Panel */}
       <div
         className={`
@@ -260,7 +252,9 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
                     <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
                       {currentConfig.icon}
                     </div>
-                    <Heading level={2} size="xl">{currentConfig.title}</Heading>
+                    <Heading level={2} size="xl">
+                      {currentConfig.title}
+                    </Heading>
                   </Flex>
                   <Text color="muted">{currentConfig.description}</Text>
                   {quote && (
@@ -268,13 +262,11 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
                       <Badge variant="outline">
                         {quote.origin_country} → {quote.destination_country}
                       </Badge>
-                      <Badge variant="secondary">
-                        Quote #{quote.display_id}
-                      </Badge>
+                      <Badge variant="secondary">Quote #{quote.display_id}</Badge>
                     </Flex>
                   )}
                 </Stack>
-                
+
                 <Button
                   variant="ghost"
                   size="sm"
@@ -290,9 +282,7 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
-              <div key={contentKey}>
-                {renderPanelContent()}
-              </div>
+              <div key={contentKey}>{renderPanelContent()}</div>
             </div>
           </div>
 
@@ -304,11 +294,13 @@ export const TaxDetailPanel: React.FC<TaxDetailPanelProps> = ({
                   {isCalculating && (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <Text size="sm" color="muted">Calculating...</Text>
+                      <Text size="sm" color="muted">
+                        Calculating...
+                      </Text>
                     </>
                   )}
                 </Flex>
-                
+
                 <Flex gap="sm">
                   <Button variant="outline" onClick={onClose}>
                     <ArrowLeft className="h-4 w-4 mr-2" />

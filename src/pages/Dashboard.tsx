@@ -74,19 +74,19 @@ const Dashboard = () => {
         await notificationService.createNotification(
           user.id,
           NOTIFICATION_TYPES.WELCOME_NEW_USER,
-          "Welcome to iwishBag! Start by creating your first quote request to shop globally.",
+          'Welcome to iwishBag! Start by creating your first quote request to shop globally.',
           {
             action_url: '/quote',
             action_label: 'Request Quote',
             title: 'Welcome to iwishBag!',
-            subtitle: 'Your global shopping journey starts here'
+            subtitle: 'Your global shopping journey starts here',
           },
-          { skipDuplicates: true }
+          { skipDuplicates: true },
         );
       }
 
       // Pending quote notifications
-      const pendingQuotes = quotes?.filter(q => q.status === 'pending') || [];
+      const pendingQuotes = quotes?.filter((q) => q.status === 'pending') || [];
       if (pendingQuotes.length > 0) {
         await notificationService.createNotification(
           user.id,
@@ -96,16 +96,17 @@ const Dashboard = () => {
             quote_id: pendingQuotes[0].id,
             action_url: '/dashboard/quotes',
             action_label: 'View Quotes',
-            title: 'Quotes Under Review'
+            title: 'Quotes Under Review',
           },
-          { skipDuplicates: true }
+          { skipDuplicates: true },
         );
       }
 
       // Approved quote notifications (high priority)
-      const approvedQuotes = quotes?.filter(q => q.status === 'approved') || [];
+      const approvedQuotes = quotes?.filter((q) => q.status === 'approved') || [];
       if (approvedQuotes.length > 0) {
-        for (const quote of approvedQuotes.slice(0, 3)) { // Limit to 3 to avoid spam
+        for (const quote of approvedQuotes.slice(0, 3)) {
+          // Limit to 3 to avoid spam
           await notificationService.createNotification(
             user.id,
             NOTIFICATION_TYPES.QUOTE_APPROVED,
@@ -115,9 +116,9 @@ const Dashboard = () => {
               action_url: `/checkout/${quote.id}`,
               action_label: 'Checkout Now',
               title: 'Quote Approved!',
-              subtitle: `Total: $${quote.final_total_usd?.toFixed(2) || '0.00'}`
+              subtitle: `Total: $${quote.final_total_usd?.toFixed(2) || '0.00'}`,
             },
-            { skipDuplicates: true }
+            { skipDuplicates: true },
           );
         }
       }
@@ -126,14 +127,14 @@ const Dashboard = () => {
       await notificationService.createNotification(
         user.id,
         NOTIFICATION_TYPES.FEATURE_ANNOUNCEMENT,
-        "New Feature: Track your orders in real-time with our enhanced tracking system!",
+        'New Feature: Track your orders in real-time with our enhanced tracking system!',
         {
           action_url: '/dashboard/orders',
           action_label: 'View Orders',
           title: 'New Tracking Feature',
-          subtitle: 'Enhanced order tracking now available'
+          subtitle: 'Enhanced order tracking now available',
         },
-        { skipDuplicates: true }
+        { skipDuplicates: true },
       );
 
       // Profile completion reminder
@@ -141,23 +142,22 @@ const Dashboard = () => {
         await notificationService.createNotification(
           user.id,
           NOTIFICATION_TYPES.PROFILE_INCOMPLETE,
-          "Complete your profile to get personalized recommendations and faster checkout.",
+          'Complete your profile to get personalized recommendations and faster checkout.',
           {
             action_url: '/profile',
             action_label: 'Complete Profile',
-            title: 'Complete Your Profile'
+            title: 'Complete Your Profile',
           },
-          { skipDuplicates: true }
+          { skipDuplicates: true },
         );
       }
 
       // Orders in progress notifications
-      const inProgressOrders = orders?.filter(o => 
-        o.status === 'ordered' || o.status === 'shipped'
-      ) || [];
-      
+      const inProgressOrders =
+        orders?.filter((o) => o.status === 'ordered' || o.status === 'shipped') || [];
+
       if (inProgressOrders.length > 0) {
-        const shippedOrders = inProgressOrders.filter(o => o.status === 'shipped');
+        const shippedOrders = inProgressOrders.filter((o) => o.status === 'shipped');
         if (shippedOrders.length > 0) {
           await notificationService.createNotification(
             user.id,
@@ -167,13 +167,12 @@ const Dashboard = () => {
               order_id: shippedOrders[0].id,
               action_url: '/dashboard/orders',
               action_label: 'Track Orders',
-              title: 'Orders Shipped!'
+              title: 'Orders Shipped!',
             },
-            { skipDuplicates: true }
+            { skipDuplicates: true },
           );
         }
       }
-
     } catch (error) {
       console.error('Error creating sample notifications:', error);
     }
@@ -203,24 +202,29 @@ const Dashboard = () => {
       link: `/dashboard/quotes/${q.id}`,
       amount: q.final_total_usd,
       image: q.product_image,
-      actions: q.status === 'approved' ? [
-        {
-          label: 'Checkout',
-          onClick: () => window.location.href = `/checkout/${q.id}`,
-          variant: 'default' as const
-        },
-        {
-          label: 'View Details',
-          onClick: () => window.location.href = `/dashboard/quotes/${q.id}`,
-          variant: 'outline' as const
-        }
-      ] : q.status === 'sent' ? [
-        {
-          label: 'Review Quote',
-          onClick: () => window.location.href = `/dashboard/quotes/${q.id}`,
-          variant: 'default' as const
-        }
-      ] : undefined,
+      actions:
+        q.status === 'approved'
+          ? [
+              {
+                label: 'Checkout',
+                onClick: () => (window.location.href = `/checkout/${q.id}`),
+                variant: 'default' as const,
+              },
+              {
+                label: 'View Details',
+                onClick: () => (window.location.href = `/dashboard/quotes/${q.id}`),
+                variant: 'outline' as const,
+              },
+            ]
+          : q.status === 'sent'
+            ? [
+                {
+                  label: 'Review Quote',
+                  onClick: () => (window.location.href = `/dashboard/quotes/${q.id}`),
+                  variant: 'default' as const,
+                },
+              ]
+            : undefined,
     })) || []),
     ...(orders?.slice(0, 2).map((o) => ({
       id: o.id,
@@ -231,13 +235,16 @@ const Dashboard = () => {
       status: o.status,
       link: `/dashboard/orders/${o.id}`,
       amount: o.final_total_usd,
-      actions: o.status === 'shipped' ? [
-        {
-          label: 'Track Package',
-          onClick: () => window.location.href = `/track/${o.iwish_tracking_id || o.id}`,
-          variant: 'default' as const
-        }
-      ] : undefined,
+      actions:
+        o.status === 'shipped'
+          ? [
+              {
+                label: 'Track Package',
+                onClick: () => (window.location.href = `/track/${o.iwish_tracking_id || o.id}`),
+                variant: 'default' as const,
+              },
+            ]
+          : undefined,
     })) || []),
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -284,9 +291,12 @@ const Dashboard = () => {
       bgColor: 'from-blue-50 to-blue-100',
       link: '/dashboard/quotes',
       trend: trends.activeQuotes,
-      insight: trends.activeQuotes.direction === 'up' ? 'You\'re requesting more quotes recently!' : 
-               trends.activeQuotes.direction === 'down' ? 'Fewer active quotes than usual' : 
-               'Steady quote activity',
+      insight:
+        trends.activeQuotes.direction === 'up'
+          ? "You're requesting more quotes recently!"
+          : trends.activeQuotes.direction === 'down'
+            ? 'Fewer active quotes than usual'
+            : 'Steady quote activity',
     },
     {
       value: approvedQuotes,
@@ -296,9 +306,12 @@ const Dashboard = () => {
       bgColor: 'from-emerald-50 to-emerald-100',
       link: '/dashboard/quotes',
       trend: trends.approvedQuotes,
-      insight: trends.approvedQuotes.direction === 'up' ? 'More quotes getting approved!' :
-               trends.approvedQuotes.direction === 'down' ? 'Consider reviewing quote requirements' :
-               'Consistent approval rate',
+      insight:
+        trends.approvedQuotes.direction === 'up'
+          ? 'More quotes getting approved!'
+          : trends.approvedQuotes.direction === 'down'
+            ? 'Consider reviewing quote requirements'
+            : 'Consistent approval rate',
     },
     {
       value: ordersInProgress,
@@ -308,8 +321,10 @@ const Dashboard = () => {
       bgColor: 'from-purple-50 to-purple-100',
       link: '/dashboard/orders',
       trend: trends.ordersInProgress,
-      insight: trends.ordersInProgress.direction === 'up' ? 'More orders in the pipeline!' :
-               'Orders moving through fulfillment',
+      insight:
+        trends.ordersInProgress.direction === 'up'
+          ? 'More orders in the pipeline!'
+          : 'Orders moving through fulfillment',
     },
     {
       value: deliveredOrders,
@@ -319,8 +334,10 @@ const Dashboard = () => {
       bgColor: 'from-green-50 to-green-100',
       link: '/dashboard/orders',
       trend: trends.deliveredOrders,
-      insight: trends.deliveredOrders.direction === 'up' ? 'Great! More deliveries completed' :
-               'Steady delivery rate',
+      insight:
+        trends.deliveredOrders.direction === 'up'
+          ? 'Great! More deliveries completed'
+          : 'Steady delivery rate',
     },
     {
       value: openTickets,
@@ -330,9 +347,12 @@ const Dashboard = () => {
       bgColor: 'from-purple-50 to-purple-100',
       link: '/support/my-tickets',
       trend: trends.openTickets,
-      insight: trends.openTickets.direction === 'down' ? 'Fewer support issues - great!' :
-               trends.openTickets.direction === 'up' ? 'We\'re here to help with any issues' :
-               'Normal support activity',
+      insight:
+        trends.openTickets.direction === 'down'
+          ? 'Fewer support issues - great!'
+          : trends.openTickets.direction === 'up'
+            ? "We're here to help with any issues"
+            : 'Normal support activity',
     },
   ];
 
@@ -365,10 +385,9 @@ const Dashboard = () => {
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer'}!
                 </H1>
                 <BodySmall className="text-gray-600">
-                  {isNewUser 
-                    ? 'Ready to start your global shopping journey?' 
-                    : 'Here\'s what\'s happening with your international shopping.'
-                  }
+                  {isNewUser
+                    ? 'Ready to start your global shopping journey?'
+                    : "Here's what's happening with your international shopping."}
                 </BodySmall>
               </div>
             </div>
@@ -408,9 +427,13 @@ const Dashboard = () => {
                     <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden transform hover:-translate-y-1">
                       <CardContent className="p-4 sm:p-6">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-teal-100 transition-colors">
-                          {React.cloneElement(action.icon, { className: 'w-4 h-4 sm:w-5 sm:h-5 text-teal-600' })}
+                          {React.cloneElement(action.icon, {
+                            className: 'w-4 h-4 sm:w-5 sm:h-5 text-teal-600',
+                          })}
                         </div>
-                        <H2 className="text-sm sm:text-lg font-semibold mb-1 leading-tight">{action.label}</H2>
+                        <H2 className="text-sm sm:text-lg font-semibold mb-1 leading-tight">
+                          {action.label}
+                        </H2>
                         <BodySmall className="text-gray-600 text-xs sm:text-sm leading-tight hidden sm:block">
                           {action.label === 'Request Quote' && 'Start a new quote request'}
                           {action.label === 'View All Quotes' && 'Manage your quote requests'}
@@ -440,11 +463,7 @@ const Dashboard = () => {
         {/* Notification Center */}
         <AnimatedSection animation="fadeInUp" delay={700}>
           <div className="mb-8">
-            <NotificationCenter 
-              maxHeight="300px"
-              defaultView="unread"
-              compact={false}
-            />
+            <NotificationCenter maxHeight="300px" defaultView="unread" compact={false} />
           </div>
         </AnimatedSection>
 

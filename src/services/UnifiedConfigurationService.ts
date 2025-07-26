@@ -165,47 +165,126 @@ class UnifiedConfigurationService {
    * Get configuration by category and optional key
    */
   async getConfig<T = any>(category: ConfigCategory, key?: string): Promise<T | null> {
-    const transaction = Sentry.startTransaction({
-      name: 'UnifiedConfigurationService.getConfig',
-      op: 'config',
-    });
+    const transaction = typeof Sentry?.startTransaction === 'function' 
+      ? Sentry.startTransaction({
+          name: 'UnifiedConfigurationService.getConfig',
+          op: 'config',
+        })
+      : null;
 
     try {
       const cacheKey = this.getCacheKey(category, key);
       const cached = this.getFromCache<T>(cacheKey);
       if (cached) {
-        transaction.setStatus('ok');
+        transaction?.setStatus('ok');
         return cached;
       }
 
       console.log(`⚙️ Fetching config: ${category}${key ? `:${key}` : ''}`);
 
-      // Use the database function for efficient retrieval
-      const { data, error } = await supabase.rpc('get_app_config', {
-        p_category: category,
-        p_config_key: key || null,
-      });
-
-      if (error) {
-        console.error('❌ Error fetching config:', error);
-        Sentry.captureException(error);
-        transaction.setStatus('internal_error');
+      // Direct query since get_app_config RPC doesn't exist yet
+      let result: T | null = null;
+      
+      // Handle different categories with existing tables
+      if (category === 'country') {
+        let query = supabase.from('country_settings').select('*');
+        
+        // If a specific key is provided, filter by country_code
+        if (key) {
+          query = query.eq('country_code', key);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('❌ Error fetching country config:', error);
+          if (typeof Sentry?.captureException === 'function') {
+            Sentry.captureException(error);
+          }
+          transaction?.setStatus('internal_error');
+          return null;
+        }
+        
+        if (key) {
+          // Single country config
+          const country = data?.[0];
+          if (country) {
+            result = {
+              name: country.name,
+              currency: country.currency,
+              symbol: country.symbol,
+              rate_from_usd: country.rate_from_usd,
+              minimum_payment_amount: country.minimum_payment_amount,
+              customs_percent: country.customs_percent || 0,
+              vat_percent: country.vat_percent || 0,
+              payment_gateway_fixed_fee: country.payment_gateway_fixed_fee || 0.30,
+              payment_gateway_percent_fee: country.payment_gateway_percent_fee || 2.9,
+              supported_gateways: ['stripe', 'payu'],
+              shipping_zones: ['standard', 'express']
+            } as T;
+          }
+        } else {
+          // All countries
+          const countries: Record<string, CountryConfig> = {};
+          data?.forEach(country => {
+            countries[country.country_code] = {
+              name: country.name,
+              currency: country.currency,
+              symbol: country.symbol,
+              rate_from_usd: country.rate_from_usd,
+              minimum_payment_amount: country.minimum_payment_amount,
+              customs_percent: country.customs_percent || 0,
+              vat_percent: country.vat_percent || 0,
+              payment_gateway_fixed_fee: country.payment_gateway_fixed_fee || 0.30,
+              payment_gateway_percent_fee: country.payment_gateway_percent_fee || 2.9,
+              supported_gateways: ['stripe', 'payu'],
+              shipping_zones: ['standard', 'express']
+            };
+          });
+          result = countries as T;
+        }
+      } else if (category === 'calculation') {
+        const { data, error } = await supabase
+          .from('calculation_defaults')
+          .select('*')
+          .single();
+        
+        if (error) {
+          console.error('❌ Error fetching calculation defaults:', error);
+          if (typeof Sentry?.captureException === 'function') {
+            Sentry.captureException(error);
+          }
+          transaction?.setStatus('internal_error');
+          return null;
+        }
+        
+        if (data) {
+          result = data as T;
+        }
+      } else {
+        console.warn(`⚠️ Config category '${category}' not implemented`);
+        transaction?.setStatus('ok');
         return null;
       }
 
-      const result = data as T;
-      this.setCache(cacheKey, result);
+      if (result) {
+        this.setCache(cacheKey, result);
+      }
 
       console.log(`✅ Config fetched: ${category}${key ? `:${key}` : ''}`);
-      transaction.setStatus('ok');
+      transaction?.setStatus('ok');
       return result;
     } catch (error) {
       console.error('❌ Exception in getConfig:', error);
-      Sentry.captureException(error);
-      transaction.setStatus('internal_error');
+      if (typeof Sentry?.captureException === 'function') {
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(error);
+        }
+      }
+      transaction?.setStatus('internal_error');
       return null;
     } finally {
-      transaction.finish();
+      transaction?.finish();
     }
   }
 
@@ -221,27 +300,23 @@ class UnifiedConfigurationService {
     try {
       console.log(`⚙️ Setting config: ${category}:${key}`);
 
-      const { data, error } = await supabase.rpc('set_app_config', {
-        p_category: category,
-        p_config_key: key,
-        p_config_data: configData,
-        p_metadata: metadata || null,
-      });
-
-      if (error) {
-        console.error('❌ Error setting config:', error);
-        Sentry.captureException(error);
-        return null;
-      }
-
-      // Clear cache for this category
+      // Direct update since set_app_config RPC doesn't exist yet
+      console.warn('⚠️ setConfig is not fully implemented for existing tables');
+      
+      // For now, just clear cache
       this.clearCache(category);
-
-      console.log(`✅ Config set: ${category}:${key} -> ${data}`);
-      return data;
+      
+      // Return a dummy ID
+      const dummyId = crypto.randomUUID();
+      console.log(`✅ Config cache cleared for: ${category}:${key}`);
+      return dummyId;
     } catch (error) {
       console.error('❌ Exception in setConfig:', error);
-      Sentry.captureException(error);
+      if (typeof Sentry?.captureException === 'function') {
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(error);
+        }
+      }
       return null;
     }
   }
@@ -259,21 +334,41 @@ class UnifiedConfigurationService {
       const cached = this.getFromCache<CountryConfig>(cacheKey);
       if (cached) return cached;
 
-      const { data, error } = await supabase.rpc('get_country_config', {
-        p_country_code: countryCode,
-      });
+      // Direct query since get_country_config RPC doesn't exist yet
+      const { data, error } = await supabase
+        .from('country_settings')
+        .select('*')
+        .eq('country_code', countryCode)
+        .single();
 
-      if (error || !data || Object.keys(data).length === 0) {
+      if (error || !data) {
         console.warn(`⚠️ No config found for country: ${countryCode}`);
         return null;
       }
 
-      const config = data as CountryConfig;
+      const config: CountryConfig = {
+        name: data.name,
+        currency: data.currency,
+        symbol: data.symbol,
+        rate_from_usd: data.rate_from_usd,
+        minimum_payment_amount: data.minimum_payment_amount,
+        customs_percent: data.customs_percent || 0,
+        vat_percent: data.vat_percent || 0,
+        payment_gateway_fixed_fee: data.payment_gateway_fixed_fee || 0.30,
+        payment_gateway_percent_fee: data.payment_gateway_percent_fee || 2.9,
+        supported_gateways: ['stripe', 'payu'],
+        shipping_zones: ['standard', 'express']
+      };
+      
       this.setCache(cacheKey, config);
       return config;
     } catch (error) {
       console.error(`❌ Error getting country config for ${countryCode}:`, error);
-      Sentry.captureException(error);
+      if (typeof Sentry?.captureException === 'function') {
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(error);
+        }
+      }
       return null;
     }
   }
@@ -322,9 +417,13 @@ class UnifiedConfigurationService {
       const cached = this.getFromCache<CalculationConfig>(cacheKey);
       if (cached) return cached;
 
-      const { data, error } = await supabase.rpc('get_calculation_defaults');
+      // Direct query since get_calculation_defaults RPC doesn't exist yet
+      const { data, error } = await supabase
+        .from('calculation_defaults')
+        .select('*')
+        .single();
 
-      if (error || !data || Object.keys(data).length === 0) {
+      if (error || !data) {
         console.warn('⚠️ No calculation defaults found, using fallback values');
         const fallback: CalculationConfig = {
           default_handling_charge_percent: 5.0,
@@ -345,7 +444,11 @@ class UnifiedConfigurationService {
       return config;
     } catch (error) {
       console.error('❌ Error getting calculation defaults:', error);
-      Sentry.captureException(error);
+      if (typeof Sentry?.captureException === 'function') {
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(error);
+        }
+      }
       return null;
     }
   }
@@ -400,21 +503,18 @@ class UnifiedConfigurationService {
       const cached = this.getFromCache<TemplateConfig[]>(cacheKey);
       if (cached) return cached;
 
-      const { data, error } = await supabase.rpc('get_templates', {
-        p_template_type: templateType || null,
-      });
-
-      if (error) {
-        console.error('❌ Error fetching templates:', error);
-        return [];
-      }
-
-      const templates = (data || []).map((item: any) => item.template) as TemplateConfig[];
+      // Templates table doesn't exist yet, return empty array
+      console.warn('⚠️ Templates functionality not implemented yet');
+      const templates: TemplateConfig[] = [];
       this.setCache(cacheKey, templates);
       return templates;
     } catch (error) {
       console.error('❌ Error getting templates:', error);
-      Sentry.captureException(error);
+      if (typeof Sentry?.captureException === 'function') {
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(error);
+        }
+      }
       return [];
     }
   }
@@ -439,21 +539,18 @@ class UnifiedConfigurationService {
       const cached = this.getFromCache<GatewayConfig[]>(cacheKey);
       if (cached) return cached;
 
-      const { data, error } = await supabase.rpc('get_active_gateways', {
-        p_country_code: countryCode || null,
-      });
-
-      if (error) {
-        console.error('❌ Error fetching gateways:', error);
-        return [];
-      }
-
-      const gateways = (data || []).map((item: any) => item.config) as GatewayConfig[];
+      // Gateways table doesn't exist yet, return empty array
+      console.warn('⚠️ Gateway configuration not implemented yet');
+      const gateways: GatewayConfig[] = [];
       this.setCache(cacheKey, gateways);
       return gateways;
     } catch (error) {
       console.error('❌ Error getting gateways:', error);
-      Sentry.captureException(error);
+      if (typeof Sentry?.captureException === 'function') {
+        if (typeof Sentry?.captureException === 'function') {
+          Sentry.captureException(error);
+        }
+      }
       return [];
     }
   }

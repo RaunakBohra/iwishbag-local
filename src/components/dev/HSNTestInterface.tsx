@@ -8,7 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   TestTube,
@@ -39,9 +45,9 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
 
   // Update selected quote when selection changes
   useEffect(() => {
-    const quote = sampleHSNQuotes.find(q => q.id === selectedQuoteId) || null;
+    const quote = sampleHSNQuotes.find((q) => q.id === selectedQuoteId) || null;
     setSelectedQuote(quote);
-    
+
     if (quote) {
       generateMockTaxBreakdowns(quote);
     }
@@ -50,27 +56,32 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
   // Generate mock tax breakdowns for testing
   const generateMockTaxBreakdowns = (quote: UnifiedQuote) => {
     const breakdowns: ItemTaxBreakdown[] = quote.items
-      .filter(item => item.hsn_code)
-      .map(item => {
+      .filter((item) => item.hsn_code)
+      .map((item) => {
         // Get HSN-specific data
         const hsnConfig = getHSNConfig(item.hsn_code!);
         const originPrice = item.price_usd * 83; // Convert to INR for testing
-        
+
         // Calculate actual price taxes
-        const actualPriceCustoms = Math.round((originPrice * hsnConfig.customsRate / 100) * 100) / 100;
-        const actualPriceLocalTax = Math.round((originPrice * hsnConfig.localTaxRate / 100) * 100) / 100;
-        
+        const actualPriceCustoms =
+          Math.round(((originPrice * hsnConfig.customsRate) / 100) * 100) / 100;
+        const actualPriceLocalTax =
+          Math.round(((originPrice * hsnConfig.localTaxRate) / 100) * 100) / 100;
+
         // Calculate minimum valuation if applicable
         let minimumValuationCalculation = undefined;
         let selectedMethod: 'actual_price' | 'minimum_valuation' = 'actual_price';
         let taxableAmount = originPrice;
-        let valuationMethod: 'original_price' | 'minimum_valuation' | 'higher_of_both' = 'original_price';
+        let valuationMethod: 'original_price' | 'minimum_valuation' | 'higher_of_both' =
+          'original_price';
 
         if (hsnConfig.minimumValuationUSD) {
           const minimumInINR = Math.ceil(hsnConfig.minimumValuationUSD * 83);
-          const minimumCustoms = Math.round((minimumInINR * hsnConfig.customsRate / 100) * 100) / 100;
-          const minimumLocalTax = Math.round((minimumInINR * hsnConfig.localTaxRate / 100) * 100) / 100;
-          
+          const minimumCustoms =
+            Math.round(((minimumInINR * hsnConfig.customsRate) / 100) * 100) / 100;
+          const minimumLocalTax =
+            Math.round(((minimumInINR * hsnConfig.localTaxRate) / 100) * 100) / 100;
+
           minimumValuationCalculation = {
             basis_amount: minimumInINR,
             customs_amount: minimumCustoms,
@@ -91,29 +102,32 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
           }
         }
 
-        const selectedCalculation = selectedMethod === 'minimum_valuation' && minimumValuationCalculation
-          ? minimumValuationCalculation
-          : {
-              basis_amount: originPrice,
-              customs_amount: actualPriceCustoms,
-              local_tax_amount: actualPriceLocalTax,
-              total_tax: actualPriceCustoms + actualPriceLocalTax,
-            };
+        const selectedCalculation =
+          selectedMethod === 'minimum_valuation' && minimumValuationCalculation
+            ? minimumValuationCalculation
+            : {
+                basis_amount: originPrice,
+                customs_amount: actualPriceCustoms,
+                local_tax_amount: actualPriceLocalTax,
+                total_tax: actualPriceCustoms + actualPriceLocalTax,
+              };
 
         return {
           item_id: item.id,
           hsn_code: item.hsn_code!,
           item_name: item.name,
           original_price_origin_currency: originPrice,
-          minimum_valuation_conversion: minimumValuationCalculation ? {
-            usdAmount: hsnConfig.minimumValuationUSD!,
-            originCurrency: 'INR',
-            convertedAmount: minimumValuationCalculation.basis_amount,
-            exchangeRate: 83,
-            conversionTimestamp: new Date(),
-            roundingMethod: 'up' as const,
-            cacheSource: 'cached' as const,
-          } : undefined,
+          minimum_valuation_conversion: minimumValuationCalculation
+            ? {
+                usdAmount: hsnConfig.minimumValuationUSD!,
+                originCurrency: 'INR',
+                convertedAmount: minimumValuationCalculation.basis_amount,
+                exchangeRate: 83,
+                conversionTimestamp: new Date(),
+                roundingMethod: 'up' as const,
+                cacheSource: 'cached' as const,
+              }
+            : undefined,
           taxable_amount_origin_currency: taxableAmount,
           valuation_method: valuationMethod,
           calculation_options: {
@@ -159,36 +173,41 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
       '6109': { customsRate: 12, localTaxRate: 13, minimumValuationUSD: 5, confidence: 0.9 },
       '8518': { customsRate: 20, localTaxRate: 13, minimumValuationUSD: 15, confidence: 0.92 },
     };
-    return configs[hsnCode] || { customsRate: 10, localTaxRate: 10, minimumValuationUSD: null, confidence: 0.7 };
+    return (
+      configs[hsnCode] || {
+        customsRate: 10,
+        localTaxRate: 10,
+        minimumValuationUSD: null,
+        confidence: 0.7,
+      }
+    );
   };
 
   const generateWarnings = (item: any, selectedMethod: string, minimumCalc: any): string[] => {
     const warnings: string[] = [];
-    
+
     if (selectedMethod === 'minimum_valuation' && minimumCalc) {
-      warnings.push(
-        `Minimum valuation applied: ${minimumCalc.currency_conversion_details}`
-      );
+      warnings.push(`Minimum valuation applied: ${minimumCalc.currency_conversion_details}`);
     }
-    
+
     if (item.hsn_code === '4901') {
       warnings.push('Item may be tax-exempt under educational materials provision');
     }
-    
+
     return warnings;
   };
 
   const getQuoteTypeDescription = (quote: UnifiedQuote): string => {
     const itemCount = quote.items.length;
-    const hasMinimumValuation = quote.items.some(item => 
-      ['6204', '8517', '6109', '8518'].includes(item.hsn_code || '')
+    const hasMinimumValuation = quote.items.some((item) =>
+      ['6204', '8517', '6109', '8518'].includes(item.hsn_code || ''),
     );
-    const hasTaxExempt = quote.items.some(item => item.hsn_code === '4901');
-    
+    const hasTaxExempt = quote.items.some((item) => item.hsn_code === '4901');
+
     let description = `${itemCount} item${itemCount > 1 ? 's' : ''}`;
     if (hasMinimumValuation) description += ', with minimum valuations';
     if (hasTaxExempt) description += ', includes tax-exempt items';
-    
+
     return description;
   };
 
@@ -241,7 +260,7 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
                   <SelectValue placeholder="Choose a test quote" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sampleHSNQuotes.map(quote => (
+                  {sampleHSNQuotes.map((quote) => (
                     <SelectItem key={quote.id} value={quote.id}>
                       <div className="flex items-center justify-between min-w-0">
                         <span className="font-medium">{quote.display_id}</span>
@@ -354,12 +373,15 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
                   </div>
                   <div>
                     <span className="text-gray-600">Total Value:</span>
-                    <div className="font-medium">₹{selectedQuote.calculation_data.breakdown.items_total} INR</div>
+                    <div className="font-medium">
+                      ₹{selectedQuote.calculation_data.breakdown.items_total} INR
+                    </div>
                   </div>
                   <div>
                     <span className="text-gray-600">HSN Items:</span>
                     <div className="font-medium">
-                      {selectedQuote.items.filter(item => item.hsn_code).length} / {selectedQuote.items.length}
+                      {selectedQuote.items.filter((item) => item.hsn_code).length} /{' '}
+                      {selectedQuote.items.length}
                     </div>
                   </div>
                 </CardContent>
@@ -371,7 +393,7 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
         <TabsContent value="breakdown" className="space-y-4">
           {mockTaxBreakdowns.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {mockTaxBreakdowns.map(breakdown => (
+              {mockTaxBreakdowns.map((breakdown) => (
                 <Card key={breakdown.item_id}>
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center justify-between">
@@ -384,7 +406,9 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
                   <CardContent>
                     <SmartCustomsCalculation
                       breakdown={breakdown}
-                      onMethodChange={(method, value) => handleMethodChange(breakdown.item_id, method, value)}
+                      onMethodChange={(method, value) =>
+                        handleMethodChange(breakdown.item_id, method, value)
+                      }
                       allowOverride={true}
                       compact={false}
                       showDetails={true}
@@ -397,7 +421,8 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                No HSN items found in this quote. Select a different quote with HSN-classified items.
+                No HSN items found in this quote. Select a different quote with HSN-classified
+                items.
               </AlertDescription>
             </Alert>
           )}
@@ -405,7 +430,7 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
 
         <TabsContent value="individual" className="space-y-4">
           <div className="space-y-4">
-            {selectedQuote.items.map(item => (
+            {selectedQuote.items.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
                   <CardTitle className="text-lg">{item.name}</CardTitle>
@@ -430,9 +455,7 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
                     </div>
                   </div>
                   {item.options && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      Options: {item.options}
-                    </div>
+                    <div className="mt-2 text-sm text-gray-600">Options: {item.options}</div>
                   )}
                 </CardContent>
               </Card>
@@ -453,13 +476,21 @@ export const HSNTestInterface: React.FC<HSNTestInterfaceProps> = ({ className })
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {mockTaxBreakdowns.filter(b => b.calculation_options.selected_method === 'actual_price').length}
+                {
+                  mockTaxBreakdowns.filter(
+                    (b) => b.calculation_options.selected_method === 'actual_price',
+                  ).length
+                }
               </div>
               <div className="text-gray-600">Using Actual Price</div>
             </div>
             <div className="text-center p-4 bg-amber-50 rounded-lg">
               <div className="text-2xl font-bold text-amber-600">
-                {mockTaxBreakdowns.filter(b => b.calculation_options.selected_method === 'minimum_valuation').length}
+                {
+                  mockTaxBreakdowns.filter(
+                    (b) => b.calculation_options.selected_method === 'minimum_valuation',
+                  ).length
+                }
               </div>
               <div className="text-gray-600">Using Min. Valuation</div>
             </div>

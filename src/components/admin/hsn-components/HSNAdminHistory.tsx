@@ -14,7 +14,7 @@ interface HSNAdminHistoryProps {
 
 export function HSNAdminHistory({ quote, className = '' }: HSNAdminHistoryProps) {
   const history = unifiedDataEngine.getHSNAdminOverrideHistory(quote);
-  
+
   // Debug logging to track data updates
   React.useEffect(() => {
     console.log('🔍 [HSN-HISTORY] Component updated with quote data:', {
@@ -25,7 +25,7 @@ export function HSNAdminHistory({ quote, className = '' }: HSNAdminHistoryProps)
       updatedAt: quote.updated_at,
     });
   }, [quote.operational_data?.admin_override_count, quote.updated_at, history.overrides.length]);
-  
+
   const getActionIcon = (modificationType: string) => {
     switch (modificationType) {
       case 'assign':
@@ -89,7 +89,9 @@ export function HSNAdminHistory({ quote, className = '' }: HSNAdminHistoryProps)
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-2 bg-green-50 rounded-md border border-green-200">
-            <div className="text-lg font-semibold text-green-700">{history.summary.assignments}</div>
+            <div className="text-lg font-semibold text-green-700">
+              {history.summary.assignments}
+            </div>
             <div className="text-xs text-green-600">Assigned</div>
           </div>
           <div className="text-center p-2 bg-blue-50 rounded-md border border-blue-200">
@@ -112,8 +114,13 @@ export function HSNAdminHistory({ quote, className = '' }: HSNAdminHistoryProps)
           <ScrollArea className="h-40">
             <div className="space-y-2">
               {history.recent_activity.map((activity, index) => (
-                <div key={`${activity.timestamp}-${index}`} className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/30 transition-colors">
-                  <div className={`p-1.5 rounded-full ${getActionColor(activity.modification_type)}`}>
+                <div
+                  key={`${activity.timestamp}-${index}`}
+                  className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/30 transition-colors"
+                >
+                  <div
+                    className={`p-1.5 rounded-full ${getActionColor(activity.modification_type)}`}
+                  >
                     {getActionIcon(activity.modification_type)}
                   </div>
                   <div className="flex-1 min-w-0">

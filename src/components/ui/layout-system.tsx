@@ -1,10 +1,10 @@
 /**
  * RESPONSIVE LAYOUT SYSTEM
- * 
+ *
  * Professional design system foundation based on best practices from
  * Stripe, Salesforce, HubSpot, and Shopify. Implements consistent
  * spacing, breakpoints, and layout patterns for tax calculation interfaces.
- * 
+ *
  * Features:
  * - 8px grid system for consistent spacing
  * - Mobile-first responsive breakpoints
@@ -18,11 +18,11 @@ import { cn } from '@/lib/utils';
 
 // Design System Constants
 export const SPACING = {
-  xs: '4px',   // 0.5 * 8px
-  sm: '8px',   // 1 * 8px
-  md: '16px',  // 2 * 8px
-  lg: '24px',  // 3 * 8px
-  xl: '32px',  // 4 * 8px
+  xs: '4px', // 0.5 * 8px
+  sm: '8px', // 1 * 8px
+  md: '16px', // 2 * 8px
+  lg: '24px', // 3 * 8px
+  xl: '32px', // 4 * 8px
   '2xl': '48px', // 6 * 8px
   '3xl': '64px', // 8 * 8px
 } as const;
@@ -62,11 +62,11 @@ interface ContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export const Container: React.FC<ContainerProps> = ({ 
-  maxWidth = 'full', 
-  className, 
-  children, 
-  ...props 
+export const Container: React.FC<ContainerProps> = ({
+  maxWidth = 'full',
+  className,
+  children,
+  ...props
 }) => {
   const maxWidthClasses = {
     sm: 'max-w-sm',
@@ -78,14 +78,7 @@ export const Container: React.FC<ContainerProps> = ({
   };
 
   return (
-    <div 
-      className={cn(
-        GRID_CLASSES.container,
-        maxWidthClasses[maxWidth],
-        className
-      )}
-      {...props}
-    >
+    <div className={cn(GRID_CLASSES.container, maxWidthClasses[maxWidth], className)} {...props}>
       {children}
     </div>
   );
@@ -97,12 +90,12 @@ interface GridProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export const Grid: React.FC<GridProps> = ({ 
-  cols = 1, 
+export const Grid: React.FC<GridProps> = ({
+  cols = 1,
   gap = 'md',
-  className, 
-  children, 
-  ...props 
+  className,
+  children,
+  ...props
 }) => {
   const colsClasses = {
     1: GRID_CLASSES.cols1,
@@ -123,15 +116,7 @@ export const Grid: React.FC<GridProps> = ({
   };
 
   return (
-    <div 
-      className={cn(
-        'grid',
-        colsClasses[cols],
-        gapClasses[gap],
-        className
-      )}
-      {...props}
-    >
+    <div className={cn('grid', colsClasses[cols], gapClasses[gap], className)} {...props}>
       {children}
     </div>
   );
@@ -143,12 +128,12 @@ interface StackProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
 }
 
-export const Stack: React.FC<StackProps> = ({ 
+export const Stack: React.FC<StackProps> = ({
   spacing = 'md',
   align = 'stretch',
-  className, 
-  children, 
-  ...props 
+  className,
+  children,
+  ...props
 }) => {
   const alignClasses = {
     start: 'items-start',
@@ -158,13 +143,8 @@ export const Stack: React.FC<StackProps> = ({
   };
 
   return (
-    <div 
-      className={cn(
-        'flex flex-col',
-        SPACING_CLASSES[spacing],
-        alignClasses[align],
-        className
-      )}
+    <div
+      className={cn('flex flex-col', SPACING_CLASSES[spacing], alignClasses[align], className)}
       {...props}
     >
       {children}
@@ -234,7 +214,7 @@ export const Flex: React.FC<FlexProps> = ({
         justifyClasses[justify],
         wrap && 'flex-wrap',
         gapClasses[gap],
-        className
+        className,
       )}
       {...props}
     >
@@ -279,7 +259,7 @@ export const LayoutCard: React.FC<CardProps> = ({
         variantClasses[variant],
         paddingClasses[padding],
         'transition-all duration-200',
-        className
+        className,
       )}
       {...props}
     >
@@ -310,13 +290,7 @@ export const Section: React.FC<SectionProps> = ({
   };
 
   return (
-    <section
-      className={cn(
-        spacingClasses[spacing],
-        className
-      )}
-      {...props}
-    >
+    <section className={cn(spacingClasses[spacing], className)} {...props}>
       {children}
     </section>
   );
@@ -341,7 +315,7 @@ export const Heading: React.FC<HeadingProps> = ({
   ...props
 }) => {
   const Component = `h${level}` as keyof JSX.IntrinsicElements;
-  
+
   // Auto-size based on heading level if not specified
   const autoSize = {
     1: '3xl',
@@ -383,7 +357,7 @@ export const Heading: React.FC<HeadingProps> = ({
         weightClasses[weight],
         colorClasses[color],
         'leading-tight',
-        className
+        className,
       )}
       {...props}
     >
@@ -434,7 +408,7 @@ export const Text: React.FC<TextProps> = ({
         weightClasses[weight],
         colorClasses[color],
         'leading-relaxed',
-        className
+        className,
       )}
       {...props}
     >

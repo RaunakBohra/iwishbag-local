@@ -96,7 +96,7 @@ export const CreateQuoteModal = ({
 
   // Auto-fill currency based on shipping country
   useEffect(() => {
-    if (shippingCountry && allCountries) {
+    if (shippingCountry && Array.isArray(allCountries)) {
       const country = allCountries.find((c) => c.code === shippingCountry);
       if (country?.currency) {
         form.setValue('customerCurrency', country.currency);
@@ -116,7 +116,8 @@ export const CreateQuoteModal = ({
     const cleanEmail = email && email.trim() !== '' ? email : null;
 
     // Determine origin currency from purchase country
-    const originCurrency = allCountries?.find((c) => c.code === purchaseCountry)?.currency || 'USD';
+    const originCurrency = Array.isArray(allCountries) ? 
+      allCountries.find((c) => c.code === purchaseCountry)?.currency || 'USD' : 'USD';
 
     // Determine if this is for a registered user or guest
     const isRegisteredUser = !!userId;
@@ -184,7 +185,7 @@ export const CreateQuoteModal = ({
 
   // Get available currencies based on all countries (just currency codes)
   const availableCurrencies =
-    allCountries?.reduce(
+    Array.isArray(allCountries) ? allCountries.reduce(
       (acc, country) => {
         if (country.currency && !acc.find((c) => c.code === country.currency)) {
           acc.push({
@@ -195,7 +196,7 @@ export const CreateQuoteModal = ({
         return acc;
       },
       [] as Array<{ code: string; name: string }>,
-    ) || [];
+    ) : [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

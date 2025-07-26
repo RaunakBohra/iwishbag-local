@@ -1,10 +1,10 @@
 /**
  * DUAL CALCULATION METHOD SELECTOR
- * 
+ *
  * Admin interface component for selecting between different tax calculation methods
  * in the 2-tier tax system. Provides visual comparison, confidence indicators,
  * and intelligent recommendations.
- * 
+ *
  * Features:
  * - Visual method comparison with pros/cons
  * - Real-time confidence scoring
@@ -19,16 +19,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Calculator, 
-  Database, 
-  Settings, 
-  TrendingUp, 
-  AlertTriangle, 
+import {
+  Calculator,
+  Database,
+  Settings,
+  TrendingUp,
+  AlertTriangle,
   CheckCircle,
   Info,
   Clock,
-  Users
+  Users,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -66,7 +66,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
   onMethodChange,
   adminId,
   isLoading = false,
-  className = ''
+  className = '',
 }) => {
   const { toast } = useToast();
   const [selectedMethod, setSelectedMethod] = useState<string>(currentMethod);
@@ -81,41 +81,40 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
     {
       id: 'auto',
       name: 'Auto (Recommended)',
-      description: 'Intelligent selection between HSN and fallback based on data availability and confidence',
+      description:
+        'Intelligent selection between HSN and fallback based on data availability and confidence',
       icon: <TrendingUp className="h-5 w-5" />,
       pros: [
         'Automatically chooses best method',
         'Adapts to data availability',
         'Highest overall accuracy',
-        'No admin intervention needed'
+        'No admin intervention needed',
       ],
-      cons: [
-        'Less predictable method selection',
-        'May switch methods between calculations'
-      ],
+      cons: ['Less predictable method selection', 'May switch methods between calculations'],
       confidence: 0.95,
-      recommended: true
+      recommended: true,
     },
     {
       id: 'hsn_only',
       name: 'HSN Only',
-      description: 'Per-item tax calculation using HSN codes with minimum valuations and currency conversion',
+      description:
+        'Per-item tax calculation using HSN codes with minimum valuations and currency conversion',
       icon: <Database className="h-5 w-5" />,
       pros: [
         'Most accurate per-item taxes',
         'Supports minimum valuations',
         'Currency-aware calculations',
-        'Detailed item breakdowns'
+        'Detailed item breakdowns',
       ],
       cons: [
         'Requires HSN codes for all items',
         'More complex calculations',
-        'May fail if HSN data missing'
+        'May fail if HSN data missing',
       ],
       confidence: 0.0, // Will be updated dynamically
       recommended: false,
       requiresConfiguration: true,
-      configurationStatus: 'missing'
+      configurationStatus: 'missing',
     },
     {
       id: 'legacy_fallback',
@@ -126,38 +125,35 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
         'Always available',
         'Fast calculations',
         'Uses established shipping routes',
-        'Reliable for percentage-based taxes'
+        'Reliable for percentage-based taxes',
       ],
-      cons: [
-        'Less accurate than per-item',
-        'No minimum valuation support',
-        'Generic tax rates'
-      ],
+      cons: ['Less accurate than per-item', 'No minimum valuation support', 'Generic tax rates'],
       confidence: 0.0, // Will be updated dynamically
       recommended: false,
       requiresConfiguration: true,
-      configurationStatus: 'missing'
+      configurationStatus: 'missing',
     },
     {
       id: 'admin_choice',
       name: 'Admin Choice',
-      description: 'Manual selection with hybrid approach - uses HSN where available, fallback otherwise',
+      description:
+        'Manual selection with hybrid approach - uses HSN where available, fallback otherwise',
       icon: <Settings className="h-5 w-5" />,
       pros: [
         'Full admin control',
         'Hybrid approach benefits',
         'Can override auto selection',
-        'Audit trail for decisions'
+        'Audit trail for decisions',
       ],
       cons: [
         'Requires manual intervention',
         'Admin must understand implications',
-        'May be inconsistent over time'
+        'May be inconsistent over time',
       ],
       confidence: 0.8,
       recommended: false,
-      requiresConfiguration: false
-    }
+      requiresConfiguration: false,
+    },
   ]);
 
   /**
@@ -167,12 +163,12 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
     if (!quoteId) return;
 
     setIsAnalyzing(true);
-    
+
     try {
       // Get method comparison from UnifiedTaxFallbackService
       const comparison = await unifiedTaxFallbackService.getCalculationMethodComparison(
         originCountry,
-        destinationCountry
+        destinationCountry,
       );
 
       setMethodAnalysis(comparison);
@@ -180,41 +176,42 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       setRouteDataAvailability(comparison.legacy_available);
 
       // Update method confidence scores and status
-      setCalculationMethods(prev => prev.map(method => {
-        switch (method.id) {
-          case 'auto':
-            return {
-              ...method,
-              confidence: 0.95,
-              recommended: true
-            };
-          case 'hsn_only':
-            return {
-              ...method,
-              confidence: comparison.hsn_available ? 0.9 : 0.2,
-              configurationStatus: comparison.hsn_available ? 'complete' : 'missing',
-              recommended: comparison.recommended_method === 'hsn_only'
-            };
-          case 'legacy_fallback':
-            return {
-              ...method,
-              confidence: comparison.unified_data.confidence_score,
-              configurationStatus: comparison.legacy_available ? 'complete' : 'partial',
-              recommended: comparison.recommended_method === 'legacy_fallback'
-            };
-          default:
-            return method;
-        }
-      }));
+      setCalculationMethods((prev) =>
+        prev.map((method) => {
+          switch (method.id) {
+            case 'auto':
+              return {
+                ...method,
+                confidence: 0.95,
+                recommended: true,
+              };
+            case 'hsn_only':
+              return {
+                ...method,
+                confidence: comparison.hsn_available ? 0.9 : 0.2,
+                configurationStatus: comparison.hsn_available ? 'complete' : 'missing',
+                recommended: comparison.recommended_method === 'hsn_only',
+              };
+            case 'legacy_fallback':
+              return {
+                ...method,
+                confidence: comparison.unified_data.confidence_score,
+                configurationStatus: comparison.legacy_available ? 'complete' : 'partial',
+                recommended: comparison.recommended_method === 'legacy_fallback',
+              };
+            default:
+              return method;
+          }
+        }),
+      );
 
       setLastUpdated(new Date());
-
     } catch (error) {
       console.error('Error analyzing method availability:', error);
       toast({
-        title: "Analysis Error",
-        description: "Failed to analyze calculation methods. Using default settings.",
-        variant: "destructive"
+        title: 'Analysis Error',
+        description: 'Failed to analyze calculation methods. Using default settings.',
+        variant: 'destructive',
       });
     } finally {
       setIsAnalyzing(false);
@@ -226,32 +223,35 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
    */
   const handleMethodSelection = async (methodId: string) => {
     if (isLoading || isAnalyzing) {
-      console.log(`[METHOD SELECTOR DEBUG] Skipping selection - isLoading: ${isLoading}, isAnalyzing: ${isAnalyzing}`);
+      console.log(
+        `[METHOD SELECTOR DEBUG] Skipping selection - isLoading: ${isLoading}, isAnalyzing: ${isAnalyzing}`,
+      );
       return;
     }
 
     const previousMethod = selectedMethod;
-    console.log(`[METHOD SELECTOR DEBUG] Selecting method: ${methodId} (previous: ${previousMethod})`);
+    console.log(
+      `[METHOD SELECTOR DEBUG] Selecting method: ${methodId} (previous: ${previousMethod})`,
+    );
     setSelectedMethod(methodId);
 
     try {
       // Log the method change for audit purposes
       if (adminId && previousMethod !== methodId) {
-        const { error } = await supabase
-          .rpc('log_tax_method_change', {
-            p_quote_id: quoteId,
-            p_admin_id: adminId,
-            p_calculation_method: methodId,
-            p_valuation_method: 'auto', // Will be set by valuation selector
-            p_change_reason: `Admin selected ${methodId} method via DualCalculationMethodSelector`,
-            p_change_details: {
-              previous_method: previousMethod,
-              route: `${originCountry} → ${destinationCountry}`,
-              method_analysis: methodAnalysis,
-              timestamp: new Date().toISOString(),
-              ui_component: 'DualCalculationMethodSelector'
-            }
-          });
+        const { error } = await supabase.rpc('log_tax_method_change', {
+          p_quote_id: quoteId,
+          p_admin_id: adminId,
+          p_calculation_method: methodId,
+          p_valuation_method: 'auto', // Will be set by valuation selector
+          p_change_reason: `Admin selected ${methodId} method via DualCalculationMethodSelector`,
+          p_change_details: {
+            previous_method: previousMethod,
+            route: `${originCountry} → ${destinationCountry}`,
+            method_analysis: methodAnalysis,
+            timestamp: new Date().toISOString(),
+            ui_component: 'DualCalculationMethodSelector',
+          },
+        });
 
         if (error) {
           console.warn('Failed to log method change:', error);
@@ -261,9 +261,9 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       // Update quote with new method preference
       const { error: updateError } = await supabase
         .from('quotes')
-        .update({ 
+        .update({
           calculation_method_preference: methodId,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', quoteId);
 
@@ -276,27 +276,26 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       onMethodChange(methodId, {
         previousMethod,
         methodAnalysis,
-        confidence: calculationMethods.find(m => m.id === methodId)?.confidence || 0.5,
-        timestamp: new Date().toISOString()
+        confidence: calculationMethods.find((m) => m.id === methodId)?.confidence || 0.5,
+        timestamp: new Date().toISOString(),
       });
 
       toast({
-        title: "Method Updated",
-        description: `Tax calculation method changed to ${calculationMethods.find(m => m.id === methodId)?.name}`,
+        title: 'Method Updated',
+        description: `Tax calculation method changed to ${calculationMethods.find((m) => m.id === methodId)?.name}`,
       });
 
       console.log(`[METHOD SELECTOR DEBUG] Method selection completed successfully`);
-
     } catch (error) {
       console.error('Error updating calculation method:', error);
-      
+
       // Revert selection on error
       setSelectedMethod(previousMethod);
-      
+
       toast({
-        title: "Update Failed",
-        description: "Failed to update calculation method. Please try again.",
-        variant: "destructive"
+        title: 'Update Failed',
+        description: 'Failed to update calculation method. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -319,7 +318,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
     const statusConfig = {
       complete: { variant: 'default' as const, text: 'Ready' },
       partial: { variant: 'secondary' as const, text: 'Partial' },
-      missing: { variant: 'destructive' as const, text: 'Setup Required' }
+      missing: { variant: 'destructive' as const, text: 'Setup Required' },
     };
 
     const config = statusConfig[method.configurationStatus || 'missing'];
@@ -341,9 +340,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       {/* Header with status */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Tax Calculation Method
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900">Tax Calculation Method</h3>
           <p className="text-sm text-gray-600">
             Select how taxes should be calculated for {originCountry} → {destinationCountry}
           </p>
@@ -385,7 +382,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
               <div className="text-sm">
                 <span className="font-medium">Recommended:</span>{' '}
                 <Badge variant="outline">
-                  {calculationMethods.find(m => m.recommended)?.name || 'Auto'}
+                  {calculationMethods.find((m) => m.recommended)?.name || 'Auto'}
                 </Badge>
               </div>
             </div>
@@ -396,7 +393,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       {/* Method Selection Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {calculationMethods.map((method) => (
-          <Card 
+          <Card
             key={method.id}
             className={`cursor-pointer transition-all duration-200 ${
               selectedMethod === method.id
@@ -408,43 +405,43 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${
-                    selectedMethod === method.id ? 'bg-primary text-white' : 'bg-gray-100'
-                  }`}>
+                  <div
+                    className={`p-2 rounded-lg ${
+                      selectedMethod === method.id ? 'bg-primary text-white' : 'bg-gray-100'
+                    }`}
+                  >
                     {method.icon}
                   </div>
                   <div>
                     <CardTitle className="text-base flex items-center space-x-2">
                       <span>{method.name}</span>
                       {method.recommended && (
-                        <Badge variant="default" className="text-xs">Recommended</Badge>
+                        <Badge variant="default" className="text-xs">
+                          Recommended
+                        </Badge>
                       )}
                     </CardTitle>
                     <div className="flex items-center space-x-2 mt-1">
-                      <span className={`text-sm font-medium ${getConfidenceColor(method.confidence)}`}>
+                      <span
+                        className={`text-sm font-medium ${getConfidenceColor(method.confidence)}`}
+                      >
                         {Math.round(method.confidence * 100)}% confidence
                       </span>
                       {getConfigurationBadge(method)}
                     </div>
                   </div>
                 </div>
-                {selectedMethod === method.id && (
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                )}
+                {selectedMethod === method.id && <CheckCircle className="h-5 w-5 text-primary" />}
               </div>
             </CardHeader>
 
             <CardContent className="pt-0">
-              <p className="text-sm text-gray-600 mb-3">
-                {method.description}
-              </p>
+              <p className="text-sm text-gray-600 mb-3">{method.description}</p>
 
               <div className="space-y-3">
                 {method.pros.length > 0 && (
                   <div>
-                    <div className="text-xs font-medium text-green-700 mb-1">
-                      Advantages:
-                    </div>
+                    <div className="text-xs font-medium text-green-700 mb-1">Advantages:</div>
                     <ul className="text-xs text-green-600 space-y-1">
                       {method.pros.slice(0, 2).map((pro, index) => (
                         <li key={index} className="flex items-start">
@@ -458,9 +455,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
 
                 {method.cons.length > 0 && (
                   <div>
-                    <div className="text-xs font-medium text-red-700 mb-1">
-                      Considerations:
-                    </div>
+                    <div className="text-xs font-medium text-red-700 mb-1">Considerations:</div>
                     <ul className="text-xs text-red-600 space-y-1">
                       {method.cons.slice(0, 2).map((con, index) => (
                         <li key={index} className="flex items-start">
@@ -492,9 +487,7 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
 
         <div className="flex items-center space-x-2 text-sm text-gray-500">
           <Users className="h-4 w-4" />
-          <span>
-            {adminId ? 'Admin Override' : 'System Selection'}
-          </span>
+          <span>{adminId ? 'Admin Override' : 'System Selection'}</span>
         </div>
       </div>
 
@@ -503,21 +496,24 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            HSN data is not available for this route. The system will automatically fall back to legacy calculation.
-            Consider setting up HSN codes for items or using Auto method for intelligent selection.
+            HSN data is not available for this route. The system will automatically fall back to
+            legacy calculation. Consider setting up HSN codes for items or using Auto method for
+            intelligent selection.
           </AlertDescription>
         </Alert>
       )}
 
-      {selectedMethod === 'legacy_fallback' && methodAnalysis?.unified_data.confidence_score < 0.7 && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Legacy fallback has low confidence ({Math.round(methodAnalysis.unified_data.confidence_score * 100)}%) 
-            for this route. Consider configuring specific shipping routes or using Auto method.
-          </AlertDescription>
-        </Alert>
-      )}
+      {selectedMethod === 'legacy_fallback' &&
+        methodAnalysis?.unified_data.confidence_score < 0.7 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Legacy fallback has low confidence (
+              {Math.round(methodAnalysis.unified_data.confidence_score * 100)}%) for this route.
+              Consider configuring specific shipping routes or using Auto method.
+            </AlertDescription>
+          </Alert>
+        )}
     </div>
   );
 };

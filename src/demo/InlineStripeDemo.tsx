@@ -13,23 +13,40 @@ const InlineStripeDemo = () => {
   const [hsn2, setHsn2] = useState(undefined);
 
   const weightSuggestions1 = [
-    { value: 1.5, source: 'hsn' as const, confidence: 0.95, description: 'Official database range: 1.3-1.7kg' },
-    { value: 0.2, source: 'ai' as const, confidence: 0.90, description: 'iPhone 15 Pro match detected' }
+    {
+      value: 1.5,
+      source: 'hsn' as const,
+      confidence: 0.95,
+      description: 'Official database range: 1.3-1.7kg',
+    },
+    {
+      value: 0.2,
+      source: 'ai' as const,
+      confidence: 0.9,
+      description: 'iPhone 15 Pro match detected',
+    },
   ];
 
   const weightSuggestions2 = [
-    { value: 0.8, source: 'hsn' as const, confidence: 0.85, description: 'Standard laptop accessory weight' },
-    { value: 1.1, source: 'ai' as const, confidence: 0.75, description: 'Gaming headset category' }
+    {
+      value: 0.8,
+      source: 'hsn' as const,
+      confidence: 0.85,
+      description: 'Standard laptop accessory weight',
+    },
+    { value: 1.1, source: 'ai' as const, confidence: 0.75, description: 'Gaming headset category' },
   ];
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">Inline Stripe Design - Final Implementation</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Inline Stripe Design - Final Implementation
+          </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Ultra-compact inline weight & HSN selectors integrated into product edit forms. 
-            Based on your exact specifications: input+arrow for weight, HSN badge or search button.
+            Ultra-compact inline weight & HSN selectors integrated into product edit forms. Based on
+            your exact specifications: input+arrow for weight, HSN badge or search button.
           </p>
         </div>
 
@@ -103,7 +120,9 @@ const InlineStripeDemo = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Smartphone className="w-5 h-5 text-blue-600" />
                 iPhone 15 Pro
-                <Badge variant="info" className="ml-auto">₹2,222.00</Badge>
+                <Badge variant="info" className="ml-auto">
+                  ₹2,222.00
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -118,7 +137,7 @@ const InlineStripeDemo = () => {
                   onHSNRemove={() => setHsn1(undefined)}
                 />
               </div>
-              
+
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <ArrowRight className="w-4 h-4" />
                 <span>All weight & HSN data in one compact line!</span>
@@ -132,7 +151,9 @@ const InlineStripeDemo = () => {
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Package className="w-5 h-5 text-purple-600" />
                 Gaming Headset Pro
-                <Badge variant="success" className="ml-auto">₹8,999.00</Badge>
+                <Badge variant="success" className="ml-auto">
+                  ₹8,999.00
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -147,7 +168,7 @@ const InlineStripeDemo = () => {
                   onHSNRemove={() => setHsn2(undefined)}
                 />
               </div>
-              
+
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <ArrowRight className="w-4 h-4" />
                 <span>Clean Stripe design with progressive disclosure</span>
@@ -191,12 +212,13 @@ const InlineStripeDemo = () => {
                 </ul>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg p-4 border border-gray-200 mt-6">
               <p className="text-sm text-gray-700">
-                <strong>Integration Complete:</strong> The inline Stripe selectors are now integrated into your 
-                SmartItemsManager component for both Edit and Add dialogs. The design follows Stripe's minimal 
-                aesthetic while providing all the functionality you need in the most compact form possible.
+                <strong>Integration Complete:</strong> The inline Stripe selectors are now
+                integrated into your SmartItemsManager component for both Edit and Add dialogs. The
+                design follows Stripe's minimal aesthetic while providing all the functionality you
+                need in the most compact form possible.
               </p>
             </div>
           </CardContent>

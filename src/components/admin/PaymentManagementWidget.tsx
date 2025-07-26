@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
+import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { UnifiedPaymentModal } from './UnifiedPaymentModal';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
@@ -267,7 +267,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Order Total</span>
               <span className="font-semibold">
-                {currencyService.formatAmount(paymentSummary.finalTotal, paymentCurrency)}
+                {optimizedCurrencyService.formatAmount(paymentSummary.finalTotal, paymentCurrency)}
               </span>
             </div>
 
@@ -280,7 +280,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                   paymentSummary.totalPayments > 0 ? 'text-green-600' : 'text-gray-500',
                 )}
               >
-                {currencyService.formatAmount(paymentSummary.totalPayments, paymentCurrency)}
+                {optimizedCurrencyService.formatAmount(paymentSummary.totalPayments, paymentCurrency)}
               </span>
             </div>
 
@@ -289,7 +289,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Refunds</span>
                 <span className="font-semibold text-red-600">
-                  -{currencyService.formatAmount(paymentSummary.totalRefunds, paymentCurrency)}
+                  -{optimizedCurrencyService.formatAmount(paymentSummary.totalRefunds, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -300,7 +300,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Net Paid</span>
                   <span className="font-bold">
-                    {currencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
+                    {optimizedCurrencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
                   </span>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 <div className="flex items-center justify-between bg-orange-50 p-2 rounded">
                   <span className="text-sm font-medium text-orange-800">Balance Due</span>
                   <span className="font-bold text-orange-600">
-                    {currencyService.formatAmount(paymentSummary.remaining, paymentCurrency)}
+                    {optimizedCurrencyService.formatAmount(paymentSummary.remaining, paymentCurrency)}
                   </span>
                 </div>
               )}
@@ -322,7 +322,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div className="flex items-center justify-between bg-teal-50 p-2 rounded">
                 <span className="text-sm font-medium text-teal-800">Overpayment</span>
                 <span className="font-bold text-teal-600">
-                  {currencyService.formatAmount(paymentSummary.overpaidAmount, paymentCurrency)}
+                  {optimizedCurrencyService.formatAmount(paymentSummary.overpaidAmount, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -346,7 +346,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                             netAmount > 0 ? 'text-green-700' : 'text-red-700',
                           )}
                         >
-                          {currencyService.formatAmount(Math.abs(netAmount), curr)}
+                          {optimizedCurrencyService.formatAmount(Math.abs(netAmount), curr)}
                         </span>
                       </div>
                     );
@@ -534,7 +534,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div>
                 <p className="text-sm text-muted-foreground">Amount</p>
                 <p className="font-medium">
-                  {currencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
+                  {optimizedCurrencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
                 </p>
               </div>
               <div>
@@ -549,7 +549,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
 
             {/* Customer Information */}
             {(() => {
-              const customerData = getCustomerDisplayData(quote);
+              const customerData = customerDisplayUtils.getCustomerDisplayData(quote);
               return customerData.name !== 'Unknown Customer' && (
                 <div className="space-y-2">
                   <h4 className="font-medium flex items-center gap-2">

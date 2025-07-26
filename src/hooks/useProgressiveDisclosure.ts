@@ -26,7 +26,7 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
   // Load saved level from localStorage
   const getSavedLevel = (): DisclosureLevel => {
     if (!persistKey || typeof window === 'undefined') return defaultLevel;
-    
+
     const saved = localStorage.getItem(`pd-level-${persistKey}`);
     return saved ? (parseInt(saved) as DisclosureLevel) : defaultLevel;
   };
@@ -41,17 +41,20 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
   const [sessionStart] = useState(Date.now());
 
   // Save level to localStorage
-  const saveLevel = useCallback((level: DisclosureLevel) => {
-    if (persistKey && typeof window !== 'undefined') {
-      localStorage.setItem(`pd-level-${persistKey}`, level.toString());
-    }
-  }, [persistKey]);
+  const saveLevel = useCallback(
+    (level: DisclosureLevel) => {
+      if (persistKey && typeof window !== 'undefined') {
+        localStorage.setItem(`pd-level-${persistKey}`, level.toString());
+      }
+    },
+    [persistKey],
+  );
 
   // Track metrics
   const trackInteraction = useCallback(() => {
     if (!analyticsEnabled) return;
 
-    setMetrics(prev => ({
+    setMetrics((prev) => ({
       ...prev,
       interactions: prev.interactions + 1,
     }));
@@ -60,7 +63,7 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
     if (autoProgressThreshold && metrics.interactions >= autoProgressThreshold) {
       if (currentLevel < DisclosureLevel.EXPERT) {
         setCurrentLevel(currentLevel + 1);
-        setMetrics(prev => ({
+        setMetrics((prev) => ({
           ...prev,
           levelChanges: prev.levelChanges + 1,
           interactions: 0, // Reset counter
@@ -74,7 +77,7 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
     if (!analyticsEnabled) return;
 
     const interval = setInterval(() => {
-      setMetrics(prev => ({
+      setMetrics((prev) => ({
         ...prev,
         timeSpent: Math.floor((Date.now() - sessionStart) / 1000),
       }));
@@ -84,17 +87,20 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
   }, [analyticsEnabled, sessionStart]);
 
   // Level management functions
-  const setLevel = useCallback((level: DisclosureLevel) => {
-    setCurrentLevel(level);
-    saveLevel(level);
-    
-    if (analyticsEnabled) {
-      setMetrics(prev => ({
-        ...prev,
-        levelChanges: prev.levelChanges + 1,
-      }));
-    }
-  }, [saveLevel, analyticsEnabled]);
+  const setLevel = useCallback(
+    (level: DisclosureLevel) => {
+      setCurrentLevel(level);
+      saveLevel(level);
+
+      if (analyticsEnabled) {
+        setMetrics((prev) => ({
+          ...prev,
+          levelChanges: prev.levelChanges + 1,
+        }));
+      }
+    },
+    [saveLevel, analyticsEnabled],
+  );
 
   const incrementLevel = useCallback(() => {
     if (currentLevel < DisclosureLevel.EXPERT) {
@@ -109,9 +115,12 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
   }, [currentLevel, setLevel]);
 
   // Helper functions
-  const isVisible = useCallback((minLevel: DisclosureLevel): boolean => {
-    return currentLevel >= minLevel;
-  }, [currentLevel]);
+  const isVisible = useCallback(
+    (minLevel: DisclosureLevel): boolean => {
+      return currentLevel >= minLevel;
+    },
+    [currentLevel],
+  );
 
   const getLevelName = useCallback((): string => {
     const names = {
@@ -136,11 +145,13 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
     }
 
     if (metrics.timeSpent > 300 && currentLevel < DisclosureLevel.ADVANCED) {
-      recommendations.push('You\'ve spent some time here. Advanced view might help you work faster.');
+      recommendations.push(
+        "You've spent some time here. Advanced view might help you work faster.",
+      );
     }
 
     if (metrics.sectionsExpanded > 5 && currentLevel < DisclosureLevel.EXPERT) {
-      recommendations.push('You\'re exploring many sections. Expert view shows everything at once.');
+      recommendations.push("You're exploring many sections. Expert view shows everything at once.");
     }
 
     return recommendations;
@@ -150,19 +161,19 @@ export function useProgressiveDisclosure(config: ProgressiveDisclosureConfig = {
     // State
     currentLevel,
     metrics,
-    
+
     // Actions
     setLevel,
     incrementLevel,
     decrementLevel,
     trackInteraction,
-    
+
     // Helpers
     isVisible,
     getLevelName,
     getLevelProgress,
     getRecommendations,
-    
+
     // Constants
     levels: {
       SUMMARY: DisclosureLevel.SUMMARY,

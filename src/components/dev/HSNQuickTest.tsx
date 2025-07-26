@@ -18,10 +18,7 @@ interface HSNQuickTestProps {
   compact?: boolean;
 }
 
-export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({ 
-  className = '', 
-  compact = false 
-}) => {
+export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({ className = '', compact = false }) => {
   const [sampleQuote, setSampleQuote] = useState<UnifiedQuote | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,7 +26,7 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
     setIsLoading(true);
     try {
       // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       const quote = loadSampleHSNQuote();
       setSampleQuote(quote);
     } catch (error) {
@@ -54,7 +51,9 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
             <div className="flex items-center space-x-2 text-sm">
               <TestTube className="w-4 h-4 text-orange-600" />
               <span className="font-medium">HSN Test</span>
-              <Badge variant="outline" className="text-xs">Dev</Badge>
+              <Badge variant="outline" className="text-xs">
+                Dev
+              </Badge>
             </div>
             <Button size="sm" variant="outline" onClick={handleLoadSample} disabled={isLoading}>
               <Play className="w-3 h-3 mr-1" />
@@ -83,15 +82,18 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
         <CardTitle className="flex items-center space-x-2 text-lg">
           <TestTube className="w-5 h-5 text-orange-600" />
           <span>HSN System Quick Test</span>
-          <Badge variant="outline" className="text-xs">Development</Badge>
+          <Badge variant="outline" className="text-xs">
+            Development
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert>
           <TestTube className="h-4 w-4" />
           <AlertDescription>
-            Test the enhanced HSN customs calculation system with realistic sample data.
-            This includes minimum valuation conversion, dual calculation display, and admin override options.
+            Test the enhanced HSN customs calculation system with realistic sample data. This
+            includes minimum valuation conversion, dual calculation display, and admin override
+            options.
           </AlertDescription>
         </Alert>
 
@@ -100,7 +102,7 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
             <Play className="w-4 h-4 mr-2" />
             {isLoading ? 'Loading Sample...' : 'Load Sample Quote'}
           </Button>
-          
+
           <Button variant="outline" onClick={handleOpenInAdmin}>
             <ExternalLink className="w-4 h-4 mr-2" />
             Open in Admin
@@ -123,7 +125,9 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
                 </div>
                 <div>
                   <span className="text-gray-600">Route:</span>
-                  <div>{sampleQuote.origin_country} → {sampleQuote.destination_country}</div>
+                  <div>
+                    {sampleQuote.origin_country} → {sampleQuote.destination_country}
+                  </div>
                 </div>
                 <div>
                   <span className="text-gray-600">Items:</span>
@@ -131,7 +135,7 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
                 </div>
                 <div>
                   <span className="text-gray-600">HSN Items:</span>
-                  <div>{sampleQuote.items.filter(item => item.hsn_code).length} classified</div>
+                  <div>{sampleQuote.items.filter((item) => item.hsn_code).length} classified</div>
                 </div>
               </div>
             </div>
@@ -148,7 +152,9 @@ export const HSNQuickTest: React.FC<HSNQuickTestProps> = ({
             />
 
             <div className="text-xs text-gray-500 space-y-1">
-              <div>💡 <strong>Test Scenarios:</strong></div>
+              <div>
+                💡 <strong>Test Scenarios:</strong>
+              </div>
               <div>• Kurta: ₹500 vs $10 minimum (₹830) → Uses minimum valuation</div>
               <div>• Samsung: ₹25,000 vs $50 minimum (₹4,150) → Uses actual price</div>
               <div>• Books: ₹3,000, tax-exempt → Zero taxes</div>

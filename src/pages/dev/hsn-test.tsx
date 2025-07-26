@@ -14,7 +14,7 @@ const HSNTestPage: React.FC = () => {
       <div className="bg-orange-600 text-white p-2 text-center text-sm font-medium">
         🧪 DEVELOPMENT MODE - HSN System Testing Interface
       </div>
-      
+
       <HSNTestInterface />
     </div>
   );

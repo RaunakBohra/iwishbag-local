@@ -1,6 +1,6 @@
 /**
  * HSN Weight Service
- * 
+ *
  * Fetches weight data from HSN master table for accurate weight estimation.
  * Provides weight ranges (min, max, average) and packaging weight from HSN data.
  */
@@ -46,7 +46,7 @@ class HSNWeightService {
 
     try {
       // Fetching HSN weight data
-      
+
       const { data: hsnRecord, error } = await supabase
         .from('hsn_master')
         .select('weight_data')
@@ -74,15 +74,16 @@ class HSNWeightService {
         average: Number(weightData.average) || 0,
         min: Number(weightData.min) || 0,
         max: Number(weightData.max) || 0,
-        packaging: packagingData?.additional_weight ? Number(packagingData.additional_weight) : undefined,
+        packaging: packagingData?.additional_weight
+          ? Number(packagingData.additional_weight)
+          : undefined,
         source: 'hsn',
-        confidence: 0.95 // High confidence for HSN data
+        confidence: 0.95, // High confidence for HSN data
       };
 
       // HSN weight data found
       this.setCache(hsnCode, result);
       return result;
-
     } catch (error) {
       console.error(`❌ [HSN Weight] Error fetching weight for HSN ${hsnCode}:`, error);
       this.setCache(hsnCode, null);
@@ -160,9 +161,11 @@ class HSNWeightService {
       average: Number(weightData.average) || 0,
       min: Number(weightData.min) || 0,
       max: Number(weightData.max) || 0,
-      packaging: packagingData?.additional_weight ? Number(packagingData.additional_weight) : undefined,
+      packaging: packagingData?.additional_weight
+        ? Number(packagingData.additional_weight)
+        : undefined,
       source: 'hsn',
-      confidence: 0.95
+      confidence: 0.95,
     };
   }
 
@@ -183,7 +186,7 @@ class HSNWeightService {
   private setCache(hsnCode: string, data: HSNWeightData | null): void {
     this.cache.set(hsnCode, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 
@@ -201,7 +204,7 @@ class HSNWeightService {
   getCacheStats(): { size: number; entries: string[] } {
     return {
       size: this.cache.size,
-      entries: Array.from(this.cache.keys())
+      entries: Array.from(this.cache.keys()),
     };
   }
 }

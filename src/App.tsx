@@ -61,9 +61,9 @@ const TrackingPage = React.lazy(() =>
 );
 const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTickets'));
 
-
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
+const AdminQuoteDetail = React.lazy(() => import('@/pages/admin/QuoteDetail'));
 const EmailTemplatesPage = React.lazy(() => import('@/pages/admin/EmailTemplates'));
 const PaymentManagement = React.lazy(() => import('@/pages/admin/PaymentManagement'));
 const ShippingRoutesPage = React.lazy(() => import('@/pages/admin/ShippingRoutes'));
@@ -184,7 +184,7 @@ const router = createBrowserRouter([
             path: 'quotes/:id',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
-                <UnifiedQuoteInterface />
+                <AdminQuoteDetail />
               </ErrorBoundary>
             ),
           },

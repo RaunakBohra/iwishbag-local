@@ -42,16 +42,18 @@ export const useUserOnboarding = (): UserOnboardingStatus => {
     // Calculate days since signup
     const signupDate = new Date(user.created_at);
     const now = new Date();
-    const daysSinceSignup = Math.floor((now.getTime() - signupDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceSignup = Math.floor(
+      (now.getTime() - signupDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     // Check if user is new (signed up within last 7 days)
     const isNewUser = daysSinceSignup <= 7;
 
     // Check completion status
     const hasAnyQuotes = (quotes || []).length > 0;
-    const hasApprovedQuote = (quotes || []).some(q => q.status === 'approved');
+    const hasApprovedQuote = (quotes || []).some((q) => q.status === 'approved');
     const hasAnyOrders = (orders || []).length > 0;
-    const hasCompletedOrder = (orders || []).some(o => o.status === 'completed');
+    const hasCompletedOrder = (orders || []).some((o) => o.status === 'completed');
 
     // Determine if we should show onboarding
     // Show if user is new AND hasn't completed their first quote

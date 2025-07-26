@@ -67,7 +67,7 @@ export function DisclosureProvider({
   };
 
   const toggleSection = (sectionId: string) => {
-    setExpandedSections(prev => {
+    setExpandedSections((prev) => {
       const next = new Set(prev);
       if (next.has(sectionId)) {
         next.delete(sectionId);
@@ -147,10 +147,7 @@ export function DisclosureLevelControl({
           variant={level === l.value ? 'default' : 'outline'}
           size="sm"
           onClick={() => setLevel(l.value)}
-          className={cn(
-            'transition-all',
-            level === l.value && 'shadow-sm'
-          )}
+          className={cn('transition-all', level === l.value && 'shadow-sm')}
         >
           <l.icon className="h-4 w-4 mr-1.5" />
           {showLabels && l.label}
@@ -224,7 +221,7 @@ export function DisclosureSection({
 }: DisclosureSectionProps) {
   const { level, isExpanded, toggleSection } = useDisclosure();
   const [localExpanded, setLocalExpanded] = useState(defaultExpanded);
-  
+
   // Use context expansion state if available, otherwise local state
   const expanded = isExpanded(id) || localExpanded;
   const isVisible = level >= minLevel;
@@ -243,18 +240,11 @@ export function DisclosureSection({
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <ChevronRight
-            className={cn(
-              'h-4 w-4 transition-transform',
-              expanded && 'rotate-90'
-            )}
-          />
+          <ChevronRight className={cn('h-4 w-4 transition-transform', expanded && 'rotate-90')} />
           {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
           <div className="text-left">
             <div className="font-medium">{title}</div>
-            {subtitle && (
-              <div className="text-sm text-muted-foreground">{subtitle}</div>
-            )}
+            {subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
           </div>
         </div>
         {badge && (
@@ -263,7 +253,7 @@ export function DisclosureSection({
           </Badge>
         )}
       </button>
-      
+
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -273,9 +263,7 @@ export function DisclosureSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-2 border-t">
-              {children}
-            </div>
+            <div className="px-4 pb-4 pt-2 border-t">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -298,7 +286,7 @@ export function ShowAtLevel({ minLevel, children, fallback }: ShowAtLevelProps) 
 // Level indicator badge
 export function DisclosureLevelBadge({ className }: { className?: string }) {
   const { level } = useDisclosure();
-  
+
   const levelInfo = {
     [DisclosureLevel.SUMMARY]: { label: 'Summary', color: 'bg-blue-100 text-blue-700' },
     [DisclosureLevel.ESSENTIAL]: { label: 'Essential', color: 'bg-green-100 text-green-700' },
@@ -308,11 +296,7 @@ export function DisclosureLevelBadge({ className }: { className?: string }) {
 
   const info = levelInfo[level];
 
-  return (
-    <Badge className={cn('text-xs', info.color, className)}>
-      {info.label} View
-    </Badge>
-  );
+  return <Badge className={cn('text-xs', info.color, className)}>{info.label} View</Badge>;
 }
 
 // Quick toggle for expand/collapse all

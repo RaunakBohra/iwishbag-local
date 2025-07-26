@@ -53,7 +53,7 @@ export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({ item }) => {
                 <h3 className="text-sm font-medium text-gray-900 truncate">
                   {item.name || 'Product'}
                 </h3>
-                
+
                 {item.options && Object.keys(item.options).length > 0 && (
                   <div className="mt-1">
                     <p className="text-xs text-gray-500">
@@ -89,7 +89,7 @@ export const QuoteItemCard: React.FC<QuoteItemCardProps> = ({ item }) => {
                   <DollarSign className="h-4 w-4 mr-1" />
                   {totalPrice.toFixed(2)}
                 </div>
-                
+
                 <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                   <div className="flex items-center">
                     <Package className="h-3 w-3 mr-1" />

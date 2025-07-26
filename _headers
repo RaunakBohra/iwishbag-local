@@ -1,0 +1,25 @@
+# Cloudflare Pages _headers file
+# This configures security headers and caching for your site
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://*.iwishbag.com wss://*.supabase.co https://api.cloudflare.com https://*.sentry.io; media-src 'self' https:; object-src 'none'; child-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com;
+
+# Cache static assets
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Cache images
+/images/*
+  Cache-Control: public, max-age=86400
+
+# Don't cache HTML files
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# Don't cache the service worker
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate

@@ -18,7 +18,7 @@ const mockServiceWorker = {
   removeEventListener: vi.fn(),
   postMessage: vi.fn(),
   onmessage: null as ((event: MessageEvent) => void) | null,
-  state: 'activated' as ServiceWorkerState
+  state: 'activated' as ServiceWorkerState,
 };
 
 // Mock Service Worker Registration
@@ -29,7 +29,7 @@ const mockServiceWorkerRegistration = {
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
   update: vi.fn(),
-  unregister: vi.fn()
+  unregister: vi.fn(),
 };
 
 // Mock navigator.serviceWorker
@@ -40,15 +40,15 @@ Object.defineProperty(navigator, 'serviceWorker', {
     controller: mockServiceWorker,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-    getRegistration: vi.fn().mockResolvedValue(mockServiceWorkerRegistration)
+    getRegistration: vi.fn().mockResolvedValue(mockServiceWorkerRegistration),
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock online/offline status
 Object.defineProperty(navigator, 'onLine', {
   writable: true,
-  value: true
+  value: true,
 });
 
 // Mock connection status
@@ -59,9 +59,9 @@ Object.defineProperty(navigator, 'connection', {
     rtt: 100,
     saveData: false,
     addEventListener: vi.fn(),
-    removeEventListener: vi.fn()
+    removeEventListener: vi.fn(),
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock IndexedDB for offline storage
@@ -82,24 +82,24 @@ const mockIndexedDB = {
           clear: vi.fn().mockResolvedValue(undefined),
           index: vi.fn().mockReturnValue({
             get: vi.fn().mockResolvedValue(null),
-            getAll: vi.fn().mockResolvedValue([])
-          })
+            getAll: vi.fn().mockResolvedValue([]),
+          }),
         }),
         oncomplete: null,
         onerror: null,
-        onabort: null
+        onabort: null,
       }),
       close: vi.fn(),
       addEventListener: vi.fn(),
-      removeEventListener: vi.fn()
+      removeEventListener: vi.fn(),
     });
   }),
-  deleteDatabase: vi.fn().mockResolvedValue(undefined)
+  deleteDatabase: vi.fn().mockResolvedValue(undefined),
 };
 
 Object.defineProperty(window, 'indexedDB', {
   value: mockIndexedDB,
-  configurable: true
+  configurable: true,
 });
 
 // Mock Cache API
@@ -111,7 +111,7 @@ const mockCache = {
   addAll: vi.fn().mockResolvedValue(undefined),
   put: vi.fn().mockResolvedValue(undefined),
   delete: vi.fn().mockResolvedValue(true),
-  keys: vi.fn().mockResolvedValue([])
+  keys: vi.fn().mockResolvedValue([]),
 };
 
 Object.defineProperty(window, 'caches', {
@@ -120,9 +120,9 @@ Object.defineProperty(window, 'caches', {
     match: vi.fn(),
     has: vi.fn().mockResolvedValue(true),
     delete: vi.fn().mockResolvedValue(true),
-    keys: vi.fn().mockResolvedValue(['iwishbag-v1'])
+    keys: vi.fn().mockResolvedValue(['iwishbag-v1']),
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock dependencies
@@ -149,16 +149,16 @@ const offlineQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 199.99,
   item_price: 149.99,
-  sales_tax_price: 12.00,
-  merchant_shipping_price: 10.00,
-  international_shipping: 18.00,
-  customs_and_ecs: 7.50,
-  domestic_shipping: 5.00,
-  handling_charge: 2.50,
-  insurance_amount: 1.50,
-  payment_gateway_fee: 2.50,
-  vat: 0.00,
-  discount: 5.00,
+  sales_tax_price: 12.0,
+  merchant_shipping_price: 10.0,
+  international_shipping: 18.0,
+  customs_and_ecs: 7.5,
+  domestic_shipping: 5.0,
+  handling_charge: 2.5,
+  insurance_amount: 1.5,
+  payment_gateway_fee: 2.5,
+  vat: 0.0,
+  discount: 5.0,
   destination_country: 'CA',
   origin_country: 'US',
   website: 'amazon.com',
@@ -166,43 +166,45 @@ const offlineQuote: UnifiedQuote = {
     info: {
       name: 'Offline User',
       email: 'offline@example.com',
-      phone: '+1-555-0199'
-    }
+      phone: '+1-555-0199',
+    },
   },
   shipping_address: {
-    formatted: '123 Offline Street, Toronto, ON M5H 2N2, Canada'
+    formatted: '123 Offline Street, Toronto, ON M5H 2N2, Canada',
   },
-  items: [{
-    id: 'offline-item',
-    name: 'Offline Product',
-    description: 'Product available offline',
-    quantity: 1,
-    price: 149.99,
-    product_url: 'https://amazon.com/offline-product',
-    image_url: 'https://example.com/offline.jpg'
-  }],
+  items: [
+    {
+      id: 'offline-item',
+      name: 'Offline Product',
+      description: 'Product available offline',
+      quantity: 1,
+      price: 149.99,
+      product_url: 'https://amazon.com/offline-product',
+      image_url: 'https://example.com/offline.jpg',
+    },
+  ],
   notes: 'Offline test quote',
   admin_notes: '',
   priority: 'medium',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
 const renderWithProviders = (component: React.ReactNode) => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { 
+      queries: {
         retry: 3,
         retryDelay: 1000,
         staleTime: 300000, // 5 minutes
         cacheTime: 600000, // 10 minutes
         refetchOnWindowFocus: false,
-        refetchOnReconnect: true
+        refetchOnReconnect: true,
       },
-      mutations: { 
+      mutations: {
         retry: 3,
-        retryDelay: 1000
+        retryDelay: 1000,
       },
     },
   });
@@ -210,11 +212,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -222,7 +222,7 @@ const renderWithProviders = (component: React.ReactNode) => {
 const setNetworkStatus = (online: boolean) => {
   Object.defineProperty(navigator, 'onLine', {
     writable: true,
-    value: online
+    value: online,
   });
 
   // Dispatch online/offline events
@@ -245,9 +245,10 @@ describe('PWA Offline Functionality Tests', () => {
   describe('Service Worker Registration and Management', () => {
     it('should register service worker on app initialization', async () => {
       const mockOnServiceWorkerUpdate = vi.fn();
-      
+
       const ServiceWorkerTestComponent = () => {
-        const [swRegistration, setSwRegistration] = React.useState<ServiceWorkerRegistration | null>(null);
+        const [swRegistration, setSwRegistration] =
+          React.useState<ServiceWorkerRegistration | null>(null);
         const [updateAvailable, setUpdateAvailable] = React.useState(false);
 
         React.useEffect(() => {
@@ -278,17 +279,11 @@ describe('PWA Offline Functionality Tests', () => {
 
         return (
           <div>
-            <div data-testid="sw-status">
-              {swRegistration ? 'registered' : 'not-registered'}
-            </div>
+            <div data-testid="sw-status">{swRegistration ? 'registered' : 'not-registered'}</div>
             <div data-testid="update-status">
               {updateAvailable ? 'update-available' : 'no-update'}
             </div>
-            <UnifiedQuoteCard
-              quote={offlineQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={offlineQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -312,7 +307,7 @@ describe('PWA Offline Functionality Tests', () => {
           };
 
           navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
-          
+
           return () => {
             navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
           };
@@ -332,11 +327,7 @@ describe('PWA Offline Functionality Tests', () => {
                 <button onClick={skipWaiting}>Update Now</button>
               </div>
             )}
-            <UnifiedQuoteList
-              quotes={[offlineQuote]}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={[offlineQuote]} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -366,7 +357,7 @@ describe('PWA Offline Functionality Tests', () => {
       const mockOfflineStorage = {
         saveQuote: vi.fn().mockResolvedValue(true),
         getQuotes: vi.fn().mockResolvedValue([offlineQuote]),
-        deleteQuote: vi.fn().mockResolvedValue(true)
+        deleteQuote: vi.fn().mockResolvedValue(true),
       };
 
       const OfflineStorageTest = () => {
@@ -400,20 +391,12 @@ describe('PWA Offline Functionality Tests', () => {
 
         return (
           <div>
-            <div data-testid="network-status">
-              {isOffline ? 'offline' : 'online'}
-            </div>
-            <div data-testid="offline-quotes-count">
-              {offlineQuotes.length}
-            </div>
+            <div data-testid="network-status">{isOffline ? 'offline' : 'online'}</div>
+            <div data-testid="offline-quotes-count">{offlineQuotes.length}</div>
             <button onClick={saveOfflineQuote} data-testid="save-offline">
               Save Offline
             </button>
-            <UnifiedQuoteList
-              quotes={offlineQuotes}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={offlineQuotes} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -444,19 +427,21 @@ describe('PWA Offline Functionality Tests', () => {
     it('should sync offline data when coming back online', async () => {
       const mockSyncService = {
         syncOfflineData: vi.fn().mockResolvedValue({ synced: 1, failed: 0 }),
-        getOfflineChanges: vi.fn().mockResolvedValue([
-          { type: 'create', data: offlineQuote, timestamp: Date.now() }
-        ])
+        getOfflineChanges: vi
+          .fn()
+          .mockResolvedValue([{ type: 'create', data: offlineQuote, timestamp: Date.now() }]),
       };
 
       const OfflineSyncTest = () => {
-        const [syncStatus, setSyncStatus] = React.useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+        const [syncStatus, setSyncStatus] = React.useState<'idle' | 'syncing' | 'synced' | 'error'>(
+          'idle',
+        );
         const [syncedCount, setSyncedCount] = React.useState(0);
 
         React.useEffect(() => {
           const handleOnline = async () => {
             setSyncStatus('syncing');
-            
+
             try {
               const result = await mockSyncService.syncOfflineData();
               setSyncedCount(result.synced);
@@ -474,11 +459,7 @@ describe('PWA Offline Functionality Tests', () => {
           <div>
             <div data-testid="sync-status">{syncStatus}</div>
             <div data-testid="synced-count">{syncedCount}</div>
-            <UnifiedQuoteCard
-              quote={offlineQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={offlineQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -509,7 +490,7 @@ describe('PWA Offline Functionality Tests', () => {
       const mockOfflineQueue = {
         add: vi.fn().mockResolvedValue('queued-123'),
         process: vi.fn().mockResolvedValue({ success: true }),
-        getQueueSize: vi.fn().mockReturnValue(1)
+        getQueueSize: vi.fn().mockReturnValue(1),
       };
 
       const OfflineFormTest = () => {
@@ -542,16 +523,10 @@ describe('PWA Offline Functionality Tests', () => {
 
         return (
           <div>
-            <div data-testid="network-status">
-              {isOffline ? 'offline' : 'online'}
-            </div>
+            <div data-testid="network-status">{isOffline ? 'offline' : 'online'}</div>
             <div data-testid="queue-size">{queueSize}</div>
             <div data-testid="submit-status">{submitStatus}</div>
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode="guest"
-              onSubmit={handleSubmit}
-            />
+            <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={handleSubmit} />
           </div>
         );
       };
@@ -608,11 +583,7 @@ describe('PWA Offline Functionality Tests', () => {
                 <span>You're offline. Form submissions will be queued.</span>
               </div>
             )}
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode="guest"
-              onSubmit={vi.fn()}
-            />
+            <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />
           </div>
         );
       };
@@ -631,7 +602,9 @@ describe('PWA Offline Functionality Tests', () => {
         expect(screen.getByTestId('offline-banner')).toBeInTheDocument();
       });
 
-      expect(screen.getByText("You're offline. Form submissions will be queued.")).toBeInTheDocument();
+      expect(
+        screen.getByText("You're offline. Form submissions will be queued."),
+      ).toBeInTheDocument();
     });
   });
 
@@ -640,11 +613,13 @@ describe('PWA Offline Functionality Tests', () => {
       const mockAssetCache = {
         cacheAssets: vi.fn().mockResolvedValue(true),
         getAsset: vi.fn().mockResolvedValue(new Response('cached-content')),
-        hasAsset: vi.fn().mockResolvedValue(true)
+        hasAsset: vi.fn().mockResolvedValue(true),
       };
 
       const OfflineAssetTest = () => {
-        const [assetStatus, setAssetStatus] = React.useState<'loading' | 'cached' | 'offline'>('loading');
+        const [assetStatus, setAssetStatus] = React.useState<'loading' | 'cached' | 'offline'>(
+          'loading',
+        );
         const [imageUrl, setImageUrl] = React.useState('');
 
         React.useEffect(() => {
@@ -654,7 +629,9 @@ describe('PWA Offline Functionality Tests', () => {
               setAssetStatus('cached');
               setImageUrl('https://example.com/cached-image.jpg');
             } else {
-              const hasAsset = await mockAssetCache.hasAsset('https://example.com/cached-image.jpg');
+              const hasAsset = await mockAssetCache.hasAsset(
+                'https://example.com/cached-image.jpg',
+              );
               if (hasAsset) {
                 setAssetStatus('cached');
                 setImageUrl('https://example.com/cached-image.jpg');
@@ -673,10 +650,12 @@ describe('PWA Offline Functionality Tests', () => {
             <UnifiedQuoteCard
               quote={{
                 ...offlineQuote,
-                items: [{
-                  ...offlineQuote.items[0],
-                  image_url: imageUrl
-                }]
+                items: [
+                  {
+                    ...offlineQuote.items[0],
+                    image_url: imageUrl,
+                  },
+                ],
               }}
               viewMode="customer"
               layout="detail"
@@ -720,19 +699,19 @@ describe('PWA Offline Functionality Tests', () => {
 
         return (
           <div>
-            <div data-testid="network-status">
-              {isOffline ? 'offline' : 'online'}
-            </div>
-            <div data-testid="image-status">
-              {imageError ? 'fallback' : 'original'}
-            </div>
+            <div data-testid="network-status">{isOffline ? 'offline' : 'online'}</div>
+            <div data-testid="image-status">{imageError ? 'fallback' : 'original'}</div>
             <UnifiedQuoteCard
               quote={{
                 ...offlineQuote,
-                items: [{
-                  ...offlineQuote.items[0],
-                  image_url: imageError ? '/assets/fallback-image.jpg' : 'https://example.com/image.jpg'
-                }]
+                items: [
+                  {
+                    ...offlineQuote.items[0],
+                    image_url: imageError
+                      ? '/assets/fallback-image.jpg'
+                      : 'https://example.com/image.jpg',
+                  },
+                ],
               }}
               viewMode="customer"
               layout="detail"
@@ -769,13 +748,13 @@ describe('PWA Offline Functionality Tests', () => {
     it('should register background sync when offline', async () => {
       const mockBackgroundSync = {
         register: vi.fn().mockResolvedValue(undefined),
-        getTags: vi.fn().mockResolvedValue(['quote-sync'])
+        getTags: vi.fn().mockResolvedValue(['quote-sync']),
       };
 
       // Mock Background Sync API
       Object.defineProperty(mockServiceWorkerRegistration, 'sync', {
         value: mockBackgroundSync,
-        configurable: true
+        configurable: true,
       });
 
       const BackgroundSyncTest = () => {
@@ -783,7 +762,10 @@ describe('PWA Offline Functionality Tests', () => {
 
         React.useEffect(() => {
           const registerBackgroundSync = async () => {
-            if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+            if (
+              'serviceWorker' in navigator &&
+              'sync' in window.ServiceWorkerRegistration.prototype
+            ) {
               const registration = await navigator.serviceWorker.ready;
               await registration.sync.register('quote-sync');
               setSyncRegistered(true);
@@ -800,11 +782,7 @@ describe('PWA Offline Functionality Tests', () => {
             <div data-testid="sync-registered">
               {syncRegistered ? 'registered' : 'not-registered'}
             </div>
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode="guest"
-              onSubmit={vi.fn()}
-            />
+            <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />
           </div>
         );
       };
@@ -835,7 +813,7 @@ describe('PWA Offline Functionality Tests', () => {
             setIsOffline(true);
             setError('You are currently offline. Some features may not be available.');
           };
-          
+
           const handleOnline = () => {
             setIsOffline(false);
             setError(null);
@@ -883,7 +861,9 @@ describe('PWA Offline Functionality Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('offline-error')).toBeInTheDocument();
-        expect(screen.getByText('You are currently offline. Some features may not be available.')).toBeInTheDocument();
+        expect(
+          screen.getByText('You are currently offline. Some features may not be available.'),
+        ).toBeInTheDocument();
       });
 
       // Try to perform an action while offline
@@ -891,24 +871,28 @@ describe('PWA Offline Functionality Tests', () => {
       await user.click(approveButton);
 
       await waitFor(() => {
-        expect(screen.getByText('This action requires an internet connection.')).toBeInTheDocument();
+        expect(
+          screen.getByText('This action requires an internet connection.'),
+        ).toBeInTheDocument();
       });
     });
 
     it('should retry failed requests when coming back online', async () => {
       const mockRetryService = {
         addFailedRequest: vi.fn(),
-        retryFailedRequests: vi.fn().mockResolvedValue({ retried: 2, failed: 0 })
+        retryFailedRequests: vi.fn().mockResolvedValue({ retried: 2, failed: 0 }),
       };
 
       const RetryTest = () => {
-        const [retryStatus, setRetryStatus] = React.useState<'idle' | 'retrying' | 'completed'>('idle');
+        const [retryStatus, setRetryStatus] = React.useState<'idle' | 'retrying' | 'completed'>(
+          'idle',
+        );
         const [retriedCount, setRetriedCount] = React.useState(0);
 
         React.useEffect(() => {
           const handleOnline = async () => {
             setRetryStatus('retrying');
-            
+
             const result = await mockRetryService.retryFailedRequests();
             setRetriedCount(result.retried);
             setRetryStatus('completed');

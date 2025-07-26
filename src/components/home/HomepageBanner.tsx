@@ -1,16 +1,16 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Package, 
-  Globe, 
-  Shield, 
-  Zap, 
+import {
+  Package,
+  Globe,
+  Shield,
+  Zap,
   Star,
   CheckCircle,
   Users,
   MapPin,
-  Headphones
+  Headphones,
 } from 'lucide-react';
 
 export const HomepageBanner: React.FC = () => {
@@ -18,7 +18,6 @@ export const HomepageBanner: React.FC = () => {
     <div className="relative min-h-[800px] bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
-        
         {/* Enhanced Gradient Orbs */}
         <div className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-br from-teal-500/15 to-cyan-500/15 rounded-full blur-3xl" />
         <div className="absolute bottom-20 right-10 w-80 h-80 bg-gradient-to-br from-cyan-500/15 to-blue-500/15 rounded-full blur-3xl" />
@@ -45,24 +44,24 @@ export const HomepageBanner: React.FC = () => {
                 Delivered to You
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              Access millions of products from Amazon, eBay, Alibaba and more. 
-              We handle everything - purchasing, shipping, and customs clearance.
+              Access millions of products from Amazon, eBay, Alibaba and more. We handle everything
+              - purchasing, shipping, and customs clearance.
             </p>
           </div>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white px-8 py-4 text-lg font-semibold h-14 shadow-xl hover:shadow-2xl transition-all duration-300"
             >
               Get Your Free Quote
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
+            <Button
+              size="lg"
+              variant="outline"
               className="border-2 border-teal-300 hover:border-teal-500 text-teal-700 hover:text-teal-800 hover:bg-orange-50 px-8 py-4 text-lg font-semibold h-14 bg-white/90 backdrop-blur-sm transition-all duration-300"
             >
               Calculate Costs Instantly
@@ -106,7 +105,9 @@ export const HomepageBanner: React.FC = () => {
             <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-teal-100 hover:border-teal-200">
               <Globe className="w-10 h-10 text-teal-600 mb-4" />
               <h3 className="font-semibold text-slate-900 mb-2">Shop Globally</h3>
-              <p className="text-slate-600 text-sm">Access products from top international marketplaces</p>
+              <p className="text-slate-600 text-sm">
+                Access products from top international marketplaces
+              </p>
             </div>
             <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-cyan-100 hover:border-cyan-200">
               <Package className="w-10 h-10 text-cyan-600 mb-4" />
@@ -133,13 +134,13 @@ export const HomepageBanner: React.FC = () => {
                 <Shield className="w-5 h-5 text-green-600 mr-2" />
                 <span className="text-sm font-medium text-slate-700">SSL Secured</span>
               </div>
-              
+
               {/* Money Back Badge */}
               <div className="flex items-center bg-white/80 backdrop-blur-sm rounded-lg px-4 py-2 shadow-md">
                 <CheckCircle className="w-5 h-5 text-blue-600 mr-2" />
                 <span className="text-sm font-medium text-slate-700">Money-Back Guarantee</span>
               </div>
-              
+
               {/* Customer Rating */}
               <div className="flex items-center bg-white/80 backdrop-blur-sm rounded-lg px-4 py-2 shadow-md">
                 <div className="flex items-center mr-2">
@@ -154,7 +155,8 @@ export const HomepageBanner: React.FC = () => {
             {/* Customer Testimonial Preview */}
             <div className="max-w-2xl mx-auto">
               <blockquote className="text-lg italic text-slate-600 mb-4">
-                "iwishBag made international shopping effortless. Got my products from Amazon US delivered to Delhi in just 10 days!"
+                "iwishBag made international shopping effortless. Got my products from Amazon US
+                delivered to Delhi in just 10 days!"
               </blockquote>
               <cite className="text-sm font-medium text-slate-500">
                 - Priya S., Verified Customer

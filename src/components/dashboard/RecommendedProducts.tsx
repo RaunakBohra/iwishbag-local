@@ -24,12 +24,12 @@ import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityServ
 import { useDashboardState } from '@/hooks/useDashboardState';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { 
-  useActivityPatterns, 
-  useRecentProductViews, 
+import {
+  useActivityPatterns,
+  useRecentProductViews,
   useQuoteHistory,
   inferCategoryFromProductName,
-  activityKeys
+  activityKeys,
 } from '@/hooks/useUserActivityAnalytics';
 
 interface RecommendedProduct {
@@ -194,240 +194,357 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
   const { user } = useAuth();
   const { quotes, orders } = useDashboardState();
   const queryClient = useQueryClient();
-  
+
   // Use React Query hooks for intelligent data fetching
   const { data: activityPatterns, isLoading: patternsLoading } = useActivityPatterns();
   const { data: recentViews, isLoading: viewsLoading } = useRecentProductViews(10);
   const { data: quoteHistory, isLoading: historyLoading } = useQuoteHistory(20);
-  
+
   const isLoading = patternsLoading || viewsLoading || historyLoading;
 
   // Helper function to generate category-based recommendations (memoized for performance)
-  const generateCategoryRecommendations = useMemo(() => (
-    category: string,
-    priceRange: { min: number; max: number; average: number; confidence: number },
-    confidence: number
-  ): Omit<RecommendedProduct, 'id' | 'source' | 'reason'>[] => {
-    const categoryProducts = {
-      'Electronics': [
-        { name: 'iPhone 15 Pro', description: 'Latest Apple smartphone with professional camera system', price: 999 },
-        { name: 'MacBook Air M3', description: '13-inch laptop with Apple M3 chip and all-day battery', price: 1099 },
-        { name: 'Sony WH-1000XM5', description: 'Industry-leading noise canceling wireless headphones', price: 399 },
-        { name: 'iPad Pro 12.9"', description: 'Most advanced iPad with M2 chip and Liquid Retina display', price: 1099 },
-        { name: 'AirPods Pro 2nd Gen', description: 'Active noise cancellation with spatial audio', price: 249 },
-      ],
-      'Fashion': [
-        { name: 'Nike Air Jordan 1 Retro High', description: 'Classic basketball sneakers in premium leather', price: 170 },
-        { name: 'Levi\'s 501 Original Jeans', description: 'The original blue jean with a straight leg fit', price: 98 },
-        { name: 'Ray-Ban Aviator Sunglasses', description: 'Iconic pilot sunglasses with crystal lenses', price: 154 },
-        { name: 'Adidas Ultraboost 23', description: 'Premium running shoes with responsive cushioning', price: 190 },
-        { name: 'Champion Reverse Weave Hoodie', description: 'Classic heavyweight hoodie with iconic logo', price: 85 },
-      ],
-      'Home & Garden': [
-        { name: 'Dyson V15 Detect Vacuum', description: 'Cordless vacuum with laser dust detection', price: 749 },
-        { name: 'Instant Pot Duo 7-in-1', description: 'Multi-use pressure cooker for fast, healthy meals', price: 99 },
-        { name: 'Philips Hue Smart Bulbs', description: 'Color-changing LED bulbs with app control', price: 199 },
-        { name: 'Ninja Foodi Indoor Grill', description: 'Indoor grill and air fryer combination', price: 229 },
-        { name: 'iRobot Roomba j7+', description: 'Self-emptying robot vacuum with obstacle avoidance', price: 799 },
-      ],
-      'Sports & Outdoors': [
-        { name: 'Yeti Rambler Tumbler', description: 'Insulated stainless steel drinkware', price: 39 },
-        { name: 'Patagonia Down Sweater', description: 'Lightweight insulated jacket for outdoor adventures', price: 229 },
-        { name: 'Hydro Flask Water Bottle', description: 'Insulated water bottle that keeps drinks cold 24hrs', price: 44 },
-        { name: 'REI Co-op Trail 40 Backpack', description: 'Versatile hiking backpack with multiple compartments', price: 149 },
-        { name: 'Fitbit Charge 5', description: 'Advanced fitness tracker with built-in GPS', price: 199 },
-      ],
-      'Beauty & Health': [
-        { name: 'Olaplex Hair Treatment Set', description: 'Professional hair repair treatment system', price: 85 },
-        { name: 'The Ordinary Skincare Set', description: 'Complete skincare routine with active ingredients', price: 45 },
-        { name: 'Dyson Airwrap Styler', description: 'Multi-styler for hair styling without extreme heat', price: 599 },
-        { name: 'Cetaphil Gentle Cleanser', description: 'Dermatologist-recommended face wash for sensitive skin', price: 15 },
-        { name: 'Biotin Hair Growth Supplements', description: 'Daily vitamins for stronger, healthier hair', price: 29 },
-      ],
-    };
+  const generateCategoryRecommendations = useMemo(
+    () =>
+      (
+        category: string,
+        priceRange: { min: number; max: number; average: number; confidence: number },
+        confidence: number,
+      ): Omit<RecommendedProduct, 'id' | 'source' | 'reason'>[] => {
+        const categoryProducts = {
+          Electronics: [
+            {
+              name: 'iPhone 15 Pro',
+              description: 'Latest Apple smartphone with professional camera system',
+              price: 999,
+            },
+            {
+              name: 'MacBook Air M3',
+              description: '13-inch laptop with Apple M3 chip and all-day battery',
+              price: 1099,
+            },
+            {
+              name: 'Sony WH-1000XM5',
+              description: 'Industry-leading noise canceling wireless headphones',
+              price: 399,
+            },
+            {
+              name: 'iPad Pro 12.9"',
+              description: 'Most advanced iPad with M2 chip and Liquid Retina display',
+              price: 1099,
+            },
+            {
+              name: 'AirPods Pro 2nd Gen',
+              description: 'Active noise cancellation with spatial audio',
+              price: 249,
+            },
+          ],
+          Fashion: [
+            {
+              name: 'Nike Air Jordan 1 Retro High',
+              description: 'Classic basketball sneakers in premium leather',
+              price: 170,
+            },
+            {
+              name: "Levi's 501 Original Jeans",
+              description: 'The original blue jean with a straight leg fit',
+              price: 98,
+            },
+            {
+              name: 'Ray-Ban Aviator Sunglasses',
+              description: 'Iconic pilot sunglasses with crystal lenses',
+              price: 154,
+            },
+            {
+              name: 'Adidas Ultraboost 23',
+              description: 'Premium running shoes with responsive cushioning',
+              price: 190,
+            },
+            {
+              name: 'Champion Reverse Weave Hoodie',
+              description: 'Classic heavyweight hoodie with iconic logo',
+              price: 85,
+            },
+          ],
+          'Home & Garden': [
+            {
+              name: 'Dyson V15 Detect Vacuum',
+              description: 'Cordless vacuum with laser dust detection',
+              price: 749,
+            },
+            {
+              name: 'Instant Pot Duo 7-in-1',
+              description: 'Multi-use pressure cooker for fast, healthy meals',
+              price: 99,
+            },
+            {
+              name: 'Philips Hue Smart Bulbs',
+              description: 'Color-changing LED bulbs with app control',
+              price: 199,
+            },
+            {
+              name: 'Ninja Foodi Indoor Grill',
+              description: 'Indoor grill and air fryer combination',
+              price: 229,
+            },
+            {
+              name: 'iRobot Roomba j7+',
+              description: 'Self-emptying robot vacuum with obstacle avoidance',
+              price: 799,
+            },
+          ],
+          'Sports & Outdoors': [
+            {
+              name: 'Yeti Rambler Tumbler',
+              description: 'Insulated stainless steel drinkware',
+              price: 39,
+            },
+            {
+              name: 'Patagonia Down Sweater',
+              description: 'Lightweight insulated jacket for outdoor adventures',
+              price: 229,
+            },
+            {
+              name: 'Hydro Flask Water Bottle',
+              description: 'Insulated water bottle that keeps drinks cold 24hrs',
+              price: 44,
+            },
+            {
+              name: 'REI Co-op Trail 40 Backpack',
+              description: 'Versatile hiking backpack with multiple compartments',
+              price: 149,
+            },
+            {
+              name: 'Fitbit Charge 5',
+              description: 'Advanced fitness tracker with built-in GPS',
+              price: 199,
+            },
+          ],
+          'Beauty & Health': [
+            {
+              name: 'Olaplex Hair Treatment Set',
+              description: 'Professional hair repair treatment system',
+              price: 85,
+            },
+            {
+              name: 'The Ordinary Skincare Set',
+              description: 'Complete skincare routine with active ingredients',
+              price: 45,
+            },
+            {
+              name: 'Dyson Airwrap Styler',
+              description: 'Multi-styler for hair styling without extreme heat',
+              price: 599,
+            },
+            {
+              name: 'Cetaphil Gentle Cleanser',
+              description: 'Dermatologist-recommended face wash for sensitive skin',
+              price: 15,
+            },
+            {
+              name: 'Biotin Hair Growth Supplements',
+              description: 'Daily vitamins for stronger, healthier hair',
+              price: 29,
+            },
+          ],
+        };
 
-    const products = categoryProducts[category as keyof typeof categoryProducts] || [];
-    
-    // Filter products within user's price range preference
-    const affordableProducts = products.filter(product => 
-      product.price >= priceRange.min * 0.5 && product.price <= priceRange.max * 1.5
-    );
+        const products = categoryProducts[category as keyof typeof categoryProducts] || [];
 
-    return (affordableProducts.length > 0 ? affordableProducts : products.slice(0, 2))
-      .map(product => ({
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        currency: 'USD',
-        confidence: Math.max(60, confidence),
-        category,
-        rating: 4.1 + Math.random() * 0.8,
-        reviews: Math.floor(Math.random() * 1000) + 200,
-      }));
-  }, []); // Empty dependency array since product catalog is static
+        // Filter products within user's price range preference
+        const affordableProducts = products.filter(
+          (product) =>
+            product.price >= priceRange.min * 0.5 && product.price <= priceRange.max * 1.5,
+        );
+
+        return (affordableProducts.length > 0 ? affordableProducts : products.slice(0, 2)).map(
+          (product) => ({
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            currency: 'USD',
+            confidence: Math.max(60, confidence),
+            category,
+            rating: 4.1 + Math.random() * 0.8,
+            reviews: Math.floor(Math.random() * 1000) + 200,
+          }),
+        );
+      },
+    [],
+  ); // Empty dependency array since product catalog is static
 
   // Helper function to generate similar products based on previous orders (memoized for performance)
-  const generateSimilarProduct = useMemo(() => (
-    originalProduct: string,
-    category: string,
-    price: number
-  ): Omit<RecommendedProduct, 'id' | 'source' | 'reason'> | null => {
-    const similarProducts = {
-      // Electronics variations
-      iphone: ['iPhone 15 Pro Max', 'Samsung Galaxy S24 Ultra', 'Google Pixel 8 Pro'],
-      macbook: ['MacBook Pro 14"', 'Dell XPS 13', 'Surface Laptop Studio'],
-      headphones: ['Sony WH-1000XM5', 'Bose QuietComfort 45', 'Apple AirPods Max'],
-      
-      // Fashion variations
-      nike: ['Nike Air Jordan 4', 'Nike Dunk Low', 'Nike Air Force 1'],
-      adidas: ['Adidas Stan Smith', 'Adidas Ultraboost', 'Adidas Gazelle'],
-      jeans: ['Levi\'s 511 Slim', 'Wrangler 936 Cowboy Cut', 'AG Graduate Jeans'],
-    };
+  const generateSimilarProduct = useMemo(
+    () =>
+      (
+        originalProduct: string,
+        category: string,
+        price: number,
+      ): Omit<RecommendedProduct, 'id' | 'source' | 'reason'> | null => {
+        const similarProducts = {
+          // Electronics variations
+          iphone: ['iPhone 15 Pro Max', 'Samsung Galaxy S24 Ultra', 'Google Pixel 8 Pro'],
+          macbook: ['MacBook Pro 14"', 'Dell XPS 13', 'Surface Laptop Studio'],
+          headphones: ['Sony WH-1000XM5', 'Bose QuietComfort 45', 'Apple AirPods Max'],
 
-    const productLower = originalProduct.toLowerCase();
-    let suggestions: string[] = [];
+          // Fashion variations
+          nike: ['Nike Air Jordan 4', 'Nike Dunk Low', 'Nike Air Force 1'],
+          adidas: ['Adidas Stan Smith', 'Adidas Ultraboost', 'Adidas Gazelle'],
+          jeans: ["Levi's 511 Slim", 'Wrangler 936 Cowboy Cut', 'AG Graduate Jeans'],
+        };
 
-    // Find matching product category
-    for (const [key, variants] of Object.entries(similarProducts)) {
-      if (productLower.includes(key)) {
-        suggestions = variants;
-        break;
-      }
-    }
+        const productLower = originalProduct.toLowerCase();
+        let suggestions: string[] = [];
 
-    if (suggestions.length === 0) {
-      // Fallback to category-based suggestions
-      const categoryProducts = generateCategoryRecommendations(
-        category,
-        { min: price * 0.7, max: price * 1.3, average: price, confidence: 70 },
-        70
-      );
-      return categoryProducts[0] || null;
-    }
+        // Find matching product category
+        for (const [key, variants] of Object.entries(similarProducts)) {
+          if (productLower.includes(key)) {
+            suggestions = variants;
+            break;
+          }
+        }
 
-    const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
-    return {
-      name: randomSuggestion,
-      description: `Recommended based on your interest in similar products`,
-      price: Math.round(price * (0.8 + Math.random() * 0.4)), // ±20% price variation
-      currency: 'USD',
-      confidence: 75,
-      category,
-      rating: 4.2 + Math.random() * 0.6,
-      reviews: Math.floor(Math.random() * 800) + 150,
-    };
-  }, []); // Empty dependency array since product variations are static
+        if (suggestions.length === 0) {
+          // Fallback to category-based suggestions
+          const categoryProducts = generateCategoryRecommendations(
+            category,
+            { min: price * 0.7, max: price * 1.3, average: price, confidence: 70 },
+            70,
+          );
+          return categoryProducts[0] || null;
+        }
+
+        const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+        return {
+          name: randomSuggestion,
+          description: `Recommended based on your interest in similar products`,
+          price: Math.round(price * (0.8 + Math.random() * 0.4)), // ±20% price variation
+          currency: 'USD',
+          confidence: 75,
+          category,
+          rating: 4.2 + Math.random() * 0.6,
+          reviews: Math.floor(Math.random() * 800) + 150,
+        };
+      },
+    [],
+  ); // Empty dependency array since product variations are static
 
   // Helper function to get trending products (memoized for performance)
-  const getTrendingProducts = useMemo(() => (
-    priceRange: { min: number; max: number; average: number; confidence: number },
-    preferredCategory?: string
-  ): Omit<RecommendedProduct, 'id' | 'source'>[] => {
-    const globalTrending = [
-      {
-        name: 'iPhone 15 Pro Max',
-        description: 'Latest Apple flagship with titanium design and Action Button',
-        price: 1199,
-        category: 'Electronics',
-        confidence: 88,
-        reason: 'Trending globally - most requested premium smartphone',
-      },
-      {
-        name: 'Sony PlayStation 5',
-        description: 'Next-gen gaming console with ultra-high speed SSD',
-        price: 499,
-        category: 'Electronics',
-        confidence: 85,
-        reason: 'High demand gaming console, perfect for international shipping',
-      },
-      {
-        name: 'Nike Air Jordan 1 Chicago',
-        description: 'Iconic basketball shoe in the original Chicago colorway',
-        price: 170,
-        category: 'Fashion',
-        confidence: 82,
-        reason: 'Consistently popular sneaker with strong resale value',
-      },
-      {
-        name: 'Dyson V15 Detect',
-        description: 'Advanced cordless vacuum with laser dust detection',
-        price: 749,
-        category: 'Home & Garden',
-        confidence: 79,
-        reason: 'Premium home appliance frequently requested by customers',
-      },
-      {
-        name: 'MacBook Air M3',
-        description: '13-inch laptop with Apple M3 chip for professionals',
-        price: 1099,
-        category: 'Electronics',
-        confidence: 90,
-        reason: 'Top-rated laptop for work and creativity, excellent for shipping',
-      },
-      {
-        name: 'Patagonia Better Sweater',
-        description: 'Sustainable fleece jacket made from recycled materials',
-        price: 99,
-        category: 'Fashion',
-        confidence: 76,
-        reason: 'Eco-friendly fashion trending among conscious consumers',
-      },
-    ];
+  const getTrendingProducts = useMemo(
+    () =>
+      (
+        priceRange: { min: number; max: number; average: number; confidence: number },
+        preferredCategory?: string,
+      ): Omit<RecommendedProduct, 'id' | 'source'>[] => {
+        const globalTrending = [
+          {
+            name: 'iPhone 15 Pro Max',
+            description: 'Latest Apple flagship with titanium design and Action Button',
+            price: 1199,
+            category: 'Electronics',
+            confidence: 88,
+            reason: 'Trending globally - most requested premium smartphone',
+          },
+          {
+            name: 'Sony PlayStation 5',
+            description: 'Next-gen gaming console with ultra-high speed SSD',
+            price: 499,
+            category: 'Electronics',
+            confidence: 85,
+            reason: 'High demand gaming console, perfect for international shipping',
+          },
+          {
+            name: 'Nike Air Jordan 1 Chicago',
+            description: 'Iconic basketball shoe in the original Chicago colorway',
+            price: 170,
+            category: 'Fashion',
+            confidence: 82,
+            reason: 'Consistently popular sneaker with strong resale value',
+          },
+          {
+            name: 'Dyson V15 Detect',
+            description: 'Advanced cordless vacuum with laser dust detection',
+            price: 749,
+            category: 'Home & Garden',
+            confidence: 79,
+            reason: 'Premium home appliance frequently requested by customers',
+          },
+          {
+            name: 'MacBook Air M3',
+            description: '13-inch laptop with Apple M3 chip for professionals',
+            price: 1099,
+            category: 'Electronics',
+            confidence: 90,
+            reason: 'Top-rated laptop for work and creativity, excellent for shipping',
+          },
+          {
+            name: 'Patagonia Better Sweater',
+            description: 'Sustainable fleece jacket made from recycled materials',
+            price: 99,
+            category: 'Fashion',
+            confidence: 76,
+            reason: 'Eco-friendly fashion trending among conscious consumers',
+          },
+        ];
 
-    // Filter by preferred category if available
-    let filteredProducts = preferredCategory 
-      ? globalTrending.filter(p => p.category === preferredCategory)
-      : globalTrending;
+        // Filter by preferred category if available
+        let filteredProducts = preferredCategory
+          ? globalTrending.filter((p) => p.category === preferredCategory)
+          : globalTrending;
 
-    // If no products in preferred category, use all trending
-    if (filteredProducts.length === 0) {
-      filteredProducts = globalTrending;
-    }
+        // If no products in preferred category, use all trending
+        if (filteredProducts.length === 0) {
+          filteredProducts = globalTrending;
+        }
 
-    // Filter by price range if user has established preferences
-    if (priceRange.confidence > 50) {
-      const affordableProducts = filteredProducts.filter(product => 
-        product.price >= priceRange.min * 0.3 && product.price <= priceRange.max * 2
-      );
-      if (affordableProducts.length > 0) {
-        filteredProducts = affordableProducts;
-      }
-    }
+        // Filter by price range if user has established preferences
+        if (priceRange.confidence > 50) {
+          const affordableProducts = filteredProducts.filter(
+            (product) =>
+              product.price >= priceRange.min * 0.3 && product.price <= priceRange.max * 2,
+          );
+          if (affordableProducts.length > 0) {
+            filteredProducts = affordableProducts;
+          }
+        }
 
-    return filteredProducts.map(product => ({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      currency: 'USD',
-      confidence: product.confidence,
-      reason: product.reason,
-      category: product.category,
-      rating: 4.1 + Math.random() * 0.7,
-      reviews: Math.floor(Math.random() * 1200) + 300,
-    }));
-  }, []); // Empty dependency array since trending products catalog is static
+        return filteredProducts.map((product) => ({
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          currency: 'USD',
+          confidence: product.confidence,
+          reason: product.reason,
+          category: product.category,
+          rating: 4.1 + Math.random() * 0.7,
+          reviews: Math.floor(Math.random() * 1200) + 300,
+        }));
+      },
+    [],
+  ); // Empty dependency array since trending products catalog is static
 
   // Generate intelligent recommendations using activity patterns
   const recommendations = useMemo((): RecommendedProduct[] => {
     if (!user) return [];
-    
+
     // Handle new users with no activity data - provide trending recommendations
-    if (!activityPatterns || 
-        (activityPatterns.recentlyViewedProducts.length === 0 && 
-         activityPatterns.preferredCategories.length === 0 && 
-         activityPatterns.quoteCompletionHistory.length === 0)) {
-      
+    if (
+      !activityPatterns ||
+      (activityPatterns.recentlyViewedProducts.length === 0 &&
+        activityPatterns.preferredCategories.length === 0 &&
+        activityPatterns.quoteCompletionHistory.length === 0)
+    ) {
       // For new users, show trending products with generic messaging
       const newUserTrending = getTrendingProducts(
         { min: 50, max: 500, average: 150, confidence: 0 }, // Default price range for new users
-        undefined // No category preference
+        undefined, // No category preference
       );
-      
+
       return newUserTrending.slice(0, maxItems).map((product, index) => ({
         ...product,
         id: `new_user_trending_${index}`,
         source: 'trending' as const,
-        reason: 'Popular choice for first-time iwishBag customers - highly rated and frequently shipped',
+        reason:
+          'Popular choice for first-time iwishBag customers - highly rated and frequently shipped',
       }));
     }
 
@@ -456,9 +573,12 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
     }
 
     // Priority 2: Products in preferred categories
-    if (activityPatterns.preferredCategories.length > 0 && intelligentRecommendations.length < maxItems) {
+    if (
+      activityPatterns.preferredCategories.length > 0 &&
+      intelligentRecommendations.length < maxItems
+    ) {
       const topCategories = activityPatterns.preferredCategories.slice(0, 2);
-      
+
       topCategories.forEach((categoryInfo, index) => {
         if (intelligentRecommendations.length >= maxItems) return;
 
@@ -466,7 +586,7 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
         const categoryProducts = generateCategoryRecommendations(
           categoryInfo.category,
           activityPatterns.priceRangePreference,
-          categoryInfo.confidence
+          categoryInfo.confidence,
         );
 
         if (categoryProducts.length > 0) {
@@ -481,16 +601,19 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
     }
 
     // Priority 3: Similar to completed quotes/orders
-    if (activityPatterns.quoteCompletionHistory.length > 0 && intelligentRecommendations.length < maxItems) {
+    if (
+      activityPatterns.quoteCompletionHistory.length > 0 &&
+      intelligentRecommendations.length < maxItems
+    ) {
       const recentCompletions = activityPatterns.quoteCompletionHistory.slice(0, 2);
-      
+
       recentCompletions.forEach((completion, index) => {
         if (intelligentRecommendations.length >= maxItems || !completion.product_name) return;
 
         const similarProduct = generateSimilarProduct(
           completion.product_name,
           completion.category || 'General',
-          completion.value || activityPatterns.priceRangePreference.average
+          completion.value || activityPatterns.priceRangePreference.average,
         );
 
         if (similarProduct) {
@@ -508,7 +631,7 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
     if (intelligentRecommendations.length < maxItems) {
       const trendingProducts = getTrendingProducts(
         activityPatterns.priceRangePreference,
-        activityPatterns.preferredCategories[0]?.category
+        activityPatterns.preferredCategories[0]?.category,
       );
 
       const remainingSlots = maxItems - intelligentRecommendations.length;
@@ -522,7 +645,14 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
     }
 
     return intelligentRecommendations.slice(0, maxItems);
-  }, [activityPatterns, maxItems, user, generateCategoryRecommendations, generateSimilarProduct, getTrendingProducts]);
+  }, [
+    activityPatterns,
+    maxItems,
+    user,
+    generateCategoryRecommendations,
+    generateSimilarProduct,
+    getTrendingProducts,
+  ]);
 
   const handleProductClick = async (product: RecommendedProduct) => {
     // Track the recommendation click
@@ -624,7 +754,7 @@ export const RecommendedProducts: React.FC<RecommendedProductsProps> = ({
             }}
             disabled={isLoading}
           >
-            <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
+            <RefreshCw className={cn('w-4 h-4 mr-2', isLoading && 'animate-spin')} />
             Refresh
           </Button>
         </div>

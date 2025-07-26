@@ -8,7 +8,7 @@
  * 4. USD (final fallback)
  */
 
-import { currencyService } from './CurrencyService';
+import { optimizedCurrencyService } from './OptimizedCurrencyService';
 
 interface LocationData {
   country: string;
@@ -192,7 +192,8 @@ class LocationDetectionService {
     if (detectedLocation?.currency) {
       // Validate currency is supported by our system
       try {
-        const currencyInfo = await currencyService.getCurrency(detectedLocation.currency);
+        const allCurrencies = await optimizedCurrencyService.getAllCurrencies();
+        const currencyInfo = allCurrencies.find(c => c.code === detectedLocation.currency);
         if (currencyInfo) {
           console.log('💰 Using IP-detected currency:', detectedLocation.currency);
           return detectedLocation.currency;
@@ -206,7 +207,7 @@ class LocationDetectionService {
     if (quoteDestinationCountry) {
       try {
         const destinationCurrency =
-          await currencyService.getCurrencyForCountry(quoteDestinationCountry);
+          await optimizedCurrencyService.getCurrencyForCountry(quoteDestinationCountry);
         if (destinationCurrency) {
           console.log('💰 Using quote destination currency:', destinationCurrency);
           return destinationCurrency;

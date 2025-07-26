@@ -366,7 +366,25 @@ class PerItemTaxCalculator {
    * Get quote-level totals needed for CIF/landed cost calculations
    */
   private getQuoteTotals(items: QuoteItem[], context: TaxCalculationContext) {
-    const totalItemsValue = items.reduce((sum, item) => sum + item.price_origin_currency, 0);
+    // 🔍 [DEBUG] Individual item analysis for NaN detection
+    console.log(`[QUOTE TOTALS DEBUG] Analyzing ${items.length} items:`);
+    items.forEach((item, index) => {
+      const itemPrice = item.price_origin_currency;
+      const isValidPrice = typeof itemPrice === 'number' && !isNaN(itemPrice);
+      console.log(`  Item ${index}: ${item.name}, price: ${itemPrice} (valid: ${isValidPrice})`);
+    });
+
+    // ✅ FIXED: Add proper null checking and validation for item prices
+    const totalItemsValue = items.reduce((sum, item) => {
+      const itemPrice = item.price_origin_currency;
+      const validPrice = typeof itemPrice === 'number' && !isNaN(itemPrice) ? itemPrice : 0;
+      
+      if (itemPrice !== validPrice) {
+        console.warn(`[QUOTE TOTALS] Invalid price for item "${item.name}": ${itemPrice}, using 0 instead`);
+      }
+      
+      return sum + validPrice;
+    }, 0);
 
     // ✅ FIXED: Use actual values from context (form inputs)
     const totalShippingCost = context.shipping_cost || 0;
@@ -617,15 +635,32 @@ class PerItemTaxCalculator {
     totalInsuranceAmount: number,
     totalHandlingFee: number,
   ): number {
+    // ✅ FIXED: Add protection against invalid item price and division by zero
+    const itemPrice = typeof item.price_origin_currency === 'number' && !isNaN(item.price_origin_currency) 
+      ? item.price_origin_currency 
+      : 0;
+    
+    if (itemPrice !== item.price_origin_currency) {
+      console.warn(`[CIF CALCULATION] Invalid price for item "${item.name}": ${item.price_origin_currency}, using 0 instead`);
+    }
+    
+    // Protect against division by zero or invalid totalItemsValue
+    const safeTotal = totalItemsValue > 0 ? totalItemsValue : 1;
+    const itemProportion = itemPrice / safeTotal;
+    
+    if (totalItemsValue <= 0) {
+      console.warn(`[CIF CALCULATION] Invalid totalItemsValue: ${totalItemsValue}, using proportion 1 for item "${item.name}"`);
+    }
+    
     // Allocate shipping, insurance, and handling proportionally to item value
-    const itemProportion = item.price_origin_currency / totalItemsValue;
     const allocatedShipping = totalShippingCost * itemProportion;
     const allocatedInsurance = totalInsuranceAmount * itemProportion;
     const allocatedHandling = totalHandlingFee * itemProportion;
 
     // CIF = Cost + Insurance + Freight (including handling as part of freight)
-    const cifValue =
-      item.price_origin_currency + allocatedShipping + allocatedInsurance + allocatedHandling;
+    const cifValue = itemPrice + allocatedShipping + allocatedInsurance + allocatedHandling;
+
+    console.log(`[CIF DEBUG] Item: ${item.name}, Price: ${itemPrice}, Proportion: ${itemProportion.toFixed(4)}, CIF: ${cifValue.toFixed(2)}`);
 
     return cifValue;
   }

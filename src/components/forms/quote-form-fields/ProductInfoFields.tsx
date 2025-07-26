@@ -28,28 +28,23 @@ interface ProductInfoFieldsProps {
   setValue: UseFormSetValue<ProductFormData>;
 }
 
-
 export const ProductInfoFields = ({ control, index, setValue }: ProductInfoFieldsProps) => {
-
   // Watch the product URL and product name fields
   const productUrl = useWatch({
     control,
     name: `items.${index}.productUrl`,
   });
-  
+
   const productName = useWatch({
     control,
     name: `items.${index}.productName`,
   });
-
-
 
   const handleOpenUrl = (url: string) => {
     if (url && url.trim()) {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
-
 
   return (
     <div className="space-y-6">
@@ -156,8 +151,6 @@ export const ProductInfoFields = ({ control, index, setValue }: ProductInfoField
           </FormItem>
         )}
       />
-
-
     </div>
   );
 };

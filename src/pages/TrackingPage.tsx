@@ -333,14 +333,18 @@ export const TrackingPage: React.FC = () => {
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">{item.name}</p>
                           <p className="text-sm text-gray-600">
-                            Qty: {item.quantity} × ${typeof item.price_usd === 'number' ? item.price_usd : 0}
+                            Qty: {item.quantity} × $
+                            {typeof item.price_usd === 'number' ? item.price_usd : 0}
                           </p>
-                          {item.customer_notes && <p className="text-xs text-gray-500">{item.customer_notes}</p>}
+                          {item.customer_notes && (
+                            <p className="text-xs text-gray-500">{item.customer_notes}</p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="font-semibold">
-                            ${typeof item.price_usd === 'number' && typeof item.quantity === 'number' 
-                              ? (item.price_usd * item.quantity).toFixed(2) 
+                            $
+                            {typeof item.price_usd === 'number' && typeof item.quantity === 'number'
+                              ? (item.price_usd * item.quantity).toFixed(2)
                               : '0.00'}
                           </p>
                           <p className="text-sm text-gray-600">{item.weight_kg}kg</p>

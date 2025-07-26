@@ -130,10 +130,10 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
                 currentHSNCode={editValues.hsnCode}
                 productName={breakdown.itemName}
                 onHSNSelect={(hsn) => {
-                  setEditValues(prev => ({
+                  setEditValues((prev) => ({
                     ...prev,
                     hsnCode: hsn.hsn_code,
-                    category: hsn.category
+                    category: hsn.category,
                   }));
                 }}
                 placeholder="Search HSN code..."
@@ -200,17 +200,26 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
           <div className="mb-3 p-2 bg-white rounded border">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-gray-600">Valuation Method:</span>
-              <Badge 
+              <Badge
                 variant={breakdown.valuation_method === 'minimum_valuation' ? 'default' : 'outline'}
                 className="text-xs"
               >
-                {breakdown.valuation_method === 'minimum_valuation' ? 'Minimum Valuation' : 
-                 breakdown.valuation_method === 'original_price' ? 'Product Value' :
-                 breakdown.valuation_method === 'higher_of_both' ? 'Higher of Both' : 'Admin Override'}
+                {breakdown.valuation_method === 'minimum_valuation'
+                  ? 'Minimum Valuation'
+                  : breakdown.valuation_method === 'original_price'
+                    ? 'Product Value'
+                    : breakdown.valuation_method === 'higher_of_both'
+                      ? 'Higher of Both'
+                      : 'Admin Override'}
               </Badge>
             </div>
             <div className="text-xs text-gray-600">
-              Taxable Amount: <span className="font-medium">${breakdown.taxable_amount_origin_currency?.toFixed(2) || breakdown.valuationAmount?.toFixed(2)}</span>
+              Taxable Amount:{' '}
+              <span className="font-medium">
+                $
+                {breakdown.taxable_amount_origin_currency?.toFixed(2) ||
+                  breakdown.valuationAmount?.toFixed(2)}
+              </span>
             </div>
             {breakdown.minimum_valuation_conversion && (
               <div className="text-xs text-amber-600 mt-1">
@@ -225,7 +234,8 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
               <div>
                 <span className="text-gray-700">Customs Duty</span>
                 <div className="text-xs text-gray-600">
-                  Rate: {breakdown.customs_calculation?.rate_percentage || breakdown.customsDuty?.rate}%
+                  Rate:{' '}
+                  {breakdown.customs_calculation?.rate_percentage || breakdown.customsDuty?.rate}%
                 </div>
               </div>
               <span className="font-medium text-red-600">
@@ -239,7 +249,8 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
                   {breakdown.local_tax_calculation?.tax_type?.toUpperCase() || 'Local Tax'}
                 </span>
                 <div className="text-xs text-gray-600">
-                  Rate: {breakdown.local_tax_calculation?.rate_percentage || breakdown.localTax?.rate}%
+                  Rate:{' '}
+                  {breakdown.local_tax_calculation?.rate_percentage || breakdown.localTax?.rate}%
                 </div>
               </div>
               <span className="font-medium text-blue-600">
@@ -262,9 +273,12 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
             <div className="flex justify-between items-center">
               <span className="font-medium text-gray-800">Item Total (with tax)</span>
               <span className="font-bold text-green-600">
-                ${breakdown.totalItemCostWithTax?.toFixed(2) || 
-                  ((breakdown.costPrice || breakdown.original_price_origin_currency || 0) + 
-                   (breakdown.total_taxes || breakdown.totalTaxAmount || 0)).toFixed(2)}
+                $
+                {breakdown.totalItemCostWithTax?.toFixed(2) ||
+                  (
+                    (breakdown.costPrice || breakdown.original_price_origin_currency || 0) +
+                    (breakdown.total_taxes || breakdown.totalTaxAmount || 0)
+                  ).toFixed(2)}
               </span>
             </div>
           </div>
@@ -274,7 +288,10 @@ export const HSNItemBreakdownCard: React.FC<HSNItemBreakdownCardProps> = ({
             <div className="flex items-center justify-between">
               <span>Confidence Score:</span>
               <Badge variant="outline" className="text-xs">
-                {Math.round((breakdown.confidence_score || breakdown.classificationConfidence || 0) * 100)}%
+                {Math.round(
+                  (breakdown.confidence_score || breakdown.classificationConfidence || 0) * 100,
+                )}
+                %
               </Badge>
             </div>
             {breakdown.warnings && breakdown.warnings.length > 0 && (

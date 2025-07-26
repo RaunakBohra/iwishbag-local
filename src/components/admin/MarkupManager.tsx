@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from '../ui/dialog';
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface RouteMarkup {
   id: number;
@@ -305,8 +305,8 @@ export function MarkupManager() {
                             <DollarSign className="h-3 w-3 text-green-500" />
                             <span>
                               Fixed:{' '}
-                              {currencyService.getCurrencySymbol(
-                                currencyService.getCurrencyForCountrySync(route.origin_country),
+                              {optimizedCurrencyService.getCurrencySymbol(
+                                optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                               )}
                               {route.markup_fixed_amount}
                             </span>
@@ -323,8 +323,8 @@ export function MarkupManager() {
                             <AlertCircle className="h-3 w-3 text-orange-500" />
                             <span>
                               Priority:{' '}
-                              {currencyService.getCurrencySymbol(
-                                currencyService.getCurrencyForCountrySync(route.origin_country),
+                              {optimizedCurrencyService.getCurrencySymbol(
+                                optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                               )}
                               {route.priority_fee}
                             </span>
@@ -346,8 +346,8 @@ export function MarkupManager() {
                             <DollarSign className="h-3 w-3 text-gray-500" />
                             <span>
                               Base:{' '}
-                              {currencyService.getCurrencySymbol(
-                                currencyService.getCurrencyForCountrySync(route.origin_country),
+                              {optimizedCurrencyService.getCurrencySymbol(
+                                optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                               )}
                               {route.base_shipping_cost}
                             </span>
@@ -358,8 +358,8 @@ export function MarkupManager() {
                             <DollarSign className="h-3 w-3 text-gray-500" />
                             <span>
                               Per kg:{' '}
-                              {currencyService.getCurrencySymbol(
-                                currencyService.getCurrencyForCountrySync(route.origin_country),
+                              {optimizedCurrencyService.getCurrencySymbol(
+                                optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                               )}
                               {route.shipping_per_kg || route.cost_per_kg}
                             </span>
@@ -373,8 +373,8 @@ export function MarkupManager() {
                       <p className="text-sm font-medium">Sample Calculation (100 USD, 1 kg):</p>
                       <p className="text-sm">
                         Total Extra Cost:{' '}
-                        {currencyService.getCurrencySymbol(
-                          currencyService.getCurrencyForCountrySync(route.origin_country),
+                        {optimizedCurrencyService.getCurrencySymbol(
+                          optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
                         )}
                         {calculateTotalMarkup(route, 100, 1).toFixed(2)}
                       </p>
@@ -435,8 +435,8 @@ export function MarkupManager() {
                         <DollarSign className="h-3 w-3 text-green-500" />
                         <span>
                           Fixed Fee:{' '}
-                          {currencyService.getCurrencySymbol(
-                            currencyService.getCurrencyForCountrySync(country.code),
+                          {optimizedCurrencyService.getCurrencySymbol(
+                            optimizedCurrencyService.getCurrencyForCountrySync(country.code),
                           )}
                           {country.country_markup_fixed}
                         </span>
@@ -567,8 +567,8 @@ function RouteMarkupForm({
           />
           <p className="text-xs text-gray-500 mt-1">
             Fixed amount in{' '}
-            {currencyService.getCurrencySymbol(
-              currencyService.getCurrencyForCountrySync(route.origin_country),
+            {optimizedCurrencyService.getCurrencySymbol(
+              optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
             )}
           </p>
         </div>
@@ -684,8 +684,8 @@ function CountryMarkupForm({
           />
           <p className="text-xs text-gray-500 mt-1">
             Fixed fee in{' '}
-            {currencyService.getCurrencySymbol(
-              currencyService.getCurrencyForCountrySync(country.code),
+            {optimizedCurrencyService.getCurrencySymbol(
+              optimizedCurrencyService.getCurrencyForCountrySync(country.code),
             )}
           </p>
         </div>

@@ -68,21 +68,25 @@ export const usePermissions = (): UsePermissionsReturn => {
             .select('role')
             .eq('user_id', user.id)
             .eq('is_active', true);
-          
+
           const userRole = roles?.[0]?.role || 'user';
-          return [{
-            permission_name: userRole,
-            permission_description: `${userRole} permissions`
-          }];
+          return [
+            {
+              permission_name: userRole,
+              permission_description: `${userRole} permissions`,
+            },
+          ];
         }
 
         return data || [];
       } catch (err) {
         console.warn('Falling back to basic permissions check');
-        return [{
-          permission_name: 'user',
-          permission_description: 'Basic user permissions'
-        }];
+        return [
+          {
+            permission_name: 'user',
+            permission_description: 'Basic user permissions',
+          },
+        ];
       }
     },
     enabled: isAuthenticated,
@@ -117,11 +121,13 @@ export const usePermissions = (): UsePermissionsReturn => {
             .select('role, created_at')
             .eq('user_id', user.id)
             .eq('is_active', true);
-          
-          return roles?.map(r => ({
-            role_name: r.role,
-            role_description: `${r.role} role`
-          })) || [];
+
+          return (
+            roles?.map((r) => ({
+              role_name: r.role,
+              role_description: `${r.role} role`,
+            })) || []
+          );
         }
 
         return data || [];

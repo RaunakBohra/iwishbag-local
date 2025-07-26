@@ -19,7 +19,7 @@ const Layout = () => {
           <Outlet />
         </main>
         <Footer />
-        
+
         {/* Global Command Palette */}
         <CommandPalette isOpen={isOpen} onClose={closePalette} />
       </div>

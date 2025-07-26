@@ -1,6 +1,6 @@
 // src/pages/Checkout.tsx
 import React, { useState, useEffect, useMemo } from 'react';
-import { getCustomerDisplayData } from '@/lib/customerDisplayUtils';
+import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,7 +42,7 @@ import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { useLocationDetection } from '@/hooks/useLocationDetection';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { StripePaymentForm } from '@/components/payment/StripePaymentForm';
@@ -284,7 +284,7 @@ export default function Checkout() {
   const { data: availableCurrencies } = useQuery({
     queryKey: ['available-currencies-service'],
     queryFn: async () => {
-      const currencies = await currencyService.getAllCurrencies();
+      const currencies = await optimizedCurrencyService.getAllCurrencies();
       return currencies.map((currency) => ({
         code: currency.code,
         name: currency.name,
@@ -451,7 +451,7 @@ export default function Checkout() {
 
       const countryCode =
         selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode || 'US';
-      return await currencyService.getCurrencyForCountry(countryCode);
+      return await optimizedCurrencyService.getCurrencyForCountry(countryCode);
     },
     enabled: isGuestCheckout && !!guestQuote && selectedCartItems.length > 0,
   });
@@ -2042,7 +2042,7 @@ export default function Checkout() {
                             <CheckCircle className="h-5 w-5 text-green-600" />
                             <div>
                               {(() => {
-                                const customerData = getCustomerDisplayData(guestQuote);
+                                const customerData = customerDisplayUtils.getCustomerDisplayData(guestQuote);
                                 return (
                                   <>
                                     <p className="font-medium text-green-900">

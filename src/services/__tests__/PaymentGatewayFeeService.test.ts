@@ -12,25 +12,27 @@ vi.mock('@/integrations/supabase/client', () => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({
-            data: {
-              payment_gateway_fixed_fee: 0.50,
-              payment_gateway_percent_fee: 3.5,
-              currency: 'INR'
-            },
-            error: null
-          }))
-        }))
-      }))
-    }))
-  }
+          single: vi.fn(() =>
+            Promise.resolve({
+              data: {
+                payment_gateway_fixed_fee: 0.5,
+                payment_gateway_percent_fee: 3.5,
+                currency: 'INR',
+              },
+              error: null,
+            }),
+          ),
+        })),
+      })),
+    })),
+  },
 }));
 
 vi.mock('../UnifiedConfigurationService', () => ({
   unifiedConfigService: {
     getGatewayConfig: vi.fn(),
     getCountryConfig: vi.fn(),
-  }
+  },
 }));
 
 vi.mock('@sentry/react', () => ({
@@ -62,19 +64,19 @@ describe('PaymentGatewayFeeService', () => {
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
               data: null,
-              error: { message: 'No data found' }
-            })
-          })
-        })
+              error: { message: 'No data found' },
+            }),
+          }),
+        }),
       } as any);
 
       const fees = await paymentGatewayFeeService.getPaymentGatewayFees('XX');
 
       expect(fees).toEqual({
-        fixedFee: 0.30,
+        fixedFee: 0.3,
         percentFee: 2.9,
         source: 'default',
-        currency: 'USD'
+        currency: 'USD',
       });
     });
 
@@ -82,10 +84,10 @@ describe('PaymentGatewayFeeService', () => {
       const fees = await paymentGatewayFeeService.getPaymentGatewayFees('IN');
 
       expect(fees).toEqual({
-        fixedFee: 0.50,
+        fixedFee: 0.5,
         percentFee: 3.5,
         source: 'country',
-        currency: 'INR'
+        currency: 'INR',
       });
     });
 
@@ -94,7 +96,7 @@ describe('PaymentGatewayFeeService', () => {
       vi.mocked(unifiedConfigService.getGatewayConfig).mockResolvedValue({
         gateway_name: 'stripe',
         fees: {
-          fixed_fee: 0.30,
+          fixed_fee: 0.3,
           percent_fee: 2.9,
         },
         supported_countries: ['US', 'IN'],
@@ -103,22 +105,22 @@ describe('PaymentGatewayFeeService', () => {
         display_name: 'Stripe',
         api_config: {
           webhook_endpoint: '/webhook/stripe',
-          supported_payment_methods: ['card']
+          supported_payment_methods: ['card'],
         },
         limits: {
-          min_amount: 0.50,
-          max_amount: 999999
-        }
+          min_amount: 0.5,
+          max_amount: 999999,
+        },
       });
 
       const fees = await paymentGatewayFeeService.getPaymentGatewayFees('IN', 'stripe');
 
       expect(fees).toEqual({
-        fixedFee: 0.30,
+        fixedFee: 0.3,
         percentFee: 2.9,
         source: 'gateway',
         gateway: 'stripe',
-        currency: 'USD'
+        currency: 'USD',
       });
     });
   });
@@ -127,12 +129,12 @@ describe('PaymentGatewayFeeService', () => {
     it('should calculate fees correctly', async () => {
       const calculation = await paymentGatewayFeeService.calculatePaymentGatewayFee(100, 'IN');
 
-      expect(calculation.calculatedAmount).toBe(4.00); // (100 * 3.5%) + 0.50 = 3.50 + 0.50 = 4.00
+      expect(calculation.calculatedAmount).toBe(4.0); // (100 * 3.5%) + 0.50 = 3.50 + 0.50 = 4.00
       expect(calculation.breakdown).toEqual({
         baseAmount: 100,
-        percentageFee: 3.50,
-        fixedFee: 0.50,
-        totalFee: 4.00
+        percentageFee: 3.5,
+        fixedFee: 0.5,
+        totalFee: 4.0,
       });
       expect(calculation.fees.source).toBe('country');
     });
@@ -140,12 +142,12 @@ describe('PaymentGatewayFeeService', () => {
     it('should handle zero amounts correctly', async () => {
       const calculation = await paymentGatewayFeeService.calculatePaymentGatewayFee(0, 'IN');
 
-      expect(calculation.calculatedAmount).toBe(0.50); // Only fixed fee
+      expect(calculation.calculatedAmount).toBe(0.5); // Only fixed fee
       expect(calculation.breakdown).toEqual({
         baseAmount: 0,
         percentageFee: 0,
-        fixedFee: 0.50,
-        totalFee: 0.50
+        fixedFee: 0.5,
+        totalFee: 0.5,
       });
     });
   });
@@ -154,12 +156,12 @@ describe('PaymentGatewayFeeService', () => {
     it('should cache results and return cached values on subsequent calls', async () => {
       // First call
       const fees1 = await paymentGatewayFeeService.getPaymentGatewayFees('IN');
-      
+
       // Second call should use cache
       const fees2 = await paymentGatewayFeeService.getPaymentGatewayFees('IN');
 
       expect(fees1).toEqual(fees2);
-      
+
       // Verify supabase was only called once
       const { supabase } = await import('@/integrations/supabase/client');
       expect(supabase.from).toHaveBeenCalledTimes(1);
@@ -168,13 +170,13 @@ describe('PaymentGatewayFeeService', () => {
     it('should clear cache when requested', async () => {
       // Make a call to populate cache
       await paymentGatewayFeeService.getPaymentGatewayFees('IN');
-      
+
       // Clear cache
       paymentGatewayFeeService.clearCache('IN');
-      
+
       // Next call should fetch fresh data
       await paymentGatewayFeeService.getPaymentGatewayFees('IN');
-      
+
       // Verify supabase was called twice
       const { supabase } = await import('@/integrations/supabase/client');
       expect(supabase.from).toHaveBeenCalledTimes(2);

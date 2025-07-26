@@ -112,9 +112,7 @@ export const EnhancedHowItWorksSection = () => {
       <div className="container mx-auto px-4">
         {/* Compact Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            How iwishBag Works
-          </h2>
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">How iwishBag Works</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Simple, transparent international shopping in 4 easy steps
           </p>
@@ -140,10 +138,8 @@ export const EnhancedHowItWorksSection = () => {
 
               {/* Content */}
               <h3 className="font-bold text-gray-900 mb-2">{step.title}</h3>
-              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                {step.description}
-              </p>
-              
+              <p className="text-sm text-gray-600 mb-3 leading-relaxed">{step.description}</p>
+
               {/* Timeframe */}
               <div className="text-xs text-teal-600 font-medium bg-teal-100 rounded-full px-3 py-1 inline-block">
                 {step.timeframe}

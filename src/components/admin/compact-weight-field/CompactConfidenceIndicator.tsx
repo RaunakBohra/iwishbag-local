@@ -12,7 +12,7 @@ export const CompactConfidenceIndicator: React.FC<CompactConfidenceIndicatorProp
   confidence,
   size = 'sm',
   showPercentage = false,
-  className
+  className,
 }) => {
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'bg-green-500';
@@ -25,19 +25,11 @@ export const CompactConfidenceIndicator: React.FC<CompactConfidenceIndicatorProp
 
   return (
     <div className={cn('flex items-center gap-1', className)}>
-      <div 
-        className={cn(
-          'rounded-full flex-shrink-0',
-          dotSize,
-          getConfidenceColor(confidence)
-        )}
+      <div
+        className={cn('rounded-full flex-shrink-0', dotSize, getConfidenceColor(confidence))}
         title={`${percentage}% confidence`}
       />
-      {showPercentage && (
-        <span className="text-xs text-gray-600 font-medium">
-          {percentage}%
-        </span>
-      )}
+      {showPercentage && <span className="text-xs text-gray-600 font-medium">{percentage}%</span>}
     </div>
   );
 };

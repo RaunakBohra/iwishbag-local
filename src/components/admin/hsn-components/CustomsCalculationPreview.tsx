@@ -7,11 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingUp, 
-  ArrowRight, 
+import {
+  Calculator,
+  DollarSign,
+  TrendingUp,
+  ArrowRight,
   AlertTriangle,
   CheckCircle,
   Info,
@@ -69,7 +69,15 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
     if (productPrice > 0 && quantity > 0 && hsnCode) {
       calculateCustoms();
     }
-  }, [productPrice, quantity, hsnCode, category, minimumValuationUSD, originCountry, destinationCountry]);
+  }, [
+    productPrice,
+    quantity,
+    hsnCode,
+    category,
+    minimumValuationUSD,
+    originCountry,
+    destinationCountry,
+  ]);
 
   const calculateCustoms = async () => {
     setIsLoading(true);
@@ -77,10 +85,10 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
 
     try {
       const totalValue = productPrice * quantity;
-      
+
       // Get typical tax rates for the category (simplified for demo)
       const taxRates = getTaxRates(category || 'general', destinationCountry);
-      
+
       // Calculate actual price method
       const actualPriceCalculation: CustomsCalculation = {
         method: 'actual_price',
@@ -99,7 +107,7 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
         try {
           const conversion = await currencyService.convertMinimumValuation(
             minimumValuationUSD * quantity,
-            originCountry
+            originCountry,
           );
 
           const minimumBasisUSD = minimumValuationUSD * quantity;
@@ -119,10 +127,11 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
       }
 
       // Determine which method yields higher tax (government requirement)
-      const selectedMethod = minimumValuationCalculation && 
+      const selectedMethod =
+        minimumValuationCalculation &&
         minimumValuationCalculation.totalTax > actualPriceCalculation.totalTax
-        ? 'minimum_valuation'
-        : 'actual_price';
+          ? 'minimum_valuation'
+          : 'actual_price';
 
       const newCalculations = {
         actualPrice: actualPriceCalculation,
@@ -134,14 +143,14 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
 
       // Notify parent component
       if (onCalculationUpdate) {
-        const selectedCalculation = selectedMethod === 'minimum_valuation' 
-          ? minimumValuationCalculation 
-          : actualPriceCalculation;
+        const selectedCalculation =
+          selectedMethod === 'minimum_valuation'
+            ? minimumValuationCalculation
+            : actualPriceCalculation;
         if (selectedCalculation) {
           onCalculationUpdate(selectedCalculation);
         }
       }
-
     } catch (error) {
       console.error('Customs calculation failed:', error);
       setError('Failed to calculate customs duties');
@@ -154,7 +163,8 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
   const getTaxRates = (category: string, destinationCountry: string) => {
     // Simplified tax rates - in reality, would come from database/API
     const rates = {
-      NP: { // Nepal
+      NP: {
+        // Nepal
         electronics: { customs: 20, localTax: 13 },
         clothing: { customs: 12, localTax: 13 },
         books: { customs: 0, localTax: 0 },
@@ -163,7 +173,8 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
         home_garden: { customs: 12, localTax: 13 },
         general: { customs: 15, localTax: 13 },
       },
-      IN: { // India
+      IN: {
+        // India
         electronics: { customs: 20, localTax: 18 },
         clothing: { customs: 12, localTax: 12 },
         books: { customs: 0, localTax: 0 },
@@ -174,9 +185,10 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
       },
     };
 
-    return rates[destinationCountry as keyof typeof rates]?.[category] || 
-           rates[destinationCountry as keyof typeof rates]?.['general'] || 
-           { customs: 10, localTax: 10 };
+    return (
+      rates[destinationCountry as keyof typeof rates]?.[category] ||
+      rates[destinationCountry as keyof typeof rates]?.['general'] || { customs: 10, localTax: 10 }
+    );
   };
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
@@ -238,11 +250,13 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
         {/* Calculation Methods Comparison */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Actual Price Method */}
-          <div className={`p-3 rounded-lg border ${
-            calculations.selected === 'actual_price' 
-              ? 'border-green-300 bg-green-50' 
-              : 'border-gray-200 bg-gray-50'
-          }`}>
+          <div
+            className={`p-3 rounded-lg border ${
+              calculations.selected === 'actual_price'
+                ? 'border-green-300 bg-green-50'
+                : 'border-gray-200 bg-gray-50'
+            }`}
+          >
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-semibold text-gray-800">Actual Price Method</h4>
               {calculations.selected === 'actual_price' && (
@@ -253,19 +267,29 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Basis:</span>
-                  <span className="font-medium">{formatCurrency(calculations.actualPrice.basisAmount)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(calculations.actualPrice.basisAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Customs ({calculations.actualPrice.customsRate}%):</span>
-                  <span className="font-medium">{formatCurrency(calculations.actualPrice.customsAmount)}</span>
+                  <span className="text-gray-600">
+                    Customs ({calculations.actualPrice.customsRate}%):
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrency(calculations.actualPrice.customsAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Local Tax:</span>
-                  <span className="font-medium">{formatCurrency(calculations.actualPrice.localTaxAmount)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(calculations.actualPrice.localTaxAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between border-t pt-1 mt-2">
                   <span className="font-semibold text-gray-800">Total Tax:</span>
-                  <span className="font-semibold">{formatCurrency(calculations.actualPrice.totalTax)}</span>
+                  <span className="font-semibold">
+                    {formatCurrency(calculations.actualPrice.totalTax)}
+                  </span>
                 </div>
               </div>
             )}
@@ -273,11 +297,13 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
 
           {/* Minimum Valuation Method */}
           {calculations.minimumValuation ? (
-            <div className={`p-3 rounded-lg border ${
-              calculations.selected === 'minimum_valuation' 
-                ? 'border-green-300 bg-green-50' 
-                : 'border-gray-200 bg-gray-50'
-            }`}>
+            <div
+              className={`p-3 rounded-lg border ${
+                calculations.selected === 'minimum_valuation'
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-gray-200 bg-gray-50'
+              }`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-xs font-semibold text-gray-800">Minimum Valuation</h4>
                 {calculations.selected === 'minimum_valuation' && (
@@ -293,20 +319,31 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Basis:</span>
                   <span className="font-medium">
-                    {formatCurrency(calculations.minimumValuation.basisAmount, calculations.minimumValuation.basisCurrency)}
+                    {formatCurrency(
+                      calculations.minimumValuation.basisAmount,
+                      calculations.minimumValuation.basisCurrency,
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Customs ({calculations.minimumValuation.customsRate}%):</span>
-                  <span className="font-medium">{formatCurrency(calculations.minimumValuation.customsAmount)}</span>
+                  <span className="text-gray-600">
+                    Customs ({calculations.minimumValuation.customsRate}%):
+                  </span>
+                  <span className="font-medium">
+                    {formatCurrency(calculations.minimumValuation.customsAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Local Tax:</span>
-                  <span className="font-medium">{formatCurrency(calculations.minimumValuation.localTaxAmount)}</span>
+                  <span className="font-medium">
+                    {formatCurrency(calculations.minimumValuation.localTaxAmount)}
+                  </span>
                 </div>
                 <div className="flex justify-between border-t pt-1 mt-2">
                   <span className="font-semibold text-gray-800">Total Tax:</span>
-                  <span className="font-semibold">{formatCurrency(calculations.minimumValuation.totalTax)}</span>
+                  <span className="font-semibold">
+                    {formatCurrency(calculations.minimumValuation.totalTax)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -322,7 +359,8 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
           <div className="flex items-center space-x-2">
             <TrendingUp className="h-4 w-4 text-green-600" />
             <span className="text-sm font-medium text-gray-800">
-              Applied Method: {calculations.selected === 'minimum_valuation' ? 'Minimum Valuation' : 'Actual Price'}
+              Applied Method:{' '}
+              {calculations.selected === 'minimum_valuation' ? 'Minimum Valuation' : 'Actual Price'}
             </span>
           </div>
           <div className="text-right">
@@ -330,9 +368,8 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
               {calculations.selected === 'minimum_valuation' && calculations.minimumValuation
                 ? formatCurrency(calculations.minimumValuation.totalTax)
                 : calculations.actualPrice
-                ? formatCurrency(calculations.actualPrice.totalTax)
-                : '$0.00'
-              }
+                  ? formatCurrency(calculations.actualPrice.totalTax)
+                  : '$0.00'}
             </div>
             <div className="text-xs text-gray-500">Total Duties & Taxes</div>
           </div>
@@ -342,7 +379,8 @@ export const CustomsCalculationPreview: React.FC<CustomsCalculationPreviewProps>
         <div className="flex items-start space-x-2 text-xs text-gray-600 bg-blue-50 p-2 rounded">
           <Info className="h-3 w-3 mt-0.5 text-blue-500 flex-shrink-0" />
           <span>
-            Government regulations require using the higher of actual price or minimum valuation for customs calculation.
+            Government regulations require using the higher of actual price or minimum valuation for
+            customs calculation.
           </span>
         </div>
       </CardContent>

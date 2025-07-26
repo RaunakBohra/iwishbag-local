@@ -251,11 +251,12 @@ export class HSNTaxIntegrationService {
       // Step 6: Update quote with tax calculation results
       if (result.taxCalculation.success) {
         result.updatedQuote.final_total_usd = result.taxCalculation.totals.totalWithTaxes;
-        
+
         // Calculate local currency total
         const exchangeRate = result.updatedQuote.calculation_data?.exchange_rate?.rate || 1;
-        result.updatedQuote.final_total = Math.round(result.taxCalculation.totals.totalWithTaxes * exchangeRate * 100) / 100;
-        
+        result.updatedQuote.final_total =
+          Math.round(result.taxCalculation.totals.totalWithTaxes * exchangeRate * 100) / 100;
+
         result.updatedQuote.calculation_data = {
           ...result.updatedQuote.calculation_data,
           breakdown: {
@@ -397,9 +398,7 @@ export class HSNTaxIntegrationService {
     if (!forceWeightDetection) {
       const needsWeightDetection = items.filter(
         (item) =>
-          !item.weight ||
-          item.weight === 0.5 ||
-          (item.smart_data?.weight_confidence || 0) < 0.7,
+          !item.weight || item.weight === 0.5 || (item.smart_data?.weight_confidence || 0) < 0.7,
       );
 
       if (needsWeightDetection.length === 0) {

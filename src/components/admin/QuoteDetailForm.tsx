@@ -18,7 +18,7 @@ import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { AdminQuoteFormValues } from '@/components/admin/admin-quote-form-validation';
 import type { ShippingOption } from '@/types/unified-quote';
 import { BarChart3, Truck, CreditCard, Brain } from 'lucide-react';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { SmartCalculationEngine } from '@/services/SmartCalculationEngine';
 
 interface CustomsTier {
@@ -162,7 +162,7 @@ export const QuoteDetailForm = ({
   }, [destinationCurrency, form]);
 
   // Get currency symbol for input fields (origin currency - all costs are entered in origin currency)
-  const inputCurrencySymbol = currencyService.getCurrencySymbol(originCurrency);
+  const inputCurrencySymbol = optimizedCurrencyService.getCurrencySymbol(originCurrency);
 
   const handleNumberInputWheel = (e: React.WheelEvent<HTMLInputElement>) => {
     e.currentTarget.blur();
@@ -380,7 +380,7 @@ export const QuoteDetailForm = ({
                               <div className="font-medium text-blue-600">
                                 {(() => {
                                   const customs = calculateCustomsForMethod('product_value');
-                                  return currencyService.formatAmount(customs, originCurrency);
+                                  return optimizedCurrencyService.formatAmount(customs, originCurrency);
                                 })()}
                               </div>
                               <div className="text-gray-500">customs</div>
@@ -397,7 +397,7 @@ export const QuoteDetailForm = ({
                               <div className="font-medium text-amber-600">
                                 {(() => {
                                   const customs = calculateCustomsForMethod('minimum_valuation');
-                                  return currencyService.formatAmount(customs, originCurrency);
+                                  return optimizedCurrencyService.formatAmount(customs, originCurrency);
                                 })()}
                               </div>
                               <div className="text-gray-500">customs</div>
@@ -416,7 +416,7 @@ export const QuoteDetailForm = ({
                                   const productCustoms = calculateCustomsForMethod('product_value');
                                   const minimumCustoms = calculateCustomsForMethod('minimum_valuation');
                                   const higherCustoms = Math.max(productCustoms, minimumCustoms);
-                                  return currencyService.formatAmount(higherCustoms, originCurrency);
+                                  return optimizedCurrencyService.formatAmount(higherCustoms, originCurrency);
                                 })()}
                               </div>
                               <div className="text-gray-500">customs</div>
@@ -446,7 +446,7 @@ export const QuoteDetailForm = ({
                         </span>
                         <span className="font-semibold">
                           {field.value === 'minimum_valuation'
-                            ? `Est. ${currencyService.formatAmount(
+                            ? `Est. ${optimizedCurrencyService.formatAmount(
                                 (_items?.reduce(
                                   (sum, item) =>
                                     sum + (item.costprice_origin || 0) * (item.quantity || 1),
@@ -455,7 +455,7 @@ export const QuoteDetailForm = ({
                                 originCurrency,
                               )}`
                             : field.value === 'higher_of_both'
-                              ? `Auto ${currencyService.formatAmount(
+                              ? `Auto ${optimizedCurrencyService.formatAmount(
                                   Math.max(
                                     _items?.reduce(
                                       (sum, item) =>
@@ -470,7 +470,7 @@ export const QuoteDetailForm = ({
                                   ),
                                   originCurrency,
                                 )}`
-                              : currencyService.formatAmount(
+                              : optimizedCurrencyService.formatAmount(
                                   _items?.reduce(
                                     (sum, item) =>
                                       sum + (item.costprice_origin || 0) * (item.quantity || 1),

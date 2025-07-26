@@ -94,7 +94,11 @@ class EnhancedHSNSearchService {
         results = await this.performTextSearch(options.query, options.limit || 10);
       } else if (options.category) {
         // Category-based browsing
-        results = await this.searchByCategory(options.category, options.subcategory, options.limit || 20);
+        results = await this.searchByCategory(
+          options.category,
+          options.subcategory,
+          options.limit || 20,
+        );
       } else {
         // Get popular/recommended HSN codes
         results = await this.getPopularHSNCodes(options.limit || 15);
@@ -102,7 +106,6 @@ class EnhancedHSNSearchService {
 
       this.setCache(cacheKey, results);
       return results;
-
     } catch (error) {
       console.error('HSN search error:', error);
       return [];
@@ -124,21 +127,18 @@ class EnhancedHSNSearchService {
       const [textSearchResults, brandBasedResults, contextualResults] = await Promise.all([
         this.performTextBasedDetection(productName),
         this.performBrandBasedDetection(productName),
-        this.performContextualDetection(productName)
+        this.performContextualDetection(productName),
       ]);
 
-      // Merge and deduplicate results with confidence scoring  
+      // Merge and deduplicate results with confidence scoring
       const allResults = [...textSearchResults, ...brandBasedResults, ...contextualResults];
       const uniqueResults = this.deduplicateResults(allResults);
-      
+
       // Sort by confidence and limit to top 5
-      const sortedResults = uniqueResults
-        .sort((a, b) => b.confidence - a.confidence)
-        .slice(0, 5);
+      const sortedResults = uniqueResults.sort((a, b) => b.confidence - a.confidence).slice(0, 5);
 
       this.setCache(cacheKey, sortedResults);
       return sortedResults;
-
     } catch (error) {
       console.error('HSN detection error:', error);
       return [];
@@ -165,10 +165,13 @@ class EnhancedHSNSearchService {
 
       let learned = 0;
       let updated = 0;
-      const productHSNMappings = new Map<string, { hsn_code: string; frequency: number; categories: Set<string> }>();
+      const productHSNMappings = new Map<
+        string,
+        { hsn_code: string; frequency: number; categories: Set<string> }
+      >();
 
       // Extract product name -> HSN mappings from quotes
-      quotes?.forEach(quote => {
+      quotes?.forEach((quote) => {
         const items = quote.items || [];
         const hsnData = quote.item_level_calculations?.hsn_classifications || [];
 
@@ -179,12 +182,12 @@ class EnhancedHSNSearchService {
           if (productName && hsnInfo?.hsn_code) {
             const cleanName = this.cleanProductName(productName);
             const key = cleanName.toLowerCase();
-            
+
             if (!productHSNMappings.has(key)) {
               productHSNMappings.set(key, {
                 hsn_code: hsnInfo.hsn_code,
                 frequency: 1,
-                categories: new Set([hsnInfo.category || 'unknown'])
+                categories: new Set([hsnInfo.category || 'unknown']),
               });
               learned++;
             } else {
@@ -203,8 +206,8 @@ class EnhancedHSNSearchService {
         hsn_code: data.hsn_code,
         frequency: data.frequency,
         categories: Array.from(data.categories),
-        confidence: Math.min(0.9, 0.5 + (data.frequency * 0.1)), // Higher frequency = higher confidence
-        last_updated: new Date().toISOString()
+        confidence: Math.min(0.9, 0.5 + data.frequency * 0.1), // Higher frequency = higher confidence
+        last_updated: new Date().toISOString(),
       }));
 
       // Cache the learning results
@@ -213,7 +216,6 @@ class EnhancedHSNSearchService {
       this.setCache('product_hsn_mappings', mappingData);
 
       return { learned, updated };
-
     } catch (error) {
       console.error('Learning from quote data failed:', error);
       return { learned: 0, updated: 0 };
@@ -223,7 +225,10 @@ class EnhancedHSNSearchService {
   /**
    * Get contextual HSN suggestions based on learned patterns
    */
-  async getContextualSuggestions(productName: string, limit: number = 3): Promise<HSNSearchResult[]> {
+  async getContextualSuggestions(
+    productName: string,
+    limit: number = 3,
+  ): Promise<HSNSearchResult[]> {
     const cleanName = this.cleanProductName(productName).toLowerCase();
     const mappings = this.getCached('product_hsn_mappings') || [];
 
@@ -245,7 +250,7 @@ class EnhancedHSNSearchService {
           results.push({
             ...hsnData,
             confidence: mapping.confidence,
-            match_reason: `Similar to "${mapping.product_name}" (${mapping.frequency}x used)`
+            match_reason: `Similar to "${mapping.product_name}" (${mapping.frequency}x used)`,
           });
         }
       } catch (error) {
@@ -277,7 +282,7 @@ class EnhancedHSNSearchService {
 
       data?.forEach((item: any) => {
         const category = item.category;
-        
+
         if (!categoryMap.has(category)) {
           categoryMap.set(category, {
             category,
@@ -285,7 +290,7 @@ class EnhancedHSNSearchService {
             icon: item.icon || '📦',
             color: item.color || '#64748B',
             count: 0,
-            subcategories: []
+            subcategories: [],
           });
         }
 
@@ -294,12 +299,12 @@ class EnhancedHSNSearchService {
 
         // Add subcategory if it exists
         if (item.subcategory) {
-          let subcat = group.subcategories.find(s => s.name === item.subcategory);
+          let subcat = group.subcategories.find((s) => s.name === item.subcategory);
           if (!subcat) {
             subcat = {
               name: item.subcategory,
               count: 0,
-              hsn_codes: []
+              hsn_codes: [],
             };
             group.subcategories.push(subcat);
           }
@@ -308,12 +313,10 @@ class EnhancedHSNSearchService {
         }
       });
 
-      const results = Array.from(categoryMap.values())
-        .sort((a, b) => b.count - a.count); // Sort by popularity
+      const results = Array.from(categoryMap.values()).sort((a, b) => b.count - a.count); // Sort by popularity
 
       this.setCache(cacheKey, results);
       return results;
-
     } catch (error) {
       console.error('Category groups error:', error);
       return [];
@@ -352,7 +355,6 @@ class EnhancedHSNSearchService {
       const results = data?.map((item: any) => this.mapToSearchResult(item, '')) || [];
       this.setCache(cacheKey, results);
       return results;
-
     } catch (error) {
       console.error('Similar HSN codes error:', error);
       return [];
@@ -362,7 +364,11 @@ class EnhancedHSNSearchService {
   /**
    * Initialize contextual learning system
    */
-  async initializeContextualLearning(): Promise<{ success: boolean; learned: number; updated: number }> {
+  async initializeContextualLearning(): Promise<{
+    success: boolean;
+    learned: number;
+    updated: number;
+  }> {
     try {
       const stats = await this.learnFromQuoteData();
       return { success: true, ...stats };
@@ -394,10 +400,10 @@ class EnhancedHSNSearchService {
       const strategies = {
         text_search: 0,
         brand_match: 0,
-        contextual: 0
+        contextual: 0,
       };
 
-      suggestions.forEach(suggestion => {
+      suggestions.forEach((suggestion) => {
         if (suggestion.match_reason.includes('Brand match')) strategies.brand_match++;
         else if (suggestion.match_reason.includes('Similar to')) strategies.contextual++;
         else strategies.text_search++;
@@ -406,15 +412,16 @@ class EnhancedHSNSearchService {
       return {
         suggestions,
         strategies,
-        learningStats: learningStats ? { learned: learningStats.learned, updated: learningStats.updated } : null
+        learningStats: learningStats
+          ? { learned: learningStats.learned, updated: learningStats.updated }
+          : null,
       };
-
     } catch (error) {
       console.error('Enhanced suggestions failed:', error);
       return {
         suggestions: [],
         strategies: { text_search: 0, brand_match: 0, contextual: 0 },
-        learningStats: null
+        learningStats: null,
       };
     }
   }
@@ -426,12 +433,11 @@ class EnhancedHSNSearchService {
     try {
       const { error } = await supabase.rpc('refresh_hsn_search_cache');
       if (error) throw error;
-      
+
       // Clear local cache and reinitialize learning
       this.cache.clear();
       await this.initializeContextualLearning();
       return true;
-
     } catch (error) {
       console.error('Cache refresh error:', error);
       return false;
@@ -447,7 +453,7 @@ class EnhancedHSNSearchService {
         .select('*')
         .textSearch('search_vector', productName.trim(), {
           type: 'websearch',
-          config: 'english'
+          config: 'english',
         })
         .order('search_priority', { ascending: true })
         .limit(3);
@@ -469,17 +475,19 @@ class EnhancedHSNSearchService {
       const { data, error } = await supabase
         .from('hsn_search_optimized')
         .select('*')
-        .or(brands.map(brand => `common_brands.cs.{${brand}}`).join(','))
+        .or(brands.map((brand) => `common_brands.cs.{${brand}}`).join(','))
         .order('search_priority', { ascending: true })
         .limit(2);
 
       if (error) throw error;
 
-      return data?.map((item: any) => ({
-        ...this.mapToSearchResult(item, productName),
-        confidence: item.confidence + 0.1, // Brand match gets bonus
-        match_reason: `Brand match: ${brands.join(', ')}`
-      })) || [];
+      return (
+        data?.map((item: any) => ({
+          ...this.mapToSearchResult(item, productName),
+          confidence: item.confidence + 0.1, // Brand match gets bonus
+          match_reason: `Brand match: ${brands.join(', ')}`,
+        })) || []
+      );
     } catch (error) {
       console.error('Brand-based detection failed:', error);
       return [];
@@ -497,7 +505,7 @@ class EnhancedHSNSearchService {
 
   private deduplicateResults(results: HSNSearchResult[]): HSNSearchResult[] {
     const seen = new Set<string>();
-    return results.filter(result => {
+    return results.filter((result) => {
       if (seen.has(result.hsn_code)) {
         return false;
       }
@@ -516,25 +524,58 @@ class EnhancedHSNSearchService {
 
   private extractBrands(productName: string): string[] {
     const knownBrands = [
-      'apple', 'samsung', 'nike', 'adidas', 'sony', 'lg', 'microsoft', 'google',
-      'amazon', 'dell', 'hp', 'lenovo', 'asus', 'acer', 'canon', 'nikon',
-      'xiaomi', 'huawei', 'oneplus', 'oppo', 'vivo', 'realme', 'motorola',
-      'nokia', 'phillips', 'panasonic', 'bosch', 'whirlpool', 'zara', 'h&m',
-      'uniqlo', 'levis', 'tommy', 'calvin', 'ralph', 'gucci', 'prada', 'chanel'
+      'apple',
+      'samsung',
+      'nike',
+      'adidas',
+      'sony',
+      'lg',
+      'microsoft',
+      'google',
+      'amazon',
+      'dell',
+      'hp',
+      'lenovo',
+      'asus',
+      'acer',
+      'canon',
+      'nikon',
+      'xiaomi',
+      'huawei',
+      'oneplus',
+      'oppo',
+      'vivo',
+      'realme',
+      'motorola',
+      'nokia',
+      'phillips',
+      'panasonic',
+      'bosch',
+      'whirlpool',
+      'zara',
+      'h&m',
+      'uniqlo',
+      'levis',
+      'tommy',
+      'calvin',
+      'ralph',
+      'gucci',
+      'prada',
+      'chanel',
     ];
 
     const words = productName.toLowerCase().split(/\s+/);
-    return words.filter(word => knownBrands.includes(word));
+    return words.filter((word) => knownBrands.includes(word));
   }
 
   private calculateSimilarity(str1: string, str2: string): number {
     // Simple Jaccard similarity for product names
     const set1 = new Set(str1.split(/\s+/));
     const set2 = new Set(str2.split(/\s+/));
-    
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
+
+    const intersection = new Set([...set1].filter((x) => set2.has(x)));
     const union = new Set([...set1, ...set2]);
-    
+
     return intersection.size / union.size;
   }
 
@@ -556,7 +597,7 @@ class EnhancedHSNSearchService {
 
   private async performTextSearch(query: string, limit: number): Promise<HSNSearchResult[]> {
     const searchTerms = query.trim().toLowerCase();
-    
+
     try {
       // Strategy 1: Full-text search with ranking
       const textSearchPromise = supabase
@@ -564,7 +605,7 @@ class EnhancedHSNSearchService {
         .select('*')
         .textSearch('search_vector', searchTerms, {
           type: 'websearch',
-          config: 'english'
+          config: 'english',
         })
         .order('search_priority', { ascending: true })
         .limit(Math.floor(limit * 0.7)); // Reserve 70% for text search
@@ -573,13 +614,15 @@ class EnhancedHSNSearchService {
       const categorySearchPromise = supabase
         .from('hsn_search_optimized')
         .select('*')
-        .or(`category.ilike.%${searchTerms}%,subcategory.ilike.%${searchTerms}%,description.ilike.%${searchTerms}%`)
+        .or(
+          `category.ilike.%${searchTerms}%,subcategory.ilike.%${searchTerms}%,description.ilike.%${searchTerms}%`,
+        )
         .order('search_priority', { ascending: true })
         .limit(Math.floor(limit * 0.3)); // Reserve 30% for category matching
 
       const [textResult, categoryResult] = await Promise.all([
         textSearchPromise,
-        categorySearchPromise
+        categorySearchPromise,
       ]);
 
       if (textResult.error) throw textResult.error;
@@ -588,10 +631,10 @@ class EnhancedHSNSearchService {
       // Combine and deduplicate results
       const textData = textResult.data || [];
       const categoryData = categoryResult.data || [];
-      
+
       const seenCodes = new Set();
       const combinedResults = [];
-      
+
       // Add text search results first (higher priority)
       for (const item of textData) {
         if (!seenCodes.has(item.hsn_code)) {
@@ -599,7 +642,7 @@ class EnhancedHSNSearchService {
           combinedResults.push(this.mapToSearchResult(item, query));
         }
       }
-      
+
       // Add category search results
       for (const item of categoryData) {
         if (!seenCodes.has(item.hsn_code) && combinedResults.length < limit) {
@@ -609,17 +652,16 @@ class EnhancedHSNSearchService {
       }
 
       return combinedResults;
-
     } catch (error) {
       console.error('Enhanced text search failed, falling back to basic search:', error);
-      
+
       // Fallback to original search
       const { data, error: fallbackError } = await supabase
         .from('hsn_search_optimized')
         .select('*')
         .textSearch('search_vector', searchTerms, {
           type: 'websearch',
-          config: 'english'
+          config: 'english',
         })
         .order('search_priority', { ascending: true })
         .limit(limit);
@@ -629,19 +671,18 @@ class EnhancedHSNSearchService {
     }
   }
 
-  private async searchByCategory(category: string, subcategory?: string, limit: number = 20): Promise<HSNSearchResult[]> {
-    let query = supabase
-      .from('hsn_search_optimized')
-      .select('*')
-      .eq('category', category);
+  private async searchByCategory(
+    category: string,
+    subcategory?: string,
+    limit: number = 20,
+  ): Promise<HSNSearchResult[]> {
+    let query = supabase.from('hsn_search_optimized').select('*').eq('category', category);
 
     if (subcategory) {
       query = query.eq('subcategory', subcategory);
     }
 
-    const { data, error } = await query
-      .order('search_priority', { ascending: true })
-      .limit(limit);
+    const { data, error } = await query.order('search_priority', { ascending: true }).limit(limit);
 
     if (error) throw error;
 
@@ -663,12 +704,12 @@ class EnhancedHSNSearchService {
   private mapToSearchResult(item: any, query: string): HSNSearchResult {
     // Calculate confidence based on match quality
     let confidence = 0.7; // Base confidence
-    
+
     if (query) {
       const lowerQuery = query.toLowerCase();
       const keywords = item.keywords_text?.toLowerCase() || '';
       const description = item.description?.toLowerCase() || '';
-      
+
       // Exact HSN code match
       if (item.hsn_code === query) confidence = 1.0;
       // Exact keyword match
@@ -684,8 +725,10 @@ class EnhancedHSNSearchService {
     if (query) {
       const lowerQuery = query.toLowerCase();
       if (item.hsn_code === query) matchReason = 'Exact HSN code';
-      else if (item.keywords_text?.toLowerCase().includes(lowerQuery)) matchReason = 'Keyword match';
-      else if (item.description?.toLowerCase().includes(lowerQuery)) matchReason = 'Description match';
+      else if (item.keywords_text?.toLowerCase().includes(lowerQuery))
+        matchReason = 'Keyword match';
+      else if (item.description?.toLowerCase().includes(lowerQuery))
+        matchReason = 'Description match';
       else matchReason = 'Text search match';
     }
 
@@ -700,14 +743,20 @@ class EnhancedHSNSearchService {
       display_name: item.display_name || item.description,
       search_priority: parseInt(item.search_priority) || 5,
       common_brands: this.parseJSONField(item.common_brands) || [],
-      typical_price_range: this.parseJSONField(item.typical_price_range) || { min: 0, max: 100, currency: 'USD' },
-      tax_data: this.parseJSONField(item.tax_data) || { typical_rates: { customs: { min: 10, max: 20, common: 15 } } },
-      weight_data: this.parseJSONField(item.weight_data) || { 
+      typical_price_range: this.parseJSONField(item.typical_price_range) || {
+        min: 0,
+        max: 100,
+        currency: 'USD',
+      },
+      tax_data: this.parseJSONField(item.tax_data) || {
+        typical_rates: { customs: { min: 10, max: 20, common: 15 } },
+      },
+      weight_data: this.parseJSONField(item.weight_data) || {
         typical_weights: { per_unit: { min: 0.1, max: 1.0, average: 0.5 } },
-        packaging: { additional_weight: 0.05 }
+        packaging: { additional_weight: 0.05 },
       },
       confidence,
-      match_reason: matchReason
+      match_reason: matchReason,
     };
   }
 
@@ -725,7 +774,7 @@ class EnhancedHSNSearchService {
   private formatCategoryName(category: string): string {
     return category
       .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
 
@@ -740,7 +789,7 @@ class EnhancedHSNSearchService {
   private setCache(key: string, data: any): void {
     this.cache.set(key, {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
   }
 }

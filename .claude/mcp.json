@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cloudflare/mcp-server-cloudflare"
+      ],
+      "env": {
+        "CLOUDFLARE_ACCOUNT_ID": "610762493d34333f1a6d72a037b345cf",
+        "CLOUDFLARE_API_TOKEN": "4Y_WjuGIEtTpK85hmE6XrGwbi85d8zN5Me0T_45l"
+      }
+    }
+  }
+}

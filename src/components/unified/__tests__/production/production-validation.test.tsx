@@ -24,33 +24,37 @@ const PRODUCTION_CONFIG = {
     errorTracking: true,
     performanceMonitoring: true,
     a11y: true,
-    pwa: true
+    pwa: true,
   },
   limits: {
     maxQuotesPerPage: 25,
     maxFileSize: 10 * 1024 * 1024, // 10MB
     maxConcurrentUsers: 10000,
     apiRateLimit: 100, // requests per minute
-    cacheTTL: 300000 // 5 minutes
+    cacheTTL: 300000, // 5 minutes
   },
   security: {
     csrfProtection: true,
     corsEnabled: true,
     httpsOnly: true,
-    secureHeaders: true
-  }
+    secureHeaders: true,
+  },
 };
 
 // Production monitoring utilities
 class ProductionMonitor {
   private metrics: Map<string, any> = new Map();
-  private alerts: Array<{ level: 'info' | 'warning' | 'error' | 'critical', message: string, timestamp: number }> = [];
+  private alerts: Array<{
+    level: 'info' | 'warning' | 'error' | 'critical';
+    message: string;
+    timestamp: number;
+  }> = [];
 
   trackMetric(name: string, value: any, tags: Record<string, string> = {}): void {
     this.metrics.set(name, {
       value,
       tags,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // Simulate production monitoring thresholds
@@ -59,10 +63,10 @@ class ProductionMonitor {
 
   private checkThresholds(metricName: string, value: any): void {
     const thresholds = {
-      'response_time': { warning: 500, error: 1000, critical: 2000 },
-      'error_rate': { warning: 0.01, error: 0.05, critical: 0.1 },
-      'memory_usage': { warning: 0.7, error: 0.85, critical: 0.95 },
-      'cpu_usage': { warning: 0.7, error: 0.85, critical: 0.95 }
+      response_time: { warning: 500, error: 1000, critical: 2000 },
+      error_rate: { warning: 0.01, error: 0.05, critical: 0.1 },
+      memory_usage: { warning: 0.7, error: 0.85, critical: 0.95 },
+      cpu_usage: { warning: 0.7, error: 0.85, critical: 0.95 },
     };
 
     const threshold = thresholds[metricName as keyof typeof thresholds];
@@ -77,9 +81,13 @@ class ProductionMonitor {
     }
   }
 
-  addAlert(level: 'info' | 'warning' | 'error' | 'critical', message: string, timestamp: number): void {
+  addAlert(
+    level: 'info' | 'warning' | 'error' | 'critical',
+    message: string,
+    timestamp: number,
+  ): void {
     this.alerts.push({ level, message, timestamp });
-    
+
     // In production, this would send to monitoring services
     console.log(`[${level.toUpperCase()}] ${message}`);
   }
@@ -88,8 +96,8 @@ class ProductionMonitor {
     return this.metrics.get(name);
   }
 
-  getAlerts(level?: string): Array<{ level: string, message: string, timestamp: number }> {
-    return level ? this.alerts.filter(alert => alert.level === level) : this.alerts;
+  getAlerts(level?: string): Array<{ level: string; message: string; timestamp: number }> {
+    return level ? this.alerts.filter((alert) => alert.level === level) : this.alerts;
   }
 
   clearMetrics(): void {
@@ -100,7 +108,7 @@ class ProductionMonitor {
 
 // Production error handling
 class ProductionErrorHandler {
-  private errors: Array<{ error: Error, context: any, timestamp: number }> = [];
+  private errors: Array<{ error: Error; context: any; timestamp: number }> = [];
 
   captureError(error: Error, context: any = {}): void {
     this.errors.push({
@@ -111,16 +119,16 @@ class ProductionErrorHandler {
         userAgent: navigator.userAgent,
         timestamp: Date.now(),
         buildId: PRODUCTION_CONFIG.buildId,
-        version: PRODUCTION_CONFIG.version
+        version: PRODUCTION_CONFIG.version,
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     // In production, this would send to Sentry or similar service
     console.error('Production Error:', error, context);
   }
 
-  getErrors(): Array<{ error: Error, context: any, timestamp: number }> {
+  getErrors(): Array<{ error: Error; context: any; timestamp: number }> {
     return this.errors;
   }
 
@@ -135,9 +143,10 @@ const mockProductionAPI = {
     list: vi.fn().mockImplementation(async (params: any) => {
       // Simulate production API response times and patterns
       const delay = Math.random() * 200 + 50; // 50-250ms
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      if (Math.random() < 0.02) { // 2% error rate
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      if (Math.random() < 0.02) {
+        // 2% error rate
         throw new Error('API temporarily unavailable');
       }
 
@@ -147,43 +156,45 @@ const mockProductionAPI = {
           page: params.page || 1,
           limit: params.limit || 25,
           total: 1000,
-          totalPages: 40
+          totalPages: 40,
         },
         meta: {
           timestamp: Date.now(),
-          version: PRODUCTION_CONFIG.version
-        }
+          version: PRODUCTION_CONFIG.version,
+        },
       };
     }),
-    
+
     update: vi.fn().mockImplementation(async (id: string, data: any) => {
       const delay = Math.random() * 300 + 100; // 100-400ms
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      if (Math.random() < 0.01) { // 1% error rate
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      if (Math.random() < 0.01) {
+        // 1% error rate
         throw new Error('Update failed - please try again');
       }
 
       return {
         data: { ...data, id, updated_at: new Date().toISOString() },
-        meta: { timestamp: Date.now() }
+        meta: { timestamp: Date.now() },
       };
     }),
 
     create: vi.fn().mockImplementation(async (data: any) => {
       const delay = Math.random() * 500 + 200; // 200-700ms
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      if (Math.random() < 0.005) { // 0.5% error rate
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      if (Math.random() < 0.005) {
+        // 0.5% error rate
         throw new Error('Creation failed - validation error');
       }
 
       return {
         data: { ...data, id: `prod-${Date.now()}`, created_at: new Date().toISOString() },
-        meta: { timestamp: Date.now() }
+        meta: { timestamp: Date.now() },
       };
-    })
-  }
+    }),
+  },
 };
 
 // Generate production-like test data
@@ -192,7 +203,9 @@ const generateProductionQuotes = (count: number): UnifiedQuote[] => {
     id: `prod-quote-${Date.now()}-${index}`,
     display_id: `QT-PROD${(index + 1).toString().padStart(4, '0')}`,
     user_id: `prod-user-${Math.floor(Math.random() * 1000)}`,
-    status: ['pending', 'sent', 'approved', 'paid', 'shipped', 'completed'][Math.floor(Math.random() * 6)] as any,
+    status: ['pending', 'sent', 'approved', 'paid', 'shipped', 'completed'][
+      Math.floor(Math.random() * 6)
+    ] as any,
     created_at: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
     expires_at: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
     final_total_usd: Math.round((Math.random() * 3000 + 50) * 100) / 100,
@@ -207,48 +220,59 @@ const generateProductionQuotes = (count: number): UnifiedQuote[] => {
     payment_gateway_fee: Math.round((Math.random() * 40 + 3) * 100) / 100,
     vat: Math.round(Math.random() * 150 * 100) / 100,
     discount: Math.round(Math.random() * 300 * 100) / 100,
-    destination_country: ['US', 'IN', 'CA', 'GB', 'AU', 'DE', 'FR', 'JP', 'SG', 'AE'][Math.floor(Math.random() * 10)],
+    destination_country: ['US', 'IN', 'CA', 'GB', 'AU', 'DE', 'FR', 'JP', 'SG', 'AE'][
+      Math.floor(Math.random() * 10)
+    ],
     origin_country: ['US', 'CN', 'DE', 'JP', 'GB'][Math.floor(Math.random() * 5)],
-    website: ['amazon.com', 'ebay.com', 'alibaba.com', 'flipkart.com', 'etsy.com'][Math.floor(Math.random() * 5)],
+    website: ['amazon.com', 'ebay.com', 'alibaba.com', 'flipkart.com', 'etsy.com'][
+      Math.floor(Math.random() * 5)
+    ],
     customer_data: {
       info: {
         name: `Production Customer ${index + 1}`,
         email: `prod.customer${index + 1}@example.com`,
-        phone: `+${Math.floor(Math.random() * 99) + 1}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`
-      }
+        phone: `+${Math.floor(Math.random() * 99) + 1}-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+      },
     },
     shipping_address: {
-      formatted: `${index + 1} Production Street, Business District, ${Math.floor(Math.random() * 99999) + 10000}, Production Country`
+      formatted: `${index + 1} Production Street, Business District, ${Math.floor(Math.random() * 99999) + 10000}, Production Country`,
     },
-    items: [{
-      id: `prod-item-${index + 1}`,
-      name: `Production Item ${index + 1}`,
-      description: `Real-world product for production testing - ${['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Sports'][Math.floor(Math.random() * 5)]}`,
-      quantity: Math.floor(Math.random() * 5) + 1,
-      price: Math.round((Math.random() * 2500 + 25) * 100) / 100,
-      product_url: `https://example.com/product-${index + 1}`,
-      image_url: `${PRODUCTION_CONFIG.cdnUrl}/images/product-${index + 1}.jpg`
-    }],
+    items: [
+      {
+        id: `prod-item-${index + 1}`,
+        name: `Production Item ${index + 1}`,
+        description: `Real-world product for production testing - ${['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Sports'][Math.floor(Math.random() * 5)]}`,
+        quantity: Math.floor(Math.random() * 5) + 1,
+        price: Math.round((Math.random() * 2500 + 25) * 100) / 100,
+        product_url: `https://example.com/product-${index + 1}`,
+        image_url: `${PRODUCTION_CONFIG.cdnUrl}/images/product-${index + 1}.jpg`,
+      },
+    ],
     notes: `Production quote ${index + 1} for end-to-end testing`,
     admin_notes: `Generated for production validation - Batch ${Math.floor(index / 100) + 1}`,
     priority: ['low', 'medium', 'high', 'urgent'][Math.floor(Math.random() * 4)] as any,
     in_cart: Math.random() > 0.8,
-    attachments: Math.random() > 0.7 ? [{ 
-      id: `attachment-${index}`, 
-      name: `document-${index}.pdf`, 
-      url: `${PRODUCTION_CONFIG.cdnUrl}/attachments/document-${index}.pdf` 
-    }] : []
+    attachments:
+      Math.random() > 0.7
+        ? [
+            {
+              id: `attachment-${index}`,
+              name: `document-${index}.pdf`,
+              url: `${PRODUCTION_CONFIG.cdnUrl}/attachments/document-${index}.pdf`,
+            },
+          ]
+        : [],
   }));
 };
 
 // Mock dependencies with production configurations
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
-    user: { 
-      id: 'prod-user-12345', 
+    user: {
+      id: 'prod-user-12345',
       email: 'production.user@iwishbag.com',
       subscription_plan: 'enterprise',
-      created_at: '2023-01-01T00:00:00Z'
+      created_at: '2023-01-01T00:00:00Z',
     },
   }),
 }));
@@ -264,17 +288,17 @@ vi.mock('@/hooks/useAdminRole', () => ({
 const renderWithProductionProviders = (component: React.ReactNode) => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { 
+      queries: {
         retry: 3,
-        retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
         staleTime: PRODUCTION_CONFIG.limits.cacheTTL,
         cacheTime: PRODUCTION_CONFIG.limits.cacheTTL * 2,
         refetchOnWindowFocus: false,
-        refetchOnReconnect: true
+        refetchOnReconnect: true,
       },
-      mutations: { 
+      mutations: {
         retry: 2,
-        retryDelay: 1000
+        retryDelay: 1000,
       },
     },
   });
@@ -282,11 +306,9 @@ const renderWithProductionProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -298,7 +320,7 @@ describe('Production Environment Validation', () => {
     vi.clearAllMocks();
     productionMonitor = new ProductionMonitor();
     errorHandler = new ProductionErrorHandler();
-    
+
     // Set production environment
     process.env.NODE_ENV = 'production';
     process.env.VITE_API_URL = PRODUCTION_CONFIG.apiUrl;
@@ -313,12 +335,9 @@ describe('Production Environment Validation', () => {
 
   describe('Production Configuration Validation', () => {
     it('should validate all required production environment variables', () => {
-      const requiredEnvVars = [
-        'VITE_API_URL',
-        'VITE_CDN_URL'
-      ];
+      const requiredEnvVars = ['VITE_API_URL', 'VITE_CDN_URL'];
 
-      requiredEnvVars.forEach(envVar => {
+      requiredEnvVars.forEach((envVar) => {
         expect(process.env[envVar]).toBeDefined();
         expect(process.env[envVar]).not.toBe('');
       });
@@ -369,18 +388,19 @@ describe('Production Environment Validation', () => {
         const [error, setError] = React.useState<string | null>(null);
 
         React.useEffect(() => {
-          mockProductionAPI.quotes.list({ limit: 25, page: 1 })
-            .then(response => {
+          mockProductionAPI.quotes
+            .list({ limit: 25, page: 1 })
+            .then((response) => {
               setQuotes(response.data);
               setLoading(false);
-              
+
               const responseTime = performance.now() - startTime;
               productionMonitor.trackMetric('api_response_time', responseTime, {
                 endpoint: 'quotes.list',
-                status: 'success'
+                status: 'success',
               });
             })
-            .catch(err => {
+            .catch((err) => {
               setError(err.message);
               setLoading(false);
               errorHandler.captureError(err, { endpoint: 'quotes.list' });
@@ -390,20 +410,17 @@ describe('Production Environment Validation', () => {
         if (loading) return <div data-testid="loading">Loading...</div>;
         if (error) return <div data-testid="error">{error}</div>;
 
-        return (
-          <UnifiedQuoteList
-            quotes={quotes}
-            viewMode="admin"
-            layout="table"
-          />
-        );
+        return <UnifiedQuoteList quotes={quotes} viewMode="admin" layout="table" />;
       };
 
       renderWithProductionProviders(<ProductionAPITest />);
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+        },
+        { timeout: 5000 },
+      );
 
       // Verify API performance metrics
       const responseTime = productionMonitor.getMetric('api_response_time');
@@ -419,7 +436,9 @@ describe('Production Environment Validation', () => {
 
     it('should handle production API failures gracefully', async () => {
       // Force API failure for testing
-      mockProductionAPI.quotes.list.mockRejectedValueOnce(new Error('Service temporarily unavailable'));
+      mockProductionAPI.quotes.list.mockRejectedValueOnce(
+        new Error('Service temporarily unavailable'),
+      );
 
       const APIFailureTest = () => {
         const [error, setError] = React.useState<string | null>(null);
@@ -431,17 +450,20 @@ describe('Production Environment Validation', () => {
               await mockProductionAPI.quotes.list({ limit: 25 });
             } catch (err) {
               setError((err as Error).message);
-              errorHandler.captureError(err as Error, { 
+              errorHandler.captureError(err as Error, {
                 endpoint: 'quotes.list',
-                retryAttempt: retryCount
+                retryAttempt: retryCount,
               });
-              
+
               // Implement retry logic
               if (retryCount < 3) {
-                setTimeout(() => {
-                  setRetryCount(c => c + 1);
-                  setError(null);
-                }, 1000 * (retryCount + 1)); // Exponential backoff
+                setTimeout(
+                  () => {
+                    setRetryCount((c) => c + 1);
+                    setError(null);
+                  },
+                  1000 * (retryCount + 1),
+                ); // Exponential backoff
               }
             }
           };
@@ -469,9 +491,12 @@ describe('Production Environment Validation', () => {
       });
 
       // Should implement retry logic
-      await waitFor(() => {
-        expect(parseInt(screen.getByTestId('retry-count').textContent!)).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(parseInt(screen.getByTestId('retry-count').textContent!)).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
 
       const errors = errorHandler.getErrors();
       expect(errors.length).toBeGreaterThan(0);
@@ -485,23 +510,28 @@ describe('Production Environment Validation', () => {
       // Make rapid requests to test rate limiting
       for (let i = 0; i < maxRequests; i++) {
         requests.push(
-          mockProductionAPI.quotes.list({ limit: 1 })
-            .catch(err => ({ error: err.message, requestIndex: i }))
+          mockProductionAPI.quotes
+            .list({ limit: 1 })
+            .catch((err) => ({ error: err.message, requestIndex: i })),
         );
       }
 
       const results = await Promise.allSettled(requests);
-      
-      const successful = results.filter(r => r.status === 'fulfilled' && !(r.value as any).error).length;
-      const rateLimited = results.filter(r => r.status === 'fulfilled' && (r.value as any).error).length;
+
+      const successful = results.filter(
+        (r) => r.status === 'fulfilled' && !(r.value as any).error,
+      ).length;
+      const rateLimited = results.filter(
+        (r) => r.status === 'fulfilled' && (r.value as any).error,
+      ).length;
 
       // Should respect rate limits
       expect(successful).toBeLessThanOrEqual(PRODUCTION_CONFIG.limits.apiRateLimit);
-      
+
       productionMonitor.trackMetric('api_rate_limit_test', {
         total_requests: maxRequests,
         successful_requests: successful,
-        rate_limited_requests: rateLimited
+        rate_limited_requests: rateLimited,
       });
     });
   });
@@ -509,22 +539,22 @@ describe('Production Environment Validation', () => {
   describe('Production Performance Monitoring', () => {
     it('should monitor component rendering performance in production', async () => {
       const quotes = generateProductionQuotes(PRODUCTION_CONFIG.limits.maxQuotesPerPage);
-      
+
       const PerformanceMonitoringTest = () => {
         const [renderTime, setRenderTime] = React.useState<number>(0);
 
         React.useEffect(() => {
           const startTime = performance.now();
-          
+
           // Simulate component work
           setTimeout(() => {
             const endTime = performance.now();
             const duration = endTime - startTime;
             setRenderTime(duration);
-            
+
             productionMonitor.trackMetric('component_render_time', duration, {
               component: 'UnifiedQuoteList',
-              itemCount: quotes.length.toString()
+              itemCount: quotes.length.toString(),
             });
           }, 100);
         }, []);
@@ -532,11 +562,7 @@ describe('Production Environment Validation', () => {
         return (
           <div>
             <div data-testid="render-time">{renderTime}</div>
-            <UnifiedQuoteList
-              quotes={quotes}
-              viewMode="admin"
-              layout="table"
-            />
+            <UnifiedQuoteList quotes={quotes} viewMode="admin" layout="table" />
           </div>
         );
       };
@@ -555,26 +581,29 @@ describe('Production Environment Validation', () => {
 
     it('should monitor memory usage in production', async () => {
       const MemoryMonitoringTest = () => {
-        const [memoryUsage, setMemoryUsage] = React.useState<{ used: number; total: number }>({ used: 0, total: 0 });
+        const [memoryUsage, setMemoryUsage] = React.useState<{ used: number; total: number }>({
+          used: 0,
+          total: 0,
+        });
 
         React.useEffect(() => {
           const monitorMemory = () => {
             // Simulate memory monitoring (in real production, use performance.memory)
             const usage = {
               used: Math.random() * 100 * 1024 * 1024, // Random usage up to 100MB
-              total: 200 * 1024 * 1024 // 200MB total
+              total: 200 * 1024 * 1024, // 200MB total
             };
-            
+
             setMemoryUsage(usage);
-            
+
             productionMonitor.trackMetric('memory_usage', usage.used / usage.total, {
-              component: 'production_validation'
+              component: 'production_validation',
             });
           };
 
           monitorMemory();
           const interval = setInterval(monitorMemory, 1000);
-          
+
           return () => clearInterval(interval);
         }, []);
 
@@ -583,11 +612,7 @@ describe('Production Environment Validation', () => {
             <div data-testid="memory-usage">
               {((memoryUsage.used / memoryUsage.total) * 100).toFixed(1)}%
             </div>
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode="guest"
-              onSubmit={vi.fn()}
-            />
+            <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />
           </div>
         );
       };
@@ -610,12 +635,12 @@ describe('Production Environment Validation', () => {
         const [interactions, setInteractions] = React.useState<number>(0);
 
         const handleInteraction = (action: string) => {
-          setInteractions(prev => prev + 1);
-          
+          setInteractions((prev) => prev + 1);
+
           productionMonitor.trackMetric('user_interaction', 1, {
             action,
             component: 'UnifiedQuoteActions',
-            timestamp: Date.now().toString()
+            timestamp: Date.now().toString(),
           });
         };
 
@@ -658,7 +683,7 @@ describe('Production Environment Validation', () => {
             errorHandler.captureError(event.error, {
               filename: event.filename,
               lineno: event.lineno,
-              colno: event.colno
+              colno: event.colno,
             });
           };
 
@@ -673,7 +698,7 @@ describe('Production Environment Validation', () => {
           } catch (error) {
             errorHandler.captureError(error as Error, {
               component: 'ErrorBoundaryTest',
-              userAction: 'triggerError'
+              userAction: 'triggerError',
             });
           }
         };
@@ -683,9 +708,7 @@ describe('Production Environment Validation', () => {
             <button onClick={triggerError} data-testid="trigger-error">
               Trigger Error
             </button>
-            <div data-testid="error-count">
-              {errorHandler.getErrors().length}
-            </div>
+            <div data-testid="error-count">{errorHandler.getErrors().length}</div>
             {!shouldError && (
               <UnifiedQuoteCard
                 quote={generateProductionQuotes(1)[0]}
@@ -718,19 +741,18 @@ describe('Production Environment Validation', () => {
 
         React.useEffect(() => {
           // Simulate network failure
-          mockProductionAPI.quotes.list({})
-            .catch(error => {
-              setNetworkError(error.message);
-              errorHandler.captureError(error, {
-                type: 'network_error',
-                endpoint: 'quotes.list'
-              });
-              
-              productionMonitor.trackMetric('error_rate', 1, {
-                error_type: 'network',
-                endpoint: 'quotes.list'
-              });
+          mockProductionAPI.quotes.list({}).catch((error) => {
+            setNetworkError(error.message);
+            errorHandler.captureError(error, {
+              type: 'network_error',
+              endpoint: 'quotes.list',
             });
+
+            productionMonitor.trackMetric('error_rate', 1, {
+              error_type: 'network',
+              endpoint: 'quotes.list',
+            });
+          });
         }, []);
 
         return (
@@ -754,7 +776,7 @@ describe('Production Environment Validation', () => {
       });
 
       const errors = errorHandler.getErrors();
-      expect(errors.some(e => e.context.type === 'network_error')).toBe(true);
+      expect(errors.some((e) => e.context.type === 'network_error')).toBe(true);
     });
   });
 
@@ -768,19 +790,19 @@ describe('Production Environment Validation', () => {
 
     it('should validate CSRF protection', () => {
       expect(PRODUCTION_CONFIG.security.csrfProtection).toBe(true);
-      
+
       // Mock CSRF token validation
       const mockCSRFToken = 'prod-csrf-token-12345';
-      
+
       // Simulate API request with CSRF token
       const apiRequest = {
         method: 'POST',
         url: `${PRODUCTION_CONFIG.apiUrl}/quotes`,
         headers: {
           'X-CSRF-Token': mockCSRFToken,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ test: 'data' })
+        body: JSON.stringify({ test: 'data' }),
       };
 
       expect(apiRequest.headers['X-CSRF-Token']).toBeDefined();
@@ -796,7 +818,7 @@ describe('Production Environment Validation', () => {
             .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
             .replace(/javascript:/gi, '')
             .replace(/on\w+=/gi, '');
-          
+
           setSanitizedValue(sanitized);
         };
 
@@ -818,7 +840,7 @@ describe('Production Environment Validation', () => {
 
       const nameInput = screen.getByLabelText(/your name/i);
       const maliciousInput = '<script>alert("xss")</script>John Doe';
-      
+
       await user.type(nameInput, maliciousInput);
 
       await waitFor(() => {
@@ -833,32 +855,32 @@ describe('Production Environment Validation', () => {
   describe('Production Scalability Testing', () => {
     it('should handle high-volume data efficiently', async () => {
       const largeDataset = generateProductionQuotes(1000);
-      
+
       const ScalabilityTest = () => {
         const [processedCount, setProcessedCount] = React.useState(0);
         const [processingTime, setProcessingTime] = React.useState(0);
 
         React.useEffect(() => {
           const startTime = performance.now();
-          
+
           // Process data in chunks to avoid blocking UI
           const processChunk = (startIndex: number) => {
             const chunkSize = 50;
             const endIndex = Math.min(startIndex + chunkSize, largeDataset.length);
-            
+
             // Simulate processing
             setTimeout(() => {
               setProcessedCount(endIndex);
-              
+
               if (endIndex < largeDataset.length) {
                 processChunk(endIndex);
               } else {
                 const endTime = performance.now();
                 setProcessingTime(endTime - startTime);
-                
+
                 productionMonitor.trackMetric('bulk_processing_time', endTime - startTime, {
                   item_count: largeDataset.length.toString(),
-                  chunk_size: chunkSize.toString()
+                  chunk_size: chunkSize.toString(),
                 });
               }
             }, 10);
@@ -872,7 +894,10 @@ describe('Production Environment Validation', () => {
             <div data-testid="processed-count">{processedCount}</div>
             <div data-testid="processing-time">{processingTime}</div>
             <UnifiedQuoteList
-              quotes={largeDataset.slice(0, Math.min(processedCount, PRODUCTION_CONFIG.limits.maxQuotesPerPage))}
+              quotes={largeDataset.slice(
+                0,
+                Math.min(processedCount, PRODUCTION_CONFIG.limits.maxQuotesPerPage),
+              )}
               viewMode="admin"
               layout="table"
             />
@@ -882,9 +907,12 @@ describe('Production Environment Validation', () => {
 
       renderWithProductionProviders(<ScalabilityTest />);
 
-      await waitFor(() => {
-        expect(parseInt(screen.getByTestId('processed-count').textContent!)).toBe(1000);
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          expect(parseInt(screen.getByTestId('processed-count').textContent!)).toBe(1000);
+        },
+        { timeout: 10000 },
+      );
 
       const processingTime = parseFloat(screen.getByTestId('processing-time').textContent!);
       expect(processingTime).toBeLessThan(5000); // Under 5 seconds
@@ -900,17 +928,17 @@ describe('Production Environment Validation', () => {
 
         React.useEffect(() => {
           const simulateUser = async (userId: number) => {
-            setActiveUsers(prev => prev + 1);
-            
+            setActiveUsers((prev) => prev + 1);
+
             // Simulate user actions
-            await new Promise(resolve => setTimeout(resolve, Math.random() * 1000));
-            
-            setCompletedActions(prev => prev + 1);
-            setActiveUsers(prev => prev - 1);
-            
+            await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000));
+
+            setCompletedActions((prev) => prev + 1);
+            setActiveUsers((prev) => prev - 1);
+
             productionMonitor.trackMetric('concurrent_user_action', 1, {
               user_id: userId.toString(),
-              action_type: 'quote_interaction'
+              action_type: 'quote_interaction',
             });
           };
 
@@ -929,9 +957,12 @@ describe('Production Environment Validation', () => {
 
       renderWithProductionProviders(<ConcurrentLoadTest />);
 
-      await waitFor(() => {
-        expect(parseInt(screen.getByTestId('completed-actions').textContent!)).toBe(100);
-      }, { timeout: 15000 });
+      await waitFor(
+        () => {
+          expect(parseInt(screen.getByTestId('completed-actions').textContent!)).toBe(100);
+        },
+        { timeout: 15000 },
+      );
 
       const userActionMetric = productionMonitor.getMetric('concurrent_user_action');
       expect(userActionMetric).toBeDefined();
@@ -942,7 +973,7 @@ describe('Production Environment Validation', () => {
     it('should generate alerts for critical metrics', async () => {
       // Simulate critical response time
       productionMonitor.trackMetric('response_time', 2500); // Above critical threshold
-      
+
       const criticalAlerts = productionMonitor.getAlerts('critical');
       expect(criticalAlerts.length).toBeGreaterThan(0);
       expect(criticalAlerts[0].message).toContain('response_time is critical');
@@ -954,17 +985,17 @@ describe('Production Environment Validation', () => {
           // Track business-specific metrics
           productionMonitor.trackMetric('quote_conversion_rate', 0.15, {
             period: 'daily',
-            date: new Date().toISOString().split('T')[0]
+            date: new Date().toISOString().split('T')[0],
           });
-          
+
           productionMonitor.trackMetric('average_quote_value', 587.99, {
             currency: 'USD',
-            period: 'daily'
+            period: 'daily',
           });
-          
+
           productionMonitor.trackMetric('customer_satisfaction', 4.7, {
             scale: '1-5',
-            period: 'weekly'
+            period: 'weekly',
           });
         }, []);
 

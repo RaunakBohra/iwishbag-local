@@ -39,7 +39,7 @@ export const EnhancedMetricCard: React.FC<EnhancedMetricCardProps> = ({
 }) => {
   const getTrendIcon = () => {
     if (!trend) return null;
-    
+
     switch (trend.direction) {
       case 'up':
         return <TrendingUp className="w-4 h-4 text-green-600" />;
@@ -52,7 +52,7 @@ export const EnhancedMetricCard: React.FC<EnhancedMetricCardProps> = ({
 
   const getTrendColor = () => {
     if (!trend) return 'text-gray-500';
-    
+
     switch (trend.direction) {
       case 'up':
         return 'text-green-600';
@@ -74,7 +74,7 @@ export const EnhancedMetricCard: React.FC<EnhancedMetricCardProps> = ({
           className={cn(
             'relative overflow-hidden group hover:shadow-lg transition-all duration-300 cursor-pointer',
             'bg-white border border-gray-200 hover:border-teal-300',
-            'transform hover:-translate-y-1'
+            'transform hover:-translate-y-1',
           )}
         >
           <CardContent className="relative p-6">
@@ -82,23 +82,23 @@ export const EnhancedMetricCard: React.FC<EnhancedMetricCardProps> = ({
             <div
               className={cn(
                 'absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300',
-                bgColor
+                bgColor,
               )}
             />
-            
+
             {/* Icon */}
             <div className="w-12 h-12 rounded-lg bg-teal-50 flex items-center justify-center mb-4 group-hover:bg-teal-100 transition-colors">
               <Icon className="w-6 h-6 text-teal-600" />
             </div>
-            
+
             {/* Main value */}
             <StatNumber className="mb-1">
               <AnimatedCounter end={value} />
             </StatNumber>
-            
+
             {/* Label */}
             <StatLabel className="mb-2">{label}</StatLabel>
-            
+
             {/* Trend indicator */}
             {trend && (
               <div className="flex items-center gap-2 text-sm">
@@ -108,7 +108,7 @@ export const EnhancedMetricCard: React.FC<EnhancedMetricCardProps> = ({
                 </span>
               </div>
             )}
-            
+
             {/* Insight text */}
             {insight && (
               <div className="mt-3 p-2 bg-gray-50 rounded-md">

@@ -24,11 +24,11 @@ class PerformanceMonitor {
   measure(name: string, startMark: string, endMark?: string): number {
     const startTime = this.marks.get(startMark);
     const endTime = endMark ? this.marks.get(endMark) : performance.now();
-    
+
     if (startTime === undefined) {
       throw new Error(`Start mark "${startMark}" not found`);
     }
-    
+
     const duration = endTime! - startTime;
     this.measures.set(name, duration);
     return duration;
@@ -46,11 +46,11 @@ class PerformanceMonitor {
     this.measures.clear();
   }
 
-  getMemoryUsage(): { used: number; total: number; } {
+  getMemoryUsage(): { used: number; total: number } {
     // Mock memory usage (in real implementation, use performance.memory)
     return {
       used: Math.random() * 50 * 1024 * 1024, // Random value up to 50MB
-      total: 100 * 1024 * 1024 // 100MB total
+      total: 100 * 1024 * 1024, // 100MB total
     };
   }
 }
@@ -66,14 +66,14 @@ class LoadTestRunner {
   async runConcurrentTest(
     testFunction: () => Promise<void>,
     concurrency: number,
-    totalRequests: number
+    totalRequests: number,
   ): Promise<{
     completedRequests: number;
     failedRequests: number;
     averageResponseTime: number;
     requestsPerSecond: number;
     p95ResponseTime: number;
-    memoryUsage: { used: number; total: number; };
+    memoryUsage: { used: number; total: number };
   }> {
     const startTime = performance.now();
     const promises: Promise<void>[] = [];
@@ -92,7 +92,7 @@ class LoadTestRunner {
 
       // Add small delay between batches to simulate realistic load
       if (i + concurrency < totalRequests) {
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
       }
     }
 
@@ -102,9 +102,10 @@ class LoadTestRunner {
     this.totalDuration = endTime - startTime;
 
     // Calculate metrics
-    const averageResponseTime = this.requestTimes.reduce((a, b) => a + b, 0) / this.requestTimes.length;
+    const averageResponseTime =
+      this.requestTimes.reduce((a, b) => a + b, 0) / this.requestTimes.length;
     const requestsPerSecond = (this.completedRequests / this.totalDuration) * 1000;
-    
+
     // Calculate 95th percentile
     const sortedTimes = [...this.requestTimes].sort((a, b) => a - b);
     const p95Index = Math.floor(sortedTimes.length * 0.95);
@@ -119,13 +120,13 @@ class LoadTestRunner {
       averageResponseTime,
       requestsPerSecond,
       p95ResponseTime,
-      memoryUsage
+      memoryUsage,
     };
   }
 
   private async runSingleRequest(testFunction: () => Promise<void>): Promise<void> {
     const startTime = performance.now();
-    
+
     try {
       this.concurrentRequests++;
       await testFunction();
@@ -169,26 +170,28 @@ const generateTestQuotes = (count: number): UnifiedQuote[] => {
       info: {
         name: `Load Test Customer ${index + 1}`,
         email: `loadtest${index + 1}@example.com`,
-        phone: `+1-555-${String(index + 1).padStart(4, '0')}`
-      }
+        phone: `+1-555-${String(index + 1).padStart(4, '0')}`,
+      },
     },
     shipping_address: {
-      formatted: `${index + 1} Load Test Street, Test City, TC ${String(index + 1).padStart(5, '0')}, Test Country`
+      formatted: `${index + 1} Load Test Street, Test City, TC ${String(index + 1).padStart(5, '0')}, Test Country`,
     },
-    items: [{
-      id: `load-test-item-${index + 1}`,
-      name: `Load Test Product ${index + 1}`,
-      description: `High-performance product for load testing purposes - Item ${index + 1}`,
-      quantity: Math.floor(Math.random() * 5) + 1,
-      price: Math.round((Math.random() * 1500 + 50) * 100) / 100,
-      product_url: `https://example.com/product-${index + 1}`,
-      image_url: `https://example.com/image-${index + 1}.jpg`
-    }],
+    items: [
+      {
+        id: `load-test-item-${index + 1}`,
+        name: `Load Test Product ${index + 1}`,
+        description: `High-performance product for load testing purposes - Item ${index + 1}`,
+        quantity: Math.floor(Math.random() * 5) + 1,
+        price: Math.round((Math.random() * 1500 + 50) * 100) / 100,
+        product_url: `https://example.com/product-${index + 1}`,
+        image_url: `https://example.com/image-${index + 1}.jpg`,
+      },
+    ],
     notes: `Load test quote ${index + 1} for performance benchmarking`,
     admin_notes: `Bulk generated for load testing - Batch ${Math.floor(index / 100) + 1}`,
     priority: ['low', 'medium', 'high', 'urgent'][index % 4] as any,
     in_cart: Math.random() > 0.7,
-    attachments: []
+    attachments: [],
   }));
 };
 
@@ -210,13 +213,15 @@ vi.mock('@/hooks/useAdminRole', () => ({
 global.IntersectionObserver = vi.fn().mockImplementation((callback) => ({
   observe: vi.fn((target) => {
     setTimeout(() => {
-      callback([{
-        target,
-        isIntersecting: true,
-        intersectionRatio: 1,
-        boundingClientRect: { top: 0, bottom: 100, height: 100 },
-        rootBounds: { top: 0, bottom: 800, height: 800 }
-      }]);
+      callback([
+        {
+          target,
+          isIntersecting: true,
+          intersectionRatio: 1,
+          boundingClientRect: { top: 0, bottom: 100, height: 100 },
+          rootBounds: { top: 0, bottom: 800, height: 800 },
+        },
+      ]);
     }, 1);
   }),
   unobserve: vi.fn(),
@@ -227,15 +232,15 @@ global.IntersectionObserver = vi.fn().mockImplementation((callback) => ({
 const renderWithProviders = (component: React.ReactNode) => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { 
+      queries: {
         retry: 1,
         retryDelay: 100,
         staleTime: 30000,
-        cacheTime: 60000
+        cacheTime: 60000,
       },
-      mutations: { 
+      mutations: {
         retry: 1,
-        retryDelay: 100
+        retryDelay: 100,
       },
     },
   });
@@ -243,11 +248,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -270,15 +273,11 @@ describe('Load Testing and Performance Benchmarks', () => {
   describe('Component Rendering Performance', () => {
     it('should render large quote lists efficiently', async () => {
       const quotes = generateTestQuotes(1000);
-      
+
       performanceMonitor.mark('list-render-start');
-      
+
       const { container } = renderWithProviders(
-        <UnifiedQuoteList
-          quotes={quotes}
-          viewMode="admin"
-          layout="table"
-        />
+        <UnifiedQuoteList quotes={quotes} viewMode="admin" layout="table" />,
       );
 
       await waitFor(() => {
@@ -286,11 +285,15 @@ describe('Load Testing and Performance Benchmarks', () => {
       });
 
       performanceMonitor.mark('list-render-end');
-      const renderTime = performanceMonitor.measure('list-render', 'list-render-start', 'list-render-end');
+      const renderTime = performanceMonitor.measure(
+        'list-render',
+        'list-render-start',
+        'list-render-end',
+      );
 
       // Should render 1000 quotes in under 2 seconds
       expect(renderTime).toBeLessThan(2000);
-      
+
       // Memory usage should be reasonable
       const memory = performanceMonitor.getMemoryUsage();
       expect(memory.used).toBeLessThan(memory.total * 0.8); // Less than 80% of available memory
@@ -299,7 +302,7 @@ describe('Load Testing and Performance Benchmarks', () => {
     it('should handle rapid quote card updates efficiently', async () => {
       const quote = generateTestQuotes(1)[0];
       const updateCount = 100;
-      let updateTimes: number[] = [];
+      const updateTimes: number[] = [];
 
       const RapidUpdateTest = () => {
         const [currentQuote, setCurrentQuote] = React.useState(quote);
@@ -308,17 +311,17 @@ describe('Load Testing and Performance Benchmarks', () => {
         React.useEffect(() => {
           if (updateCounter < updateCount) {
             const startTime = performance.now();
-            
+
             setTimeout(() => {
               setCurrentQuote({
                 ...currentQuote,
                 final_total_usd: Math.random() * 1000,
-                status: ['pending', 'sent', 'approved'][Math.floor(Math.random() * 3)] as any
+                status: ['pending', 'sent', 'approved'][Math.floor(Math.random() * 3)] as any,
               });
-              
+
               const endTime = performance.now();
               updateTimes.push(endTime - startTime);
-              setUpdateCounter(c => c + 1);
+              setUpdateCounter((c) => c + 1);
             }, 10);
           }
         }, [updateCounter, currentQuote]);
@@ -326,11 +329,7 @@ describe('Load Testing and Performance Benchmarks', () => {
         return (
           <div>
             <div data-testid="update-counter">{updateCounter}</div>
-            <UnifiedQuoteCard
-              quote={currentQuote}
-              viewMode="admin"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={currentQuote} viewMode="admin" layout="detail" />
           </div>
         );
       };
@@ -338,16 +337,19 @@ describe('Load Testing and Performance Benchmarks', () => {
       renderWithProviders(<RapidUpdateTest />);
 
       // Wait for all updates to complete
-      await waitFor(() => {
-        expect(screen.getByTestId('update-counter')).toHaveTextContent(updateCount.toString());
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('update-counter')).toHaveTextContent(updateCount.toString());
+        },
+        { timeout: 5000 },
+      );
 
       // Calculate average update time
       const averageUpdateTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length;
-      
+
       // Each update should take less than 50ms on average
       expect(averageUpdateTime).toBeLessThan(50);
-      
+
       // 95th percentile should be under 100ms
       const sortedTimes = updateTimes.sort((a, b) => a - b);
       const p95Time = sortedTimes[Math.floor(sortedTimes.length * 0.95)];
@@ -357,30 +359,29 @@ describe('Load Testing and Performance Benchmarks', () => {
     it('should handle form rendering with large datasets efficiently', async () => {
       const FormWithLargeDataset = () => {
         const [formData, setFormData] = React.useState({
-          countries: Array.from({ length: 200 }, (_, i) => ({ code: `C${i}`, name: `Country ${i}` })),
-          categories: Array.from({ length: 100 }, (_, i) => ({ id: i, name: `Category ${i}` }))
+          countries: Array.from({ length: 200 }, (_, i) => ({
+            code: `C${i}`,
+            name: `Country ${i}`,
+          })),
+          categories: Array.from({ length: 100 }, (_, i) => ({ id: i, name: `Category ${i}` })),
         });
 
         return (
           <div>
             <select data-testid="country-select">
-              {formData.countries.map(country => (
+              {formData.countries.map((country) => (
                 <option key={country.code} value={country.code}>
                   {country.name}
                 </option>
               ))}
             </select>
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode="guest"
-              onSubmit={vi.fn()}
-            />
+            <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={vi.fn()} />
           </div>
         );
       };
 
       performanceMonitor.mark('form-render-start');
-      
+
       renderWithProviders(<FormWithLargeDataset />);
 
       await waitFor(() => {
@@ -388,7 +389,11 @@ describe('Load Testing and Performance Benchmarks', () => {
       });
 
       performanceMonitor.mark('form-render-end');
-      const renderTime = performanceMonitor.measure('form-render', 'form-render-start', 'form-render-end');
+      const renderTime = performanceMonitor.measure(
+        'form-render',
+        'form-render-start',
+        'form-render-end',
+      );
 
       // Form with large dataset should render in under 1 second
       expect(renderTime).toBeLessThan(1000);
@@ -412,7 +417,7 @@ describe('Load Testing and Performance Benchmarks', () => {
               quote={quotes[approvalCount % quotes.length]}
               viewMode="admin"
               onAction={mockAction}
-            />
+            />,
           );
 
           // Simulate user clicking approve
@@ -427,7 +432,7 @@ describe('Load Testing and Performance Benchmarks', () => {
       const results = await loadTestRunner.runConcurrentTest(
         testApproval,
         10, // 10 concurrent users
-        50  // 50 total requests
+        50, // 50 total requests
       );
 
       // Performance benchmarks
@@ -436,7 +441,7 @@ describe('Load Testing and Performance Benchmarks', () => {
       expect(results.averageResponseTime).toBeLessThan(200); // Under 200ms average
       expect(results.requestsPerSecond).toBeGreaterThan(50); // At least 50 RPS
       expect(results.p95ResponseTime).toBeLessThan(500); // 95th percentile under 500ms
-      
+
       // Memory should not exceed reasonable limits
       expect(results.memoryUsage.used / results.memoryUsage.total).toBeLessThan(0.9);
     });
@@ -452,24 +457,22 @@ describe('Load Testing and Performance Benchmarks', () => {
           });
 
           const { unmount } = renderWithProviders(
-            <UnifiedQuoteForm
-              mode="create"
-              viewMode="guest"
-              onSubmit={mockSubmit}
-            />
+            <UnifiedQuoteForm mode="create" viewMode="guest" onSubmit={mockSubmit} />,
           );
 
           // Simulate form filling and submission
           setTimeout(async () => {
             const nameInput = screen.getByLabelText(/your name/i);
             const emailInput = screen.getByLabelText(/email address/i);
-            
+
             fireEvent.change(nameInput, { target: { value: `User ${submissionCount}` } });
-            fireEvent.change(emailInput, { target: { value: `user${submissionCount}@example.com` } });
-            
+            fireEvent.change(emailInput, {
+              target: { value: `user${submissionCount}@example.com` },
+            });
+
             const submitButton = screen.getByRole('button', { name: /submit quote request/i });
             fireEvent.click(submitButton);
-            
+
             unmount();
           }, Math.random() * 150);
         });
@@ -477,8 +480,8 @@ describe('Load Testing and Performance Benchmarks', () => {
 
       const results = await loadTestRunner.runConcurrentTest(
         testFormSubmission,
-        5,  // 5 concurrent users
-        25  // 25 total submissions
+        5, // 5 concurrent users
+        25, // 25 total submissions
       );
 
       expect(results.completedRequests).toBe(25);
@@ -494,11 +497,7 @@ describe('Load Testing and Performance Benchmarks', () => {
       const testScrolling = async (): Promise<void> => {
         return new Promise((resolve) => {
           const { container, unmount } = renderWithProviders(
-            <UnifiedQuoteList
-              quotes={quotes}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={quotes} viewMode="customer" layout="list" />,
           );
 
           setTimeout(() => {
@@ -518,8 +517,8 @@ describe('Load Testing and Performance Benchmarks', () => {
 
       const results = await loadTestRunner.runConcurrentTest(
         testScrolling,
-        8,  // 8 concurrent users scrolling
-        40  // 40 total scroll sessions
+        8, // 8 concurrent users scrolling
+        40, // 40 total scroll sessions
       );
 
       expect(results.completedRequests).toBe(40);
@@ -532,13 +531,13 @@ describe('Load Testing and Performance Benchmarks', () => {
     it('should not leak memory during component mounting/unmounting', async () => {
       const quotes = generateTestQuotes(100);
       const initialMemory = performanceMonitor.getMemoryUsage();
-      
+
       const MountUnmountTest = () => {
         const [mounted, setMounted] = React.useState(true);
 
         React.useEffect(() => {
           const interval = setInterval(() => {
-            setMounted(m => !m);
+            setMounted((m) => !m);
           }, 100);
 
           setTimeout(() => {
@@ -550,22 +549,16 @@ describe('Load Testing and Performance Benchmarks', () => {
 
         if (!mounted) return null;
 
-        return (
-          <UnifiedQuoteList
-            quotes={quotes}
-            viewMode="admin"
-            layout="table"
-          />
-        );
+        return <UnifiedQuoteList quotes={quotes} viewMode="admin" layout="table" />;
       };
 
       renderWithProviders(<MountUnmountTest />);
 
       // Wait for multiple mount/unmount cycles
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      await new Promise((resolve) => setTimeout(resolve, 2500));
 
       const finalMemory = performanceMonitor.getMemoryUsage();
-      
+
       // Memory usage should not increase significantly (less than 20% growth)
       const memoryGrowth = (finalMemory.used - initialMemory.used) / initialMemory.used;
       expect(memoryGrowth).toBeLessThan(0.2);
@@ -590,8 +583,8 @@ describe('Load Testing and Performance Benchmarks', () => {
         const [count, setCount] = React.useState(0);
 
         React.useEffect(() => {
-          const handleResize = () => setCount(c => c + 1);
-          const handleScroll = () => setCount(c => c + 1);
+          const handleResize = () => setCount((c) => c + 1);
+          const handleScroll = () => setCount((c) => c + 1);
 
           window.addEventListener('resize', handleResize);
           window.addEventListener('scroll', handleScroll);
@@ -603,28 +596,24 @@ describe('Load Testing and Performance Benchmarks', () => {
         }, []);
 
         return (
-          <UnifiedQuoteCard
-            quote={generateTestQuotes(1)[0]}
-            viewMode="customer"
-            layout="detail"
-          />
+          <UnifiedQuoteCard quote={generateTestQuotes(1)[0]} viewMode="customer" layout="detail" />
         );
       };
 
       const { unmount } = renderWithProviders(<EventListenerTest />);
-      
+
       // Let component mount and set up listeners
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
       const listenersAfterMount = listenerCount;
-      
+
       // Unmount component
       unmount();
-      
+
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       });
 
       // All listeners should be cleaned up
@@ -641,19 +630,15 @@ describe('Load Testing and Performance Benchmarks', () => {
       const quotes = generateTestQuotes(500);
       const performanceBaselines = {
         initialRender: 1500, // 1.5 seconds
-        listUpdate: 200,     // 200ms
-        itemScrolling: 50    // 50ms per scroll
+        listUpdate: 200, // 200ms
+        itemScrolling: 50, // 50ms per scroll
       };
 
       // Test initial render performance
       performanceMonitor.mark('baseline-render-start');
-      
+
       const { rerender } = renderWithProviders(
-        <UnifiedQuoteList
-          quotes={quotes}
-          viewMode="admin"
-          layout="table"
-        />
+        <UnifiedQuoteList quotes={quotes} viewMode="admin" layout="table" />,
       );
 
       await waitFor(() => {
@@ -661,29 +646,31 @@ describe('Load Testing and Performance Benchmarks', () => {
       });
 
       performanceMonitor.mark('baseline-render-end');
-      const initialRenderTime = performanceMonitor.measure('baseline-render', 'baseline-render-start', 'baseline-render-end');
+      const initialRenderTime = performanceMonitor.measure(
+        'baseline-render',
+        'baseline-render-start',
+        'baseline-render-end',
+      );
 
       expect(initialRenderTime).toBeLessThan(performanceBaselines.initialRender);
 
       // Test update performance
       performanceMonitor.mark('baseline-update-start');
-      
-      const updatedQuotes = quotes.map(q => ({ ...q, status: 'approved' as any }));
-      
-      rerender(
-        <UnifiedQuoteList
-          quotes={updatedQuotes}
-          viewMode="admin"
-          layout="table"
-        />
-      );
+
+      const updatedQuotes = quotes.map((q) => ({ ...q, status: 'approved' as any }));
+
+      rerender(<UnifiedQuoteList quotes={updatedQuotes} viewMode="admin" layout="table" />);
 
       await waitFor(() => {
         expect(screen.getAllByText('approved')).toHaveLength(Math.min(25, quotes.length)); // Assuming 25 items per page
       });
 
       performanceMonitor.mark('baseline-update-end');
-      const updateTime = performanceMonitor.measure('baseline-update', 'baseline-update-start', 'baseline-update-end');
+      const updateTime = performanceMonitor.measure(
+        'baseline-update',
+        'baseline-update-start',
+        'baseline-update-end',
+      );
 
       expect(updateTime).toBeLessThan(performanceBaselines.listUpdate);
     });
@@ -697,12 +684,16 @@ describe('Load Testing and Performance Benchmarks', () => {
           if (updateCount < 50) {
             setTimeout(() => {
               // Simulate rapid updates
-              setQuotes(prevQuotes => prevQuotes.map(q => ({
-                ...q,
-                final_total_usd: Math.random() * 2000,
-                status: ['pending', 'sent', 'approved', 'paid'][Math.floor(Math.random() * 4)] as any
-              })));
-              setUpdateCount(c => c + 1);
+              setQuotes((prevQuotes) =>
+                prevQuotes.map((q) => ({
+                  ...q,
+                  final_total_usd: Math.random() * 2000,
+                  status: ['pending', 'sent', 'approved', 'paid'][
+                    Math.floor(Math.random() * 4)
+                  ] as any,
+                })),
+              );
+              setUpdateCount((c) => c + 1);
             }, 50);
           }
         }, [updateCount]);
@@ -710,25 +701,28 @@ describe('Load Testing and Performance Benchmarks', () => {
         return (
           <div>
             <div data-testid="stress-counter">{updateCount}</div>
-            <UnifiedQuoteList
-              quotes={quotes}
-              viewMode="admin"
-              layout="table"
-            />
+            <UnifiedQuoteList quotes={quotes} viewMode="admin" layout="table" />
           </div>
         );
       };
 
       performanceMonitor.mark('stress-test-start');
-      
+
       renderWithProviders(<StressTest />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('stress-counter')).toHaveTextContent('50');
-      }, { timeout: 10000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('stress-counter')).toHaveTextContent('50');
+        },
+        { timeout: 10000 },
+      );
 
       performanceMonitor.mark('stress-test-end');
-      const stressTestTime = performanceMonitor.measure('stress-test', 'stress-test-start', 'stress-test-end');
+      const stressTestTime = performanceMonitor.measure(
+        'stress-test',
+        'stress-test-start',
+        'stress-test-end',
+      );
 
       // Stress test should complete in under 5 seconds
       expect(stressTestTime).toBeLessThan(5000);
@@ -742,7 +736,7 @@ describe('Load Testing and Performance Benchmarks', () => {
   describe('Network Performance Simulation', () => {
     it('should handle slow network conditions gracefully', async () => {
       // Mock slow API responses
-      const slowApiResponse = () => new Promise(resolve => setTimeout(resolve, 2000));
+      const slowApiResponse = () => new Promise((resolve) => setTimeout(resolve, 2000));
 
       const SlowNetworkTest = () => {
         const [loading, setLoading] = React.useState(true);
@@ -759,29 +753,30 @@ describe('Load Testing and Performance Benchmarks', () => {
           return <div data-testid="loading">Loading...</div>;
         }
 
-        return (
-          <UnifiedQuoteList
-            quotes={quotes}
-            viewMode="customer"
-            layout="list"
-          />
-        );
+        return <UnifiedQuoteList quotes={quotes} viewMode="customer" layout="list" />;
       };
 
       performanceMonitor.mark('slow-network-start');
-      
+
       renderWithProviders(<SlowNetworkTest />);
 
       // Should show loading state initially
       expect(screen.getByTestId('loading')).toBeInTheDocument();
 
       // Wait for data to load
-      await waitFor(() => {
-        expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
       performanceMonitor.mark('slow-network-end');
-      const loadTime = performanceMonitor.measure('slow-network', 'slow-network-start', 'slow-network-end');
+      const loadTime = performanceMonitor.measure(
+        'slow-network',
+        'slow-network-start',
+        'slow-network-end',
+      );
 
       // Should handle gracefully even with slow network
       expect(loadTime).toBeGreaterThan(1900); // Should respect the 2s delay
@@ -797,9 +792,9 @@ describe('Load Testing and Performance Benchmarks', () => {
           // Simulate lazy loading with high latency
           const loadMore = () => {
             setTimeout(() => {
-              setVisibleRange(prev => ({ 
-                start: prev.start, 
-                end: Math.min(prev.end + 10, quotes.length) 
+              setVisibleRange((prev) => ({
+                start: prev.start,
+                end: Math.min(prev.end + 10, quotes.length),
               }));
             }, 500); // 500ms latency
           };
@@ -814,11 +809,7 @@ describe('Load Testing and Performance Benchmarks', () => {
         return (
           <div>
             <div data-testid="visible-count">{visibleQuotes.length}</div>
-            <UnifiedQuoteList
-              quotes={visibleQuotes}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={visibleQuotes} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -826,13 +817,19 @@ describe('Load Testing and Performance Benchmarks', () => {
       renderWithProviders(<HighLatencyTest />);
 
       // Should progressively load more items
-      await waitFor(() => {
-        expect(parseInt(screen.getByTestId('visible-count').textContent!)).toBeGreaterThan(10);
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          expect(parseInt(screen.getByTestId('visible-count').textContent!)).toBeGreaterThan(10);
+        },
+        { timeout: 2000 },
+      );
 
-      await waitFor(() => {
-        expect(parseInt(screen.getByTestId('visible-count').textContent!)).toBe(50);
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(parseInt(screen.getByTestId('visible-count').textContent!)).toBe(50);
+        },
+        { timeout: 5000 },
+      );
     });
   });
 });

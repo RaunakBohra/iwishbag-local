@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  AlertTriangle, 
-  Activity, 
-  TrendingUp, 
+import {
+  AlertTriangle,
+  Activity,
+  TrendingUp,
   TrendingDown,
   Clock,
   Filter,
   Download,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ErrorType, ErrorSeverity } from '@/lib/errorHandling';
@@ -31,7 +37,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
 } from 'recharts';
 
 interface ErrorMetrics {
@@ -64,7 +70,11 @@ export function ErrorMonitoringDashboard() {
   const [filterSeverity, setFilterSeverity] = useState<ErrorSeverity | 'all'>('all');
 
   // Fetch error metrics
-  const { data: metrics, isLoading, refetch } = useQuery<ErrorMetrics>({
+  const {
+    data: metrics,
+    isLoading,
+    refetch,
+  } = useQuery<ErrorMetrics>({
     queryKey: ['error-metrics', timeRange, filterType, filterSeverity],
     queryFn: async () => {
       // In production, this would fetch from your error tracking service
@@ -141,9 +151,7 @@ export function ErrorMonitoringDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Error Monitoring</h2>
-          <p className="text-muted-foreground">
-            Track and analyze system errors in real-time
-          </p>
+          <p className="text-muted-foreground">Track and analyze system errors in real-time</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -179,8 +187,14 @@ export function ErrorMonitoringDashboard() {
           <CardContent>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold">{metrics.total}</span>
-              <div className={`flex items-center text-sm ${isIncreasing ? 'text-red-600' : 'text-green-600'}`}>
-                {isIncreasing ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              <div
+                className={`flex items-center text-sm ${isIncreasing ? 'text-red-600' : 'text-green-600'}`}
+              >
+                {isIncreasing ? (
+                  <TrendingUp className="h-4 w-4" />
+                ) : (
+                  <TrendingDown className="h-4 w-4" />
+                )}
                 <span>{Math.abs(errorTrend)}%</span>
               </div>
             </div>
@@ -253,26 +267,24 @@ export function ErrorMonitoringDashboard() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={metrics.timeline}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="timestamp" 
+                    <XAxis
+                      dataKey="timestamp"
                       tickFormatter={(value) => format(new Date(value), 'HH:mm')}
                     />
                     <YAxis />
-                    <Tooltip 
-                      labelFormatter={(value) => format(new Date(value), 'MMM dd, HH:mm')}
-                    />
+                    <Tooltip labelFormatter={(value) => format(new Date(value), 'MMM dd, HH:mm')} />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="count" 
-                      stroke="#3b82f6" 
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#3b82f6"
                       name="Total Errors"
                       strokeWidth={2}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="critical" 
-                      stroke="#dc2626" 
+                    <Line
+                      type="monotone"
+                      dataKey="critical"
+                      stroke="#dc2626"
                       name="Critical"
                       strokeWidth={2}
                     />
@@ -307,9 +319,9 @@ export function ErrorMonitoringDashboard() {
                         dataKey="value"
                       >
                         {Object.entries(metrics.bySeverity).map(([severity], index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={severityColors[severity as ErrorSeverity]} 
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={severityColors[severity as ErrorSeverity]}
                           />
                         ))}
                       </Pie>
@@ -392,11 +404,13 @@ export function ErrorMonitoringDashboard() {
                 className="flex items-center justify-between p-3 rounded-lg border"
               >
                 <div className="flex items-start gap-3">
-                  <AlertTriangle 
+                  <AlertTriangle
                     className={`h-5 w-5 mt-0.5 ${
-                      error.severity === ErrorSeverity.CRITICAL ? 'text-red-600' :
-                      error.severity === ErrorSeverity.HIGH ? 'text-orange-600' :
-                      'text-yellow-600'
+                      error.severity === ErrorSeverity.CRITICAL
+                        ? 'text-red-600'
+                        : error.severity === ErrorSeverity.HIGH
+                          ? 'text-orange-600'
+                          : 'text-yellow-600'
                     }`}
                   />
                   <div>
@@ -405,19 +419,14 @@ export function ErrorMonitoringDashboard() {
                       <Badge variant="outline" className="text-xs">
                         {error.type}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {error.component}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{error.component}</span>
                       <span className="text-xs text-muted-foreground">
                         {format(error.timestamp, 'HH:mm:ss')}
                       </span>
                     </div>
                   </div>
                 </div>
-                <Badge 
-                  variant={error.resolved ? 'secondary' : 'destructive'}
-                  className="text-xs"
-                >
+                <Badge variant={error.resolved ? 'secondary' : 'destructive'} className="text-xs">
                   {error.resolved ? 'Resolved' : 'Active'}
                 </Badge>
               </div>
@@ -432,13 +441,13 @@ export function ErrorMonitoringDashboard() {
 // Helper functions
 function calculateTrend(timeline: ErrorMetrics['timeline']): number {
   if (timeline.length < 2) return 0;
-  
+
   const recent = timeline.slice(-Math.ceil(timeline.length / 2));
   const previous = timeline.slice(0, Math.floor(timeline.length / 2));
-  
+
   const recentAvg = recent.reduce((sum, t) => sum + t.count, 0) / recent.length;
   const previousAvg = previous.reduce((sum, t) => sum + t.count, 0) / previous.length;
-  
+
   if (previousAvg === 0) return 0;
   return Math.round(((recentAvg - previousAvg) / previousAvg) * 100);
 }
@@ -447,7 +456,7 @@ function calculateTrend(timeline: ErrorMetrics['timeline']): number {
 function getMockErrorMetrics(timeRange: string): ErrorMetrics {
   const now = new Date();
   const hours = timeRange === '1h' ? 1 : timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720;
-  
+
   const timeline = Array.from({ length: Math.min(hours, 24) }, (_, i) => ({
     timestamp: subHours(now, i).toISOString(),
     count: Math.floor(Math.random() * 50) + 10,
@@ -473,16 +482,16 @@ function getMockErrorMetrics(timeRange: string): ErrorMetrics {
       [ErrorSeverity.LOW]: 118,
     },
     byComponent: {
-      'UnifiedQuoteInterface': 45,
-      'QuoteCalculatorService': 38,
-      'SmartCalculationEngine': 32,
-      'TaxCalculationSidebar': 28,
-      'PaymentProcessor': 25,
-      'ShippingCalculator': 22,
-      'CurrencyService': 20,
-      'HSNSearchService': 18,
-      'CustomerPortal': 15,
-      'AdminDashboard': 12,
+      UnifiedQuoteInterface: 45,
+      QuoteCalculatorService: 38,
+      SmartCalculationEngine: 32,
+      TaxCalculationSidebar: 28,
+      PaymentProcessor: 25,
+      ShippingCalculator: 22,
+      CurrencyService: 20,
+      HSNSearchService: 18,
+      CustomerPortal: 15,
+      AdminDashboard: 12,
     },
     timeline,
     recentErrors: [

@@ -2,11 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, Scale, Sparkles, Database, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +24,7 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
   weight,
   suggestions,
   onWeightChange,
-  className
+  className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(weight.toString());
@@ -48,14 +44,14 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
   };
 
   const getSourceConfig = (source: string) => {
-    return source === 'hsn' 
+    return source === 'hsn'
       ? {
           icon: Database,
           color: 'from-emerald-500 to-teal-600',
           bg: 'bg-gradient-to-r from-emerald-50 to-teal-50',
           border: 'border-emerald-200',
           text: 'text-emerald-700',
-          badge: 'emerald' as const
+          badge: 'emerald' as const,
         }
       : {
           icon: Sparkles,
@@ -63,7 +59,7 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
           bg: 'bg-gradient-to-r from-blue-50 to-indigo-50',
           border: 'border-blue-200',
           text: 'text-blue-700',
-          badge: 'info' as const
+          badge: 'info' as const,
         };
   };
 
@@ -75,7 +71,7 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
         </div>
         <span>Weight</span>
       </div>
-      
+
       <div className="relative flex items-center">
         <Input
           value={inputValue}
@@ -86,8 +82,10 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
           step="0.1"
           min="0"
         />
-        <span className="absolute right-10 text-xs text-slate-500 pointer-events-none font-medium">kg</span>
-        
+        <span className="absolute right-10 text-xs text-slate-500 pointer-events-none font-medium">
+          kg
+        </span>
+
         {suggestions.length > 0 && (
           <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
@@ -99,7 +97,10 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
                 <ChevronDown className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-800 transition-colors" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 shadow-2xl border border-slate-200 bg-white/95 backdrop-blur-md" align="start">
+            <PopoverContent
+              className="w-80 p-0 shadow-2xl border border-slate-200 bg-white/95 backdrop-blur-md"
+              align="start"
+            >
               <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-slate-600" />
@@ -115,7 +116,7 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
                 {suggestions.map((suggestion, index) => {
                   const config = getSourceConfig(suggestion.source);
                   const Icon = config.icon;
-                  
+
                   return (
                     <button
                       key={index}
@@ -123,8 +124,9 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
                       className={cn(
                         'w-full flex items-center justify-between p-4 text-sm rounded-xl transition-all duration-200 group',
                         'border hover:shadow-md transform hover:-translate-y-0.5',
-                        config.bg, config.border,
-                        'hover:border-opacity-60'
+                        config.bg,
+                        config.border,
+                        'hover:border-opacity-60',
                       )}
                     >
                       <div className="flex items-center gap-3">
@@ -143,7 +145,7 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1.5">
                           <div className="flex gap-0.5">
@@ -153,9 +155,12 @@ export const ModernWeightSelector: React.FC<ModernWeightSelectorProps> = ({
                                 className={cn(
                                   'w-1.5 h-1.5 rounded-full transition-all duration-300',
                                   dot <= suggestion.confidence * 5
-                                    ? suggestion.confidence >= 0.8 ? 'bg-emerald-500' :
-                                      suggestion.confidence >= 0.6 ? 'bg-amber-500' : 'bg-red-500'
-                                    : 'bg-slate-200'
+                                    ? suggestion.confidence >= 0.8
+                                      ? 'bg-emerald-500'
+                                      : suggestion.confidence >= 0.6
+                                        ? 'bg-amber-500'
+                                        : 'bg-red-500'
+                                    : 'bg-slate-200',
                                 )}
                               />
                             ))}

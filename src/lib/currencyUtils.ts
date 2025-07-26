@@ -1,7 +1,7 @@
 import { supabase } from '../integrations/supabase/client';
 import { logger } from './logger';
 import { Quote, ShippingAddress } from '@/types/quote';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 // SIMPLIFIED: Remove all wrapper functions around CurrencyService
 // All currency operations should go through hooks or CurrencyService directly
@@ -32,8 +32,8 @@ export async function getExchangeRate(
     return cached.result;
   }
 
-  const fromCurr = fromCurrency || currencyService.getCurrencyForCountrySync(fromCountry);
-  const toCurr = toCurrency || currencyService.getCurrencyForCountrySync(toCountry);
+  const fromCurr = fromCurrency || optimizedCurrencyService.getCurrencyForCountrySync(fromCountry);
+  const toCurr = toCurrency || optimizedCurrencyService.getCurrencyForCountrySync(toCountry);
 
   // Same currency, no conversion needed
   if (fromCurr === toCurr) {

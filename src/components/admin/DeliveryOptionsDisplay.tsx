@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Truck, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryOption } from '@/types/shipping';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface DeliveryOptionsDisplayProps {
   routeId: number;
@@ -109,11 +109,11 @@ export const DeliveryOptionsDisplay = ({
                         exchangeRate?: number,
                       ) => {
                         const originCurrency =
-                          currencyService.getCurrencyForCountrySync(originCountry);
+                          optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
                         const destinationCurrency =
-                          currencyService.getCurrencyForCountrySync(destinationCountry);
+                          optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
 
-                        const originSymbol = currencyService.getCurrencySymbol(originCurrency);
+                        const originSymbol = optimizedCurrencyService.getCurrencySymbol(originCurrency);
                         const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
                         if (exchangeRate && exchangeRate !== 1) {
@@ -125,7 +125,7 @@ export const DeliveryOptionsDisplay = ({
                             convertedAmount = Math.round(convertedAmount * 100) / 100;
                           }
                           const destinationSymbol =
-                            currencyService.getCurrencySymbol(destinationCurrency);
+                            optimizedCurrencyService.getCurrencySymbol(destinationCurrency);
                           const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
 
                           return {

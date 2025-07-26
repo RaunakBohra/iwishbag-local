@@ -180,7 +180,7 @@ class UserActivityService {
           userId: user.id,
           errorMessage: error?.message,
           errorCode: error?.code,
-          errorDetails: error?.details
+          errorDetails: error?.details,
         });
         // Don't throw error to avoid disrupting user experience
       }

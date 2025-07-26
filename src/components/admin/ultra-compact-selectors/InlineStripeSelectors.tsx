@@ -38,7 +38,7 @@ export const InlineStripeSelectors: React.FC<InlineStripeSelectorsProps> = ({
   hsnSuggestions,
   onHSNSelect,
   onHSNRemove,
-  className
+  className,
 }) => {
   return (
     <div className={cn('flex items-center gap-6 flex-wrap', className)}>
@@ -47,9 +47,9 @@ export const InlineStripeSelectors: React.FC<InlineStripeSelectorsProps> = ({
         suggestions={weightSuggestions}
         onWeightChange={onWeightChange}
       />
-      
+
       <div className="h-8 w-px bg-gray-200" />
-      
+
       <SmartHSNSearch
         currentHSNCode={currentHSN?.code}
         onSelect={(hsn) => onHSNSelect({ code: hsn.hsn_code, description: hsn.display_name })}

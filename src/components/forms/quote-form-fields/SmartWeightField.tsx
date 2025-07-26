@@ -42,12 +42,12 @@ interface SmartWeightFieldProps {
   onWeightSourceSelected?: (source: 'hsn' | 'ml' | 'manual') => void;
 }
 
-export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({ 
-  control, 
-  index, 
-  setValue, 
+export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
+  control,
+  index,
+  setValue,
   hsnCode,
-  onWeightSourceSelected 
+  onWeightSourceSelected,
 }) => {
   const { toast } = useToast();
   const [mlEstimation, setMlEstimation] = useState<EstimationResult | null>(null);
@@ -136,9 +136,9 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
     setHasUserInput(true);
     setSelectedSource(source);
     onWeightSourceSelected?.(source);
-    
+
     toast({
-      title: "Weight Applied",
+      title: 'Weight Applied',
       description: `Using ${source === 'hsn' ? 'HSN database' : 'AI estimated'} weight: ${weight} kg`,
     });
 
@@ -152,7 +152,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
         source,
         productUrl,
         undefined, // category - could be passed if available
-        hsnCode
+        hsnCode,
       );
     }
   };
@@ -253,16 +253,24 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
               {/* Dual Weight Suggestions */}
               {!hasUserInput && (hsnWeight || mlEstimation) && (
                 <DualWeightSuggestions
-                  hsnWeight={hsnWeight ? {
-                    ...hsnWeight,
-                    source: 'hsn' as const
-                  } : undefined}
-                  mlWeight={mlEstimation ? {
-                    estimated: mlEstimation.estimated_weight,
-                    confidence: mlEstimation.confidence,
-                    reasoning: mlEstimation.reasoning,
-                    source: 'ml' as const
-                  } : undefined}
+                  hsnWeight={
+                    hsnWeight
+                      ? {
+                          ...hsnWeight,
+                          source: 'hsn' as const,
+                        }
+                      : undefined
+                  }
+                  mlWeight={
+                    mlEstimation
+                      ? {
+                          estimated: mlEstimation.estimated_weight,
+                          confidence: mlEstimation.confidence,
+                          reasoning: mlEstimation.reasoning,
+                          source: 'ml' as const,
+                        }
+                      : undefined
+                  }
                   currentWeight={currentWeight ? parseFloat(currentWeight) : undefined}
                   onSelectWeight={handleSelectWeight}
                   isLoading={isEstimating || isLoadingHSN}

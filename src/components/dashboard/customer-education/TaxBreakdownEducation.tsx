@@ -9,20 +9,26 @@ interface TaxBreakdownEducationProps {
   destinationCountry?: string;
 }
 
-export const TaxBreakdownEducation: React.FC<TaxBreakdownEducationProps> = ({ 
-  originCountry = 'US', 
-  destinationCountry = 'IN' 
+export const TaxBreakdownEducation: React.FC<TaxBreakdownEducationProps> = ({
+  originCountry = 'US',
+  destinationCountry = 'IN',
 }) => {
   // Map country codes to display names and tax types
   const getCountryInfo = (countryCode: string) => {
     const countryMap: Record<string, { name: string; localTax: string; localTaxRate: string }> = {
-      'US': { name: 'United States', localTax: 'Sales Tax', localTaxRate: '0-11%' },
-      'IN': { name: 'India', localTax: 'GST', localTaxRate: '5-28%' },
-      'NP': { name: 'Nepal', localTax: 'VAT', localTaxRate: '13%' },
-      'UK': { name: 'United Kingdom', localTax: 'VAT', localTaxRate: '20%' },
-      'CA': { name: 'Canada', localTax: 'HST/GST', localTaxRate: '5-15%' },
+      US: { name: 'United States', localTax: 'Sales Tax', localTaxRate: '0-11%' },
+      IN: { name: 'India', localTax: 'GST', localTaxRate: '5-28%' },
+      NP: { name: 'Nepal', localTax: 'VAT', localTaxRate: '13%' },
+      UK: { name: 'United Kingdom', localTax: 'VAT', localTaxRate: '20%' },
+      CA: { name: 'Canada', localTax: 'HST/GST', localTaxRate: '5-15%' },
     };
-    return countryMap[countryCode] || { name: countryCode, localTax: 'Local Tax', localTaxRate: 'Varies' };
+    return (
+      countryMap[countryCode] || {
+        name: countryCode,
+        localTax: 'Local Tax',
+        localTaxRate: 'Varies',
+      }
+    );
   };
 
   const originInfo = getCountryInfo(originCountry);
@@ -38,8 +44,8 @@ export const TaxBreakdownEducation: React.FC<TaxBreakdownEducationProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-green-800 text-sm leading-relaxed">
-          Your total cost includes multiple tax components applied at different stages of the shipping process. 
-          Here's what each component means:
+          Your total cost includes multiple tax components applied at different stages of the
+          shipping process. Here's what each component means:
         </p>
 
         <div className="space-y-4">
@@ -117,9 +123,10 @@ export const TaxBreakdownEducation: React.FC<TaxBreakdownEducationProps> = ({
             Tax Calculation Method
           </h4>
           <p className="text-blue-800 text-xs">
-            <strong>HSN-Based Calculation:</strong> We use the Harmonized System of Nomenclature (HSN) to determine 
-            the most accurate tax rates for each item. This ensures compliance with {destinationInfo.name} customs 
-            regulations and prevents delays or additional charges.
+            <strong>HSN-Based Calculation:</strong> We use the Harmonized System of Nomenclature
+            (HSN) to determine the most accurate tax rates for each item. This ensures compliance
+            with {destinationInfo.name} customs regulations and prevents delays or additional
+            charges.
           </p>
         </div>
 

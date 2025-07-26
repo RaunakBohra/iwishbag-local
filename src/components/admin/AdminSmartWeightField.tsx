@@ -105,27 +105,24 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
   }, [hsnCode]);
 
   // Debounced ML estimation function
-  const estimateMLWeight = useCallback(
-    async (name: string, url?: string) => {
-      if (!name?.trim() && !url?.trim()) {
-        setMlEstimation(null);
-        return;
-      }
+  const estimateMLWeight = useCallback(async (name: string, url?: string) => {
+    if (!name?.trim() && !url?.trim()) {
+      setMlEstimation(null);
+      return;
+    }
 
-      setIsEstimating(true);
-      try {
-        const result = await smartWeightEstimator.estimateWeight(name || '', url || undefined);
-        setMlEstimation(result);
-        console.log(`🤖 [Weight] ML estimation for "${name}":`, result);
-      } catch (error) {
-        console.error('Weight estimation error:', error);
-        setMlEstimation(null);
-      } finally {
-        setIsEstimating(false);
-      }
-    },
-    [],
-  );
+    setIsEstimating(true);
+    try {
+      const result = await smartWeightEstimator.estimateWeight(name || '', url || undefined);
+      setMlEstimation(result);
+      console.log(`🤖 [Weight] ML estimation for "${name}":`, result);
+    } catch (error) {
+      console.error('Weight estimation error:', error);
+      setMlEstimation(null);
+    } finally {
+      setIsEstimating(false);
+    }
+  }, []);
 
   // Auto-estimate when product name or URL changes
   useEffect(() => {
@@ -143,9 +140,9 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
     setHasUserInput(true);
     setSelectedSource(source);
     onWeightSourceSelected?.(source);
-    
+
     toast({
-      title: "Weight Applied",
+      title: 'Weight Applied',
       description: `Using ${source === 'hsn' ? 'HSN database' : 'AI estimated'} weight: ${weight} kg`,
     });
 
@@ -159,7 +156,7 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
         source,
         productUrl,
         undefined, // category - could be passed if available
-        hsnCode
+        hsnCode,
       );
     }
   };
@@ -292,16 +289,24 @@ export const AdminSmartWeightField: React.FC<AdminSmartWeightFieldProps> = ({
       {/* Dual Weight Suggestions */}
       {!hasUserInput && (hsnWeight || mlEstimation) && (
         <DualWeightSuggestions
-          hsnWeight={hsnWeight ? {
-            ...hsnWeight,
-            source: 'hsn' as const
-          } : undefined}
-          mlWeight={mlEstimation ? {
-            estimated: mlEstimation.estimated_weight,
-            confidence: mlEstimation.confidence,
-            reasoning: mlEstimation.reasoning,
-            source: 'ml' as const
-          } : undefined}
+          hsnWeight={
+            hsnWeight
+              ? {
+                  ...hsnWeight,
+                  source: 'hsn' as const,
+                }
+              : undefined
+          }
+          mlWeight={
+            mlEstimation
+              ? {
+                  estimated: mlEstimation.estimated_weight,
+                  confidence: mlEstimation.confidence,
+                  reasoning: mlEstimation.reasoning,
+                  source: 'ml' as const,
+                }
+              : undefined
+          }
           currentWeight={currentWeight ? parseFloat(currentWeight.toString()) : undefined}
           onSelectWeight={handleSelectWeight}
           isLoading={isEstimating || isLoadingHSN}

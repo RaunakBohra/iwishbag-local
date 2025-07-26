@@ -989,7 +989,7 @@ class HSNDataValidationService {
   private async validateJSONBItemsStructure(options: ValidationOptions): Promise<ValidationResult> {
     const quotes = await this.getQuotesInDateRange(options.date_range);
     let structureIssues = 0;
-    let totalQuotes = quotes.length;
+    const totalQuotes = quotes.length;
     const issues: string[] = [];
 
     for (const quote of quotes) {
@@ -1052,30 +1052,34 @@ class HSNDataValidationService {
       rule_id: 'jsonb_001',
       passed: structureIssues === 0,
       severity: 'critical' as const,
-      message: structureIssues === 0 
-        ? `All ${totalQuotes} quotes have valid JSONB items structure`
-        : `Found ${structureIssues} JSONB structure issues in ${totalQuotes} quotes`,
-      details: { 
+      message:
+        structureIssues === 0
+          ? `All ${totalQuotes} quotes have valid JSONB items structure`
+          : `Found ${structureIssues} JSONB structure issues in ${totalQuotes} quotes`,
+      details: {
         total_quotes: totalQuotes,
         structure_issues: structureIssues,
-        sample_issues: issues.slice(0, 10) // First 10 issues for debugging
+        sample_issues: issues.slice(0, 10), // First 10 issues for debugging
       },
-      suggested_fix: structureIssues > 0 
-        ? 'Run HSN migration service to fix JSONB structure inconsistencies'
-        : undefined,
+      suggested_fix:
+        structureIssues > 0
+          ? 'Run HSN migration service to fix JSONB structure inconsistencies'
+          : undefined,
       data_context: { affected_records: structureIssues },
     };
   }
 
-  private async validateMigrationCompleteness(options: ValidationOptions): Promise<ValidationResult> {
+  private async validateMigrationCompleteness(
+    options: ValidationOptions,
+  ): Promise<ValidationResult> {
     const quotes = await this.getQuotesInDateRange(options.date_range);
     let incompleteCount = 0;
-    let totalQuotes = quotes.length;
+    const totalQuotes = quotes.length;
     const incompleteQuotes: string[] = [];
 
     for (const quote of quotes) {
       const isHSNMigrationComplete = quote.operational_data?.hsn_migration_completed;
-      const hasHSNItems = quote.items?.some(item => item.hsn_code);
+      const hasHSNItems = quote.items?.some((item) => item.hsn_code);
       const hasCalculationMethod = quote.operational_data?.calculation_method === 'per_item_hsn';
 
       // Quote should be migrated if it has items but isn't marked as migrated
@@ -1089,17 +1093,17 @@ class HSNDataValidationService {
       rule_id: 'migration_001',
       passed: incompleteCount === 0,
       severity: 'high' as const,
-      message: incompleteCount === 0
-        ? `All ${totalQuotes} quotes have completed HSN migration`
-        : `${incompleteCount} of ${totalQuotes} quotes have incomplete HSN migration`,
+      message:
+        incompleteCount === 0
+          ? `All ${totalQuotes} quotes have completed HSN migration`
+          : `${incompleteCount} of ${totalQuotes} quotes have incomplete HSN migration`,
       details: {
         total_quotes: totalQuotes,
         incomplete_migrations: incompleteCount,
-        incomplete_quote_ids: incompleteQuotes.slice(0, 20) // First 20 for debugging
+        incomplete_quote_ids: incompleteQuotes.slice(0, 20), // First 20 for debugging
       },
-      suggested_fix: incompleteCount > 0
-        ? 'Run HSN migration service for incomplete quotes'
-        : undefined,
+      suggested_fix:
+        incompleteCount > 0 ? 'Run HSN migration service for incomplete quotes' : undefined,
       data_context: { affected_records: incompleteCount },
     };
   }
@@ -1126,14 +1130,20 @@ class HSNDataValidationService {
 
           if (error || !hsnRecord) {
             inconsistencyCount++;
-            inconsistencies.push(`Quote ${quote.id}: item ${item.id} has invalid HSN code ${item.hsn_code}`);
+            inconsistencies.push(
+              `Quote ${quote.id}: item ${item.id} has invalid HSN code ${item.hsn_code}`,
+            );
           } else if (item.category && hsnRecord.category !== item.category) {
             inconsistencyCount++;
-            inconsistencies.push(`Quote ${quote.id}: item ${item.id} category mismatch - has '${item.category}' but HSN ${item.hsn_code} requires '${hsnRecord.category}'`);
+            inconsistencies.push(
+              `Quote ${quote.id}: item ${item.id} category mismatch - has '${item.category}' but HSN ${item.hsn_code} requires '${hsnRecord.category}'`,
+            );
           }
         } catch (error) {
           inconsistencyCount++;
-          inconsistencies.push(`Quote ${quote.id}: error validating HSN ${item.hsn_code} - ${error}`);
+          inconsistencies.push(
+            `Quote ${quote.id}: error validating HSN ${item.hsn_code} - ${error}`,
+          );
         }
       }
     }
@@ -1142,16 +1152,18 @@ class HSNDataValidationService {
       rule_id: 'hsn_004',
       passed: inconsistencyCount === 0,
       severity: 'high' as const,
-      message: inconsistencyCount === 0
-        ? 'All HSN codes are consistent with master database'
-        : `Found ${inconsistencyCount} HSN data inconsistencies`,
+      message:
+        inconsistencyCount === 0
+          ? 'All HSN codes are consistent with master database'
+          : `Found ${inconsistencyCount} HSN data inconsistencies`,
       details: {
         inconsistency_count: inconsistencyCount,
-        sample_inconsistencies: inconsistencies.slice(0, 10)
+        sample_inconsistencies: inconsistencies.slice(0, 10),
       },
-      suggested_fix: inconsistencyCount > 0
-        ? 'Update items with correct HSN codes and categories from master database'
-        : undefined,
+      suggested_fix:
+        inconsistencyCount > 0
+          ? 'Update items with correct HSN codes and categories from master database'
+          : undefined,
       data_context: { affected_records: inconsistencyCount },
     };
   }
@@ -1159,24 +1171,26 @@ class HSNDataValidationService {
   /**
    * Run comprehensive migration validation
    */
-  async validateMigrationIntegrity(options: Partial<ValidationOptions> = {}): Promise<ValidationReport> {
+  async validateMigrationIntegrity(
+    options: Partial<ValidationOptions> = {},
+  ): Promise<ValidationReport> {
     const fullOptions = { ...this.defaultOptions, ...options };
-    
+
     console.log('🔍 Starting HSN migration integrity validation...');
-    
+
     const results: ValidationResult[] = [];
-    
+
     // Run JSONB-specific validations
     results.push(await this.validateJSONBItemsStructure(fullOptions));
     results.push(await this.validateMigrationCompleteness(fullOptions));
     results.push(await this.validateHSNDataConsistency(fullOptions));
-    
+
     // Create validation report
     const report = this.generateValidationReport(results, 'migration_integrity');
     this.validationHistory.push(report);
-    
+
     console.log(`✅ Migration validation complete. Score: ${report.overall_score}%`);
-    
+
     return report;
   }
 

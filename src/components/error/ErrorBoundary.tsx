@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const { onError, component } = this.props;
-    
+
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
       console.error('Error caught by ErrorBoundary:', error);
@@ -72,12 +72,10 @@ export class ErrorBoundary extends Component<Props, State> {
     // Update error count
     const now = Date.now();
     const timeSinceLastError = now - this.state.lastErrorTime;
-    
-    this.setState(prevState => ({
+
+    this.setState((prevState) => ({
       errorInfo,
-      errorCount: timeSinceLastError < this.ERROR_RESET_TIME 
-        ? prevState.errorCount + 1 
-        : 1,
+      errorCount: timeSinceLastError < this.ERROR_RESET_TIME ? prevState.errorCount + 1 : 1,
       lastErrorTime: now,
     }));
 
@@ -93,18 +91,18 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidUpdate(prevProps: Props) {
     const { resetKeys, resetOnPropsChange } = this.props;
     const { hasError } = this.state;
-    
+
     // Reset on prop changes if enabled
     if (hasError && resetOnPropsChange && prevProps.children !== this.props.children) {
       this.resetErrorBoundary();
     }
-    
+
     // Reset on specific key changes
     if (hasError && resetKeys) {
       const hasResetKeyChanged = resetKeys.some(
-        key => prevProps[key as keyof Props] !== this.props[key as keyof Props]
+        (key) => prevProps[key as keyof Props] !== this.props[key as keyof Props],
       );
-      
+
       if (hasResetKeyChanged) {
         this.resetErrorBoundary();
       }
@@ -121,7 +119,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.resetTimeoutId) {
       clearTimeout(this.resetTimeoutId);
     }
-    
+
     this.resetTimeoutId = setTimeout(() => {
       this.resetErrorBoundary();
     }, this.ERROR_RESET_TIME);
@@ -132,7 +130,7 @@ export class ErrorBoundary extends Component<Props, State> {
       clearTimeout(this.resetTimeoutId);
       this.resetTimeoutId = null;
     }
-    
+
     this.setState({
       hasError: false,
       error: null,
@@ -167,13 +165,13 @@ export class ErrorBoundary extends Component<Props, State> {
                     <code className="text-xs">{error.message}</code>
                   </AlertDescription>
                 </Alert>
-                
+
                 <div className="flex gap-2">
                   <Button onClick={() => window.location.reload()} variant="default">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reload Page
                   </Button>
-                  <Button onClick={() => window.location.href = '/'} variant="outline">
+                  <Button onClick={() => (window.location.href = '/')} variant="outline">
                     <Home className="mr-2 h-4 w-4" />
                     Go Home
                   </Button>
@@ -218,15 +216,9 @@ export class ErrorBoundary extends Component<Props, State> {
             <CardContent>
               <div className="space-y-3">
                 <Alert>
-                  <AlertDescription className="text-xs font-mono">
-                    {error.message}
-                  </AlertDescription>
+                  <AlertDescription className="text-xs font-mono">{error.message}</AlertDescription>
                 </Alert>
-                <Button 
-                  onClick={this.resetErrorBoundary} 
-                  variant="outline"
-                  className="w-full"
-                >
+                <Button onClick={this.resetErrorBoundary} variant="outline" className="w-full">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Try Again
                 </Button>
@@ -244,7 +236,7 @@ export class ErrorBoundary extends Component<Props, State> {
 // HOC for easy component wrapping
 export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  errorBoundaryProps?: Omit<Props, 'children'>
+  errorBoundaryProps?: Omit<Props, 'children'>,
 ) {
   const WrappedComponent = (props: P) => (
     <ErrorBoundary {...errorBoundaryProps}>
@@ -253,6 +245,6 @@ export function withErrorBoundary<P extends object>(
   );
 
   WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 }

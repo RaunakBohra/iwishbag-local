@@ -52,7 +52,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { currencyService, type Currency } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import type { Currency } from '@/services/CurrencyService';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { H1, Body, BodySmall } from '@/components/ui/typography';
 
@@ -229,7 +230,7 @@ const Profile = () => {
     const loadCurrencies = async () => {
       try {
         setCurrencyLoading(true);
-        const currencies = await currencyService.getAllCurrencies();
+        const currencies = await optimizedCurrencyService.getAllCurrencies();
         setAvailableCurrencies(currencies);
       } catch (error) {
         console.error('Error loading currencies:', error);
@@ -272,7 +273,7 @@ const Profile = () => {
   const handleCurrencyChange = async (currencyCode: string) => {
     try {
       // Get the country associated with this currency
-      const countryCode = await currencyService.getCountryForCurrency(currencyCode);
+      const countryCode = await optimizedCurrencyService.getCountryForCurrency(currencyCode);
 
       // Update country in the form (currency is already updated by field.onChange)
       if (countryCode) {
@@ -301,7 +302,7 @@ const Profile = () => {
 
     // Use CurrencyService fallback instead of hardcoded values
     try {
-      return currencyService.getCurrencyName(currencyCode);
+      return optimizedCurrencyService.getCurrencyName(currencyCode);
     } catch (error) {
       console.warn('Failed to get currency name from service:', error);
       return currencyCode;

@@ -1,16 +1,16 @@
 /**
  * SMART METHOD CARDS
- * 
+ *
  * Redesigned tax method selection using card-based interface with
  * improved visual hierarchy, clear comparisons, and contextual recommendations.
  * Replaces complex tabs with intuitive, scannable method options.
- * 
+ *
  * Design Principles:
  * - Visual hierarchy: Important info stands out
  * - Comparison-first: Easy to compare methods side-by-side
  * - Contextual guidance: Smart recommendations and explanations
  * - Progressive disclosure: Basic info first, details on demand
- * 
+ *
  * Features:
  * - Side-by-side method comparison
  * - Visual confidence indicators
@@ -26,13 +26,13 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { 
-  Calculator, 
-  Database, 
-  Settings, 
+import {
+  Calculator,
+  Database,
+  Settings,
   Zap,
-  TrendingUp, 
-  AlertTriangle, 
+  TrendingUp,
+  AlertTriangle,
   CheckCircle,
   ChevronDown,
   ChevronUp,
@@ -40,7 +40,7 @@ import {
   Target,
   Clock,
   BarChart3,
-  Lightbulb
+  Lightbulb,
 } from 'lucide-react';
 import { LayoutCard, Flex, Stack, Heading, Text, Grid } from '@/components/ui/layout-system';
 import { useToast } from '@/hooks/use-toast';
@@ -84,10 +84,10 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
   currentMethod,
   onMethodChange,
   isLoading = false,
-  className = ''
+  className = '',
 }) => {
   const { toast } = useToast();
-  
+
   // State
   const [methods, setMethods] = useState<MethodOption[]>([]);
   const [expandedMethod, setExpandedMethod] = useState<string | null>(null);
@@ -99,12 +99,12 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
    */
   const analyzeMethodOptions = async () => {
     setIsAnalyzing(true);
-    
+
     try {
       // Get method comparison data
       const comparison = await unifiedTaxFallbackService.getCalculationMethodComparison(
         originCountry,
-        destinationCountry
+        destinationCountry,
       );
 
       // Build method options with real data
@@ -113,7 +113,8 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
           id: 'auto',
           name: 'Auto (Intelligent)',
           shortDescription: 'System chooses the best method automatically',
-          fullDescription: 'Intelligent selection between HSN and fallback based on data availability, confidence scores, and historical performance. Adapts automatically as data improves.',
+          fullDescription:
+            'Intelligent selection between HSN and fallback based on data availability, confidence scores, and historical performance. Adapts automatically as data improves.',
           icon: <Zap className="h-5 w-5" />,
           confidence: 0.95,
           status: 'recommended',
@@ -121,27 +122,28 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
             'Always uses the most accurate method available',
             'Adapts as data quality improves',
             'No manual configuration needed',
-            'Best overall accuracy across different scenarios'
+            'Best overall accuracy across different scenarios',
           ],
           cons: [
             'Less predictable which specific method is used',
-            'May switch methods between calculations'
+            'May switch methods between calculations',
           ],
           costImpact: {
             estimatedChange: 0, // Baseline
-            savings: 0
+            savings: 0,
           },
           availability: {
             dataAvailable: true,
             requirements: [],
-            missingRequirements: []
-          }
+            missingRequirements: [],
+          },
         },
         {
           id: 'hsn_only',
           name: 'HSN Per-Item',
           shortDescription: 'Precise per-item calculation using HSN codes',
-          fullDescription: 'Calculate taxes for each item individually using HSN classification codes with minimum valuations and currency conversion. Most accurate when HSN data is complete.',
+          fullDescription:
+            'Calculate taxes for each item individually using HSN classification codes with minimum valuations and currency conversion. Most accurate when HSN data is complete.',
           icon: <BarChart3 className="h-5 w-5" />,
           confidence: comparison.hsn_available ? 0.92 : 0.25,
           status: comparison.hsn_available ? 'optimal' : 'limited',
@@ -149,28 +151,29 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
             'Most accurate per-item tax rates',
             'Supports minimum valuation rules',
             'Currency-aware calculations',
-            'Detailed item-level breakdown'
+            'Detailed item-level breakdown',
           ],
           cons: [
             'Requires HSN codes for all items',
             'More complex calculations',
-            'May be slower than other methods'
+            'May be slower than other methods',
           ],
           costImpact: {
             estimatedChange: comparison.hsn_available ? -2.3 : 0, // 2.3% potential savings
-            savings: comparison.hsn_available ? 45.50 : 0 // Example savings
+            savings: comparison.hsn_available ? 45.5 : 0, // Example savings
           },
           availability: {
             dataAvailable: comparison.hsn_available,
             requirements: ['HSN codes assigned to items', 'HSN master data'],
-            missingRequirements: comparison.hsn_available ? [] : ['HSN codes for items']
-          }
+            missingRequirements: comparison.hsn_available ? [] : ['HSN codes for items'],
+          },
         },
         {
           id: 'legacy_fallback',
           name: 'Route-Based',
           shortDescription: 'Traditional percentage-based calculation',
-          fullDescription: 'Uses shipping route and country settings to calculate taxes as percentages of item values. Fast and reliable but less precise than per-item methods.',
+          fullDescription:
+            'Uses shipping route and country settings to calculate taxes as percentages of item values. Fast and reliable but less precise than per-item methods.',
           icon: <Calculator className="h-5 w-5" />,
           confidence: comparison.unified_data.confidence_score,
           status: comparison.legacy_available ? 'available' : 'limited',
@@ -178,28 +181,29 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
             'Always available',
             'Fast calculations',
             'Uses established shipping routes',
-            'Consistent results'
+            'Consistent results',
           ],
           cons: [
             'Less accurate than per-item methods',
             'No minimum valuation support',
-            'Generic tax rates for all items'
+            'Generic tax rates for all items',
           ],
           costImpact: {
             estimatedChange: 1.8, // 1.8% potential increase
-            savings: -28.75 // Potential cost increase
+            savings: -28.75, // Potential cost increase
           },
           availability: {
             dataAvailable: comparison.legacy_available,
             requirements: ['Shipping route configured', 'Country tax settings'],
-            missingRequirements: comparison.legacy_available ? [] : ['Route configuration']
-          }
+            missingRequirements: comparison.legacy_available ? [] : ['Route configuration'],
+          },
         },
         {
           id: 'admin_choice',
           name: 'Manual Control',
           shortDescription: 'Full admin control with hybrid approach',
-          fullDescription: 'Manual method selection with hybrid calculation approach. Uses HSN where available and falls back to route data otherwise. Best for experienced admins who understand tax implications.',
+          fullDescription:
+            'Manual method selection with hybrid calculation approach. Uses HSN where available and falls back to route data otherwise. Best for experienced admins who understand tax implications.',
           icon: <Settings className="h-5 w-5" />,
           confidence: 0.85,
           status: 'available',
@@ -207,34 +211,33 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
             'Full control over method selection',
             'Hybrid approach benefits',
             'Can override automatic decisions',
-            'Complete audit trail'
+            'Complete audit trail',
           ],
           cons: [
             'Requires tax knowledge',
             'Manual intervention needed',
-            'May be inconsistent over time'
+            'May be inconsistent over time',
           ],
           costImpact: {
             estimatedChange: 0.5, // 0.5% variance
-            savings: -8.25
+            savings: -8.25,
           },
           availability: {
             dataAvailable: true,
             requirements: ['Admin tax knowledge'],
-            missingRequirements: []
-          }
-        }
+            missingRequirements: [],
+          },
+        },
       ];
 
       setMethods(methodOptions);
       setRecommendedMethod(comparison.recommended_method || 'auto');
-
     } catch (error) {
       console.error('Method analysis error:', error);
       toast({
-        title: "Analysis Error",
-        description: "Failed to analyze method options. Using defaults.",
-        variant: "destructive"
+        title: 'Analysis Error',
+        description: 'Failed to analyze method options. Using defaults.',
+        variant: 'destructive',
       });
     } finally {
       setIsAnalyzing(false);
@@ -245,13 +248,13 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
    * Handle method selection with confirmation for significant changes
    */
   const handleMethodSelect = async (methodId: string) => {
-    const method = methods.find(m => m.id === methodId);
+    const method = methods.find((m) => m.id === methodId);
     if (!method) return;
 
     // Show confirmation for methods with significant cost impact
     if (Math.abs(method.costImpact.estimatedChange) > 3) {
       const proceed = window.confirm(
-        `Switching to ${method.name} may change costs by ${method.costImpact.estimatedChange > 0 ? '+' : ''}${method.costImpact.estimatedChange.toFixed(1)}%. Continue?`
+        `Switching to ${method.name} may change costs by ${method.costImpact.estimatedChange > 0 ? '+' : ''}${method.costImpact.estimatedChange.toFixed(1)}%. Continue?`,
       );
       if (!proceed) return;
     }
@@ -261,20 +264,19 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
         method_analysis: method,
         confidence_score: method.confidence,
         cost_impact: method.costImpact,
-        selected_via: 'SmartMethodCards'
+        selected_via: 'SmartMethodCards',
       });
 
       toast({
-        title: "Method Updated",
+        title: 'Method Updated',
         description: `Switched to ${method.name}. Recalculating taxes...`,
       });
-
     } catch (error) {
       console.error('Method selection error:', error);
       toast({
-        title: "Update Failed",
-        description: "Failed to update tax method. Please try again.",
-        variant: "destructive"
+        title: 'Update Failed',
+        description: 'Failed to update tax method. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -288,7 +290,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
       optimal: 'border-green-200 bg-green-50',
       available: 'border-gray-200 bg-white',
       limited: 'border-yellow-200 bg-yellow-50',
-      unavailable: 'border-red-200 bg-red-50'
+      unavailable: 'border-red-200 bg-red-50',
     };
     return styles[status];
   };
@@ -299,7 +301,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
       optimal: <Badge className="bg-green-100 text-green-800">Optimal</Badge>,
       available: <Badge variant="outline">Available</Badge>,
       limited: <Badge className="bg-yellow-100 text-yellow-800">Limited</Badge>,
-      unavailable: <Badge variant="destructive">Unavailable</Badge>
+      unavailable: <Badge variant="destructive">Unavailable</Badge>,
     };
     return badges[status];
   };
@@ -308,7 +310,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -336,17 +338,20 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
     <div className={`space-y-6 ${className}`}>
       {/* Header with recommendation */}
       <Stack spacing="sm">
-        <Heading level={3} size="lg">Tax Calculation Methods</Heading>
+        <Heading level={3} size="lg">
+          Tax Calculation Methods
+        </Heading>
         <Text color="muted">
           Choose how taxes should be calculated for {originCountry} → {destinationCountry}
         </Text>
-        
+
         {recommendedMethod && (
           <Alert>
             <Lightbulb className="h-4 w-4" />
             <AlertDescription>
-              <strong>Recommendation:</strong> {methods.find(m => m.id === recommendedMethod)?.name} 
-              {' '}is recommended for this route based on data availability and accuracy.
+              <strong>Recommendation:</strong>{' '}
+              {methods.find((m) => m.id === recommendedMethod)?.name} is recommended for this route
+              based on data availability and accuracy.
             </AlertDescription>
           </Alert>
         )}
@@ -357,7 +362,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
         {methods.map((method) => {
           const isSelected = currentMethod === method.id;
           const isExpanded = expandedMethod === method.id;
-          
+
           return (
             <LayoutCard
               key={method.id}
@@ -373,12 +378,18 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
                 {/* Header */}
                 <Flex justify="between" align="start">
                   <Flex align="center" gap="sm">
-                    <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
+                    <div
+                      className={`p-2 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
+                    >
                       {method.icon}
                     </div>
                     <Stack spacing="xs">
-                      <Heading level={4} size="base">{method.name}</Heading>
-                      <Text size="sm" color="muted">{method.shortDescription}</Text>
+                      <Heading level={4} size="base">
+                        {method.name}
+                      </Heading>
+                      <Text size="sm" color="muted">
+                        {method.shortDescription}
+                      </Text>
                     </Stack>
                   </Flex>
                   {isSelected && <CheckCircle className="h-5 w-5 text-blue-600" />}
@@ -399,12 +410,16 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
                 {method.costImpact.estimatedChange !== 0 && (
                   <Flex align="center" gap="sm">
                     <DollarSign className="h-4 w-4 text-gray-500" />
-                    <Text size="sm" color={method.costImpact.estimatedChange > 0 ? 'muted' : 'accent'}>
+                    <Text
+                      size="sm"
+                      color={method.costImpact.estimatedChange > 0 ? 'muted' : 'accent'}
+                    >
                       {method.costImpact.estimatedChange > 0 ? '+' : ''}
                       {method.costImpact.estimatedChange.toFixed(1)}% impact
                       {method.costImpact.savings !== 0 && (
                         <span className="ml-2">
-                          ({method.costImpact.savings > 0 ? 'saves' : 'costs'} {formatCurrency(Math.abs(method.costImpact.savings))})
+                          ({method.costImpact.savings > 0 ? 'saves' : 'costs'}{' '}
+                          {formatCurrency(Math.abs(method.costImpact.savings))})
                         </span>
                       )}
                     </Text>
@@ -412,19 +427,30 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
                 )}
 
                 {/* Expandable Details */}
-                <Collapsible open={isExpanded} onOpenChange={() => setExpandedMethod(isExpanded ? null : method.id)}>
+                <Collapsible
+                  open={isExpanded}
+                  onOpenChange={() => setExpandedMethod(isExpanded ? null : method.id)}
+                >
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-full justify-between p-2">
                       <span>View Details</span>
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
                     </Button>
                   </CollapsibleTrigger>
-                  
+
                   <CollapsibleContent className="space-y-3 pt-3">
-                    <Text size="sm" color="secondary">{method.fullDescription}</Text>
-                    
+                    <Text size="sm" color="secondary">
+                      {method.fullDescription}
+                    </Text>
+
                     <div className="space-y-2">
-                      <Text size="sm" weight="medium" color="primary">Advantages:</Text>
+                      <Text size="sm" weight="medium" color="primary">
+                        Advantages:
+                      </Text>
                       <ul className="text-sm text-green-700 space-y-1">
                         {method.pros.slice(0, 2).map((pro, index) => (
                           <li key={index} className="flex items-start">
@@ -436,7 +462,9 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                      <Text size="sm" weight="medium" color="primary">Considerations:</Text>
+                      <Text size="sm" weight="medium" color="primary">
+                        Considerations:
+                      </Text>
                       <ul className="text-sm text-yellow-700 space-y-1">
                         {method.cons.slice(0, 2).map((con, index) => (
                           <li key={index} className="flex items-start">
@@ -451,7 +479,8 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                          <strong>Missing:</strong> {method.availability.missingRequirements.join(', ')}
+                          <strong>Missing:</strong>{' '}
+                          {method.availability.missingRequirements.join(', ')}
                         </AlertDescription>
                       </Alert>
                     )}

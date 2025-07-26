@@ -1,6 +1,6 @@
 /**
  * Dual Weight Suggestions Component
- * 
+ *
  * Displays both HSN and ML weight suggestions side by side,
  * allowing admins to choose which weight to use for the quote.
  */
@@ -9,15 +9,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Tags, 
-  Sparkles, 
-  Scale, 
-  Package,
-  ArrowRight,
-  AlertCircle,
-  CheckCircle
-} from 'lucide-react';
+import { Tags, Sparkles, Scale, Package, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DualWeightSuggestionsProps {
@@ -45,7 +37,7 @@ export const DualWeightSuggestions: React.FC<DualWeightSuggestionsProps> = ({
   mlWeight,
   currentWeight,
   onSelectWeight,
-  isLoading = false
+  isLoading = false,
 }) => {
   if (!hsnWeight && !mlWeight) return null;
 
@@ -64,57 +56,57 @@ export const DualWeightSuggestions: React.FC<DualWeightSuggestionsProps> = ({
         {hsnWeight && (
           <Card
             className={cn(
-              "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
-              "border border-gray-200 bg-white",
-              isHSNSelected 
-                ? "border-teal-500 bg-teal-50 shadow-sm" 
-                : "hover:border-teal-300 hover:bg-gray-50"
+              'p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+              'border border-gray-200 bg-white',
+              isHSNSelected
+                ? 'border-teal-500 bg-teal-50 shadow-sm'
+                : 'hover:border-teal-300 hover:bg-gray-50',
             )}
             onClick={() => onSelectWeight(hsnWeight.average, 'hsn')}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 flex-1">
-                <div className={cn(
-                  "p-2.5 rounded-lg flex-shrink-0",
-                  isHSNSelected ? "bg-teal-100" : "bg-gray-100"
-                )}>
-                  <Tags className={cn(
-                    "w-5 h-5",
-                    isHSNSelected ? "text-teal-600" : "text-gray-500"
-                  )} />
+                <div
+                  className={cn(
+                    'p-2.5 rounded-lg flex-shrink-0',
+                    isHSNSelected ? 'bg-teal-100' : 'bg-gray-100',
+                  )}
+                >
+                  <Tags
+                    className={cn('w-5 h-5', isHSNSelected ? 'text-teal-600' : 'text-gray-500')}
+                  />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-2">
                     <h4 className="font-semibold text-gray-900">HSN Database</h4>
-                    <Badge variant="secondary" className="text-xs bg-emerald-100 text-emerald-800 border-emerald-200">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-emerald-100 text-emerald-800 border-emerald-200"
+                    >
                       Official Data
                     </Badge>
-                    {isHSNSelected && (
-                      <CheckCircle className="w-4 h-4 text-teal-600" />
-                    )}
+                    {isHSNSelected && <CheckCircle className="w-4 h-4 text-teal-600" />}
                   </div>
-                  
+
                   <div className="flex items-center space-x-4 mb-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      {hsnWeight.average} kg
-                    </span>
+                    <span className="text-lg font-bold text-gray-900">{hsnWeight.average} kg</span>
                     <span className="text-sm text-gray-600">
                       Range: {hsnWeight.min}-{hsnWeight.max} kg
                     </span>
                   </div>
-                  
+
                   {hsnWeight.packaging && hsnWeight.packaging > 0 && (
                     <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
                       <Package className="w-4 h-4" />
                       <span>+{hsnWeight.packaging} kg packaging weight</span>
                     </div>
                   )}
-                  
+
                   <div className="flex items-center space-x-2">
                     <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-teal-600 h-2 rounded-full transition-all duration-300" 
+                      <div
+                        className="bg-teal-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${hsnWeight.confidence * 100}%` }}
                       />
                     </div>
@@ -124,11 +116,13 @@ export const DualWeightSuggestions: React.FC<DualWeightSuggestionsProps> = ({
                   </div>
                 </div>
               </div>
-              
-              <ArrowRight className={cn(
-                "w-5 h-5 ml-3 flex-shrink-0",
-                isHSNSelected ? "text-teal-600" : "text-gray-400"
-              )} />
+
+              <ArrowRight
+                className={cn(
+                  'w-5 h-5 ml-3 flex-shrink-0',
+                  isHSNSelected ? 'text-teal-600' : 'text-gray-400',
+                )}
+              />
             </div>
           </Card>
         )}
@@ -137,64 +131,57 @@ export const DualWeightSuggestions: React.FC<DualWeightSuggestionsProps> = ({
         {mlWeight && (
           <Card
             className={cn(
-              "p-4 cursor-pointer transition-all duration-200 hover:shadow-md",
-              "border border-gray-200 bg-white",
-              isMLSelected 
-                ? "border-teal-500 bg-teal-50 shadow-sm" 
-                : "hover:border-teal-300 hover:bg-gray-50"
+              'p-4 cursor-pointer transition-all duration-200 hover:shadow-md',
+              'border border-gray-200 bg-white',
+              isMLSelected
+                ? 'border-teal-500 bg-teal-50 shadow-sm'
+                : 'hover:border-teal-300 hover:bg-gray-50',
             )}
             onClick={() => onSelectWeight(mlWeight.estimated, 'ml')}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 flex-1">
-                <div className={cn(
-                  "p-2.5 rounded-lg flex-shrink-0",
-                  isMLSelected ? "bg-teal-100" : "bg-gray-100"
-                )}>
-                  <Sparkles className={cn(
-                    "w-5 h-5",
-                    isMLSelected ? "text-teal-600" : "text-gray-500"
-                  )} />
+                <div
+                  className={cn(
+                    'p-2.5 rounded-lg flex-shrink-0',
+                    isMLSelected ? 'bg-teal-100' : 'bg-gray-100',
+                  )}
+                >
+                  <Sparkles
+                    className={cn('w-5 h-5', isMLSelected ? 'text-teal-600' : 'text-gray-500')}
+                  />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-2">
                     <h4 className="font-semibold text-gray-900">AI Estimation</h4>
-                    <Badge 
+                    <Badge
                       variant="secondary"
                       className={cn(
-                        "text-xs",
-                        mlWeight.confidence > 0.7 
-                          ? "bg-blue-100 text-blue-800 border-blue-200" 
-                          : "bg-amber-100 text-amber-800 border-amber-200"
+                        'text-xs',
+                        mlWeight.confidence > 0.7
+                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                          : 'bg-amber-100 text-amber-800 border-amber-200',
                       )}
                     >
-                      {mlWeight.confidence > 0.7 ? "High" : "Medium"} Confidence
+                      {mlWeight.confidence > 0.7 ? 'High' : 'Medium'} Confidence
                     </Badge>
-                    {isMLSelected && (
-                      <CheckCircle className="w-4 h-4 text-teal-600" />
-                    )}
+                    {isMLSelected && <CheckCircle className="w-4 h-4 text-teal-600" />}
                   </div>
-                  
+
                   <div className="flex items-center space-x-4 mb-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      {mlWeight.estimated} kg
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      ML Analyzed
-                    </span>
+                    <span className="text-lg font-bold text-gray-900">{mlWeight.estimated} kg</span>
+                    <span className="text-sm text-gray-600">ML Analyzed</span>
                   </div>
-                  
+
                   {mlWeight.reasoning && mlWeight.reasoning.length > 0 && (
-                    <div className="text-sm text-gray-600 mb-2 italic">
-                      {mlWeight.reasoning[0]}
-                    </div>
+                    <div className="text-sm text-gray-600 mb-2 italic">{mlWeight.reasoning[0]}</div>
                   )}
-                  
+
                   <div className="flex items-center space-x-2">
                     <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-teal-600 h-2 rounded-full transition-all duration-300" 
+                      <div
+                        className="bg-teal-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${mlWeight.confidence * 100}%` }}
                       />
                     </div>
@@ -204,11 +191,13 @@ export const DualWeightSuggestions: React.FC<DualWeightSuggestionsProps> = ({
                   </div>
                 </div>
               </div>
-              
-              <ArrowRight className={cn(
-                "w-5 h-5 ml-3 flex-shrink-0",
-                isMLSelected ? "text-teal-600" : "text-gray-400"
-              )} />
+
+              <ArrowRight
+                className={cn(
+                  'w-5 h-5 ml-3 flex-shrink-0',
+                  isMLSelected ? 'text-teal-600' : 'text-gray-400',
+                )}
+              />
             </div>
           </Card>
         )}
@@ -221,17 +210,20 @@ export const DualWeightSuggestions: React.FC<DualWeightSuggestionsProps> = ({
           <div className="text-sm text-slate-700">
             {Math.abs(hsnWeight.average - mlWeight.estimated) > 0.5 ? (
               <>
-                <span className="font-semibold text-slate-900">Significant difference detected.</span>
+                <span className="font-semibold text-slate-900">
+                  Significant difference detected.
+                </span>
                 <br />
-                HSN database suggests <strong>{hsnWeight.average}kg</strong> while AI estimates <strong>{mlWeight.estimated}kg</strong>. 
-                Consider reviewing the product details or using HSN data for accuracy.
+                HSN database suggests <strong>{hsnWeight.average}kg</strong> while AI estimates{' '}
+                <strong>{mlWeight.estimated}kg</strong>. Consider reviewing the product details or
+                using HSN data for accuracy.
               </>
             ) : (
               <>
                 <span className="font-semibold text-slate-900">Estimates are aligned.</span>
                 <br />
-                Both sources suggest similar weights ({hsnWeight.average}kg vs {mlWeight.estimated}kg), 
-                indicating reliable weight estimates.
+                Both sources suggest similar weights ({hsnWeight.average}kg vs {mlWeight.estimated}
+                kg), indicating reliable weight estimates.
               </>
             )}
           </div>

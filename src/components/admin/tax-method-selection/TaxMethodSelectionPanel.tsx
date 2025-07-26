@@ -1,10 +1,10 @@
 /**
  * TAX METHOD SELECTION PANEL
- * 
+ *
  * Comprehensive admin interface for managing tax calculation methods across
  * the entire 2-tier tax system. Provides detailed analysis, bulk operations,
  * and advanced configuration options beyond the basic DualCalculationMethodSelector.
- * 
+ *
  * Features:
  * - Detailed method analysis with cost comparisons
  * - Bulk method selection for multiple quotes
@@ -24,12 +24,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Calculator, 
-  Database, 
-  Settings, 
-  TrendingUp, 
-  AlertTriangle, 
+import {
+  Calculator,
+  Database,
+  Settings,
+  TrendingUp,
+  AlertTriangle,
   CheckCircle,
   Info,
   Clock,
@@ -40,7 +40,7 @@ import {
   Zap,
   Shield,
   Activity,
-  RefreshCw
+  RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,25 +103,27 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
   showBulkOperations = false,
   showHistoricalAnalysis = true,
   showAdvancedConfig = true,
-  enableAutoOptimization = false
+  enableAutoOptimization = false,
 }) => {
   const { toast } = useToast();
-  
+
   // Core state
   const [selectedMethod, setSelectedMethod] = useState<string>(currentMethod);
   const [methodAnalysis, setMethodAnalysis] = useState<TaxMethodAnalysis[]>([]);
   const [routeAnalysis, setRouteAnalysis] = useState<RouteAnalysis[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastAnalysisUpdate, setLastAnalysisUpdate] = useState<Date>(new Date());
-  
+
   // Advanced features state
   const [autoOptimizationEnabled, setAutoOptimizationEnabled] = useState(enableAutoOptimization);
   const [bulkSelectionMode, setBulkSelectionMode] = useState(false);
   const [selectedQuotes, setSelectedQuotes] = useState<string[]>([]);
   const [analysisTimeRange, setAnalysisTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
-  
+
   // Panel view state
-  const [activeTab, setActiveTab] = useState<'method-selector' | 'analysis' | 'historical' | 'bulk-ops' | 'config'>('method-selector');
+  const [activeTab, setActiveTab] = useState<
+    'method-selector' | 'analysis' | 'historical' | 'bulk-ops' | 'config'
+  >('method-selector');
 
   /**
    * Comprehensive method analysis across all calculation options
@@ -133,21 +135,20 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
     }
 
     setIsAnalyzing(true);
-    
+
     try {
       // Get method comparison data
       const comparison = await unifiedTaxFallbackService.getCalculationMethodComparison(
         originCountry,
-        destinationCountry
+        destinationCountry,
       );
 
       // Analyze historical performance for each method
-      const { data: historicalData } = await supabase
-        .rpc('analyze_tax_method_performance', {
-          p_origin_country: originCountry,
-          p_destination_country: destinationCountry,
-          p_time_range_days: parseInt(analysisTimeRange.replace('d', ''))
-        });
+      const { data: historicalData } = await supabase.rpc('analyze_tax_method_performance', {
+        p_origin_country: originCountry,
+        p_destination_country: destinationCountry,
+        p_time_range_days: parseInt(analysisTimeRange.replace('d', '')),
+      });
 
       // Build comprehensive analysis
       const methodAnalysisData: TaxMethodAnalysis[] = [
@@ -163,7 +164,7 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
           success_rate: historicalData?.auto?.success_rate || 0.95,
           admin_override_rate: historicalData?.auto?.override_rate || 0.05,
           customer_approval_rate: historicalData?.auto?.approval_rate || 0.89,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
         },
         {
           method_id: 'hsn_only',
@@ -177,7 +178,7 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
           success_rate: historicalData?.hsn_only?.success_rate || 0.88,
           admin_override_rate: historicalData?.hsn_only?.override_rate || 0.12,
           customer_approval_rate: historicalData?.hsn_only?.approval_rate || 0.91,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
         },
         {
           method_id: 'legacy_fallback',
@@ -191,7 +192,7 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
           success_rate: historicalData?.legacy_fallback?.success_rate || 0.82,
           admin_override_rate: historicalData?.legacy_fallback?.override_rate || 0.18,
           customer_approval_rate: historicalData?.legacy_fallback?.approval_rate || 0.85,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
         },
         {
           method_id: 'admin_choice',
@@ -205,8 +206,8 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
           success_rate: historicalData?.admin_choice?.success_rate || 0.91,
           admin_override_rate: 1.0, // Always admin-driven
           customer_approval_rate: historicalData?.admin_choice?.approval_rate || 0.88,
-          last_updated: new Date().toISOString()
-        }
+          last_updated: new Date().toISOString(),
+        },
       ];
 
       setMethodAnalysis(methodAnalysisData);
@@ -222,18 +223,17 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
         hsn_availability: comparison.hsn_available,
         legacy_data_quality: comparison.unified_data.confidence_score,
         recommended_method: comparison.recommended_method,
-        cost_savings_potential: historicalData?.cost_savings_potential || 0
+        cost_savings_potential: historicalData?.cost_savings_potential || 0,
       };
 
       setRouteAnalysis([routeAnalysisData]);
       setLastAnalysisUpdate(new Date());
-
     } catch (error) {
       console.error('TaxMethodSelectionPanel: Analysis error:', error);
       toast({
-        title: "Analysis Error",
-        description: "Failed to analyze tax calculation methods. Using cached data.",
-        variant: "destructive"
+        title: 'Analysis Error',
+        description: 'Failed to analyze tax calculation methods. Using cached data.',
+        variant: 'destructive',
       });
     } finally {
       setIsAnalyzing(false);
@@ -262,11 +262,11 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
           p_change_details: {
             previous_method: selectedMethod,
             route: `${originCountry} → ${destinationCountry}`,
-            analysis_data: methodAnalysis.find(m => m.method_id === method),
+            analysis_data: methodAnalysis.find((m) => m.method_id === method),
             panel_metadata: metadata,
             timestamp: new Date().toISOString(),
-            ui_component: 'TaxMethodSelectionPanel'
-          }
+            ui_component: 'TaxMethodSelectionPanel',
+          },
         });
       }
 
@@ -275,20 +275,20 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
         ...metadata,
         analysis_performed: true,
         panel_selection: true,
-        confidence_score: methodAnalysis.find(m => m.method_id === method)?.confidence_score || 0.5
+        confidence_score:
+          methodAnalysis.find((m) => m.method_id === method)?.confidence_score || 0.5,
       });
 
       toast({
-        title: "Method Updated",
-        description: `Tax calculation method changed to ${methodAnalysis.find(m => m.method_id === method)?.method_name || method}`,
+        title: 'Method Updated',
+        description: `Tax calculation method changed to ${methodAnalysis.find((m) => m.method_id === method)?.method_name || method}`,
       });
-
     } catch (error) {
       console.error('TaxMethodSelectionPanel: Method change error:', error);
       toast({
-        title: "Update Failed",
-        description: "Failed to update calculation method. Please try again.",
-        variant: "destructive"
+        title: 'Update Failed',
+        description: 'Failed to update calculation method. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -299,9 +299,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
   const handleBulkMethodUpdate = async (method: string) => {
     if (!selectedQuotes.length) {
       toast({
-        title: "No Quotes Selected",
-        description: "Please select quotes to update before proceeding.",
-        variant: "destructive"
+        title: 'No Quotes Selected',
+        description: 'Please select quotes to update before proceeding.',
+        variant: 'destructive',
       });
       return;
     }
@@ -311,25 +311,24 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
         p_quote_ids: selectedQuotes,
         p_admin_id: adminId,
         p_calculation_method: method,
-        p_change_reason: `Bulk update via TaxMethodSelectionPanel`
+        p_change_reason: `Bulk update via TaxMethodSelectionPanel`,
       });
 
       if (error) throw error;
 
       toast({
-        title: "Bulk Update Complete",
+        title: 'Bulk Update Complete',
         description: `Updated ${selectedQuotes.length} quotes to use ${method} method.`,
       });
 
       setSelectedQuotes([]);
       setBulkSelectionMode(false);
-
     } catch (error) {
       console.error('TaxMethodSelectionPanel: Bulk update error:', error);
       toast({
-        title: "Bulk Update Failed",
-        description: "Failed to update selected quotes. Please try again.",
-        variant: "destructive"
+        title: 'Bulk Update Failed',
+        description: 'Failed to update selected quotes. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -343,8 +342,12 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
     }
 
     const bestMethod = methodAnalysis.reduce((best, current) => {
-      const bestScore = (best.estimated_accuracy * 0.4) + (best.success_rate * 0.3) + (best.customer_approval_rate * 0.3);
-      const currentScore = (current.estimated_accuracy * 0.4) + (current.success_rate * 0.3) + (current.customer_approval_rate * 0.3);
+      const bestScore =
+        best.estimated_accuracy * 0.4 + best.success_rate * 0.3 + best.customer_approval_rate * 0.3;
+      const currentScore =
+        current.estimated_accuracy * 0.4 +
+        current.success_rate * 0.3 +
+        current.customer_approval_rate * 0.3;
       return currentScore > bestScore ? current : best;
     });
 
@@ -352,17 +355,17 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
       await handleMethodChange(bestMethod.method_id, {
         auto_optimized: true,
         optimization_score: bestMethod.estimated_accuracy,
-        optimization_reason: `Auto-selected based on ${bestMethod.estimated_accuracy.toFixed(1)}% accuracy and ${bestMethod.success_rate.toFixed(1)}% success rate`
+        optimization_reason: `Auto-selected based on ${bestMethod.estimated_accuracy.toFixed(1)}% accuracy and ${bestMethod.success_rate.toFixed(1)}% success rate`,
       });
 
       toast({
-        title: "Auto-Optimization Complete",
+        title: 'Auto-Optimization Complete',
         description: `Switched to ${bestMethod.method_name} based on performance analysis.`,
       });
     } else {
       toast({
-        title: "Already Optimized",
-        description: "Current method is already the best performing option.",
+        title: 'Already Optimized',
+        description: 'Current method is already the best performing option.',
       });
     }
   };
@@ -379,9 +382,7 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
       {/* Header with controls */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Tax Method Selection Panel
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900">Tax Method Selection Panel</h2>
           <p className="text-sm text-gray-600">
             Comprehensive tax calculation method management and analysis
           </p>
@@ -417,15 +418,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="method-selector">Method Selection</TabsTrigger>
           <TabsTrigger value="analysis">Performance Analysis</TabsTrigger>
-          {showHistoricalAnalysis && (
-            <TabsTrigger value="historical">Historical Data</TabsTrigger>
-          )}
-          {showBulkOperations && (
-            <TabsTrigger value="bulk-ops">Bulk Operations</TabsTrigger>
-          )}
-          {showAdvancedConfig && (
-            <TabsTrigger value="config">Configuration</TabsTrigger>
-          )}
+          {showHistoricalAnalysis && <TabsTrigger value="historical">Historical Data</TabsTrigger>}
+          {showBulkOperations && <TabsTrigger value="bulk-ops">Bulk Operations</TabsTrigger>}
+          {showAdvancedConfig && <TabsTrigger value="config">Configuration</TabsTrigger>}
         </TabsList>
 
         {/* Method Selection Tab */}
@@ -459,7 +454,7 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center justify-between">
                     <span>{method.method_name}</span>
-                    <Badge variant={method.method_id === selectedMethod ? "default" : "outline"}>
+                    <Badge variant={method.method_id === selectedMethod ? 'default' : 'outline'}>
                       {Math.round(method.confidence_score * 100)}%
                     </Badge>
                   </CardTitle>
@@ -468,7 +463,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Accuracy</span>
-                      <span className="font-medium">{Math.round(method.estimated_accuracy * 100)}%</span>
+                      <span className="font-medium">
+                        {Math.round(method.estimated_accuracy * 100)}%
+                      </span>
                     </div>
                     <Progress value={method.estimated_accuracy * 100} className="h-2" />
                   </div>
@@ -495,8 +492,11 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                   <div className="pt-2 border-t">
                     <div className="flex justify-between text-sm">
                       <span>Cost Impact</span>
-                      <span className={`font-medium ${method.cost_difference_percent > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {method.cost_difference_percent > 0 ? '+' : ''}{method.cost_difference_percent.toFixed(1)}%
+                      <span
+                        className={`font-medium ${method.cost_difference_percent > 0 ? 'text-red-600' : 'text-green-600'}`}
+                      >
+                        {method.cost_difference_percent > 0 ? '+' : ''}
+                        {method.cost_difference_percent.toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -516,7 +516,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{routeAnalysis[0].total_quotes}</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {routeAnalysis[0].total_quotes}
+                    </div>
                     <div className="text-sm text-gray-600">Total Quotes</div>
                   </div>
                   <div className="text-center">
@@ -542,13 +544,13 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                 <div className="pt-4 border-t">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-medium">Recommended Method</span>
-                    <Badge variant="default">
-                      {routeAnalysis[0].recommended_method}
-                    </Badge>
+                    <Badge variant="default">{routeAnalysis[0].recommended_method}</Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className={`h-4 w-4 ${routeAnalysis[0].hsn_availability ? 'text-green-600' : 'text-gray-400'}`} />
+                      <CheckCircle
+                        className={`h-4 w-4 ${routeAnalysis[0].hsn_availability ? 'text-green-600' : 'text-gray-400'}`}
+                      />
                       <span>HSN Data Available</span>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -615,7 +617,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                       <div key={method.method_id} className="space-y-1">
                         <div className="flex justify-between text-sm">
                           <span>{method.method_name.split(' ')[0]}</span>
-                          <span className="font-medium">{Math.round(method.customer_approval_rate * 100)}%</span>
+                          <span className="font-medium">
+                            {Math.round(method.customer_approval_rate * 100)}%
+                          </span>
                         </div>
                         <Progress value={method.customer_approval_rate * 100} className="h-1" />
                       </div>
@@ -636,8 +640,11 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                     {methodAnalysis.map((method) => (
                       <div key={method.method_id} className="flex justify-between text-sm">
                         <span>{method.method_name.split(' ')[0]}</span>
-                        <span className={`font-medium ${method.cost_difference_percent > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                          {method.cost_difference_percent > 0 ? '+' : ''}{method.cost_difference_percent.toFixed(1)}%
+                        <span
+                          className={`font-medium ${method.cost_difference_percent > 0 ? 'text-red-600' : 'text-green-600'}`}
+                        >
+                          {method.cost_difference_percent > 0 ? '+' : ''}
+                          {method.cost_difference_percent.toFixed(1)}%
                         </span>
                       </div>
                     ))}
@@ -654,8 +661,8 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Bulk operations allow you to update tax calculation methods for multiple quotes simultaneously.
-                Use with caution as this affects customer quotes directly.
+                Bulk operations allow you to update tax calculation methods for multiple quotes
+                simultaneously. Use with caution as this affects customer quotes directly.
               </AlertDescription>
             </Alert>
 
@@ -670,9 +677,7 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                   <Label htmlFor="bulk-mode">Enable Bulk Selection Mode</Label>
                 </div>
                 {bulkSelectionMode && (
-                  <Badge variant="outline">
-                    {selectedQuotes.length} quotes selected
-                  </Badge>
+                  <Badge variant="outline">{selectedQuotes.length} quotes selected</Badge>
                 )}
               </div>
               {bulkSelectionMode && selectedQuotes.length > 0 && (
@@ -699,8 +704,8 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm text-gray-600">
-                    Select quotes to update by clicking the checkboxes. This feature requires integration
-                    with the quote management interface to display available quotes.
+                    Select quotes to update by clicking the checkboxes. This feature requires
+                    integration with the quote management interface to display available quotes.
                   </div>
                   <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center text-gray-500">
                     Quote selection interface will be integrated here
@@ -726,7 +731,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="auto-optimization">Auto-Optimization</Label>
-                      <p className="text-sm text-gray-600">Automatically select best performing methods</p>
+                      <p className="text-sm text-gray-600">
+                        Automatically select best performing methods
+                      </p>
                     </div>
                     <Switch
                       id="auto-optimization"
@@ -758,7 +765,9 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                       <Label>Default Time Range</Label>
                       <select
                         value={analysisTimeRange}
-                        onChange={(e) => setAnalysisTimeRange(e.target.value as '7d' | '30d' | '90d')}
+                        onChange={(e) =>
+                          setAnalysisTimeRange(e.target.value as '7d' | '30d' | '90d')
+                        }
                         className="w-full mt-1 px-3 py-1 border rounded-md"
                       >
                         <option value="7d">7 days</option>
@@ -794,7 +803,8 @@ export const TaxMethodSelectionPanel: React.FC<TaxMethodSelectionPanelProps> = (
                   </div>
                 </div>
                 <div className="text-sm text-gray-600">
-                  All method changes are logged with timestamps, admin IDs, and detailed reasoning for audit purposes.
+                  All method changes are logged with timestamps, admin IDs, and detailed reasoning
+                  for audit purposes.
                 </div>
               </CardContent>
             </Card>

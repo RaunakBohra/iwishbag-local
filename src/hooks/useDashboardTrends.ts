@@ -68,10 +68,7 @@ export const useDashboardTrends = () => {
     queryFn: async () => {
       if (!user) return [];
 
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('user_id', user.id);
+      const { data, error } = await supabase.from('tickets').select('*').eq('user_id', user.id);
 
       if (error) throw error;
       return data;
@@ -114,46 +111,42 @@ export const useDashboardTrends = () => {
 
     // Calculate current metrics
     const currentActiveQuotes = currentData.filter(
-      (q) => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated'
+      (q) => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated',
     ).length;
-    
-    const currentApprovedQuotes = currentData.filter(
-      (q) => q.status === 'approved'
-    ).length;
-    
+
+    const currentApprovedQuotes = currentData.filter((q) => q.status === 'approved').length;
+
     const currentOrdersInProgress = currentData.filter(
-      (o) => o.status !== 'completed' && o.status !== 'cancelled' && 
-      ['paid', 'ordered', 'shipped', 'processing'].includes(o.status)
+      (o) =>
+        o.status !== 'completed' &&
+        o.status !== 'cancelled' &&
+        ['paid', 'ordered', 'shipped', 'processing'].includes(o.status),
     ).length;
-    
-    const currentDeliveredOrders = currentData.filter(
-      (o) => o.status === 'completed'
-    ).length;
-    
+
+    const currentDeliveredOrders = currentData.filter((o) => o.status === 'completed').length;
+
     const currentOpenTickets = (currentTickets || []).filter(
-      (t) => t.status === 'open' || t.status === 'in_progress'
+      (t) => t.status === 'open' || t.status === 'in_progress',
     ).length;
 
     // Calculate historical metrics
     const historicalActiveQuotes = historicalData.filter(
-      (q) => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated'
+      (q) => q.status === 'pending' || q.status === 'sent' || q.status === 'calculated',
     ).length;
-    
-    const historicalApprovedQuotes = historicalData.filter(
-      (q) => q.status === 'approved'
-    ).length;
-    
+
+    const historicalApprovedQuotes = historicalData.filter((q) => q.status === 'approved').length;
+
     const historicalOrdersInProgress = historicalData.filter(
-      (o) => o.status !== 'completed' && o.status !== 'cancelled' &&
-      ['paid', 'ordered', 'shipped', 'processing'].includes(o.status)
+      (o) =>
+        o.status !== 'completed' &&
+        o.status !== 'cancelled' &&
+        ['paid', 'ordered', 'shipped', 'processing'].includes(o.status),
     ).length;
-    
-    const historicalDeliveredOrders = historicalData.filter(
-      (o) => o.status === 'completed'
-    ).length;
-    
+
+    const historicalDeliveredOrders = historicalData.filter((o) => o.status === 'completed').length;
+
     const historicalOpenTickets = (historicalTickets || []).filter(
-      (t) => t.status === 'open' || t.status === 'in_progress'
+      (t) => t.status === 'open' || t.status === 'in_progress',
     ).length;
 
     // Helper function to calculate trend
@@ -162,7 +155,7 @@ export const useDashboardTrends = () => {
         return {
           direction: current > 0 ? 'up' : 'neutral',
           percentage: current > 0 ? 100 : 0,
-          period: 'last month'
+          period: 'last month',
         };
       }
 
@@ -172,31 +165,31 @@ export const useDashboardTrends = () => {
       return {
         direction: percentageChange > 5 ? 'up' : percentageChange < -5 ? 'down' : 'neutral',
         percentage: roundedPercentage,
-        period: 'last month'
+        period: 'last month',
       };
     };
 
     return {
       activeQuotes: {
         value: currentActiveQuotes,
-        ...calculateTrend(currentActiveQuotes, historicalActiveQuotes)
+        ...calculateTrend(currentActiveQuotes, historicalActiveQuotes),
       },
       approvedQuotes: {
         value: currentApprovedQuotes,
-        ...calculateTrend(currentApprovedQuotes, historicalApprovedQuotes)
+        ...calculateTrend(currentApprovedQuotes, historicalApprovedQuotes),
       },
       ordersInProgress: {
         value: currentOrdersInProgress,
-        ...calculateTrend(currentOrdersInProgress, historicalOrdersInProgress)
+        ...calculateTrend(currentOrdersInProgress, historicalOrdersInProgress),
       },
       deliveredOrders: {
         value: currentDeliveredOrders,
-        ...calculateTrend(currentDeliveredOrders, historicalDeliveredOrders)
+        ...calculateTrend(currentDeliveredOrders, historicalDeliveredOrders),
       },
       openTickets: {
         value: currentOpenTickets,
-        ...calculateTrend(currentOpenTickets, historicalOpenTickets)
-      }
+        ...calculateTrend(currentOpenTickets, historicalOpenTickets),
+      },
     };
   }, [currentData, historicalData, currentTickets, historicalTickets]);
 

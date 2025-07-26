@@ -50,6 +50,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@cloudflare/mcp-server-cloudflare": "^0.2.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -155,5 +156,21 @@
     "vite": "^6.3.5",
     "vitest": "^3.2.4",
     "wait-on": "^8.0.3"
-  }
+  },
+  "description": "A comprehensive e-commerce platform with advanced features for managing global wishlists and orders.",
+  "main": "check-db-direct.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RaunakBohra/global-wishlist-hub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RaunakBohra/global-wishlist-hub/issues"
+  },
+  "homepage": "https://github.com/RaunakBohra/global-wishlist-hub#readme"
 }

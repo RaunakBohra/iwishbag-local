@@ -309,7 +309,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                 {quote.calculation_data?.valuation_applied && (
                   <div className="mt-2 pt-2 border-t border-current/20">
                     <div className="flex justify-between items-center text-xs">
-                      <span>Original Total:</span>
+                      <span>Product Total:</span>
                       <span className="font-mono">
                         {currencyDisplay.formatSingleAmount(
                           quote.calculation_data.valuation_applied.original_items_total,
@@ -317,25 +317,21 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
                         )}
                       </span>
                     </div>
-                    {quote.calculation_data.valuation_applied.adjustment_applied && (
-                      <div className="flex justify-between items-center text-xs font-medium">
-                        <span>Adjusted Total:</span>
-                        <span className="font-mono">
-                          {currencyDisplay.formatSingleAmount(
-                            quote.calculation_data.valuation_applied.adjusted_items_total,
-                            'origin'
-                          )}
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex justify-between items-center text-xs font-medium">
+                      <span>Customs Basis:</span>
+                      <span className="font-mono">
+                        {currencyDisplay.formatSingleAmount(
+                          quote.calculation_data.valuation_applied.customs_calculation_base || 
+                          quote.calculation_data.valuation_applied.original_items_total,
+                          'origin'
+                        )}
+                      </span>
+                    </div>
                     <div className="text-xs opacity-75 mt-1">
-                      {quote.calculation_data.valuation_applied.adjustment_applied
-                        ? `+${currencyDisplay.formatSingleAmount(
-                            quote.calculation_data.valuation_applied.adjusted_items_total - 
-                            quote.calculation_data.valuation_applied.original_items_total,
-                            'origin'
-                          )} valuation adjustment applied`
-                        : 'No adjustment needed - product value used'}
+                      {quote.calculation_data.valuation_applied.basis_explanation || 
+                       (quote.calculation_data.valuation_applied.adjustment_applied
+                        ? 'Customs calculated on adjusted valuation basis'
+                        : 'Customs calculated on actual product value')}
                     </div>
                   </div>
                 )}

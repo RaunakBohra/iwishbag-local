@@ -8,10 +8,10 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  notificationService, 
-  NotificationRecord, 
-  NotificationData 
+import {
+  notificationService,
+  NotificationRecord,
+  NotificationData,
 } from '@/services/NotificationService';
 import { NotificationType } from '@/types/NotificationTypes';
 import { toast } from 'sonner';
@@ -39,23 +39,27 @@ interface UseNotificationsReturn {
   // Data
   notifications: NotificationRecord[];
   unreadCount: number;
-  
+
   // Loading states
   isLoading: boolean;
   isLoadingMore: boolean;
   isFetching: boolean;
   isRefreshing: boolean;
-  
+
   // Error states
   error: Error | null;
-  
+
   // Actions
   markAsRead: (notificationId: string) => Promise<void>;
   dismiss: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
-  createNotification: (type: NotificationType, message: string, data?: NotificationData) => Promise<void>;
+  createNotification: (
+    type: NotificationType,
+    message: string,
+    data?: NotificationData,
+  ) => Promise<void>;
   refresh: () => Promise<void>;
-  
+
   // Utilities
   hasUnread: boolean;
   canLoadMore: boolean;
@@ -67,7 +71,7 @@ interface UseNotificationsReturn {
 export const useNotifications = (options: UseNotificationsOptions = {}): UseNotificationsReturn => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   const {
     unreadOnly = false,
     limit = 20,
@@ -89,7 +93,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
     queryKey: notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
     queryFn: async () => {
       if (!userId) return [];
-      
+
       return await notificationService.getUserNotifications(userId, {
         unreadOnly,
         limit,
@@ -103,10 +107,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   });
 
   // Query for unread count
-  const {
-    data: unreadCount = 0,
-    isLoading: isLoadingCount,
-  } = useQuery({
+  const { data: unreadCount = 0, isLoading: isLoadingCount } = useQuery({
     queryKey: notificationKeys.count(userId || ''),
     queryFn: async () => {
       if (!userId) return 0;
@@ -121,38 +122,40 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       if (!userId) throw new Error('User not authenticated');
-      
+
       const success = await notificationService.markAsRead(notificationId, userId);
       if (!success) throw new Error('Failed to mark notification as read');
     },
     onMutate: async (notificationId: string) => {
       // Optimistic update
       await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
-      
+
       // Update notifications list
       const previousNotifications = queryClient.getQueryData(
-        notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired })
+        notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
       ) as NotificationRecord[];
-      
+
       if (previousNotifications) {
-        const updatedNotifications = previousNotifications.map(notification =>
+        const updatedNotifications = previousNotifications.map((notification) =>
           notification.id === notificationId
             ? { ...notification, is_read: true, read_at: new Date().toISOString() }
-            : notification
+            : notification,
         );
-        
+
         queryClient.setQueryData(
           notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
-          updatedNotifications
+          updatedNotifications,
         );
       }
-      
+
       // Update unread count
-      const previousCount = queryClient.getQueryData(notificationKeys.count(userId || '')) as number;
+      const previousCount = queryClient.getQueryData(
+        notificationKeys.count(userId || ''),
+      ) as number;
       if (previousCount > 0) {
         queryClient.setQueryData(notificationKeys.count(userId || ''), previousCount - 1);
       }
-      
+
       return { previousNotifications, previousCount };
     },
     onError: (error, notificationId, context) => {
@@ -160,13 +163,13 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       if (context?.previousNotifications) {
         queryClient.setQueryData(
           notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
-          context.previousNotifications
+          context.previousNotifications,
         );
       }
       if (context?.previousCount !== undefined) {
         queryClient.setQueryData(notificationKeys.count(userId || ''), context.previousCount);
       }
-      
+
       toast.error('Failed to mark notification as read');
       console.error('Error marking notification as read:', error);
     },
@@ -181,38 +184,40 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   const dismissMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       if (!userId) throw new Error('User not authenticated');
-      
+
       const success = await notificationService.dismiss(notificationId, userId);
       if (!success) throw new Error('Failed to dismiss notification');
     },
     onMutate: async (notificationId: string) => {
       // Optimistic update - remove from list
       await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
-      
+
       const previousNotifications = queryClient.getQueryData(
-        notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired })
+        notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
       ) as NotificationRecord[];
-      
+
       if (previousNotifications) {
         const updatedNotifications = previousNotifications.filter(
-          notification => notification.id !== notificationId
+          (notification) => notification.id !== notificationId,
         );
-        
+
         queryClient.setQueryData(
           notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
-          updatedNotifications
+          updatedNotifications,
         );
       }
-      
+
       // Update unread count if notification was unread
-      const dismissedNotification = previousNotifications?.find(n => n.id === notificationId);
+      const dismissedNotification = previousNotifications?.find((n) => n.id === notificationId);
       if (dismissedNotification && !dismissedNotification.is_read) {
-        const previousCount = queryClient.getQueryData(notificationKeys.count(userId || '')) as number;
+        const previousCount = queryClient.getQueryData(
+          notificationKeys.count(userId || ''),
+        ) as number;
         if (previousCount > 0) {
           queryClient.setQueryData(notificationKeys.count(userId || ''), previousCount - 1);
         }
       }
-      
+
       return { previousNotifications };
     },
     onError: (error, notificationId, context) => {
@@ -220,10 +225,10 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       if (context?.previousNotifications) {
         queryClient.setQueryData(
           notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
-          context.previousNotifications
+          context.previousNotifications,
         );
       }
-      
+
       toast.error('Failed to dismiss notification');
       console.error('Error dismissing notification:', error);
     },
@@ -238,34 +243,34 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       if (!userId) throw new Error('User not authenticated');
-      
+
       const count = await notificationService.markAllAsRead(userId);
       return count;
     },
     onMutate: async () => {
       // Optimistic update - mark all as read
       await queryClient.cancelQueries({ queryKey: notificationKeys.lists() });
-      
+
       const previousNotifications = queryClient.getQueryData(
-        notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired })
+        notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
       ) as NotificationRecord[];
-      
+
       if (previousNotifications) {
-        const updatedNotifications = previousNotifications.map(notification => ({
+        const updatedNotifications = previousNotifications.map((notification) => ({
           ...notification,
           is_read: true,
           read_at: new Date().toISOString(),
         }));
-        
+
         queryClient.setQueryData(
           notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
-          updatedNotifications
+          updatedNotifications,
         );
       }
-      
+
       // Set unread count to 0
       queryClient.setQueryData(notificationKeys.count(userId || ''), 0);
-      
+
       return { previousNotifications };
     },
     onSuccess: (count) => {
@@ -276,10 +281,10 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       if (context?.previousNotifications) {
         queryClient.setQueryData(
           notificationKeys.list(userId || '', { unreadOnly, limit, includeExpired }),
-          context.previousNotifications
+          context.previousNotifications,
         );
       }
-      
+
       toast.error('Failed to mark all notifications as read');
       console.error('Error marking all notifications as read:', error);
     },
@@ -292,10 +297,23 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
 
   // Mutation for creating notification (useful for testing/admin)
   const createNotificationMutation = useMutation({
-    mutationFn: async ({ type, message, data }: { type: NotificationType; message: string; data?: NotificationData }) => {
+    mutationFn: async ({
+      type,
+      message,
+      data,
+    }: {
+      type: NotificationType;
+      message: string;
+      data?: NotificationData;
+    }) => {
       if (!userId) throw new Error('User not authenticated');
-      
-      const notification = await notificationService.createNotification(userId, type, message, data);
+
+      const notification = await notificationService.createNotification(
+        userId,
+        type,
+        message,
+        data,
+      );
       return notification;
     },
     onSuccess: () => {
@@ -320,27 +338,31 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
     // Data
     notifications,
     unreadCount,
-    
+
     // Loading states
     isLoading: isLoading || isLoadingCount,
     isLoadingMore,
     isFetching,
     isRefreshing,
-    
+
     // Error states
     error: error as Error | null,
-    
+
     // Actions
     markAsRead: markAsReadMutation.mutateAsync,
     dismiss: dismissMutation.mutateAsync,
     markAllAsRead: markAllAsReadMutation.mutateAsync,
-    createNotification: async (type: NotificationType, message: string, data?: NotificationData) => {
+    createNotification: async (
+      type: NotificationType,
+      message: string,
+      data?: NotificationData,
+    ) => {
       await createNotificationMutation.mutateAsync({ type, message, data });
     },
     refresh: async () => {
       await refetch();
     },
-    
+
     // Utilities
     hasUnread,
     canLoadMore,
@@ -350,7 +372,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
 /**
  * Hook for getting only unread notifications
  */
-export const useUnreadNotifications = (options: Omit<UseNotificationsOptions, 'unreadOnly'> = {}) => {
+export const useUnreadNotifications = (
+  options: Omit<UseNotificationsOptions, 'unreadOnly'> = {},
+) => {
   return useNotifications({ ...options, unreadOnly: true });
 };
 
@@ -378,7 +402,7 @@ export const useNotificationCount = () => {
  */
 export const useInvalidateNotifications = () => {
   const queryClient = useQueryClient();
-  
+
   return () => {
     queryClient.invalidateQueries({ queryKey: notificationKeys.all });
   };

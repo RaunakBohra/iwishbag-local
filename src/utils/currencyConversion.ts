@@ -16,7 +16,7 @@ export function calculateItemsTotalUSD(items: QuoteItem[], exchangeRate: number)
 
   const localTotal = items.reduce(
     (sum, item) => sum + (item.costprice_origin || 0) * (item.quantity || 1),
-    0
+    0,
   );
 
   return localTotal / exchangeRate;
@@ -30,12 +30,12 @@ export function calculateItemsTotalUSD(items: QuoteItem[], exchangeRate: number)
 export function getExchangeRateFromQuote(quote: UnifiedQuote): number {
   // Try to get exchange rate from calculation data
   const exchangeRate = quote.calculation_data?.exchange_rate?.rate || 1;
-  
+
   console.log('🔄 [CURRENCY] Exchange rate extracted:', {
     quoteId: quote.id,
     route: `${quote.origin_country}→${quote.destination_country}`,
     exchangeRate,
-    source: quote.calculation_data?.exchange_rate?.source || 'default'
+    source: quote.calculation_data?.exchange_rate?.source || 'default',
   });
 
   return exchangeRate;
@@ -49,14 +49,16 @@ export function getExchangeRateFromQuote(quote: UnifiedQuote): number {
 export function calculateCorrectBaseTotalUSD(quote: UnifiedQuote): number {
   const exchangeRate = getExchangeRateFromQuote(quote);
   const baseTotalUSD = calculateItemsTotalUSD(quote.items, exchangeRate);
-  
+
   console.log('💰 [CURRENCY] Base total USD calculation:', {
     quoteId: quote.id,
     itemsCount: quote.items?.length || 0,
-    localTotal: quote.items?.reduce((sum, item) => sum + (item.price_local || 0) * (item.quantity || 1), 0) || 0,
+    localTotal:
+      quote.items?.reduce((sum, item) => sum + (item.price_local || 0) * (item.quantity || 1), 0) ||
+      0,
     exchangeRate,
     baseTotalUSD,
-    currency: quote.currency
+    currency: quote.currency,
   });
 
   return Math.round(baseTotalUSD * 100) / 100; // Round to 2 decimal places
@@ -69,15 +71,15 @@ export function calculateCorrectBaseTotalUSD(quote: UnifiedQuote): number {
  */
 export function getCurrencySymbol(countryCode: string): string {
   const symbols: Record<string, string> = {
-    'IN': '₹',
-    'NP': '₨',
-    'US': '$',
-    'UK': '£',
-    'EU': '€',
-    'CN': '¥',
-    'JP': '¥'
+    IN: '₹',
+    NP: '₨',
+    US: '$',
+    UK: '£',
+    EU: '€',
+    CN: '¥',
+    JP: '¥',
   };
-  
+
   return symbols[countryCode] || '$';
 }
 
@@ -88,15 +90,15 @@ export function getCurrencySymbol(countryCode: string): string {
  */
 export function getCurrencyCode(countryCode: string): string {
   const codes: Record<string, string> = {
-    'IN': 'INR',
-    'NP': 'NPR', 
-    'US': 'USD',
-    'UK': 'GBP',
-    'EU': 'EUR',
-    'CN': 'CNY',
-    'JP': 'JPY'
+    IN: 'INR',
+    NP: 'NPR',
+    US: 'USD',
+    UK: 'GBP',
+    EU: 'EUR',
+    CN: 'CNY',
+    JP: 'JPY',
   };
-  
+
   return codes[countryCode] || 'USD';
 }
 
@@ -108,20 +110,20 @@ export function getCurrencyCode(countryCode: string): string {
  */
 export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
   const symbolMap: Record<string, string> = {
-    'USD': '$',
-    'INR': '₹',
-    'NPR': '₨',
-    'EUR': '€',
-    'GBP': '£',
-    'CNY': '¥',
-    'JPY': '¥',
-    'CAD': 'C$',
-    'AUD': 'A$',
-    'SGD': 'S$'
+    USD: '$',
+    INR: '₹',
+    NPR: '₨',
+    EUR: '€',
+    GBP: '£',
+    CNY: '¥',
+    JPY: '¥',
+    CAD: 'C$',
+    AUD: 'A$',
+    SGD: 'S$',
   };
 
   const symbol = symbolMap[currencyCode] || currencyCode + ' ';
-  
+
   // Format with proper decimal places
   const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,

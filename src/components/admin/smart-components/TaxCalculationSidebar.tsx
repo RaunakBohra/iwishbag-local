@@ -137,31 +137,34 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
   // Calculate comprehensive tax analytics
   const taxAnalytics = useMemo(() => {
     const totalItems = quote.items?.length || 0;
-    const itemsWithHSN = quote.items?.filter(item => item.hsn_code)?.length || 0;
+    const itemsWithHSN = quote.items?.filter((item) => item.hsn_code)?.length || 0;
     const itemsWithoutHSN = totalItems - itemsWithHSN;
-    
+
     // HSN Classification Status
     const classificationProgress = totalItems > 0 ? (itemsWithHSN / totalItems) * 100 : 0;
-    
+
     // Tax Calculation Method Analysis
     const calculationMethod = currentMethod || quote.calculation_method_preference || 'auto';
-    const isUsingHSNMethod = calculationMethod === 'hsn_based' || (calculationMethod === 'auto' && itemsWithHSN > 0);
-    
-    console.log(`📊 [TaxAnalytics] Current method: ${calculationMethod}, Quote ID: ${quote.id}, Items: ${totalItems}, HSN: ${itemsWithHSN}`);
-    
+    const isUsingHSNMethod =
+      calculationMethod === 'hsn_based' || (calculationMethod === 'auto' && itemsWithHSN > 0);
+
+    console.log(
+      `📊 [TaxAnalytics] Current method: ${calculationMethod}, Quote ID: ${quote.id}, Items: ${totalItems}, HSN: ${itemsWithHSN}`,
+    );
+
     // Tax Breakdown Analysis
     let totalCustoms = 0;
     let totalLocalTaxes = 0;
     let minValuationItems = 0;
     let highConfidenceItems = 0;
-    
-    taxBreakdowns.forEach(breakdown => {
+
+    taxBreakdowns.forEach((breakdown) => {
       totalCustoms += breakdown.total_customs;
       totalLocalTaxes += breakdown.total_local_taxes;
       if (breakdown.valuation_method === 'minimum_valuation') minValuationItems++;
       if (breakdown.confidence_score >= 0.8) highConfidenceItems++;
     });
-    
+
     // Country-specific tax analysis
     const destinationCountry = quote.destination_country;
     let primaryTaxType = 'VAT';
@@ -192,7 +195,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
   // Get calculation method status
   const getCalculationMethodStatus = () => {
     const { calculationMethod, isUsingHSNMethod, hsnSourcedTaxes, fallbackTaxes } = taxAnalytics;
-    
+
     if (calculationMethod === 'hsn_based') {
       return {
         method: 'HSN-Based',
@@ -235,7 +238,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      
+
       // Extra safeguard: if this event is somehow connected to a form, prevent submission
       const target = event.target as HTMLElement;
       const form = target.closest('form');
@@ -243,15 +246,15 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
         console.log('🚫 [TaxMethodChange] Preventing form submission from event chain');
       }
     }
-    
+
     console.log(`🎯 [TaxSidebar] Method change requested: ${newMethod}`);
-    
+
     if (onMethodChange) {
       try {
         setIsChangingMethod(true);
         await onMethodChange(newMethod);
         console.log(`✅ [TaxSidebar] Method change completed: ${newMethod}`);
-        
+
         // Force recalculation after method change
         if (onRecalculate) {
           setTimeout(() => {
@@ -279,7 +282,9 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             <CardTitle className="flex items-center text-base">
               <Settings className="w-4 h-4 mr-2 text-indigo-600" />
               Tax Calculation Method
-              {(isLoading || isChangingMethod) && <RefreshCw className="w-3 h-3 ml-2 animate-spin" />}
+              {(isLoading || isChangingMethod) && (
+                <RefreshCw className="w-3 h-3 ml-2 animate-spin" />
+              )}
               {isChangingMethod && <span className="ml-2 text-xs text-blue-600">Updating...</span>}
             </CardTitle>
           </CardHeader>
@@ -291,10 +296,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               <button
                 type="button"
                 className={`w-full p-3 rounded-lg border transition-all text-left ${
-                  isChangingMethod 
-                    ? 'cursor-not-allowed opacity-50 border-gray-200' 
-                    : taxAnalytics.calculationMethod === 'hsn_based' 
-                      ? 'border-green-300 bg-green-50 ring-2 ring-green-200 cursor-pointer' 
+                  isChangingMethod
+                    ? 'cursor-not-allowed opacity-50 border-gray-200'
+                    : taxAnalytics.calculationMethod === 'hsn_based'
+                      ? 'border-green-300 bg-green-50 ring-2 ring-green-200 cursor-pointer'
                       : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
@@ -319,11 +324,13 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      taxAnalytics.calculationMethod === 'hsn_based'
-                        ? 'border-green-600 bg-green-600'
-                        : 'border-gray-300'
-                    }`}>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        taxAnalytics.calculationMethod === 'hsn_based'
+                          ? 'border-green-600 bg-green-600'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       {taxAnalytics.calculationMethod === 'hsn_based' && (
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       )}
@@ -356,10 +363,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               <button
                 type="button"
                 className={`w-full p-3 rounded-lg border transition-all text-left ${
-                  isChangingMethod 
-                    ? 'cursor-not-allowed opacity-50 border-gray-200' 
-                    : taxAnalytics.calculationMethod === 'country_settings' 
-                      ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200 cursor-pointer' 
+                  isChangingMethod
+                    ? 'cursor-not-allowed opacity-50 border-gray-200'
+                    : taxAnalytics.calculationMethod === 'country_settings'
+                      ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200 cursor-pointer'
                       : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
@@ -384,11 +391,13 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      taxAnalytics.calculationMethod === 'country_settings'
-                        ? 'border-blue-600 bg-blue-600'
-                        : 'border-gray-300'
-                    }`}>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        taxAnalytics.calculationMethod === 'country_settings'
+                          ? 'border-blue-600 bg-blue-600'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       {taxAnalytics.calculationMethod === 'country_settings' && (
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       )}
@@ -404,9 +413,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-blue-700">
-                      All items
-                    </div>
+                    <div className="text-sm font-semibold text-blue-700">All items</div>
                     <div className="text-xs text-gray-500">uniform</div>
                   </div>
                 </div>
@@ -416,10 +423,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               <button
                 type="button"
                 className={`w-full p-3 rounded-lg border transition-all text-left ${
-                  isChangingMethod 
-                    ? 'cursor-not-allowed opacity-50 border-gray-200' 
-                    : taxAnalytics.calculationMethod === 'auto' 
-                      ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200 cursor-pointer' 
+                  isChangingMethod
+                    ? 'cursor-not-allowed opacity-50 border-gray-200'
+                    : taxAnalytics.calculationMethod === 'auto'
+                      ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200 cursor-pointer'
                       : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
@@ -444,11 +451,13 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      taxAnalytics.calculationMethod === 'auto'
-                        ? 'border-purple-600 bg-purple-600'
-                        : 'border-gray-300'
-                    }`}>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        taxAnalytics.calculationMethod === 'auto'
+                          ? 'border-purple-600 bg-purple-600'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       {taxAnalytics.calculationMethod === 'auto' && (
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       )}
@@ -467,9 +476,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-purple-700">
-                      Mixed
-                    </div>
+                    <div className="text-sm font-semibold text-purple-700">Mixed</div>
                     <div className="text-xs text-gray-500">intelligent</div>
                   </div>
                 </div>
@@ -480,9 +487,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium">
-                  {methodStatus.method} Active
-                </span>
+                <span className="text-sm font-medium">{methodStatus.method} Active</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -546,9 +551,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               <Alert className="border-amber-200 bg-amber-50">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>{taxAnalytics.itemsWithoutHSN} items</strong> need HSN classification for optimal tax accuracy. 
-                  <Button 
-                    variant="link" 
+                  <strong>{taxAnalytics.itemsWithoutHSN} items</strong> need HSN classification for
+                  optimal tax accuracy.
+                  <Button
+                    variant="link"
                     className="h-auto p-0 ml-1 text-amber-700 hover:text-amber-900"
                     onClick={onUpdateQuote}
                   >
@@ -568,9 +574,13 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                   className="w-full text-xs justify-between"
                 >
                   <span>Advanced Controls</span>
-                  {showDetailedView ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {showDetailedView ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
                 </Button>
-                
+
                 {showDetailedView && (
                   <div className="mt-3 space-y-3">
                     <div className="text-xs text-gray-600">
@@ -586,7 +596,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     );
   }
 
-  // View Mode Interface (existing implementation)  
+  // View Mode Interface (existing implementation)
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Main Tax Status Card */}
@@ -611,7 +621,9 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
         <CardContent className="pt-0">
           {/* Calculation Method Status */}
-          <div className={`p-3 rounded-lg border ${methodStatus.borderColor} ${methodStatus.bgColor}`}>
+          <div
+            className={`p-3 rounded-lg border ${methodStatus.borderColor} ${methodStatus.bgColor}`}
+          >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
                 <methodStatus.icon className={`w-4 h-4 ${methodStatus.color}`} />
@@ -666,7 +678,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             <Alert className="mt-4 border-amber-200 bg-amber-50">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>{taxAnalytics.itemsWithoutHSN} items</strong> need HSN classification for 
+                <strong>{taxAnalytics.itemsWithoutHSN} items</strong> need HSN classification for
                 accurate tax calculations. Using country defaults as fallback.
               </AlertDescription>
             </Alert>
@@ -677,9 +689,15 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             <div className="mt-4">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 h-8">
-                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-                  <TabsTrigger value="items" className="text-xs">Items</TabsTrigger>
-                  <TabsTrigger value="methods" className="text-xs">Methods</TabsTrigger>
+                  <TabsTrigger value="overview" className="text-xs">
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger value="items" className="text-xs">
+                    Items
+                  </TabsTrigger>
+                  <TabsTrigger value="methods" className="text-xs">
+                    Methods
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="mt-3 space-y-3">
@@ -734,15 +752,11 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                         <div
                           key={item.id || index}
                           className={`p-2 rounded border text-xs ${
-                            hasHSN 
-                              ? 'border-green-200 bg-green-50' 
-                              : 'border-amber-200 bg-amber-50'
+                            hasHSN ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'
                           }`}
                         >
                           <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium truncate flex-1 mr-2">
-                              {item.name}
-                            </span>
+                            <span className="font-medium truncate flex-1 mr-2">{item.name}</span>
                             {hasHSN ? (
                               <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
                             ) : (
@@ -762,7 +776,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                                 )}
                               </>
                             ) : (
-                              <Badge variant="secondary" className="text-xs px-1 py-0 bg-amber-200 text-amber-800">
+                              <Badge
+                                variant="secondary"
+                                className="text-xs px-1 py-0 bg-amber-200 text-amber-800"
+                              >
                                 No HSN Code
                               </Badge>
                             )}
@@ -792,7 +809,12 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                           <Tags className="w-3 h-3 text-green-600" />
                           <span>HSN-Based</span>
                         </div>
-                        <Badge variant={taxAnalytics.calculationMethod === 'hsn_based' ? 'default' : 'outline'} className="text-xs">
+                        <Badge
+                          variant={
+                            taxAnalytics.calculationMethod === 'hsn_based' ? 'default' : 'outline'
+                          }
+                          className="text-xs"
+                        >
                           {taxAnalytics.hsnSourcedTaxes} items
                         </Badge>
                       </div>
@@ -801,7 +823,14 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                           <Globe className="w-3 h-3 text-blue-600" />
                           <span>Country Default</span>
                         </div>
-                        <Badge variant={taxAnalytics.calculationMethod === 'country_settings' ? 'default' : 'outline'} className="text-xs">
+                        <Badge
+                          variant={
+                            taxAnalytics.calculationMethod === 'country_settings'
+                              ? 'default'
+                              : 'outline'
+                          }
+                          className="text-xs"
+                        >
                           All items
                         </Badge>
                       </div>
@@ -816,19 +845,14 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
           <div className="mt-4 pt-3 border-t border-indigo-200 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {taxAnalytics.itemsWithoutHSN > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onUpdateQuote}
-                  className="text-xs h-7"
-                >
+                <Button size="sm" variant="outline" onClick={onUpdateQuote} className="text-xs h-7">
                   <Zap className="w-3 h-3 mr-1" />
                   Auto-classify
                 </Button>
               )}
               <Button
                 size="sm"
-                variant="outline" 
+                variant="outline"
                 onClick={onRecalculate}
                 disabled={isLoading || isCalculating}
                 className="text-xs h-7"
@@ -853,9 +877,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
       {error && (
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            Tax calculation error: {error}
-          </AlertDescription>
+          <AlertDescription className="text-sm">Tax calculation error: {error}</AlertDescription>
         </Alert>
       )}
     </div>

@@ -7,7 +7,7 @@ import type { UnifiedQuote } from '@/types/unified-quote';
 
 export const createSampleHSNQuote = (): UnifiedQuote => {
   const now = new Date().toISOString();
-  
+
   return {
     id: 'hsn-test-quote-001',
     display_id: '#HSN2001',
@@ -16,12 +16,12 @@ export const createSampleHSNQuote = (): UnifiedQuote => {
     origin_country: 'IN', // India
     destination_country: 'NP', // Nepal
     currency: 'INR',
-    
+
     // Sample items with HSN codes and realistic pricing
     items: [
       {
         id: 'hsn-item-1',
-        name: 'Traditional Nepali Kurta - Women\'s Cotton',
+        name: "Traditional Nepali Kurta - Women's Cotton",
         quantity: 1,
         price_usd: 6.02, // ₹500 INR (will trigger minimum valuation)
         weight_kg: 0.3,
@@ -38,12 +38,12 @@ export const createSampleHSNQuote = (): UnifiedQuote => {
         },
       },
       {
-        id: 'hsn-item-2', 
+        id: 'hsn-item-2',
         name: 'Samsung Galaxy A54 5G Smartphone',
         quantity: 1,
-        price_usd: 301.20, // ₹25,000 INR (above minimum valuation)
+        price_usd: 301.2, // ₹25,000 INR (above minimum valuation)
         weight_kg: 0.2,
-        url: 'https://example.com/samsung-galaxy-a54',  
+        url: 'https://example.com/samsung-galaxy-a54',
         image_url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
         options: '128GB Storage, Awesome Blue, Dual SIM',
         hsn_code: '8517', // Mobile phones - $50 USD minimum
@@ -103,7 +103,7 @@ export const createSampleHSNQuote = (): UnifiedQuote => {
         items_total: 30000, // ₹30,000 INR (361.43 * 83)
         shipping: 0, // Will be calculated
         customs: 0, // Will be calculated by HSN system
-        taxes: 0, // Will be calculated by HSN system  
+        taxes: 0, // Will be calculated by HSN system
         fees: 0,
         discount: 0,
       },
@@ -129,7 +129,7 @@ export const createSampleHSNQuote = (): UnifiedQuote => {
         city: 'Kathmandu',
         state: 'Bagmati Province',
         postal: '44600',
-        country: 'Nepal', 
+        country: 'Nepal',
         locked: false,
       },
       profile: {
@@ -180,7 +180,7 @@ export const createSampleHSNQuote = (): UnifiedQuote => {
         },
       },
       {
-        id: 'hsn-suggestion-2', 
+        id: 'hsn-suggestion-2',
         type: 'weight',
         message: 'Electronics item weight seems accurate based on product specifications',
         confidence: 0.95,
@@ -234,7 +234,7 @@ export const createTestQuoteVariants = () => {
           image_url: 'https://images.unsplash.com/photo-1594736797933-d0d6b4ed6a60?w=400',
           options: 'Size: S, Color: White',
           hsn_code: '6204',
-          category: 'clothing', 
+          category: 'clothing',
           smart_data: {
             weight_confidence: 0.8,
             category_detected: 'clothing',

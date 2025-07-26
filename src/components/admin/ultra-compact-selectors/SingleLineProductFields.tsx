@@ -2,11 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, Search, Tag, Scale, Info, Package, DollarSign, Hash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,7 +56,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
   onHSNSelect,
   onHSNRemove,
   className,
-  disabled = false
+  disabled = false,
 }) => {
   const [isWeightOpen, setIsWeightOpen] = useState(false);
   const [isHSNOpen, setIsHSNOpen] = useState(false);
@@ -69,12 +65,31 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
 
   // Mock HSN search results
   const mockHSNResults = [
-    { code: '8517', description: 'Telephone sets, mobile phones', category: 'Electronics', tax_rate: 18, duty_rate: 10 },
-    { code: '8471', description: 'Electronics and computers', category: 'Computing', tax_rate: 18, duty_rate: 0 },
-    { code: '8504', description: 'Electrical transformers', category: 'Electrical', tax_rate: 12, duty_rate: 7.5 },
-  ].filter(hsn => 
-    hsn.code.includes(searchQuery) || 
-    hsn.description.toLowerCase().includes(searchQuery.toLowerCase())
+    {
+      code: '8517',
+      description: 'Telephone sets, mobile phones',
+      category: 'Electronics',
+      tax_rate: 18,
+      duty_rate: 10,
+    },
+    {
+      code: '8471',
+      description: 'Electronics and computers',
+      category: 'Computing',
+      tax_rate: 18,
+      duty_rate: 0,
+    },
+    {
+      code: '8504',
+      description: 'Electrical transformers',
+      category: 'Electrical',
+      tax_rate: 12,
+      duty_rate: 7.5,
+    },
+  ].filter(
+    (hsn) =>
+      hsn.code.includes(searchQuery) ||
+      hsn.description.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleWeightSelect = (suggestion: WeightSuggestion) => {
@@ -139,7 +154,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
             disabled={disabled}
           />
           <span className="absolute right-8 text-xs text-gray-500">kg</span>
-          
+
           {weightSuggestions.length > 0 && (
             <Popover open={isWeightOpen} onOpenChange={setIsWeightOpen}>
               <PopoverTrigger asChild>
@@ -165,15 +180,19 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{suggestion.value}kg</span>
-                        <span className="text-xs text-gray-500 uppercase">
-                          {suggestion.source}
-                        </span>
+                        <span className="text-xs text-gray-500 uppercase">{suggestion.source}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <div className={cn('w-1.5 h-1.5 rounded-full', 
-                          suggestion.confidence >= 0.8 ? 'bg-green-500' :
-                          suggestion.confidence >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
-                        )} />
+                        <div
+                          className={cn(
+                            'w-1.5 h-1.5 rounded-full',
+                            suggestion.confidence >= 0.8
+                              ? 'bg-green-500'
+                              : suggestion.confidence >= 0.6
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500',
+                          )}
+                        />
                         <span className="text-xs font-medium text-gray-600">
                           {Math.round(suggestion.confidence * 100)}%
                         </span>
@@ -193,13 +212,13 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
       <div className="flex items-center gap-1.5">
         <Tag className="w-3.5 h-3.5 text-gray-500" />
         <span className="text-sm text-gray-600">HSN</span>
-        
+
         {currentHSN ? (
           <div className="flex items-center gap-2">
             <Popover open={isHSNDetailsOpen} onOpenChange={setIsHSNDetailsOpen}>
               <PopoverTrigger asChild>
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className="h-8 px-2 text-sm font-mono border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer group"
                 >
                   {currentHSN.code}
@@ -212,7 +231,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                     <Hash className="w-4 h-4 text-gray-600" />
                     <h4 className="font-semibold text-gray-900">HSN Details</h4>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Code:</span>
@@ -220,12 +239,16 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-600">Description:</span>
-                      <span className="text-sm font-medium text-right max-w-48">{currentHSN.description}</span>
+                      <span className="text-sm font-medium text-right max-w-48">
+                        {currentHSN.description}
+                      </span>
                     </div>
                     {currentHSN.category && (
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Category:</span>
-                        <Badge variant="secondary" className="text-xs">{currentHSN.category}</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {currentHSN.category}
+                        </Badge>
                       </div>
                     )}
                     {currentHSN.tax_rate !== undefined && (
@@ -241,7 +264,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                       </div>
                     )}
                   </div>
-                  
+
                   {onHSNRemove && (
                     <Button
                       variant="outline"
@@ -262,12 +285,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
         ) : (
           <Popover open={isHSNOpen} onOpenChange={setIsHSNOpen}>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 px-3 text-sm"
-                disabled={disabled}
-              >
+              <Button variant="outline" size="sm" className="h-8 px-3 text-sm" disabled={disabled}>
                 <Search className="w-3 h-3 mr-1" />
                 Search
               </Button>
@@ -284,7 +302,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                     autoFocus
                   />
                 </div>
-                
+
                 <div className="space-y-1 max-h-60 overflow-y-auto">
                   {mockHSNResults.map((hsn, index) => (
                     <button
@@ -296,9 +314,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                         {hsn.code}
                       </Badge>
                       <div className="flex-1">
-                        <div className="text-sm text-gray-700 truncate">
-                          {hsn.description}
-                        </div>
+                        <div className="text-sm text-gray-700 truncate">{hsn.description}</div>
                         <div className="text-xs text-gray-500">
                           {hsn.category} • GST: {hsn.tax_rate}% • Duty: {hsn.duty_rate}%
                         </div>

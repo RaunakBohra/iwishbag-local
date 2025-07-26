@@ -38,50 +38,50 @@ const mockManifest = {
       src: '/icons/icon-72x72.png',
       sizes: '72x72',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-96x96.png',
       sizes: '96x96',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-128x128.png',
       sizes: '128x128',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-144x144.png',
       sizes: '144x144',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-152x152.png',
       sizes: '152x152',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-192x192.png',
       sizes: '192x192',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-384x384.png',
       sizes: '384x384',
       type: 'image/png',
-      purpose: 'maskable any'
+      purpose: 'maskable any',
     },
     {
       src: '/icons/icon-512x512.png',
       sizes: '512x512',
       type: 'image/png',
-      purpose: 'maskable any'
-    }
+      purpose: 'maskable any',
+    },
   ],
   categories: ['shopping', 'business'],
   screenshots: [
@@ -89,37 +89,40 @@ const mockManifest = {
       src: '/screenshots/desktop-1.png',
       sizes: '1280x720',
       type: 'image/png',
-      form_factor: 'wide'
+      form_factor: 'wide',
     },
     {
       src: '/screenshots/mobile-1.png',
       sizes: '375x667',
       type: 'image/png',
-      form_factor: 'narrow'
-    }
-  ]
+      form_factor: 'narrow',
+    },
+  ],
 };
 
 // Mock Web Share API
 Object.defineProperty(navigator, 'share', {
   value: vi.fn().mockResolvedValue(undefined),
-  configurable: true
+  configurable: true,
 });
 
 // Mock User Agent for different platforms
 const mockUserAgents = {
-  chrome: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-  safari: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
+  chrome:
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  safari:
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
   edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59',
   firefox: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
-  mobile: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1'
+  mobile:
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
 };
 
 // Mock device capabilities
 const mockDeviceCapabilities = {
   standalone: false,
   installable: true,
-  platform: 'web'
+  platform: 'web',
 };
 
 // Mock localStorage for install preferences
@@ -134,11 +137,11 @@ Object.defineProperty(window, 'localStorage', {
       delete mockLocalStorage[key];
     }),
     clear: vi.fn(() => {
-      Object.keys(mockLocalStorage).forEach(key => {
+      Object.keys(mockLocalStorage).forEach((key) => {
         delete mockLocalStorage[key];
       });
-    })
-  }
+    }),
+  },
 });
 
 // Mock dependencies
@@ -165,16 +168,16 @@ const installTestQuote: UnifiedQuote = {
   expires_at: '2024-02-15T10:00:00Z',
   final_total_usd: 299.99,
   item_price: 249.99,
-  sales_tax_price: 20.00,
-  merchant_shipping_price: 15.00,
-  international_shipping: 25.00,
-  customs_and_ecs: 12.50,
-  domestic_shipping: 7.50,
-  handling_charge: 5.00,
-  insurance_amount: 2.50,
+  sales_tax_price: 20.0,
+  merchant_shipping_price: 15.0,
+  international_shipping: 25.0,
+  customs_and_ecs: 12.5,
+  domestic_shipping: 7.5,
+  handling_charge: 5.0,
+  insurance_amount: 2.5,
   payment_gateway_fee: 3.75,
-  vat: 0.00,
-  discount: 10.00,
+  vat: 0.0,
+  discount: 10.0,
   destination_country: 'IN',
   origin_country: 'US',
   website: 'amazon.com',
@@ -182,26 +185,28 @@ const installTestQuote: UnifiedQuote = {
     info: {
       name: 'Install Test User',
       email: 'install@example.com',
-      phone: '+91-9876543210'
-    }
+      phone: '+91-9876543210',
+    },
   },
   shipping_address: {
-    formatted: '123 Install Street, Mumbai, Maharashtra 400001, India'
+    formatted: '123 Install Street, Mumbai, Maharashtra 400001, India',
   },
-  items: [{
-    id: 'install-item',
-    name: 'Premium Headphones',
-    description: 'High-quality wireless headphones',
-    quantity: 1,
-    price: 249.99,
-    product_url: 'https://amazon.com/premium-headphones',
-    image_url: 'https://example.com/headphones.jpg'
-  }],
+  items: [
+    {
+      id: 'install-item',
+      name: 'Premium Headphones',
+      description: 'High-quality wireless headphones',
+      quantity: 1,
+      price: 249.99,
+      product_url: 'https://amazon.com/premium-headphones',
+      image_url: 'https://example.com/headphones.jpg',
+    },
+  ],
   notes: 'Install test quote',
   admin_notes: '',
   priority: 'high',
   in_cart: false,
-  attachments: []
+  attachments: [],
 };
 
 // Helper function to render components with providers
@@ -216,11 +221,9 @@ const renderWithProviders = (component: React.ReactNode) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <QuoteThemeProvider>
-          {component}
-        </QuoteThemeProvider>
+        <QuoteThemeProvider>{component}</QuoteThemeProvider>
       </BrowserRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 };
 
@@ -228,7 +231,7 @@ const renderWithProviders = (component: React.ReactNode) => {
 const setUserAgent = (userAgent: string) => {
   Object.defineProperty(navigator, 'userAgent', {
     value: userAgent,
-    configurable: true
+    configurable: true,
   });
 };
 
@@ -245,10 +248,10 @@ describe('PWA Installation Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockInstallPromptEvent = null;
-    Object.keys(mockLocalStorage).forEach(key => {
+    Object.keys(mockLocalStorage).forEach((key) => {
       delete mockLocalStorage[key];
     });
-    
+
     // Set default user agent to Chrome
     setUserAgent(mockUserAgents.chrome);
   });
@@ -282,14 +285,8 @@ describe('PWA Installation Tests', () => {
             <div data-testid="installable-status">
               {isInstallable ? 'installable' : 'not-installable'}
             </div>
-            <div data-testid="prompt-available">
-              {installPrompt ? 'prompt-ready' : 'no-prompt'}
-            </div>
-            <UnifiedQuoteCard
-              quote={installTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <div data-testid="prompt-available">{installPrompt ? 'prompt-ready' : 'no-prompt'}</div>
+            <UnifiedQuoteCard quote={installTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -323,7 +320,7 @@ describe('PWA Installation Tests', () => {
           removeEventListener: vi.fn(),
           dispatchEvent: vi.fn(),
         })),
-        configurable: true
+        configurable: true,
       });
 
       const InstallStatusTest = () => {
@@ -334,20 +331,14 @@ describe('PWA Installation Tests', () => {
           const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
           // Check if launched from home screen (iOS)
           const isIosStandalone = (window.navigator as any).standalone === true;
-          
+
           setIsInstalled(isStandalone || isIosStandalone);
         }, []);
 
         return (
           <div>
-            <div data-testid="install-status">
-              {isInstalled ? 'installed' : 'not-installed'}
-            </div>
-            <UnifiedQuoteList
-              quotes={[installTestQuote]}
-              viewMode="customer"
-              layout="list"
-            />
+            <div data-testid="install-status">{isInstalled ? 'installed' : 'not-installed'}</div>
+            <UnifiedQuoteList quotes={[installTestQuote]} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -372,7 +363,7 @@ describe('PWA Installation Tests', () => {
           const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setInstallPrompt(e);
-            
+
             // Check if user previously dismissed
             const dismissed = localStorage.getItem('install-prompt-dismissed');
             if (!dismissed) {
@@ -412,11 +403,7 @@ describe('PWA Installation Tests', () => {
                 </button>
               </div>
             )}
-            <UnifiedQuoteCard
-              quote={installTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={installTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -453,9 +440,9 @@ describe('PWA Installation Tests', () => {
           const userAgent = navigator.userAgent;
           const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
           const isSafari = /Safari/.test(userAgent) && /Apple Computer/.test(navigator.vendor);
-          
+
           setIsIOS(isIOSDevice);
-          
+
           if ((isIOSDevice || isSafari) && !(window.navigator as any).standalone) {
             const dismissed = localStorage.getItem('safari-install-dismissed');
             if (!dismissed) {
@@ -474,7 +461,10 @@ describe('PWA Installation Tests', () => {
             {showSafariInstructions && (
               <div data-testid="safari-instructions" className="bg-gray-100 p-4">
                 <h3>Install iwishBag</h3>
-                <p>To install this app on your {isIOS ? 'iOS device' : 'Mac'}, tap the share button and then "Add to Home Screen".</p>
+                <p>
+                  To install this app on your {isIOS ? 'iOS device' : 'Mac'}, tap the share button
+                  and then "Add to Home Screen".
+                </p>
                 <div className="instructions">
                   <ol>
                     <li>Tap the Share button in Safari</li>
@@ -487,14 +477,8 @@ describe('PWA Installation Tests', () => {
                 </button>
               </div>
             )}
-            <div data-testid="platform-info">
-              {isIOS ? 'iOS' : 'Desktop Safari'}
-            </div>
-            <UnifiedQuoteList
-              quotes={[installTestQuote]}
-              viewMode="customer"
-              layout="compact"
-            />
+            <div data-testid="platform-info">{isIOS ? 'iOS' : 'Desktop Safari'}</div>
+            <UnifiedQuoteList quotes={[installTestQuote]} viewMode="customer" layout="compact" />
           </div>
         );
       };
@@ -522,10 +506,11 @@ describe('PWA Installation Tests', () => {
         React.useEffect(() => {
           const checkMobile = () => {
             const userAgent = navigator.userAgent;
-            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-            
+            const isMobileDevice =
+              /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
             setIsMobile(isMobileDevice);
-            
+
             if (isMobileDevice) {
               const hasSeenPrompt = localStorage.getItem('mobile-install-seen');
               if (!hasSeenPrompt) {
@@ -543,17 +528,16 @@ describe('PWA Installation Tests', () => {
 
         return (
           <div>
-            <div data-testid="device-type">
-              {isMobile ? 'mobile' : 'desktop'}
-            </div>
+            <div data-testid="device-type">{isMobile ? 'mobile' : 'desktop'}</div>
             {showMobilePrompt && (
-              <div data-testid="mobile-install-prompt" className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4">
+              <div
+                data-testid="mobile-install-prompt"
+                className="fixed bottom-0 left-0 right-0 bg-blue-600 text-white p-4"
+              >
                 <p>Get the full iwishBag experience - install our app!</p>
                 <div className="flex gap-2 mt-2">
-                  <button className="bg-white text-blue-600 px-4 py-2 rounded">
-                    Install
-                  </button>
-                  <button 
+                  <button className="bg-white text-blue-600 px-4 py-2 rounded">Install</button>
+                  <button
                     onClick={() => setShowMobilePrompt(false)}
                     className="border border-white px-4 py-2 rounded"
                   >
@@ -562,11 +546,7 @@ describe('PWA Installation Tests', () => {
                 </div>
               </div>
             )}
-            <UnifiedQuoteCard
-              quote={installTestQuote}
-              viewMode="customer"
-              layout="compact"
-            />
+            <UnifiedQuoteCard quote={installTestQuote} viewMode="customer" layout="compact" />
           </div>
         );
       };
@@ -578,9 +558,12 @@ describe('PWA Installation Tests', () => {
       });
 
       // Wait for mobile prompt to appear
-      await waitFor(() => {
-        expect(screen.getByTestId('mobile-install-prompt')).toBeInTheDocument();
-      }, { timeout: 4000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('mobile-install-prompt')).toBeInTheDocument();
+        },
+        { timeout: 4000 },
+      );
 
       expect(localStorage.setItem).toHaveBeenCalledWith('mobile-install-seen', 'true');
     });
@@ -589,13 +572,13 @@ describe('PWA Installation Tests', () => {
   describe('Installation Analytics and Tracking', () => {
     it('should track installation events', async () => {
       const mockAnalytics = {
-        track: vi.fn()
+        track: vi.fn(),
       };
 
       // Mock gtag
       Object.defineProperty(window, 'gtag', {
         value: vi.fn(),
-        configurable: true
+        configurable: true,
       });
 
       const InstallAnalyticsTest = () => {
@@ -605,11 +588,11 @@ describe('PWA Installation Tests', () => {
           const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setInstallPrompt(e);
-            
+
             // Track install prompt shown
             window.gtag('event', 'install_prompt_shown', {
               platform: 'web',
-              source: 'auto'
+              source: 'auto',
             });
           };
 
@@ -617,7 +600,7 @@ describe('PWA Installation Tests', () => {
             // Track successful installation
             window.gtag('event', 'app_installed', {
               platform: 'web',
-              method: 'browser_prompt'
+              method: 'browser_prompt',
             });
           };
 
@@ -635,15 +618,15 @@ describe('PWA Installation Tests', () => {
             // Track install attempt
             window.gtag('event', 'install_attempt', {
               platform: 'web',
-              trigger: 'user_action'
+              trigger: 'user_action',
             });
 
             const result = await installPrompt.prompt();
-            
+
             // Track result
             window.gtag('event', 'install_prompt_result', {
               outcome: result.outcome,
-              platform: result.platform
+              platform: result.platform,
             });
           }
         };
@@ -655,11 +638,7 @@ describe('PWA Installation Tests', () => {
                 Install App
               </button>
             )}
-            <UnifiedQuoteCard
-              quote={installTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={installTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -675,7 +654,7 @@ describe('PWA Installation Tests', () => {
       await waitFor(() => {
         expect(window.gtag).toHaveBeenCalledWith('event', 'install_prompt_shown', {
           platform: 'web',
-          source: 'auto'
+          source: 'auto',
         });
       });
 
@@ -685,7 +664,7 @@ describe('PWA Installation Tests', () => {
       await waitFor(() => {
         expect(window.gtag).toHaveBeenCalledWith('event', 'install_attempt', {
           platform: 'web',
-          trigger: 'user_action'
+          trigger: 'user_action',
         });
       });
 
@@ -697,7 +676,7 @@ describe('PWA Installation Tests', () => {
       await waitFor(() => {
         expect(window.gtag).toHaveBeenCalledWith('event', 'app_installed', {
           platform: 'web',
-          method: 'browser_prompt'
+          method: 'browser_prompt',
         });
       });
     });
@@ -712,7 +691,7 @@ describe('PWA Installation Tests', () => {
             window.gtag('event', 'install_funnel', {
               step,
               timestamp: Date.now(),
-              user_agent: navigator.userAgent.substring(0, 100)
+              user_agent: navigator.userAgent.substring(0, 100),
             });
           };
 
@@ -741,11 +720,7 @@ describe('PWA Installation Tests', () => {
         return (
           <div>
             <div data-testid="funnel-step">{funnelStep}</div>
-            <UnifiedQuoteList
-              quotes={[installTestQuote]}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={[installTestQuote]} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -757,19 +732,25 @@ describe('PWA Installation Tests', () => {
         expect(window.gtag).toHaveBeenCalledWith('event', 'install_funnel', {
           step: 'landing',
           timestamp: expect.any(Number),
-          user_agent: expect.any(String)
+          user_agent: expect.any(String),
         });
       });
 
       // Wait for engagement tracking
-      await waitFor(() => {
-        expect(screen.getByTestId('funnel-step')).toHaveTextContent('engaged');
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('funnel-step')).toHaveTextContent('engaged');
+        },
+        { timeout: 3000 },
+      );
 
       // Wait for intent tracking
-      await waitFor(() => {
-        expect(screen.getByTestId('funnel-step')).toHaveTextContent('intent_shown');
-      }, { timeout: 6000 });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('funnel-step')).toHaveTextContent('intent_shown');
+        },
+        { timeout: 6000 },
+      );
     });
   });
 
@@ -783,7 +764,7 @@ describe('PWA Installation Tests', () => {
           const handleAppInstalled = (e: Event) => {
             setInstallMethod('browser_prompt');
             setShowWelcome(true);
-            
+
             // Store installation info
             localStorage.setItem('app_installed', 'true');
             localStorage.setItem('install_date', new Date().toISOString());
@@ -802,25 +783,23 @@ describe('PWA Installation Tests', () => {
         return (
           <div>
             {showWelcome && (
-              <div data-testid="welcome-screen" className="fixed inset-0 bg-blue-600 text-white flex items-center justify-center">
+              <div
+                data-testid="welcome-screen"
+                className="fixed inset-0 bg-blue-600 text-white flex items-center justify-center"
+              >
                 <div className="text-center">
                   <h1 className="text-3xl font-bold mb-4">Welcome to iwishBag!</h1>
                   <p className="text-lg mb-4">
-                    Thanks for installing our app. You can now access iwishBag offline and get faster performance.
+                    Thanks for installing our app. You can now access iwishBag offline and get
+                    faster performance.
                   </p>
                   <div className="flex items-center justify-center space-x-4">
-                    <div className="text-sm opacity-80">
-                      Installed via: {installMethod}
-                    </div>
+                    <div className="text-sm opacity-80">Installed via: {installMethod}</div>
                   </div>
                 </div>
               </div>
             )}
-            <UnifiedQuoteCard
-              quote={installTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={installTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -851,16 +830,16 @@ describe('PWA Installation Tests', () => {
           const checkInstallStatus = () => {
             const installed = localStorage.getItem('app_installed') === 'true';
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-            
+
             setIsInstalled(installed || isStandalone);
-            
+
             if (installed || isStandalone) {
               setFeatures([
                 'Offline Access',
                 'Push Notifications',
                 'Background Sync',
                 'Faster Loading',
-                'Home Screen Icon'
+                'Home Screen Icon',
               ]);
             }
           };
@@ -874,27 +853,19 @@ describe('PWA Installation Tests', () => {
 
         return (
           <div>
-            <div data-testid="app-status">
-              {isInstalled ? 'installed' : 'browser'}
-            </div>
-            <div data-testid="features-count">
-              {features.length}
-            </div>
+            <div data-testid="app-status">{isInstalled ? 'installed' : 'browser'}</div>
+            <div data-testid="features-count">{features.length}</div>
             {features.length > 0 && (
               <div data-testid="app-features">
                 <h3>Available Features:</h3>
                 <ul>
-                  {features.map(feature => (
+                  {features.map((feature) => (
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
               </div>
             )}
-            <UnifiedQuoteList
-              quotes={[installTestQuote]}
-              viewMode="customer"
-              layout="list"
-            />
+            <UnifiedQuoteList quotes={[installTestQuote]} viewMode="customer" layout="list" />
           </div>
         );
       };
@@ -934,7 +905,7 @@ describe('PWA Installation Tests', () => {
             // Mock a failing prompt
             const failingPrompt = {
               prompt: vi.fn().mockRejectedValue(new Error('Installation failed')),
-              userChoice: Promise.reject(new Error('User choice failed'))
+              userChoice: Promise.reject(new Error('User choice failed')),
             };
             setInstallPrompt(failingPrompt);
           };
@@ -950,11 +921,11 @@ describe('PWA Installation Tests', () => {
             }
           } catch (error) {
             setInstallError('Installation failed. Please try again later.');
-            
+
             // Track error
             window.gtag('event', 'install_error', {
               error_message: (error as Error).message,
-              platform: 'web'
+              platform: 'web',
             });
           }
         };
@@ -971,11 +942,7 @@ describe('PWA Installation Tests', () => {
                 Install App
               </button>
             )}
-            <UnifiedQuoteCard
-              quote={installTestQuote}
-              viewMode="customer"
-              layout="detail"
-            />
+            <UnifiedQuoteCard quote={installTestQuote} viewMode="customer" layout="detail" />
           </div>
         );
       };
@@ -997,12 +964,14 @@ describe('PWA Installation Tests', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('install-error')).toBeInTheDocument();
-        expect(screen.getByText('Installation failed. Please try again later.')).toBeInTheDocument();
+        expect(
+          screen.getByText('Installation failed. Please try again later.'),
+        ).toBeInTheDocument();
       });
 
       expect(window.gtag).toHaveBeenCalledWith('event', 'install_error', {
         error_message: 'Installation failed',
-        platform: 'web'
+        platform: 'web',
       });
     });
   });

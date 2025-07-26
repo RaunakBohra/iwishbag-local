@@ -192,9 +192,6 @@ export const useColorVariantTesting = (testName?: string) => {
   const colorScheme = useMemo(() => {
     const variantConfig = COLOR_VARIANTS[variant] || COLOR_VARIANTS.control;
     return {
-      primary: variantConfig.primary,
-      secondary: variantConfig.secondary,
-      accent: variantConfig.accent,
       // Merge with other theme colors
       ...customerTheme,
       // Override with variant colors

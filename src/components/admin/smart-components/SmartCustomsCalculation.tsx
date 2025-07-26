@@ -28,7 +28,10 @@ import type { ItemTaxBreakdown } from '@/services/PerItemTaxCalculator';
 
 interface SmartCustomsCalculationProps {
   breakdown: ItemTaxBreakdown;
-  onMethodChange?: (method: 'actual_price' | 'minimum_valuation' | 'manual_override', value?: number) => void;
+  onMethodChange?: (
+    method: 'actual_price' | 'minimum_valuation' | 'manual_override',
+    value?: number,
+  ) => void;
   allowOverride?: boolean;
   compact?: boolean;
   showDetails?: boolean;
@@ -41,9 +44,9 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
   compact = false,
   showDetails = true,
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<'actual_price' | 'minimum_valuation' | 'manual_override'>(
-    breakdown.calculation_options.selected_method
-  );
+  const [selectedMethod, setSelectedMethod] = useState<
+    'actual_price' | 'minimum_valuation' | 'manual_override'
+  >(breakdown.calculation_options.selected_method);
   const [manualAmount, setManualAmount] = useState<string>('');
   const [isEditingManual, setIsEditingManual] = useState(false);
 
@@ -103,8 +106,11 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-600">Customs Method:</span>
           <Badge variant={selectedMethod === 'actual_price' ? 'default' : 'secondary'}>
-            {selectedMethod === 'actual_price' ? 'Actual Price' : 
-             selectedMethod === 'minimum_valuation' ? 'Min. Valuation' : 'Manual'}
+            {selectedMethod === 'actual_price'
+              ? 'Actual Price'
+              : selectedMethod === 'minimum_valuation'
+                ? 'Min. Valuation'
+                : 'Manual'}
           </Badge>
         </div>
         {hasMinimumValuation && getDifferencePercentage() > 10 && (
@@ -135,11 +141,7 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
 
       <CardContent className="space-y-4">
         {/* Calculation Options */}
-        <RadioGroup
-          value={selectedMethod}
-          onValueChange={handleMethodChange}
-          className="space-y-3"
-        >
+        <RadioGroup value={selectedMethod} onValueChange={handleMethodChange} className="space-y-3">
           {/* Actual Price Calculation */}
           <div className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
             <RadioGroupItem value="actual_price" id="actual_price" className="mt-1" />
@@ -151,7 +153,8 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
                 <div className="flex items-center justify-between">
                   <span>Basis Amount:</span>
                   <span className="font-medium">
-                    {calculation_options.actual_price_calculation.basis_amount.toLocaleString()} {breakdown.minimum_valuation_conversion?.originCurrency || 'USD'}
+                    {calculation_options.actual_price_calculation.basis_amount.toLocaleString()}{' '}
+                    {breakdown.minimum_valuation_conversion?.originCurrency || 'USD'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -191,13 +194,19 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
                   <div className="flex items-center justify-between">
                     <span>Currency Conversion:</span>
                     <span className="font-medium text-amber-700 flex items-center space-x-1">
-                      <span>{calculation_options.minimum_valuation_calculation!.currency_conversion_details}</span>
+                      <span>
+                        {
+                          calculation_options.minimum_valuation_calculation!
+                            .currency_conversion_details
+                        }
+                      </span>
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Basis Amount:</span>
                     <span className="font-medium">
-                      {calculation_options.minimum_valuation_calculation!.basis_amount.toLocaleString()} {breakdown.minimum_valuation_conversion?.originCurrency || 'USD'}
+                      {calculation_options.minimum_valuation_calculation!.basis_amount.toLocaleString()}{' '}
+                      {breakdown.minimum_valuation_conversion?.originCurrency || 'USD'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -291,7 +300,8 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
                 {selectedMethod === 'manual_override' && 'Manual Override'}
               </div>
               <div className="text-lg font-bold text-indigo-600">
-                Total: {getSelectedCalculation().total_tax.toLocaleString()} {breakdown.minimum_valuation_conversion?.originCurrency || 'USD'}
+                Total: {getSelectedCalculation().total_tax.toLocaleString()}{' '}
+                {breakdown.minimum_valuation_conversion?.originCurrency || 'USD'}
               </div>
             </div>
           </div>
@@ -302,8 +312,9 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              <strong>Large Difference Detected:</strong> {getDifferencePercentage()}% difference between calculation methods. 
-              Please review the item valuation and ensure the correct method is selected.
+              <strong>Large Difference Detected:</strong> {getDifferencePercentage()}% difference
+              between calculation methods. Please review the item valuation and ensure the correct
+              method is selected.
             </AlertDescription>
           </Alert>
         )}
@@ -312,7 +323,8 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              Manual override selected. This will be logged for audit purposes. Please ensure the amount is justified.
+              Manual override selected. This will be logged for audit purposes. Please ensure the
+              amount is justified.
             </AlertDescription>
           </Alert>
         )}
@@ -324,9 +336,7 @@ export const SmartCustomsCalculation: React.FC<SmartCustomsCalculationProps> = (
             <div>HSN Code: {breakdown.hsn_code}</div>
             <div>Confidence: {Math.round(breakdown.confidence_score * 100)}%</div>
             {breakdown.warnings.length > 0 && (
-              <div className="text-amber-600">
-                Warnings: {breakdown.warnings.length} item(s)
-              </div>
+              <div className="text-amber-600">Warnings: {breakdown.warnings.length} item(s)</div>
             )}
           </div>
         )}

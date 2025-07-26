@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChevronDown, Scale } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +23,7 @@ export const StripeWeightSelector: React.FC<StripeWeightSelectorProps> = ({
   weight,
   suggestions,
   onWeightChange,
-  className
+  className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(weight.toString());
@@ -58,7 +54,7 @@ export const StripeWeightSelector: React.FC<StripeWeightSelectorProps> = ({
         <Scale className="w-3.5 h-3.5" />
         <span>Weight</span>
       </div>
-      
+
       <div className="relative flex items-center">
         <Input
           value={inputValue}
@@ -70,7 +66,7 @@ export const StripeWeightSelector: React.FC<StripeWeightSelectorProps> = ({
           min="0"
         />
         <span className="absolute right-8 text-xs text-gray-500 pointer-events-none">kg</span>
-        
+
         {suggestions.length > 0 && (
           <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
@@ -84,9 +80,7 @@ export const StripeWeightSelector: React.FC<StripeWeightSelectorProps> = ({
             </PopoverTrigger>
             <PopoverContent className="w-56 p-2" align="start">
               <div className="space-y-1">
-                <div className="text-xs font-medium text-gray-900 px-2 py-1">
-                  Suggestions
-                </div>
+                <div className="text-xs font-medium text-gray-900 px-2 py-1">Suggestions</div>
                 {suggestions.map((suggestion, index) => (
                   <button
                     key={index}
@@ -95,16 +89,25 @@ export const StripeWeightSelector: React.FC<StripeWeightSelectorProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{suggestion.value}kg</span>
-                      <span className="text-xs text-gray-500 uppercase">
-                        {suggestion.source}
-                      </span>
+                      <span className="text-xs text-gray-500 uppercase">{suggestion.source}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={cn('w-1.5 h-1.5 rounded-full', 
-                        suggestion.confidence >= 0.8 ? 'bg-green-500' :
-                        suggestion.confidence >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
-                      )} />
-                      <span className={cn('text-xs font-medium', getConfidenceColor(suggestion.confidence))}>
+                      <div
+                        className={cn(
+                          'w-1.5 h-1.5 rounded-full',
+                          suggestion.confidence >= 0.8
+                            ? 'bg-green-500'
+                            : suggestion.confidence >= 0.6
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500',
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'text-xs font-medium',
+                          getConfidenceColor(suggestion.confidence),
+                        )}
+                      >
                         {Math.round(suggestion.confidence * 100)}%
                       </span>
                     </div>

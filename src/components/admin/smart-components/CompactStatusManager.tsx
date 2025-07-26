@@ -129,10 +129,8 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         finalTotal: quote.final_total_usd || 0,
         quantity: quote.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
         itemWeight:
-          quote.items?.reduce(
-            (sum, item) => sum + (item.weight || 0) * (item.quantity || 1),
-            0,
-          ) || 0,
+          quote.items?.reduce((sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 0) ||
+          0,
         imageUrl: quote.items?.[0]?.image_url,
         countryCode: quote.destination_country || 'US',
         purchaseCountryCode: quote.origin_country || 'US',
@@ -210,7 +208,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
     setOptimisticStatus(newStatus);
 
     try {
-
       // Handle cart-related business logic before status update
       if (newStatus === 'rejected' || newStatus === 'expired') {
         // Remove from cart if being rejected/expired
@@ -256,7 +253,6 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
         throw new Error('Failed to update quote status');
       }
     } catch (error) {
-
       // Revert optimistic update on error
       setOptimisticStatus(null);
 

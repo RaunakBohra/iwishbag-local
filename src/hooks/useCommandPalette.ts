@@ -16,18 +16,14 @@ interface UseCommandPaletteOptions {
 }
 
 export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
-  const {
-    enableShortcut = true,
-    shortcutKey = 'k',
-    preventDefaultShortcuts = true,
-  } = options;
+  const { enableShortcut = true, shortcutKey = 'k', preventDefaultShortcuts = true } = options;
 
   const [isOpen, setIsOpen] = useState(false);
 
   // Open the command palette
   const openPalette = useCallback(() => {
     setIsOpen(true);
-    
+
     // Track command palette open event
     userActivityService.trackActivity(ACTIVITY_TYPES.BUTTON_CLICK, {
       element_id: 'command_palette',
@@ -55,17 +51,12 @@ export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
-      const isCommandK = 
-        (event.metaKey || event.ctrlKey) && 
-        event.key.toLowerCase() === shortcutKey;
+      const isCommandK =
+        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === shortcutKey;
 
       // Check for standalone shortcuts like "/" for search
-      const isSlashSearch = 
-        event.key === '/' && 
-        !event.metaKey && 
-        !event.ctrlKey && 
-        !event.altKey &&
-        !isInputFocused();
+      const isSlashSearch =
+        event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey && !isInputFocused();
 
       if (isCommandK || isSlashSearch) {
         // Prevent default browser behavior
@@ -88,7 +79,7 @@ export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
         closePalette();
       }
     },
-    [shortcutKey, preventDefaultShortcuts, togglePalette, isOpen, closePalette]
+    [shortcutKey, preventDefaultShortcuts, togglePalette, isOpen, closePalette],
   );
 
   // Check if an input element is currently focused
@@ -99,7 +90,7 @@ export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
     const tagName = activeElement.tagName.toLowerCase();
     const isContentEditable = activeElement.getAttribute('contenteditable') === 'true';
     const isInput = ['input', 'textarea', 'select'].includes(tagName);
-    
+
     return isInput || isContentEditable;
   };
 
@@ -108,7 +99,7 @@ export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
     if (!enableShortcut) return;
 
     document.addEventListener('keydown', handleKeyDown, true);
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
     };
@@ -138,12 +129,12 @@ export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
   return {
     // State
     isOpen,
-    
+
     // Actions
     openPalette,
     closePalette,
     togglePalette,
-    
+
     // Utilities
     getShortcutDisplay,
     isInputFocused,
@@ -171,22 +162,20 @@ export const useCommandPaletteAnalytics = () => {
     });
   }, []);
 
-  const trackPaletteSelection = useCallback(async (
-    itemType: string,
-    itemId: string,
-    itemTitle: string,
-    searchQuery?: string
-  ) => {
-    await userActivityService.trackActivity(ACTIVITY_TYPES.LINK_CLICK, {
-      element_id: itemId,
-      element_type: itemType,
-      element_text: itemTitle,
-      action: 'select',
-      source: 'command_palette',
-      search_query: searchQuery,
-      timestamp: new Date().toISOString(),
-    });
-  }, []);
+  const trackPaletteSelection = useCallback(
+    async (itemType: string, itemId: string, itemTitle: string, searchQuery?: string) => {
+      await userActivityService.trackActivity(ACTIVITY_TYPES.LINK_CLICK, {
+        element_id: itemId,
+        element_type: itemType,
+        element_text: itemTitle,
+        action: 'select',
+        source: 'command_palette',
+        search_query: searchQuery,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    [],
+  );
 
   return {
     trackPaletteOpen,
@@ -199,41 +188,47 @@ export const useCommandPaletteAnalytics = () => {
 export const useGlobalKeyboardShortcuts = () => {
   const [shortcuts, setShortcuts] = useState<Map<string, () => void>>(new Map());
 
-  const registerShortcut = useCallback((
-    key: string,
-    modifiers: {
-      ctrl?: boolean;
-      meta?: boolean;
-      alt?: boolean;
-      shift?: boolean;
-    },
-    callback: () => void,
-    description?: string
-  ) => {
-    const shortcutKey = `${modifiers.ctrl ? 'ctrl+' : ''}${modifiers.meta ? 'meta+' : ''}${modifiers.alt ? 'alt+' : ''}${modifiers.shift ? 'shift+' : ''}${key}`;
-    
-    setShortcuts(prev => new Map(prev).set(shortcutKey, callback));
-    
-    return () => {
-      setShortcuts(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(shortcutKey);
-        return newMap;
-      });
-    };
-  }, []);
+  const registerShortcut = useCallback(
+    (
+      key: string,
+      modifiers: {
+        ctrl?: boolean;
+        meta?: boolean;
+        alt?: boolean;
+        shift?: boolean;
+      },
+      callback: () => void,
+      description?: string,
+    ) => {
+      const shortcutKey = `${modifiers.ctrl ? 'ctrl+' : ''}${modifiers.meta ? 'meta+' : ''}${modifiers.alt ? 'alt+' : ''}${modifiers.shift ? 'shift+' : ''}${key}`;
 
-  const handleGlobalKeyDown = useCallback((event: KeyboardEvent) => {
-    const key = event.key.toLowerCase();
-    const shortcutKey = `${event.ctrlKey ? 'ctrl+' : ''}${event.metaKey ? 'meta+' : ''}${event.altKey ? 'alt+' : ''}${event.shiftKey ? 'shift+' : ''}${key}`;
-    
-    const callback = shortcuts.get(shortcutKey);
-    if (callback) {
-      event.preventDefault();
-      event.stopPropagation();
-      callback();
-    }
-  }, [shortcuts]);
+      setShortcuts((prev) => new Map(prev).set(shortcutKey, callback));
+
+      return () => {
+        setShortcuts((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(shortcutKey);
+          return newMap;
+        });
+      };
+    },
+    [],
+  );
+
+  const handleGlobalKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const shortcutKey = `${event.ctrlKey ? 'ctrl+' : ''}${event.metaKey ? 'meta+' : ''}${event.altKey ? 'alt+' : ''}${event.shiftKey ? 'shift+' : ''}${key}`;
+
+      const callback = shortcuts.get(shortcutKey);
+      if (callback) {
+        event.preventDefault();
+        event.stopPropagation();
+        callback();
+      }
+    },
+    [shortcuts],
+  );
 
   useEffect(() => {
     document.addEventListener('keydown', handleGlobalKeyDown, true);

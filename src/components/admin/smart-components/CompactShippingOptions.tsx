@@ -63,7 +63,6 @@ export const CompactShippingOptions: React.FC<CompactShippingOptionsProps> = ({
   const selectedOptionId = quote.operational_data?.shipping?.selected_option;
   const selectedOption = shippingOptions.find((opt) => opt.id === selectedOptionId);
 
-
   // Get top recommendation
   const topRecommendation = recommendations[0];
   const recommendedOption = topRecommendation

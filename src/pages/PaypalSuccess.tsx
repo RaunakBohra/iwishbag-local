@@ -24,7 +24,7 @@ import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { supabase } from '@/integrations/supabase/client';
 import { useCartStore } from '@/stores/cartStore';
 import { useQueryClient } from '@tanstack/react-query';
-import { currencyService } from '@/services/CurrencyService';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 
 interface PayPalSuccessData {
   token: string; // PayPal order ID
@@ -546,7 +546,7 @@ const PaypalSuccess: React.FC = () => {
                         <div>
                           <span className="text-gray-600">Amount Paid:</span>
                           <p className="font-semibold text-lg text-green-600">
-                            {currencyService.formatAmount(paymentData.amount, paymentData.currency)}
+                            {optimizedCurrencyService.formatAmount(paymentData.amount, paymentData.currency)}
                           </p>
                         </div>
                         <div>

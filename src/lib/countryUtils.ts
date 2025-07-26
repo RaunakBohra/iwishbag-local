@@ -23,6 +23,7 @@ export const getCountryDisplayName = (
   showCode: boolean = false,
 ): string => {
   if (!code) return 'Unknown';
+  if (!Array.isArray(countries)) return code;
 
   const country = countries.find((c) => c.code === code);
   if (!country) return code;
@@ -38,6 +39,7 @@ export const getCountryDisplayName = (
  */
 export const getCountryCode = (name: string, countries: CountryInfo[] = []): string => {
   if (!name) return '';
+  if (!Array.isArray(countries)) return name;
 
   // If it's already a 2-letter code, return it
   if (name.length === 2 && /^[A-Z]{2}$/.test(name.toUpperCase())) {
@@ -81,6 +83,9 @@ export const formatShippingRoute = (
 ): string => {
   // Handle empty or invalid inputs
   if (!originCode || !destinationCode) {
+    return '—';
+  }
+  if (!Array.isArray(countries)) {
     return '—';
   }
 

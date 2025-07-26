@@ -41,15 +41,11 @@ const AddToCartButton = ({ quoteId, className = '' }: { quoteId: string; classNa
 
   const handleAddToCart = async () => {
     // Track add to cart activity
-    await userActivityService.trackQuoteActivity(
-      ACTIVITY_TYPES.PRODUCT_ADD_TO_CART,
-      quoteId,
-      {
-        action: 'add_to_cart',
-        source: 'quotes_page',
-      }
-    );
-    
+    await userActivityService.trackQuoteActivity(ACTIVITY_TYPES.PRODUCT_ADD_TO_CART, quoteId, {
+      action: 'add_to_cart',
+      source: 'quotes_page',
+    });
+
     await addToCart();
   };
 
@@ -98,7 +94,9 @@ const QuoteCard = ({
 
   // Get origin country name for fallback display
   const originCountry = quote.origin_country || quote.destination_country || 'US';
-  const originCountryName = countries?.find((c) => c.code === originCountry)?.name || originCountry;
+  const originCountryName = Array.isArray(countries) 
+    ? countries.find((c) => c.code === originCountry)?.name || originCountry
+    : originCountry;
   const fallbackName = `${originCountryName} Quote`;
 
   // Check if quote can be added to cart based on status configuration

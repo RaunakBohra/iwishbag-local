@@ -31,7 +31,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/design-system';
-import { useCommandPaletteData, useSearchAnalytics, SearchResult, QuickAction } from '@/hooks/useGlobalSearch';
+import {
+  useCommandPaletteData,
+  useSearchAnalytics,
+  SearchResult,
+  QuickAction,
+} from '@/hooks/useGlobalSearch';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -43,7 +48,7 @@ const iconMap = {
   support_ticket: MessageSquare,
   product: Package,
   order: Package,
-  
+
   // Quick action icons
   Plus,
   FileText,
@@ -84,17 +89,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
   const { logSearchSelection } = useSearchAnalytics();
 
   // Get command palette data
-  const {
-    searchResults,
-    quickActions,
-    suggestions,
-    isSearching,
-    isLoading,
-  } = useCommandPaletteData(query, {
-    enabled: isOpen,
-    searchLimit: 12,
-    showQuickActions: true,
-  });
+  const { searchResults, quickActions, suggestions, isSearching, isLoading } =
+    useCommandPaletteData(query, {
+      enabled: isOpen,
+      searchLimit: 12,
+      showQuickActions: true,
+    });
 
   // Combine all items for unified navigation
   const allItems: CommandItem[] = React.useMemo(() => {
@@ -126,8 +126,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           description: action.description,
           url: action.url,
           icon: action.icon,
-          category: action.category === 'creation' ? 'Create' : 
-                   action.category === 'navigation' ? 'Navigate' : 'Manage',
+          category:
+            action.category === 'creation'
+              ? 'Create'
+              : action.category === 'navigation'
+                ? 'Navigate'
+                : 'Manage',
           shortcut: action.shortcut,
         });
       });
@@ -174,13 +178,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           break;
         default:
           // Focus input for typing
-          if (e.key.length === 1 && inputRef.current && document.activeElement !== inputRef.current) {
+          if (
+            e.key.length === 1 &&
+            inputRef.current &&
+            document.activeElement !== inputRef.current
+          ) {
             inputRef.current.focus();
           }
           break;
       }
     },
-    [isOpen, allItems, selectedIndex, isNavigating]
+    [isOpen, allItems, selectedIndex, isNavigating],
   );
 
   useEffect(() => {
@@ -192,11 +200,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     const selectedElement = scrollContainer?.children[selectedIndex] as HTMLElement;
-    
+
     if (selectedElement && scrollContainer) {
       const containerRect = scrollContainer.getBoundingClientRect();
       const elementRect = selectedElement.getBoundingClientRect();
-      
+
       if (elementRect.bottom > containerRect.bottom) {
         selectedElement.scrollIntoView({ block: 'end', behavior: 'smooth' });
       } else if (elementRect.top < containerRect.top) {
@@ -214,7 +222,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
 
   const handleItemSelect = async (item: CommandItem) => {
     if (isNavigating) return;
-    
+
     setIsNavigating(true);
 
     try {
@@ -255,7 +263,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         </Badge>
       );
     }
-    
+
     if (item.shortcut) {
       return (
         <Badge variant="outline" className="text-xs">
@@ -263,13 +271,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
         </Badge>
       );
     }
-    
+
     return null;
   };
 
   const groupedItems = React.useMemo(() => {
     const groups: { [category: string]: CommandItem[] } = {};
-    
+
     allItems.forEach((item) => {
       const category = item.category || 'Other';
       if (!groups[category]) {
@@ -277,7 +285,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
       }
       groups[category].push(item);
     });
-    
+
     return groups;
   }, [allItems]);
 
@@ -311,9 +319,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
               className="border-0 p-0 text-base bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
               autoComplete="off"
             />
-            {isSearching && (
-              <Loader2 className="w-4 h-4 text-gray-400 animate-spin ml-2" />
-            )}
+            {isSearching && <Loader2 className="w-4 h-4 text-gray-400 animate-spin ml-2" />}
             <div className="flex items-center gap-1 ml-3 text-xs text-gray-500">
               <Command className="w-3 h-3" />
               <span>K</span>
@@ -321,10 +327,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
           </div>
 
           {/* Results */}
-          <div
-            ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto py-2 max-h-96"
-          >
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto py-2 max-h-96">
             {isLoading && allItems.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -352,21 +355,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
                 {Object.entries(groupedItems).map(([category, items], groupIndex) => (
                   <div key={category}>
                     {groupIndex > 0 && <Separator className="my-2" />}
-                    
+
                     {/* Category header */}
                     <div className="px-4 py-1 text-xs font-medium text-gray-500 flex items-center gap-2">
-                      {React.createElement(getCategoryIcon(category), { className: "w-3 h-3" })}
+                      {React.createElement(getCategoryIcon(category), { className: 'w-3 h-3' })}
                       {category}
                       <span className="text-gray-400">({items.length})</span>
                     </div>
-                    
+
                     {/* Category items */}
                     <AnimatePresence>
                       {items.map((item, itemIndex) => {
-                        const globalIndex = allItems.findIndex(i => i.id === item.id);
+                        const globalIndex = allItems.findIndex((i) => i.id === item.id);
                         const isSelected = globalIndex === selectedIndex;
                         const Icon = getItemIcon(item.icon);
-                        
+
                         return (
                           <motion.div
                             key={item.id}
@@ -378,28 +381,34 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
                               'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors relative',
                               isSelected
                                 ? 'bg-teal-50 border-r-2 border-teal-500'
-                                : 'hover:bg-gray-50'
+                                : 'hover:bg-gray-50',
                             )}
                             onClick={() => handleItemSelect(item)}
                           >
                             {/* Icon */}
-                            <div className={cn(
-                              'flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center',
-                              isSelected ? 'bg-teal-100' : 'bg-gray-100'
-                            )}>
-                              <Icon className={cn(
-                                'w-4 h-4',
-                                isSelected ? 'text-teal-600' : 'text-gray-600'
-                              )} />
+                            <div
+                              className={cn(
+                                'flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center',
+                                isSelected ? 'bg-teal-100' : 'bg-gray-100',
+                              )}
+                            >
+                              <Icon
+                                className={cn(
+                                  'w-4 h-4',
+                                  isSelected ? 'text-teal-600' : 'text-gray-600',
+                                )}
+                              />
                             </div>
-                            
+
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <p className={cn(
-                                  'font-medium truncate text-sm',
-                                  isSelected ? 'text-teal-900' : 'text-gray-900'
-                                )}>
+                                <p
+                                  className={cn(
+                                    'font-medium truncate text-sm',
+                                    isSelected ? 'text-teal-900' : 'text-gray-900',
+                                  )}
+                                >
                                   {item.title}
                                 </p>
                                 {getItemBadge(item)}
@@ -408,16 +417,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
                                 {item.description}
                               </p>
                             </div>
-                            
+
                             {/* Arrow or loading indicator */}
                             <div className="flex-shrink-0">
                               {isNavigating && isSelected ? (
                                 <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
                               ) : (
-                                <ArrowRight className={cn(
-                                  'w-4 h-4 transition-colors',
-                                  isSelected ? 'text-teal-600' : 'text-gray-400'
-                                )} />
+                                <ArrowRight
+                                  className={cn(
+                                    'w-4 h-4 transition-colors',
+                                    isSelected ? 'text-teal-600' : 'text-gray-400',
+                                  )}
+                                />
                               )}
                             </div>
                           </motion.div>
@@ -448,9 +459,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
                   <span>Close</span>
                 </div>
               </div>
-              <div>
-                {user ? `${allItems.length} results` : 'Sign in to search'}
-              </div>
+              <div>{user ? `${allItems.length} results` : 'Sign in to search'}</div>
             </div>
           </div>
         </div>
