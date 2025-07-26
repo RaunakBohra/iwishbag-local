@@ -43,6 +43,7 @@ import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
 import { notificationService } from '@/services/NotificationService';
 import { NOTIFICATION_TYPES } from '@/types/NotificationTypes';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 const steps = ['Product Info', 'Contact & Submit'];
 
@@ -152,7 +153,7 @@ export default function QuoteRequestPage() {
     }
   };
 
-  const handleSubmit = async (submissionData?: { email?: string; name?: string; insuranceOptedIn?: boolean }) => {
+  const handleSubmit = async (submissionData?: { email?: string; name?: string; insuranceOptedIn?: boolean; turnstileToken?: string }) => {
     setIsSubmitting(true);
     setSubmitError('');
 

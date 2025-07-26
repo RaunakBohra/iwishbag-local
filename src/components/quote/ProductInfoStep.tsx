@@ -35,8 +35,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { ImageUpload } from '@/components/ui/image-upload';
+import { InlineFileUploadZone } from '@/components/ui/InlineFileUploadZone';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Upload,
   X,
@@ -56,11 +58,21 @@ import {
   FileSpreadsheet,
   Image,
   Eye,
+  LogIn,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { locationDetectionService } from '@/services/LocationDetectionService';
 import { R2StorageService } from '@/services/R2StorageService';
+import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 function isValidUrl(url) {
   try {
@@ -80,12 +92,15 @@ export default function ProductInfoStep({
   setDestinationCountry,
   next,
 }) {
+  const { user } = useAuth();
   const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
   const { data: shippingCountries, isLoading: shippingCountriesLoading } = useShippingCountries();
   const [errors, setErrors] = useState({});
   const [countryValidationError, setCountryValidationError] = useState('');
   const [destinationCountryError, setDestinationCountryError] = useState('');
   const [uploadStates, setUploadStates] = useState({}); // Track upload states for each product
+  const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState({}); // Track expanded state for notes per product
   
   // Location detection debug state
   const [locationDebug, setLocationDebug] = useState({
@@ -177,11 +192,8 @@ export default function ProductInfoStep({
 
   const addProduct = () => {
     const newProduct = {
-      name: '',
       url: '',
-      file: null,
-      imageUrl: '', // Separate field for uploaded image URL
-      fileKey: null, // R2 storage key for deletion
+      files: [], // Array of uploaded files with metadata
       quantity: 1,
       price: '',
       weight: '',
@@ -194,6 +206,11 @@ export default function ProductInfoStep({
   const removeProduct = (idx) => {
     setProducts(products.filter((_, i) => i !== idx));
     setUploadStates((prev) => {
+      const newStates = { ...prev };
+      delete newStates[idx];
+      return newStates;
+    });
+    setExpandedNotes((prev) => {
       const newStates = { ...prev };
       delete newStates[idx];
       return newStates;
@@ -216,183 +233,54 @@ export default function ProductInfoStep({
     setProducts(newProducts);
   };
 
-  const handleFileUpload = async (index, file) => {
-    if (!file) return;
-
-    // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      setUploadStates((prev) => ({
-        ...prev,
-        [index]: { status: 'error', message: 'File size must be less than 10MB' },
-      }));
-      return;
+  const handleFileUpload = async (productIndex, file) => {
+    // Require authentication for file uploads
+    if (!user || user.is_anonymous) {
+      setShowSignInPrompt(true);
+      throw new Error('Authentication required');
     }
 
-    // Validate file type
-    const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'image/svg+xml',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
-      'text/csv',
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      setUploadStates((prev) => ({
-        ...prev,
-        [index]: {
-          status: 'error',
-          message: 'File type not supported. Please upload images, PDFs, or documents.',
-        },
-      }));
-      return;
+    // Get or create session ID
+    const sessionId = localStorage.getItem('anonymous_session_id') || crypto.randomUUID();
+    if (!localStorage.getItem('anonymous_session_id')) {
+      localStorage.setItem('anonymous_session_id', sessionId);
     }
 
-    // Set uploading state
-    setUploadStates((prev) => ({
-      ...prev,
-      [index]: { status: 'uploading', message: 'Uploading...' },
-    }));
-
-    try {
-      // Get or create session ID
-      const sessionId = localStorage.getItem('anonymous_session_id') || crypto.randomUUID();
-      if (!localStorage.getItem('anonymous_session_id')) {
-        localStorage.setItem('anonymous_session_id', sessionId);
-      }
-
-      // Upload to R2 via worker
-      const r2Service = R2StorageService.getInstance();
-      const { url, key } = await r2Service.uploadFile(file, {
-        sessionId: sessionId,
-        productIndex: index
-      });
-
-      // Update product with file info
-      updateProduct(index, 'file', file);
-      updateProduct(index, 'imageUrl', url);
-      updateProduct(index, 'fileKey', key); // Store the key for deletion
-
-      // Set success state
-      setUploadStates((prev) => ({
-        ...prev,
-        [index]: { status: 'success', message: 'Upload successful' },
-      }));
-    } catch (error) {
-      console.error('Upload error:', error);
-      setUploadStates((prev) => ({
-        ...prev,
-        [index]: { status: 'error', message: 'Upload failed. Please try again.' },
-      }));
-    }
-  };
-
-  const handleDeleteFile = async (index) => {
-    const product = products[index];
-    
-    // Delete from R2 if we have a key
-    if (product.fileKey) {
-      try {
-        const r2Service = R2StorageService.getInstance();
-        await r2Service.deleteFile(product.fileKey);
-      } catch (error) {
-        console.warn('Failed to delete file from R2:', error);
-        // Continue with local cleanup even if R2 delete fails
-      }
-    }
-    
-    updateProduct(index, 'file', null);
-    updateProduct(index, 'imageUrl', '');
-    updateProduct(index, 'fileKey', null);
-    setUploadStates((prev) => {
-      const newStates = { ...prev };
-      delete newStates[index];
-      return newStates;
+    // Upload to R2 via worker
+    const r2Service = R2StorageService.getInstance();
+    const { url, key } = await r2Service.uploadFile(file, {
+      sessionId: sessionId,
+      productIndex: productIndex
     });
+
+    return { url, key };
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const handleFilesChange = (productIndex, files) => {
+    updateProduct(productIndex, 'files', files);
   };
 
-  const getFileIcon = (file) => {
-    if (!file) return File;
+  const toggleNotesExpansion = (productIndex) => {
+    setExpandedNotes(prev => ({
+      ...prev,
+      [productIndex]: !prev[productIndex]
+    }));
+  };
 
-    const type = file.type.toLowerCase();
-    const name = file.name.toLowerCase();
-
-    // Images
-    if (type.startsWith('image/')) {
-      return Image;
+  const handleNotesChange = (productIndex, value) => {
+    updateProduct(productIndex, 'notes', value);
+    
+    // Auto-expand if text is long
+    if (value.length > 100 && !expandedNotes[productIndex]) {
+      setExpandedNotes(prev => ({
+        ...prev,
+        [productIndex]: true
+      }));
     }
-
-    // PDFs
-    if (type === 'application/pdf' || name.endsWith('.pdf')) {
-      return FileText;
-    }
-
-    // Excel files
-    if (type.includes('spreadsheet') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
-      return FileSpreadsheet;
-    }
-
-    // Word documents
-    if (type.includes('document') || name.endsWith('.docx') || name.endsWith('.doc')) {
-      return FileText;
-    }
-
-    // Default
-    return File;
   };
 
-  const isImageFile = (file) => {
-    return file && file.type.startsWith('image/');
-  };
 
-  const FileChip = ({ file, onDelete, onView, index }) => {
-    const FileIcon = getFileIcon(file);
-    const isImage = file.type.startsWith('image/');
 
-    return (
-      <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 max-w-xs">
-        <FileIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-green-800 truncate">{file.name}</p>
-          <p className="text-xs text-green-600">{formatFileSize(file.size)}</p>
-        </div>
-        <div className="flex gap-1">
-          {isImage && (
-            <button
-              onClick={onView}
-              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
-              title="Preview"
-            >
-              <Eye className="h-3 w-3" />
-            </button>
-          )}
-          <button
-            onClick={onDelete}
-            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded transition-colors"
-            title="Remove"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   const validate = () => {
     const newErrors = {};
@@ -421,7 +309,8 @@ export default function ProductInfoStep({
     }
 
     products.forEach((product, index) => {
-      if (!product.url && !product.file) {
+      const hasFiles = product.files && product.files.length > 0;
+      if (!product.url && !hasFiles) {
         newErrors[`url-${index}`] = 'Either URL or file upload is required';
       }
       if (product.url && !isValidUrl(product.url)) {
@@ -740,13 +629,15 @@ export default function ProductInfoStep({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
+              {/* Row 1: Purchase Country + Product URL */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                {/* Purchase Country - 18% on desktop (40% less than 30%) */}
+                <div className="sm:w-[18%] sm:min-w-[100px]">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                    Purchase Country *
+                    Country *
                     {quoteType === 'combined' && index > 0 && (
-                      <span className="text-teal-600 ml-2 text-xs sm:text-sm font-normal">
-                        (Auto-synced)
+                      <span className="text-teal-600 ml-1 text-xs font-normal">
+                        (Auto)
                       </span>
                     )}
                   </label>
@@ -760,11 +651,11 @@ export default function ProductInfoStep({
                     }`}
                     disabled={quoteType === 'combined' && index > 0}
                   >
-                    <option value="">Select country</option>
+                    <option value="">Select</option>
                     {isLoading ? (
-                      <option>Loading countries...</option>
+                      <option>Loading...</option>
                     ) : countryError ? (
-                      <option>Failed to load countries</option>
+                      <option>Error</option>
                     ) : Array.isArray(countries) ? (
                       countries.map((country) => (
                         <option key={country.code} value={country.code}>
@@ -772,201 +663,174 @@ export default function ProductInfoStep({
                         </option>
                       ))
                     ) : (
-                      <option>No countries available</option>
+                      <option>No countries</option>
                     )}
                   </select>
                   {errors[`country-${index}`] && (
-                    <p className="text-red-500 text-xs sm:text-sm mt-1">
+                    <p className="text-red-500 text-xs mt-1">
                       {errors[`country-${index}`]}
                     </p>
                   )}
                   {quoteType === 'combined' && index > 0 && product.country && (
-                    <div className="flex items-center gap-1 mt-2">
+                    <div className="flex items-center gap-1 mt-1">
                       <CheckCircle className="h-3 w-3 text-green-600" />
-                      <span className="text-xs sm:text-sm text-green-600">
-                        Synced with Product 1
+                      <span className="text-xs text-green-600">
+                        Synced
                       </span>
                     </div>
                   )}
                 </div>
 
-                <div>
+                {/* Product URL - 82% on desktop (increased to compensate) */}
+                <div className="flex-1 sm:w-[82%]">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                    Product Name
+                    Product URL {!product.url && !product.files?.length && '*'}
                   </label>
-                  <input
-                    type="text"
-                    value={product.name}
-                    onChange={(e) => updateProduct(index, 'name', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                    placeholder="Product name (optional)"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                  Product URL or Upload File *
-                </label>
-                <div className="flex gap-3">
                   <input
                     type="url"
                     value={product.url}
                     onChange={(e) => updateProduct(index, 'url', e.target.value)}
-                    className="flex-1 border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                    placeholder="Paste product URL (Amazon, eBay, etc.)"
+                    className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                    placeholder="Paste product URL (Amazon, eBay, etc.) or upload files below"
                   />
-
-                  {/* Enhanced Upload Button - Show when no file uploaded */}
-                  {!product.file && uploadStates[index]?.status !== 'uploading' && (
-                    <label className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white border border-teal-600 rounded-lg cursor-pointer hover:bg-teal-700 hover:border-teal-700 transition-all duration-200 shadow-sm">
-                      <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                      <span className="text-xs sm:text-sm font-medium">Upload File</span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                        onChange={(e) => handleFileUpload(index, e.target.files[0])}
-                      />
-                    </label>
-                  )}
-
-                  {/* Uploading State */}
-                  {uploadStates[index]?.status === 'uploading' && (
-                    <div className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-blue-50 border border-blue-300 rounded-lg">
-                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 animate-spin text-blue-600" />
-                      <span className="text-xs sm:text-sm font-medium text-blue-700">
-                        Uploading...
-                      </span>
-                    </div>
-                  )}
-
-                  {/* File Management Buttons - Show when file uploaded */}
-                  {product.file && uploadStates[index]?.status !== 'uploading' && (
-                    <div className="flex gap-2">
-                      <label
-                        className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-gray-100 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
-                        title="Change file"
-                      >
-                        <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">
-                          Change
-                        </span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                          onChange={(e) => handleFileUpload(index, e.target.files[0])}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteFile(index)}
-                        className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-3 bg-red-50 border border-red-300 rounded-lg hover:bg-red-100 transition-colors text-red-600"
-                        title="Delete file"
-                      >
-                        <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="ml-1 text-xs sm:text-sm font-medium hidden sm:inline">
-                          Delete
-                        </span>
-                      </button>
-                    </div>
+                  {errors[`url-${index}`] && (
+                    <p className="text-red-500 text-xs mt-1">{errors[`url-${index}`]}</p>
                   )}
                 </div>
+              </div>
 
-                {/* File Display - Enhanced chip when file is uploaded */}
-                {product.file && (
-                  <div className="mt-2">
-                    <FileChip
-                      file={product.file}
-                      onDelete={() => handleDeleteFile(index)}
-                      onView={() => window.open(product.imageUrl, '_blank')}
-                      index={index}
+              {/* Row 2: Quantity + Price + Weight + Upload Files */}
+              <div className="mt-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  {/* Quantity - ~20% */}
+                  <div className="sm:w-[20%] sm:min-w-[80px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Qty *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={product.quantity}
+                      onChange={(e) =>
+                        updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
+                      }
+                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                      placeholder="1"
+                    />
+                    {errors[`quantity-${index}`] && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors[`quantity-${index}`]}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Price - ~25% */}
+                  <div className="sm:w-[25%] sm:min-w-[100px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Price
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={product.price}
+                      onChange={(e) => updateProduct(index, 'price', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                      placeholder="0.00"
                     />
                   </div>
-                )}
 
-                {/* Upload Error State */}
-                {uploadStates[index]?.status === 'error' && (
-                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-                      <p className="text-red-600 text-xs sm:text-sm font-medium flex-1">
-                        {uploadStates[index].message}
-                      </p>
-                    </div>
+                  {/* Weight - ~25% */}
+                  <div className="sm:w-[25%] sm:min-w-[100px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Weight (kg)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={product.weight}
+                      onChange={(e) => updateProduct(index, 'weight', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                      placeholder="0.00"
+                    />
                   </div>
-                )}
 
-                {/* URL Validation Error */}
-                {errors[`url-${index}`] && (
-                  <p className="text-red-500 text-xs sm:text-sm mt-2">{errors[`url-${index}`]}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                    Quantity *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={product.quantity}
-                    onChange={(e) =>
-                      updateProduct(index, 'quantity', parseInt(e.target.value) || 1)
-                    }
-                    className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                    placeholder="1"
-                  />
-                  {errors[`quantity-${index}`] && (
-                    <p className="text-red-500 text-xs sm:text-sm mt-1">
-                      {errors[`quantity-${index}`]}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={product.price}
-                    onChange={(e) => updateProduct(index, 'price', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                    Weight (kg)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={product.weight}
-                    onChange={(e) => updateProduct(index, 'weight', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                    placeholder="0.00"
-                  />
+                  {/* Upload Files - ~30% */}
+                  <div className="flex-1 sm:w-[30%] sm:min-w-[120px]">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                      Files
+                    </label>
+                    {(!user || user.is_anonymous) ? (
+                      <div 
+                        className="h-[40px] sm:h-[48px] flex items-center justify-center border-2 border-dashed border-blue-300 rounded-lg bg-blue-50 cursor-pointer hover:bg-blue-100 transition-colors"
+                        onClick={() => setShowSignInPrompt(true)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <LogIn className="h-4 w-4 text-blue-600" />
+                          <span className="text-blue-700 text-sm font-medium hidden sm:inline">
+                            Sign In
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <InlineFileUploadZone
+                        onFilesChange={(files) => handleFilesChange(index, files)}
+                        onFileUpload={(file) => handleFileUpload(index, file)}
+                        uploadedFiles={product.files || []}
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                        maxSize={10 * 1024 * 1024} // 10MB
+                        maxFiles={5}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Product Notes */}
+              {/* Row 3: Adaptive Notes Field */}
               <div className="mt-4">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                  Product Notes (optional)
+                  Notes (optional)
                 </label>
-                <textarea
-                  value={product.notes}
-                  onChange={(e) => updateProduct(index, 'notes', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[60px] sm:min-h-[80px] resize-vertical transition-colors"
-                  placeholder="E.g., Size, color, specific model, or any other product details..."
-                  rows={3}
-                />
+                
+                {expandedNotes[index] ? (
+                  // Expanded textarea
+                  <div className="relative">
+                    <textarea
+                      value={product.notes}
+                      onChange={(e) => handleNotesChange(index, e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-h-[80px] resize-vertical transition-all duration-200"
+                      placeholder="Add detailed notes about size, color, specific model, special instructions, or any other product details..."
+                      rows={3}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleNotesExpansion(index)}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      title="Collapse notes"
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  // Collapsed single-line input
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={product.notes}
+                      onChange={(e) => handleNotesChange(index, e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 pr-10"
+                      placeholder="Add notes (size, color, special instructions)..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => toggleNotesExpansion(index)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      title="Expand notes"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -987,6 +851,23 @@ export default function ProductInfoStep({
           </div>
         )}
       </div>
+
+      {/* Sign-In Prompt Modal */}
+      <Dialog open={showSignInPrompt} onOpenChange={setShowSignInPrompt}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">Sign In to Upload Files</DialogTitle>
+          </DialogHeader>
+          <ProgressiveAuthModal
+            onSuccess={() => {
+              setShowSignInPrompt(false);
+              // Reload the component to show upload buttons for authenticated user
+              window.location.reload();
+            }}
+            onBack={() => setShowSignInPrompt(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Continue Button */}
       <div className="flex justify-end pt-2">

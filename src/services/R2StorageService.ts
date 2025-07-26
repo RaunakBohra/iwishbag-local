@@ -13,6 +13,7 @@ interface UploadOptions {
   metadata?: Record<string, string>;
   sessionId?: string;
   productIndex?: string | number;
+  onProgress?: (progress: number) => void; // Progress callback for upload tracking
 }
 
 export class R2StorageService {
@@ -36,7 +37,7 @@ export class R2StorageService {
   }
 
   /**
-   * Upload a file directly to R2 using a Worker endpoint
+   * Upload a file directly to R2 using a Worker endpoint with progress tracking
    */
   async uploadFile(file: File, options: UploadOptions = {}): Promise<{ url: string; key: string }> {
     const formData = new FormData();
@@ -51,6 +52,50 @@ export class R2StorageService {
     }
 
     try {
+      // Create XMLHttpRequest for progress tracking if callback provided
+      if (options.onProgress) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          
+          // Track upload progress
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable && options.onProgress) {
+              const progress = Math.round((event.loaded / event.total) * 100);
+              options.onProgress(progress);
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            try {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                const result = JSON.parse(xhr.responseText);
+                resolve({
+                  url: result.url,
+                  key: result.key
+                });
+              } else {
+                const error = JSON.parse(xhr.responseText);
+                reject(new Error(error.error || 'Upload failed'));
+              }
+            } catch (parseError) {
+              reject(new Error('Invalid response from server'));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(new Error('Network error during upload'));
+          });
+
+          xhr.addEventListener('abort', () => {
+            reject(new Error('Upload was aborted'));
+          });
+
+          xhr.open('POST', `${this.config.workerUrl}/upload/quote`);
+          xhr.send(formData);
+        });
+      }
+
+      // Fallback to fetch for non-progress uploads
       const response = await fetch(`${this.config.workerUrl}/upload/quote`, {
         method: 'POST',
         body: formData

@@ -1574,25 +1574,34 @@ export default function UnifiedQuoteOrderSystem({
                   </CardHeader>
                   <CardContent>
                     <div className="border rounded-lg overflow-hidden">
-                      <table className="w-full">
+                      <table className="w-full table-fixed">
+                        <colgroup>
+                          <col style={{ width: '25%' }} />  {/* Product */}
+                          <col style={{ width: '12%' }} />  {/* Price & Qty */}
+                          <col style={{ width: '20%' }} />  {/* Weight & HSN */}
+                          <col style={{ width: '12%' }} />  {/* Tax Method */}
+                          <col style={{ width: '15%' }} />  {/* Valuation */}
+                          {orderMode && <col style={{ width: '10%' }} />}  {/* Variance */}
+                          <col style={{ width: orderMode ? '6%' : '16%' }} />  {/* Actions */}
+                        </colgroup>
                         <thead className="bg-gray-50 border-b">
                           <tr>
-                            <th className="text-left px-4 py-3 font-medium text-gray-900 text-sm">Product</th>
-                            <th className="text-center px-4 py-3 font-medium text-gray-900 text-sm">Price & Qty</th>
-                            <th className="text-center px-4 py-3 font-medium text-gray-900 text-sm">Weight & HSN</th>
-                            <th className="text-center px-4 py-3 font-medium text-gray-900 text-sm">Tax Method</th>
-                            <th className="text-center px-4 py-3 font-medium text-gray-900 text-sm">Valuation</th>
+                            <th className="text-left px-3 py-3 font-medium text-gray-900 text-sm">Product</th>
+                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Price & Qty</th>
+                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Weight & HSN</th>
+                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Tax Method</th>
+                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Valuation</th>
                             {orderMode && (
-                              <th className="text-center px-4 py-3 font-medium text-gray-900 text-sm">Variance</th>
+                              <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Variance</th>
                             )}
-                            <th className="text-center px-4 py-3 font-medium text-gray-900 text-sm">Actions</th>
+                            <th className="text-center px-2 py-3 font-medium text-gray-900 text-sm">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {items.map((item) => (
                             <tr key={item.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-4">
-                                <div className="flex items-center gap-3">
+                              <td className="px-3 py-3">
+                                <div className="flex items-center gap-2">
                                   {item.image_url && (
                                     <img 
                                       src={item.image_url} 
@@ -1630,13 +1639,14 @@ export default function UnifiedQuoteOrderSystem({
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 text-center">
+                              <td className="px-2 py-3 text-center">
                                 <div className="space-y-1">
                                   <InlineEdit
                                     fieldId={`price-${item.id}`}
                                     value={item.price}
                                     type="number"
                                     prefix="$"
+                                    className="w-20"
                                     itemId={item.id}
                                   />
                                   <div className="text-xs text-gray-500">
@@ -1650,9 +1660,9 @@ export default function UnifiedQuoteOrderSystem({
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 text-center">
-                                <div className="space-y-1">
-                                  <div className="relative">
+                              <td className="px-2 py-3">
+                                <div className="space-y-2">
+                                  <div className="w-full">
                                     <SmartDualWeightField
                                       value={item.weight || 0}
                                       onChange={(weight) => {
@@ -1680,7 +1690,7 @@ export default function UnifiedQuoteOrderSystem({
                                         setItems(updatedItems);
                                       }}
                                       label=""
-                                      className="compact-mode w-16"
+                                      className="compact-mode w-full max-w-none"
                                     />
                                     {item.weight_source && (
                                       <Popover>
@@ -1814,8 +1824,8 @@ export default function UnifiedQuoteOrderSystem({
                                   </div>
                                   <Popover open={hsnSearchOpen === item.id} onOpenChange={(open) => setHsnSearchOpen(open ? item.id : null)}>
                                     <PopoverTrigger>
-                                      <Badge variant="outline" className="cursor-pointer text-xs">
-                                        {item.hsn_code}
+                                      <Badge variant="outline" className="cursor-pointer text-xs w-full justify-center truncate">
+                                        {item.hsn_code || 'No HSN'}
                                       </Badge>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-80">
@@ -2054,7 +2064,7 @@ export default function UnifiedQuoteOrderSystem({
                                   </Popover>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 text-center">
+                              <td className="px-2 py-3 text-center">
                                 <Select 
                                   value={item.tax_method || 'hsn'}
                                   onValueChange={(value) => {
@@ -2075,7 +2085,7 @@ export default function UnifiedQuoteOrderSystem({
                                   </SelectContent>
                                 </Select>
                               </td>
-                              <td className="px-4 py-4 text-center">
+                              <td className="px-2 py-3 text-center">
                                 <Select 
                                   value={item.valuation_method || 'actual_price'}
                                   onValueChange={(value) => {
@@ -2097,7 +2107,7 @@ export default function UnifiedQuoteOrderSystem({
                                 </Select>
                               </td>
                               {orderMode && (
-                                <td className="px-4 py-4 text-center">
+                                <td className="px-2 py-3 text-center">
                                   {item.actual_price ? (
                                     <div className="space-y-1 text-xs">
                                       <div className={cn(
@@ -2118,8 +2128,8 @@ export default function UnifiedQuoteOrderSystem({
                                   )}
                                 </td>
                               )}
-                              <td className="px-4 py-4 text-center">
-                                <div className="flex items-center gap-1">
+                              <td className="px-2 py-3 text-center">
+                                <div className="flex items-center justify-center gap-1">
                                   <Popover>
                                     <PopoverTrigger asChild>
                                       <Button variant="ghost" size="sm" title="View tax breakdown">

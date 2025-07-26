@@ -25,6 +25,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 // Removed unused cn import
 import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 // Removed unused useEmailNotifications import
 
 const signInSchema = z.object({
@@ -99,7 +100,7 @@ const AuthForm = () => {
     return { text: 'Strong', color: 'text-green-500', bg: 'bg-green-500' };
   };
 
-  const handleSignIn = async (values: z.infer<typeof signInSchema>) => {
+  const handleSignIn = async (values: z.infer<typeof signInSchema>, turnstileToken?: string) => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
@@ -159,7 +160,7 @@ const AuthForm = () => {
     setLoading(false);
   };
 
-  const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
+  const handleSignUp = async (values: z.infer<typeof signUpSchema>, turnstileToken?: string) => {
     setLoading(true);
 
     try {
@@ -282,7 +283,7 @@ const AuthForm = () => {
     }
   };
 
-  const handleForgotPassword = async (values: z.infer<typeof forgotPasswordSchema>) => {
+  const handleForgotPassword = async (values: z.infer<typeof forgotPasswordSchema>, turnstileToken?: string) => {
     setForgotLoading(true);
     setResetEmailSent(false);
 
@@ -328,7 +329,18 @@ const AuthForm = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <Form {...signInForm}>
-        <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-5 pt-4">
+        <TurnstileProtectedForm
+          onSubmit={(turnstileToken) => {
+            const values = signInForm.getValues();
+            handleSignIn(values, turnstileToken);
+          }}
+          isSubmitting={loading}
+          submitButtonText={loading ? "Signing In..." : "Sign In"}
+          submitButtonClassName="w-full h-10 sm:h-11 lg:h-12 text-sm sm:text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
+          action="sign_in"
+          className="space-y-5 pt-4"
+          id="sign-in-form"
+        >
           <FormField
             control={signInForm.control}
             name="email"
@@ -364,20 +376,7 @@ const AuthForm = () => {
               </FormItem>
             )}
           />
-          <Button
-            type="submit"
-            className="w-full h-10 sm:h-11 lg:h-12 text-sm sm:text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing In...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </Button>
+          {/* Submit button is now handled by TurnstileProtectedForm */}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -446,7 +445,7 @@ const AuthForm = () => {
               Sign Up
             </button>
           </div>
-        </form>
+        </TurnstileProtectedForm>
       </Form>
 
       {/* Sign Up Modal */}
@@ -464,7 +463,18 @@ const AuthForm = () => {
             </DialogHeader>
           </div>
           <Form {...signUpForm}>
-            <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-5">
+            <TurnstileProtectedForm
+              onSubmit={(turnstileToken) => {
+                const values = signUpForm.getValues();
+                handleSignUp(values, turnstileToken);
+              }}
+              isSubmitting={loading}
+              submitButtonText={loading ? "Creating Account..." : "Create Account"}
+              submitButtonClassName="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
+              action="sign_up"
+              className="space-y-5"
+              id="sign-up-form"
+            >
               <FormField
                 control={signUpForm.control}
                 name="name"
@@ -613,21 +623,8 @@ const AuthForm = () => {
                   </FormItem>
                 )}
               />
-              <Button
-                type="submit"
-                className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-md transition-all duration-200 mt-6 shadow-lg"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  'Create Account'
-                )}
-              </Button>
-            </form>
+              {/* Submit button is now handled by TurnstileProtectedForm */}
+            </TurnstileProtectedForm>
           </Form>
         </DialogContent>
       </Dialog>
@@ -685,7 +682,18 @@ const AuthForm = () => {
             </div>
           ) : (
             <Form {...forgotForm}>
-              <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="space-y-4">
+              <TurnstileProtectedForm
+                onSubmit={(turnstileToken) => {
+                  const values = forgotForm.getValues();
+                  handleForgotPassword(values, turnstileToken);
+                }}
+                isSubmitting={forgotLoading}
+                submitButtonText={forgotLoading ? "Sending Reset Link..." : "Send Reset Link"}
+                submitButtonClassName="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
+                action="password_reset"
+                className="space-y-4"
+                id="forgot-password-form"
+              >
                 <FormField
                   control={forgotForm.control}
                   name="email"
@@ -705,21 +713,8 @@ const AuthForm = () => {
                     </FormItem>
                   )}
                 />
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
-                  disabled={forgotLoading}
-                >
-                  {forgotLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    'Send Reset Link'
-                  )}
-                </Button>
-              </form>
+                {/* Submit button is now handled by TurnstileProtectedForm */}
+              </TurnstileProtectedForm>
             </Form>
           )}
         </DialogContent>

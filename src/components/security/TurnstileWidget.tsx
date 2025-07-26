@@ -107,25 +107,39 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   // Load Turnstile script
   useEffect(() => {
+    console.log('🔧 [Turnstile] Initializing widget component...', {
+      siteKey: siteKey?.substring(0, 10) + '...',
+      theme,
+      size,
+      disabled,
+      componentId: componentId.current
+    });
+
     const script = document.createElement('script');
     script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
     script.async = true;
     script.defer = true;
 
     script.onload = () => {
+      console.log('✅ [Turnstile] Script loaded successfully');
       setIsLoading(false);
     };
 
     script.onerror = () => {
+      console.error('❌ [Turnstile] Failed to load script from Cloudflare');
       setError('Failed to load Turnstile script');
       setIsLoading(false);
     };
 
     // Check if script is already loaded
     if (window.turnstile) {
+      console.log('✅ [Turnstile] Script already available');
       setIsLoading(false);
     } else if (!document.querySelector('script[src*="turnstile"]')) {
+      console.log('📥 [Turnstile] Loading script from CDN...');
       document.head.appendChild(script);
+    } else {
+      console.log('⏳ [Turnstile] Script loading in progress...');
     }
 
     return () => {
@@ -145,15 +159,30 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
       disabled ||
       isRendering.current
     ) {
+      console.log('⏭️ [Turnstile] Skipping render:', {
+        isLoading,
+        turnstileAvailable: !!window.turnstile,
+        containerReady: !!containerRef.current,
+        disabled,
+        isRendering: isRendering.current
+      });
       return;
     }
 
     // Check if this widget is already being rendered
     const currentId = componentId.current;
     if (activeWidgets.has(currentId)) {
-      console.warn('Turnstile widget already rendered for this component');
+      console.warn('⚠️ [Turnstile] Widget already rendered for this component:', currentId);
       return;
     }
+
+    console.log('🎯 [Turnstile] Starting widget render...', {
+      siteKey: siteKey?.substring(0, 10) + '...',
+      theme,
+      size,
+      action: actionRef.current,
+      componentId: currentId
+    });
 
     isRendering.current = true;
     activeWidgets.add(currentId);
@@ -166,24 +195,33 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     // Cleanup any existing widget before creating a new one
     if (widgetId && window.turnstile) {
       try {
+        console.log('🧹 [Turnstile] Cleaning up previous widget:', widgetId);
         window.turnstile.remove(widgetId);
         setWidgetId(null);
       } catch (err) {
-        console.warn('Failed to cleanup previous Turnstile widget:', err);
+        console.warn('⚠️ [Turnstile] Failed to cleanup previous widget:', err);
       }
     }
 
     try {
+      console.log('🔨 [Turnstile] Rendering widget...');
       const id = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         callback: (token: string) => {
+          console.log('✅ [Turnstile] Challenge completed successfully!', {
+            tokenLength: token.length,
+            tokenPrefix: token.substring(0, 20) + '...',
+            timestamp: new Date().toISOString()
+          });
           onSuccessRef.current(token);
         },
         'error-callback': (error: string) => {
+          console.error('❌ [Turnstile] Challenge failed:', error);
           setError(`Turnstile error: ${error}`);
           onErrorRef.current?.(error);
         },
         'expired-callback': () => {
+          console.warn('⏰ [Turnstile] Challenge expired, resetting...');
           onExpiredRef.current?.();
         },
         theme,
@@ -192,10 +230,15 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         cData: cDataRef.current,
       });
 
+      console.log('🎉 [Turnstile] Widget rendered successfully!', {
+        widgetId: id,
+        componentId: currentId
+      });
       setWidgetId(id);
       isRendering.current = false;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('💥 [Turnstile] Failed to render widget:', errorMessage, err);
       setError(`Failed to render Turnstile: ${errorMessage}`);
       onError?.(errorMessage);
       isRendering.current = false;
@@ -204,13 +247,15 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
     // Cleanup function
     return () => {
+      console.log('🧹 [Turnstile] Cleaning up widget component:', currentId);
       isRendering.current = false;
       activeWidgets.delete(currentId);
       if (widgetId && window.turnstile) {
         try {
           window.turnstile.remove(widgetId);
+          console.log('✅ [Turnstile] Widget cleanup successful');
         } catch (err) {
-          console.warn('Failed to cleanup Turnstile widget:', err);
+          console.warn('⚠️ [Turnstile] Failed to cleanup widget:', err);
         }
       }
     };
@@ -218,16 +263,26 @@ export const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
 
   // Reset widget method
   const reset = () => {
+    console.log('🔄 [Turnstile] Resetting widget...', { widgetId });
     if (widgetId && window.turnstile) {
       window.turnstile.reset(widgetId);
+      console.log('✅ [Turnstile] Widget reset completed');
+    } else {
+      console.warn('⚠️ [Turnstile] Cannot reset: widget not available');
     }
   };
 
   // Get current response
   const getResponse = (): string | undefined => {
     if (widgetId && window.turnstile) {
-      return window.turnstile.getResponse(widgetId);
+      const response = window.turnstile.getResponse(widgetId);
+      console.log('📋 [Turnstile] Getting current response:', {
+        hasResponse: !!response,
+        responseLength: response?.length || 0
+      });
+      return response;
     }
+    console.warn('⚠️ [Turnstile] Cannot get response: widget not available');
     return undefined;
   };
 

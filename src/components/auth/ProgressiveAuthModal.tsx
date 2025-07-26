@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail } from 'lucide-react';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 // Step 1: Email collection
 const emailSchema = z.object({
@@ -195,7 +196,7 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
     });
   };
 
-  const handleSignIn = async (values: z.infer<typeof signInSchema>) => {
+  const handleSignIn = async (values: z.infer<typeof signInSchema>, turnstileToken?: string) => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
@@ -243,7 +244,7 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
     setLoading(false);
   };
 
-  const handleSignUp = async (values: z.infer<typeof signUpSchema>) => {
+  const handleSignUp = async (values: z.infer<typeof signUpSchema>, turnstileToken?: string) => {
     setLoading(true);
 
     try {
@@ -623,7 +624,18 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
         </div>
 
         <Form {...signInForm}>
-          <form onSubmit={signInForm.handleSubmit(handleSignIn)} className="space-y-4">
+          <TurnstileProtectedForm
+            onSubmit={(turnstileToken) => {
+              const values = signInForm.getValues();
+              handleSignIn(values, turnstileToken);
+            }}
+            isSubmitting={loading}
+            submitButtonText={loading ? "Signing In..." : "Sign In"}
+            submitButtonClassName="w-full h-10 sm:h-12 text-sm sm:text-base"
+            action="sign_in"
+            className="space-y-4"
+            id="progressive-sign-in-form"
+          >
             {/* Hidden email field for browser autofill */}
             <FormField
               control={signInForm.control}
@@ -673,21 +685,8 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
               )}
             />
 
-            <Button
-              type="submit"
-              className="w-full h-10 sm:h-12 text-sm sm:text-base"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing In...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-          </form>
+            {/* Submit button is now handled by TurnstileProtectedForm */}
+          </TurnstileProtectedForm>
         </Form>
 
         <div className="text-center space-y-3">
@@ -729,7 +728,18 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
       </div>
 
       <Form {...signUpForm}>
-        <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+        <TurnstileProtectedForm
+          onSubmit={(turnstileToken) => {
+            const values = signUpForm.getValues();
+            handleSignUp(values, turnstileToken);
+          }}
+          isSubmitting={loading}
+          submitButtonText={loading ? "Creating Account..." : "Create Account"}
+          submitButtonClassName="w-full h-12 text-base"
+          action="sign_up"
+          className="space-y-4"
+          id="progressive-sign-up-form"
+        >
           <FormField
             control={signUpForm.control}
             name="name"
@@ -851,17 +861,8 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
             )}
           />
 
-          <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Account...
-              </>
-            ) : (
-              'Create Account'
-            )}
-          </Button>
-        </form>
+          {/* Submit button is now handled by TurnstileProtectedForm */}
+        </TurnstileProtectedForm>
       </Form>
 
       <div className="text-center space-y-3">

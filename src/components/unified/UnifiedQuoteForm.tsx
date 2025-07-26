@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { useQuoteTheme, useConversionColors } from '@/contexts/QuoteThemeContext';
 import { useColorVariantTesting } from '@/hooks/useColorVariantTesting';
 import type { UnifiedQuote } from '@/types/unified-quote';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 // Security: File upload validation
 const ALLOWED_FILE_TYPES = {
@@ -447,7 +448,7 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
 
     // Form submission handler
     const handleSubmit = useCallback(
-      async (data: FormData) => {
+      async (data: FormData, turnstileToken?: string) => {
         const submitStartTime = performance.now();
         setIsSubmitting(true);
         setServerErrors({});
@@ -456,8 +457,8 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
           // Track form submission
           trackConversion('quote_form_submitted', 1);
 
-          // Call submit handler
-          const result = await onSubmit?.(data, uploadedFiles);
+          // Call submit handler with turnstile token
+          const result = await onSubmit?.({ ...data, turnstileToken }, uploadedFiles);
 
           // Log performance
           if (performanceMode === 'detailed') {
@@ -569,7 +570,18 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+          <TurnstileProtectedForm
+            onSubmit={(turnstileToken) => {
+              const data = form.getValues();
+              handleSubmit(data, turnstileToken);
+            }}
+            isSubmitting={isSubmitting}
+            submitButtonText={isSubmitting ? "Submitting Quote..." : mode === 'edit' ? "Update Quote" : "Submit Quote"}
+            submitButtonClassName="w-full h-12 text-base"
+            action="quote_submission"
+            className="space-y-8"
+            id="unified-quote-form"
+          >
             {/* General error message */}
             {serverErrors.general && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1003,18 +1015,7 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
 
             {/* Form Actions */}
             <div className="flex items-center gap-3 pt-6 border-t border-gray-200">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 sm:flex-none"
-                style={{
-                  backgroundColor: conversionColors.approveButton,
-                  color: 'white',
-                }}
-              >
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                {mode === 'create' ? t('submitQuote') : t('updateQuote')}
-              </Button>
+              {/* Submit button is now handled by TurnstileProtectedForm */}
 
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
@@ -1027,7 +1028,7 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
                 <span>Secure & Encrypted</span>
               </div>
             </div>
-          </form>
+          </TurnstileProtectedForm>
         </CardContent>
       </Card>
     );

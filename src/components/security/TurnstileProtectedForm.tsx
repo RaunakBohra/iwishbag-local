@@ -37,6 +37,16 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
   const siteKey = getTurnstileSiteKey();
   const [formError, setFormError] = useState<string | null>(null);
 
+  console.log('🛡️ [TurnstileForm] Form initialized:', {
+    formId: id,
+    action,
+    showTurnstile,
+    hasSiteKey: !!siteKey,
+    disabled,
+    disableTurnstile,
+    isSubmitting
+  });
+
   const {
     token,
     isVerified,
@@ -49,34 +59,51 @@ export const TurnstileProtectedForm: React.FC<TurnstileProtectedFormProps> = ({
   } = useTurnstile({
     siteKey,
     onError: (error) => {
-      console.error('Turnstile error:', error);
+      console.error('🚨 [TurnstileForm] CAPTCHA error:', { error, formId: id });
     },
     onExpired: () => {
-      console.warn('Turnstile token expired');
+      console.warn('⏰ [TurnstileForm] CAPTCHA token expired:', { formId: id });
     },
   });
 
   const handleFormSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
+      console.log('📤 [TurnstileForm] Form submission started:', {
+        formId: id,
+        showTurnstile,
+        isVerified,
+        hasToken: !!token,
+        tokenLength: token?.length || 0
+      });
+
       setFormError(null);
       clearError();
 
       try {
         // If Turnstile is enabled but not verified, show error
         if (showTurnstile && !isVerified) {
+          console.warn('⚠️ [TurnstileForm] Submission blocked: CAPTCHA not verified');
           setFormError('Please complete the security verification');
           return;
         }
 
+        console.log('✅ [TurnstileForm] CAPTCHA validation passed, submitting form...');
+        
         // Submit form with Turnstile token (if enabled)
         await onSubmit(showTurnstile ? token || undefined : undefined);
+        
+        console.log('🎉 [TurnstileForm] Form submitted successfully!');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+        console.error('💥 [TurnstileForm] Form submission failed:', { 
+          error: errorMessage,
+          formId: id 
+        });
         setFormError(errorMessage);
       }
     },
-    [onSubmit, showTurnstile, isVerified, token, clearError],
+    [onSubmit, showTurnstile, isVerified, token, clearError, id],
   );
 
   const canSubmit = !isSubmitting && !disabled && (!showTurnstile || isVerified);

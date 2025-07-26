@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
 import { Checkbox } from '@/components/ui/checkbox';
+import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
 
 export default function SimplifiedContactStep({
   contactInfo,
@@ -55,7 +56,7 @@ export default function SimplifiedContactStep({
   const showRoute = purchaseCountry && shippingCountry;
 
   // Handle guest email submission (email only, no name)
-  const handleGuestSubmit = () => {
+  const handleGuestSubmit = (turnstileToken?: string) => {
     if (!guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)) {
       return;
     }
@@ -67,7 +68,7 @@ export default function SimplifiedContactStep({
     };
 
     setContactInfo(updatedContactInfo);
-    next({ email: guestEmail, name: '', insuranceOptedIn });
+    next({ email: guestEmail, name: '', insuranceOptedIn, turnstileToken });
   };
 
   // Handle successful authentication
@@ -191,7 +192,7 @@ export default function SimplifiedContactStep({
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Button with Turnstile Protection */}
           <div className="space-y-4">
             {submitError && (
               <div className="p-3 border border-red-300 rounded bg-red-50">
@@ -202,26 +203,22 @@ export default function SimplifiedContactStep({
               </div>
             )}
 
-            <button
-              onClick={() =>
+            <TurnstileProtectedForm
+              onSubmit={(turnstileToken) =>
                 next({
                   email: user.email,
                   name: user.user_metadata?.full_name || user.user_metadata?.name || '',
                   insuranceOptedIn,
+                  turnstileToken,
                 })
               }
-              disabled={isSubmitting}
-              className="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Submitting Quote Request...
-                </div>
-              ) : (
-                'Submit Quote Request'
-              )}
-            </button>
+              isSubmitting={isSubmitting}
+              submitButtonText={isSubmitting ? "Submitting Quote Request..." : "Submit Quote Request"}
+              submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm disabled:opacity-50"
+              action="quote_request"
+              className="w-full"
+              id="authenticated-quote-submit"
+            />
           </div>
         </div>
 
@@ -500,22 +497,16 @@ export default function SimplifiedContactStep({
               </div>
             )}
 
-            <Button
-              onClick={handleGuestSubmit}
-              disabled={
-                isSubmitting || !guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)
-              }
-              className="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Submitting Quote Request...
-                </div>
-              ) : (
-                'Submit Quote Request'
-              )}
-            </Button>
+            <TurnstileProtectedForm
+              onSubmit={handleGuestSubmit}
+              isSubmitting={isSubmitting}
+              disabled={!guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)}
+              submitButtonText={isSubmitting ? "Submitting Quote Request..." : "Submit Quote Request"}
+              submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg"
+              action="quote_request"
+              className="w-full"
+              id="guest-quote-submit"
+            />
           </div>
         </div>
 

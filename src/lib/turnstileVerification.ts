@@ -166,10 +166,21 @@ export function createTurnstileMiddleware(secretKey: string) {
  */
 export function isTurnstileEnabled(): boolean {
   // Check if we're in browser environment
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') {
+    console.log('🔧 [Turnstile] Server-side environment detected, disabling');
+    return false;
+  }
 
   // Check environment variables (Vite style)
   const enableTurnstile = import.meta.env?.VITE_ENABLE_TURNSTILE === 'true';
+  const siteKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY;
+  
+  console.log('🔧 [Turnstile] Environment check:', {
+    enableTurnstile,
+    hasSiteKey: !!siteKey,
+    siteKeyLength: siteKey?.length || 0,
+    environment: import.meta.env?.MODE || 'unknown'
+  });
   
   // Only enable if explicitly set to true
   // Don't automatically enable in production
@@ -202,8 +213,14 @@ export const TURNSTILE_CONFIG = {
 export function getTurnstileSiteKey(): string {
   const siteKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY;
 
+  console.log('🔑 [Turnstile] Site key lookup:', {
+    hasSiteKey: !!siteKey,
+    siteKeyLength: siteKey?.length || 0,
+    siteKeyPrefix: siteKey?.substring(0, 10) + '...' || 'none'
+  });
+
   if (!siteKey) {
-    console.warn('Turnstile site key not found in environment variables');
+    console.warn('⚠️ [Turnstile] Site key not found in environment variables');
     return '';
   }
 
