@@ -145,6 +145,7 @@ const DemoIndex = React.lazy(() => import('@/demo/DemoIndex'));
 const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns'));
 const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns'));
 const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo'));
+const WeightTabDemo = React.lazy(() => import('@/demo/WeightTabDemo'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -258,6 +259,10 @@ const router = createBrowserRouter([
       {
         path: 'url-autofill',
         element: <UrlAutoFillDemo />,
+      },
+      {
+        path: 'weight-tabs',
+        element: <WeightTabDemo />,
       },
     ],
   },

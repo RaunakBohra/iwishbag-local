@@ -236,7 +236,8 @@ class ProductDataFetchService {
         body: JSON.stringify({ 
           url, 
           website_domain: siteInfo.site,
-          test: false 
+          test: false,
+          demo_mode: true // Enable demo mode for unauthenticated access
         })
       });
 

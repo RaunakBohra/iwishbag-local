@@ -20,12 +20,25 @@ serve(async (req) => {
     // Validate request method
     validateMethod(req, ['POST']);
 
-    // Authenticate user
-    const { user, supabaseClient } = await authenticateUser(req);
+    const { url, website_domain, test, demo_mode } = await req.json();
 
-    console.log(`🔐 Authenticated user ${user.email} requesting product scraping`);
-
-    const { url, website_domain, test } = await req.json();
+    // Skip authentication for demo mode
+    let user = null;
+    let supabaseClient = null;
+    
+    if (demo_mode) {
+      console.log(`🎭 Demo mode - skipping authentication`);
+      // Create a basic supabase client for demo mode
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+      supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    } else {
+      // Authenticate user for normal mode
+      const authResult = await authenticateUser(req);
+      user = authResult.user;
+      supabaseClient = authResult.supabaseClient;
+      console.log(`🔐 Authenticated user ${user.email} requesting product scraping`);
+    }
 
     // Test endpoint to verify ScrapeAPI is working
     if (test) {
@@ -86,7 +99,7 @@ serve(async (req) => {
 });
 
 async function scrapeWithScrapeAPI(url: string, website: string) {
-  const apiKey = Deno.env.get('VITE_SCRAPER_API_KEY');
+  const apiKey = Deno.env.get('SCRAPER_API_KEY');
 
   if (!apiKey) {
     throw new Error('ScrapeAPI key not configured');
@@ -712,7 +725,7 @@ function calculateConfidence(data: Record<string, unknown>, website: string): nu
 }
 
 async function testScrapeAPI() {
-  const apiKey = Deno.env.get('VITE_SCRAPER_API_KEY');
+  const apiKey = Deno.env.get('SCRAPER_API_KEY');
 
   if (!apiKey) {
     return {

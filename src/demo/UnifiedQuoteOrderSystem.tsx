@@ -78,6 +78,7 @@ import {
   Plus,
   Minus,
   ChevronUp,
+  Trash2,
   Upload,
   Save,
   Lightbulb,
@@ -117,7 +118,6 @@ import {
 import { cn } from '@/lib/utils';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
 import { ShareQuoteButtonV2 } from '@/components/admin/ShareQuoteButtonV2';
-import { SmartDualWeightField } from '@/components/admin/SmartDualWeightField';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -1837,35 +1837,24 @@ export default function UnifiedQuoteOrderSystem({
                               <td className="px-4 py-4">
                                 <div className="space-y-2 overflow-hidden">
                                   <div className="w-full min-w-0">
-                                    <SmartDualWeightField
-                                      value={item.weight || 0}
-                                      onChange={(weight) => {
-                                        const updatedItems = items.map(i => 
-                                          i.id === item.id ? { ...i, weight } : i
-                                        );
-                                        setItems(updatedItems);
-                                        recalculateQuote(updatedItems);
-                                      }}
-                                      productName={item.product_name || ''}
-                                      hsnCode={item.hsn_code || ''}
-                                      productUrl={item.product_url}
-                                      onSourceSelected={(source) => {
-                                        console.log(`Weight source selected for item ${item.id}:`, source);
-                                        // Update item's smart_data with weight source
-                                        const updatedItems = items.map(i => 
-                                          i.id === item.id ? { 
-                                            ...i, 
-                                            smart_data: {
-                                              ...i.smart_data,
-                                              weight_source: source
-                                            }
-                                          } : i
-                                        );
-                                        setItems(updatedItems);
-                                      }}
-                                      label=""
-                                      className="compact-mode w-full max-w-none"
-                                    />
+                                    <div className="flex items-center gap-1">
+                                      <input
+                                        type="number"
+                                        value={item.weight || 0}
+                                        onChange={(e) => {
+                                          const weight = parseFloat(e.target.value) || 0;
+                                          const updatedItems = items.map(i => 
+                                            i.id === item.id ? { ...i, weight } : i
+                                          );
+                                          setItems(updatedItems);
+                                          recalculateQuote(updatedItems);
+                                        }}
+                                        className="w-16 px-2 py-1 text-xs text-center border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                                        step="0.001"
+                                        min="0"
+                                      />
+                                      <span className="text-xs text-gray-600">kg</span>
+                                    </div>
                                     {item.weight_source && (
                                       <Popover>
                                         <PopoverTrigger asChild>
