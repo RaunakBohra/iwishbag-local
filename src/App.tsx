@@ -146,6 +146,7 @@ const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesi
 const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns'));
 const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo'));
 const WeightTabDemo = React.lazy(() => import('@/demo/WeightTabDemo'));
+const HSNInputDesigns = React.lazy(() => import('@/demo/HSNInputDesigns'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -263,6 +264,10 @@ const router = createBrowserRouter([
       {
         path: 'weight-tabs',
         element: <WeightTabDemo />,
+      },
+      {
+        path: 'hsn-designs',
+        element: <HSNInputDesigns />,
       },
     ],
   },

@@ -1841,7 +1841,7 @@ export default function UnifiedQuoteOrderSystem({
                                     <div>
                                       <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Weight</label>
                                       <div className="inline-flex items-end gap-3 border-b border-gray-200">
-                                        <button
+                                        <div
                                           onClick={() => {
                                             const updatedItems = items.map(i => 
                                               i.id === item.id ? { ...i, weight_source: 'manual' } : i
@@ -1849,40 +1849,33 @@ export default function UnifiedQuoteOrderSystem({
                                             setItems(updatedItems);
                                           }}
                                           className={cn(
-                                            "pb-1 px-1 text-xs transition-all relative flex items-center gap-1",
+                                            "pb-1 px-1 text-xs transition-all relative flex items-center gap-1 cursor-text",
                                             (item.weight_source === 'manual' || !item.weight_source)
                                               ? "text-gray-700 font-medium" 
                                               : "text-gray-500 hover:text-gray-700"
                                           )}
                                         >
-                                          Manual
-                                          {(item.weight_source === 'manual' || !item.weight_source) && (
-                                            <>
-                                              <span className="text-gray-600">:</span>
-                                              <input
-                                                type="number"
-                                                value={item.weight || 0}
-                                                onChange={(e) => {
-                                                  e.stopPropagation();
-                                                  const weight = parseFloat(e.target.value) || 0;
-                                                  const updatedItems = items.map(i => 
-                                                    i.id === item.id ? { ...i, weight, weight_source: 'manual' } : i
-                                                  );
-                                                  setItems(updatedItems);
-                                                  recalculateQuote(updatedItems);
-                                                }}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="w-12 px-1 text-xs text-center text-gray-700 font-medium bg-gray-50 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-gray-400"
-                                                step="0.001"
-                                                min="0"
-                                              />
-                                              <span className="text-xs text-gray-600">kg</span>
-                                            </>
-                                          )}
+                                          <input
+                                            type="number"
+                                            value={item.weight || 0}
+                                            onChange={(e) => {
+                                              const weight = parseFloat(e.target.value) || 0;
+                                              const updatedItems = items.map(i => 
+                                                i.id === item.id ? { ...i, weight, weight_source: 'manual' } : i
+                                              );
+                                              setItems(updatedItems);
+                                              recalculateQuote(updatedItems);
+                                            }}
+                                            className="w-12 px-0 text-xs text-center text-gray-700 font-medium bg-transparent border-none focus:outline-none"
+                                            step="0.001"
+                                            min="0"
+                                            placeholder="0.0"
+                                          />
+                                          <span className="text-xs text-gray-600">kg</span>
                                           {(item.weight_source === 'manual' || !item.weight_source) && (
                                             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-600" />
                                           )}
-                                        </button>
+                                        </div>
                                         <button
                                           onClick={() => {
                                             // TODO: Fetch HSN weight and update
@@ -2071,207 +2064,143 @@ export default function UnifiedQuoteOrderSystem({
                                       </Popover>
                                     )}
                                   </div>
-                                  <Popover open={hsnSearchOpen === item.id} onOpenChange={(open) => setHsnSearchOpen(open ? item.id : null)}>
-                                    <PopoverTrigger>
-                                      <Badge variant="outline" className="cursor-pointer text-xs px-2 py-1">
-                                        {item.hsn_code ? (
-                                          <div className="text-center">
-                                            <div className="font-medium">{item.hsn_code}</div>
-                                            {item.hsn_category && (
-                                              <div className="text-gray-500 text-[10px] capitalize mt-0.5">
-                                                {item.hsn_category}
-                                              </div>
-                                            )}
+                                  <div className="relative">
+                                    <div className="flex items-center gap-1 border-b border-gray-300 pb-1 hover:border-gray-400 transition-colors">
+                                      <Search className="w-3 h-3 text-gray-400" />
+                                      <input
+                                        type="text"
+                                        value={hsnSearchOpen === item.id ? (hsnSearchQuery[item.id] || '') : 
+                                               item.hsn_code ? `${item.hsn_code}${item.hsn_category ? ' - ' + item.hsn_category : ''}` : ''}
+                                        onFocus={() => {
+                                          setHsnSearchOpen(item.id);
+                                          setHsnSearchQuery({
+                                            ...hsnSearchQuery,
+                                            [item.id]: item.hsn_code || ''
+                                          });
+                                        }}
+                                        onBlur={() => {
+                                          // Delay closing to allow selection
+                                          setTimeout(() => setHsnSearchOpen(null), 150);
+                                        }}
+                                        onChange={(e) => setHsnSearchQuery({
+                                          ...hsnSearchQuery,
+                                          [item.id]: e.target.value
+                                        })}
+                                        className="flex-1 px-0 text-xs bg-transparent border-none focus:outline-none placeholder-gray-400"
+                                        placeholder="Search HSN code or category..."
+                                      />
+                                    </div>
+                                    {hsnSearchOpen === item.id && (
+                                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+                                        {isLoadingHSN ? (
+                                          <div className="flex items-center justify-center py-4">
+                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                            <span className="text-sm text-gray-500">Loading HSN codes...</span>
                                           </div>
-                                        ) : (
-                                          'No HSN'
-                                        )}
-                                      </Badge>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                      <div className="space-y-2">
-                                        <div className="flex items-center gap-2 pb-2">
-                                          <Search className="w-4 h-4 text-gray-500" />
-                                          <Input 
-                                            placeholder="Search HSN code, description, or keywords..." 
-                                            className="h-8 flex-1"
-                                            autoFocus
-                                            value={hsnSearchQuery[item.id] || ''}
-                                            onChange={(e) => setHsnSearchQuery({
-                                              ...hsnSearchQuery,
-                                              [item.id]: e.target.value
-                                            })}
-                                          />
-                                        </div>
-                                        <div className="space-y-1 max-h-64 overflow-y-auto">
-                                          {isLoadingHSN ? (
-                                            <div className="flex items-center justify-center py-4">
-                                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                              <span className="text-sm text-gray-500">Loading HSN codes...</span>
-                                            </div>
-                                          ) : (() => {
-                                            const query = hsnSearchQuery[item.id]?.toLowerCase() || '';
-                                            console.log(`🔍 [HSN Search Debug] Query: "${query}", Total HSN codes: ${hsnCodes.length}`);
-                                            const filtered = hsnCodes.filter(hsn => {
-                                              // Search in HSN code
-                                              if (hsn.code.toLowerCase().includes(query)) return true;
-                                              
-                                              // Search in description
-                                              if (hsn.description.toLowerCase().includes(query)) return true;
-                                              
-                                              // Search in keywords array
-                                              if (hsn.keywords && Array.isArray(hsn.keywords)) {
-                                                return hsn.keywords.some(keyword => 
-                                                  keyword.toLowerCase().includes(query)
-                                                );
-                                              }
-                                              
-                                              return false;
-                                            });
+                                        ) : (() => {
+                                          const query = hsnSearchQuery[item.id]?.toLowerCase() || '';
+                                          const filtered = hsnCodes.filter(hsn => {
+                                            // Search in HSN code
+                                            if (hsn.code.toLowerCase().includes(query)) return true;
                                             
-                                            console.log(`🔍 [HSN Search Debug] Filtered results: ${filtered.length}, Show button condition: ${filtered.length === 0}`);
+                                            // Search in description
+                                            if (hsn.description.toLowerCase().includes(query)) return true;
                                             
-                                            if (filtered.length === 0) {
-                                              return (
-                                                <div className="text-center py-6 px-4">
-                                                  <div className="mb-3">
-                                                    <Package className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                                                    <p className="text-sm text-gray-600 font-medium mb-1">No HSN code found</p>
-                                                    <p className="text-xs text-gray-500">
-                                                      {query ? `No results for "${hsnSearchQuery[item.id]}"` : 'Start typing to search HSN codes'}
-                                                    </p>
-                                                  </div>
-                                                  <Button
-                                                    size="sm"
-                                                    variant="default"
-                                                    className="bg-blue-600 hover:bg-blue-700"
-                                                    onClick={() => {
-                                                      setNewHSNData({
-                                                        code: hsnSearchQuery[item.id] || '',
-                                                        product_name: item.product_name,
-                                                        weight: item.weight,
-                                                        category: item.category
-                                                      });
-                                                      setShowHSNCreateModal(true);
-                                                      setHsnSearchOpen(null);
-                                                    }}
-                                                  >
-                                                    <Plus className="w-4 h-4 mr-2" />
-                                                    Add New HSN Code
-                                                  </Button>
-                                                  <p className="text-xs text-gray-500 mt-2">
-                                                    Create a new HSN entry for this product
-                                                  </p>
-                                                </div>
+                                            // Search in keywords array
+                                            if (hsn.keywords && Array.isArray(hsn.keywords)) {
+                                              return hsn.keywords.some(keyword => 
+                                                keyword.toLowerCase().includes(query)
                                               );
                                             }
                                             
-                                            return filtered.map((hsn) => {
-                                              // Find matching keywords for display
-                                              const matchingKeywords = hsn.keywords ? 
-                                                hsn.keywords.filter(keyword => 
-                                                  keyword.toLowerCase().includes(query)
-                                                ) : [];
-                                              
-                                              // Create inline component for weight preview
-                                              const WeightPreview = () => {
-                                                const [weightData, setWeightData] = React.useState(null);
-                                                const [loading, setLoading] = React.useState(true);
-                                                
-                                                React.useEffect(() => {
-                                                  hsnWeightService.getHSNWeight(hsn.code)
-                                                    .then(data => {
-                                                      setWeightData(data);
-                                                      setLoading(false);
-                                                    })
-                                                    .catch(() => {
-                                                      setLoading(false);
+                                            return false;
+                                          });
+                                          
+                                          if (filtered.length === 0) {
+                                            return (
+                                              <div className="text-center py-6 px-4">
+                                                <div className="mb-3">
+                                                  <Package className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                                                  <p className="text-sm text-gray-600 font-medium mb-1">No HSN code found</p>
+                                                  <p className="text-xs text-gray-500">
+                                                    {query ? `No results for "${hsnSearchQuery[item.id]}"` : 'Start typing to search HSN codes'}
+                                                  </p>
+                                                </div>
+                                                <Button
+                                                  size="sm"
+                                                  variant="default"
+                                                  className="bg-blue-600 hover:bg-blue-700"
+                                                  onClick={() => {
+                                                    setNewHSNData({
+                                                      code: hsnSearchQuery[item.id] || '',
+                                                      product_name: item.product_name,
+                                                      weight: item.weight,
+                                                      category: item.category
                                                     });
-                                                }, []);
-                                                
-                                                if (loading) {
-                                                  return (
-                                                    <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
-                                                      ⏳ Loading...
-                                                    </span>
-                                                  );
-                                                }
-                                                
-                                                if (weightData && weightData.average > 0) {
-                                                  return (
-                                                    <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                                      📦 {weightData.min}-{weightData.max}kg (avg: {weightData.average}kg)
-                                                    </span>
-                                                  );
-                                                }
-                                                
-                                                return (
-                                                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
-                                                    📦 No weight data
-                                                  </span>
-                                                );
-                                              };
-                                              
-                                              return (
-                                            <div
-                                              key={hsn.code}
-                                              className="p-2 hover:bg-gray-100 rounded cursor-pointer border-l-2 border-transparent hover:border-blue-300"
-                                              onClick={async () => {
-                                                // Update HSN code and category
-                                                let updatedItem = { 
-                                                  ...item, 
-                                                  hsn_code: hsn.code,
-                                                  hsn_category: hsn.category || hsn.subcategory || ''
-                                                };
-                                                
-                                                // Fetch weight data from HSN
-                                                try {
-                                                  const weightData = await hsnWeightService.getHSNWeight(hsn.code);
-                                                  if (weightData && weightData.average > 0) {
-                                                    // Store additional weight context for validation
-                                                    updatedItem = {
-                                                      ...updatedItem,
-                                                      weight: weightData.average,
-                                                      weight_source: 'HSN Database',
-                                                      weight_confidence: weightData.confidence,
-                                                      // Add HSN weight range for validation
-                                                      hsn_weight_range: {
-                                                        min: weightData.min,
-                                                        max: weightData.max,
-                                                        average: weightData.average,
-                                                        packaging: weightData.packaging
-                                                      }
-                                                    };
-                                                    
-                                                    // Enhanced toast notification with range
-                                                    const totalWeight = weightData.average + (weightData.packaging || 0);
-                                                    const rangeDisplay = `Range: ${weightData.min}-${weightData.max}kg`;
-                                                    const packagingDisplay = weightData.packaging ? ` + ${weightData.packaging}kg packaging` : '';
-                                                    
-                                                    toast({
-                                                      title: 'Weight Auto-filled from HSN',
-                                                      description: `Set to ${weightData.average}kg (${rangeDisplay})${packagingDisplay}. Total: ${totalWeight}kg`,
-                                                      variant: 'default'
-                                                    });
+                                                    setShowHSNCreateModal(true);
+                                                    setHsnSearchOpen(null);
+                                                  }}
+                                                >
+                                                  <Plus className="w-4 h-4 mr-2" />
+                                                  Add New HSN Code
+                                                </Button>
+                                              </div>
+                                            );
+                                          }
+                                          
+                                          return filtered.map((hsn) => {
+                                            // Find matching keywords for display
+                                            const matchingKeywords = hsn.keywords ? 
+                                              hsn.keywords.filter(keyword => 
+                                                keyword.toLowerCase().includes(query)
+                                              ) : [];
+                                            
+                                            return (
+                                              <div
+                                                key={hsn.code}
+                                                className="p-3 hover:bg-gray-50 rounded cursor-pointer border-l-2 border-transparent hover:border-blue-300"
+                                                onClick={async () => {
+                                                  // Update HSN code and category
+                                                  let updatedItem = { 
+                                                    ...item, 
+                                                    hsn_code: hsn.code,
+                                                    hsn_category: hsn.category || hsn.subcategory || ''
+                                                  };
+                                                  
+                                                  // Fetch weight data from HSN
+                                                  try {
+                                                    const weightData = await hsnWeightService.getHSNWeight(hsn.code);
+                                                    if (weightData && weightData.average > 0) {
+                                                      updatedItem = {
+                                                        ...updatedItem,
+                                                        weight: weightData.average,
+                                                        weight_source: 'hsn',
+                                                        weight_confidence: weightData.confidence,
+                                                        hsn_weight_range: {
+                                                          min: weightData.min,
+                                                          max: weightData.max,
+                                                          average: weightData.average,
+                                                          packaging: weightData.packaging
+                                                        }
+                                                      };
+                                                    }
+                                                  } catch (error) {
+                                                    console.error('Failed to fetch HSN weight:', error);
                                                   }
-                                                } catch (error) {
-                                                  console.error('Failed to fetch HSN weight:', error);
-                                                }
-                                                
-                                                setItems(items.map(i => 
-                                                  i.id === item.id ? updatedItem : i
-                                                ));
-                                                setHsnSearchOpen(null);
-                                                
-                                                // Trigger recalculation if weight changed
-                                                if (updatedItem.weight !== item.weight) {
-                                                  await recalculateQuote(items.map(i => 
+                                                  
+                                                  setItems(items.map(i => 
                                                     i.id === item.id ? updatedItem : i
                                                   ));
-                                                }
-                                              }}
-                                            >
-                                              <div className="flex-1">
+                                                  setHsnSearchOpen(null);
+                                                  
+                                                  // Trigger recalculation if weight changed
+                                                  if (updatedItem.weight !== item.weight) {
+                                                    await recalculateQuote(items.map(i => 
+                                                      i.id === item.id ? updatedItem : i
+                                                    ));
+                                                  }
+                                                }}
+                                              >
                                                 <div className="flex items-center gap-2">
                                                   <p className="font-medium text-sm">{hsn.code}</p>
                                                   {hsn.category && (
@@ -2279,9 +2208,8 @@ export default function UnifiedQuoteOrderSystem({
                                                       {hsn.category}
                                                     </Badge>
                                                   )}
-                                                  <WeightPreview />
                                                 </div>
-                                                <p className="text-xs text-gray-500">{hsn.description}</p>
+                                                <p className="text-xs text-gray-500 mt-1">{hsn.description}</p>
                                                 {matchingKeywords.length > 0 && (
                                                   <div className="flex gap-1 mt-1">
                                                     <span className="text-xs text-blue-600">Keywords:</span>
@@ -2296,41 +2224,33 @@ export default function UnifiedQuoteOrderSystem({
                                                   </div>
                                                 )}
                                               </div>
-                                              <Badge variant="secondary" className="text-xs">
-                                                {hsn.rate}%
-                                              </Badge>
-                                            </div>
-                                            );
                                             });
                                           })()}
                                           
                                           {/* Always show Add New HSN Code button at bottom */}
-                                          {!isLoadingHSN && (
-                                            <div className="border-t pt-2 mt-2">
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                onClick={() => {
-                                                  setNewHSNData({
-                                                    code: hsnSearchQuery[item.id] || '',
-                                                    product_name: item.product_name,
-                                                    weight: item.weight,
-                                                    category: item.category
-                                                  });
-                                                  setShowHSNCreateModal(true);
-                                                  setHsnSearchOpen(null);
-                                                }}
-                                              >
-                                                <Plus className="w-3 h-3 mr-2" />
-                                                Add New HSN Code
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </div>
+                                          <div className="border-t pt-2 mt-2">
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                              onClick={() => {
+                                                setNewHSNData({
+                                                  code: hsnSearchQuery[item.id] || '',
+                                                  product_name: item.product_name,
+                                                  weight: item.weight,
+                                                  category: item.category
+                                                });
+                                                setShowHSNCreateModal(true);
+                                                setHsnSearchOpen(null);
+                                              }}
+                                            >
+                                              <Plus className="w-3 h-3 mr-2" />
+                                              Add New HSN Code
+                                            </Button>
+                                          </div>
                                       </div>
-                                    </PopoverContent>
-                                  </Popover>
+                                    )}
+                                  </div>
                                 </div>
                               </td>
                               <td className="px-4 py-4">
