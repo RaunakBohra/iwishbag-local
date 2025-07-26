@@ -20,11 +20,67 @@ import { R2StorageDemo } from '../components/demo/R2StorageDemo';
 import { KVCacheDemo } from '../components/demo/KVCacheDemo';
 import AIProductClassifierDemo from './AIProductClassifierDemo';
 import { LeanWeightDemo } from './LeanWeightDemo';
+import TurnstileDemo from '../pages/demo/TurnstileDemo';
+import EnhancedWeightFieldDemo from '../pages/demo/EnhancedWeightFieldDemo';
+import CloudflareFeaturesDemo from '../pages/demo/CloudflareFeaturesDemo';
+import ZeroTrustSetup from '../pages/demo/ZeroTrustSetup';
 
 const DemoIndex = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
 
   const demos = [
+    {
+      id: 'cloudflare-features',
+      title: '☁️ Cloudflare Features Configuration',
+      description:
+        'Complete implementation of all Cloudflare free tier features - Load Balancing, Zero Trust, Speed Optimizations, and more',
+      features: [
+        'Load Balancing for high availability',
+        'Zero Trust Access for admin security',
+        'Speed optimizations (Polish, Minify)',
+        'Cache Reserve & Waiting Room',
+      ],
+      component: CloudflareFeaturesDemo,
+    },
+    {
+      id: 'zero-trust-setup',
+      title: '🔐 Zero Trust Access Setup',
+      description:
+        'Step-by-step guide to secure your admin dashboard with Cloudflare Zero Trust - Enterprise security for free',
+      features: [
+        'Interactive setup wizard',
+        'Email-based authentication',  
+        'Session & geographic controls',
+        'Complete testing checklist',
+      ],
+      component: ZeroTrustSetup,
+    },
+    {
+      id: 'enhanced-weight-field',
+      title: '⚖️ Enhanced Weight Field Demo',
+      description:
+        'Beautiful Stripe/Shopify-style weight input with simultaneous manual entry and smart AI suggestions dropdown',
+      features: [
+        'Manual input + smart suggestions together',
+        'Stripe/Shopify-inspired design',
+        'HSN Database + ML predictions',
+        'One-click suggestion selection',
+      ],
+      component: EnhancedWeightFieldDemo,
+    },
+    {
+      id: 'turnstile-themes',
+      title: '🔒 Turnstile CAPTCHA Themes Demo',
+      description:
+        'Explore Cloudflare Turnstile CAPTCHA appearance options - Light, Dark, Auto themes and different sizes for optimal user experience',
+      features: [
+        'Light, Dark & Auto theme options',
+        'Normal & Compact size variants',
+        'Real-time verification testing',
+        'Mobile-optimized configurations',
+      ],
+      component: TurnstileDemo,
+    },
     {
       id: 'lean-weight',
       title: '🎯 Lean Weight Service Demo',

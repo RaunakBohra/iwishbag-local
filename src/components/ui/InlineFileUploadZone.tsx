@@ -225,7 +225,7 @@ export const InlineFileUploadZone: React.FC<InlineFileUploadZoneProps> = ({
           relative flex items-center justify-center h-[40px] sm:h-[48px] px-3 sm:px-4 border-2 border-dashed rounded-lg cursor-pointer transition-all
           ${isDragOver 
             ? 'border-teal-400 bg-teal-50' 
-            : 'border-gray-300 hover:border-teal-400 hover:bg-gray-50'
+            : 'border-orange-400 hover:border-orange-500 bg-orange-50 hover:bg-orange-100'
           }
           ${disabled || uploadedFiles.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : ''}
           ${hasUploading ? 'border-blue-300 bg-blue-50' : ''}
@@ -258,15 +258,15 @@ export const InlineFileUploadZone: React.FC<InlineFileUploadZoneProps> = ({
           <div className="flex items-center gap-2">
             {successFiles.length > 0 ? (
               <>
-                <Paperclip className={`h-4 w-4 ${isDragOver ? 'text-teal-600' : 'text-gray-500'}`} />
-                <span className={`text-sm font-medium hidden sm:inline ${isDragOver ? 'text-teal-700' : 'text-gray-700'}`}>
+                <Paperclip className={`h-4 w-4 ${isDragOver ? 'text-teal-600' : 'text-orange-500'}`} />
+                <span className={`text-sm font-medium hidden sm:inline ${isDragOver ? 'text-teal-700' : 'text-orange-600'}`}>
                   {successFiles.length}/{maxFiles}
                 </span>
               </>
             ) : (
               <>
-                <Upload className={`h-4 w-4 ${isDragOver ? 'text-teal-600' : 'text-gray-500'}`} />
-                <span className={`text-sm font-medium hidden sm:inline ${isDragOver ? 'text-teal-700' : 'text-gray-700'}`}>
+                <Upload className={`h-4 w-4 ${isDragOver ? 'text-teal-600' : 'text-orange-600'}`} />
+                <span className={`text-sm font-medium hidden sm:inline ${isDragOver ? 'text-teal-700' : 'text-orange-700'}`}>
                   {isDragOver ? 'Drop files' : 'Upload'}
                 </span>
               </>

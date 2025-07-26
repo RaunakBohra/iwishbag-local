@@ -1633,9 +1633,62 @@ export default function UnifiedQuoteOrderSystem({
                                         </Popover>
                                       )}
                                     </div>
-                                    <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1">
-                                      View source <ExternalLink className="w-3 h-3" />
-                                    </a>
+                                    <div className="flex items-center gap-2">
+                                      <InlineEdit
+                                        fieldId={`product_url-${item.id}`}
+                                        value={item.product_url || ''}
+                                        placeholder="https://amazon.com/..."
+                                        className="flex-1 max-w-xs text-xs"
+                                        itemId={item.id}
+                                      />
+                                      {item.product_url && (
+                                        <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Files Section - Admin can manage customer uploaded files */}
+                                    {item.files && item.files.length > 0 && (
+                                      <div className="mt-2">
+                                        <div className="flex flex-wrap gap-1">
+                                          {item.files.map((file, fileIndex) => (
+                                            <div key={fileIndex} className="inline-flex items-center gap-1 bg-green-50 border border-green-200 rounded px-2 py-1 text-xs">
+                                              <FileText className="h-3 w-3 text-green-600" />
+                                              <span className="text-green-800 font-medium truncate max-w-16">
+                                                {file.file?.name || 'File'}
+                                              </span>
+                                              {file.url && (
+                                                <a 
+                                                  href={file.url} 
+                                                  target="_blank" 
+                                                  rel="noopener noreferrer" 
+                                                  className="text-green-600 hover:text-green-800"
+                                                  title="View file"
+                                                >
+                                                  <Eye className="h-3 w-3" />
+                                                </a>
+                                              )}
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const updatedFiles = item.files.filter((_, i) => i !== fileIndex);
+                                                  const updatedItems = items.map(i => 
+                                                    i.id === item.id ? { ...i, files: updatedFiles } : i
+                                                  );
+                                                  setItems(updatedItems);
+                                                  recalculateQuote(updatedItems);
+                                                }}
+                                                className="text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5"
+                                                title="Remove file"
+                                              >
+                                                <X className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </td>
