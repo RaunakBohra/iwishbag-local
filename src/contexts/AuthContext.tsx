@@ -78,6 +78,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             logger.warn('Anonymous sign-ins are disabled, continuing without auth', null, 'Auth');
             return;
           }
+          // If captcha verification fails, continue without auth
+          if (error.message?.includes('captcha') || error.message?.includes('verification')) {
+            logger.warn('Captcha verification not supported for anonymous auth, continuing without auth', null, 'Auth');
+            return;
+          }
           logger.error('Error signing in anonymously', error, 'Auth');
           return;
         }

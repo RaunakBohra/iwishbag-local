@@ -170,9 +170,10 @@ export function isTurnstileEnabled(): boolean {
 
   // Check environment variables (Vite style)
   const enableTurnstile = import.meta.env?.VITE_ENABLE_TURNSTILE === 'true';
-  const isProduction = import.meta.env?.MODE === 'production';
-
-  return enableTurnstile || isProduction;
+  
+  // Only enable if explicitly set to true
+  // Don't automatically enable in production
+  return enableTurnstile;
 }
 
 /**

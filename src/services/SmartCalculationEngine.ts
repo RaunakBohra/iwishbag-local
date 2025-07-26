@@ -776,6 +776,13 @@ export class SmartCalculationEngine {
       // ✅ FIXED: delivery option price is a PREMIUM on top of base cost, not absolute cost
       const deliveryPremium = deliveryOption.price || 0;
       const optionCost = baseCost + deliveryPremium;
+      
+      // 🧮 DETAILED DELIVERY OPTION CALCULATION LOG
+      console.log(`  Delivery Option: ${deliveryOption.carrier} - ${deliveryOption.name}`);
+      console.log(`  Delivery Premium: ${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium}`);
+      console.log(`  Total Shipping Cost: ${route.origin_country === 'IN' ? '₹' : '$'}${baseCost} + ${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium} = ${route.origin_country === 'IN' ? '₹' : '$'}${optionCost}`);
+      console.log(`  📊 FORMULA: Base (${route.origin_country === 'IN' ? '₹' : '$'}${route.base_shipping_cost}) + Weight (${params.weight}kg × ${route.origin_country === 'IN' ? '₹' : '$'}${route.weight_tiers?.find((t: any) => params.weight >= t.min && (t.max === null || params.weight <= t.max))?.cost || 0}/kg) + Delivery Premium (${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium}) = ${route.origin_country === 'IN' ? '₹' : '$'}${optionCost}`);
+      console.log(`  ════════════════════════════════════════`);
 
       // Validate that we don't accidentally create zero-cost shipping
       if (optionCost <= 0) {
@@ -941,6 +948,15 @@ export class SmartCalculationEngine {
         // 🚀 FIXED: Tier cost is PER-KG rate, must multiply by weight
         const tierRatePerKg = tier.cost;
         const tierCost = weight * tierRatePerKg;
+        
+        // 🧮 DETAILED CALCULATION LOG
+        console.log(`📦 [SHIPPING CALCULATION] Route: ${route.origin_country}→${route.destination_country}`);
+        console.log(`  Base Shipping Cost: ${route.origin_country === 'IN' ? '₹' : '$'}${route.base_shipping_cost}`);
+        console.log(`  Weight: ${weight}kg`);
+        console.log(`  Weight Tier: ${tier.min}-${tier.max || '∞'}kg @ ${route.origin_country === 'IN' ? '₹' : '$'}${tierRatePerKg}/kg`);
+        console.log(`  Weight Tier Calculation: ${weight}kg × ${route.origin_country === 'IN' ? '₹' : '$'}${tierRatePerKg}/kg = ${route.origin_country === 'IN' ? '₹' : '$'}${tierCost}`);
+        console.log(`  Subtotal (Base + Weight): ${route.origin_country === 'IN' ? '₹' : '$'}${route.base_shipping_cost} + ${route.origin_country === 'IN' ? '₹' : '$'}${tierCost} = ${route.origin_country === 'IN' ? '₹' : '$'}${baseCost + tierCost}`);
+        
         baseCost += tierCost; // Add calculated tier cost to base cost
       } else {
         // Fallback to per-kg calculation when no tier matches
@@ -972,6 +988,18 @@ export class SmartCalculationEngine {
       const valueCost = value * (route.cost_percentage / 100);
       baseCost += valueCost;
     }
+
+    // 🧮 FINAL BASE COST SUMMARY
+    console.log(`  ════════════════════════════════════════`);
+    console.log(`  📈 BASE COST BREAKDOWN SUMMARY:`);
+    console.log(`  Initial Base: ${route.origin_country === 'IN' ? '₹' : '$'}${initialBaseCost}`);
+    console.log(`  + Weight Cost: ${route.origin_country === 'IN' ? '₹' : '$'}${baseCost - initialBaseCost}`);
+    if (route.cost_percentage && route.cost_percentage > 0) {
+      console.log(`  + Value Percentage (${route.cost_percentage}%): ${route.origin_country === 'IN' ? '₹' : '$'}${value * (route.cost_percentage / 100)}`);
+    }
+    console.log(`  = Total Base Cost: ${route.origin_country === 'IN' ? '₹' : '$'}${baseCost}`);
+    console.log(`  (Note: Delivery option premium will be added separately)`);
+    console.log(`  ════════════════════════════════════════`);
 
     // 🚨 IMPORTANT: NO CURRENCY CONVERSION FOR SHIPPING COSTS
     //

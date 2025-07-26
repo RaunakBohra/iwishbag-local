@@ -24,7 +24,6 @@ import {
   Calendar,
   Clock,
   DollarSign,
-  Calculator,
   Truck,
   MessageSquare,
   FileText,
@@ -98,7 +97,9 @@ import {
   XOctagon,
   RefreshCcw,
   Loader2,
-  Circle
+  Circle,
+  Calculator,
+  Plane
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
@@ -235,11 +236,18 @@ export default function UnifiedQuoteOrderSystem({
   // Use provided quote data only - no mock data fallback
   const quote = propQuote;
   
+  // Fix currency symbol based on origin country
+  if (quote && !quote.currency_symbol) {
+    const originCurrency = currencyService.getCurrencyForCountrySync(quote.origin_country || 'US');
+    quote.currency_symbol = currencyService.getCurrencySymbol(originCurrency);
+  }
+  
   // Debug logging (reduced to prevent excessive logs)
   useEffect(() => {
     console.log('UnifiedQuoteOrderSystem received quote:', quote?.id);
     console.log('Quote items count:', quote?.items?.length);
     console.log('Customer insurance preference:', quote?.customer_data?.preferences?.insurance_opted_in);
+    console.log('Currency symbol:', quote?.currency_symbol, 'for origin:', quote?.origin_country);
     if (quote?.items?.[0]) {
       console.log('🔍 [Initial] First item detailed:', JSON.stringify(quote.items[0], null, 2));
     }
@@ -753,14 +761,26 @@ export default function UnifiedQuoteOrderSystem({
           smart_recommendations: calculationResult.smart_recommendations,
           optimization_suggestions: calculationResult.optimization_suggestions,
           // Update items with any enhanced data from calculation
-          items: calculationResult.updated_quote?.items || updatedItems
+          items: calculationResult.updated_quote?.items || updatedItems,
+          // Save shipping cost and selected option
+          shipping: internationalShipping,
+          operational_data: {
+            ...quote.operational_data,
+            shipping: {
+              selected_option: selectedShippingOptionId,
+              cost_usd: internationalShipping,
+              available_options: availableShippingOptions
+            }
+          }
         };
         
         console.log('🔄 Enhanced calculation update:', {
           has_hsn_breakdown: !!calculationResult.hsn_tax_breakdown,
           has_smart_recommendations: !!calculationResult.smart_recommendations,
           total_customs: calculationResult.hsn_calculation_summary?.total_customs,
-          items_with_minimum_valuation: calculationResult.hsn_calculation_summary?.items_with_minimum_valuation
+          items_with_minimum_valuation: calculationResult.hsn_calculation_summary?.items_with_minimum_valuation,
+          shipping_option_selected: selectedShippingOptionId,
+          shipping_cost: internationalShipping
         });
         
         onUpdate(updateData);
@@ -945,6 +965,40 @@ export default function UnifiedQuoteOrderSystem({
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Debug Panel for Empty Calculation Data */}
+        {(!quote.calculation_data || Object.keys(quote.calculation_data).length === 0) && (
+          <Alert className="mb-6 border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <div>
+                <span className="font-medium text-orange-800">Missing Calculation Data</span>
+                <p className="text-sm text-orange-700 mt-1">
+                  This quote has no calculation data. Click recalculate to compute shipping and taxes.
+                </p>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => recalculateQuote(items)}
+                disabled={isRecalculating}
+                className="ml-4"
+              >
+                {isRecalculating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Recalculating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Recalculate Now
+                  </>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-12 gap-6">
           {/* Main Content */}
           <div className="col-span-8">
@@ -1923,6 +1977,7 @@ export default function UnifiedQuoteOrderSystem({
                           <p className="font-medium text-green-600">
                             ${(
                               items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) +
+                              safeNumber(internationalShipping) +
                               safeNumber(domesticShipping) + 
                               safeNumber(handlingAmount) + 
                               safeNumber(insuranceAmount) -
@@ -1969,15 +2024,225 @@ export default function UnifiedQuoteOrderSystem({
                       </div>
 
                       {/* Shipping Options */}
+                      <div className="space-y-4">
+                        <h3 className="font-medium flex items-center gap-2">
+                          <Package className="w-4 h-4" />
+                          Available Shipping Methods
+                        </h3>
+                        {availableShippingOptions.length > 0 ? (
+                          <div className="space-y-3">
+                            {availableShippingOptions.map((option: any) => (
+                              <div
+                                key={option.id}
+                                className={cn(
+                                  "p-4 border rounded-lg cursor-pointer transition-all",
+                                  selectedShippingOptionId === option.id 
+                                    ? "border-blue-500 bg-blue-50 shadow-sm" 
+                                    : "border-gray-200 hover:border-gray-300"
+                                )}
+                                onClick={() => {
+                                  setSelectedShippingOptionId(option.id);
+                                  setInternationalShipping(option.cost_usd);
+                                  recalculateQuote(items);
+                                }}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="font-medium">{option.name}</h4>
+                                      {selectedShippingOptionId === option.id && (
+                                        <Badge variant="secondary" className="text-xs">Selected</Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                                      <span className="flex items-center gap-1">
+                                        <Truck className="w-3 h-3" />
+                                        {option.carrier}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {option.days}
+                                      </span>
+                                      {option.tracking_available && (
+                                        <span className="flex items-center gap-1">
+                                          <Package className="w-3 h-3" />
+                                          Tracking included
+                                        </span>
+                                      )}
+                                    </div>
+                                    {option.description && (
+                                      <p className="text-xs text-gray-500 mt-2">{option.description}</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right ml-4">
+                                    <p className="font-semibold">${option.cost_usd.toFixed(2)}</p>
+                                    <p className="text-xs text-gray-500">USD</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-gray-500">
+                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                            <p>No shipping options available</p>
+                            <p className="text-sm mt-1">Please check the route configuration</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Shipping Route Details */}
+                      {selectedShippingOptionId && (
+                        <div className="space-y-4 border-t pt-4">
+                          <h3 className="font-medium">Route Details</h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-gray-500">Handling Fee</p>
+                              <p className="font-medium">{quote.currency_symbol || '$'}{calculatedHandling.toFixed(2)}</p>
+                              {selectedShippingOptionId && availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.handling_charge && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Base + {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.handling_charge.percentage_of_value}% of value
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">Insurance</p>
+                              <p className="font-medium">
+                                {insuranceAmount > 0 
+                                  ? `${quote.currency_symbol || '$'}${insuranceAmount.toFixed(2)}` 
+                                  : 'Not included'}
+                              </p>
+                              {selectedShippingOptionId && availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.insurance_options?.available && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.insurance_options.coverage_percentage}% coverage available
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Comprehensive Shipping Cost Breakdown */}
+                      {(internationalShipping > 0 || domesticShipping > 0 || handlingAmount > 0) && (
+                        <div className="space-y-4 border-t pt-4">
+                          <h3 className="font-medium flex items-center gap-2">
+                            <Calculator className="w-4 h-4" />
+                            Cost Breakdown
+                          </h3>
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="space-y-3">
+                              {/* Product Subtotal */}
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Product Subtotal</span>
+                                <span className="font-medium">
+                                  {quote.currency_symbol || '$'}
+                                  {items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)}
+                                </span>
+                              </div>
+
+                              {/* Shipping Costs */}
+                              {internationalShipping > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 flex items-center gap-1">
+                                    <Plane className="w-3 h-3" />
+                                    International Shipping
+                                  </span>
+                                  <span className="font-medium">
+                                    {quote.currency_symbol || '$'}{internationalShipping.toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {domesticShipping > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 flex items-center gap-1">
+                                    <Truck className="w-3 h-3" />
+                                    Domestic Delivery
+                                  </span>
+                                  <span className="font-medium">
+                                    {quote.currency_symbol || '$'}{domesticShipping.toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {handlingAmount > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Processing & Handling</span>
+                                  <span className="font-medium">
+                                    {quote.currency_symbol || '$'}{handlingAmount.toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {insuranceAmount > 0 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 flex items-center gap-1">
+                                    <Shield className="w-3 h-3" />
+                                    Insurance Coverage
+                                  </span>
+                                  <span className="font-medium">
+                                    {quote.currency_symbol || '$'}{insuranceAmount.toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+
+                              <Separator className="my-2" />
+
+                              {/* Total Shipping & Fees */}
+                              <div className="flex justify-between">
+                                <span className="font-medium">Total Shipping & Fees</span>
+                                <span className="font-semibold text-lg">
+                                  {quote.currency_symbol || '$'}
+                                  {(
+                                    safeNumber(internationalShipping) +
+                                    safeNumber(domesticShipping) +
+                                    safeNumber(handlingAmount) +
+                                    safeNumber(insuranceAmount)
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Estimated Timeline */}
+                            {selectedShippingOptionId && (
+                              <div className="mt-4 pt-4 border-t">
+                                <h4 className="text-sm font-medium mb-2">Estimated Timeline</h4>
+                                <div className="text-xs text-gray-600 space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <span>Order Processing: 1-2 business days</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <span>
+                                      International Transit: {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.days || 'N/A'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                    <span>Customs Clearance: 2-4 business days</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                    <span>Final Delivery: 1-2 business days</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Legacy shipping options (if any) */}
                       {quote.shipping_options && quote.shipping_options.length > 0 && (
-                        <div className="space-y-4">
-                          <h3 className="font-medium">Available Shipping Options</h3>
+                        <div className="space-y-4 border-t pt-4">
+                          <h3 className="font-medium text-gray-600">Legacy Options</h3>
                           <div className="space-y-3">
                             {quote.shipping_options.map((option: any, index: number) => (
                               <div
                                 key={index}
                                 className={cn(
-                                  "p-4 border rounded-lg cursor-pointer transition-colors",
+                                  "p-4 border rounded-lg cursor-pointer transition-colors opacity-60",
                                   option.selected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
                                 )}
                                 onClick={() => {
@@ -2132,10 +2397,10 @@ export default function UnifiedQuoteOrderSystem({
                   </div>
                   <Separator />
                   <div className="space-y-2 text-sm">
-                    {safeNumber(quote.shipping) > 0 && (
+                    {(safeNumber(quote.shipping) > 0 || safeNumber(internationalShipping) > 0) && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Shipping</span>
-                        <span>{quote.currency_symbol || '$'}{safeNumber(quote.shipping).toFixed(2)}</span>
+                        <span>{quote.currency_symbol || '$'}{(safeNumber(quote.shipping) || safeNumber(internationalShipping)).toFixed(2)}</span>
                       </div>
                     )}
                     {safeNumber(quote.customs) > 0 && (
@@ -2204,7 +2469,16 @@ export default function UnifiedQuoteOrderSystem({
                   <Separator />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total</span>
-                    <span>{quote.currency_symbol || '$'}{safeNumber(quote.total).toFixed(2)}</span>
+                    <span>{quote.currency_symbol || '$'}{(() => {
+                      // If we have international shipping selected, add it to the total
+                      const baseTotal = safeNumber(quote.total);
+                      const shippingCost = safeNumber(internationalShipping);
+                      // Only add if it's not already included in quote.total
+                      if (shippingCost > 0 && !quote.shipping) {
+                        return (baseTotal + shippingCost).toFixed(2);
+                      }
+                      return baseTotal.toFixed(2);
+                    })()}</span>
                   </div>
 
                   {/* Margin Analysis for Orders */}
