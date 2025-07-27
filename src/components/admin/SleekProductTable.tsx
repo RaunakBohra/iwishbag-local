@@ -43,23 +43,18 @@ import { hsnWeightService } from '@/services/HSNWeightService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { taxRateService } from '@/services/TaxRateService';
 import { supabase } from '@/integrations/supabase/client';
+import type { QuoteItem } from '@/types/unified-quote';
 
-interface QuoteItem {
-  id: string;
-  product_name: string;
-  product_url?: string;
-  price: number;
-  quantity: number;
-  weight: number;
+// Extended interface for SleekProductTable specific features
+interface SleekProductTableItem extends QuoteItem {
+  product_name?: string; // Alias for name field
+  product_url?: string; // Alias for url field  
+  price?: number; // Alias for costprice_origin field
   weight_source?: string;
   dimensions?: { length: number; width: number; height: number; unit?: 'cm' | 'in' };
-  hsn_code?: string;
-  category?: string;
-  tax_method?: string;
-  valuation_method?: string;
   image_url?: string;
   seller?: string;
-  // New fields for comprehensive options
+  // Additional display options
   weight_options?: {
     hsn?: number;
     ml?: number;
@@ -71,14 +66,13 @@ interface QuoteItem {
     country?: { rate: number; amount: number };
     manual?: { rate: number; amount: number };
   };
-  minimum_valuation_usd?: number;
 }
 
 interface SleekProductTableProps {
-  items: QuoteItem[];
-  onUpdateItem: (itemId: string, updates: Partial<QuoteItem>) => void;
+  items: SleekProductTableItem[];
+  onUpdateItem: (itemId: string, updates: Partial<SleekProductTableItem>) => void;
   onDeleteItem: (itemId: string) => void;
-  onDuplicateItem: (item: QuoteItem) => void;
+  onDuplicateItem: (item: SleekProductTableItem) => void;
   onRecalculate: (updatedItems?: any[]) => void;
   selectedShippingOption?: {
     id: string;

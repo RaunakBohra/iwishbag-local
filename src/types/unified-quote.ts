@@ -18,6 +18,11 @@ export interface QuoteItem {
   hsn_code?: string;
   category?: string;
 
+  // Per-item tax and valuation configuration
+  tax_method?: 'hsn' | 'country' | 'customs' | 'manual';
+  valuation_method?: 'actual_price' | 'minimum_valuation' | 'higher_of_both';
+  minimum_valuation_usd?: number;
+
   smart_data: {
     weight_confidence: number; // 0-1 scale
     price_confidence: number; // 0-1 scale
@@ -300,7 +305,7 @@ export interface UnifiedQuote {
   destination_country: string;
 
   // Tax Calculation Preferences
-  calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
+  calculation_method_preference?: 'manual' | 'hsn_only' | 'route_based';
   valuation_method_preference?:
     | 'auto'
     | 'product_value'
@@ -361,6 +366,11 @@ export interface QuoteItemInput {
   // HSN Classification Fields (optional for input)
   hsn_code?: string;
   category?: string;
+
+  // Per-item tax and valuation configuration (optional for input)
+  tax_method?: 'hsn' | 'country' | 'customs' | 'manual';
+  valuation_method?: 'actual_price' | 'minimum_valuation' | 'higher_of_both';
+  minimum_valuation_usd?: number;
 }
 
 export interface QuoteCalculationInput {
