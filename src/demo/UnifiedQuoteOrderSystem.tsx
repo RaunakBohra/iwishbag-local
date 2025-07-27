@@ -322,14 +322,60 @@ export default function UnifiedQuoteOrderSystem({
   const statusColor = statusConfig[quote.status as keyof typeof statusConfig]?.color || 'bg-gray-500';
   
   // Extract tax calculations from quote data
+  // First check if we have item-level breakdowns (new HSN system)
+  const hasItemBreakdowns = quote?.calculation_data?.item_breakdowns?.length > 0;
+  
+  // Calculate totals from item-level taxes if available
+  const itemLevelCustoms = hasItemBreakdowns 
+    ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + (item.customs || 0), 0)
+    : 0;
+  const itemLevelSalesTax = hasItemBreakdowns
+    ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + (item.sales_tax || 0), 0)
+    : 0;
+  const itemLevelDestinationTax = hasItemBreakdowns
+    ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + (item.destination_tax || 0), 0)
+    : 0;
+  
+  // Extract tax rates and amounts with proper fallbacks
   const customsPercentage = quote?.calculation_data?.tax_calculation?.customs_percentage || 
+                           quote?.tax_rates?.customs ||
                            quote?.operational_data?.customs?.percentage || 
                            0;
-  const customsAmount = quote?.calculation_data?.breakdown?.customs || 0;
+  const customsAmount = quote?.customs || // From transformed data
+                       itemLevelCustoms || // From item-level calculations
+                       quote?.calculation_data?.breakdown?.customs || 0;
+                       
+  const salesTaxAmount = quote?.sales_tax || // From transformed data
+                        itemLevelSalesTax || // From item-level calculations
+                        quote?.calculation_data?.breakdown?.sales_tax || 0;
+                        
   const destinationTaxRate = quote?.calculation_data?.tax_calculation?.destination_tax_rate || 
+                            quote?.tax_rates?.destination_tax ||
                             quote?.calculation_data?.breakdown?.destination_tax_rate || 
                             13; // Default 13% VAT for Nepal
-  const destinationTaxAmount = quote?.calculation_data?.breakdown?.destination_tax || 0;
+  const destinationTaxAmount = quote?.destination_tax || // From transformed data
+                              itemLevelDestinationTax || // From item-level calculations
+                              quote?.calculation_data?.breakdown?.destination_tax || 0;
+  
+  // Debug logging
+  console.log('💰 Tax Extraction Debug:', {
+    has_item_breakdowns: hasItemBreakdowns,
+    item_count: quote?.calculation_data?.item_breakdowns?.length || 0,
+    item_level_totals: {
+      customs: itemLevelCustoms,
+      sales_tax: itemLevelSalesTax,
+      destination_tax: itemLevelDestinationTax
+    },
+    final_amounts: {
+      customs: customsAmount,
+      sales_tax: salesTaxAmount,
+      destination_tax: destinationTaxAmount
+    },
+    rates: {
+      customs_percentage: customsPercentage,
+      destination_tax_rate: destinationTaxRate
+    }
+  });
   
   // Calculate gateway fee
   const subtotalForGateway = items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) +
@@ -341,15 +387,6 @@ export default function UnifiedQuoteOrderSystem({
                             customsAmount +
                             destinationTaxAmount;
   const gatewayFee = (subtotalForGateway * 0.029) + 0.30;
-  
-  console.log('Tax rates debug:', {
-    customs_rate: customsPercentage,
-    destination_tax_rate: destinationTaxRate,
-    sales_tax_rate: quote?.calculation_data?.tax_calculation?.sales_tax_rate || 0,
-    customs_amount: customsAmount,
-    destination_tax_amount: destinationTaxAmount,
-    subtotal: quote?.subtotal || (items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0))
-  });
 
   // Check if we're in order mode
   const orderMode = isOrderMode(quote.status);
@@ -3514,6 +3551,39 @@ export default function UnifiedQuoteOrderSystem({
                           <div className="font-medium text-orange-600">Customs Amount: ${customsAmount.toFixed(2)}</div>
                         </div>
                       </div>
+                      
+                      {/* Item-wise Tax Breakdown (if available) */}
+                      {hasItemBreakdowns && (
+                        <div className="bg-indigo-50 p-3 rounded border border-indigo-200">
+                          <div className="font-medium text-indigo-700 mb-2 text-xs">📦 Item-wise Tax Breakdown</div>
+                          <div className="space-y-2">
+                            {quote.calculation_data.item_breakdowns.map((itemBreakdown, idx) => (
+                              <div key={idx} className="text-xs bg-white p-2 rounded border border-indigo-100">
+                                <div className="font-medium text-gray-700">{itemBreakdown.item_name || `Item ${idx + 1}`}</div>
+                                {itemBreakdown.hsn_code && (
+                                  <div className="text-gray-500">HSN: {itemBreakdown.hsn_code}</div>
+                                )}
+                                <div className="grid grid-cols-3 gap-2 mt-1">
+                                  <div>
+                                    <span className="text-gray-500">Customs:</span>
+                                    <span className="ml-1 font-medium">${(itemBreakdown.customs || 0).toFixed(2)}</span>
+                                  </div>
+                                  {itemBreakdown.sales_tax > 0 && (
+                                    <div>
+                                      <span className="text-gray-500">Sales:</span>
+                                      <span className="ml-1 font-medium">${itemBreakdown.sales_tax.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="text-gray-500">VAT:</span>
+                                    <span className="ml-1 font-medium">${(itemBreakdown.destination_tax || 0).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Sales Tax Detail (US→NP only) */}
                       {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && salesTaxAmount > 0 && (
