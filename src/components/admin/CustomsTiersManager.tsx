@@ -32,6 +32,7 @@ interface CustomsTierFormData {
   logicType: 'AND' | 'OR';
   customsPercentage: number;
   vatPercentage: number;
+  salesTaxPercentage: number;
   priorityOrder: number;
   isActive: boolean;
   description?: string;
@@ -58,6 +59,7 @@ function CustomsTierForm({
     logicType: initialData?.logicType || 'AND',
     customsPercentage: initialData?.customsPercentage || 0,
     vatPercentage: initialData?.vatPercentage || 0,
+    salesTaxPercentage: initialData?.salesTaxPercentage || 0,
     priorityOrder: initialData?.priorityOrder || 1,
     isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
     description: initialData?.description || '',
@@ -80,6 +82,7 @@ function CustomsTierForm({
         logic_type: formData.logicType,
         customs_percentage: formData.customsPercentage,
         vat_percentage: formData.vatPercentage,
+        sales_tax_percentage: formData.salesTaxPercentage,
         priority_order: formData.priorityOrder,
         is_active: formData.isActive,
         description: formData.description,
@@ -314,6 +317,28 @@ function CustomsTierForm({
       </div>
 
       <div>
+        <Label htmlFor="salesTaxPercentage">Sales Tax Percentage (%)</Label>
+        <Input
+          id="salesTaxPercentage"
+          type="number"
+          step="0.01"
+          min="0"
+          max="100"
+          value={formData.salesTaxPercentage}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              salesTaxPercentage: parseFloat(e.target.value) || 0,
+            }))
+          }
+          placeholder="0"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Origin country sales tax (e.g., US state tax). Typically only for US→NP routes.
+        </p>
+      </div>
+
+      <div>
         <Label htmlFor="description">Description (Optional)</Label>
         <Input
           id="description"
@@ -444,6 +469,7 @@ export function CustomsTiersManager() {
     logicType: tier.logic_type,
     customsPercentage: tier.customs_percentage,
     vatPercentage: tier.vat_percentage,
+    salesTaxPercentage: tier.sales_tax_percentage || 0,
     priorityOrder: tier.priority_order,
     isActive: tier.is_active,
     description: tier.description,
@@ -555,6 +581,7 @@ export function CustomsTiersManager() {
                   <CardDescription>
                     <strong>{tier.rule_name}</strong> - {tier.customs_percentage}% customs,{' '}
                     {tier.vat_percentage}% VAT
+                    {tier.sales_tax_percentage > 0 && `, ${tier.sales_tax_percentage}% sales tax`}
                   </CardDescription>
                 </div>
                 <div className="flex space-x-2">
@@ -599,6 +626,9 @@ export function CustomsTiersManager() {
                   <div className="mt-1 space-y-1">
                     <div>Customs: {tier.customs_percentage}%</div>
                     <div>VAT: {tier.vat_percentage}%</div>
+                    {tier.sales_tax_percentage > 0 && (
+                      <div>Sales Tax: {tier.sales_tax_percentage}%</div>
+                    )}
                     {tier.description && (
                       <div className="text-gray-600 mt-2">{tier.description}</div>
                     )}

@@ -105,7 +105,6 @@ import {
   ShieldCheck,
   CircleDollarSign,
   WalletCards,
-  ReceiptText,
   ClipboardCheck,
   FileCheck,
   LinkIcon,
@@ -269,16 +268,6 @@ export default function UnifiedQuoteOrderSystem({
     }
   }, []); // Run only once on mount
   
-  
-  console.log('Tax rates debug:', {
-    customs_rate: quote?.tax_rates?.customs,
-    destination_tax_rate: quote?.tax_rates?.destination_tax,
-    sales_tax_rate: quote?.tax_rates?.sales_tax,
-    customs_amount: quote?.customs,
-    destination_tax_amount: quote?.destination_tax,
-    subtotal: quote?.subtotal
-  });
-  
   // Early return if no quote data
   if (!quote) {
     return (
@@ -296,7 +285,6 @@ export default function UnifiedQuoteOrderSystem({
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [showHSNCreateModal, setShowHSNCreateModal] = useState(false);
   const [newHSNData, setNewHSNData] = useState<any>(null);
-;
   const [showCategoryCreateModal, setShowCategoryCreateModal] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState<any>(null);
   const [categories, setCategories] = useState<Array<{value: string, label: string}>>([
@@ -313,11 +301,13 @@ export default function UnifiedQuoteOrderSystem({
   const [internalNotes, setInternalNotes] = useState(quote.internal_notes || '');
   const [insuranceAmount, setInsuranceAmount] = useState(safeNumber(quote.insurance));
   const [handlingAmount, setHandlingAmount] = useState(safeNumber(quote.handling));
+  const [salesTaxAmount, setSalesTaxAmount] = useState(safeNumber(quote.calculation_data?.sales_tax_price || 0));
   
   // Track calculated values from SmartCalculationEngine
   const [calculatedHandling, setCalculatedHandling] = useState(0);
   const [calculatedInsurance, setCalculatedInsurance] = useState(0);
   const [handlingMode, setHandlingMode] = useState<'auto' | 'manual'>('auto');
+  const [costsDesignOption, setCostsDesignOption] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [showCalculatedValues, setShowCalculatedValues] = useState(false);
   const [domesticShipping, setDomesticShipping] = useState(safeNumber(quote.calculation_metadata?.domestic_shipping));
   const [internationalShipping, setInternationalShipping] = useState(safeNumber(quote.shipping));
@@ -330,6 +320,36 @@ export default function UnifiedQuoteOrderSystem({
 
   const StatusIcon = statusConfig[quote.status as keyof typeof statusConfig]?.icon || FileText;
   const statusColor = statusConfig[quote.status as keyof typeof statusConfig]?.color || 'bg-gray-500';
+  
+  // Extract tax calculations from quote data
+  const customsPercentage = quote?.calculation_data?.tax_calculation?.customs_percentage || 
+                           quote?.operational_data?.customs?.percentage || 
+                           0;
+  const customsAmount = quote?.calculation_data?.breakdown?.customs || 0;
+  const destinationTaxRate = quote?.calculation_data?.tax_calculation?.destination_tax_rate || 
+                            quote?.calculation_data?.breakdown?.destination_tax_rate || 
+                            13; // Default 13% VAT for Nepal
+  const destinationTaxAmount = quote?.calculation_data?.breakdown?.destination_tax || 0;
+  
+  // Calculate gateway fee
+  const subtotalForGateway = items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) +
+                            safeNumber(internationalShipping) +
+                            safeNumber(domesticShipping) +
+                            safeNumber(handlingAmount) +
+                            safeNumber(insuranceAmount) +
+                            safeNumber(salesTaxAmount) +
+                            customsAmount +
+                            destinationTaxAmount;
+  const gatewayFee = (subtotalForGateway * 0.029) + 0.30;
+  
+  console.log('Tax rates debug:', {
+    customs_rate: customsPercentage,
+    destination_tax_rate: destinationTaxRate,
+    sales_tax_rate: quote?.calculation_data?.tax_calculation?.sales_tax_rate || 0,
+    customs_amount: customsAmount,
+    destination_tax_amount: destinationTaxAmount,
+    subtotal: quote?.subtotal || (items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0))
+  });
 
   // Check if we're in order mode
   const orderMode = isOrderMode(quote.status);
@@ -1437,63 +1457,6 @@ export default function UnifiedQuoteOrderSystem({
               </TabsContent>
 
               <TabsContent value="items" className="mt-6 space-y-6">
-                {/* Tax Configuration */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Tax Configuration</CardTitle>
-                    <CardDescription>
-                      Configure how taxes are calculated for this quote
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <Label className="text-sm font-medium">Global Tax Method</Label>
-                        <Select 
-                          value={quote.tax_method || 'per_item'}
-                          onValueChange={(value) => {
-                            if (onUpdate) {
-                              onUpdate({ tax_method: value });
-                            }
-                            recalculateQuote(items);
-                          }}
-                        >
-                          <SelectTrigger className="mt-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="per_item">Per-Item Configuration</SelectItem>
-                            <SelectItem value="global_hsn">Global HSN-based</SelectItem>
-                            <SelectItem value="global_country">Global Country-based</SelectItem>
-                            <SelectItem value="global_manual">Global Manual</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Global Valuation Method</Label>
-                        <Select 
-                          value={quote.valuation_method || 'auto'}
-                          onValueChange={(value) => {
-                            if (onUpdate) {
-                              onUpdate({ valuation_method: value });
-                            }
-                            recalculateQuote(items);
-                          }}
-                        >
-                          <SelectTrigger className="mt-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto (Higher of Both)</SelectItem>
-                            <SelectItem value="product_value">Product Value Only</SelectItem>
-                            <SelectItem value="minimum_valuation">Minimum Valuation Only</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* Customer Uploaded Files */}
                 {quote.customer_data?.sessionId && (
                   <Card>
@@ -1620,20 +1583,40 @@ export default function UnifiedQuoteOrderSystem({
                 {/* Additional Costs */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CircleDollarSign className="w-5 h-5" />
-                      Additional Costs & Adjustments
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CircleDollarSign className="w-5 h-5" />
+                        <CardTitle className="text-lg">Additional Costs & Adjustments</CardTitle>
+                      </div>
+                      <Select 
+                        value={costsDesignOption.toString()} 
+                        onValueChange={(value) => setCostsDesignOption(Number(value) as 1 | 2 | 3 | 4 | 5)}
+                      >
+                        <SelectTrigger className="w-48 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1. Stripe-Inspired Minimal</SelectItem>
+                          <SelectItem value="2">2. Dashboard Compact Grid</SelectItem>
+                          <SelectItem value="3">3. Modern Inline Design</SelectItem>
+                          <SelectItem value="4">4. Card-Based Tight</SelectItem>
+                          <SelectItem value="5">5. Shopify Professional</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <CardDescription>
                       Configure shipping, insurance, handling, and discounts
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-6">
+                    {/* Design Option 1: Stripe-Inspired Minimal List */}
+                    {costsDesignOption === 1 && (
                       <div className="space-y-4">
+                        <div className="divide-y divide-gray-100">
+                        {/* International Shipping */}
                         <div>
-                          <div className="flex items-center justify-between">
-                            <Label>International Shipping</Label>
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-sm font-medium text-gray-700">International Shipping</Label>
                             {availableShippingOptions.length > 0 && (
                               <Select 
                                 value={selectedShippingOptionId || ''} 
@@ -1642,12 +1625,11 @@ export default function UnifiedQuoteOrderSystem({
                                   const option = availableShippingOptions.find(opt => opt.id === value);
                                   if (option) {
                                     setInternationalShipping(option.cost_usd);
-                                    // Trigger recalculation with new shipping option
                                     recalculateQuote(items);
                                   }
                                 }}
                               >
-                                <SelectTrigger className="w-48 h-7">
+                                <SelectTrigger className="w-48 h-8 text-xs border-gray-200">
                                   <SelectValue placeholder="Select shipping method" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1663,43 +1645,42 @@ export default function UnifiedQuoteOrderSystem({
                               </Select>
                             )}
                           </div>
-                          <div className="relative mt-2">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <Input 
-                              type="number" 
-                              className="pl-10 bg-blue-50 border-blue-200"
-                              value={internationalShipping}
-                              onChange={(e) => setInternationalShipping(Number(e.target.value))}
-                              readOnly={availableShippingOptions.length > 0}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-gray-500">International carrier shipping</p>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all bg-blue-50 border border-blue-200 text-blue-700">
+                              <DollarSign className="h-4 w-4" />
+                              <span className="font-mono">{internationalShipping.toFixed(2)}</span>
+                            </button>
+                            <span className="text-xs text-gray-500">International carrier shipping</span>
                             {selectedShippingOptionId && availableShippingOptions.length > 0 && (
-                              <p className="text-xs text-blue-600">
-                                {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.name || 'Selected'}
-                              </p>
+                              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                                {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.name}
+                              </span>
                             )}
                           </div>
                         </div>
                         
+                        {/* Domestic Shipping */}
                         <div>
-                          <Label>Domestic Shipping</Label>
-                          <div className="relative mt-2">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <Input 
-                              type="number" 
-                              className="pl-10"
-                              value={domesticShipping}
-                              onChange={(e) => setDomesticShipping(Number(e.target.value))}
-                            />
+                          <Label className="text-sm font-medium text-gray-700 mb-3 block">Domestic Shipping</Label>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter domestic shipping cost:', domesticShipping.toString());
+                                if (newValue !== null) setDomesticShipping(Number(newValue) || 0);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all text-gray-600 hover:bg-gray-100 border border-gray-200"
+                            >
+                              <DollarSign className="h-4 w-4" />
+                              <span className="font-mono">{domesticShipping.toFixed(2)}</span>
+                            </button>
+                            <span className="text-xs text-gray-500">Last mile delivery cost</span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">Last mile delivery cost</p>
                         </div>
                         
+                        {/* Handling Fee */}
                         <div>
-                          <div className="flex items-center justify-between">
-                            <Label>Handling Fee</Label>
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-sm font-medium text-gray-700">Handling Fee</Label>
                             <div className="flex items-center gap-2">
                               <Select value={handlingMode} onValueChange={(v: 'auto' | 'manual') => {
                                 setHandlingMode(v);
@@ -1707,7 +1688,7 @@ export default function UnifiedQuoteOrderSystem({
                                   setHandlingAmount(calculatedHandling);
                                 }
                               }}>
-                                <SelectTrigger className="w-20 h-7">
+                                <SelectTrigger className="w-20 h-7 text-xs border-gray-200">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1719,99 +1700,105 @@ export default function UnifiedQuoteOrderSystem({
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  className="h-7 px-2 text-xs"
+                                  className="h-7 px-2 text-xs border-gray-200"
                                   onClick={() => setHandlingAmount(calculatedHandling)}
                                 >
-                                  Use Calculated ({debugData?.currency_symbol || '$'}{calculatedHandling.toFixed(2)})
+                                  Use Calc ({debugData?.currency_symbol || '$'}{calculatedHandling.toFixed(2)})
                                 </Button>
                               )}
                             </div>
                           </div>
-                          <div className="relative mt-2">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <Input 
-                              type="number" 
-                              className={`pl-10 ${handlingMode === 'auto' ? 'bg-green-50 border-green-200' : ''}`}
-                              value={handlingAmount}
-                              onChange={(e) => setHandlingAmount(Number(e.target.value))}
-                              readOnly={handlingMode === 'auto'}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-gray-500">Order processing & packaging</p>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              onClick={() => {
+                                if (handlingMode === 'manual') {
+                                  const newValue = prompt('Enter handling fee:', handlingAmount.toString());
+                                  if (newValue !== null) setHandlingAmount(Number(newValue) || 0);
+                                }
+                              }}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border ${
+                                handlingMode === 'auto' 
+                                  ? 'bg-green-50 border-green-200 text-green-700' 
+                                  : 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                              }`}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                              <span className="font-mono">{handlingAmount.toFixed(2)}</span>
+                            </button>
+                            <span className="text-xs text-gray-500">Order processing & packaging</span>
                             {calculatedHandling > 0 && (
-                              <p className={`text-xs ${handlingMode === 'auto' ? 'text-green-600' : 'text-blue-600'}`}>
-                                {handlingMode === 'auto' ? 'Auto: Route-based calculation' : `Calculated: ${debugData?.currency_symbol || '$'}${calculatedHandling.toFixed(2)}`}
-                              </p>
+                              <span className={`text-xs px-2 py-1 rounded ${handlingMode === 'auto' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {handlingMode === 'auto' ? 'Auto: Route-based' : `Calculated: ${debugData?.currency_symbol || '$'}${calculatedHandling.toFixed(2)}`}
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-6">
+                        {/* Insurance */}
                         <div>
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <Label>Insurance</Label>
+                              <Label className="text-sm font-medium text-gray-700">Insurance</Label>
                               {calculatedInsurance > 0 && (
                                 <span className="text-xs text-gray-500">
                                   (calc: {debugData?.currency_symbol || '$'}{calculatedInsurance.toFixed(2)})
                                 </span>
                               )}
                               {quote.customer_data?.preferences?.insurance_opted_in && insuranceAmount > 0 && (
-                                <Badge variant="secondary" className="text-xs bg-green-50 text-green-700">
+                                <Badge variant="secondary" className="text-xs bg-green-50 text-green-700 border-green-200">
                                   Customer Requested
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              {calculatedInsurance > 0 && insuranceAmount !== calculatedInsurance && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="h-7 px-2 text-xs"
-                                  onClick={() => setInsuranceAmount(calculatedInsurance)}
-                                >
-                                  Use Calculated
-                                </Button>
-                              )}
-                            </div>
+                            {calculatedInsurance > 0 && insuranceAmount !== calculatedInsurance && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-7 px-2 text-xs border-gray-200"
+                                onClick={() => setInsuranceAmount(calculatedInsurance)}
+                              >
+                                Use Calculated
+                              </Button>
+                            )}
                           </div>
-                          <div className="relative mt-2">
-                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                            <Input 
-                              type="number" 
-                              className="pl-10"
-                              value={insuranceAmount}
-                              onChange={(e) => setInsuranceAmount(Number(e.target.value))}
-                              placeholder="0.00"
-                            />
-                          </div>
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs text-gray-500">Loss/damage protection</p>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter insurance amount:', insuranceAmount.toString());
+                                if (newValue !== null) setInsuranceAmount(Number(newValue) || 0);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all text-gray-600 hover:bg-gray-100 border border-gray-200"
+                            >
+                              <DollarSign className="h-4 w-4" />
+                              <span className="font-mono">{insuranceAmount.toFixed(2)}</span>
+                            </button>
+                            <span className="text-xs text-gray-500">Loss/damage protection</span>
                             {insuranceAmount > 0 && (
-                              <p className="text-xs text-green-600">
+                              <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
                                 Active: {debugData?.currency_symbol || '$'}{insuranceAmount.toFixed(2)}
-                              </p>
+                              </span>
                             )}
                           </div>
                         </div>
 
+                        {/* Discount */}
                         <div>
-                          <Label>Discount</Label>
-                          <div className="flex gap-2 mt-2">
-                            <div className="relative flex-1">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                              <Input 
-                                type="number" 
-                                className="pl-10"
-                                placeholder="0.00"
-                                value={discountAmount}
-                                onChange={(e) => setDiscountAmount(Number(e.target.value))}
-                              />
-                            </div>
+                          <Label className="text-sm font-medium text-gray-700 mb-3 block">Discount</Label>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter discount amount:', discountAmount.toString());
+                                if (newValue !== null) setDiscountAmount(Number(newValue) || 0);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all text-gray-600 hover:bg-gray-100 border border-gray-200"
+                            >
+                              <DollarSign className="h-4 w-4" />
+                              <span className="font-mono">{discountAmount.toFixed(2)}</span>
+                            </button>
                             <Select defaultValue="amount">
-                              <SelectTrigger className="w-24">
+                              <SelectTrigger className="w-24 h-8 text-xs border-gray-200">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1821,47 +1808,858 @@ export default function UnifiedQuoteOrderSystem({
                             </Select>
                           </div>
                         </div>
+                        {/* Sales Tax */}
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 mb-3 block">Sales Tax</Label>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                              onClick={() => {
+                                const route = `${quote.origin_country}-${quote.destination_country}`;
+                                if (route !== 'US-NP') {
+                                  toast({
+                                    title: "Sales Tax Disabled",
+                                    description: "Sales tax only applies to US→Nepal shipments",
+                                    variant: "warning"
+                                  });
+                                  return;
+                                }
+                                const newValue = prompt('Enter sales tax amount:', salesTaxAmount.toString());
+                                if (newValue !== null) setSalesTaxAmount(Number(newValue) || 0);
+                              }}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border ${
+                                `${quote.origin_country}-${quote.destination_country}` === 'US-NP'
+                                  ? 'text-gray-600 hover:bg-gray-100 border-gray-200'
+                                  : 'text-gray-400 cursor-not-allowed border-gray-100 bg-gray-50'
+                              }`}
+                              disabled={`${quote.origin_country}-${quote.destination_country}` !== 'US-NP'}
+                            >
+                              <Receipt className="h-4 w-4" />
+                              <span className="font-mono">{salesTaxAmount.toFixed(2)}</span>
+                            </button>
+                            <span className="text-xs text-gray-500">
+                              {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' ? 'US state tax' : 'Only for US→NP'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <div className="grid grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-500">Subtotal</p>
-                          <p className="font-medium">
-                            ${items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)}
-                          </p>
+                    )}
+                    
+                    {/* Design Option 2: Ultra-Compact Single Row */}
+                    {costsDesignOption === 2 && (
+                      <div className="space-y-3">
+                        {/* Single Row Grid */}
+                        <div className="grid grid-cols-5 gap-3">
+                          {/* International Shipping */}
+                          <div className="group p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-900">International</span>
+                              {availableShippingOptions.length > 0 && selectedShippingOptionId && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                                  {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.name?.substring(0, 3) || 'Exp'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="space-y-1.5">
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter international shipping cost:', internationalShipping.toString());
+                                  if (newValue !== null) setInternationalShipping(Number(newValue) || 0);
+                                }}
+                                className="w-full px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md font-mono text-sm font-bold text-blue-900 hover:text-blue-600 transition-all flex items-center gap-1 group"
+                              >
+                                <DollarSign className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                                {internationalShipping.toFixed(2)}
+                              </button>
+                              {availableShippingOptions.length > 0 && (
+                                <Select 
+                                  value={selectedShippingOptionId || ''} 
+                                  onValueChange={(value) => {
+                                    setSelectedShippingOptionId(value);
+                                    const option = availableShippingOptions.find(opt => opt.id === value);
+                                    if (option) setInternationalShipping(option.cost_usd);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-7 text-xs border-gray-300 hover:border-blue-400 transition-colors">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableShippingOptions.map((option) => (
+                                      <SelectItem key={option.id} value={option.id}>
+                                        {option.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Domestic Shipping */}
+                          <div className="group p-3 bg-white border border-gray-200 rounded-lg hover:border-green-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-900">Domestic</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter domestic shipping cost:', domesticShipping.toString());
+                                if (newValue !== null) setDomesticShipping(Number(newValue) || 0);
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 rounded-md font-mono text-sm font-bold text-green-900 hover:text-green-600 transition-all flex items-center gap-1 group"
+                            >
+                              <DollarSign className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                              {domesticShipping.toFixed(2)}
+                            </button>
+                          </div>
+
+                          {/* Handling Fee */}
+                          <div className="group p-3 bg-white border border-gray-200 rounded-lg hover:border-orange-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-900">Handling</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                handlingMode === 'auto' 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-orange-100 text-orange-700'
+                              }`}>
+                                {handlingMode === 'auto' ? 'A' : 'M'}
+                              </span>
+                              <Select 
+                                value={handlingMode} 
+                                onValueChange={(value: 'auto' | 'manual') => setHandlingMode(value)}
+                              >
+                                <SelectTrigger className="h-5 w-5 text-xs border-0 bg-transparent p-0">
+                                  <MoreHorizontal className="w-3 h-3" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="auto">Auto</SelectItem>
+                                  <SelectItem value="manual">Manual</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (handlingMode === 'manual') {
+                                  const newValue = prompt('Enter handling fee:', handlingAmount.toString());
+                                  if (newValue !== null) setHandlingAmount(Number(newValue) || 0);
+                                }
+                              }}
+                              className={`w-full px-2.5 py-1.5 border rounded-md font-mono text-sm font-bold transition-all flex items-center gap-1 group ${
+                                handlingMode === 'auto' 
+                                  ? 'bg-gray-50 border-gray-200 text-gray-600 cursor-not-allowed' 
+                                  : 'bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-900 hover:text-orange-600 cursor-pointer'
+                              }`}
+                              disabled={handlingMode === 'auto'}
+                            >
+                              <DollarSign className={`w-3 h-3 transition-transform ${handlingMode === 'manual' ? 'group-hover:scale-110' : ''}`} />
+                              {handlingAmount.toFixed(2)}
+                            </button>
+                          </div>
+
+                          {/* Insurance */}
+                          <div className="group p-3 bg-white border border-gray-200 rounded-lg hover:border-purple-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-900">Insurance</span>
+                              {quote.customer_data?.preferences?.insurance_opted_in && (
+                                <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
+                                  Req
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter insurance amount:', insuranceAmount.toString());
+                                if (newValue !== null) setInsuranceAmount(Number(newValue) || 0);
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-md font-mono text-sm font-bold text-purple-900 hover:text-purple-600 transition-all flex items-center gap-1 group"
+                            >
+                              <DollarSign className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                              {insuranceAmount.toFixed(2)}
+                            </button>
+                          </div>
+
+                          {/* Discount */}
+                          <div className="group p-3 bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-900">Discount</span>
+                              <Select defaultValue="amount">
+                                <SelectTrigger className="h-5 w-6 text-xs border-0 bg-transparent p-0">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="amount">$</SelectItem>
+                                  <SelectItem value="percent">%</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter discount amount:', discountAmount.toString());
+                                if (newValue !== null) setDiscountAmount(Number(newValue) || 0);
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md font-mono text-sm font-bold text-red-900 hover:text-red-600 transition-all flex items-center gap-1 group"
+                            >
+                              <DollarSign className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                              {discountAmount.toFixed(2)}
+                            </button>
+                          </div>
+                          
+                          {/* Sales Tax */}
+                          <div className="group p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-300 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-900">Sales Tax</span>
+                              {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && (
+                                <Badge variant="outline" className="text-xs h-5 px-1">
+                                  US→NP
+                                </Badge>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                const route = `${quote.origin_country}-${quote.destination_country}`;
+                                if (route !== 'US-NP') {
+                                  toast({
+                                    title: "Sales Tax Disabled",
+                                    description: "Sales tax only applies to US→Nepal shipments",
+                                    variant: "warning"
+                                  });
+                                  return;
+                                }
+                                const newValue = prompt('Enter sales tax amount:', salesTaxAmount.toString());
+                                if (newValue !== null) setSalesTaxAmount(Number(newValue) || 0);
+                              }}
+                              className={`w-full px-2.5 py-1.5 border rounded-md font-mono text-sm font-bold transition-all flex items-center gap-1 group ${
+                                `${quote.origin_country}-${quote.destination_country}` === 'US-NP'
+                                  ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-900 hover:text-indigo-600'
+                                  : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                              }`}
+                              disabled={`${quote.origin_country}-${quote.destination_country}` !== 'US-NP'}
+                            >
+                              <DollarSign className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                              {salesTaxAmount.toFixed(2)}
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-gray-500">Shipping & Fees</p>
-                          <p className="font-medium">
-                            ${(
-                              safeNumber(internationalShipping) +
-                              safeNumber(domesticShipping) + 
-                              safeNumber(handlingAmount) + 
-                              safeNumber(insuranceAmount)
-                            ).toFixed(2)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Discount</p>
-                          <p className="font-medium text-red-600">-${safeNumber(discountAmount).toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Impact on Total</p>
-                          <p className="font-medium text-green-600">
-                            ${(
-                              items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) +
-                              safeNumber(internationalShipping) +
-                              safeNumber(domesticShipping) + 
-                              safeNumber(handlingAmount) + 
-                              safeNumber(insuranceAmount) -
-                              safeNumber(discountAmount)
-                            ).toFixed(2)}
-                          </p>
+
+                        {/* Summary Bar */}
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+                          <div className="flex items-center gap-4">
+                            <span className="text-gray-600">Products: <span className="font-mono font-semibold">${items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)}</span></span>
+                            <span className="text-gray-600">Fees: <span className="font-mono font-semibold">${(safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount) + safeNumber(salesTaxAmount)).toFixed(2)}</span></span>
+                            {discountAmount > 0 && (
+                              <span className="text-red-600">Discount: <span className="font-mono font-semibold">-${discountAmount.toFixed(2)}</span></span>
+                            )}
+                          </div>
+                          <div className="font-bold text-green-600">
+                            Total: <span className="font-mono text-lg">${(items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) + safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount) + safeNumber(salesTaxAmount) - safeNumber(discountAmount)).toFixed(2)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Design Option 3: Modern Inline Design */}
+                    {costsDesignOption === 3 && (
+                      <div className="space-y-6">
+                        <div className="flex flex-wrap gap-4">
+                          {/* International Shipping */}
+                          <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Plane className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">International</div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter international shipping cost:', internationalShipping.toString());
+                                  if (newValue !== null) setInternationalShipping(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+                              >
+                                ${internationalShipping.toFixed(2)}
+                              </button>
+                            </div>
+                            {availableShippingOptions.length > 0 && (
+                              <Select 
+                                value={selectedShippingOptionId || ''} 
+                                onValueChange={(value) => {
+                                  setSelectedShippingOptionId(value);
+                                  const option = availableShippingOptions.find(opt => opt.id === value);
+                                  if (option) setInternationalShipping(option.cost_usd);
+                                }}
+                              >
+                                <SelectTrigger className="w-28 h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableShippingOptions.map((option) => (
+                                    <SelectItem key={option.id} value={option.id}>
+                                      {option.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+
+                          {/* Domestic Shipping */}
+                          <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                              <Truck className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">Domestic</div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter domestic shipping cost:', domesticShipping.toString());
+                                  if (newValue !== null) setDomesticShipping(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-xl font-bold text-gray-900 hover:text-green-600 transition-colors"
+                              >
+                                ${domesticShipping.toFixed(2)}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Handling */}
+                          <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                              <Package className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">Handling</div>
+                              <button
+                                onClick={() => {
+                                  if (handlingMode === 'manual') {
+                                    const newValue = prompt('Enter handling fee:', handlingAmount.toString());
+                                    if (newValue !== null) setHandlingAmount(Number(newValue) || 0);
+                                  }
+                                }}
+                                className={`font-mono text-xl font-bold transition-colors ${
+                                  handlingMode === 'auto' 
+                                    ? 'text-gray-900 cursor-not-allowed' 
+                                    : 'text-gray-900 hover:text-orange-600 cursor-pointer'
+                                }`}
+                                disabled={handlingMode === 'auto'}
+                              >
+                                ${handlingAmount.toFixed(2)}
+                              </button>
+                            </div>
+                            <Select 
+                              value={handlingMode} 
+                              onValueChange={(value: 'auto' | 'manual') => setHandlingMode(value)}
+                            >
+                              <SelectTrigger className="w-16 h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="auto">Auto</SelectItem>
+                                <SelectItem value="manual">Manual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Insurance */}
+                          <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                              <Shield className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">Insurance</div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter insurance amount:', insuranceAmount.toString());
+                                  if (newValue !== null) setInsuranceAmount(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-xl font-bold text-gray-900 hover:text-purple-600 transition-colors"
+                              >
+                                ${insuranceAmount.toFixed(2)}
+                              </button>
+                            </div>
+                            {quote.customer_data?.preferences?.insurance_opted_in && (
+                              <div className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-md">
+                                Requested
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Sales Tax */}
+                          <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                              <Receipt className="w-5 h-5 text-indigo-600" />
+                            </div>
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">Sales Tax</div>
+                              <button
+                                onClick={() => {
+                                  const route = `${quote.origin_country}-${quote.destination_country}`;
+                                  if (route !== 'US-NP') {
+                                    toast({
+                                      title: "Sales Tax Disabled",
+                                      description: "Sales tax only applies to US→Nepal shipments",
+                                      variant: "warning"
+                                    });
+                                    return;
+                                  }
+                                  const newValue = prompt('Enter sales tax amount:', salesTaxAmount.toString());
+                                  if (newValue !== null) setSalesTaxAmount(Number(newValue) || 0);
+                                }}
+                                className={`font-mono text-xl font-bold transition-colors ${
+                                  `${quote.origin_country}-${quote.destination_country}` === 'US-NP'
+                                    ? 'text-gray-900 hover:text-indigo-600'
+                                    : 'text-gray-400 cursor-not-allowed'
+                                }`}
+                                disabled={`${quote.origin_country}-${quote.destination_country}` !== 'US-NP'}
+                              >
+                                ${salesTaxAmount.toFixed(2)}
+                              </button>
+                            </div>
+                            {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && (
+                              <Badge variant="outline" className="text-xs">
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Discount & Summary Row */}
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                <Percent className="w-5 h-5 text-red-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs text-gray-500 uppercase tracking-wide">Discount</div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const newValue = prompt('Enter discount amount:', discountAmount.toString());
+                                      if (newValue !== null) setDiscountAmount(Number(newValue) || 0);
+                                    }}
+                                    className="font-mono text-xl font-bold text-gray-900 hover:text-red-600 transition-colors"
+                                  >
+                                    ${discountAmount.toFixed(2)}
+                                  </button>
+                                  <Select defaultValue="amount">
+                                    <SelectTrigger className="w-16 h-8 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="amount">$</SelectItem>
+                                      <SelectItem value="percent">%</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-500 uppercase tracking-wide">Total Impact</div>
+                            <div className="font-mono text-2xl font-bold text-green-600">
+                              ${(items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) + safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount) + safeNumber(salesTaxAmount) - safeNumber(discountAmount)).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Design Option 4: Card-Based (But Tight) */}
+                    {costsDesignOption === 4 && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Left Column - Shipping & Handling */}
+                          <div className="space-y-3">
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Plane className="w-4 h-4 text-blue-600" />
+                                  <span className="font-medium text-blue-900">International</span>
+                                </div>
+                                {availableShippingOptions.length > 0 && (
+                                  <Select 
+                                    value={selectedShippingOptionId || ''} 
+                                    onValueChange={(value) => {
+                                      setSelectedShippingOptionId(value);
+                                      const option = availableShippingOptions.find(opt => opt.id === value);
+                                      if (option) setInternationalShipping(option.cost_usd);
+                                    }}
+                                  >
+                                    <SelectTrigger className="w-24 h-7 text-xs bg-white">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableShippingOptions.map((option) => (
+                                        <SelectItem key={option.id} value={option.id}>
+                                          {option.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter international shipping cost:', internationalShipping.toString());
+                                  if (newValue !== null) setInternationalShipping(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-2xl font-bold text-blue-900 hover:text-blue-600 transition-colors"
+                              >
+                                ${internationalShipping.toFixed(2)}
+                              </button>
+                            </div>
+
+                            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Truck className="w-4 h-4 text-green-600" />
+                                <span className="font-medium text-green-900">Domestic</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter domestic shipping cost:', domesticShipping.toString());
+                                  if (newValue !== null) setDomesticShipping(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-2xl font-bold text-green-900 hover:text-green-600 transition-colors"
+                              >
+                                ${domesticShipping.toFixed(2)}
+                              </button>
+                            </div>
+
+                            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Package className="w-4 h-4 text-orange-600" />
+                                  <span className="font-medium text-orange-900">Handling</span>
+                                </div>
+                                <Select 
+                                  value={handlingMode} 
+                                  onValueChange={(value: 'auto' | 'manual') => setHandlingMode(value)}
+                                >
+                                  <SelectTrigger className="w-16 h-7 text-xs bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="auto">Auto</SelectItem>
+                                    <SelectItem value="manual">Manual</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (handlingMode === 'manual') {
+                                    const newValue = prompt('Enter handling fee:', handlingAmount.toString());
+                                    if (newValue !== null) setHandlingAmount(Number(newValue) || 0);
+                                  }
+                                }}
+                                className={`font-mono text-2xl font-bold transition-colors ${
+                                  handlingMode === 'auto' 
+                                    ? 'text-orange-900 cursor-not-allowed' 
+                                    : 'text-orange-900 hover:text-orange-600 cursor-pointer'
+                                }`}
+                                disabled={handlingMode === 'auto'}
+                              >
+                                ${handlingAmount.toFixed(2)}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Right Column - Insurance, Discount & Summary */}
+                          <div className="space-y-3">
+                            <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Shield className="w-4 h-4 text-purple-600" />
+                                  <span className="font-medium text-purple-900">Insurance</span>
+                                </div>
+                                {quote.customer_data?.preferences?.insurance_opted_in && (
+                                  <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter insurance amount:', insuranceAmount.toString());
+                                  if (newValue !== null) setInsuranceAmount(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-2xl font-bold text-purple-900 hover:text-purple-600 transition-colors"
+                              >
+                                ${insuranceAmount.toFixed(2)}
+                              </button>
+                            </div>
+
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Percent className="w-4 h-4 text-red-600" />
+                                  <span className="font-medium text-red-900">Discount</span>
+                                </div>
+                                <Select defaultValue="amount">
+                                  <SelectTrigger className="w-14 h-7 text-xs bg-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="amount">$</SelectItem>
+                                    <SelectItem value="percent">%</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter discount amount:', discountAmount.toString());
+                                  if (newValue !== null) setDiscountAmount(Number(newValue) || 0);
+                                }}
+                                className="font-mono text-2xl font-bold text-red-900 hover:text-red-600 transition-colors"
+                              >
+                                ${discountAmount.toFixed(2)}
+                              </button>
+                            </div>
+
+                            <div className="p-4 bg-gray-900 text-white rounded-xl">
+                              <div className="text-xs uppercase tracking-wide text-gray-400 mb-2">Final Total</div>
+                              <div className="font-mono text-3xl font-bold">
+                                ${(items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) + safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount) - safeNumber(discountAmount)).toFixed(2)}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                Products: ${items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)} • 
+                                Fees: ${(safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount)).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Design Option 5: Shopify-Style Professional */}
+                    {costsDesignOption === 5 && (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 gap-4">
+                          {/* International Shipping */}
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Plane className="w-6 h-6 text-blue-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">International Shipping</h4>
+                                <p className="text-sm text-gray-500">
+                                  {availableShippingOptions.length > 0 && selectedShippingOptionId 
+                                    ? `${availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.name || 'Just Express'} • International carrier`
+                                    : 'International carrier shipping'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {availableShippingOptions.length > 0 && (
+                                <Select 
+                                  value={selectedShippingOptionId || ''} 
+                                  onValueChange={(value) => {
+                                    setSelectedShippingOptionId(value);
+                                    const option = availableShippingOptions.find(opt => opt.id === value);
+                                    if (option) setInternationalShipping(option.cost_usd);
+                                  }}
+                                >
+                                  <SelectTrigger className="w-36 border-gray-300">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableShippingOptions.map((option) => (
+                                      <SelectItem key={option.id} value={option.id}>
+                                        <div>
+                                          <div className="font-medium">{option.name}</div>
+                                          <div className="text-xs text-gray-500">${option.cost_usd.toFixed(2)}</div>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter international shipping cost:', internationalShipping.toString());
+                                  if (newValue !== null) setInternationalShipping(Number(newValue) || 0);
+                                }}
+                                className="px-4 py-2 font-mono text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors border border-gray-300 rounded-md hover:border-blue-300"
+                              >
+                                ${internationalShipping.toFixed(2)}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Domestic Shipping */}
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <Truck className="w-6 h-6 text-green-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Domestic Shipping</h4>
+                                <p className="text-sm text-gray-500">Last mile delivery to customer address</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newValue = prompt('Enter domestic shipping cost:', domesticShipping.toString());
+                                if (newValue !== null) setDomesticShipping(Number(newValue) || 0);
+                              }}
+                              className="px-4 py-2 font-mono text-lg font-semibold text-gray-900 hover:text-green-600 transition-colors border border-gray-300 rounded-md hover:border-green-300"
+                            >
+                              ${domesticShipping.toFixed(2)}
+                            </button>
+                          </div>
+
+                          {/* Handling Fee */}
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <Package className="w-6 h-6 text-orange-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Handling Fee</h4>
+                                <p className="text-sm text-gray-500">
+                                  {handlingMode === 'auto' 
+                                    ? 'Automatically calculated based on route and weight'
+                                    : 'Manual override for special handling requirements'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Select 
+                                value={handlingMode} 
+                                onValueChange={(value: 'auto' | 'manual') => setHandlingMode(value)}
+                              >
+                                <SelectTrigger className="w-24 border-gray-300">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="auto">Auto</SelectItem>
+                                  <SelectItem value="manual">Manual</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <button
+                                onClick={() => {
+                                  if (handlingMode === 'manual') {
+                                    const newValue = prompt('Enter handling fee:', handlingAmount.toString());
+                                    if (newValue !== null) setHandlingAmount(Number(newValue) || 0);
+                                  }
+                                }}
+                                className={`px-4 py-2 font-mono text-lg font-semibold border border-gray-300 rounded-md transition-colors ${
+                                  handlingMode === 'auto' 
+                                    ? 'text-gray-900 cursor-not-allowed bg-gray-50' 
+                                    : 'text-gray-900 hover:text-orange-600 hover:border-orange-300 cursor-pointer'
+                                }`}
+                                disabled={handlingMode === 'auto'}
+                              >
+                                ${handlingAmount.toFixed(2)}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Insurance */}
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <Shield className="w-6 h-6 text-purple-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Package Insurance</h4>
+                                <p className="text-sm text-gray-500">
+                                  {quote.customer_data?.preferences?.insurance_opted_in 
+                                    ? 'Customer requested protection for high-value items'
+                                    : 'Optional coverage for loss or damage during transit'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {quote.customer_data?.preferences?.insurance_opted_in && (
+                                <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
+                                  Requested
+                                </span>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter insurance amount:', insuranceAmount.toString());
+                                  if (newValue !== null) setInsuranceAmount(Number(newValue) || 0);
+                                }}
+                                className="px-4 py-2 font-mono text-lg font-semibold text-gray-900 hover:text-purple-600 transition-colors border border-gray-300 rounded-md hover:border-purple-300"
+                              >
+                                ${insuranceAmount.toFixed(2)}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Discount */}
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <Percent className="w-6 h-6 text-red-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-semibold text-gray-900">Discount</h4>
+                                <p className="text-sm text-gray-500">Apply promotional discount or customer credit</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Select defaultValue="amount">
+                                <SelectTrigger className="w-20 border-gray-300">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="amount">Amount</SelectItem>
+                                  <SelectItem value="percent">Percent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <button
+                                onClick={() => {
+                                  const newValue = prompt('Enter discount amount:', discountAmount.toString());
+                                  if (newValue !== null) setDiscountAmount(Number(newValue) || 0);
+                                }}
+                                className="px-4 py-2 font-mono text-lg font-semibold text-gray-900 hover:text-red-600 transition-colors border border-gray-300 rounded-md hover:border-red-300"
+                              >
+                                ${discountAmount.toFixed(2)}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Professional Summary */}
+                        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h4>
+                          <div className="grid grid-cols-4 gap-6">
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500 mb-2">Product Subtotal</div>
+                              <div className="font-mono text-xl font-bold text-gray-900">
+                                ${items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500 mb-2">Shipping & Fees</div>
+                              <div className="font-mono text-xl font-bold text-gray-900">
+                                ${(safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount)).toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500 mb-2">Total Discount</div>
+                              <div className="font-mono text-xl font-bold text-red-600">
+                                -${safeNumber(discountAmount).toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500 mb-2">Final Total</div>
+                              <div className="font-mono text-2xl font-bold text-green-600">
+                                ${(items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0) + safeNumber(internationalShipping) + safeNumber(domesticShipping) + safeNumber(handlingAmount) + safeNumber(insuranceAmount) - safeNumber(discountAmount)).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -2529,28 +3327,251 @@ export default function UnifiedQuoteOrderSystem({
               </Card>
             )}
 
+            {/* Enhanced Tax Breakdown - Always Visible */}
+            {console.log('Tax breakdown check:', {
+              hasCalculationData: !!quote?.calculation_data,
+              calculationData: quote?.calculation_data,
+              customsPercentage,
+              customsAmount,
+              destinationTaxRate,
+              destinationTaxAmount
+            })}
+            {quote?.calculation_data && (
+              <Card className="mt-4 border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-purple-600" />
+                    🎯 Detailed Tax & Calculation Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Tax Method & Valuation Method */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-purple-50 p-2 rounded">
+                      <div className="font-medium text-purple-700">Tax Method</div>
+                      <div className="text-purple-600">
+                        {quote.calculation_method_preference === 'hsn' ? 'HSN Based' : 
+                         quote.calculation_method_preference === 'route' ? 'Route Based' : 'Manual'}
+                      </div>
+                    </div>
+                    <div className="bg-orange-50 p-2 rounded">
+                      <div className="font-medium text-orange-700">Valuation Method</div>
+                      <div className="text-orange-600">
+                        {quote.valuation_method_preference === 'product_value' ? 'Actual Price' : 
+                         quote.valuation_method_preference === 'minimum_valuation' ? 'Minimum Valuation' : 'Higher of Both'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Customs Calculation Detail */}
+                  <div className="border-l-2 border-orange-200 pl-3">
+                    <div className="font-medium text-orange-700 mb-1">Customs Calculation</div>
+                    <div className="space-y-1 text-xs text-gray-600">
+                      <div>Base: {quote.calculation_data.valuation_applied?.original_items_total ? `$${quote.calculation_data.valuation_applied.original_items_total.toFixed(2)}` : 'N/A'} (actual)</div>
+                      {quote.calculation_data.valuation_applied?.customs_calculation_base && (
+                        <div>Customs Base: ${quote.calculation_data.valuation_applied.customs_calculation_base.toFixed(2)} 
+                          {quote.calculation_data.valuation_applied.adjustment_applied && ' (adjusted)'}
+                        </div>
+                      )}
+                      <div>CIF Value: Base + Shipping (${internationalShipping.toFixed(2)}) + Insurance (${insuranceAmount.toFixed(2)})</div>
+                      <div>Customs %: {customsPercentage}%</div>
+                      <div className="font-medium text-orange-600">= ${customsAmount.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Sales Tax Detail (US→NP only) */}
+                  {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && (
+                    <div className="border-l-2 border-indigo-200 pl-3">
+                      <div className="font-medium text-indigo-700 mb-1">Sales Tax (Origin)</div>
+                      <div className="space-y-1 text-xs text-gray-600">
+                        <div>Route: {quote.origin_country}→{quote.destination_country}</div>
+                        <div>Base: ${quote.calculation_data.breakdown?.items_total || 0}</div>
+                        <div>Sales Tax: ${salesTaxAmount.toFixed(2)}</div>
+                        <div className="text-indigo-600 font-medium">Applied to items first</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Destination Tax Detail */}
+                  {quote.calculation_data.breakdown?.destination_tax && (
+                    <div className="border-l-2 border-green-200 pl-3">
+                      <div className="font-medium text-green-700 mb-1">Destination Tax (VAT/GST)</div>
+                      <div className="space-y-1 text-xs text-gray-600">
+                        <div>Country: {quote.destination_country}</div>
+                        <div>Type: {quote.destination_country === 'IN' ? 'GST' : quote.destination_country === 'NP' ? 'VAT' : 'Tax'}</div>
+                        <div>Landed Cost: Items + Shipping + Insurance + Customs + Handling</div>
+                        <div className="font-medium text-green-600">= ${quote.calculation_data.breakdown.destination_tax.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Summary Totals */}
+                  <div className="border-t pt-2 space-y-1 text-xs font-medium">
+                    <div className="flex justify-between text-orange-600">
+                      <span>Total Customs:</span>
+                      <span>${customsAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-indigo-600">
+                      <span>Total Sales Tax:</span>
+                      <span>${salesTaxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Total Destination Tax:</span>
+                      <span>${(quote.calculation_data.breakdown?.destination_tax || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-purple-700 text-sm pt-1 border-t">
+                      <span>Total All Taxes:</span>
+                      <span>${(customsAmount + salesTaxAmount + (quote.calculation_data.breakdown?.destination_tax || 0)).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Gateway Fee Calculation */}
+                  {quote?.calculation_data?.breakdown && (
+                    <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                      <div className="text-xs font-medium text-blue-700 mb-2">💳 Payment Gateway Fee</div>
+                      <div className="space-y-1 text-xs">
+                        <div>Subtotal: ${(
+                          quote.calculation_data.breakdown.items_total +
+                          quote.calculation_data.breakdown.shipping +
+                          domesticShipping +
+                          customsAmount +
+                          salesTaxAmount +
+                          (quote.calculation_data.breakdown.destination_tax || 0) +
+                          handlingAmount +
+                          insuranceAmount
+                        ).toFixed(2)}</div>
+                        <div>Fee: 2.9% + $0.30 = ${quote.calculation_data.breakdown.fees.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Final Total */}
+                  {quote?.calculation_data?.breakdown && (
+                    <div className="bg-green-50 p-3 rounded border border-green-200">
+                      <div className="flex justify-between text-sm font-bold text-green-700">
+                        <span>Final Total:</span>
+                        <span>${quote.calculation_data.total_cost.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* 🔧 DEBUG DISPLAY - Calculation Breakdown */}
-            {debugData && (
+            {(debugData || quote?.calculation_data) && (
               <Card className="mt-4 border-cyan-200 bg-cyan-50/20">
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Activity className="w-4 h-4 text-cyan-600" />
-                    🔧 Calculation Debug Data
+                    🔧 Calculation Debug Data & Tax Breakdown
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Last calculation: {debugData.calculation_timestamp}
+                    {debugData?.calculation_timestamp ? `Last calculation: ${debugData.calculation_timestamp}` : 'Tax calculation details'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Route & Currency */}
-                  <div className="bg-white p-3 rounded-lg border">
-                    <div className="text-xs font-medium text-gray-600 mb-2">Route & Currency</div>
-                    <div className="space-y-1 text-xs">
-                      <div><strong>Route:</strong> {debugData.route}</div>
-                      <div><strong>Currency:</strong> {debugData.currency_used}</div>
+                  {debugData && (
+                    <div className="bg-white p-3 rounded-lg border">
+                      <div className="text-xs font-medium text-gray-600 mb-2">Route & Currency</div>
+                      <div className="space-y-1 text-xs">
+                        <div><strong>Route:</strong> {debugData.route}</div>
+                        <div><strong>Currency:</strong> {debugData.currency_used}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Enhanced Tax Breakdown */}
+                  <div className="bg-white p-3 rounded-lg border border-purple-200">
+                    <div className="text-xs font-medium text-purple-700 mb-2">🎯 Detailed Tax & Calculation Breakdown</div>
+                    <div className="space-y-3">
+                      {/* Tax Method & Valuation Method */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-purple-50 p-2 rounded">
+                          <div className="font-medium text-purple-700">Tax Method</div>
+                          <div className="text-purple-600">
+                            {quote.calculation_method_preference === 'hsn' ? 'HSN Based' : 
+                             quote.calculation_method_preference === 'route' ? 'Route Based' : 'Manual'}
+                          </div>
+                        </div>
+                        <div className="bg-orange-50 p-2 rounded">
+                          <div className="font-medium text-orange-700">Valuation Method</div>
+                          <div className="text-orange-600">
+                            {quote.valuation_method_preference === 'product_value' ? 'Actual Price' : 
+                             quote.valuation_method_preference === 'minimum_valuation' ? 'Minimum Valuation' : 'Higher of Both'}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Customs Calculation Detail */}
+                      <div className="border-l-2 border-orange-200 pl-3">
+                        <div className="font-medium text-orange-700 mb-1">Customs Calculation</div>
+                        <div className="space-y-1 text-xs text-gray-600">
+                          <div>Base: ${items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)} (actual)</div>
+                          <div>CIF Value: Base + Shipping (${internationalShipping.toFixed(2)}) + Insurance (${insuranceAmount.toFixed(2)})</div>
+                          <div>Customs Rate: {customsPercentage}%</div>
+                          <div className="font-medium text-orange-600">Customs Amount: ${customsAmount.toFixed(2)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Sales Tax Detail (US→NP only) */}
+                      {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && salesTaxAmount > 0 && (
+                        <div className="border-l-2 border-indigo-200 pl-3">
+                          <div className="font-medium text-indigo-700 mb-1">Sales Tax (Origin)</div>
+                          <div className="space-y-1 text-xs text-gray-600">
+                            <div>Route: {quote.origin_country}→{quote.destination_country}</div>
+                            <div>Sales Tax: ${salesTaxAmount.toFixed(2)}</div>
+                            <div className="text-indigo-600 font-medium">Applied to items first</div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Destination Tax Detail */}
+                      {destinationTaxAmount > 0 && (
+                        <div className="border-l-2 border-green-200 pl-3">
+                          <div className="font-medium text-green-700 mb-1">Destination Tax (VAT/GST)</div>
+                          <div className="space-y-1 text-xs text-gray-600">
+                            <div>Country: {quote.destination_country}</div>
+                            <div>VAT/GST Rate: {destinationTaxRate.toFixed(1)}%</div>
+                            <div className="font-medium text-green-600">VAT/GST Amount: ${destinationTaxAmount.toFixed(2)}</div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Payment Gateway Fee */}
+                      <div className="border-l-2 border-blue-200 pl-3">
+                        <div className="font-medium text-blue-700 mb-1">💳 Payment Gateway Fee</div>
+                        <div className="space-y-1 text-xs text-gray-600">
+                          <div>Subtotal: ${subtotalForGateway.toFixed(2)}</div>
+                          <div>Fee: 2.9% + $0.30</div>
+                          <div className="font-medium text-blue-600">Gateway Fee: ${gatewayFee.toFixed(2)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Summary Totals */}
+                      <div className="bg-gray-50 p-2 rounded space-y-1 text-xs">
+                        <div className="font-medium text-gray-700">Summary Totals</div>
+                        <div className="flex justify-between">
+                          <span>Total Customs:</span>
+                          <span className="font-medium">${customsAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Sales Tax:</span>
+                          <span className="font-medium">${salesTaxAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total VAT/GST:</span>
+                          <span className="font-medium">${destinationTaxAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-1">
+                          <span className="font-medium">Total All Taxes:</span>
+                          <span className="font-bold text-purple-600">${(customsAmount + salesTaxAmount + destinationTaxAmount).toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
+                  
                   {/* Live Calculation Breakdown */}
                   {debugData?.calculation_breakdown && (
                     <div className="bg-white p-3 rounded-lg border">
@@ -2579,7 +3600,19 @@ export default function UnifiedQuoteOrderSystem({
                       <div className="flex justify-between">
                         <span><strong>Taxes:</strong></span>
                         <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.taxes}</span>
+                      </div>
+                      {debugData.calculation_breakdown.destination_tax && (
+                        <div className="flex justify-between">
+                          <span><strong>Destination Tax:</strong></span>
+                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.destination_tax}</span>
                         </div>
+                      )}
+                      {domesticShipping > 0 && (
+                        <div className="flex justify-between">
+                          <span><strong>Domestic Shipping:</strong></span>
+                          <span>{debugData?.currency_symbol || '$'}{domesticShipping.toFixed(2)}</span>
+                        </div>
+                      )}
                         <div className="border-t pt-1 mt-1 flex justify-between font-semibold">
                           <span><strong>Total:</strong></span>
                           <span>{debugData?.currency_symbol || '$'}{(
@@ -2594,6 +3627,7 @@ export default function UnifiedQuoteOrderSystem({
                       </div>
                     </div>
                   )}
+
 
                   {/* Detailed Calculation Formulas */}
                   {debugData?.detailed_calculations && (

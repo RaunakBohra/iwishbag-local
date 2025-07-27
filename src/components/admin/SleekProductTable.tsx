@@ -51,7 +51,7 @@ interface QuoteItem {
   quantity: number;
   weight: number;
   weight_source?: string;
-  dimensions?: { length: number; width: number; height: number };
+  dimensions?: { length: number; width: number; height: number; unit?: 'cm' | 'in' };
   hsn_code?: string;
   category?: string;
   tax_method?: string;
@@ -98,9 +98,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   // State for expanded rows - default to all expanded
   const [expandedRows, setExpandedRows] = useState<string[]>(items.map(item => item.id));
   const [editingField, setEditingField] = useState<{itemId: string, field: string} | null>(null);
-  const [dimensionUnit, setDimensionUnit] = useState<'cm' | 'in'>('cm');
   const [loadingWeight, setLoadingWeight] = useState<{itemId: string, source: string} | null>(null);
   const [editingManualWeight, setEditingManualWeight] = useState<string | null>(null);
+  const [editingManualTaxRate, setEditingManualTaxRate] = useState<string | null>(null);
+  const [editingDimension, setEditingDimension] = useState<{itemId: string, field: 'length' | 'width' | 'height'} | null>(null);
   const [hsnCategories, setHsnCategories] = useState<Record<string, string>>({});
 
   // Pre-fetch weights for all items on mount
@@ -198,12 +199,12 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
 
   const calculateVolumetricWeight = (dimensions: any) => {
     if (!dimensions) return null;
-    const { length, width, height } = dimensions;
+    const { length, width, height, unit } = dimensions;
     
     // Use the service to calculate volumetric weight
     // Default to air divisor (5000) for the product table
     return volumetricWeightService.calculateVolumetricWeight(
-      { ...dimensions, unit: dimensionUnit },
+      { length, width, height, unit: unit || 'cm' },
       5000 // Air freight divisor
     );
   };
@@ -777,10 +778,63 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               // Get tax rate for display
                               const taxRate = item.tax_options?.[method as keyof typeof item.tax_options]?.rate || 18;
                               
+                              // Special handling for manual tax rate - make it editable
+                              if (method === 'manual' && editingManualTaxRate === item.id) {
+                                return (
+                                  <div key={method} className="flex items-center gap-1">
+                                    <Settings className="h-3 w-3 text-gray-500" />
+                                    <span className="capitalize text-[11px]">Manual</span>
+                                    <Input
+                                      type="number"
+                                      step="0.1"
+                                      className="h-6 w-16 text-[11px] px-1"
+                                      defaultValue={taxRate}
+                                      onBlur={(e) => {
+                                        const newTaxRate = parseFloat(e.target.value) || 18;
+                                        onUpdateItem(item.id, { 
+                                          tax_method: 'manual',
+                                          tax_options: {
+                                            ...item.tax_options,
+                                            manual: { rate: newTaxRate, amount: 0 }
+                                          }
+                                        });
+                                        onRecalculate();
+                                        setEditingManualTaxRate(null);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          const newTaxRate = parseFloat(e.currentTarget.value) || 18;
+                                          onUpdateItem(item.id, { 
+                                            tax_method: 'manual',
+                                            tax_options: {
+                                              ...item.tax_options,
+                                              manual: { rate: newTaxRate, amount: 0 }
+                                            }
+                                          });
+                                          onRecalculate();
+                                          setEditingManualTaxRate(null);
+                                        }
+                                        if (e.key === 'Escape') {
+                                          setEditingManualTaxRate(null);
+                                        }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <span className="text-[11px]">%</span>
+                                  </div>
+                                );
+                              }
+                              
                               return (
                                 <button
                                   key={method}
                                   onClick={() => {
+                                    // If manual and not editing, make it editable
+                                    if (method === 'manual') {
+                                      setEditingManualTaxRate(item.id);
+                                      return;
+                                    }
+                                    
                                     onUpdateItem(item.id, { tax_method: method });
                                     onRecalculate();
                                   }}
@@ -810,41 +864,140 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                       <div className="col-span-3">
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-medium text-gray-500 w-12">Size</span>
-                          <div className="flex items-center gap-1">
-                            <Input 
-                              placeholder="L" 
-                              className="h-8 w-16 text-xs" 
-                              defaultValue={item.dimensions?.length} 
-                              onChange={(e) => {
-                                const dimensions = { ...item.dimensions, length: parseFloat(e.target.value) || 0 };
-                                onUpdateItem(item.id, { dimensions });
-                              }}
-                            />
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {/* Length */}
+                            {editingDimension?.itemId === item.id && editingDimension?.field === 'length' ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[11px] text-gray-500">L</span>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  className="h-6 w-16 text-[11px] px-1"
+                                  defaultValue={item.dimensions?.length || ''}
+                                  placeholder="0"
+                                  onBlur={(e) => {
+                                    const newLength = parseFloat(e.target.value) || 0;
+                                    const dimensions = { ...item.dimensions, length: newLength };
+                                    onUpdateItem(item.id, { dimensions });
+                                    setEditingDimension(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const newLength = parseFloat(e.currentTarget.value) || 0;
+                                      const dimensions = { ...item.dimensions, length: newLength };
+                                      onUpdateItem(item.id, { dimensions });
+                                      setEditingDimension(null);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingDimension(null);
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingDimension({ itemId: item.id, field: 'length' })}
+                                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-all text-gray-600 hover:bg-gray-100 border border-gray-200"
+                              >
+                                <span>L</span>
+                                <span className="font-mono">{item.dimensions?.length ? `${item.dimensions.length}` : '0'}</span>
+                              </button>
+                            )}
+                            
                             <X className="h-3 w-3 text-gray-400" />
-                            <Input 
-                              placeholder="W" 
-                              className="h-8 w-16 text-xs" 
-                              defaultValue={item.dimensions?.width} 
-                              onChange={(e) => {
-                                const dimensions = { ...item.dimensions, width: parseFloat(e.target.value) || 0 };
-                                onUpdateItem(item.id, { dimensions });
-                              }}
-                            />
+                            
+                            {/* Width */}
+                            {editingDimension?.itemId === item.id && editingDimension?.field === 'width' ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[11px] text-gray-500">W</span>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  className="h-6 w-16 text-[11px] px-1"
+                                  defaultValue={item.dimensions?.width || ''}
+                                  placeholder="0"
+                                  onBlur={(e) => {
+                                    const newWidth = parseFloat(e.target.value) || 0;
+                                    const dimensions = { ...item.dimensions, width: newWidth };
+                                    onUpdateItem(item.id, { dimensions });
+                                    setEditingDimension(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const newWidth = parseFloat(e.currentTarget.value) || 0;
+                                      const dimensions = { ...item.dimensions, width: newWidth };
+                                      onUpdateItem(item.id, { dimensions });
+                                      setEditingDimension(null);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingDimension(null);
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingDimension({ itemId: item.id, field: 'width' })}
+                                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-all text-gray-600 hover:bg-gray-100 border border-gray-200"
+                              >
+                                <span>W</span>
+                                <span className="font-mono">{item.dimensions?.width ? `${item.dimensions.width}` : '0'}</span>
+                              </button>
+                            )}
+                            
                             <X className="h-3 w-3 text-gray-400" />
-                            <Input 
-                              placeholder="H" 
-                              className="h-8 w-16 text-xs" 
-                              defaultValue={item.dimensions?.height} 
-                              onChange={(e) => {
-                                const dimensions = { ...item.dimensions, height: parseFloat(e.target.value) || 0 };
-                                onUpdateItem(item.id, { dimensions });
-                              }}
-                            />
+                            
+                            {/* Height */}
+                            {editingDimension?.itemId === item.id && editingDimension?.field === 'height' ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[11px] text-gray-500">H</span>
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  className="h-6 w-16 text-[11px] px-1"
+                                  defaultValue={item.dimensions?.height || ''}
+                                  placeholder="0"
+                                  onBlur={(e) => {
+                                    const newHeight = parseFloat(e.target.value) || 0;
+                                    const dimensions = { ...item.dimensions, height: newHeight };
+                                    onUpdateItem(item.id, { dimensions });
+                                    setEditingDimension(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const newHeight = parseFloat(e.currentTarget.value) || 0;
+                                      const dimensions = { ...item.dimensions, height: newHeight };
+                                      onUpdateItem(item.id, { dimensions });
+                                      setEditingDimension(null);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingDimension(null);
+                                    }
+                                  }}
+                                  autoFocus
+                                />
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingDimension({ itemId: item.id, field: 'height' })}
+                                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] transition-all text-gray-600 hover:bg-gray-100 border border-gray-200"
+                              >
+                                <span>H</span>
+                                <span className="font-mono">{item.dimensions?.height ? `${item.dimensions.height}` : '0'}</span>
+                              </button>
+                            )}
+                            
+                            {/* Unit Selector */}
                             <Select 
-                              defaultValue={dimensionUnit}
-                              onValueChange={(value) => setDimensionUnit(value as 'cm' | 'in')}
+                              value={item.dimensions?.unit || 'cm'}
+                              onValueChange={(value) => {
+                                const dimensions = { ...item.dimensions, unit: value as 'cm' | 'in' };
+                                onUpdateItem(item.id, { dimensions });
+                              }}
                             >
-                              <SelectTrigger className="h-8 w-16 text-xs">
+                              <SelectTrigger className="h-6 w-auto min-w-[32px] text-[11px] border-gray-200 px-2">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>

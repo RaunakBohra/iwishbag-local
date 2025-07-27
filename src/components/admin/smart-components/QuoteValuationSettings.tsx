@@ -1,6 +1,6 @@
 // ============================================================================
-// QUOTE TAX SETTINGS - Industry-Standard Tax Configuration Component
-// Features: Tax method selection, visual impact preview, clear hierarchy
+// QUOTE VALUATION SETTINGS - Valuation Method Selection Component
+// Features: Valuation method selection for customs calculation
 // ============================================================================
 
 import React from 'react';
@@ -13,59 +13,61 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Calculator, Info, Edit, Globe, Tag } from 'lucide-react';
+import { Calculator, Info, Package, TrendingUp, Zap } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
-interface QuoteTaxSettingsProps {
+interface QuoteValuationSettingsProps {
   quote: UnifiedQuote;
-  onMethodChange: (method: 'manual' | 'hsn' | 'route') => void;
+  onMethodChange: (method: 'product_value' | 'minimum_valuation' | 'higher_of_both') => void;
   isEditMode: boolean;
 }
 
-export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
+export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
   quote,
   onMethodChange,
   isEditMode,
 }) => {
   if (!isEditMode) return null;
 
-  const currentMethod = quote.calculation_method_preference || 'hsn';
+  const currentMethod = quote.valuation_method_preference || 'product_value';
 
   // Calculate method impact
   const methodInfo = {
-    manual: {
-      label: 'Manual',
-      description: 'Manually enter all tax values',
-      icon: <Edit className="w-4 h-4" />,
+    product_value: {
+      label: 'Actual Price',
+      description: 'Use actual product prices for customs calculation',
+      icon: <Package className="w-4 h-4" />,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+    },
+    minimum_valuation: {
+      label: 'Minimum Valuation',
+      description: 'Use HSN minimum valuation for customs (may be higher)',
+      icon: <TrendingUp className="w-4 h-4" />,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
     },
-    hsn: {
-      label: 'HSN',
-      description: 'Tax rates from HSN classification codes',
-      icon: <Tag className="w-4 h-4" />,
+    higher_of_both: {
+      label: 'Higher of Both',
+      description: 'Use whichever is higher: actual price or HSN minimum',
+      icon: <Zap className="w-4 h-4" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
-    },
-    route: {
-      label: 'Route',
-      description: 'Tax rates from route customs tiers',
-      icon: <Globe className="w-4 h-4" />,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
     },
   };
 
   const selectedInfo = methodInfo[currentMethod];
 
-  // Count items with HSN codes
-  const itemsWithHSN = quote.items?.filter((item) => item.hsn_code)?.length || 0;
+  // Count items with HSN minimum valuations
+  const itemsWithMinimum = quote.items?.filter((item) => {
+    // Check if item has HSN code and potentially minimum valuation
+    return item.hsn_code;
+  })?.length || 0;
   const totalItems = quote.items?.length || 0;
-  const hsnCoverage = totalItems > 0 ? Math.round((itemsWithHSN / totalItems) * 100) : 0;
 
   return (
     <Card className={`shadow-sm ${selectedInfo.borderColor} ${selectedInfo.bgColor}`}>
@@ -73,11 +75,11 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
         <CardTitle className="flex items-center justify-between text-sm">
           <div className="flex items-center space-x-2">
             <Calculator className={`w-4 h-4 ${selectedInfo.color}`} />
-            <span>Tax Calculation Method</span>
+            <span>Valuation Method (for Customs)</span>
           </div>
-          {hsnCoverage > 0 && (
+          {itemsWithMinimum > 0 && (
             <Badge variant="outline" className="text-xs">
-              {hsnCoverage}% HSN Coverage
+              {itemsWithMinimum}/{totalItems} Items with HSN
             </Badge>
           )}
         </CardTitle>
@@ -90,22 +92,22 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="hsn">
+                <SelectItem value="product_value">
                   <div className="flex items-center space-x-2">
-                    <Tag className="w-3 h-3 text-purple-600" />
-                    <span>HSN</span>
+                    <Package className="w-3 h-3 text-blue-600" />
+                    <span>Actual Price</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="route">
+                <SelectItem value="minimum_valuation">
                   <div className="flex items-center space-x-2">
-                    <Globe className="w-3 h-3 text-green-600" />
-                    <span>Route</span>
+                    <TrendingUp className="w-3 h-3 text-orange-600" />
+                    <span>Minimum Valuation</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="manual">
+                <SelectItem value="higher_of_both">
                   <div className="flex items-center space-x-2">
-                    <Edit className="w-3 h-3 text-orange-600" />
-                    <span>Manual</span>
+                    <Zap className="w-3 h-3 text-purple-600" />
+                    <span>Higher of Both</span>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -124,31 +126,39 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
           </div>
         </div>
 
-        {/* HSN Coverage Alert */}
-        {currentMethod === 'hsn' && itemsWithHSN < totalItems && (
+        {/* Contextual Alerts */}
+        {currentMethod === 'minimum_valuation' && itemsWithMinimum === 0 && (
           <Alert className="border-amber-200 bg-amber-50">
             <Info className="h-3 w-3" />
             <AlertDescription className="text-xs">
-              {totalItems - itemsWithHSN} item{totalItems - itemsWithHSN !== 1 ? 's' : ''} without
-              HSN codes will use fallback rates
+              No items have HSN codes. Actual prices will be used for all items.
             </AlertDescription>
           </Alert>
         )}
 
-        {currentMethod === 'route' && (
-          <Alert className="border-green-200 bg-green-50">
-            <Info className="h-3 w-3" />
-            <AlertDescription className="text-xs">
-              Using route-based tiers for {quote.origin_country}→{quote.destination_country}. Rates vary by price/weight.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {currentMethod === 'manual' && (
+        {currentMethod === 'minimum_valuation' && itemsWithMinimum > 0 && (
           <Alert className="border-orange-200 bg-orange-50">
             <Info className="h-3 w-3" />
             <AlertDescription className="text-xs">
-              Enter all tax values manually. Automatic calculations disabled.
+              HSN minimum valuations will be applied where available. May increase customs amount.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {currentMethod === 'higher_of_both' && (
+          <Alert className="border-purple-200 bg-purple-50">
+            <Info className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              Automatically selects higher value per item. Recommended for compliance.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {currentMethod === 'product_value' && (
+          <Alert className="border-blue-200 bg-blue-50">
+            <Info className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              Using declared product values. May be flagged if below HSN minimums.
             </AlertDescription>
           </Alert>
         )}
@@ -157,4 +167,4 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
   );
 };
 
-export default QuoteTaxSettings;
+export default QuoteValuationSettings;

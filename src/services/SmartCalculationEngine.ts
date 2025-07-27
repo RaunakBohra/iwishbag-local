@@ -19,6 +19,8 @@ import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import { weightDetectionService } from '@/services/WeightDetectionService';
 import { vatService } from '@/services/VATService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
+import { hsnTaxService } from '@/services/HSNTaxService';
+import { routeTierTaxService } from '@/services/RouteTierTaxService';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -1252,25 +1254,31 @@ export class SmartCalculationEngine {
     const handlingFee = this.calculateRouteBasedHandlingSync(selectedShipping, itemsTotal, quote);
 
     // Calculate other costs using route-based configuration
-    const salesTax = quote.calculation_data?.breakdown?.taxes || itemsTotal * 0.1;
-    const paymentGatewayFee =
-      quote.operational_data?.payment_gateway_fee ||
-      (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
+    // Sales tax only applies to US→NP route
+    const route = `${quote.origin_country}-${quote.destination_country}`;
+    const salesTax = route === 'US-NP' ? (quote.calculation_data?.sales_tax_price || 0) : 0;
+    const domesticShipping = quote.operational_data?.domestic_shipping || 0;
 
     // Calculate VAT on landed cost (CIF + Customs + Handling) - FIXED
     const vatPercentage = quote.operational_data?.customs?.smart_tier?.vat_percentage || 0;
     const landedCost = cifValue + customsAmount + handlingFee;
     const vatAmount = vatPercentage > 0 ? landedCost * (vatPercentage / 100) : 0;
 
-    // Calculate totals
+    // Calculate totals (including domestic shipping)
     const subtotal =
       itemsTotal +
       selectedShipping.cost_usd +
+      domesticShipping +  // ✅ FIXED: Include domestic shipping
       customsAmount +
       salesTax +
       handlingFee +
       insuranceAmount +
       vatAmount;
+    
+    // ✅ FIXED: Calculate payment gateway fee on full subtotal
+    const paymentGatewayFee =
+      quote.operational_data?.payment_gateway_fee ||
+      (subtotal * 0.029 + 0.3);
 
     // Get discount amount and subtract it from final total
     const discount = quote.calculation_data?.discount || 0;
@@ -1615,13 +1623,89 @@ export class SmartCalculationEngine {
       customsAmount = cifValue * (customsPercentage / 100);
     }
 
-    // Read sales tax from input fields
-    localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+    // ✅ ENHANCED: Integrate tax services based on calculation method
+    const taxMethod = quote.calculation_method_preference || 'hsn';
+    
+    if (taxMethod === 'hsn' && !hsnTaxSummary) {
+      // HSN method: Use HSN Tax Service for tax rates
+      console.log('[TAX SERVICE] Using HSN Tax Service for tax calculations');
+      
+      let hsnBasedCustomsTotal = 0;
+      let hsnBasedSalesTaxTotal = 0;
+      let hsnBasedVatTotal = 0;
+      
+      for (const item of quote.items) {
+        if (item.hsn_code) {
+          const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+          const hsnRates = await hsnTaxService.getHSNTaxRates(
+            item.hsn_code,
+            quote.destination_country
+          );
+          
+          if (hsnRates) {
+            // Calculate item-level taxes
+            hsnBasedCustomsTotal += (itemValue * hsnRates.customs) / 100;
+            hsnBasedSalesTaxTotal += (itemValue * hsnRates.sales_tax) / 100;
+            hsnBasedVatTotal += (itemValue * hsnRates.vat) / 100;
+          }
+        }
+      }
+      
+      // Apply HSN-based rates if available
+      if (hsnBasedCustomsTotal > 0) {
+        customsPercentage = (hsnBasedCustomsTotal / itemsTotal) * 100;
+      }
+      
+      // Sales tax only for US→NP route
+      const route = `${quote.origin_country}-${quote.destination_country}`;
+      if (route === 'US-NP' && hsnBasedSalesTaxTotal > 0) {
+        localTaxesAmount = hsnBasedSalesTaxTotal;
+      } else {
+        localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+      }
+    } else if (taxMethod === 'route') {
+      // Route method: Use Route Tier Tax Service
+      console.log('[TAX SERVICE] Using Route Tier Tax Service for tax calculations');
+      
+      const totalWeight = quote.items.reduce(
+        (sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 
+        0
+      );
+      
+      const routeRates = await routeTierTaxService.getRouteTierTaxes(
+        quote.origin_country,
+        quote.destination_country,
+        itemsTotal,
+        totalWeight
+      );
+      
+      if (routeRates) {
+        customsPercentage = routeRates.customs;
+        
+        // Sales tax only for US→NP route
+        const route = `${quote.origin_country}-${quote.destination_country}`;
+        if (route === 'US-NP' && routeRates.sales_tax > 0) {
+          localTaxesAmount = (itemsTotal * routeRates.sales_tax) / 100;
+        } else {
+          localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+        }
+        
+        console.log(`[TAX SERVICE] Applied route tier '${routeRates.tier_name}' rates`);
+      } else {
+        // Fallback to manual values
+        localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+      }
+    } else {
+      // Manual method: Read from input fields
+      console.log('[TAX SERVICE] Using manual tax values');
+      localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+    }
 
     // ✅ FIXED: Calculate handling using ACTUAL product prices, not customs basis
     const handlingFee = await this.calculateRouteBasedHandling(selectedShipping, itemsTotal, quote);
 
     // ✅ CALCULATE DESTINATION TAX: Get VAT/GST rate for destination country
+    let destinationTaxRate = 0; // Store the rate for later use
     try {
       const vatResult = await vatService.getVATPercentage(
         quote.origin_country,
@@ -1629,6 +1713,7 @@ export class SmartCalculationEngine {
       );
 
       if (vatResult.percentage > 0) {
+        destinationTaxRate = vatResult.percentage; // Store the rate
         // ✅ FIXED: Calculate destination tax on landed cost using ACTUAL product prices
         const landedCost =
           itemsTotal +
@@ -1653,6 +1738,11 @@ export class SmartCalculationEngine {
     } catch (error) {
       console.warn(`[DESTINATION TAX] Error calculating destination tax:`, error);
       destinationTaxAmount = quote.calculation_data?.breakdown?.destination_tax || 0;
+      // Try to calculate rate from existing amount
+      if (destinationTaxAmount > 0) {
+        const landedCost = itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee + localTaxesAmount;
+        destinationTaxRate = (destinationTaxAmount / landedCost) * 100;
+      }
     }
 
     console.log(`[SMART ENGINE DEBUG] Final calculated values:`, {
@@ -1671,13 +1761,10 @@ export class SmartCalculationEngine {
       );
     }
 
-    // ✅ FIXED: For HSN calculations, salesTax is already included in localTaxesAmount
-    // For non-HSN, calculate on landed cost using ACTUAL product prices
-    const landedCostForTax =
-      itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee;
-    const salesTax = hsnTaxSummary ? 0 : landedCostForTax * 0.1;
-    const paymentGatewayFee =
-      (itemsTotal + selectedShipping.cost_usd + customsAmount) * 0.029 + 0.3;
+    // ✅ FIXED: Sales tax is read from input field and only applies to US→NP route
+    // localTaxesAmount already contains the sales tax from input field
+    const salesTax = 0; // Remove double counting - sales tax is already in localTaxesAmount
+    const domesticShipping = quote.operational_data?.domestic_shipping || 0;
 
     // Calculate VAT (if applicable) - deprecated, replaced by destination tax
     let vatAmount = 0;
@@ -1693,6 +1780,7 @@ export class SmartCalculationEngine {
     const subtotal =
       itemsTotal +
       selectedShipping.cost_usd +
+      domesticShipping +  // ✅ FIXED: Include domestic shipping
       customsAmount +
       salesTax +
       localTaxesAmount + // Add HSN local taxes (GST/VAT)
@@ -1700,6 +1788,9 @@ export class SmartCalculationEngine {
       handlingFee +
       insuranceAmount +
       vatAmount;
+    
+    // ✅ FIXED: Calculate payment gateway fee on full subtotal
+    const paymentGatewayFee = subtotal * 0.029 + 0.3;
 
     // Get discount amount and subtract it from final total
     const discount = quote.calculation_data?.discount || 0;
@@ -1734,6 +1825,29 @@ export class SmartCalculationEngine {
         source: 'currency_service',
         confidence: 0.95,
       },
+      // Add tax calculation details with rates
+      tax_calculation: {
+        customs_percentage: customsPercentage,
+        customs_rate: customsPercentage, // For compatibility
+        sales_tax_rate: quote.origin_country === 'US' && quote.destination_country === 'NP' ? 
+                        (localTaxesAmount > 0 ? (localTaxesAmount / itemsTotal * 100) : 0) : 0,
+        destination_tax_rate: destinationTaxRate, // Use the stored rate
+        method: quote.calculation_method_preference || 'manual',
+        valuation_method: valuationMethod,
+      },
+      // 🆕 NEW: Store HSN item-level tax breakdown for easy access
+      item_breakdowns: hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
+        item_id: item.item_id,
+        item_name: item.item_name,
+        hsn_code: item.hsn_code,
+        customs_value: item.taxable_amount_origin_currency,
+        customs: item.total_customs,
+        sales_tax: item.sales_tax || 0,
+        destination_tax: item.total_local_taxes, // HSN local taxes are destination taxes
+        total_taxes: item.total_taxes,
+        valuation_method: item.valuation_method,
+        minimum_valuation_applied: item.minimum_valuation_conversion ? true : false,
+      })) : [],
       // 🆕 NEW: Add HSN calculation metadata
       hsn_calculation: hsnTaxSummary
         ? {

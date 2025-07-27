@@ -77,6 +77,23 @@ export interface CalculationData {
   exchange_rate: ExchangeRateInfo;
   smart_optimizations: SmartOptimization[];
   legacy_breakdown?: Record<string, any>; // For migration compatibility
+  // Tax calculation details
+  tax_calculation?: {
+    customs_percentage: number;
+    customs_rate: number; // For compatibility
+    sales_tax_rate: number;
+    destination_tax_rate: number;
+    method: string;
+    valuation_method: string;
+  };
+  // HSN calculation metadata
+  hsn_calculation?: any; // For HSN tax calculations
+  // Valuation tracking
+  valuation_applied?: any; // For valuation method tracking
+  // Additional fields from SmartCalculationEngine
+  sales_tax_price?: number; // Manual sales tax input
+  discount?: number; // Discount amount
+  [key: string]: any; // For other calculation data
 }
 
 // Customer Information

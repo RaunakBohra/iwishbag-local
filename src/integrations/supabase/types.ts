@@ -3592,6 +3592,7 @@ export type Database = {
           price_min: number | null;
           priority_order: number;
           rule_name: string;
+          sales_tax_percentage: number;
           updated_at: string | null;
           vat_percentage: number;
           weight_max: number | null;
@@ -3610,6 +3611,7 @@ export type Database = {
           price_min?: number | null;
           priority_order?: number;
           rule_name: string;
+          sales_tax_percentage?: number;
           updated_at?: string | null;
           vat_percentage: number;
           weight_max?: number | null;
@@ -3628,6 +3630,7 @@ export type Database = {
           price_min?: number | null;
           priority_order?: number;
           rule_name?: string;
+          sales_tax_percentage?: number;
           updated_at?: string | null;
           vat_percentage?: number;
           weight_max?: number | null;
