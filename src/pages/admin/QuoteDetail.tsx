@@ -107,9 +107,36 @@ const transformQuoteToUnifiedFormat = (
     // Transform items with purchase tracking data and tax info
     items: items.map((item: any, index: number) => {
       // Find item tax breakdown from calculation result
-      const itemTaxBreakdown = calculationData.item_breakdowns?.find(
+      // First check item_breakdowns (where we now store HSN data)
+      let itemTaxBreakdown = calculationData.item_breakdowns?.find(
         (b: any) => b.item_id === item.id || b.item_id === `item-${index}`
       );
+      
+      // Fallback to hsn_tax_breakdown if available
+      if (!itemTaxBreakdown && calculationResult?.hsn_tax_breakdown) {
+        const hsnBreakdown = calculationResult.hsn_tax_breakdown.find(
+          (b: any) => b.item_id === item.id || b.item_id === `item-${index}`
+        );
+        if (hsnBreakdown) {
+          itemTaxBreakdown = {
+            customs_value: hsnBreakdown.taxable_amount_origin_currency,
+            customs: hsnBreakdown.total_customs,
+            sales_tax: hsnBreakdown.sales_tax || 0,
+            destination_tax: hsnBreakdown.total_local_taxes,
+          };
+        }
+      }
+      
+      // Debug logging
+      if (item.id === items[0]?.id) {
+        console.log('🔍 [Item Tax Mapping] First item tax breakdown:', {
+          item_id: item.id,
+          has_item_breakdowns: !!calculationData.item_breakdowns,
+          has_hsn_breakdown: !!calculationResult?.hsn_tax_breakdown,
+          found_breakdown: !!itemTaxBreakdown,
+          breakdown_data: itemTaxBreakdown
+        });
+      }
       
       return {
         id: item.id || `item-${index}`,
