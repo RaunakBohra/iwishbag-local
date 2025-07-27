@@ -139,6 +139,7 @@ const DuplicateComponentsPreview = React.lazy(
 );
 const UserManagementPage = React.lazy(() => import('@/pages/admin/UserManagementPage'));
 const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
+const AuditLogsPage = React.lazy(() => import('@/pages/admin/AuditLogsPage'));
 
 // Demo pages for weight recommendation designs
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex'));
@@ -232,6 +233,14 @@ const router = createBrowserRouter([
           { path: 'ml/weight-estimator', element: <MLWeightEstimatorTester /> },
           { path: 'dev/hsn-test', element: <HSNTestPage /> },
           { path: 'blog', element: <BlogManagementPage /> },
+          {
+            path: 'audit-logs',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <AuditLogsPage />
+              </ErrorBoundary>
+            ),
+          },
           { path: '*', element: <NotFound /> },
         ],
       },

@@ -788,6 +788,13 @@ export class SmartCalculationEngine {
     value: number;
   }): Promise<ShippingOption[]> {
     // 🔍 ENHANCED DEBUG: Log exact query parameters
+    console.log('[SHIPPING ROUTE DEBUG] Looking up route:', {
+      origin: params.originCountry,
+      destination: params.destinationCountry,
+      expectedRoute: `${params.originCountry}-${params.destinationCountry}`,
+      weight: params.weight,
+      value: params.value
+    });
 
     const { data: route, error } = await supabase
       .from('shipping_routes')
@@ -798,8 +805,17 @@ export class SmartCalculationEngine {
       .single();
 
     // 🔍 ENHANCED DEBUG: Log query results with full route data
+    console.log('[SHIPPING ROUTE DEBUG] Query result:', {
+      found: !!route,
+      error: error?.message,
+      routeId: route?.id,
+      routeName: route?.name,
+      isActive: route?.is_active,
+      hasDeliveryOptions: !!route?.delivery_options
+    });
 
     if (error || !route) {
+      console.log('[SHIPPING ROUTE DEBUG] No route found, returning empty options');
       return [];
     }
 

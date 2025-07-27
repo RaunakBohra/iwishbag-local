@@ -253,7 +253,7 @@ export default function UnifiedQuoteOrderSystem({
   
   // Fix currency symbol based on origin country
   if (quote && !quote.currency_symbol) {
-    const originCurrency = currencyService.getCurrencyForCountrySync(quote.origin_country || 'US');
+    const originCurrency = currencyService.getCurrencyForCountrySync(quote.origin_country);
     quote.currency_symbol = currencyService.getCurrencySymbol(originCurrency);
   }
   
@@ -457,7 +457,7 @@ export default function UnifiedQuoteOrderSystem({
           id: quote.id,
           items: mappedItems,
           destination_country: quote.destination_country || 'IN',
-          origin_country: quote.origin_country || 'US',
+          origin_country: quote.origin_country,
           status: quote.status,
           calculation_data: quote.calculation_metadata || {},
           operational_data: {},
@@ -2772,7 +2772,7 @@ export default function UnifiedQuoteOrderSystem({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <span className="font-medium">{quote.origin_country || 'US'}</span>
+                            <span className="font-medium">{quote.origin_country}</span>
                           </div>
                           <div className="flex-1 mx-4 border-t-2 border-dashed border-gray-300 relative">
                             <Truck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

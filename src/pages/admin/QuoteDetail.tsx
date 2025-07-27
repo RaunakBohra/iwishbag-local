@@ -217,7 +217,7 @@ const transformQuoteToUnifiedFormat = (
     
     // Additional fields needed by the component
     destination_country: quote.destination_country,
-    origin_country: quote.origin_country || 'US',
+    origin_country: quote.origin_country,
     shipping_method: quote.shipping_method || 'standard',
     
     // Smart recommendations from calculation
@@ -361,7 +361,7 @@ const AdminQuoteDetail: React.FC = () => {
               }
             })),
             destination_country: quote.destination_country,
-            origin_country: quote.origin_country || 'US',
+            origin_country: quote.origin_country,
             status: quote.status,
             calculation_data: quote.calculation_data || {},
             operational_data: quote.operational_data || {},
@@ -388,7 +388,7 @@ const AdminQuoteDetail: React.FC = () => {
           items_count: quote.items?.length || 0,
           has_calculation_data: !!quote.calculation_data,
           has_operational_data: !!quote.operational_data,
-          route: `${quote.origin_country || 'US'} → ${quote.destination_country}`,
+          route: `${quote.origin_country} → ${quote.destination_country}`,
           created_at: quote.created_at,
           updated_at: quote.updated_at,
           customer_insurance_preference: quote.customer_data?.preferences?.insurance_opted_in

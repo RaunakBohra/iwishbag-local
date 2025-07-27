@@ -20,6 +20,7 @@ import {
   Zap,
   UserCog,
   Calculator,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -146,6 +147,11 @@ const menuGroups = [
         title: 'ML Weight Estimator',
         url: '/admin/ml/weight-estimator',
         icon: Brain,
+      },
+      {
+        title: 'Audit Logs',
+        url: '/admin/audit-logs',
+        icon: Shield,
       },
     ],
   },
