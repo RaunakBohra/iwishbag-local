@@ -3565,7 +3565,7 @@ export default function UnifiedQuoteOrderSystem({
                     🔧 Calculation Debug Data & Tax Breakdown
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    {debugData?.calculation_timestamp ? `Last calculation: ${debugData.calculation_timestamp}` : 'Tax calculation details'}
+                    {safeDebugData.calculation_timestamp ? `Last calculation: ${safeDebugData.calculation_timestamp}` : 'Tax calculation details'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -3704,17 +3704,17 @@ export default function UnifiedQuoteOrderSystem({
                   </div>
                   
                   {/* Live Calculation Breakdown */}
-                  {debugData?.calculation_breakdown && (
+                  {safeCalculationBreakdown.items_total !== undefined && (
                     <div className="bg-white p-3 rounded-lg border">
                       <div className="text-xs font-medium text-gray-600 mb-2">💰 Live Cost Breakdown</div>
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
                           <span><strong>Items:</strong></span>
-                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.items_total || 0}</span>
+                          <span>{safeDebugData.currency_symbol || '$'}{safeCalculationBreakdown.items_total || 0}</span>
                         </div>
                         <div className="flex justify-between">
                           <span><strong>Shipping:</strong></span>
-                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.shipping || 0}</span>
+                          <span>{safeDebugData.currency_symbol || '$'}{safeCalculationBreakdown.shipping || 0}</span>
                         </div>
                       <div className="flex justify-between">
                         <span><strong>Handling:</strong></span>
@@ -3943,14 +3943,14 @@ export default function UnifiedQuoteOrderSystem({
                   </div>
 
                   {/* HSN Data */}
-                  {debugData.hsn_data && (
+                  {safeHsnData.items_processed !== undefined && (
                     <div className="bg-white p-3 rounded-lg border">
                       <div className="text-xs font-medium text-gray-600 mb-2">🏷️ HSN Tax Data</div>
                       <div className="space-y-1 text-xs">
-                        <div><strong>Items Processed:</strong> {debugData.hsn_data.items_processed}</div>
-                        <div><strong>Method:</strong> {debugData.hsn_data.calculation_method}</div>
-                        <div><strong>HSN Customs:</strong> {debugData.hsn_data.total_customs}</div>
-                        <div><strong>HSN Local Tax:</strong> {debugData.hsn_data.total_local_taxes}</div>
+                        <div><strong>Items Processed:</strong> {safeHsnData.items_processed || 0}</div>
+                        <div><strong>Method:</strong> {safeHsnData.calculation_method || 'N/A'}</div>
+                        <div><strong>HSN Customs:</strong> {safeHsnData.total_customs || 0}</div>
+                        <div><strong>HSN Local Tax:</strong> {safeHsnData.total_local_taxes || 0}</div>
                       </div>
                     </div>
                   )}
