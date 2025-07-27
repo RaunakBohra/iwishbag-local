@@ -3566,8 +3566,8 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="bg-white p-3 rounded-lg border">
                       <div className="text-xs font-medium text-gray-600 mb-2">Route & Currency</div>
                       <div className="space-y-1 text-xs">
-                        <div><strong>Route:</strong> {debugData.route}</div>
-                        <div><strong>Currency:</strong> {debugData.currency_used}</div>
+                        <div><strong>Route:</strong> {debugData?.route || 'N/A'}</div>
+                        <div><strong>Currency:</strong> {debugData?.currency_used || 'N/A'}</div>
                       </div>
                     </div>
                   )}
@@ -3702,11 +3702,11 @@ export default function UnifiedQuoteOrderSystem({
                       <div className="space-y-1 text-xs">
                         <div className="flex justify-between">
                           <span><strong>Items:</strong></span>
-                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.items_total}</span>
+                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.items_total || 0}</span>
                         </div>
                         <div className="flex justify-between">
                           <span><strong>Shipping:</strong></span>
-                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.shipping}</span>
+                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.shipping || 0}</span>
                         </div>
                       <div className="flex justify-between">
                         <span><strong>Handling:</strong></span>
@@ -3718,16 +3718,16 @@ export default function UnifiedQuoteOrderSystem({
                       </div>
                       <div className="flex justify-between">
                         <span><strong>Customs:</strong></span>
-                        <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.customs}</span>
+                        <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.customs || 0}</span>
                       </div>
                       <div className="flex justify-between">
                         <span><strong>Taxes:</strong></span>
-                        <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.taxes}</span>
+                        <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.taxes || 0}</span>
                       </div>
                       {debugData.calculation_breakdown.destination_tax && (
                         <div className="flex justify-between">
                           <span><strong>Destination Tax:</strong></span>
-                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.destination_tax}</span>
+                          <span>{debugData?.currency_symbol || '$'}{debugData.calculation_breakdown.destination_tax || 0}</span>
                         </div>
                       )}
                       {domesticShipping > 0 && (
@@ -3906,7 +3906,7 @@ export default function UnifiedQuoteOrderSystem({
                   )}
 
                   {/* Shipping Options */}
-                  {debugData.shipping_data && (
+                  {debugData?.shipping_data && (
                     <div className="bg-white p-3 rounded-lg border">
                       <div className="text-xs font-medium text-gray-600 mb-2">🚢 Shipping Options</div>
                       <div className="space-y-1 text-xs">
