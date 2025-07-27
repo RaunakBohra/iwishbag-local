@@ -167,8 +167,17 @@ export const SleekHSNSearch: React.FC<SleekHSNSearchProps> = ({
           {/* Scrollable options area */}
           <div className="overflow-y-auto flex-1">
             {options.map((option, index) => {
-            // Extract tax rate from tax_data
-            const taxRate = option.tax_data?.gst_rate || option.tax_data?.customs_rate || 18;
+            // Extract tax rate from tax_data (correct structure)
+            const taxRate = option.tax_data?.typical_rates?.customs?.common || 
+                           option.tax_data?.typical_rates?.gst?.standard ||
+                           option.tax_data?.gst_rate || 
+                           option.tax_data?.customs_rate || 
+                           18;
+            
+            // Debug logging for HSN search dropdown rates
+            if (option.tax_data) {
+              console.log(`[HSN Search] ${option.hsn_code}: customs=${option.tax_data?.typical_rates?.customs?.common}%, gst=${option.tax_data?.typical_rates?.gst?.standard}%, displaying=${taxRate}%`);
+            }
             const hasMinValuation = option.minimum_valuation_usd && option.minimum_valuation_usd > 0;
             
             return (
