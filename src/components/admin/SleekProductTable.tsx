@@ -795,6 +795,18 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               // Get tax rate for display
                               const taxRate = item.tax_options?.[method as keyof typeof item.tax_options]?.rate || 18;
                               
+                              // Debug logging for tax rate display
+                              if (method === 'hsn' && item.hsn_code) {
+                                console.log(`[HSN Tax Rate Debug] Item ${item.id}:`, {
+                                  hsn_code: item.hsn_code,
+                                  method: method,
+                                  tax_options: item.tax_options,
+                                  hsn_tax_options: item.tax_options?.hsn,
+                                  displayed_rate: taxRate,
+                                  fallback_used: !item.tax_options?.[method as keyof typeof item.tax_options]?.rate
+                                });
+                              }
+                              
                               // Special handling for manual tax rate - make it editable
                               if (method === 'manual' && editingManualTaxRate === item.id) {
                                 return (
