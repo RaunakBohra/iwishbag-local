@@ -7,7 +7,10 @@ export const useAllCountries = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('country_settings').select('*').order('name');
       if (error) throw new Error(error.message);
-      return data || [];
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
     },
+    // Set initial data to empty array to prevent undefined issues
+    initialData: [],
   });
 };

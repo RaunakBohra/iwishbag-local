@@ -31,15 +31,8 @@ export function ShippingRouteDisplay({
   const { data: countries = [], isLoading: countriesLoading } = useAllCountries();
   const { isAdmin } = useUserRoles();
   
-  // Debug logging
-  console.log('[ShippingRouteDisplay] Debug:', {
-    origin,
-    destination,
-    countriesCount: countries?.length || 0,
-    countriesLoading,
-    showCodes,
-    variant,
-  });
+  // Ensure countries is always an array
+  const countriesArray = Array.isArray(countries) ? countries : [];
 
   // Validate inputs - check for empty strings too
   if (!origin || !destination || origin.trim() === '' || destination.trim() === '') {
@@ -71,11 +64,11 @@ export function ShippingRouteDisplay({
   }
   
   // Show loading state while countries are being fetched
-  if (countriesLoading && (!countries || countries.length === 0)) {
+  if (countriesLoading && countriesArray.length === 0) {
     return <span className={cn('text-gray-400', className)}>Loading...</span>;
   }
 
-  const routeText = formatShippingRoute(origin, destination, countries, showCodes);
+  const routeText = formatShippingRoute(origin, destination, countriesArray, showCodes);
 
   if (variant === 'detailed') {
     return (
@@ -84,7 +77,7 @@ export function ShippingRouteDisplay({
           {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
           <span>Origin:</span>
           <span className="font-medium text-foreground">
-            {Array.isArray(countries) ? countries.find((c) => c.code === origin)?.name || origin : origin}
+            {countriesArray.find((c) => c.code === origin)?.name || origin}
             {showCodes && ` (${origin})`}
           </span>
         </div>
@@ -92,7 +85,7 @@ export function ShippingRouteDisplay({
           {showIcon && iconType === 'mapPin' && <MapPin className="h-3 w-3" />}
           <span>Destination:</span>
           <span className="font-medium text-foreground">
-            {Array.isArray(countries) ? countries.find((c) => c.code === destination)?.name || destination : destination}
+            {countriesArray.find((c) => c.code === destination)?.name || destination}
             {showCodes && ` (${destination})`}
           </span>
         </div>
