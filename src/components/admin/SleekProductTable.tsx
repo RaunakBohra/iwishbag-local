@@ -26,10 +26,11 @@ import {
   Copy as CopyIcon,
   Star,
   Download,
-  Link
+  Link,
+  Edit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
+import { SleekHSNSearch } from '@/components/admin/SleekHSNSearch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,7 @@ import {
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { hsnWeightService } from '@/services/HSNWeightService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuoteItem {
   id: string;
@@ -91,6 +93,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   const [dimensionUnit, setDimensionUnit] = useState<'cm' | 'in'>('cm');
   const [loadingWeight, setLoadingWeight] = useState<{itemId: string, source: string} | null>(null);
   const [editingManualWeight, setEditingManualWeight] = useState<string | null>(null);
+  const [hsnCategories, setHsnCategories] = useState<Record<string, string>>({});
 
   // Pre-fetch weights for all items on mount
   useEffect(() => {
@@ -138,6 +141,33 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     fetchWeightsForItems();
   }, [items.length]); // Only re-run when number of items changes
 
+  // Fetch HSN categories for items with HSN codes
+  useEffect(() => {
+    const fetchHSNCategories = async () => {
+      const hsnCodes = items.filter(item => item.hsn_code).map(item => item.hsn_code!);
+      if (hsnCodes.length === 0) return;
+      
+      try {
+        const { data } = await supabase
+          .from('hsn_master')
+          .select('hsn_code, category')
+          .in('hsn_code', hsnCodes);
+        
+        if (data) {
+          const categories: Record<string, string> = {};
+          data.forEach(hsn => {
+            categories[hsn.hsn_code] = hsn.category;
+          });
+          setHsnCategories(categories);
+        }
+      } catch (error) {
+        console.error('Failed to fetch HSN categories:', error);
+      }
+    };
+    
+    fetchHSNCategories();
+  }, [items]);
+
   const toggleRowExpansion = (id: string) => {
     setExpandedRows(prev => 
       prev.includes(id) ? prev.filter(row => row !== id) : [...prev, id]
@@ -179,207 +209,295 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
               "border rounded-lg transition-all duration-200 bg-white",
               isExpanded ? "shadow-lg border-blue-200 ring-1 ring-blue-100" : "hover:shadow-md hover:border-gray-300"
             )}>
-              <div className="p-4">
-                <div className="grid grid-cols-[40px_1fr_140px_120px_100px_60px] gap-4 items-center">
+              <div className="p-3">
+                <div className="flex items-center gap-4">
                   {/* Expand Button */}
                   <button
                     onClick={() => toggleRowExpansion(item.id)}
                     className={cn(
-                      "p-2 rounded-lg transition-all justify-self-start",
-                      isExpanded ? "bg-blue-50 text-blue-600" : "hover:bg-gray-100"
+                      "p-1.5 rounded transition-all flex-shrink-0",
+                      isExpanded ? "bg-blue-50 text-blue-600" : "hover:bg-gray-50 text-gray-400"
                     )}
                   >
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-3.5 w-3.5" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-3.5 w-3.5" />
                     )}
                   </button>
                   
                   {/* Product Info */}
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     {item.image_url && (
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 bg-gray-50 rounded-md overflow-hidden flex-shrink-0 border border-gray-100">
                         <img src={item.image_url} alt={item.product_name} className="w-full h-full object-cover" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      {editingField?.itemId === item.id && editingField?.field === 'product_name' ? (
-                        <Input
-                          className="h-8 font-medium"
-                          defaultValue={item.product_name}
-                          onBlur={(e) => handleFieldEdit(item.id, 'product_name', e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleFieldEdit(item.id, 'product_name', e.currentTarget.value);
-                            if (e.key === 'Escape') setEditingField(null);
-                          }}
-                          autoFocus
-                        />
-                      ) : (
-                        <h3 
-                          className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors truncate"
-                          onClick={() => setEditingField({itemId: item.id, field: 'product_name'})}
-                        >
-                          {item.product_name}
-                        </h3>
-                      )}
-                      
-                      <div className="flex items-center gap-2 mt-1">
-                        {editingField?.itemId === item.id && editingField?.field === 'product_url' ? (
-                          <Input
-                            className="h-6 text-xs"
-                            defaultValue={item.product_url}
-                            onBlur={(e) => handleFieldEdit(item.id, 'product_url', e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleFieldEdit(item.id, 'product_url', e.currentTarget.value);
-                              if (e.key === 'Escape') setEditingField(null);
-                            }}
-                            autoFocus
-                          />
-                        ) : item.product_url ? (
-                          <div className="flex items-center gap-1">
-                            <p 
-                              className="text-sm text-gray-500 cursor-pointer hover:text-blue-500 transition-colors flex items-center gap-1 truncate"
-                              onClick={() => setEditingField({itemId: item.id, field: 'product_url'})}
-                            >
-                              {new URL(item.product_url).hostname}
-                            </p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(item.product_url, '_blank');
-                              }}
-                              className="p-1 hover:bg-gray-100 rounded transition-colors"
-                              title="Open in new tab"
-                            >
-                              <ExternalLink className="h-3 w-3 text-gray-400 hover:text-blue-500" />
-                            </button>
-                          </div>
-                        ) : (
-                          <p 
-                            className="text-sm text-gray-400 cursor-pointer hover:text-blue-500 transition-colors"
-                            onClick={() => setEditingField({itemId: item.id, field: 'product_url'})}
-                          >
-                            Add URL
-                          </p>
-                        )}
-                        
-                        <span className="text-gray-300">•</span>
-                        
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-gray-500">Qty:</span>
-                          {editingField?.itemId === item.id && editingField?.field === 'quantity' ? (
-                            <Input
-                              type="number"
-                              className="h-6 w-16 text-xs"
-                              defaultValue={item.quantity}
-                              onBlur={(e) => handleFieldEdit(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleFieldEdit(item.id, 'quantity', parseInt(e.currentTarget.value) || 1);
-                                if (e.key === 'Escape') setEditingField(null);
-                              }}
-                              autoFocus
-                            />
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          {editingField?.itemId === item.id && editingField?.field === 'product_name' ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                className="h-6 text-xs font-medium border-gray-200 focus:border-blue-400"
+                                defaultValue={item.product_name}
+                                onBlur={(e) => handleFieldEdit(item.id, 'product_name', e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleFieldEdit(item.id, 'product_name', e.currentTarget.value);
+                                  if (e.key === 'Escape') setEditingField(null);
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => setEditingField(null)}
+                                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                              >
+                                <X className="h-3 w-3 text-gray-400" />
+                              </button>
+                            </div>
                           ) : (
-                            <span 
-                              className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                              onClick={() => setEditingField({itemId: item.id, field: 'quantity'})}
+                            <h3 
+                              className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors truncate leading-tight"
+                              onClick={() => setEditingField({itemId: item.id, field: 'product_name'})}
                             >
-                              {item.quantity}
-                            </span>
+                              {item.product_name}
+                            </h3>
                           )}
+                          
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {editingField?.itemId === item.id && editingField?.field === 'product_url' ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  className="h-5 text-xs border-gray-200 focus:border-blue-400"
+                                  defaultValue={item.product_url}
+                                  placeholder="Enter product URL"
+                                  onBlur={(e) => handleFieldEdit(item.id, 'product_url', e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleFieldEdit(item.id, 'product_url', e.currentTarget.value);
+                                    if (e.key === 'Escape') setEditingField(null);
+                                  }}
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => setEditingField(null)}
+                                  className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                                >
+                                  <X className="h-3 w-3 text-gray-400" />
+                                </button>
+                              </div>
+                            ) : item.product_url ? (
+                              <div className="flex items-center gap-1">
+                                <p 
+                                  className="text-xs text-gray-500 cursor-pointer hover:text-blue-500 transition-colors truncate"
+                                  onClick={() => window.open(item.product_url, '_blank')}
+                                  title="Click to open URL"
+                                >
+                                  {new URL(item.product_url).hostname}
+                                </p>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingField({itemId: item.id, field: 'product_url'});
+                                  }}
+                                  className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                                  title="Edit URL"
+                                >
+                                  <Edit className="h-3 w-3 text-gray-400 hover:text-blue-500" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
+                                onClick={() => setEditingField({itemId: item.id, field: 'product_url'})}
+                              >
+                                + Add URL
+                              </button>
+                            )}
+                            
+                            {item.seller && (
+                              <>
+                                <span className="text-gray-300 text-xs">•</span>
+                                <span className="text-xs text-gray-500">{item.seller}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Price */}
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 uppercase">Price</p>
-                    {editingField?.itemId === item.id && editingField?.field === 'price' ? (
-                      <Input
-                        type="number"
-                        className="h-8 w-full text-center font-semibold"
-                        defaultValue={item.price}
-                        onBlur={(e) => handleFieldEdit(item.id, 'price', parseFloat(e.target.value) || 0)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleFieldEdit(item.id, 'price', parseFloat(e.currentTarget.value) || 0);
-                          if (e.key === 'Escape') setEditingField(null);
-                        }}
-                        autoFocus
-                      />
-                    ) : (
-                      <p 
-                        className="font-semibold cursor-pointer hover:text-blue-600 transition-colors"
-                        onClick={() => setEditingField({itemId: item.id, field: 'price'})}
-                      >
-                        ${item.price.toLocaleString()}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-1">
-                      Total: ${(item.price * item.quantity).toLocaleString()}
-                    </p>
-                  </div>
-                  
-                  {/* Weight */}
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 uppercase">Weight</p>
-                    <div className="flex items-center justify-center gap-1">
-                      <p className="font-semibold">{item.weight} kg</p>
-                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 capitalize">
-                        {item.weight_source || 'manual'}
-                      </Badge>
+                  {/* Right side stats */}
+                  <div className="flex items-center gap-6 flex-shrink-0">
+                    {/* Quantity */}
+                    <div className="text-center min-w-[50px]">
+                      {editingField?.itemId === item.id && editingField?.field === 'quantity' ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <Input
+                            type="number"
+                            className="h-6 w-14 text-xs text-center border-gray-200 focus:border-blue-400"
+                            defaultValue={item.quantity}
+                            min="1"
+                            onBlur={(e) => handleFieldEdit(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleFieldEdit(item.id, 'quantity', parseInt(e.currentTarget.value) || 1);
+                              if (e.key === 'Escape') setEditingField(null);
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => setEditingField(null)}
+                            className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                          >
+                            <X className="h-3 w-3 text-gray-400" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div 
+                          className="cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => setEditingField({itemId: item.id, field: 'quantity'})}
+                        >
+                          <p className="text-xs text-gray-400 uppercase tracking-wider">Qty</p>
+                          <p className="text-sm font-semibold">{item.quantity}</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  
-                  {/* HSN */}
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 uppercase">HSN</p>
-                    {editingField?.itemId === item.id && editingField?.field === 'hsn_code' ? (
-                      <div className="w-full">
-                        <SmartHSNSearch
-                          value={item.hsn_code || ''}
-                          onChange={async (hsnCode) => {
-                            handleFieldEdit(item.id, 'hsn_code', hsnCode);
-                            // Also fetch HSN weight when HSN code is selected
-                            if (hsnCode) {
-                              try {
-                                const hsnData = await hsnWeightService.getHSNWeight(hsnCode);
-                                if (hsnData) {
-                                  onUpdateItem(item.id, { 
-                                    weight_options: {
-                                      ...item.weight_options,
-                                      hsn: hsnData.average
-                                    }
-                                  });
+                    
+                    {/* Price */}
+                    <div className="text-center min-w-[80px]">
+                      {editingField?.itemId === item.id && editingField?.field === 'price' ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <Input
+                            type="number"
+                            className="h-6 w-20 text-xs text-center border-gray-200 focus:border-blue-400"
+                            defaultValue={item.price}
+                            step="0.01"
+                            min="0"
+                            onBlur={(e) => handleFieldEdit(item.id, 'price', parseFloat(e.target.value) || 0)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleFieldEdit(item.id, 'price', parseFloat(e.currentTarget.value) || 0);
+                              if (e.key === 'Escape') setEditingField(null);
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => setEditingField(null)}
+                            className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                          >
+                            <X className="h-3 w-3 text-gray-400" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div 
+                          className="cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => setEditingField({itemId: item.id, field: 'price'})}
+                        >
+                          <p className="text-xs text-gray-400 uppercase tracking-wider">Unit Price</p>
+                          <p className="text-sm font-semibold">${item.price.toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Weight */}
+                    <div className="text-center min-w-[90px]">
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">Weight</p>
+                      <p className="text-sm font-semibold">{item.weight.toFixed(3)} kg</p>
+                    </div>
+                    
+                    {/* HSN */}
+                    <div className="text-center min-w-[100px]">
+                      {editingField?.itemId === item.id && editingField?.field === 'hsn_code' ? (
+                        <div className="relative">
+                          <SleekHSNSearch
+                            value={item.hsn_code || ''}
+                            onChange={async (hsnCode) => {
+                              // Update HSN code
+                              handleFieldEdit(item.id, 'hsn_code', hsnCode);
+                              
+                              // Fetch and update category
+                              if (hsnCode) {
+                                try {
+                                  const { data } = await supabase
+                                    .from('hsn_master')
+                                    .select('category')
+                                    .eq('hsn_code', hsnCode)
+                                    .single();
+                                  
+                                  if (data) {
+                                    setHsnCategories(prev => ({
+                                      ...prev,
+                                      [hsnCode]: data.category
+                                    }));
+                                  }
+                                  
+                                  // Also fetch HSN weight
+                                  const hsnData = await hsnWeightService.getHSNWeight(hsnCode);
+                                  if (hsnData) {
+                                    onUpdateItem(item.id, { 
+                                      weight_options: {
+                                        ...item.weight_options,
+                                        hsn: hsnData.average
+                                      }
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to fetch HSN data:', error);
                                 }
-                              } catch (error) {
-                                console.error('Failed to fetch HSN weight:', error);
                               }
-                            }
-                          }}
-                          onCancel={() => setEditingField(null)}
-                          placeholder="Search HSN"
-                          className="h-8 text-xs font-mono"
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <p 
-                        className="font-mono font-semibold cursor-pointer hover:text-blue-600 transition-colors"
-                        onClick={() => setEditingField({itemId: item.id, field: 'hsn_code'})}
-                      >
-                        {item.hsn_code || '--'}
-                      </p>
-                    )}
+                            }}
+                            onCancel={() => setEditingField(null)}
+                            placeholder="Type HSN code..."
+                            className="h-6 text-xs pr-8"
+                            autoFocus
+                          />
+                          <div className="absolute right-0 top-0 flex items-center h-6">
+                            {item.hsn_code && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFieldEdit(item.id, 'hsn_code', '');
+                                  setEditingField(null);
+                                }}
+                                className="p-0.5 hover:bg-gray-100 rounded transition-colors mr-1"
+                                title="Clear HSN"
+                              >
+                                <Trash2 className="h-3 w-3 text-gray-400" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setEditingField(null)}
+                              className="p-0.5 hover:bg-gray-100 rounded transition-colors"
+                            >
+                              <X className="h-3 w-3 text-gray-400" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          className="cursor-pointer hover:text-blue-600 transition-colors group"
+                          onClick={() => setEditingField({itemId: item.id, field: 'hsn_code'})}
+                        >
+                          <p className="text-xs text-gray-400 uppercase tracking-wider">HSN</p>
+                          {item.hsn_code ? (
+                            <div>
+                              <p className="text-sm font-mono font-semibold">{item.hsn_code}</p>
+                              {hsnCategories[item.hsn_code] && (
+                                <p className="text-[10px] text-gray-500 truncate">{hsnCategories[item.hsn_code]}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-400 group-hover:text-blue-500">+ Add</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   {/* Actions */}
                   <div className="flex items-center justify-end">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100">
+                          <MoreVertical className="h-3.5 w-3.5 text-gray-400" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
@@ -724,7 +842,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                       {/* Valuation */}
                       <div className="col-span-3">
                         <div className="flex items-center gap-3 justify-end">
-                          <span className="text-xs font-medium text-gray-500 w-8">Val</span>
+                          <span className="text-xs font-medium text-gray-500">Valuation</span>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => {
