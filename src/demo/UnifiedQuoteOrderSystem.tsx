@@ -161,6 +161,12 @@ export default function UnifiedQuoteOrderSystem({
     return isNaN(num) ? fallback : num;
   };
 
+  // Safe toFixed function to prevent "Cannot read properties of undefined (reading 'toFixed')" errors
+  const safeToFixed = (value: any, decimals: number = 2): string => {
+    const num = safeNumber(value, 0);
+    return num.toFixed(decimals);
+  };
+
   // Helper to calculate tax percentage from amount and base
   const calculateTaxPercentage = (taxAmount: number, baseAmount: number): number => {
     if (!baseAmount || baseAmount === 0) return 0;
@@ -1274,7 +1280,7 @@ export default function UnifiedQuoteOrderSystem({
                                   className="h-7 px-2 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                                   onClick={() => setInsuranceAmount(calculatedInsurance)}
                                 >
-                                  Add Customer Insurance ({debugData?.currency_symbol || '$'}{calculatedInsurance.toFixed(2)})
+                                  Add Customer Insurance ({debugData?.currency_symbol || '$'}{safeToFixed(calculatedInsurance)})
                                 </Button>
                               ) : null}
                             </>
@@ -1779,7 +1785,7 @@ export default function UnifiedQuoteOrderSystem({
                                   className="h-7 px-2 text-xs border-gray-200"
                                   onClick={() => setHandlingAmount(calculatedHandling)}
                                 >
-                                  Use Calc ({debugData?.currency_symbol || '$'}{calculatedHandling.toFixed(2)})
+                                  Use Calc ({debugData?.currency_symbol || '$'}{safeToFixed(calculatedHandling)})
                                 </Button>
                               )}
                             </div>
@@ -1804,7 +1810,7 @@ export default function UnifiedQuoteOrderSystem({
                             <span className="text-xs text-gray-500">Order processing & packaging</span>
                             {calculatedHandling > 0 && (
                               <span className={`text-xs px-2 py-1 rounded ${handlingMode === 'auto' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {handlingMode === 'auto' ? 'Auto: Route-based' : `Calculated: ${debugData?.currency_symbol || '$'}${calculatedHandling.toFixed(2)}`}
+                                {handlingMode === 'auto' ? 'Auto: Route-based' : `Calculated: ${debugData?.currency_symbol || '$'}${safeToFixed(calculatedHandling)}`}
                               </span>
                             )}
                           </div>
@@ -1819,7 +1825,7 @@ export default function UnifiedQuoteOrderSystem({
                               <Label className="text-sm font-medium text-gray-700">Insurance</Label>
                               {calculatedInsurance > 0 && (
                                 <span className="text-xs text-gray-500">
-                                  (calc: {debugData?.currency_symbol || '$'}{calculatedInsurance.toFixed(2)})
+                                  (calc: {debugData?.currency_symbol || '$'}{safeToFixed(calculatedInsurance)})
                                 </span>
                               )}
                               {quote.customer_data?.preferences?.insurance_opted_in && insuranceAmount > 0 && (
@@ -2547,7 +2553,7 @@ export default function UnifiedQuoteOrderSystem({
                                       <SelectItem key={option.id} value={option.id}>
                                         <div>
                                           <div className="font-medium">{option.name}</div>
-                                          <div className="text-xs text-gray-500">${option.cost_usd.toFixed(2)}</div>
+                                          <div className="text-xs text-gray-500">${safeToFixed(option.cost_usd)}</div>
                                         </div>
                                       </SelectItem>
                                     ))}
@@ -2824,7 +2830,7 @@ export default function UnifiedQuoteOrderSystem({
                                     )}
                                   </div>
                                   <div className="text-right ml-4">
-                                    <p className="font-semibold">${option.cost_usd.toFixed(2)}</p>
+                                    <p className="font-semibold">${safeToFixed(option.cost_usd)}</p>
                                     <p className="text-xs text-gray-500">USD</p>
                                   </div>
                                 </div>
@@ -3718,11 +3724,11 @@ export default function UnifiedQuoteOrderSystem({
                         </div>
                       <div className="flex justify-between">
                         <span><strong>Handling:</strong></span>
-                        <span className={handlingMode === 'auto' && calculatedHandling > 0 ? 'text-green-600 font-semibold' : ''}>{debugData?.currency_symbol || '$'}{handlingAmount.toFixed(2)} {handlingMode === 'manual' && calculatedHandling > 0 && calculatedHandling !== handlingAmount ? '(calc: ' + (debugData?.currency_symbol || '$') + calculatedHandling.toFixed(2) + ')' : ''}</span>
+                        <span className={handlingMode === 'auto' && calculatedHandling > 0 ? 'text-green-600 font-semibold' : ''}>{safeDebugData.currency_symbol || '$'}{safeToFixed(handlingAmount)} {handlingMode === 'manual' && calculatedHandling > 0 && calculatedHandling !== handlingAmount ? '(calc: ' + (safeDebugData.currency_symbol || '$') + safeToFixed(calculatedHandling) + ')' : ''}</span>
                       </div>
                       <div className="flex justify-between">
                         <span><strong>Insurance:</strong></span>
-                        <span className={calculatedInsurance > 0 && calculatedInsurance === insuranceAmount ? 'text-green-600 font-semibold' : ''}>{debugData?.currency_symbol || '$'}{insuranceAmount.toFixed(2)} {calculatedInsurance > 0 && calculatedInsurance !== insuranceAmount ? '(calc: ' + (debugData?.currency_symbol || '$') + calculatedInsurance.toFixed(2) + ')' : ''}</span>
+                        <span className={calculatedInsurance > 0 && calculatedInsurance === insuranceAmount ? 'text-green-600 font-semibold' : ''}>{safeDebugData.currency_symbol || '$'}{safeToFixed(insuranceAmount)} {calculatedInsurance > 0 && calculatedInsurance !== insuranceAmount ? '(calc: ' + (safeDebugData.currency_symbol || '$') + safeToFixed(calculatedInsurance) + ')' : ''}</span>
                       </div>
                       <div className="flex justify-between">
                         <span><strong>Customs:</strong></span>
