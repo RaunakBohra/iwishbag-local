@@ -3471,9 +3471,9 @@ export default function UnifiedQuoteOrderSystem({
                   <div className="border-l-2 border-orange-200 pl-3">
                     <div className="font-medium text-orange-700 mb-1">Customs Calculation</div>
                     <div className="space-y-1 text-xs text-gray-600">
-                      <div>Base: {quote.calculation_data.valuation_applied?.original_items_total ? `$${quote.calculation_data.valuation_applied.original_items_total.toFixed(2)}` : 'N/A'} (actual)</div>
+                      <div>Base: {quote.calculation_data.valuation_applied?.original_items_total ? `$${safeToFixed(quote.calculation_data.valuation_applied.original_items_total)}` : 'N/A'} (actual)</div>
                       {quote.calculation_data.valuation_applied?.customs_calculation_base && (
-                        <div>Customs Base: ${quote.calculation_data.valuation_applied.customs_calculation_base.toFixed(2)} 
+                        <div>Customs Base: ${safeToFixed(quote.calculation_data.valuation_applied.customs_calculation_base)} 
                           {quote.calculation_data.valuation_applied.adjustment_applied && ' (adjusted)'}
                         </div>
                       )}
@@ -3504,7 +3504,7 @@ export default function UnifiedQuoteOrderSystem({
                         <div>Country: {quote.destination_country}</div>
                         <div>Type: {quote.destination_country === 'IN' ? 'GST' : quote.destination_country === 'NP' ? 'VAT' : 'Tax'}</div>
                         <div>Landed Cost: Items + Shipping + Insurance + Customs + Handling</div>
-                        <div className="font-medium text-green-600">= ${quote.calculation_data.breakdown.destination_tax.toFixed(2)}</div>
+                        <div className="font-medium text-green-600">= ${safeToFixed(quote.calculation_data.breakdown.destination_tax)}</div>
                       </div>
                     </div>
                   )}
@@ -3544,7 +3544,7 @@ export default function UnifiedQuoteOrderSystem({
                           handlingAmount +
                           insuranceAmount
                         ).toFixed(2)}</div>
-                        <div>Fee: 2.9% + $0.30 = ${quote.calculation_data.breakdown.fees.toFixed(2)}</div>
+                        <div>Fee: 2.9% + $0.30 = ${safeToFixed(quote.calculation_data.breakdown.fees)}</div>
                       </div>
                     </div>
                   )}
@@ -3554,7 +3554,7 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="bg-green-50 p-3 rounded border border-green-200">
                       <div className="flex justify-between text-sm font-bold text-green-700">
                         <span>Final Total:</span>
-                        <span>${quote.calculation_data.total_cost.toFixed(2)}</span>
+                        <span>${safeToFixed(quote.calculation_data.total_cost)}</span>
                       </div>
                     </div>
                   )}
