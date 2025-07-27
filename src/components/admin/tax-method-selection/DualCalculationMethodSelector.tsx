@@ -35,7 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { unifiedTaxFallbackService } from '@/services/UnifiedTaxFallbackService';
 
 interface CalculationMethod {
-  id: 'auto' | 'hsn_only' | 'legacy_fallback' | 'admin_choice';
+  id: 'auto' | 'hsn_only' | 'route_based' | 'admin_choice';
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -117,17 +117,17 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
       configurationStatus: 'missing',
     },
     {
-      id: 'legacy_fallback',
-      name: 'Legacy Fallback',
-      description: 'Traditional percentage-based calculation using route and country settings',
+      id: 'route_based',
+      name: 'Route Based',
+      description: 'Route-specific tax calculation using customs tiers based on origin-destination and weight/value',
       icon: <Calculator className="h-5 w-5" />,
       pros: [
-        'Always available',
-        'Fast calculations',
+        'Route-specific accuracy',
+        'Weight and value tier support',
         'Uses established shipping routes',
-        'Reliable for percentage-based taxes',
+        'Reliable for route-based taxes',
       ],
-      cons: ['Less accurate than per-item', 'No minimum valuation support', 'Generic tax rates'],
+      cons: ['Less accurate than HSN per-item', 'Limited to configured routes', 'Generic for unmatched tiers'],
       confidence: 0.0, // Will be updated dynamically
       recommended: false,
       requiresConfiguration: true,
@@ -192,12 +192,12 @@ export const DualCalculationMethodSelector: React.FC<DualCalculationMethodSelect
                 configurationStatus: comparison.hsn_available ? 'complete' : 'missing',
                 recommended: comparison.recommended_method === 'hsn_only',
               };
-            case 'legacy_fallback':
+            case 'route_based':
               return {
                 ...method,
                 confidence: comparison.unified_data.confidence_score,
                 configurationStatus: comparison.legacy_available ? 'complete' : 'partial',
-                recommended: comparison.recommended_method === 'legacy_fallback',
+                recommended: comparison.recommended_method === 'route_based',
               };
             default:
               return method;

@@ -1,22 +1,23 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
-import { Navigate, Outlet } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { mfaService } from '@/services/MFAService';
 import { MFASetup } from './MFASetup';
 import { MFAVerification } from './MFAVerification';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
 
-const AdminProtectedRoute = () => {
-  const { user, session } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
-  
+interface MFAProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+export const MFAProtectedRoute: React.FC<MFAProtectedRouteProps> = ({ children }) => {
+  const { session, user } = useAuth();
   const [mfaState, setMfaState] = useState<{
     loading: boolean;
     requiresMFA: boolean;
     hasValidSession: boolean;
     mfaEnabled: boolean;
+    error?: string;
   }>({
     loading: true,
     requiresMFA: false,
@@ -25,35 +26,31 @@ const AdminProtectedRoute = () => {
   });
 
   useEffect(() => {
-    if (!user || !session || isAdminLoading) {
-      return;
-    }
-    
-    if (!isAdmin) {
+    if (!session || !user) {
       setMfaState({
         loading: false,
         requiresMFA: false,
-        hasValidSession: true, // Regular users don't need MFA
+        hasValidSession: true, // Allow non-authenticated users to pass through
         mfaEnabled: false,
       });
       return;
     }
-    
+
     checkMFARequirements();
-  }, [user, session, isAdmin, isAdminLoading]);
+  }, [session, user]);
 
   const checkMFARequirements = async () => {
     if (!user?.id) return;
 
     try {
-      logger.info('AdminProtectedRoute: Checking MFA for admin user:', user.email);
+      logger.info('Checking MFA requirements for user:', user.email);
       
-      // Admin users always require MFA
+      // Check if user requires MFA
       const requiresMFA = await mfaService.requiresMFA(user.id);
-      logger.info('AdminProtectedRoute: Requires MFA:', requiresMFA);
+      logger.info('User requires MFA:', requiresMFA);
       
       if (!requiresMFA) {
-        // This shouldn't happen for admin users, but handle gracefully
+        // User doesn't need MFA (regular user)
         setMfaState({
           loading: false,
           requiresMFA: false,
@@ -65,10 +62,10 @@ const AdminProtectedRoute = () => {
 
       // Check MFA status
       const mfaStatus = await mfaService.getMFAStatus();
-      logger.info('AdminProtectedRoute: MFA Status:', mfaStatus);
+      logger.info('MFA status:', mfaStatus);
       
       if (!mfaStatus?.enabled) {
-        // Admin user without MFA set up
+        // Admin user without MFA set up - needs to set up MFA
         setMfaState({
           loading: false,
           requiresMFA: true,
@@ -80,11 +77,11 @@ const AdminProtectedRoute = () => {
 
       // Check if user has valid MFA session
       const mfaSessionToken = sessionStorage.getItem('mfa_session');
-      logger.info('AdminProtectedRoute: Has MFA session token:', !!mfaSessionToken);
+      logger.info('MFA session token exists:', !!mfaSessionToken);
       
       const hasValidSession = mfaSessionToken ? 
         await mfaService.isSessionValid(mfaSessionToken) : false;
-      logger.info('AdminProtectedRoute: Valid MFA session:', hasValidSession);
+      logger.info('MFA session valid:', hasValidSession);
 
       setMfaState({
         loading: false,
@@ -94,51 +91,35 @@ const AdminProtectedRoute = () => {
       });
 
     } catch (error) {
-      logger.error('AdminProtectedRoute: MFA check failed:', error);
+      logger.error('MFA guard check failed:', error);
       setMfaState({
         loading: false,
         requiresMFA: false,
         hasValidSession: false,
         mfaEnabled: false,
+        error: 'Failed to check MFA requirements',
       });
     }
   };
 
   const handleMFASetupComplete = () => {
-    logger.info('AdminProtectedRoute: MFA setup completed');
-    checkMFARequirements();
+    logger.info('MFA setup completed');
+    checkMFARequirements(); // Recheck after setup
   };
 
   const handleMFAVerificationSuccess = (token: string) => {
-    logger.info('AdminProtectedRoute: MFA verification successful');
+    logger.info('MFA verification successful');
     sessionStorage.setItem('mfa_session', token);
     setMfaState(prev => ({ ...prev, hasValidSession: true }));
   };
 
   const handleMFACancel = async () => {
-    logger.info('AdminProtectedRoute: MFA cancelled, signing out');
+    logger.info('MFA cancelled, signing out user');
     sessionStorage.removeItem('mfa_session');
     await supabase.auth.signOut();
   };
 
-  // Show loading while checking admin role
-  if (isAdminLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p>Loading admin permissions...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect non-admin users
-  if (!user || !session || !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Show loading while checking MFA
+  // Show loading state
   if (mfaState.loading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -150,6 +131,28 @@ const AdminProtectedRoute = () => {
     );
   }
 
+  // Show error state
+  if (mfaState.error) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{mfaState.error}</p>
+          <button 
+            onClick={checkMFARequirements}
+            className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If user doesn't require MFA or has valid MFA session, show children
+  if (!mfaState.requiresMFA || mfaState.hasValidSession) {
+    return <>{children}</>;
+  }
+
   // If user requires MFA but doesn't have it enabled, show setup
   if (mfaState.requiresMFA && !mfaState.mfaEnabled) {
     return (
@@ -157,7 +160,7 @@ const AdminProtectedRoute = () => {
         <MFASetup 
           onComplete={handleMFASetupComplete}
           onSkip={() => {
-            alert('MFA is required for admin accounts. You cannot skip this step.');
+            alert('MFA is required for admin accounts');
           }}
         />
       </div>
@@ -177,8 +180,6 @@ const AdminProtectedRoute = () => {
     );
   }
 
-  // If all checks pass, render the admin content
-  return <Outlet />;
+  // Fallback: should not reach here
+  return <>{children}</>;
 };
-
-export default AdminProtectedRoute;

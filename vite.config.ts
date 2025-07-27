@@ -27,17 +27,65 @@ export default defineConfig(({ mode }) => ({
     assetsDir: 'assets',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          query: ['@tanstack/react-query'],
-          supabase: ['@supabase/supabase-js'],
+        manualChunks: (id) => {
+          // Vendor dependencies
+          if (id.includes('node_modules')) {
+            // Large chart libraries
+            if (id.includes('recharts')) {
+              return 'charts';
+            }
+            // Core React ecosystem
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            // UI components
+            if (id.includes('@radix-ui') || id.includes('lucide-react')) {
+              return 'ui-vendor';
+            }
+            // Query and state management
+            if (id.includes('@tanstack/react-query') || id.includes('zustand')) {
+              return 'state-vendor';
+            }
+            // Supabase and auth
+            if (id.includes('@supabase') || id.includes('jose') || id.includes('crypto')) {
+              return 'supabase-vendor';
+            }
+            // Date utilities
+            if (id.includes('date-fns')) {
+              return 'date-vendor';
+            }
+            // Other vendor packages
+            return 'vendor';
+          }
+          
+          // Application code splitting
+          // Admin pages
+          if (id.includes('/admin/') || id.includes('admin')) {
+            return 'admin';
+          }
+          // Demo pages
+          if (id.includes('/demo/')) {
+            return 'demo';
+          }
+          // Dashboard pages
+          if (id.includes('/dashboard/')) {
+            return 'dashboard';
+          }
+          // Payment related
+          if (id.includes('payment') || id.includes('Payment')) {
+            return 'payments';
+          }
+          // Quote related
+          if (id.includes('quote') || id.includes('Quote')) {
+            return 'quotes';
+          }
         },
       },
     },
     sourcemap: true, // Enable sourcemaps for Sentry
     minify: 'esbuild',
     chunkSizeWarningLimit: 1000,
+    target: 'es2015', // Better browser support and smaller bundles
   },
   esbuild: {
     // Remove console statements in production builds

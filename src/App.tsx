@@ -15,6 +15,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
+import { MFAProtectedRoute } from '@/components/auth/MFAProtectedRoute';
 import CloudflareAnalytics from '@/components/analytics/CloudflareAnalytics';
 import CloudflareBrowserInsights from '@/components/analytics/CloudflareBrowserInsights';
 import { CloudflareRUM } from '@/components/analytics/CloudflareRUM';
@@ -81,30 +82,30 @@ const PayUDebugPage = React.lazy(() =>
 );
 const Address = React.lazy(() => import('@/pages/profile/Address'));
 
-// Admin components (lazy loaded for better performance)
+// Admin components (lazy loaded with separate chunks for better performance)
 const AdminLayout = React.lazy(() =>
-  import('@/components/admin/AdminLayout').then((m) => ({
+  import('@/components/admin/AdminLayout' /* webpackChunkName: "admin-layout" */).then((m) => ({
     default: m.AdminLayout,
   })),
 );
-const QuoteManagementPage = React.lazy(() => import('@/components/admin/QuoteManagementPage'));
+const QuoteManagementPage = React.lazy(() => import('@/components/admin/QuoteManagementPage' /* webpackChunkName: "admin-quotes" */));
 // OrderManagementPage removed - will be replaced by unified interface
 const EnhancedCustomerManagementPage = React.lazy(() =>
-  import('@/components/admin/EnhancedCustomerManagementPage').then((m) => ({
+  import('@/components/admin/EnhancedCustomerManagementPage' /* webpackChunkName: "admin-customers" */).then((m) => ({
     default: m.EnhancedCustomerManagementPage,
   })),
 );
 const CountrySettings = React.lazy(() =>
-  import('@/components/admin/CountrySettings').then((m) => ({
+  import('@/components/admin/CountrySettings' /* webpackChunkName: "admin-countries" */).then((m) => ({
     default: m.CountrySettings,
   })),
 );
 const CustomsCategories = React.lazy(() =>
-  import('@/components/admin/CustomsCategories').then((m) => ({
+  import('@/components/admin/CustomsCategories' /* webpackChunkName: "admin-customs" */).then((m) => ({
     default: m.CustomsCategories,
   })),
 );
-const UnifiedQuoteInterface = React.lazy(() => import('@/components/admin/UnifiedQuoteInterface'));
+const UnifiedQuoteInterface = React.lazy(() => import('@/components/admin/UnifiedQuoteInterface' /* webpackChunkName: "admin-quote-interface" */));
 // QuoteTemplatesPage component is not found - commenting out to fix build
 // const QuoteTemplatesPage = React.lazy(() =>
 //   import('@/components/admin/QuoteTemplatesPage').then((m) => ({
@@ -140,15 +141,19 @@ const DuplicateComponentsPreview = React.lazy(
 const UserManagementPage = React.lazy(() => import('@/pages/admin/UserManagementPage'));
 const HSNManagement = React.lazy(() => import('@/pages/admin/HSNManagement'));
 const AuditLogsPage = React.lazy(() => import('@/pages/admin/AuditLogsPage'));
+const SecuritySettings = React.lazy(() => import('@/pages/admin/SecuritySettings'));
+const ApiAnalytics = React.lazy(() => import('@/pages/admin/ApiAnalytics'));
+const PerformanceMonitor = React.lazy(() => import('@/components/admin/PerformanceMonitor' /* webpackChunkName: "admin-performance" */));
+const ApiDocumentation = React.lazy(() => import('@/pages/admin/ApiDocumentation' /* webpackChunkName: "admin-docs" */));
 
-// Demo pages for weight recommendation designs
-const DemoIndex = React.lazy(() => import('@/demo/DemoIndex'));
-const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns'));
-const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns'));
-const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo'));
-const WeightTabDemo = React.lazy(() => import('@/demo/WeightTabDemo'));
-const HSNInputDesigns = React.lazy(() => import('@/demo/HSNInputDesigns'));
-const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants'));
+// Demo pages for weight recommendation designs (chunked separately)
+const DemoIndex = React.lazy(() => import('@/demo/DemoIndex' /* webpackChunkName: "demo-index" */));
+const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns' /* webpackChunkName: "demo-tax-designs" */));
+const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns' /* webpackChunkName: "demo-toggle-designs" */));
+const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo' /* webpackChunkName: "demo-url-autofill" */));
+const WeightTabDemo = React.lazy(() => import('@/demo/WeightTabDemo' /* webpackChunkName: "demo-weight-tab" */));
+const HSNInputDesigns = React.lazy(() => import('@/demo/HSNInputDesigns' /* webpackChunkName: "demo-hsn-designs" */));
+const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -238,6 +243,38 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <AuditLogsPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'security',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <SecuritySettings />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'api-analytics',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <ApiAnalytics />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'performance',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <PerformanceMonitor />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'api-documentation',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <ApiDocumentation />
               </ErrorBoundary>
             ),
           },

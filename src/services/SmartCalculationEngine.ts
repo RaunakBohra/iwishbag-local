@@ -1794,14 +1794,31 @@ export class SmartCalculationEngine {
           itemSalesTaxRate = routeRates.sales_tax;
           itemVatRate = routeRates.vat;
         } else if (itemTaxMethod === 'manual') {
-          // Manual method - use item's tax_options if available
-          console.log(`[PER-ITEM TAX] Using manual method for item ${item.id}:`, item.tax_options?.manual);
+          // Manual method - customs from user input, destination tax from shipping route
+          console.log(`[PER-ITEM TAX] Using manual method for item ${item.id}:`, {
+            manual_options: item.tax_options?.manual,
+            has_route_rates: !!routeRates,
+            route_rates: routeRates
+          });
           
           // Get country-specific manual default instead of hardcoded 18%
           const countryManualDefault = await taxRateService.getCountryManualDefault(quote.destination_country || 'IN');
           itemCustomsRate = item.tax_options?.manual?.rate || countryManualDefault;
-          itemSalesTaxRate = 0; // Manual doesn't set sales tax
-          itemVatRate = 0; // Manual doesn't set VAT
+          
+          // ✅ CRITICAL FIX: Get destination tax from shipping route (as user specified)
+          if (routeRates) {
+            itemSalesTaxRate = routeRates.sales_tax;
+            itemVatRate = routeRates.vat;
+            console.log(`[PER-ITEM TAX] Manual method using route destination tax:`, {
+              sales_tax: routeRates.sales_tax,
+              vat: routeRates.vat
+            });
+          } else {
+            // Fallback if no route rates available
+            itemSalesTaxRate = 0;
+            itemVatRate = 0;
+            console.log(`[PER-ITEM TAX] Manual method: No route rates available, using 0% destination tax`);
+          }
         } else if (itemTaxMethod === 'customs') {
           // Customs method - use default customs rate
           console.log(`[PER-ITEM TAX] Using customs method for item ${item.id}:`, quote.operational_data?.customs?.percentage);
@@ -1820,15 +1837,28 @@ export class SmartCalculationEngine {
         const itemSalesTax = (itemValue * itemSalesTaxRate) / 100;
         const itemVat = (itemValue * itemVatRate) / 100;
         
-        console.log(`[PER-ITEM TAX] Final calculations for item ${item.id}:`, {
-          itemValue,
-          customsRate: itemCustomsRate,
-          salesTaxRate: itemSalesTaxRate,
-          vatRate: itemVatRate,
-          customsAmount: itemCustoms,
-          salesTaxAmount: itemSalesTax,
-          vatAmount: itemVat,
-          totalTaxes: itemCustoms + itemSalesTax + itemVat
+        // ✅ COMPREHENSIVE TAX DEBUG LOGGING
+        console.log(`[TAX CALCULATION SUMMARY] Item ${item.id} (${item.name}):`, {
+          tax_method: itemTaxMethod,
+          item_value: itemValue,
+          rates: {
+            customs: `${itemCustomsRate}%`,
+            sales_tax: `${itemSalesTaxRate}%`,
+            vat: `${itemVatRate}%`
+          },
+          amounts: {
+            customs: `$${itemCustoms.toFixed(2)}`,
+            sales_tax: `$${itemSalesTax.toFixed(2)}`,
+            vat: `$${itemVat.toFixed(2)}`,
+            total_tax: `$${(itemCustoms + itemSalesTax + itemVat).toFixed(2)}`
+          },
+          data_sources: {
+            customs_source: itemTaxMethod === 'hsn' ? 'HSN table' : 
+                           itemTaxMethod === 'country' ? 'Shipping route' :
+                           itemTaxMethod === 'manual' ? 'User input' :
+                           itemTaxMethod === 'customs' ? 'Customs default' : 'Unknown',
+            destination_tax_source: routeRates ? 'Shipping route' : 'No route data'
+          }
         });
         
         perItemCustomsTotal += itemCustoms;

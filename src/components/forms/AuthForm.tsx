@@ -57,7 +57,11 @@ const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
-const AuthForm = () => {
+interface AuthFormProps {
+  onLogin?: (email: string, password: string) => Promise<void>;
+}
+
+const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
@@ -101,25 +105,31 @@ const AuthForm = () => {
   };
 
   const handleSignIn = async (values: z.infer<typeof signInSchema>, turnstileToken?: string) => {
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
-    if (error) {
-      console.error('Sign in error details:', {
-        message: error.message,
-        status: error.status,
-        name: error.name,
-        stack: error.stack,
+    if (onLogin) {
+      // Use custom login handler for MFA
+      await onLogin(values.email, values.password);
+    } else {
+      // Default sign-in behavior
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
       });
-      toast({
-        title: 'Error signing in',
-        description: error.message,
-        variant: 'destructive',
-      });
+      if (error) {
+        console.error('Sign in error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          stack: error.stack,
+        });
+        toast({
+          title: 'Error signing in',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSignInWithGoogle = async () => {

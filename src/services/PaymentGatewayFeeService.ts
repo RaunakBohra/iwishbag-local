@@ -64,16 +64,17 @@ class PaymentGatewayFeeService {
     destinationCountry: string,
     gateway?: string,
   ): Promise<PaymentGatewayFees> {
-    const transaction = Sentry.startTransaction({
-      name: 'PaymentGatewayFeeService.getPaymentGatewayFees',
-      op: 'payment_fee_lookup',
-    });
+    // Temporarily disable Sentry transaction
+    // const transaction = Sentry.startTransaction({
+    //   name: 'PaymentGatewayFeeService.getPaymentGatewayFees',
+    //   op: 'payment_fee_lookup',
+    // });
 
     try {
       const cacheKey = `${destinationCountry}:${gateway || 'default'}`;
       const cached = this.getFromCache(cacheKey);
       if (cached) {
-        transaction.setStatus('ok');
+        // transaction.setStatus('ok');
         return cached;
       }
 
@@ -96,7 +97,7 @@ class PaymentGatewayFeeService {
             source: fees.source,
           });
           this.setCache(cacheKey, fees);
-          transaction.setStatus('ok');
+          // transaction.setStatus('ok');
           return fees;
         }
       }
@@ -111,7 +112,7 @@ class PaymentGatewayFeeService {
           source: fees.source,
         });
         this.setCache(cacheKey, fees);
-        transaction.setStatus('ok');
+        // transaction.setStatus('ok');
         return fees;
       }
 
@@ -127,17 +128,17 @@ class PaymentGatewayFeeService {
       });
 
       this.setCache(cacheKey, fees);
-      transaction.setStatus('ok');
+      // transaction.setStatus('ok');
       return fees;
     } catch (error) {
       console.error('❌ Error getting payment gateway fees:', error);
       Sentry.captureException(error);
-      transaction.setStatus('internal_error');
+      // transaction.setStatus('internal_error');
 
       // Return safe defaults on error
       return this.getDefaultFees();
     } finally {
-      transaction.finish();
+      // transaction.finish();
     }
   }
 

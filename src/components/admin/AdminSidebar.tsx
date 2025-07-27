@@ -21,6 +21,10 @@ import {
   UserCog,
   Calculator,
   Shield,
+  Lock,
+  TrendingUp,
+  Activity,
+  Book,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -152,6 +156,26 @@ const menuGroups = [
         title: 'Audit Logs',
         url: '/admin/audit-logs',
         icon: Shield,
+      },
+      {
+        title: 'Security Settings',
+        url: '/admin/security',
+        icon: Lock,
+      },
+      {
+        title: 'API Analytics',
+        url: '/admin/api-analytics',
+        icon: TrendingUp,
+      },
+      {
+        title: 'Performance Monitor',
+        url: '/admin/performance',
+        icon: Activity,
+      },
+      {
+        title: 'API Documentation',
+        url: '/admin/api-documentation',
+        icon: Book,
       },
     ],
   },

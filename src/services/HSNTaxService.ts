@@ -150,17 +150,15 @@ class HSNTaxService {
                    typicalRates?.customs?.min || 
                    0;
 
-    // VAT/GST based on destination (REMOVED all hardcoded fallbacks)
-    let vat = 0;
+    // ✅ CRITICAL FIX: VAT/GST should ALWAYS be based on destination country, NOT HSN data
+    // HSN data may contain origin country tax rates, but destination tax must come from destination
+    const vat = await taxRateService.getCountryVATRate(destinationCountry);
+    console.log(`💰 [HSN TAX] Using destination country VAT/GST rate: ${vat}% for ${destinationCountry} (ignoring any HSN VAT data)`);
     
-    // Try HSN-specific rate first, then fallback to country database rate
+    // Log if HSN had different VAT data for debugging
     if (typicalRates?.vat?.common || typicalRates?.gst?.standard) {
-      vat = typicalRates?.vat?.common || typicalRates?.gst?.standard || 0;
-      console.log(`💰 [HSN TAX] Using HSN-specific VAT/GST rate: ${vat}% for ${hsnCode}`);
-    } else {
-      // Fallback to country database rate (NO MORE hardcoded 13%/18% values)
-      vat = await taxRateService.getCountryVATRate(destinationCountry);
-      console.log(`💰 [HSN TAX] Using database VAT/GST rate: ${vat}% for ${destinationCountry}`);
+      const hsnVat = typicalRates?.vat?.common || typicalRates?.gst?.standard;
+      console.log(`🚨 [HSN TAX] HSN ${hsnCode} had VAT rate ${hsnVat}% but using destination ${destinationCountry} rate ${vat}% instead`);
     }
 
     // Sales tax (typically for US origin)

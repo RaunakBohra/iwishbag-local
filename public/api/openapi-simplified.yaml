@@ -1,0 +1,252 @@
+openapi: 3.0.3
+info:
+  title: iwishBag Calculator API (Simplified)
+  description: |
+    Simplified Calculator API for iwishBag - covering 95% of use cases with just 2 endpoints.
+    
+    We reduced complexity from 5 endpoints to 2 essential ones:
+    - `/estimate` - Core shipping calculation (80% of use cases)
+    - `/rates` - Rate lookup for planning (15% of use cases)
+    
+    ## Authentication
+    No authentication required for public endpoints.
+    
+    ## Rate Limiting
+    - 100 requests per hour for unauthenticated requests
+    - 1000 requests per hour for registered users
+    
+  version: 2.0.0
+  contact:
+    name: iwishBag API Support
+    email: api@iwishbag.com
+
+servers:
+  - url: https://iwishbag.com/api/v2
+    description: Production server (simplified)
+
+paths:
+  /calculator/estimate:
+    post:
+      summary: Calculate shipping estimate
+      description: |
+        Calculate total shipping costs and taxes for items. 
+        This single endpoint handles 80% of all calculator use cases.
+        
+        **Key Features:**
+        - Simple request/response format
+        - Automatic currency conversion
+        - Tax and duty calculations
+        - Delivery time estimates
+        
+      tags:
+        - Calculator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - shipping_country
+              properties:
+                items:
+                  type: array
+                  description: List of items (max 20)
+                  maxItems: 20
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - price_usd
+                      - quantity
+                    properties:
+                      name:
+                        type: string
+                        maxLength: 100
+                        example: "iPhone 15"
+                      price_usd:
+                        type: number
+                        minimum: 0.01
+                        example: 799
+                      quantity:
+                        type: integer
+                        minimum: 1
+                        maximum: 50
+                        example: 1
+                      weight:
+                        type: number
+                        minimum: 0
+                        example: 0.2
+                        description: "Weight in kg (optional)"
+                      category:
+                        type: string
+                        example: "electronics"
+                shipping_country:
+                  type: string
+                  pattern: '^[A-Z]{2}$'
+                  example: "NP"
+                  description: "Destination country (ISO 3166-1 alpha-2)"
+                currency:
+                  type: string
+                  example: "NPR"
+                  description: "Display currency (optional, defaults to USD)"
+            example:
+              items:
+                - name: "iPhone 15"
+                  price_usd: 799
+                  quantity: 1
+                  weight: 0.2
+                  category: "electronics"
+              shipping_country: "NP"
+              currency: "NPR"
+      responses:
+        '200':
+          description: Successful calculation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_estimate:
+                    type: number
+                    example: 95000
+                    description: "Total cost in requested currency"
+                  breakdown:
+                    type: object
+                    properties:
+                      item_cost:
+                        type: number
+                        example: 79900
+                      shipping_fee:
+                        type: number
+                        example: 5000
+                      customs_duty:
+                        type: number
+                        example: 7900
+                      tax_amount:
+                        type: number
+                        example: 2200
+                      service_fee:
+                        type: number
+                        example: 0
+                  currency:
+                    type: string
+                    example: "NPR"
+                  delivery_estimate:
+                    type: string
+                    example: "7-10 business days"
+              example:
+                total_estimate: 95000
+                breakdown:
+                  item_cost: 79900
+                  shipping_fee: 5000
+                  customs_duty: 7900
+                  tax_amount: 2200
+                  service_fee: 0
+                currency: "NPR"
+                delivery_estimate: "7-10 business days"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid shipping_country: must be ISO 3166-1 alpha-2"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Rate limit exceeded. Try again in 60 seconds."
+
+  /calculator/rates:
+    get:
+      summary: Get shipping rates
+      description: |
+        Get current shipping rates and tax information for a destination country.
+        Useful for displaying rate tables or planning shipments.
+        
+        Covers the remaining 15% of calculator use cases.
+        
+      tags:
+        - Calculator
+      parameters:
+        - name: to_country
+          in: query
+          required: true
+          description: Destination country code (ISO 3166-1 alpha-2)
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+            example: "NP"
+      responses:
+        '200':
+          description: Current rates and tax information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shipping_rates:
+                    type: object
+                    properties:
+                      standard:
+                        type: number
+                        example: 15
+                        description: "Standard shipping rate per kg (USD)"
+                      express:
+                        type: number
+                        example: 25
+                        description: "Express shipping rate per kg (USD)"
+                      economy:
+                        type: number
+                        example: 10
+                        description: "Economy shipping rate per kg (USD)"
+                  tax_rates:
+                    type: object
+                    properties:
+                      customs_duty:
+                        type: number
+                        example: 15
+                        description: "Customs duty percentage"
+                      vat:
+                        type: number
+                        example: 13
+                        description: "VAT/GST percentage"
+                  currency:
+                    type: string
+                    example: "USD"
+                    description: "Base currency for rates"
+              example:
+                shipping_rates:
+                  standard: 15
+                  express: 25
+                  economy: 10
+                tax_rates:
+                  customs_duty: 15
+                  vat: 13
+                currency: "USD"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid to_country: must be ISO 3166-1 alpha-2"
+        '429':
+          description: Rate limit exceeded
+
+tags:
+  - name: Calculator
+    description: Simplified shipping cost calculation endpoints

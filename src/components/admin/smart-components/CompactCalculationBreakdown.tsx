@@ -238,7 +238,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
           {/* Warning if HSN items exist but calculation didn't use HSN */}
           {hasHSNItems &&
             !isHSNCalculation &&
-            quote.calculation_method_preference !== 'country_based' &&
+            quote.calculation_method_preference !== 'route_based' &&
             quote.calculation_method_preference !== 'manual' && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
                 <div className="flex items-center space-x-2">

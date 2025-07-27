@@ -4,12 +4,33 @@ import { Navigate, useLocation, Link } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { PageTitle, Body } from '@/components/ui/typography';
+import { useMFAAuth } from '@/hooks/useMFAAuth';
+import { useMFAGuard } from '@/hooks/useMFAGuard';
+import { MFASetup } from '@/components/auth/MFASetup';
+import { MFAVerification } from '@/components/auth/MFAVerification';
 
 const Auth = () => {
   const { session, isAnonymous } = useAuth();
   const location = useLocation();
   const message = location.state?.message;
+  const {
+    authState,
+    loading,
+    handleLogin,
+    handleMFAVerification,
+    handleMFASetupComplete,
+    handleMFACancel,
+    resetAuth,
+  } = useMFAAuth();
+  
+  const {
+    loading: mfaLoading,
+    requiresMFA,
+    hasValidMFASession,
+    mfaEnabled,
+  } = useMFAGuard();
 
   useEffect(() => {
     // Clear the message from location state after display
@@ -18,9 +39,57 @@ const Auth = () => {
     }
   }, [message]);
 
-  // Only redirect if user has a session AND is not anonymous
+  // Handle authenticated users with MFA requirements
   if (session && !isAnonymous) {
-    return <Navigate to="/" replace />;
+    if (mfaLoading) {
+      return (
+        <div className="h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p>Checking security requirements...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // If user doesn't require MFA or has valid MFA session, redirect
+    if (!requiresMFA || hasValidMFASession) {
+      return <Navigate to="/" replace />;
+    }
+    
+    // If user requires MFA but doesn't have it enabled, show setup
+    if (requiresMFA && !mfaEnabled) {
+      return (
+        <div className="h-screen flex items-center justify-center">
+          <MFASetup 
+            onComplete={() => window.location.reload()}
+            onSkip={() => {
+              // Admin users can't skip MFA
+              alert('MFA is required for admin accounts');
+            }}
+          />
+        </div>
+      );
+    }
+    
+    // If user requires MFA and has it enabled but no valid session, show verification
+    if (requiresMFA && mfaEnabled && !hasValidMFASession) {
+      return (
+        <div className="h-screen flex items-center justify-center">
+          <MFAVerification
+            onSuccess={(token) => {
+              sessionStorage.setItem('mfa_session', token);
+              window.location.reload();
+            }}
+            onCancel={() => {
+              // Sign out user if they cancel MFA
+              supabase.auth.signOut();
+            }}
+            userEmail={session.user.email}
+          />
+        </div>
+      );
+    }
   }
 
   return (
@@ -82,7 +151,20 @@ const Auth = () => {
               </div>
 
               {/* Auth Form */}
-              <AuthForm />
+              {authState.step === 'login' && <AuthForm onLogin={handleLogin} />}
+              {authState.step === 'mfa' && (
+                <MFAVerification
+                  onSuccess={handleMFAVerification}
+                  onCancel={handleMFACancel}
+                  userEmail={authState.userEmail}
+                />
+              )}
+              {authState.step === 'setup' && (
+                <MFASetup
+                  onComplete={handleMFASetupComplete}
+                  onSkip={handleMFACancel}
+                />
+              )}
             </div>
 
             {/* Footer */}

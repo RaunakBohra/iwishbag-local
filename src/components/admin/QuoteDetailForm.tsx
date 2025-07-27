@@ -53,7 +53,7 @@ interface QuoteDetailFormProps {
   onShowShippingDetails?: () => void;
   isEditingRoute?: boolean;
   onTriggerCalculation?: () => void; // ✅ NEW: For real-time calculations
-  taxCalculationMethod?: 'manual' | 'hsn_only' | 'country_based'; // ✅ NEW: For customs input enable/disable
+  taxCalculationMethod?: 'manual' | 'hsn_only' | 'route_based'; // ✅ NEW: For customs input enable/disable
 }
 
 export const QuoteDetailForm = ({

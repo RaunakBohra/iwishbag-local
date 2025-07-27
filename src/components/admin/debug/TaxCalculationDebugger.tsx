@@ -14,7 +14,7 @@ import { useAdminQuoteCurrency } from '@/hooks/useAdminQuoteCurrency';
 
 interface TaxCalculationDebuggerProps {
   quote: UnifiedQuote;
-  onMethodChange?: (method: 'manual' | 'hsn_only' | 'country_based') => void;
+  onMethodChange?: (method: 'manual' | 'hsn_only' | 'route_based') => void;
 }
 
 export const TaxCalculationDebugger: React.FC<TaxCalculationDebuggerProps> = ({
@@ -65,8 +65,8 @@ export const TaxCalculationDebugger: React.FC<TaxCalculationDebuggerProps> = ({
       taxBasis: 'Per-item HSN codes',
       description: 'Uses HSN-specific rates for each item'
     },
-    country_based: {
-      method: 'Country Tier',
+    route_based: {
+      method: 'Route Tier',
       customsRate: smartTierRate,
       customsAmount: cifTotal * (smartTierRate / 100),
       taxBasis: 'Country tier system',
@@ -225,19 +225,19 @@ export const TaxCalculationDebugger: React.FC<TaxCalculationDebuggerProps> = ({
                 <div className="font-medium text-green-900 mb-1">🌍 Country Method</div>
                 <div className="text-xs space-y-1">
                   <div>Source: Country tier system</div>
-                  <div>Tier Rate: <span className="font-mono">{calculations.country_based.customsRate}%</span></div>
+                  <div>Tier Rate: <span className="font-mono">{calculations.route_based.customsRate}%</span></div>
                   <div>CIF Basis: <span className="font-mono">{currencyDisplay.formatSingleAmount(cifTotal, 'origin')}</span></div>
-                  <div>Customs Amount: <span className="font-mono">{currencyDisplay.formatSingleAmount(calculations.country_based.customsAmount, 'origin')}</span></div>
-                  <div className="text-xs text-green-700 mt-1">{calculations.country_based.description}</div>
+                  <div>Customs Amount: <span className="font-mono">{currencyDisplay.formatSingleAmount(calculations.route_based.customsAmount, 'origin')}</span></div>
+                  <div className="text-xs text-green-700 mt-1">{calculations.route_based.description}</div>
                 </div>
                 {onMethodChange && (
                   <Button
                     size="sm"
-                    variant={currentMethod === 'country_based' ? 'default' : 'outline'}
-                    onClick={() => onMethodChange('country_based')}
+                    variant={currentMethod === 'route_based' ? 'default' : 'outline'}
+                    onClick={() => onMethodChange('route_based')}
                     className="w-full mt-2 h-6 text-xs"
                   >
-                    {currentMethod === 'country_based' ? 'Active' : 'Switch to Country'}
+                    {currentMethod === 'route_based' ? 'Active' : 'Switch to Route'}
                   </Button>
                 )}
               </div>

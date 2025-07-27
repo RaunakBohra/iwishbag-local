@@ -123,7 +123,7 @@ interface TaxCalculationContext {
   apply_exemptions?: boolean;
   calculation_date?: Date;
   // 2-tier tax system preferences
-  calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
+  calculation_method_preference?: 'manual' | 'hsn_only' | 'route_based';
   valuation_method_preference?:
     | 'auto'
     | 'product_value'
@@ -885,8 +885,8 @@ class PerItemTaxCalculator {
         // Use only HSN-specific rates
         baseRates = this.getHSNTaxRates(hsnData);
         break;
-      case 'country_based':
-        // Use only unified fallback rates (country-based)
+      case 'route_based':
+        // Use only unified fallback rates (route-based)
         baseRates = this.getUnifiedFallbackRates(unifiedTaxData);
         break;
       case 'manual':

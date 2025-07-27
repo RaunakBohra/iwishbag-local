@@ -42,6 +42,8 @@ import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { hsnWeightService } from '@/services/HSNWeightService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { taxRateService } from '@/services/TaxRateService';
+import { hsnTaxService } from '@/services/HSNTaxService';
+import { routeTierTaxService } from '@/services/RouteTierTaxService';
 import { supabase } from '@/integrations/supabase/client';
 import type { QuoteItem } from '@/types/unified-quote';
 
@@ -105,6 +107,59 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     manualDefault: number;
     countryVatRate: number;
   }>({ customsDefault: 10, manualDefault: 15, countryVatRate: 18 });
+  
+  // Add debug data state for real-time tax values
+  const [debugTaxData, setDebugTaxData] = useState<Record<string, {
+    hsnRates?: { customs: number; vat: number; sales_tax: number; };
+    routeRates?: { customs: number; vat: number; sales_tax: number; };
+  }>>({});
+
+  // Pre-fetch tax debug data for all items
+  useEffect(() => {
+    const fetchTaxDebugData = async () => {
+      if (!quote) return;
+      
+      const newDebugData: Record<string, any> = {};
+      
+      // Fetch route rates once for all items
+      const totalWeight = items.reduce((sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 0);
+      const itemsTotal = items.reduce((sum, item) => sum + (item.costprice_origin || item.price || 0) * (item.quantity || 1), 0);
+      
+      try {
+        const routeRates = await routeTierTaxService.getRouteTierTaxes(
+          quote.origin_country,
+          quote.destination_country,
+          itemsTotal,
+          totalWeight
+        );
+        
+        for (const item of items) {
+          const itemDebugData: any = { routeRates };
+          
+          // Fetch HSN rates if item has HSN code
+          if (item.hsn_code) {
+            try {
+              const hsnRates = await hsnTaxService.getHSNTaxRates(
+                item.hsn_code,
+                quote.destination_country
+              );
+              itemDebugData.hsnRates = hsnRates;
+            } catch (error) {
+              console.error(`Failed to fetch HSN rates for ${item.hsn_code}:`, error);
+            }
+          }
+          
+          newDebugData[item.id] = itemDebugData;
+        }
+        
+        setDebugTaxData(newDebugData);
+      } catch (error) {
+        console.error('Failed to fetch tax debug data:', error);
+      }
+    };
+    
+    fetchTaxDebugData();
+  }, [items, quote?.origin_country, quote?.destination_country]);
 
   // Pre-fetch weights for all items on mount
   useEffect(() => {
@@ -931,6 +986,106 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                 </button>
                               );
                             })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* DEBUG: Tax Values Preview */}
+                  <div className="px-6 py-2 bg-gray-50 border-b border-gray-100">
+                    <div className="text-xs space-y-2">
+                      <div className="font-medium text-gray-600 mb-1">🔍 Tax Debug Values - Live Data:</div>
+                      <div className="grid grid-cols-4 gap-3 text-[10px]">
+                        {/* HSN Method Debug */}
+                        <div className="bg-white p-2 rounded border">
+                          <div className="font-medium text-blue-600 mb-1">HSN Method</div>
+                          <div className="text-gray-600">
+                            {debugTaxData[item.id]?.hsnRates ? (
+                              <>
+                                <div>Customs: <span className="font-mono">{debugTaxData[item.id].hsnRates.customs}%</span></div>
+                                <div>VAT: <span className="font-mono">{debugTaxData[item.id].hsnRates.vat}%</span></div>
+                                <div>Sales Tax: <span className="font-mono">{debugTaxData[item.id].hsnRates.sales_tax}%</span></div>
+                                <div className="text-green-600 mt-1 font-medium">✅ HSN: {item.hsn_code}</div>
+                              </>
+                            ) : item.hsn_code ? (
+                              <div className="text-yellow-600">Loading HSN {item.hsn_code}...</div>
+                            ) : (
+                              <div className="text-red-500">No HSN Code</div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Route Method Debug */}
+                        <div className="bg-white p-2 rounded border">
+                          <div className="font-medium text-green-600 mb-1">Route Method</div>
+                          <div className="text-gray-600">
+                            {debugTaxData[item.id]?.routeRates ? (
+                              <>
+                                <div>Customs: <span className="font-mono">{debugTaxData[item.id].routeRates.customs}%</span></div>
+                                <div>VAT: <span className="font-mono">{debugTaxData[item.id].routeRates.vat}%</span></div>
+                                <div>Sales Tax: <span className="font-mono">{debugTaxData[item.id].routeRates.sales_tax}%</span></div>
+                                <div className="text-green-600 mt-1 font-medium">✅ Route: {quote?.origin_country}→{quote?.destination_country}</div>
+                              </>
+                            ) : (
+                              <div className="text-yellow-600">Loading route rates...</div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Manual Method Debug */}
+                        <div className="bg-white p-2 rounded border">
+                          <div className="font-medium text-orange-600 mb-1">Manual Method</div>
+                          <div className="text-gray-600">
+                            <div>Customs: <span className="font-mono">{item.tax_options?.manual?.rate || dynamicTaxRates.manualDefault}%</span> <span className="text-gray-400">(user)</span></div>
+                            {debugTaxData[item.id]?.routeRates ? (
+                              <>
+                                <div>VAT: <span className="font-mono">{debugTaxData[item.id].routeRates.vat}%</span> <span className="text-gray-400">(route)</span></div>
+                                <div>Sales Tax: <span className="font-mono">{debugTaxData[item.id].routeRates.sales_tax}%</span> <span className="text-gray-400">(route)</span></div>
+                                <div className="text-green-600 mt-1 font-medium">✅ Mixed Sources</div>
+                              </>
+                            ) : (
+                              <div className="text-yellow-600">Loading route for dest tax...</div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Current Active Method */}
+                        <div className="bg-blue-50 p-2 rounded border border-blue-200">
+                          <div className="font-medium text-blue-700 mb-1">🎯 Active: {(item.tax_method || 'hsn').toUpperCase()}</div>
+                          <div className="text-gray-700">
+                            {(() => {
+                              const method = item.tax_method || 'hsn';
+                              const itemDebug = debugTaxData[item.id];
+                              
+                              if (method === 'hsn' && itemDebug?.hsnRates) {
+                                return (
+                                  <>
+                                    <div>Customs: <span className="font-mono font-bold">{itemDebug.hsnRates.customs}%</span></div>
+                                    <div>Dest Tax: <span className="font-mono font-bold">{itemDebug.hsnRates.vat}%</span></div>
+                                    <div className="text-blue-600 mt-1 font-medium">← HSN Table</div>
+                                  </>
+                                );
+                              } else if (method === 'country' && itemDebug?.routeRates) {
+                                return (
+                                  <>
+                                    <div>Customs: <span className="font-mono font-bold">{itemDebug.routeRates.customs}%</span></div>
+                                    <div>Dest Tax: <span className="font-mono font-bold">{itemDebug.routeRates.vat}%</span></div>
+                                    <div className="text-blue-600 mt-1 font-medium">← Route</div>
+                                  </>
+                                );
+                              } else if (method === 'manual' && itemDebug?.routeRates) {
+                                return (
+                                  <>
+                                    <div>Customs: <span className="font-mono font-bold">{item.tax_options?.manual?.rate || dynamicTaxRates.manualDefault}%</span></div>
+                                    <div>Dest Tax: <span className="font-mono font-bold">{itemDebug.routeRates.vat}%</span></div>
+                                    <div className="text-blue-600 mt-1 font-medium">← Manual+Route</div>
+                                  </>
+                                );
+                              } else {
+                                return <div className="text-yellow-600">Loading {method} data...</div>;
+                              }
+                            })()}
                           </div>
                         </div>
                       </div>

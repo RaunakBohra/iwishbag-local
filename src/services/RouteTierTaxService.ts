@@ -74,7 +74,7 @@ class RouteTierTaxService {
       const cached = this.getFromCache(cacheKey);
       if (cached !== undefined) {
         console.log('💾 [ROUTE TIER] Using cached result for:', cacheKey);
-        transaction.setStatus('ok');
+        // transaction.setStatus('ok');
         return cached;
       }
 
@@ -97,14 +97,14 @@ class RouteTierTaxService {
       if (error) {
         console.error('❌ [ROUTE TIER] Query error:', error);
         Sentry.captureException(error);
-        transaction.setStatus('internal_error');
+        // transaction.setStatus('internal_error');
         this.setCache(cacheKey, null);
         return null;
       }
 
       if (!tiers || tiers.length === 0) {
         console.log('⚠️ [ROUTE TIER] No tiers found for route:', `${origin}→${destination}`);
-        transaction.setStatus('not_found');
+        // transaction.setStatus('not_found');
         this.setCache(cacheKey, null);
         return null;
       }
@@ -119,7 +119,7 @@ class RouteTierTaxService {
           totalWeight,
           tiersChecked: tiers.length,
         });
-        transaction.setStatus('no_match');
+        // transaction.setStatus('no_match');
         this.setCache(cacheKey, null);
         return null;
       }
@@ -143,16 +143,16 @@ class RouteTierTaxService {
 
       // Cache the result
       this.setCache(cacheKey, rates);
-      transaction.setStatus('ok');
+      // transaction.setStatus('ok');
       return rates;
 
     } catch (error) {
       console.error('❌ [ROUTE TIER] Unexpected error:', error);
       Sentry.captureException(error);
-      transaction.setStatus('internal_error');
+      // transaction.setStatus('internal_error');
       return null;
     } finally {
-      transaction.finish();
+      // transaction.finish();
     }
   }
 

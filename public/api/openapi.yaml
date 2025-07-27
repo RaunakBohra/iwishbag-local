@@ -1,0 +1,1303 @@
+openapi: 3.0.3
+info:
+  title: iwishBag API
+  description: |
+    Complete API for the iwishBag international shopping platform.
+    
+    ## Overview
+    The iwishBag API allows you to integrate with our quote-to-checkout flow for international shopping.
+    
+    ## Authentication
+    Most endpoints require authentication using an API key passed in the Authorization header:
+    ```
+    Authorization: Bearer YOUR_API_KEY
+    ```
+    
+    ## Rate Limiting
+    API requests are limited to:
+    - 1000 requests per hour for authenticated users
+    - 100 requests per hour for unauthenticated requests
+    
+    ## Versioning
+    The API uses semantic versioning. Current version is v1.1.
+    Legacy versions (v0.9) are deprecated and will be sunset on 2025-12-31.
+    
+  version: 1.1.0
+  contact:
+    name: iwishBag API Support
+    email: api@iwishbag.com
+    url: https://iwishbag.com/support
+  license:
+    name: Proprietary
+    url: https://iwishbag.com/terms
+
+servers:
+  - url: https://iwishbag.com/api/v1
+    description: Production server
+  - url: https://staging.iwishbag.com/api/v1
+    description: Staging server
+
+paths:
+  /quotes:
+    get:
+      summary: List quotes
+      description: Retrieve a paginated list of quotes with optional filtering
+      tags:
+        - Quotes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of quotes to return (max 100)
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          description: Number of quotes to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: status
+          in: query
+          description: Filter quotes by status
+          required: false
+          schema:
+            type: string
+            enum: [pending, sent, approved, rejected, paid, ordered, shipped, completed]
+        - name: user_id
+          in: query
+          description: Filter by user ID (admin only)
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          description: Search quotes by quote number or customer name
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Quote'
+                  total:
+                    type: integer
+                    description: Total number of quotes matching the criteria
+                  hasMore:
+                    type: boolean
+                    description: Whether there are more quotes to fetch
+                  version:
+                    type: string
+                    example: "v1.1"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    post:
+      summary: Create quote
+      description: Create a new quote request for international shopping
+      tags:
+        - Quotes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - shipping_country
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/QuoteItem'
+                  minItems: 1
+                  maxItems: 50
+                shipping_country:
+                  type: string
+                  pattern: '^[A-Z]{2}$'
+                  example: "NP"
+                  description: ISO 3166-1 alpha-2 country code
+                customer_data:
+                  $ref: '#/components/schemas/CustomerData'
+                special_instructions:
+                  type: string
+                  maxLength: 1000
+                  description: Special handling instructions
+      responses:
+        '201':
+          description: Quote created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /quotes/{id}:
+    get:
+      summary: Get quote details
+      description: Retrieve detailed information about a specific quote
+      tags:
+        - Quotes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Quote ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quote details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      summary: Update quote status
+      description: Update the status of a quote (admin only)
+      tags:
+        - Quotes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected, completed]
+                notes:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Quote updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders:
+    get:
+      summary: List orders
+      description: Retrieve user's order history
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, paid, ordered, shipped, delivered, cancelled]
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  total:
+                    type: integer
+
+  /orders/{id}:
+    get:
+      summary: Get order details
+      description: Retrieve detailed information about a specific order
+      tags:
+        - Orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetailed'
+
+  /tracking/{tracking_id}:
+    get:
+      summary: Track order
+      description: Get tracking information for an order using tracking ID
+      tags:
+        - Tracking
+      parameters:
+        - name: tracking_id
+          in: path
+          required: true
+          description: Tracking ID (format: IWB{YEAR}{SEQUENCE})
+          schema:
+            type: string
+            pattern: '^IWB\d{8}$'
+            example: "IWB20251001"
+      responses:
+        '200':
+          description: Tracking information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingInfo'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /customers:
+    get:
+      summary: List customers (Admin only)
+      description: Retrieve customer list with search and filtering
+      tags:
+        - Customers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          description: Search by name, email, or phone
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+                  total:
+                    type: integer
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /calculator/estimate:
+    post:
+      summary: Calculate shipping estimate
+      description: Calculate shipping costs, taxes, and total estimate for items
+      tags:
+        - Calculator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - shipping_country
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CalculatorItem'
+                  minItems: 1
+                  maxItems: 50
+                shipping_country:
+                  type: string
+                  pattern: '^[A-Z]{2}$'
+                  example: "NP"
+                shipping_route:
+                  type: string
+                  enum: [air_express, air_standard, sea_freight]
+                include_taxes:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Calculation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculationEstimate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /calculator/detailed:
+    post:
+      summary: Detailed calculation breakdown
+      description: Get comprehensive calculation with detailed fee breakdown and recommendations
+      tags:
+        - Calculator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+                - shipping_country
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DetailedCalculatorItem'
+                  minItems: 1
+                  maxItems: 50
+                shipping_country:
+                  type: string
+                  pattern: '^[A-Z]{2}$'
+                customer_tier:
+                  type: string
+                  enum: [new, regular, premium]
+                  default: new
+                currency:
+                  type: string
+                  pattern: '^[A-Z]{3}$'
+                  default: USD
+      responses:
+        '200':
+          description: Detailed calculation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedCalculation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /calculator/rates:
+    get:
+      summary: Get shipping rates and tax information
+      description: Retrieve current shipping rates and tax information for countries
+      tags:
+        - Calculator
+      parameters:
+        - name: from_country
+          in: query
+          description: Origin country code
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+            default: US
+        - name: to_country
+          in: query
+          required: true
+          description: Destination country code
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+        - name: category
+          in: query
+          description: Product category for specific rates
+          schema:
+            type: string
+            enum: [electronics, clothing, books, jewelry, other]
+      responses:
+        '200':
+          description: Current rates and taxes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatesInfo'
+
+  /calculator/bulk:
+    post:
+      summary: Bulk calculation
+      description: Calculate costs for multiple item sets simultaneously
+      tags:
+        - Calculator
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - calculations
+              properties:
+                calculations:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - items
+                      - shipping_country
+                    properties:
+                      id:
+                        type: string
+                        description: Unique identifier for this calculation
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CalculatorItem'
+                      shipping_country:
+                        type: string
+                        pattern: '^[A-Z]{2}$'
+                  minItems: 1
+                  maxItems: 10
+                customer_id:
+                  type: string
+                  format: uuid
+                save_results:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Bulk calculation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkCalculationResult'
+
+  /calculator/hsn-lookup:
+    get:
+      summary: HSN code lookup
+      description: Look up HSN codes and tax rates for products
+      tags:
+        - Calculator
+      parameters:
+        - name: product_name
+          in: query
+          description: Product name for HSN suggestion
+          schema:
+            type: string
+            maxLength: 200
+        - name: category
+          in: query
+          description: Product category
+          schema:
+            type: string
+            enum: [electronics, clothing, books, jewelry, cosmetics, food, other]
+        - name: hsn_code
+          in: query
+          description: Specific HSN code to look up
+          schema:
+            type: string
+            pattern: '^[0-9]{4,8}$'
+        - name: country
+          in: query
+          description: Destination country for tax rates
+          schema:
+            type: string
+            pattern: '^[A-Z]{2}$'
+      responses:
+        '200':
+          description: HSN suggestions and tax information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HSNLookupResult'
+
+  /webhooks/quote-status:
+    post:
+      summary: Quote status webhook
+      description: Webhook endpoint for quote status updates
+      tags:
+        - Webhooks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quote_id
+                - status
+                - timestamp
+              properties:
+                quote_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [pending, sent, approved, rejected, paid, ordered, shipped, completed]
+                timestamp:
+                  type: string
+                  format: date-time
+                data:
+                  type: object
+                  description: Additional status-specific data
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: API key obtained from admin dashboard
+
+  schemas:
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quote_number:
+          type: string
+          example: "IWB-2025-001"
+        status:
+          type: string
+          enum: [pending, sent, approved, rejected, paid, ordered, shipped, completed]
+        total_amount:
+          type: number
+          format: decimal
+          example: 150.50
+        currency:
+          type: string
+          example: "USD"
+        shipping_fee:
+          type: number
+          format: decimal
+        tax_amount:
+          type: number
+          format: decimal
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    QuoteDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Quote'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuoteItem'
+            customer_data:
+              $ref: '#/components/schemas/CustomerData'
+            calculation_data:
+              type: object
+              description: Detailed breakdown of costs
+            tracking_id:
+              type: string
+              example: "IWB20251001"
+
+    QuoteItem:
+      type: object
+      required:
+        - name
+        - price_usd
+        - quantity
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          example: "Wireless Bluetooth Headphones"
+        price_usd:
+          type: number
+          format: decimal
+          minimum: 0.01
+          example: 99.99
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 1
+        weight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Weight in kilograms
+          example: 0.5
+        url:
+          type: string
+          format: uri
+          maxLength: 2000
+          example: "https://example.com/product/headphones"
+        description:
+          type: string
+          maxLength: 1000
+        image_url:
+          type: string
+          format: uri
+        hsn_code:
+          type: string
+          pattern: '^[0-9]{4,8}$'
+          example: "8518"
+
+    CustomerData:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            postal_code:
+              type: string
+            country:
+              type: string
+              pattern: '^[A-Z]{2}$'
+
+    QuoteResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quote_number:
+          type: string
+        status:
+          type: string
+          enum: [pending]
+        estimated_total:
+          type: number
+          format: decimal
+        message:
+          type: string
+          example: "Quote created successfully. You will receive an email when it's ready."
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quote_id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        status:
+          type: string
+          enum: [pending, paid, ordered, shipped, delivered, cancelled]
+        total_amount:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        tracking_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OrderDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuoteItem'
+            customer_data:
+              $ref: '#/components/schemas/CustomerData'
+            payment_data:
+              type: object
+              description: Payment information
+            shipping_data:
+              type: object
+              description: Shipping information
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        total_orders:
+          type: integer
+        total_spent:
+          type: number
+          format: decimal
+
+    TrackingInfo:
+      type: object
+      properties:
+        tracking_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, preparing, shipped, in_transit, delivered]
+        estimated_delivery:
+          type: string
+          format: date
+        updates:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+              location:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+              description:
+                type: string
+
+    CalculatorItem:
+      type: object
+      required:
+        - name
+        - price_usd
+        - quantity
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          example: "iPhone 15"
+        price_usd:
+          type: number
+          format: decimal
+          minimum: 0.01
+          example: 999.99
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 1
+        weight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Weight in kilograms
+          example: 0.2
+        category:
+          type: string
+          enum: [electronics, clothing, books, jewelry, cosmetics, food, other]
+          example: "electronics"
+        hsn_code:
+          type: string
+          pattern: '^[0-9]{4,8}$'
+          example: "8517"
+
+    DetailedCalculatorItem:
+      allOf:
+        - $ref: '#/components/schemas/CalculatorItem'
+        - type: object
+          properties:
+            dimensions:
+              type: object
+              properties:
+                length:
+                  type: number
+                  description: Length in cm
+                width:
+                  type: number
+                  description: Width in cm
+                height:
+                  type: number
+                  description: Height in cm
+            url:
+              type: string
+              format: uri
+              maxLength: 2000
+            description:
+              type: string
+              maxLength: 1000
+            brand:
+              type: string
+              maxLength: 100
+
+    CalculationEstimate:
+      type: object
+      properties:
+        calculation_id:
+          type: string
+          example: "calc_abc123"
+        total_estimate:
+          type: number
+          format: decimal
+          example: 1245.50
+        breakdown:
+          type: object
+          properties:
+            item_cost:
+              type: number
+              format: decimal
+            shipping_fee:
+              type: number
+              format: decimal
+            customs_duty:
+              type: number
+              format: decimal
+            tax_amount:
+              type: number
+              format: decimal
+            service_fee:
+              type: number
+              format: decimal
+        currency:
+          type: string
+          example: "USD"
+        expires_at:
+          type: string
+          format: date-time
+
+    DetailedCalculation:
+      type: object
+      properties:
+        calculation_id:
+          type: string
+        total_estimate:
+          type: number
+          format: decimal
+        currency:
+          type: string
+        detailed_breakdown:
+          type: object
+          properties:
+            item_costs:
+              type: array
+              items:
+                type: object
+                properties:
+                  item_name:
+                    type: string
+                  base_price_usd:
+                    type: number
+                    format: decimal
+                  base_price_display:
+                    type: number
+                    format: decimal
+                  quantity:
+                    type: integer
+                  subtotal:
+                    type: number
+                    format: decimal
+            shipping:
+              type: object
+              properties:
+                base_fee:
+                  type: number
+                  format: decimal
+                weight_fee:
+                  type: number
+                  format: decimal
+                dimensional_weight:
+                  type: number
+                  format: decimal
+                total_shipping:
+                  type: number
+                  format: decimal
+            customs_taxes:
+              type: object
+              properties:
+                customs_duty_rate:
+                  type: number
+                customs_duty:
+                  type: number
+                  format: decimal
+                gst_rate:
+                  type: number
+                gst_amount:
+                  type: number
+                  format: decimal
+                total_taxes:
+                  type: number
+                  format: decimal
+            service_fees:
+              type: object
+              properties:
+                processing_fee:
+                  type: number
+                  format: decimal
+                premium_discount:
+                  type: number
+                  format: decimal
+                total_service:
+                  type: number
+                  format: decimal
+            insurance:
+              type: object
+              properties:
+                coverage_amount:
+                  type: number
+                  format: decimal
+                premium_rate:
+                  type: number
+                cost:
+                  type: number
+                  format: decimal
+        recommendations:
+          type: array
+          items:
+            type: string
+        delivery_estimate:
+          type: string
+          example: "7-10 business days"
+        expires_at:
+          type: string
+          format: date-time
+
+    RatesInfo:
+      type: object
+      properties:
+        shipping_rates:
+          type: object
+          properties:
+            air:
+              type: object
+              properties:
+                base_rate:
+                  type: number
+                  format: decimal
+                per_kg:
+                  type: number
+                  format: decimal
+                min_charge:
+                  type: number
+                  format: decimal
+            sea:
+              type: object
+              properties:
+                base_rate:
+                  type: number
+                  format: decimal
+                per_kg:
+                  type: number
+                  format: decimal
+                min_charge:
+                  type: number
+                  format: decimal
+            express:
+              type: object
+              properties:
+                base_rate:
+                  type: number
+                  format: decimal
+                per_kg:
+                  type: number
+                  format: decimal
+                min_charge:
+                  type: number
+                  format: decimal
+        tax_rates:
+          type: object
+          properties:
+            customs_duty:
+              type: object
+              properties:
+                min:
+                  type: number
+                max:
+                  type: number
+                typical:
+                  type: number
+            gst:
+              type: number
+            additional_cess:
+              type: number
+        available_routes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              delivery_days:
+                type: string
+        currency:
+          type: string
+        last_updated:
+          type: string
+          format: date-time
+
+    BulkCalculationResult:
+      type: object
+      properties:
+        bulk_id:
+          type: string
+          example: "bulk_xyz789"
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              total_estimate:
+                type: number
+                format: decimal
+              status:
+                type: string
+                enum: [success, error]
+              error_message:
+                type: string
+        summary:
+          type: object
+          properties:
+            total_calculations:
+              type: integer
+            successful:
+              type: integer
+            failed:
+              type: integer
+            total_value:
+              type: number
+              format: decimal
+        expires_at:
+          type: string
+          format: date-time
+
+    HSNLookupResult:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              hsn_code:
+                type: string
+              description:
+                type: string
+              confidence:
+                type: number
+                format: decimal
+                minimum: 0
+                maximum: 1
+              tax_rates:
+                type: object
+                properties:
+                  customs_duty:
+                    type: number
+                  gst:
+                    type: number
+                  additional_cess:
+                    type: number
+        tax_info:
+          type: object
+          properties:
+            effective_rate:
+              type: number
+              format: decimal
+            breakdown:
+              type: string
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Bad Request"
+            message: "Invalid request format"
+            code: "INVALID_REQUEST"
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Unauthorized"
+            message: "Invalid or missing API key"
+            code: "INVALID_AUTH"
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Forbidden"
+            message: "Insufficient permissions"
+            code: "INSUFFICIENT_PERMISSIONS"
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Not Found"
+            message: "Resource not found"
+            code: "RESOURCE_NOT_FOUND"
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Rate Limit Exceeded"
+            message: "Too many requests. Please try again later."
+            code: "RATE_LIMIT_EXCEEDED"
+      headers:
+        X-RateLimit-Limit:
+          description: Request limit per hour
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Time when rate limit resets (Unix timestamp)
+          schema:
+            type: integer
+
+tags:
+  - name: Quotes
+    description: Quote request and management operations
+  - name: Orders
+    description: Order processing and tracking
+  - name: Calculator
+    description: Shipping cost calculation and estimation APIs
+  - name: Customers
+    description: Customer management (Admin only)
+  - name: Tracking
+    description: Order tracking and status
+  - name: Webhooks
+    description: Webhook endpoints for real-time updates
