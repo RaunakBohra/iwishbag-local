@@ -32,6 +32,7 @@ import { currencyService } from '@/services/CurrencyService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
 import { unifiedDataEngine, type HSNMasterRecord } from '@/services/UnifiedDataEngine';
+import { smartQuoteCacheService } from '@/services/SmartQuoteCacheService';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Package,
@@ -3294,36 +3295,58 @@ export default function UnifiedQuoteOrderSystem({
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Save Changes
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={async () => {
-                      setIsRecalculating(true);
-                      try {
-                        await recalculateQuote(items);
-                        toast({
-                          title: "Recalculated",
-                          description: "Quote has been recalculated with latest rates."
-                        });
-                      } catch (error) {
-                        toast({
-                          title: "Recalculation Failed",
-                          description: "Failed to recalculate quote. Please try again.",
-                          variant: "destructive"
-                        });
-                      } finally {
-                        setIsRecalculating(false);
-                      }
-                    }}
-                    disabled={isRecalculating}
-                  >
-                    {isRecalculating ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                    )}
-                    Recalculate
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={async () => {
+                        setIsRecalculating(true);
+                        try {
+                          await recalculateQuote(items);
+                          toast({
+                            title: "Recalculated",
+                            description: "Quote has been recalculated with latest rates."
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Recalculation Failed",
+                            description: "Failed to recalculate quote. Please try again.",
+                            variant: "destructive"
+                          });
+                        } finally {
+                          setIsRecalculating(false);
+                        }
+                      }}
+                      disabled={isRecalculating}
+                    >
+                      {isRecalculating ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                      )}
+                      Recalculate
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={async () => {
+                        try {
+                          await smartQuoteCacheService.clearAllCaches();
+                          toast({
+                            title: "Cache Cleared",
+                            description: "All calculation caches have been cleared."
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Cache Clear Failed",
+                            description: "Failed to clear cache. Please try again.",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Clear Cache
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
