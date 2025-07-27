@@ -336,6 +336,7 @@ export default function ProductInfoStep({
       
       if (result.success && result.data) {
         const productData = result.data;
+        console.log('Auto-fill received product data:', productData);
         
         // Auto-fill the fields
         if (productData.title && !products[productIndex].title) {
@@ -346,12 +347,12 @@ export default function ProductInfoStep({
           updateProduct(productIndex, 'price', productData.price.toString());
         }
         
-        if (productData.weight && !products[productIndex].weight) {
-          // If we have raw weight data, display it, otherwise use the kg value
-          if (productData.weight_raw && productData.weight_unit && productData.weight_unit !== 'kg') {
-            updateProduct(productIndex, 'weight', productData.weight_raw);
-          } else {
-            updateProduct(productIndex, 'weight', productData.weight.toFixed(2));
+        if ((productData.weight || productData.weight_value) && !products[productIndex].weight) {
+          // Always use the kg value since the input field expects a number
+          // The weight input is type="number" and expects kg values
+          const weightInKg = productData.weight || productData.weight_value;
+          if (weightInKg && typeof weightInKg === 'number') {
+            updateProduct(productIndex, 'weight', weightInKg.toFixed(2));
           }
         }
         

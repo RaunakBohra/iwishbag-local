@@ -241,11 +241,15 @@ async function scrapeAmazonWithScrapeAPI(url: string, apiKey: string) {
 function extractAmazonDataFromScrapeAPI(data: Record<string, unknown>, url: string) {
   // ScrapeAPI Amazon returns structured data
   const product = data.result || data;
+  const weightData = extractAmazonWeightFromScrapeAPI(product);
 
   return {
     title: product.title || product.name || 'Amazon Product (Title not found)',
     price: extractAmazonPriceFromScrapeAPI(product),
-    weight: extractAmazonWeightFromScrapeAPI(product),
+    weight: weightData?.kg || 0.5,
+    weight_value: weightData?.value || 0.5,
+    weight_unit: weightData?.unit || 'kg',
+    weight_raw: weightData?.raw || '0.5 kg',
     images: product.images || product.image_urls || [],
     availability: product.availability || (product.in_stock ? 'In Stock' : 'Unknown'),
     category: detectCategory(product.title || product.name, 'amazon.com'),
@@ -280,7 +284,7 @@ function extractAmazonPriceFromScrapeAPI(product: Record<string, unknown>): numb
   return 0;
 }
 
-function extractAmazonWeightFromScrapeAPI(product: Record<string, unknown>): number {
+function extractAmazonWeightFromScrapeAPI(product: Record<string, unknown>): WeightData | null {
   // Try different Amazon weight fields
   const weightFields = [
     product.weight,
@@ -291,32 +295,21 @@ function extractAmazonWeightFromScrapeAPI(product: Record<string, unknown>): num
   ];
 
   for (const weight of weightFields) {
-    if (weight && typeof weight === 'number') {
-      return weight;
-    }
-    if (weight && typeof weight === 'string') {
-      // Parse weight strings like "1.2 lbs", "500g", etc.
-      const weightMatch = weight.match(
-        /(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?|g|grams?|kg|kilograms?)/i,
-      );
-      if (weightMatch) {
-        const value = parseFloat(weightMatch[1]);
-        const unit = weightMatch[2].toLowerCase();
-
-        if (unit.includes('ounce')) {
-          return value * 0.0283495; // Convert to kg
-        } else if (unit.includes('lb') || unit.includes('pound')) {
-          return value * 0.453592; // Convert to kg
-        } else if (unit.includes('g') || unit.includes('gram')) {
-          return value / 1000; // Convert to kg
-        } else if (unit.includes('kg')) {
-          return value;
-        }
+    if (weight) {
+      const weightData = extractWeightFromValue(weight);
+      if (weightData) {
+        return weightData;
       }
     }
   }
 
-  return 0.5; // Default weight
+  // Return default weight if nothing found
+  return {
+    value: 0.5,
+    unit: 'kg',
+    raw: '0.5 kg',
+    kg: 0.5
+  };
 }
 
 function extractProductDataFromScrapeAPI(data: Record<string, unknown>, website: string) {
