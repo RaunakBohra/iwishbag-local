@@ -430,7 +430,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   const [hsnCategoryData, hsnWeightData, mlWeightData] = await Promise.all([
                                     supabase
                                       .from('hsn_master')
-                                      .select('category')
+                                      .select('category, minimum_valuation_usd, tax_data')
                                       .eq('hsn_code', hsnCode)
                                       .single(),
                                     hsnWeightService.getHSNWeight(hsnCode),
@@ -445,14 +445,25 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                     }));
                                   }
 
+                                  // Extract tax rate from HSN data
+                                  let hsnTaxRate = 18; // Default
+                                  if (hsnCategoryData.data?.tax_data?.typical_rates?.customs?.common) {
+                                    hsnTaxRate = hsnCategoryData.data.tax_data.typical_rates.customs.common;
+                                  }
+
                                   // Create comprehensive update with all data in single call
                                   const comprehensiveUpdate = {
                                     hsn_code: hsnCode,
                                     category: hsnCategoryData.data?.category || '',
+                                    minimum_valuation_usd: hsnCategoryData.data?.minimum_valuation_usd || 0,
                                     weight_options: {
                                       ...item.weight_options,
                                       hsn: hsnWeightData?.average || undefined,
                                       ml: mlWeightData?.estimated_weight || item.weight_options?.ml
+                                    },
+                                    tax_options: {
+                                      ...item.tax_options,
+                                      hsn: { rate: hsnTaxRate, amount: 0 }
                                     }
                                   };
 
@@ -773,6 +784,12 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                 country: Globe, 
                                 manual: Settings 
                               };
+                              const labels = {
+                                customs: 'Customs',
+                                hsn: 'HSN',
+                                country: 'Route',
+                                manual: 'Manual'
+                              };
                               const IconComponent = icons[method as keyof typeof icons];
                               
                               // Get tax rate for display
@@ -783,7 +800,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                 return (
                                   <div key={method} className="flex items-center gap-1">
                                     <Settings className="h-3 w-3 text-gray-500" />
-                                    <span className="capitalize text-[11px]">Manual</span>
+                                    <span className="text-[11px]">Manual</span>
                                     <Input
                                       type="number"
                                       step="0.1"
@@ -846,7 +863,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   )}
                                 >
                                   <IconComponent className="h-3 w-3" />
-                                  <span className="capitalize">{method}</span>
+                                  <span className="capitalize">{labels[method as keyof typeof labels]}</span>
                                   <span className="font-mono">{taxRate}%</span>
                                 </button>
                               );

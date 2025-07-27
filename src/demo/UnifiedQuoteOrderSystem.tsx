@@ -192,6 +192,7 @@ export default function UnifiedQuoteOrderSystem({
       weight,
       hsn_code: item.hsn_code || '',
       category: item.category || '',
+      tax_method: item.tax_method || 'hsn',
       valuation_method: item.valuation_method || 'actual_price',
       minimum_valuation_usd: safeNumber(item.minimum_valuation_usd),
       actual_price: safeNumber(item.actual_price || item.price),
@@ -341,11 +342,11 @@ export default function UnifiedQuoteOrderSystem({
                            quote?.tax_rates?.customs ||
                            quote?.operational_data?.customs?.percentage || 
                            0;
-  const customsAmount = quote?.customs || // From transformed data
+  const extractedCustomsAmount = quote?.customs || // From transformed data
                        itemLevelCustoms || // From item-level calculations
                        quote?.calculation_data?.breakdown?.customs || 0;
                        
-  const salesTaxAmount = quote?.sales_tax || // From transformed data
+  const extractedSalesTaxAmount = quote?.sales_tax || // From transformed data
                         itemLevelSalesTax || // From item-level calculations
                         quote?.calculation_data?.breakdown?.sales_tax || 0;
                         
@@ -353,7 +354,7 @@ export default function UnifiedQuoteOrderSystem({
                             quote?.tax_rates?.destination_tax ||
                             quote?.calculation_data?.breakdown?.destination_tax_rate || 
                             13; // Default 13% VAT for Nepal
-  const destinationTaxAmount = quote?.destination_tax || // From transformed data
+  const extractedDestinationTaxAmount = quote?.destination_tax || // From transformed data
                               itemLevelDestinationTax || // From item-level calculations
                               quote?.calculation_data?.breakdown?.destination_tax || 0;
   
@@ -367,9 +368,9 @@ export default function UnifiedQuoteOrderSystem({
       destination_tax: itemLevelDestinationTax
     },
     final_amounts: {
-      customs: customsAmount,
-      sales_tax: salesTaxAmount,
-      destination_tax: destinationTaxAmount
+      customs: extractedCustomsAmount,
+      sales_tax: extractedSalesTaxAmount,
+      destination_tax: extractedDestinationTaxAmount
     },
     rates: {
       customs_percentage: customsPercentage,
@@ -384,8 +385,8 @@ export default function UnifiedQuoteOrderSystem({
                             safeNumber(handlingAmount) +
                             safeNumber(insuranceAmount) +
                             safeNumber(salesTaxAmount) +
-                            customsAmount +
-                            destinationTaxAmount;
+                            extractedCustomsAmount +
+                            extractedDestinationTaxAmount;
   const gatewayFee = (subtotalForGateway * 0.029) + 0.30;
 
   // Check if we're in order mode
@@ -3382,9 +3383,9 @@ export default function UnifiedQuoteOrderSystem({
               hasCalculationData: !!quote?.calculation_data,
               calculationData: quote?.calculation_data,
               customsPercentage,
-              customsAmount,
+              customsAmount: extractedCustomsAmount,
               destinationTaxRate,
-              destinationTaxAmount
+              destinationTaxAmount: extractedDestinationTaxAmount
             })}
             {quote?.calculation_data && (
               <Card className="mt-4 border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
@@ -3425,7 +3426,7 @@ export default function UnifiedQuoteOrderSystem({
                       )}
                       <div>CIF Value: Base + Shipping (${internationalShipping.toFixed(2)}) + Insurance (${insuranceAmount.toFixed(2)})</div>
                       <div>Customs %: {customsPercentage}%</div>
-                      <div className="font-medium text-orange-600">= ${customsAmount.toFixed(2)}</div>
+                      <div className="font-medium text-orange-600">= ${extractedCustomsAmount.toFixed(2)}</div>
                     </div>
                   </div>
                   
@@ -3459,7 +3460,7 @@ export default function UnifiedQuoteOrderSystem({
                   <div className="border-t pt-2 space-y-1 text-xs font-medium">
                     <div className="flex justify-between text-orange-600">
                       <span>Total Customs:</span>
-                      <span>${customsAmount.toFixed(2)}</span>
+                      <span>${extractedCustomsAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-indigo-600">
                       <span>Total Sales Tax:</span>
@@ -3471,7 +3472,7 @@ export default function UnifiedQuoteOrderSystem({
                     </div>
                     <div className="flex justify-between text-purple-700 text-sm pt-1 border-t">
                       <span>Total All Taxes:</span>
-                      <span>${(customsAmount + salesTaxAmount + (quote.calculation_data.breakdown?.destination_tax || 0)).toFixed(2)}</span>
+                      <span>${(extractedCustomsAmount + salesTaxAmount + (quote.calculation_data.breakdown?.destination_tax || 0)).toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -3484,7 +3485,7 @@ export default function UnifiedQuoteOrderSystem({
                           quote.calculation_data.breakdown.items_total +
                           quote.calculation_data.breakdown.shipping +
                           domesticShipping +
-                          customsAmount +
+                          extractedCustomsAmount +
                           salesTaxAmount +
                           (quote.calculation_data.breakdown.destination_tax || 0) +
                           handlingAmount +
@@ -3561,7 +3562,7 @@ export default function UnifiedQuoteOrderSystem({
                           <div>Base: ${items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)} (actual)</div>
                           <div>CIF Value: Base + Shipping (${internationalShipping.toFixed(2)}) + Insurance (${insuranceAmount.toFixed(2)})</div>
                           <div>Customs Rate: {customsPercentage}%</div>
-                          <div className="font-medium text-orange-600">Customs Amount: ${customsAmount.toFixed(2)}</div>
+                          <div className="font-medium text-orange-600">Customs Amount: ${extractedCustomsAmount.toFixed(2)}</div>
                         </div>
                       </div>
                       
@@ -3599,25 +3600,25 @@ export default function UnifiedQuoteOrderSystem({
                       )}
                       
                       {/* Sales Tax Detail (US→NP only) */}
-                      {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && salesTaxAmount > 0 && (
+                      {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && extractedSalesTaxAmount > 0 && (
                         <div className="border-l-2 border-indigo-200 pl-3">
                           <div className="font-medium text-indigo-700 mb-1">Sales Tax (Origin)</div>
                           <div className="space-y-1 text-xs text-gray-600">
                             <div>Route: {quote.origin_country}→{quote.destination_country}</div>
-                            <div>Sales Tax: ${salesTaxAmount.toFixed(2)}</div>
+                            <div>Sales Tax: ${extractedSalesTaxAmount.toFixed(2)}</div>
                             <div className="text-indigo-600 font-medium">Applied to items first</div>
                           </div>
                         </div>
                       )}
                       
                       {/* Destination Tax Detail */}
-                      {destinationTaxAmount > 0 && (
+                      {extractedDestinationTaxAmount > 0 && (
                         <div className="border-l-2 border-green-200 pl-3">
                           <div className="font-medium text-green-700 mb-1">Destination Tax (VAT/GST)</div>
                           <div className="space-y-1 text-xs text-gray-600">
                             <div>Country: {quote.destination_country}</div>
                             <div>VAT/GST Rate: {destinationTaxRate.toFixed(1)}%</div>
-                            <div className="font-medium text-green-600">VAT/GST Amount: ${destinationTaxAmount.toFixed(2)}</div>
+                            <div className="font-medium text-green-600">VAT/GST Amount: ${extractedDestinationTaxAmount.toFixed(2)}</div>
                           </div>
                         </div>
                       )}
@@ -3637,7 +3638,7 @@ export default function UnifiedQuoteOrderSystem({
                         <div className="font-medium text-gray-700">Summary Totals</div>
                         <div className="flex justify-between">
                           <span>Total Customs:</span>
-                          <span className="font-medium">${customsAmount.toFixed(2)}</span>
+                          <span className="font-medium">${extractedCustomsAmount.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Total Sales Tax:</span>
@@ -3645,11 +3646,11 @@ export default function UnifiedQuoteOrderSystem({
                         </div>
                         <div className="flex justify-between">
                           <span>Total VAT/GST:</span>
-                          <span className="font-medium">${destinationTaxAmount.toFixed(2)}</span>
+                          <span className="font-medium">${extractedDestinationTaxAmount.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between border-t pt-1">
                           <span className="font-medium">Total All Taxes:</span>
-                          <span className="font-bold text-purple-600">${(customsAmount + salesTaxAmount + destinationTaxAmount).toFixed(2)}</span>
+                          <span className="font-bold text-purple-600">${(extractedCustomsAmount + salesTaxAmount + extractedDestinationTaxAmount).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>

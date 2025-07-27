@@ -1623,10 +1623,123 @@ export class SmartCalculationEngine {
       customsAmount = cifValue * (customsPercentage / 100);
     }
 
-    // ✅ ENHANCED: Integrate tax services based on calculation method
+    // ✅ ENHANCED: Per-item tax calculation based on individual tax methods
     const taxMethod = quote.calculation_method_preference || 'hsn';
     
-    if (taxMethod === 'hsn' && !hsnTaxSummary) {
+    // Check if we should use per-item tax methods
+    const itemTaxMethods = quote.items.map(item => item.tax_method || 'hsn');
+    const hasMultipleTaxMethods = new Set(itemTaxMethods).size > 1;
+    const shouldUsePerItemTaxes = hasMultipleTaxMethods || itemTaxMethods.some(method => method !== 'hsn');
+    
+    if (shouldUsePerItemTaxes && !hsnTaxSummary) {
+      // NEW: Calculate taxes per item based on each item's tax method
+      console.log('[TAX SERVICE] Using per-item tax methods for calculation');
+      
+      let perItemCustomsTotal = 0;
+      let perItemSalesTaxTotal = 0;
+      let perItemVatTotal = 0;
+      const itemBreakdowns: any[] = [];
+      
+      // Get route rates once for items using route method
+      const totalWeight = quote.items.reduce(
+        (sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 
+        0
+      );
+      const routeRates = await routeTierTaxService.getRouteTierTaxes(
+        quote.origin_country,
+        quote.destination_country,
+        itemsTotal,
+        totalWeight
+      );
+      
+      for (const item of quote.items) {
+        const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+        const itemTaxMethod = item.tax_method || 'hsn';
+        let itemCustomsRate = 0;
+        let itemSalesTaxRate = 0;
+        let itemVatRate = 0;
+        
+        console.log(`[PER-ITEM TAX] Processing item ${item.id} with method: ${itemTaxMethod}`);
+        
+        if (itemTaxMethod === 'hsn' && item.hsn_code) {
+          // HSN method for this item
+          const hsnRates = await hsnTaxService.getHSNTaxRates(
+            item.hsn_code,
+            quote.destination_country
+          );
+          
+          if (hsnRates) {
+            itemCustomsRate = hsnRates.customs;
+            itemSalesTaxRate = hsnRates.sales_tax;
+            itemVatRate = hsnRates.vat;
+          }
+        } else if (itemTaxMethod === 'country' && routeRates) {
+          // Route/Country method for this item
+          itemCustomsRate = routeRates.customs;
+          itemSalesTaxRate = routeRates.sales_tax;
+          itemVatRate = routeRates.vat;
+        } else if (itemTaxMethod === 'manual') {
+          // Manual method - use item's tax_options if available
+          itemCustomsRate = item.tax_options?.manual?.rate || 18;
+          itemSalesTaxRate = 0; // Manual doesn't set sales tax
+          itemVatRate = 0; // Manual doesn't set VAT
+        } else if (itemTaxMethod === 'customs') {
+          // Customs method - use default customs rate
+          itemCustomsRate = quote.operational_data?.customs?.percentage || 10;
+          itemSalesTaxRate = 0;
+          itemVatRate = 0;
+        }
+        
+        // Calculate item taxes
+        const itemCustoms = (itemValue * itemCustomsRate) / 100;
+        const itemSalesTax = (itemValue * itemSalesTaxRate) / 100;
+        const itemVat = (itemValue * itemVatRate) / 100;
+        
+        perItemCustomsTotal += itemCustoms;
+        perItemSalesTaxTotal += itemSalesTax;
+        perItemVatTotal += itemVat;
+        
+        // Store item breakdown
+        itemBreakdowns.push({
+          item_id: item.id,
+          item_name: item.name,
+          tax_method: itemTaxMethod,
+          customs_rate: itemCustomsRate,
+          customs: itemCustoms,
+          sales_tax: itemSalesTax,
+          destination_tax: itemVat,
+          total_taxes: itemCustoms + itemSalesTax + itemVat
+        });
+      }
+      
+      // Apply per-item calculated rates
+      if (perItemCustomsTotal > 0) {
+        customsPercentage = (perItemCustomsTotal / itemsTotal) * 100;
+        customsAmount = perItemCustomsTotal;
+      }
+      
+      // Sales tax only for US→NP route
+      const route = `${quote.origin_country}-${quote.destination_country}`;
+      if (route === 'US-NP' && perItemSalesTaxTotal > 0) {
+        localTaxesAmount = perItemSalesTaxTotal;
+      } else {
+        localTaxesAmount = quote.calculation_data?.sales_tax_price || 0;
+      }
+      
+      // Store item breakdowns in calculation data
+      quote.calculation_data = {
+        ...quote.calculation_data,
+        item_breakdowns: itemBreakdowns
+      };
+      
+      console.log('[PER-ITEM TAX] Calculation complete:', {
+        total_customs: perItemCustomsTotal,
+        total_sales_tax: perItemSalesTaxTotal,
+        total_vat: perItemVatTotal,
+        item_count: itemBreakdowns.length
+      });
+      
+    } else if (taxMethod === 'hsn' && !hsnTaxSummary) {
       // HSN method: Use HSN Tax Service for tax rates
       console.log('[TAX SERVICE] Using HSN Tax Service for tax calculations');
       
