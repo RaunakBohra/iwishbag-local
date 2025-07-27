@@ -1704,13 +1704,53 @@ export class SmartCalculationEngine {
     
     console.log(`[VALUATION ASYNC] Product total: ${itemsTotal} (unchanged), Customs basis: ${customsCalculationBase} (method: ${valuationMethod})`);
 
+    // ✅ NEW: Calculate purchase tax (sales tax at origin) first
+    let purchaseTaxAmount = 0;
+    let actualItemCost = itemsTotal; // Will be updated with purchase tax
+    let paymentGatewayFee = 0; // Declare early to use throughout
+    
+    // Get route data to check for origin sales tax
+    const totalWeight = quote.items.reduce((sum, item) => sum + (item.weight || 0) * (item.quantity || 1), 0);
+    const routeRates = await routeTierTaxService.getRouteTierTaxes(
+      quote.origin_country,
+      quote.destination_country,
+      itemsTotal,
+      totalWeight
+    );
+    
+    if (routeRates && routeRates.sales_tax > 0) {
+      purchaseTaxAmount = (itemsTotal * routeRates.sales_tax) / 100;
+      actualItemCost = itemsTotal + purchaseTaxAmount;
+      console.log(`[PURCHASE TAX] Applied ${routeRates.sales_tax}% sales tax:`, {
+        route: `${quote.origin_country}→${quote.destination_country}`,
+        items_total: itemsTotal,
+        purchase_tax_rate: routeRates.sales_tax,
+        purchase_tax_amount: purchaseTaxAmount,
+        actual_item_cost: actualItemCost
+      });
+    } else {
+      console.log(`[PURCHASE TAX] No sales tax for route ${quote.origin_country}→${quote.destination_country}`);
+    }
+
     // ✅ FIXED: Calculate insurance using ACTUAL product prices, not customs basis
     insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
 
-    // ✅ FIXED: Calculate customs using CIF value with customs calculation base
+    // ✅ FIXED: Calculate customs using CIF value with actual item cost (including purchase tax)
     if (customsPercentage > 0) {
-      const cifValue = customsCalculationBase + selectedShipping.cost_usd + insuranceAmount;
+      // Use customs calculation base but include purchase tax for accurate CIF
+      const customsBaseWithPurchaseTax = customsCalculationBase + purchaseTaxAmount;
+      const cifValue = customsBaseWithPurchaseTax + selectedShipping.cost_usd + insuranceAmount;
       customsAmount = cifValue * (customsPercentage / 100);
+      console.log(`[CUSTOMS CALCULATION] CIF breakdown:`, {
+        customs_base: customsCalculationBase,
+        purchase_tax: purchaseTaxAmount,
+        customs_base_with_tax: customsBaseWithPurchaseTax,
+        shipping: selectedShipping.cost_usd,
+        insurance: insuranceAmount,
+        cif_value: cifValue,
+        customs_rate: customsPercentage,
+        customs_amount: customsAmount
+      });
     }
 
     // ✅ ENHANCED: Per-item tax calculation based on individual tax methods
@@ -1996,34 +2036,50 @@ export class SmartCalculationEngine {
 
       if (vatResult.percentage > 0) {
         destinationTaxRate = vatResult.percentage; // Store the rate
-        // ✅ FIXED: Calculate destination tax on landed cost using ACTUAL product prices
-        const landedCost =
-          itemsTotal +
+        
+        // ✅ CRITICAL FIX: Calculate payment gateway fees BEFORE destination tax
+        const preGatewaySubtotal =
+          actualItemCost + // Use actual item cost including purchase tax
           selectedShipping.cost_usd +
           insuranceAmount +
           customsAmount +
           handlingFee +
           localTaxesAmount;
-        destinationTaxAmount = landedCost * (vatResult.percentage / 100);
+          
+        // Calculate payment gateway fee on pre-tax subtotal
+        paymentGatewayFee = preGatewaySubtotal * 0.029 + 0.3;
+        
+        // ✅ FIXED: Include gateway fees in destination tax base (tax compliance)
+        const taxableBase = preGatewaySubtotal + paymentGatewayFee;
+        destinationTaxAmount = taxableBase * (vatResult.percentage / 100);
 
-        console.log(`[DESTINATION TAX DEBUG] Calculated destination tax:`, {
+        console.log(`[DESTINATION TAX DEBUG] Calculated destination tax with gateway fees:`, {
           destination_country: quote.destination_country,
           vat_rate: vatResult.percentage,
           vat_source: vatResult.source,
-          landed_cost: landedCost,
+          actual_item_cost: actualItemCost,
+          purchase_tax: purchaseTaxAmount,
+          pre_gateway_subtotal: preGatewaySubtotal,
+          payment_gateway_fee: paymentGatewayFee,
+          taxable_base: taxableBase,
           destination_tax_amount: destinationTaxAmount,
         });
       } else {
         destinationTaxAmount = 0;
-        console.log(`[DESTINATION TAX DEBUG] No VAT/GST for ${quote.destination_country}`);
+        // Still calculate payment gateway fee even if no destination tax
+        const preGatewaySubtotal = actualItemCost + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee + localTaxesAmount;
+        paymentGatewayFee = preGatewaySubtotal * 0.029 + 0.3;
+        console.log(`[DESTINATION TAX DEBUG] No VAT/GST for ${quote.destination_country}, but calculated gateway fee: $${paymentGatewayFee.toFixed(2)}`);
       }
     } catch (error) {
       console.warn(`[DESTINATION TAX] Error calculating destination tax:`, error);
       destinationTaxAmount = quote.calculation_data?.breakdown?.destination_tax || 0;
+      // Fallback gateway fee calculation
+      const preGatewaySubtotal = actualItemCost + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee + localTaxesAmount;
+      paymentGatewayFee = preGatewaySubtotal * 0.029 + 0.3;
       // Try to calculate rate from existing amount
       if (destinationTaxAmount > 0) {
-        const landedCost = itemsTotal + selectedShipping.cost_usd + insuranceAmount + customsAmount + handlingFee + localTaxesAmount;
-        destinationTaxRate = (destinationTaxAmount / landedCost) * 100;
+        destinationTaxRate = (destinationTaxAmount / (preGatewaySubtotal + paymentGatewayFee)) * 100;
       }
     }
 
@@ -2058,25 +2114,24 @@ export class SmartCalculationEngine {
       vatAmount = 0; // Deprecated - destination tax is calculated separately
     }
 
-    // ✅ FIXED: Calculate totals using ACTUAL product prices (itemsTotal)
-    const subtotal =
-      itemsTotal +
-      selectedShipping.cost_usd +
-      domesticShipping +  // ✅ FIXED: Include domestic shipping
-      customsAmount +
-      salesTax +
-      localTaxesAmount + // Add HSN local taxes (GST/VAT)
-      destinationTaxAmount + // Add destination tax (GST/VAT from input field)
-      handlingFee +
-      insuranceAmount +
-      vatAmount;
-    
-    // ✅ FIXED: Calculate payment gateway fee on full subtotal
-    const paymentGatewayFee = subtotal * 0.029 + 0.3;
-
-    // Get discount amount and subtract it from final total
+    // ✅ FIXED: Calculate final total using corrected flow
     const discount = quote.calculation_data?.discount || 0;
-    const finalTotal = subtotal + paymentGatewayFee - discount;
+    const finalTotal = actualItemCost + selectedShipping.cost_usd + insuranceAmount + customsAmount + 
+                      handlingFee + localTaxesAmount + paymentGatewayFee + destinationTaxAmount - discount;
+    
+    console.log(`[FINAL TOTAL CALCULATION] Complete breakdown:`, {
+      actual_item_cost: actualItemCost,
+      purchase_tax: purchaseTaxAmount,
+      shipping: selectedShipping.cost_usd,
+      insurance: insuranceAmount,
+      handling: handlingFee,
+      customs: customsAmount,
+      local_taxes: localTaxesAmount,
+      payment_gateway_fee: paymentGatewayFee,
+      destination_tax: destinationTaxAmount,
+      discount: discount,
+      final_total: finalTotal
+    });
 
     // Update quote data structures with HSN tax information
     console.log(`[SMART ENGINE DEBUG] Tax breakdown summary:`, {
@@ -2092,7 +2147,8 @@ export class SmartCalculationEngine {
     const updatedCalculationData: CalculationData = {
       ...quote.calculation_data,
       breakdown: {
-        items_total: itemsTotal, // ✅ FIXED: Use ACTUAL product prices, not adjusted
+        items_total: itemsTotal, // Base product prices (before purchase tax)
+        purchase_tax: purchaseTaxAmount, // ✅ NEW: Origin country purchase tax
         shipping: selectedShipping.cost_usd,
         customs: customsAmount,
         taxes: salesTax + localTaxesAmount + vatAmount, // Local taxes only (legacy field)
@@ -2180,6 +2236,10 @@ export class SmartCalculationEngine {
         percentage: customsPercentage,
         smart_tier: null, // Smart tier calculation not used in this implementation
       },
+      // ✅ NEW: Purchase tax tracking (Transparent Tax Model)
+      purchase_tax_amount: purchaseTaxAmount,
+      purchase_tax_rate: routeRates?.sales_tax || 0,
+      actual_item_cost: actualItemCost,
       // 🆕 NEW: Add HSN operational data
       hsn_tax_data: hsnTaxBreakdown
         ? {

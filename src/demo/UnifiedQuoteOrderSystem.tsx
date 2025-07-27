@@ -19,6 +19,7 @@ import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
 import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { SleekProductTable } from '@/components/admin/SleekProductTable';
+import { SmartTaxBreakdown } from '@/components/admin/tax/SmartTaxBreakdown';
 import {
   Dialog,
   DialogContent,
@@ -3462,6 +3463,18 @@ export default function UnifiedQuoteOrderSystem({
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* NEW: Smart Tax Breakdown Component */}
+            {quote?.calculation_data && (
+              <div className="mt-4">
+                <SmartTaxBreakdown 
+                  quote={quote}
+                  showEducation={true}
+                  compact={false}
+                  title="Tax Calculation Breakdown"
+                />
+              </div>
             )}
 
             {/* Enhanced Tax Breakdown - Always Visible */}

@@ -581,13 +581,17 @@ class CurrencyService {
    * @returns Promise<number> - Exchange rate or throws error
    */
   async getExchangeRate(originCountry: string, destinationCountry: string): Promise<number> {
+    console.log(`[CurrencyService] getExchangeRate called: ${originCountry}→${destinationCountry}`);
+    
     // Same currency = 1.0
     if (originCountry === destinationCountry) {
+      console.log(`[CurrencyService] Same country, returning 1.0`);
       return 1.0;
     }
 
     try {
       // Tier 1: Check shipping routes for direct exchange rates (highest priority)
+      console.log(`[CurrencyService] Checking shipping routes for ${originCountry}→${destinationCountry}`);
       const { data: shippingRoute, error: routeError } = await supabase
         .from('shipping_routes')
         .select('exchange_rate')
@@ -596,11 +600,15 @@ class CurrencyService {
         .not('exchange_rate', 'is', null)
         .single();
 
+      console.log(`[CurrencyService] Shipping route query result:`, { data: shippingRoute, error: routeError });
+
       if (!routeError && shippingRoute?.exchange_rate) {
         console.log(
-          `[CurrencyService] Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
+          `[CurrencyService] ✅ Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
         );
         return shippingRoute.exchange_rate;
+      } else {
+        console.log(`[CurrencyService] ❌ No shipping route found, falling back to country settings`);
       }
 
       // Tier 2: Fallback to unified configuration USD-based conversion

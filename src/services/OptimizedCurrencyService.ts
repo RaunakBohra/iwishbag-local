@@ -129,16 +129,22 @@ class OptimizedCurrencyService {
    */
   async getExchangeRate(originCountry: string, destinationCountry: string): Promise<number> {
     const cacheKey = `rate_${originCountry}_${destinationCountry}`;
+    console.log(`[OptimizedCurrencyService] getExchangeRate called: ${originCountry}→${destinationCountry}, cacheKey: ${cacheKey}`);
     
     // Try to get from D1 edge cache first
     const d1Endpoint = `/api/currency/rates?from=${originCountry}&to=${destinationCountry}`;
     
+    // TEMP: Disable D1 endpoint for debugging
     return this.getCachedData(
       cacheKey,
-      () => currencyService.getExchangeRate(originCountry, destinationCountry),
+      () => {
+        console.log(`[OptimizedCurrencyService] Cache miss, calling CurrencyService.getExchangeRate(${originCountry}, ${destinationCountry})`);
+        return currencyService.getExchangeRate(originCountry, destinationCountry);
+      },
       6 * 60 * 60 * 1000, // 6 hours - exchange rates are relatively stable
-      d1Endpoint
+      // d1Endpoint  // TEMP: Disabled for debugging
     ).then(result => {
+      console.log(`[OptimizedCurrencyService] Final result for ${originCountry}→${destinationCountry}:`, result);
       // Handle D1 response format
       if (typeof result === 'object' && 'rate' in result) {
         return result.rate;
