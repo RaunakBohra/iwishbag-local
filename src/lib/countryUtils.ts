@@ -22,11 +22,25 @@ export const getCountryDisplayName = (
   countries: CountryInfo[] = [],
   showCode: boolean = false,
 ): string => {
+  console.log('[getCountryDisplayName] Debug:', {
+    code,
+    countriesCount: countries?.length || 0,
+    showCode,
+  });
+  
   if (!code) return 'Unknown';
-  if (!Array.isArray(countries)) return code;
+  if (!Array.isArray(countries)) {
+    console.log('[getCountryDisplayName] Countries is not an array, returning code');
+    return code;
+  }
 
   const country = countries.find((c) => c.code === code);
-  if (!country) return code;
+  console.log('[getCountryDisplayName] Found country:', country);
+  
+  if (!country) {
+    console.log('[getCountryDisplayName] Country not found for code:', code);
+    return code;
+  }
 
   return showCode ? `${country.name} (${code})` : country.name;
 };
@@ -81,19 +95,36 @@ export const formatShippingRoute = (
   countries: CountryInfo[] = [],
   showCodes: boolean = false,
 ): string => {
+  // Debug logging
+  console.log('[formatShippingRoute] Debug:', {
+    originCode,
+    destinationCode,
+    countriesCount: countries?.length || 0,
+    showCodes,
+    firstFewCountries: countries?.slice(0, 3),
+  });
+  
   // Handle empty or invalid inputs
   if (!originCode || !destinationCode) {
+    console.log('[formatShippingRoute] Empty origin or destination');
     return '—';
   }
   if (!Array.isArray(countries)) {
+    console.log('[formatShippingRoute] Countries is not an array');
     return '—';
   }
 
   const originName = getCountryDisplayName(originCode, countries, showCodes);
   const destinationName = getCountryDisplayName(destinationCode, countries, showCodes);
+  
+  console.log('[formatShippingRoute] Country names:', {
+    originName,
+    destinationName,
+  });
 
   // If either country name is invalid, return a dash
   if (originName === 'Unknown' || destinationName === 'Unknown') {
+    console.log('[formatShippingRoute] One or both country names are Unknown');
     return '—';
   }
 

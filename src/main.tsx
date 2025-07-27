@@ -6,22 +6,36 @@ import { validateEnv } from './config/env';
 import { logger } from '@/utils/logger';
 
 // Initialize Sentry for error and performance monitoring
-Sentry.init({
-  dsn: 'https://8c2b7811dbad53f28b209864b6dc66f0@o4509707940265984.ingest.us.sentry.io/4509707943215104',
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration({
-      // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-      maskAllText: false,
-      blockAllMedia: false,
-    }),
-  ],
-  // Performance Monitoring
-  tracesSampleRate: 1.0, //  Capture 100% of the transactions
-  // Session Replay
-  replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-  replaysOnErrorSampleRate: 1.0, // If an error happens while a session is being recorded, send the replay
-});
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({
+        maskAllText: true, // GDPR compliance - mask sensitive data
+        blockAllMedia: false,
+      }),
+    ],
+    // Performance Monitoring - reduced for production
+    tracesSampleRate: import.meta.env.MODE === 'production' ? 0.1 : 1.0, // 10% in prod, 100% in dev
+    // Session Replay
+    replaysSessionSampleRate: import.meta.env.MODE === 'production' ? 0.01 : 0.1, // 1% in prod, 10% in dev
+    replaysOnErrorSampleRate: 1.0, // Always capture on errors
+    // Additional settings
+    beforeSend(event, hint) {
+      // Filter out non-error console logs
+      if (event.level === 'log') {
+        return null;
+      }
+      return event;
+    },
+  });
+  
+  logger.info('Sentry initialized successfully');
+} else {
+  logger.warn('Sentry DSN not configured - error tracking disabled');
+}
 
 // Validate environment variables on startup
 if (!validateEnv()) {

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { logger } from '@/utils/logger';
 
 /**
  * Cloudflare Web Analytics Component
@@ -21,13 +22,13 @@ export const CloudflareAnalytics: React.FC<CloudflareAnalyticsProps> = ({ token 
     const analyticsToken = token || import.meta.env.VITE_CLOUDFLARE_ANALYTICS_TOKEN;
     
     if (!analyticsToken) {
-      console.warn('Cloudflare Analytics token not found');
+      logger.warn('Cloudflare Analytics token not found');
       return;
     }
 
     // Only load in production
     if (import.meta.env.DEV) {
-      console.log('Cloudflare Analytics disabled in development');
+      logger.debug('Cloudflare Analytics disabled in development');
       return;
     }
 
@@ -58,7 +59,7 @@ export const trackEvent = (eventName: string, properties?: Record<string, any>) 
   // Cloudflare Web Analytics doesn't support custom events yet
   // This is a placeholder for when they add this feature
   if (import.meta.env.DEV) {
-    console.log('Analytics Event:', eventName, properties);
+    logger.debug('Analytics Event:', eventName, properties);
   }
 };
 

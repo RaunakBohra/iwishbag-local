@@ -28,8 +28,18 @@ export function ShippingRouteDisplay({
   iconType = 'arrow',
   showConfigPrompt = false,
 }: ShippingRouteDisplayProps) {
-  const { data: countries = [] } = useAllCountries();
+  const { data: countries = [], isLoading: countriesLoading } = useAllCountries();
   const { isAdmin } = useUserRoles();
+  
+  // Debug logging
+  console.log('[ShippingRouteDisplay] Debug:', {
+    origin,
+    destination,
+    countriesCount: countries?.length || 0,
+    countriesLoading,
+    showCodes,
+    variant,
+  });
 
   // Validate inputs - check for empty strings too
   if (!origin || !destination || origin.trim() === '' || destination.trim() === '') {
@@ -58,6 +68,11 @@ export function ShippingRouteDisplay({
     }
     // Default fallback for non-admins or when prompt is disabled
     return <span className={cn('text-gray-400', className)}>—</span>;
+  }
+  
+  // Show loading state while countries are being fetched
+  if (countriesLoading && (!countries || countries.length === 0)) {
+    return <span className={cn('text-gray-400', className)}>Loading...</span>;
   }
 
   const routeText = formatShippingRoute(origin, destination, countries, showCodes);
