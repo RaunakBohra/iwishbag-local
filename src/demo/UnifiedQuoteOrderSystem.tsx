@@ -327,36 +327,52 @@ export default function UnifiedQuoteOrderSystem({
   const hasItemBreakdowns = quote?.calculation_data?.item_breakdowns?.length > 0;
   
   // Calculate totals from item-level taxes if available
-  const itemLevelCustoms = hasItemBreakdowns 
-    ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + (item.customs || 0), 0)
-    : 0;
-  const itemLevelSalesTax = hasItemBreakdowns
-    ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + (item.sales_tax || 0), 0)
-    : 0;
-  const itemLevelDestinationTax = hasItemBreakdowns
-    ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + (item.destination_tax || 0), 0)
-    : 0;
+  const itemLevelCustoms = safeNumber(
+    hasItemBreakdowns 
+      ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + safeNumber(item.customs), 0)
+      : 0
+  );
+  const itemLevelSalesTax = safeNumber(
+    hasItemBreakdowns
+      ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + safeNumber(item.sales_tax), 0)
+      : 0
+  );
+  const itemLevelDestinationTax = safeNumber(
+    hasItemBreakdowns
+      ? quote.calculation_data.item_breakdowns.reduce((sum, item) => sum + safeNumber(item.destination_tax), 0)
+      : 0
+  );
   
   // Extract tax rates and amounts with proper fallbacks
-  const customsPercentage = quote?.calculation_data?.tax_calculation?.customs_percentage || 
-                           quote?.tax_rates?.customs ||
-                           quote?.operational_data?.customs?.percentage || 
-                           0;
-  const extractedCustomsAmount = quote?.customs || // From transformed data
-                       itemLevelCustoms || // From item-level calculations
-                       quote?.calculation_data?.breakdown?.customs || 0;
+  const customsPercentage = safeNumber(
+    quote?.calculation_data?.tax_calculation?.customs_percentage || 
+    quote?.tax_rates?.customs ||
+    quote?.operational_data?.customs?.percentage || 
+    0
+  );
+  const extractedCustomsAmount = safeNumber(
+    quote?.customs || // From transformed data
+    itemLevelCustoms || // From item-level calculations
+    quote?.calculation_data?.breakdown?.customs || 0
+  );
                        
-  const extractedSalesTaxAmount = quote?.sales_tax || // From transformed data
-                        itemLevelSalesTax || // From item-level calculations
-                        quote?.calculation_data?.breakdown?.sales_tax || 0;
+  const extractedSalesTaxAmount = safeNumber(
+    quote?.sales_tax || // From transformed data
+    itemLevelSalesTax || // From item-level calculations
+    quote?.calculation_data?.breakdown?.sales_tax || 0
+  );
                         
-  const destinationTaxRate = quote?.calculation_data?.tax_calculation?.destination_tax_rate || 
-                            quote?.tax_rates?.destination_tax ||
-                            quote?.calculation_data?.breakdown?.destination_tax_rate || 
-                            13; // Default 13% VAT for Nepal
-  const extractedDestinationTaxAmount = quote?.destination_tax || // From transformed data
-                              itemLevelDestinationTax || // From item-level calculations
-                              quote?.calculation_data?.breakdown?.destination_tax || 0;
+  const destinationTaxRate = safeNumber(
+    quote?.calculation_data?.tax_calculation?.destination_tax_rate || 
+    quote?.tax_rates?.destination_tax ||
+    quote?.calculation_data?.breakdown?.destination_tax_rate || 
+    13 // Default 13% VAT for Nepal
+  );
+  const extractedDestinationTaxAmount = safeNumber(
+    quote?.destination_tax || // From transformed data
+    itemLevelDestinationTax || // From item-level calculations
+    quote?.calculation_data?.breakdown?.destination_tax || 0
+  );
   
   // Debug logging
   console.log('💰 Tax Extraction Debug:', {
