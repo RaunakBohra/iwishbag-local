@@ -207,12 +207,16 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
     try {
       const { data, error } = await supabase
         .from('user_hsn_requests')
-        .select('*, user:user_id(email)')
+        .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading pending requests:', error);
+        throw error;
+      }
       
+      console.log('Loaded pending requests:', data);
       setPendingRequests(data || []);
     } catch (error) {
       console.error('Failed to load pending requests:', error);
@@ -285,19 +289,27 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
   };
 
   const handleDeleteRecord = async (record: HSNMasterRecord) => {
-    if (!confirm(`Are you sure you want to delete HSN ${record.hsn_code}?`)) return;
+    if (!confirm(`Are you sure you want to delete HSN ${record.hsn_code}?\n\nThis action cannot be undone.`)) return;
 
     try {
-      // Here we would call a delete API endpoint
+      const { error } = await supabase
+        .rpc('delete_hsn_master_record', { p_hsn_code: record.hsn_code });
+
+      if (error) throw error;
+
       toast({
         title: 'HSN Record Deleted',
-        description: `HSN ${record.hsn_code} has been deleted`,
+        description: `HSN ${record.hsn_code} has been permanently deleted`,
       });
+      
+      // Clear cache and reload
+      unifiedDataEngine.clearAllCache();
       loadHSNRecords();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to delete HSN record:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete HSN record',
+        description: error.message || 'Failed to delete HSN record',
         variant: 'destructive',
       });
     }
@@ -380,6 +392,33 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
       toast({
         title: 'Error',
         description: 'Failed to reject HSN request',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this HSN request?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .rpc('delete_hsn_request', { request_id: requestId });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request Deleted',
+        description: 'HSN request has been permanently deleted',
+      });
+
+      loadPendingRequests();
+    } catch (error) {
+      console.error('Failed to delete request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete HSN request',
         variant: 'destructive',
       });
     }
@@ -706,7 +745,7 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-gray-600">
-                            {request.user?.email || 'Unknown'}
+                            User
                           </div>
                         </TableCell>
                         <TableCell>
@@ -758,6 +797,14 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
                             >
                               <X className="w-4 h-4 mr-1" />
                               Reject
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteRequest(request.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>

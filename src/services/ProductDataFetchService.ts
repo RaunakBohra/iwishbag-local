@@ -227,7 +227,7 @@ class ProductDataFetchService {
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
       
       // Call Supabase Edge Function (MCP-powered for better results)
-      const response = await fetch(`${supabaseUrl}/functions/v1/scrape-product-mcp`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/scrape-product`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

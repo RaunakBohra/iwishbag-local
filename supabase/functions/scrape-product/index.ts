@@ -165,12 +165,17 @@ async function scrapeWithScrapeAPI(url: string, website: string) {
   // Extract data from the structured response
   const extractedData = extractProductDataFromScrapeAPI(data, website);
 
+  const weightData = extractWeightFromString(extractedData.weight);
+  
   return {
     success: true,
     data: {
       title: extractedData.name || 'Product (Title not found)',
       price: extractPriceFromString(extractedData.price),
-      weight: extractWeightFromString(extractedData.weight),
+      weight: weightData.kg,
+      weight_value: weightData.value,
+      weight_unit: weightData.unit,
+      weight_raw: weightData.raw,
       images: extractedData.images,
       availability: extractedData.availability || 'Unknown',
       category: extractedData.category || detectCategory(extractedData.name, website),
@@ -415,23 +420,55 @@ function extractPriceFromString(priceString: string): number {
   }
 }
 
-function extractWeightFromString(weightString: string): number {
-  if (!weightString) return 0.5; // Default weight
+function extractWeightFromString(weightString: string): WeightData {
+  if (!weightString) {
+    return {
+      value: 0.5,
+      unit: 'kg',
+      raw: '0.5 kg',
+      kg: 0.5
+    };
+  }
 
   try {
-    // Extract numeric value from weight string (e.g., "200 g" -> 200)
-    const numericValue = weightString.replace(/[^\d.]/g, '');
-    const weight = parseFloat(numericValue);
-
-    // Convert to kg if in grams
-    if (weightString.toLowerCase().includes('g') && weight > 100) {
-      return weight / 1000;
+    const weightMatch = weightString.match(/(\d+(?:\.\d+)?)\s*(ounces?|oz|lbs?|pounds?|g|grams?|kg|kilograms?)?/i);
+    
+    if (weightMatch) {
+      const value = parseFloat(weightMatch[1]);
+      const unit = weightMatch[2]?.toLowerCase() || '';
+      
+      // Normalize unit names
+      let normalizedUnit = 'kg'; // Default if no unit specified
+      if (unit) {
+        if (unit.includes('ounce') || unit === 'oz') normalizedUnit = 'oz';
+        else if (unit.includes('pound') || unit.includes('lb')) normalizedUnit = 'lbs';
+        else if (unit.includes('gram') && !unit.includes('kg')) normalizedUnit = 'g';
+        else if (unit.includes('kg')) normalizedUnit = 'kg';
+      }
+      
+      return {
+        value: value,
+        unit: normalizedUnit,
+        raw: weightString.trim(),
+        kg: convertWeightToKg(value, normalizedUnit)
+      };
     }
 
-    return isNaN(weight) ? 0.5 : weight;
+    // If no pattern matches, return default
+    return {
+      value: 0.5,
+      unit: 'kg',
+      raw: weightString.trim(),
+      kg: 0.5
+    };
   } catch (error) {
     console.error('Error extracting weight from string:', error);
-    return 0.5;
+    return {
+      value: 0.5,
+      unit: 'kg',
+      raw: '0.5 kg',
+      kg: 0.5
+    };
   }
 }
 
@@ -586,6 +623,9 @@ function extractStructuredData(data: any, website: string) {
     title: 'Product (Title not found)',
     price: 0,
     weight: 0.5,
+    weight_value: 0.5,
+    weight_unit: 'kg',
+    weight_raw: '0.5 kg',
     images: [] as string[],
     availability: 'Unknown',
     category: 'general',
@@ -691,23 +731,41 @@ function extractStructuredData(data: any, website: string) {
       product.product_information?.shipping_weight
     ];
 
+    let weightData: WeightData | null = null;
+    
     for (const weightSource of weightSources) {
       if (weightSource) {
-        const weight = extractWeightFromValue(weightSource);
-        if (weight > 0) {
-          extractedData.weight = weight;
+        weightData = extractWeightFromValue(weightSource);
+        if (weightData) {
+          // Set all weight fields
+          extractedData.weight = weightData.kg; // For backward compatibility
+          extractedData.weight_value = weightData.value;
+          extractedData.weight_unit = weightData.unit;
+          extractedData.weight_raw = weightData.raw;
           break;
         }
       }
     }
 
     // If no direct weight, try parsing from specifications
-    if (extractedData.weight === 0.5 && product.specifications) {
-      const weightMatch = JSON.stringify(product.specifications).match(/(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?|g|grams?|kg|kilograms?)/i);
+    if (!weightData && product.specifications) {
+      const specString = JSON.stringify(product.specifications);
+      const weightMatch = specString.match(/(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?|g|grams?|kg|kilograms?)/i);
       if (weightMatch) {
         const value = parseFloat(weightMatch[1]);
         const unit = weightMatch[2].toLowerCase();
-        extractedData.weight = convertWeightToKg(value, unit);
+        
+        // Normalize unit names
+        let normalizedUnit = unit;
+        if (unit.includes('ounce') || unit === 'oz') normalizedUnit = 'oz';
+        else if (unit.includes('pound') || unit.includes('lb')) normalizedUnit = 'lbs';
+        else if (unit.includes('gram') && !unit.includes('kg')) normalizedUnit = 'g';
+        else if (unit.includes('kg')) normalizedUnit = 'kg';
+        
+        extractedData.weight = convertWeightToKg(value, unit); // For backward compatibility
+        extractedData.weight_value = value;
+        extractedData.weight_unit = normalizedUnit;
+        extractedData.weight_raw = weightMatch[0];
       }
     }
 
@@ -739,9 +797,22 @@ function extractStructuredData(data: any, website: string) {
   return extractedData;
 }
 
-function extractWeightFromValue(weightValue: any): number {
+interface WeightData {
+  value: number;
+  unit: string;
+  raw: string;
+  kg: number; // Keep converted value for backward compatibility
+}
+
+function extractWeightFromValue(weightValue: any): WeightData | null {
   if (typeof weightValue === 'number') {
-    return weightValue;
+    // If it's just a number, assume kg
+    return {
+      value: weightValue,
+      unit: 'kg',
+      raw: `${weightValue} kg`,
+      kg: weightValue
+    };
   }
   
   if (typeof weightValue === 'string') {
@@ -749,11 +820,24 @@ function extractWeightFromValue(weightValue: any): number {
     if (weightMatch) {
       const value = parseFloat(weightMatch[1]);
       const unit = weightMatch[2].toLowerCase();
-      return convertWeightToKg(value, unit);
+      
+      // Normalize unit names
+      let normalizedUnit = unit;
+      if (unit.includes('ounce') || unit === 'oz') normalizedUnit = 'oz';
+      else if (unit.includes('pound') || unit.includes('lb')) normalizedUnit = 'lbs';
+      else if (unit.includes('gram') && !unit.includes('kg')) normalizedUnit = 'g';
+      else if (unit.includes('kg')) normalizedUnit = 'kg';
+      
+      return {
+        value: value,
+        unit: normalizedUnit,
+        raw: weightValue.trim(),
+        kg: convertWeightToKg(value, unit) // Keep for compatibility
+      };
     }
   }
   
-  return 0;
+  return null;
 }
 
 function convertWeightToKg(value: number, unit: string): number {
@@ -894,14 +978,17 @@ function extractProductData(html: string, website: string) {
   // Simple HTML parsing (in production, you'd use a proper HTML parser)
   const title = extractTitle(html, website);
   const price = extractPrice(html, website);
-  const weight = extractWeight(html, website);
+  const weightData = extractWeight(html, website);
   const images = extractImages(html, website);
   const availability = extractAvailability(html, website);
 
   return {
     title: title || 'Product (Title not found)',
     price: price || 0,
-    weight: weight || 0.5, // Default weight
+    weight: weightData.kg, // For backward compatibility
+    weight_value: weightData.value,
+    weight_unit: weightData.unit,
+    weight_raw: weightData.raw,
     images: images || [],
     availability: availability || 'Unknown',
     category: detectCategory(title, website),
@@ -984,52 +1071,71 @@ function extractPrice(html: string, website: string): number {
   return 0;
 }
 
-function extractWeight(html: string, website: string): number {
+function extractWeight(html: string, website: string): WeightData {
   try {
-    // Simple search for weight patterns
-    let lowestWeight = null;
+    // Search for weight patterns and keep the original format
+    const weightPatterns = [
+      /(\d+(?:\.\d+)?)\s*(kg|kilograms?)/gi,
+      /(\d+(?:\.\d+)?)\s*(lbs?|pounds?)/gi,
+      /(\d+(?:\.\d+)?)\s*(oz|ounces?)/gi,
+      /(\d+(?:\.\d+)?)\s*(g|grams?)(?!\w)/gi // Negative lookahead to avoid matching 'graphics'
+    ];
     
-    // Look for "XX kg" pattern
-    const kgMatches = html.match(/(\d+(?:\.\d+)?)\s*kg/gi) || [];
-    for (const match of kgMatches) {
-      const value = parseFloat(match.replace(/[^\d.]/g, ''));
-      if (value > 0.1 && value < 1000) {
-        if (!lowestWeight || value < lowestWeight) {
-          lowestWeight = value;
+    let bestMatch: WeightData | null = null;
+    let lowestKgValue = Infinity;
+    
+    for (const pattern of weightPatterns) {
+      const matches = [...html.matchAll(pattern)];
+      
+      for (const match of matches) {
+        const value = parseFloat(match[1]);
+        const unit = match[2].toLowerCase();
+        
+        // Skip unrealistic values
+        if (value <= 0 || value > 10000) continue;
+        
+        // Normalize unit names
+        let normalizedUnit = unit;
+        if (unit.includes('kg')) normalizedUnit = 'kg';
+        else if (unit.includes('lb') || unit.includes('pound')) normalizedUnit = 'lbs';
+        else if (unit.includes('oz') || unit.includes('ounce')) normalizedUnit = 'oz';
+        else if (unit === 'g' || unit.includes('gram')) normalizedUnit = 'g';
+        
+        const kgValue = convertWeightToKg(value, normalizedUnit);
+        
+        // Keep the match with the lowest kg value (most likely the product weight)
+        if (kgValue < lowestKgValue && kgValue > 0.01) { // At least 10g
+          lowestKgValue = kgValue;
+          bestMatch = {
+            value: value,
+            unit: normalizedUnit,
+            raw: match[0].trim(),
+            kg: kgValue
+          };
         }
       }
     }
     
-    // Look for "XX pounds" or "XX lbs" pattern
-    const lbMatches = html.match(/(\d+(?:\.\d+)?)\s*(pounds?|lbs?)/gi) || [];
-    for (const match of lbMatches) {
-      const value = parseFloat(match.replace(/[^\d.]/g, '')) * 0.453592; // Convert to kg
-      if (value > 0.1 && value < 1000) {
-        if (!lowestWeight || value < lowestWeight) {
-          lowestWeight = value;
-        }
-      }
+    if (bestMatch) {
+      console.log(`🔵 Extracted weight: ${bestMatch.raw} (${bestMatch.kg} kg)`);
+      return bestMatch;
     }
     
-    // Look for "XX ounces" or "XX oz" pattern
-    const ozMatches = html.match(/(\d+(?:\.\d+)?)\s*(ounces?|oz)/gi) || [];
-    for (const match of ozMatches) {
-      const value = parseFloat(match.replace(/[^\d.]/g, '')) * 0.0283495; // Convert to kg
-      if (value > 0.1 && value < 1000) {
-        if (!lowestWeight || value < lowestWeight) {
-          lowestWeight = value;
-        }
-      }
-    }
-    
-    if (lowestWeight) {
-      console.log(`🔵 Extracted weight: ${lowestWeight} kg`);
-    }
-    
-    return lowestWeight || 0.5; // Default weight if nothing found
+    // Default weight if nothing found
+    return {
+      value: 0.5,
+      unit: 'kg',
+      raw: '0.5 kg',
+      kg: 0.5
+    };
   } catch (error) {
     console.error('Error extracting weight:', error);
-    return 0.5;
+    return {
+      value: 0.5,
+      unit: 'kg',
+      raw: '0.5 kg',
+      kg: 0.5
+    };
   }
 }
 
