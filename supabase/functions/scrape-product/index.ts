@@ -398,7 +398,11 @@ function extractProductDataFromScrapeAPI(data: Record<string, unknown>, website:
       weight: extracted.weight,
       images_count: extracted.images.length,
       availability: extracted.availability,
+      currency: extracted.currency,
     });
+    
+    // Debug: Log the full data object keys
+    console.log(`🔍 ScrapeAPI response keys:`, Object.keys(data));
   } catch (error) {
     console.error(`🔴 Error extracting data from ScrapeAPI response:`, error);
   }
@@ -586,7 +590,9 @@ async function scrapeWithBrightData(url: string, website: string) {
     title: extractedData.title,
     price: extractedData.price,
     weight: extractedData.weight,
-    category: extractedData.category
+    category: extractedData.category,
+    currency: extractedData.currency,
+    weight_raw: extractedData.weight_raw,
   });
 
   return {
@@ -661,12 +667,23 @@ function extractStructuredData(data: any, website: string) {
     }
 
     // Extract price
+    console.log(`🔍 Price extraction - checking fields:`, {
+      final_price: product.final_price,
+      price: product.price,
+      initial_price: product.initial_price,
+    });
+    
     if (product.final_price) {
       extractedData.price = parseFloat(product.final_price.toString().replace(/[^0-9.]/g, ''));
+      console.log(`✅ Using final_price: ${product.final_price} -> ${extractedData.price}`);
     } else if (product.price) {
       extractedData.price = parseFloat(product.price.toString().replace(/[^0-9.]/g, ''));
+      console.log(`✅ Using price: ${product.price} -> ${extractedData.price}`);
     } else if (product.initial_price) {
       extractedData.price = parseFloat(product.initial_price.toString().replace(/[^0-9.]/g, ''));
+      console.log(`✅ Using initial_price: ${product.initial_price} -> ${extractedData.price}`);
+    } else {
+      console.log(`❌ No price field found in product data`);
     }
 
     // Extract currency and country
