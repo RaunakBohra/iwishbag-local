@@ -35,11 +35,21 @@ jobs:
         run: npm run lint
         continue-on-error: true
       
-      - name: Run tests
-        run: npm run test:run || true
+      - name: Run tests with coverage
+        run: npm run test:coverage || true
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://dummy.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'dummy_key' }}
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
       
       - name: Build application
         run: npm run build

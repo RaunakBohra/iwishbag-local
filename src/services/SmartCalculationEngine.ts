@@ -282,11 +282,12 @@ export class SmartCalculationEngine {
 
       // 🚀 NEW: Check for cached shipping options first
       let shippingOptions: ShippingOption[] = [];
-      const cachedShipping = await smartQuoteCacheService.getCachedShippingOptions(
-        input.quote.origin_country,
-        input.quote.destination_country,
-        totalWeight
-      );
+      // Temporarily disable cache to debug shipping issue
+      const cachedShipping = null; // await smartQuoteCacheService.getCachedShippingOptions(
+      //   input.quote.origin_country,
+      //   input.quote.destination_country,
+      //   totalWeight
+      // );
       
       if (cachedShipping) {
         console.log(`[SMART ENGINE DEBUG] Shipping options cache HIT`);
@@ -316,23 +317,27 @@ export class SmartCalculationEngine {
         );
         
         // 🚀 NEW: Cache shipping options and recommendations for future use
-        await smartQuoteCacheService.setCachedShippingOptions(
-          input.quote.origin_country,
-          input.quote.destination_country,
-          totalWeight,
-          shippingOptions,
-          smartRecommendations
-        );
+        // Temporarily disabled to debug shipping issue
+        // await smartQuoteCacheService.setCachedShippingOptions(
+        //   input.quote.origin_country,
+        //   input.quote.destination_country,
+        //   totalWeight,
+        //   shippingOptions,
+        //   smartRecommendations
+        // );
       }
 
       // Select optimal shipping option (or use existing selection)
+      console.log('[SMART ENGINE DEBUG] About to select optimal shipping option from:', shippingOptions.length, 'options');
       const selectedOption = this.selectOptimalShippingOption(
         shippingOptions,
         input.preferences,
         input.quote.operational_data?.shipping?.selected_option,
       );
+      console.log('[SMART ENGINE DEBUG] Selected shipping option:', selectedOption?.id, selectedOption?.carrier);
 
       // Calculate all costs with selected shipping (now includes HSN taxes)
+      console.log('[SMART ENGINE DEBUG] About to calculate complete costs');
       const calculationResult = await this.calculateCompleteCosts({
         quote: input.quote,
         selectedShipping: selectedOption,
@@ -340,6 +345,7 @@ export class SmartCalculationEngine {
         totalWeight,
         hsnTaxBreakdown: hsnTaxResults.breakdown,
         hsnTaxSummary: hsnTaxResults.summary,
+        taxCalculationPreferences: input.tax_calculation_preferences,
       });
 
       // Generate optimization suggestions
@@ -375,6 +381,8 @@ export class SmartCalculationEngine {
       });
       return result;
     } catch (error) {
+      console.error('[SMART ENGINE ERROR] Calculation failed:', error);
+      console.error('[SMART ENGINE ERROR] Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
       return {
         success: false,
         updated_quote: input.quote,
@@ -747,11 +755,14 @@ export class SmartCalculationEngine {
     try {
       // Method 1: Route-specific shipping with multiple carriers
       routeOptions = await this.getRouteSpecificOptions(params);
+      console.log('[SHIPPING CALCULATION] Route-specific options returned:', routeOptions.length, 'options');
       options.push(...routeOptions);
 
       // Method 2: Country settings fallback with standard options
       if (options.length === 0) {
+        console.log('[SHIPPING CALCULATION] No route options found, falling back to country settings');
         const fallbackOptions = await this.getCountrySettingsOptions(params);
+        console.log('[SHIPPING CALCULATION] Country settings fallback returned:', fallbackOptions.length, 'options');
         options.push(...fallbackOptions);
       }
 
@@ -811,11 +822,15 @@ export class SmartCalculationEngine {
       routeId: route?.id,
       routeName: route?.name,
       isActive: route?.is_active,
-      hasDeliveryOptions: !!route?.delivery_options
+      hasDeliveryOptions: !!route?.delivery_options,
+      deliveryOptionsCount: route?.delivery_options?.length || 0,
+      activeDeliveryOptions: route?.delivery_options?.filter((opt: any) => opt.active)?.length || 0,
+      routeData: route
     });
 
     if (error || !route) {
-      console.log('[SHIPPING ROUTE DEBUG] No route found, returning empty options');
+      console.log('[SHIPPING ROUTE DEBUG] No route found, returning empty options. Error:', error);
+      console.log('[SHIPPING ROUTE DEBUG] Will fall back to country settings');
       return [];
     }
 
@@ -1613,8 +1628,9 @@ export class SmartCalculationEngine {
       items_with_minimum_valuation: number;
       currency_conversions_applied: number;
     };
+    taxCalculationPreferences?: any;
   }): Promise<{ updated_quote: UnifiedQuote }> {
-    const { quote, selectedShipping, itemsTotal, hsnTaxBreakdown, hsnTaxSummary } = params;
+    const { quote, selectedShipping, itemsTotal, hsnTaxBreakdown, hsnTaxSummary, taxCalculationPreferences } = params;
 
     // Get exchange rate
     const exchangeRate = await optimizedCurrencyService.getExchangeRate(

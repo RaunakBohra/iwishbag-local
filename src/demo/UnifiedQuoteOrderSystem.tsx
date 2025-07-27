@@ -799,6 +799,16 @@ export default function UnifiedQuoteOrderSystem({
       setDebugData(calculationDebugData);
       
       // Store available shipping options
+      console.log('🚢 [SHIPPING OPTIONS DEBUG]:', {
+        has_shipping_options: !!calculationResult.shipping_options,
+        shipping_options_count: calculationResult.shipping_options?.length || 0,
+        first_option: calculationResult.shipping_options?.[0],
+        origin: calculationInput.quote.origin_country,
+        destination: calculationInput.quote.destination_country,
+        route: `${calculationInput.quote.origin_country} → ${calculationInput.quote.destination_country}`,
+        calculation_success: calculationResult.success
+      });
+      
       if (calculationResult.shipping_options && calculationResult.shipping_options.length > 0) {
         setAvailableShippingOptions(calculationResult.shipping_options);
         

@@ -177,7 +177,7 @@ class UnifiedTaxFallbackService {
     const { data, error } = await supabase
       .from('country_settings')
       .select('*')
-      .eq('country_code', destinationCountry)
+      .eq('code', destinationCountry)
       .single();
 
     if (error && error.code !== 'PGRST116') {

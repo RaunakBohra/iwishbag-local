@@ -60,10 +60,11 @@ class RouteTierTaxService {
     itemsTotal: number,
     totalWeight: number
   ): Promise<RouteTierTaxRates | null> {
-    const transaction = Sentry.startTransaction({
-      name: 'RouteTierTaxService.getRouteTierTaxes',
-      op: 'route_tier_lookup',
-    });
+    // Temporarily disable Sentry transaction
+    // const transaction = Sentry.startTransaction({
+    //   name: 'RouteTierTaxService.getRouteTierTaxes',
+    //   op: 'route_tier_lookup',
+    // });
 
     try {
       // Generate cache key
