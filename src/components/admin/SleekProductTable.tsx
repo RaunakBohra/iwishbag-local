@@ -410,15 +410,20 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                           <SleekHSNSearch
                             value={item.hsn_code || ''}
                             onChange={async (hsnCode) => {
+                              console.log('🔍 [PRODUCT-TABLE] HSN onChange received:', { hsnCode, itemId: item.id });
+                              
                               // Update HSN code and category
                               if (hsnCode) {
                                 try {
+                                  console.log('🔍 [PRODUCT-TABLE] Fetching HSN data for:', hsnCode);
                                   // Fetch HSN data including category
                                   const { data } = await supabase
                                     .from('hsn_master')
                                     .select('category')
                                     .eq('hsn_code', hsnCode)
                                     .single();
+                                  
+                                  console.log('🔍 [PRODUCT-TABLE] HSN fetch result:', data);
                                   
                                   if (data) {
                                     // Update local state for category display
@@ -427,39 +432,50 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                       [hsnCode]: data.category
                                     }));
                                     
-                                    // Update item with both HSN code and category
-                                    onUpdateItem(item.id, { 
+                                    const updateData = { 
                                       hsn_code: hsnCode,
                                       category: data.category
-                                    });
+                                    };
+                                    console.log('🔍 [PRODUCT-TABLE] Calling onUpdateItem with:', updateData);
+                                    // Update item with both HSN code and category
+                                    onUpdateItem(item.id, updateData);
                                   } else {
+                                    const updateData = { hsn_code: hsnCode };
+                                    console.log('🔍 [PRODUCT-TABLE] No category found, calling onUpdateItem with:', updateData);
                                     // Just update HSN code if no category found
-                                    onUpdateItem(item.id, { hsn_code: hsnCode });
+                                    onUpdateItem(item.id, updateData);
                                   }
                                   
                                   // Also fetch HSN weight
                                   const hsnData = await hsnWeightService.getHSNWeight(hsnCode);
                                   if (hsnData) {
-                                    onUpdateItem(item.id, { 
+                                    const weightUpdateData = { 
                                       weight_options: {
                                         ...item.weight_options,
                                         hsn: hsnData.average
                                       }
-                                    });
+                                    };
+                                    console.log('🔍 [PRODUCT-TABLE] Calling onUpdateItem with weight data:', weightUpdateData);
+                                    onUpdateItem(item.id, weightUpdateData);
                                   }
                                 } catch (error) {
                                   console.error('Failed to fetch HSN data:', error);
                                   // Still update the HSN code even if fetch fails
-                                  onUpdateItem(item.id, { hsn_code: hsnCode });
+                                  const fallbackData = { hsn_code: hsnCode };
+                                  console.log('🔍 [PRODUCT-TABLE] Error occurred, calling onUpdateItem with fallback:', fallbackData);
+                                  onUpdateItem(item.id, fallbackData);
                                 }
                               } else {
                                 // Clear HSN code
+                                console.log('🔍 [PRODUCT-TABLE] Clearing HSN code');
                                 onUpdateItem(item.id, { hsn_code: '' });
                               }
                               
                               // Close the field and trigger recalculation
+                              console.log('🔍 [PRODUCT-TABLE] Closing field and triggering recalculation...');
                               setEditingField(null);
                               onRecalculate();
+                              console.log('🔍 [PRODUCT-TABLE] HSN onChange completed');
                             }}
                             onCancel={() => setEditingField(null)}
                             placeholder="Type HSN code..."
@@ -838,19 +854,16 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                             </Select>
                           </div>
                           
-                          {/* Volumetric Weight Indicator */}
-                          {volumetricWeight && volumetricWeight > 0 && (
-                            <div className="ml-3 text-xs">
-                              <span className="text-gray-500">Vol. Weight: </span>
-                              <span className={cn(
-                                "font-medium",
-                                volumetricWeight > item.weight ? "text-orange-600" : "text-gray-600"
-                              )}>
-                                {volumetricWeight.toFixed(3)}kg
+                          {/* Volumetric Divisor Indicator */}
+                          {item.dimensions?.length > 0 && item.dimensions?.width > 0 && item.dimensions?.height > 0 && (
+                            <div className="ml-3 text-xs bg-blue-50 px-2 py-1 rounded">
+                              <span className="text-gray-500">Divisor: </span>
+                              <span className="font-medium text-blue-600">
+                                5000 (Air)
                               </span>
-                              {volumetricWeight > item.weight && (
-                                <span className="text-orange-600 ml-1">(Chargeable)</span>
-                              )}
+                              <span className="text-gray-400 ml-1 text-[10px]">
+                                • Changes per shipping option
+                              </span>
                             </div>
                           )}
                         </div>

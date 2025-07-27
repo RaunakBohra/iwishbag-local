@@ -120,9 +120,12 @@ export const SleekHSNSearch: React.FC<SleekHSNSearchProps> = ({
   };
 
   const handleSelect = (hsnCode: string) => {
+    console.log('🔍 [HSN] handleSelect called with:', hsnCode);
+    console.log('🔍 [HSN] Calling onChange callback...');
     onChange(hsnCode);
     setSearch('');
     setIsOpen(false);
+    console.log('🔍 [HSN] handleSelect completed, search cleared, dropdown closed');
   };
 
   const handleCreateHSN = () => {

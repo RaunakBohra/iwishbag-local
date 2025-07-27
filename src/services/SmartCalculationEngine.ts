@@ -247,6 +247,7 @@ export class SmartCalculationEngine {
           destinationCountry: input.quote.destination_country,
           weight: totalWeight,
           value: itemsTotal,
+          volumeDetails: itemWeightDetails,
         });
       }
 
@@ -673,6 +674,7 @@ export class SmartCalculationEngine {
     destinationCountry: string;
     weight: number;
     value: number;
+    volumeDetails?: Array<{ actualWeight: number; volumeCm3: number; quantity: number }>;
   }): Promise<ShippingOption[]> {
     // 🔍 ENHANCED DEBUG: Log main calculation flow
 
@@ -785,9 +787,26 @@ export class SmartCalculationEngine {
     for (const deliveryOption of deliveryOptions || []) {
       if (!deliveryOption.active) continue; // Skip inactive options
 
+      // Calculate chargeable weight using delivery option's volumetric divisor
+      let chargeableWeight = params.weight; // Default to actual weight
+      let volumetricWeight = 0;
+      if (params.volumeDetails && deliveryOption.volumetric_divisor) {
+        const totalVolumeCm3 = params.volumeDetails.reduce((sum, item) => sum + item.volumeCm3, 0);
+        volumetricWeight = totalVolumeCm3 / (deliveryOption.volumetric_divisor || 5000);
+        chargeableWeight = Math.max(params.weight, volumetricWeight);
+        
+        console.log(`[VOLUMETRIC] ${deliveryOption.carrier} - ${deliveryOption.name}:`);
+        console.log(`  Actual Weight: ${params.weight.toFixed(2)}kg`);
+        console.log(`  Volume: ${totalVolumeCm3}cm³`);
+        console.log(`  Divisor: ${deliveryOption.volumetric_divisor}`);
+        console.log(`  Volumetric Weight: ${volumetricWeight.toFixed(2)}kg`);
+        console.log(`  Chargeable Weight: ${chargeableWeight.toFixed(2)}kg`);
+      }
+
       let baseCost: number;
       try {
-        baseCost = this.calculateRouteBaseCost(route, params.weight, params.value);
+        // Use chargeable weight for cost calculation
+        baseCost = this.calculateRouteBaseCost(route, chargeableWeight, params.value);
       } catch (error) {
         // Skip this delivery option if base cost calculation fails
         continue;
@@ -801,7 +820,7 @@ export class SmartCalculationEngine {
       console.log(`  Delivery Option: ${deliveryOption.carrier} - ${deliveryOption.name}`);
       console.log(`  Delivery Premium: ${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium}`);
       console.log(`  Total Shipping Cost: ${route.origin_country === 'IN' ? '₹' : '$'}${baseCost} + ${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium} = ${route.origin_country === 'IN' ? '₹' : '$'}${optionCost}`);
-      console.log(`  📊 FORMULA: Base (${route.origin_country === 'IN' ? '₹' : '$'}${route.base_shipping_cost}) + Weight (${params.weight}kg × ${route.origin_country === 'IN' ? '₹' : '$'}${route.weight_tiers?.find((t: any) => params.weight >= t.min && (t.max === null || params.weight <= t.max))?.cost || 0}/kg) + Delivery Premium (${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium}) = ${route.origin_country === 'IN' ? '₹' : '$'}${optionCost}`);
+      console.log(`  📊 FORMULA: Base (${route.origin_country === 'IN' ? '₹' : '$'}${route.base_shipping_cost}) + Weight (${chargeableWeight.toFixed(2)}kg × ${route.origin_country === 'IN' ? '₹' : '$'}${route.weight_tiers?.find((t: any) => chargeableWeight >= t.min && (t.max === null || chargeableWeight <= t.max))?.cost || 0}/kg) + Delivery Premium (${route.origin_country === 'IN' ? '₹' : '$'}${deliveryPremium}) = ${route.origin_country === 'IN' ? '₹' : '$'}${optionCost}`);
       console.log(`  ════════════════════════════════════════`);
 
       // Validate that we don't accidentally create zero-cost shipping
@@ -833,9 +852,9 @@ export class SmartCalculationEngine {
           ? `${totalMinDays} days (by ${format(estimatedDeliveryMin, 'MMM do')})`
           : `${totalMinDays}-${totalMaxDays} days (${format(estimatedDeliveryMin, 'MMM do')}-${format(estimatedDeliveryMax, 'MMM do')})`;
 
-      // Get weight tier info for breakdown
+      // Get weight tier info for breakdown using chargeable weight
       const weightTier = route.weight_tiers?.find(
-        (tier: any) => params.weight >= tier.min && (tier.max === null || params.weight <= tier.max),
+        (tier: any) => chargeableWeight >= tier.min && (tier.max === null || chargeableWeight <= tier.max),
       );
       
       options.push({
@@ -859,8 +878,13 @@ export class SmartCalculationEngine {
           base_shipping_cost: route.base_shipping_cost,
           weight_tier_used: weightTier ? `${weightTier.min}-${weightTier.max || '∞'}kg` : 'N/A',
           weight_rate_per_kg: weightTier?.cost || 0,
-          weight_cost: weightTier ? (params.weight * weightTier.cost) : 0,
+          weight_cost: weightTier ? (chargeableWeight * weightTier.cost) : 0,
           delivery_premium: deliveryPremium,
+          // Volumetric weight information
+          actual_weight: params.weight,
+          volumetric_weight: volumetricWeight,
+          chargeable_weight: chargeableWeight,
+          volumetric_divisor: deliveryOption.volumetric_divisor,
         },
       });
     }

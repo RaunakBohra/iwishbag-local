@@ -343,6 +343,7 @@ export default function UnifiedQuoteOrderSystem({
 
   // Recalculate quote when items change
   const recalculateQuote = async (updatedItems: any[]) => {
+    console.log('🔍 [UNIFIED] recalculateQuote called with items:', updatedItems);
     try {
       setIsRecalculating(true);
       
@@ -815,7 +816,9 @@ export default function UnifiedQuoteOrderSystem({
           shipping_cost: internationalShipping
         });
         
+        console.log('🔍 [UNIFIED] Calling onUpdate from recalculateQuote with:', updateData);
         onUpdate(updateData);
+        console.log('🔍 [UNIFIED] onUpdate completed from recalculateQuote');
       }
     } catch (error) {
       console.group('❌ CALCULATION ERROR ANALYSIS');
@@ -1562,10 +1565,22 @@ export default function UnifiedQuoteOrderSystem({
                     <SleekProductTable 
                       items={items}
                       onUpdateItem={(itemId, updates) => {
+                        console.log('🔍 [UNIFIED] onUpdateItem called:', { itemId, updates });
                         const updatedItems = items.map(item => 
                           item.id === itemId ? { ...item, ...updates } : item
                         );
+                        console.log('🔍 [UNIFIED] Updated items array:', updatedItems);
                         setItems(updatedItems);
+                        console.log('🔍 [UNIFIED] Items state updated');
+                        
+                        // 🚨 CRITICAL: Call onUpdate to save to database immediately
+                        if (onUpdate) {
+                          console.log('🔍 [UNIFIED] Calling onUpdate to save items to database...');
+                          onUpdate({ items: updatedItems });
+                          console.log('🔍 [UNIFIED] onUpdate called with updated items');
+                        } else {
+                          console.warn('🔍 [UNIFIED] ⚠️ onUpdate callback is missing - items will not be saved!');
+                        }
                       }}
                       onDeleteItem={(itemId) => {
                         const updatedItems = items.filter(item => item.id !== itemId);
@@ -1582,7 +1597,10 @@ export default function UnifiedQuoteOrderSystem({
                         setItems(updatedItems);
                         recalculateQuote(updatedItems);
                       }}
-                      onRecalculate={() => recalculateQuote(items)}
+                      onRecalculate={() => {
+                        console.log('🔍 [UNIFIED] onRecalculate called with current items:', items);
+                        recalculateQuote(items);
+                      }}
                     />
                   </CardContent>
                 </Card>

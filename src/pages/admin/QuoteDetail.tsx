@@ -402,6 +402,7 @@ const AdminQuoteDetail: React.FC = () => {
   // Handle quote updates
   const updateQuoteMutation = useMutation({
     mutationFn: async (updates: any) => {
+      console.log('🔍 [MUTATION] updateQuoteMutation called with:', updates);
       if (!id) throw new Error('No quote ID provided');
 
       // Transform updates back to database format
@@ -431,6 +432,7 @@ const AdminQuoteDetail: React.FC = () => {
 
       // Handle items updates
       if (updates.items) {
+        console.log('🔍 [MUTATION] Items update detected:', updates.items);
         dbUpdates.items = updates.items;
       }
 
@@ -457,6 +459,7 @@ const AdminQuoteDetail: React.FC = () => {
         dbUpdates.internal_notes = updates.internal_notes;
       }
 
+      console.log('🔍 [MUTATION] Updating database with:', dbUpdates);
       const { data, error } = await supabase
         .from('quotes')
         .update(dbUpdates)
@@ -464,7 +467,12 @@ const AdminQuoteDetail: React.FC = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('🔍 [MUTATION] Database update failed:', error);
+        throw error;
+      }
+
+      console.log('🔍 [MUTATION] Database update successful, returned data:', data);
       return data;
     },
     onSuccess: () => {
@@ -528,10 +536,13 @@ const AdminQuoteDetail: React.FC = () => {
     <UnifiedQuoteOrderSystem
       quote={transformedQuote}
       onUpdate={(updates) => {
+        console.log('🔍 [QUOTE-DETAIL] onUpdate called with:', updates);
         if (updates.refresh) {
+          console.log('🔍 [QUOTE-DETAIL] Refresh requested, invalidating queries');
           // Refetch the quote data
           queryClient.invalidateQueries({ queryKey: ['quote', id] });
         } else {
+          console.log('🔍 [QUOTE-DETAIL] Calling updateQuoteMutation with:', updates);
           updateQuoteMutation.mutate(updates);
         }
       }}
