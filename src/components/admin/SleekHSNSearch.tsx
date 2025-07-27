@@ -32,6 +32,8 @@ export const SleekHSNSearch: React.FC<SleekHSNSearchProps> = ({
   className,
   autoFocus = true,
 }) => {
+  console.log('🔍 [HSN-COMPONENT] SleekHSNSearch rendered with value:', value, 'at', new Date().toISOString());
+  
   const [search, setSearch] = useState('');
   const [options, setOptions] = useState<HSNOption[]>([]);
   const [loading, setLoading] = useState(false);

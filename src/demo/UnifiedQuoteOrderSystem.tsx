@@ -1568,6 +1568,7 @@ export default function UnifiedQuoteOrderSystem({
                   <CardContent>
                     <SleekProductTable 
                       items={items}
+                      selectedShippingOption={selectedShippingOptionId ? availableShippingOptions.find(opt => opt.id === selectedShippingOptionId) : undefined}
                       onUpdateItem={(itemId, updates) => {
                         console.log('🔍 [UNIFIED] onUpdateItem called:', { itemId, updates });
                         const updatedItems = items.map(item => 

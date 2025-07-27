@@ -94,6 +94,8 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   onRecalculate,
   selectedShippingOption,
 }) => {
+  console.log('🔍 [COMPONENT] SleekProductTable rendered with items:', items.length, 'at', new Date().toISOString());
+  
   // State for expanded rows - default to all expanded
   const [expandedRows, setExpandedRows] = useState<string[]>(items.map(item => item.id));
   const [editingField, setEditingField] = useState<{itemId: string, field: string} | null>(null);
@@ -517,7 +519,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                       ) : (
                         <div 
                           className="cursor-pointer hover:text-blue-600 transition-colors group"
-                          onClick={() => setEditingField({itemId: item.id, field: 'hsn_code'})}
+                          onClick={() => {
+                            console.log('🔍 [HSN-CLICK] User clicked HSN field for item:', item.id, 'current hsn_code:', item.hsn_code);
+                            setEditingField({itemId: item.id, field: 'hsn_code'});
+                          }}
                         >
                           <p className="text-xs text-gray-400 uppercase tracking-wider">HSN</p>
                           {item.hsn_code ? (
@@ -528,7 +533,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               )}
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-400 group-hover:text-blue-500">+ Add</p>
+                            <div>
+                              {console.log('🔍 [HSN-DISPLAY] Showing "+ Add" for item:', item.id, 'HSN empty')}
+                              <p className="text-sm text-gray-400 group-hover:text-blue-500">+ Add</p>
+                            </div>
                           )}
                         </div>
                       )}
