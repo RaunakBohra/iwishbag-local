@@ -339,9 +339,9 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                   </div>
                   
                   {/* Right side stats */}
-                  <div className="flex items-center gap-6 flex-shrink-0">
+                  <div className="flex items-center gap-4 flex-shrink-0">
                     {/* Quantity */}
-                    <div className="text-center min-w-[50px]">
+                    <div className="text-center min-w-[60px]">
                       {editingField?.itemId === item.id && editingField?.field === 'quantity' ? (
                         <div className="flex items-center justify-center gap-1">
                           <Input
@@ -410,13 +410,13 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                     </div>
                     
                     {/* Weight */}
-                    <div className="text-center min-w-[90px]">
+                    <div className="text-center min-w-[85px]">
                       <p className="text-xs text-gray-400 uppercase tracking-wider">Weight</p>
-                      <p className="text-sm font-semibold">{item.weight.toFixed(3)} kg</p>
+                      <p className="text-sm font-semibold">{item.weight.toFixed(2)} kg</p>
                     </div>
                     
                     {/* HSN */}
-                    <div className="text-center min-w-[100px]">
+                    <div className="text-center min-w-[140px] mr-1">
                       {editingField?.itemId === item.id && editingField?.field === 'hsn_code' ? (
                         <div className="relative">
                           <SleekHSNSearch
@@ -509,19 +509,12 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                         >
                           <p className="text-xs text-gray-400 uppercase tracking-wider">HSN</p>
                           {item.hsn_code ? (
-                            <div>
-                              <p className="font-mono font-semibold">
-                                {item.hsn_code}
-                              </p>
+                            <div className="text-sm font-semibold">
+                              <span className="font-mono">{item.hsn_code}</span>
                               {item.hsn_code && (hsnCategories[item.hsn_code] || item.category) && (
-                                <p className="text-[10px] text-gray-500 truncate">
-                                  {hsnCategories[item.hsn_code] || item.category}
-                                </p>
-                              )}
-                              {item.weight_options?.hsn && (
-                                <p className="text-[10px] text-blue-600 font-medium">
-                                  {item.weight_options.hsn.toFixed(3)}kg
-                                </p>
+                                <span className="text-[10px] text-gray-500 ml-1">
+                                  • {(hsnCategories[item.hsn_code] || item.category).substring(0, 12)}
+                                </span>
                               )}
                             </div>
                           ) : (
