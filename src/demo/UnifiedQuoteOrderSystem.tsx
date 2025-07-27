@@ -544,9 +544,16 @@ export default function UnifiedQuoteOrderSystem({
       if (calculationResult.hsn_tax_breakdown) {
         console.log('🏷️ HSN TAX BREAKDOWN:', {
           total_items_processed: calculationResult.hsn_tax_breakdown.length,
-          items_with_customs: calculationResult.hsn_tax_breakdown.filter(item => item.customs_amount > 0).length,
-          total_customs_calculated: calculationResult.hsn_tax_breakdown.reduce((sum, item) => sum + item.customs_amount, 0),
-          classification_sources: [...new Set(calculationResult.hsn_tax_breakdown.map(item => item.classification_source))]
+          items_with_customs: calculationResult.hsn_tax_breakdown.filter(item => item.total_customs > 0).length,
+          total_customs_calculated: calculationResult.hsn_tax_breakdown.reduce((sum, item) => sum + item.total_customs, 0),
+          total_destination_tax: calculationResult.hsn_tax_breakdown.reduce((sum, item) => sum + item.total_local_taxes, 0),
+          items_detail: calculationResult.hsn_tax_breakdown.map(item => ({
+            name: item.item_name,
+            hsn: item.hsn_code,
+            customs: item.total_customs,
+            local_taxes: item.total_local_taxes,
+            total: item.total_taxes
+          }))
         });
       }
 
@@ -874,7 +881,13 @@ export default function UnifiedQuoteOrderSystem({
         });
         
         if (!skipSave) {
-          console.log('🔍 [UNIFIED] Calling onUpdate from recalculateQuote with:', updateData);
+          console.log('🔍 [UNIFIED] Calling onUpdate from recalculateQuote with:', {
+            ...updateData,
+            item_breakdowns_count: updateData.calculation_data?.item_breakdowns?.length || 0,
+            item_breakdowns_sample: updateData.calculation_data?.item_breakdowns?.[0] || null,
+            has_hsn_breakdown: !!updateData.hsn_tax_breakdown,
+            hsn_items_count: updateData.hsn_tax_breakdown?.length || 0
+          });
           onUpdate(updateData);
           console.log('🔍 [UNIFIED] onUpdate completed from recalculateQuote');
         } else {
