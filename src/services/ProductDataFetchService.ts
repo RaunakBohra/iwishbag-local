@@ -8,6 +8,9 @@ export interface ProductData {
   price?: number;
   currency?: string;
   weight?: number;
+  weight_value?: number;
+  weight_unit?: string;
+  weight_raw?: string;
   images?: string[];
   availability?: 'in-stock' | 'out-of-stock' | 'unknown';
   variants?: ProductVariant[];
@@ -331,8 +334,15 @@ class ProductDataFetchService {
       normalized.currency = 'USD';
     }
 
-    // Weight
-    if (rawData.weight) {
+    // Weight - handle both old and new formats
+    if (rawData.weight_value !== undefined && rawData.weight_unit) {
+      // New format with separate value and unit
+      normalized.weight = rawData.weight; // Already in kg for backward compatibility
+      normalized.weight_value = rawData.weight_value;
+      normalized.weight_unit = rawData.weight_unit;
+      normalized.weight_raw = rawData.weight_raw;
+    } else if (rawData.weight) {
+      // Old format - single weight field
       if (typeof rawData.weight === 'string') {
         const weightMatch = rawData.weight.match(/(\d+(?:\.\d+)?)/);
         if (weightMatch) {

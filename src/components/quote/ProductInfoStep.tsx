@@ -347,7 +347,12 @@ export default function ProductInfoStep({
         }
         
         if (productData.weight && !products[productIndex].weight) {
-          updateProduct(productIndex, 'weight', productData.weight.toFixed(2));
+          // If we have raw weight data, display it, otherwise use the kg value
+          if (productData.weight_raw && productData.weight_unit && productData.weight_unit !== 'kg') {
+            updateProduct(productIndex, 'weight', productData.weight_raw);
+          } else {
+            updateProduct(productIndex, 'weight', productData.weight.toFixed(2));
+          }
         }
         
         // Set success status
