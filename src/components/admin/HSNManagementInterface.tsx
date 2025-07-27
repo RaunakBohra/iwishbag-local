@@ -70,6 +70,7 @@ import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
 import type { HSNMasterRecord } from '@/services/UnifiedDataEngine';
 import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import { HSNImportExport } from '@/components/admin/HSNImportExport';
+import { supabase } from '@/integrations/supabase/client';
 
 interface HSNManagementInterfaceProps {
   className?: string;
