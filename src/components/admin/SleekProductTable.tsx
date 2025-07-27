@@ -410,8 +410,8 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                           <SleekHSNSearch
                             value={item.hsn_code || ''}
                             onChange={async (hsnCode) => {
-                              // Update HSN code
-                              handleFieldEdit(item.id, 'hsn_code', hsnCode);
+                              // Update HSN code directly without closing the field
+                              onUpdateItem(item.id, { hsn_code: hsnCode });
                               
                               // Fetch and update category
                               if (hsnCode) {
@@ -443,6 +443,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   console.error('Failed to fetch HSN data:', error);
                                 }
                               }
+                              
+                              // Close the field and trigger recalculation
+                              setEditingField(null);
+                              onRecalculate();
                             }}
                             onCancel={() => setEditingField(null)}
                             placeholder="Type HSN code..."

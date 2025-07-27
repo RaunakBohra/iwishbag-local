@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Plus, Hash, Loader2 } from 'lucide-react';
+import { Plus, Hash, Package, DollarSign, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { HSNCreationModal } from './HSNCreationModal';
 
 interface HSNOption {
   hsn_code: string;
   description: string;
   category: string;
-  icon?: string;
+  subcategory?: string | null;
+  keywords?: string[] | null;
+  minimum_valuation_usd?: number | null;
+  tax_data?: any;
+  weight_data?: any;
 }
 
 interface SleekHSNSearchProps {
@@ -33,6 +38,7 @@ export const SleekHSNSearch: React.FC<SleekHSNSearchProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showCreateOption, setShowCreateOption] = useState(false);
+  const [showHSNModal, setShowHSNModal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +55,7 @@ export const SleekHSNSearch: React.FC<SleekHSNSearchProps> = ({
       try {
         const { data, error } = await supabase
           .from('hsn_master')
-          .select('hsn_code, description, category')
+          .select('hsn_code, description, category, subcategory, keywords, minimum_valuation_usd, tax_data, weight_data')
           .or(`hsn_code.ilike.%${search}%,description.ilike.%${search}%,category.ilike.%${search}%`)
           .limit(6);
 
@@ -119,113 +125,152 @@ export const SleekHSNSearch: React.FC<SleekHSNSearchProps> = ({
     setIsOpen(false);
   };
 
-  const handleCreateHSN = async () => {
-    if (!search || !/^\d+$/.test(search)) return;
-
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('hsn_requests')
-        .insert({
-          hsn_code: search,
-          description: 'User requested HSN code',
-          category: 'Uncategorized',
-          source: 'manual',
-          status: 'pending'
-        });
-
-      if (error) throw error;
-
-      handleSelect(search);
-    } catch (error) {
-      console.error('Error creating HSN request:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleCreateHSN = () => {
+    setIsOpen(false);
+    setShowHSNModal(true);
   };
 
   return (
     <div className="relative">
-      <div className="relative">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          className={cn(
-            "w-full pl-7 pr-7 py-1 text-xs border border-gray-200 rounded",
-            "focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20",
-            "placeholder:text-gray-400",
-            className
-          )}
-          autoFocus={autoFocus}
-        />
-        {loading && (
-          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 animate-spin" />
+      <input
+        ref={inputRef}
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setIsOpen(true)}
+        placeholder={placeholder}
+        className={cn(
+          "flex h-6 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-xs shadow-sm transition-colors",
+          "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-gray-950",
+          "placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950",
+          "disabled:cursor-not-allowed disabled:opacity-50 focus:border-blue-400",
+          "dark:border-gray-800 dark:bg-gray-950 dark:ring-offset-gray-950 dark:file:text-gray-50",
+          "dark:placeholder:text-gray-400 dark:focus-visible:ring-gray-300",
+          className
         )}
-      </div>
+        autoFocus={autoFocus}
+      />
 
       {/* Dropdown */}
       {isOpen && (options.length > 0 || showCreateOption) && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+          className="absolute z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg left-1/2 -translate-x-1/2 flex flex-col"
+          style={{ minWidth: '400px', maxWidth: '500px', maxHeight: '320px' }}
         >
-          {options.map((option, index) => (
-            <button
-              key={option.hsn_code}
-              onClick={() => handleSelect(option.hsn_code)}
-              className={cn(
-                "w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors",
-                "border-b border-gray-100 last:border-0",
-                selectedIndex === index && "bg-blue-50"
-              )}
-            >
-              <div className="flex items-start gap-2">
-                <Hash className="h-3 w-3 text-gray-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-medium text-gray-900">
-                      {option.hsn_code}
-                    </span>
-                    <span className="text-xs text-gray-500 truncate">
-                      {option.category}
-                    </span>
+          {/* Scrollable options area */}
+          <div className="overflow-y-auto flex-1">
+            {options.map((option, index) => {
+            // Extract tax rate from tax_data
+            const taxRate = option.tax_data?.gst_rate || option.tax_data?.customs_rate || 18;
+            const hasMinValuation = option.minimum_valuation_usd && option.minimum_valuation_usd > 0;
+            
+            return (
+              <button
+                key={option.hsn_code}
+                onClick={() => handleSelect(option.hsn_code)}
+                className={cn(
+                  "w-full px-3 py-2.5 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0",
+                  selectedIndex === index && "bg-blue-50"
+                )}
+              >
+                <div className="space-y-1.5">
+                  {/* First row: HSN code and category */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="font-mono font-semibold text-sm text-gray-900">
+                        {option.hsn_code}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {option.category}
+                        {option.subcategory && ` › ${option.subcategory}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1 text-xs text-gray-600">
+                        <Percent className="h-3 w-3" />
+                        {taxRate}%
+                      </span>
+                      {hasMinValuation && (
+                        <span className="flex items-center gap-1 text-xs text-orange-600">
+                          <DollarSign className="h-3 w-3" />
+                          Min ${option.minimum_valuation_usd}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600 truncate mt-0.5">
+                  
+                  {/* Second row: Description */}
+                  <p className="text-xs text-gray-700 leading-relaxed">
                     {option.description}
                   </p>
+                  
+                  {/* Third row: Keywords if available */}
+                  {option.keywords && option.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {option.keywords.slice(0, 3).map((keyword, idx) => (
+                        <span 
+                          key={idx}
+                          className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded"
+                        >
+                          {keyword}
+                        </span>
+                      ))}
+                      {option.keywords.length > 3 && (
+                        <span className="text-[10px] text-gray-400">
+                          +{option.keywords.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
+          </div>
 
+          {/* Sticky Add HSN button */}
           {showCreateOption && (
-            <button
-              onClick={handleCreateHSN}
-              className={cn(
-                "w-full px-3 py-2 text-left hover:bg-blue-50 transition-colors",
-                "border-t border-gray-200",
-                selectedIndex === options.length && "bg-blue-50"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Plus className="h-3 w-3 text-blue-600" />
-                <span className="text-sm text-blue-600 font-medium">
-                  Add HSN "{search}"
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 ml-5 mt-0.5">
-                Create new HSN code
-              </p>
-            </button>
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-2">
+              <button
+                onClick={handleCreateHSN}
+                className="w-full px-3 py-2.5 text-left hover:bg-blue-50 transition-colors rounded-md bg-gray-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">
+                        Add HSN "{search}"
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Request for admin approval
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
           )}
         </div>
       )}
+
+      {/* HSN Creation Modal */}
+      <HSNCreationModal
+        open={showHSNModal}
+        onOpenChange={setShowHSNModal}
+        mode="user_request"
+        initialData={{
+          hsn_code: search,
+        }}
+        onSuccess={(hsnData) => {
+          // Select the newly created HSN
+          handleSelect(search);
+          setShowHSNModal(false);
+        }}
+      />
     </div>
   );
 };

@@ -9,6 +9,7 @@ export interface DeliveryOption {
   max_days: number;
   price: number;
   active: boolean;
+  volumetric_divisor?: number;
 }
 
 export interface DeliveryEstimate {

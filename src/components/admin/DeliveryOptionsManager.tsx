@@ -32,6 +32,7 @@ interface DeliveryOption {
   min_days: number;
   max_days: number;
   cost: number;
+  volumetric_divisor?: number;
 }
 
 // Shipping route interface
@@ -64,6 +65,7 @@ interface DeliveryOptionExtended {
   price?: number;
   cost?: number;
   active?: boolean;
+  volumetric_divisor?: number;
 }
 
 // Quote interface

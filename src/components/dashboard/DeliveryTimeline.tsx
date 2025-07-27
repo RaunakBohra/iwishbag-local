@@ -15,6 +15,7 @@ interface DeliveryOption {
   min_days: number;
   max_days: number;
   cost: number;
+  volumetric_divisor?: number;
 }
 
 interface DeliveryTimelineProps {

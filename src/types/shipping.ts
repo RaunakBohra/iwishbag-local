@@ -26,6 +26,8 @@ export interface DeliveryOption {
   max_days: number;
   price: number;
   active: boolean;
+  // Volumetric weight divisor (defaults to 5000 if not specified)
+  volumetric_divisor?: number;
   // Route-based configuration (optional)
   handling_charge?: RouteHandlingChargeConfig;
   insurance_options?: RouteInsuranceConfig;
