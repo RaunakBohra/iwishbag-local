@@ -185,7 +185,7 @@ async function scrapeWithScrapeAPI(url: string, website: string) {
       reviews_count: extractedData.reviews_count,
       currency: extractedData.currency,
       country: extractedData.country,
-      url: url,
+      // Don't include URL to avoid overwriting the input field
     },
     confidence: calculateConfidence(extractedData, website),
     method: 'scrapeapi',
@@ -253,7 +253,7 @@ function extractAmazonDataFromScrapeAPI(data: Record<string, unknown>, url: stri
     images: product.images || product.image_urls || [],
     availability: product.availability || (product.in_stock ? 'In Stock' : 'Unknown'),
     category: detectCategory(product.title || product.name, 'amazon.com'),
-    url: url, // Include the original URL
+    // Don't include URL to avoid overwriting the input field
   };
 }
 
@@ -592,7 +592,7 @@ async function scrapeWithBrightData(url: string, website: string) {
     success: true,
     data: {
       ...extractedData,
-      url: url, // Include the original URL
+      // Don't include URL to avoid overwriting the input field
     },
     confidence: calculateConfidence(extractedData, website),
     method: 'brightdata-structured',
@@ -944,7 +944,7 @@ async function scrapeWithBrightDataWebUnlocker(url: string, website: string) {
     success: true,
     data: {
       ...extractedData,
-      url: url, // Include the original URL
+      // Don't include URL to avoid overwriting the input field
     },
     confidence: calculateConfidence(extractedData, website),
     method: 'brightdata-webunlocker',
