@@ -77,7 +77,13 @@ interface SleekProductTableProps {
   onUpdateItem: (itemId: string, updates: Partial<QuoteItem>) => void;
   onDeleteItem: (itemId: string) => void;
   onDuplicateItem: (item: QuoteItem) => void;
-  onRecalculate: () => void;
+  onRecalculate: (updatedItems?: any[]) => void;
+  selectedShippingOption?: {
+    id: string;
+    name: string;
+    carrier: string;
+    volumetric_divisor?: number;
+  };
 }
 
 export const SleekProductTable: React.FC<SleekProductTableProps> = ({
@@ -86,6 +92,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   onDeleteItem,
   onDuplicateItem,
   onRecalculate,
+  selectedShippingOption,
 }) => {
   // State for expanded rows - default to all expanded
   const [expandedRows, setExpandedRows] = useState<string[]>(items.map(item => item.id));
@@ -180,7 +187,11 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     
     // Recalculate if weight, price, or tax-related field changed
     if (['price', 'weight', 'weight_source', 'tax_method', 'valuation_method', 'hsn_code'].includes(field)) {
-      onRecalculate();
+      // Pass updated items to avoid state timing issues
+      const updatedItems = items.map(item => 
+        item.id === itemId ? { ...item, [field]: value } : item
+      );
+      onRecalculate(updatedItems);
     }
   };
 
@@ -471,11 +482,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                 onUpdateItem(item.id, { hsn_code: '' });
                               }
                               
-                              // Close the field and trigger recalculation
-                              console.log('🔍 [PRODUCT-TABLE] Closing field and triggering recalculation...');
+                              // Close the field - recalculation happens automatically via onUpdateItem
+                              console.log('🔍 [PRODUCT-TABLE] Closing field...');
                               setEditingField(null);
-                              onRecalculate();
-                              console.log('🔍 [PRODUCT-TABLE] HSN onChange completed');
+                              console.log('🔍 [PRODUCT-TABLE] HSN onChange completed - no manual recalculation needed');
                             }}
                             onCancel={() => setEditingField(null)}
                             placeholder="Type HSN code..."
@@ -859,10 +869,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                             <div className="ml-3 text-xs bg-blue-50 px-2 py-1 rounded">
                               <span className="text-gray-500">Divisor: </span>
                               <span className="font-medium text-blue-600">
-                                5000 (Air)
+                                {selectedShippingOption?.volumetric_divisor || 5000} ({selectedShippingOption?.carrier || 'Default'})
                               </span>
                               <span className="text-gray-400 ml-1 text-[10px]">
-                                • Changes per shipping option
+                                • {selectedShippingOption ? selectedShippingOption.name : 'Select shipping option to see specific divisor'}
                               </span>
                             </div>
                           )}

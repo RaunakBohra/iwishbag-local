@@ -342,8 +342,8 @@ export default function UnifiedQuoteOrderSystem({
 
 
   // Recalculate quote when items change
-  const recalculateQuote = async (updatedItems: any[]) => {
-    console.log('🔍 [UNIFIED] recalculateQuote called with items:', updatedItems);
+  const recalculateQuote = async (updatedItems: any[], skipSave = false) => {
+    console.log('🔍 [UNIFIED] recalculateQuote called with items:', updatedItems, 'skipSave:', skipSave);
     try {
       setIsRecalculating(true);
       
@@ -816,9 +816,13 @@ export default function UnifiedQuoteOrderSystem({
           shipping_cost: internationalShipping
         });
         
-        console.log('🔍 [UNIFIED] Calling onUpdate from recalculateQuote with:', updateData);
-        onUpdate(updateData);
-        console.log('🔍 [UNIFIED] onUpdate completed from recalculateQuote');
+        if (!skipSave) {
+          console.log('🔍 [UNIFIED] Calling onUpdate from recalculateQuote with:', updateData);
+          onUpdate(updateData);
+          console.log('🔍 [UNIFIED] onUpdate completed from recalculateQuote');
+        } else {
+          console.log('🔍 [UNIFIED] Skipping onUpdate call from recalculateQuote (skipSave=true)');
+        }
       }
     } catch (error) {
       console.group('❌ CALCULATION ERROR ANALYSIS');
@@ -1597,9 +1601,15 @@ export default function UnifiedQuoteOrderSystem({
                         setItems(updatedItems);
                         recalculateQuote(updatedItems);
                       }}
-                      onRecalculate={() => {
-                        console.log('🔍 [UNIFIED] onRecalculate called with current items:', items);
-                        recalculateQuote(items);
+                      onRecalculate={(updatedItems) => {
+                        const itemsToUse = updatedItems || items;
+                        const skipSave = !!updatedItems; // Skip save if updatedItems provided (already saved by onUpdateItem)
+                        console.log('🔍 [UNIFIED] onRecalculate called with items:', { 
+                          received: !!updatedItems, 
+                          itemCount: itemsToUse.length,
+                          skipSave 
+                        });
+                        recalculateQuote(itemsToUse, skipSave);
                       }}
                     />
                   </CardContent>
