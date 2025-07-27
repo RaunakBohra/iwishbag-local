@@ -1703,12 +1703,15 @@ export class SmartCalculationEngine {
         itemBreakdowns.push({
           item_id: item.id,
           item_name: item.name,
+          hsn_code: item.hsn_code || '',
           tax_method: itemTaxMethod,
           customs_rate: itemCustomsRate,
           customs: itemCustoms,
           sales_tax: itemSalesTax,
           destination_tax: itemVat,
-          total_taxes: itemCustoms + itemSalesTax + itemVat
+          total_taxes: itemCustoms + itemSalesTax + itemVat,
+          customs_value: itemValue,
+          valuation_method: item.valuation_method || 'actual_price'
         });
       }
       
@@ -1948,19 +1951,21 @@ export class SmartCalculationEngine {
         method: quote.calculation_method_preference || 'manual',
         valuation_method: valuationMethod,
       },
-      // 🆕 NEW: Store HSN item-level tax breakdown for easy access
-      item_breakdowns: hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
-        item_id: item.item_id,
-        item_name: item.item_name,
-        hsn_code: item.hsn_code,
-        customs_value: item.taxable_amount_origin_currency,
-        customs: item.total_customs,
-        sales_tax: item.sales_tax || 0,
-        destination_tax: item.total_local_taxes, // HSN local taxes are destination taxes
-        total_taxes: item.total_taxes,
-        valuation_method: item.valuation_method,
-        minimum_valuation_applied: item.minimum_valuation_conversion ? true : false,
-      })) : [],
+      // 🆕 NEW: Store item-level tax breakdown for easy access
+      // Use per-item breakdowns if available, otherwise use HSN breakdowns
+      item_breakdowns: quote.calculation_data?.item_breakdowns || 
+        (hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
+          item_id: item.item_id,
+          item_name: item.item_name,
+          hsn_code: item.hsn_code,
+          customs_value: item.taxable_amount_origin_currency,
+          customs: item.total_customs,
+          sales_tax: item.sales_tax || 0,
+          destination_tax: item.total_local_taxes, // HSN local taxes are destination taxes
+          total_taxes: item.total_taxes,
+          valuation_method: item.valuation_method,
+          minimum_valuation_applied: item.minimum_valuation_conversion ? true : false,
+        })) : []),
       // 🆕 NEW: Add HSN calculation metadata
       hsn_calculation: hsnTaxSummary
         ? {
@@ -2384,6 +2389,8 @@ export class SmartCalculationEngine {
         price: item.costprice_origin,
         weight: item.weight,
         quantity: item.quantity,
+        tax_method: item.tax_method || 'hsn', // Include tax method in cache key
+        hsn_code: item.hsn_code || '', // Include HSN code
       })),
       countries: `${input.quote.origin_country}-${input.quote.destination_country}`,
       preferences: input.preferences,

@@ -228,7 +228,10 @@ const transformQuoteToUnifiedFormat = (
     })) || [],
     
     // Include customer data for insurance preferences and other customer info
-    customer_data: customerData
+    customer_data: customerData,
+    
+    // Include raw calculation data for tax breakdown
+    calculation_data: calculationData
   };
 };
 
