@@ -56,12 +56,13 @@ export default function QuoteRequestPage() {
     {
       title: '',
       url: '',
-      file: null,
+      files: [],
       imageUrl: '', // Separate field for uploaded image URL
       quantity: 1,
       price: '',
       weight: '',
       country: '',
+      notes: '',
     },
   ]);
   const [contactInfo, setContactInfo] = useState({
@@ -682,12 +683,13 @@ export default function QuoteRequestPage() {
                           {
                             title: '',
                             url: '',
-                            file: null,
+                            files: [],
                             imageUrl: '', // Include imageUrl field in reset
                             quantity: 1,
                             price: '',
                             weight: '',
                             country: '',
+      notes: '',
                           },
                         ]);
                         setContactInfo({ name: '', email: '' });
