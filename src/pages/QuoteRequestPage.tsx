@@ -54,7 +54,7 @@ export default function QuoteRequestPage() {
   const [quoteType, setQuoteType] = useState('separate');
   const [products, setProducts] = useState([
     {
-      name: '',
+      title: '',
       url: '',
       file: null,
       imageUrl: '', // Separate field for uploaded image URL
@@ -188,7 +188,7 @@ export default function QuoteRequestPage() {
         // Combined quote: Create one quote with multiple items
         const items = products.map((product) => ({
           productUrl: product.url,
-          productName: product.name,
+          productName: product.title,
           quantity: product.quantity,
           options: product.notes || '',
           imageUrl: product.file ? product.url : '',
@@ -238,7 +238,7 @@ export default function QuoteRequestPage() {
             user_id: user?.id || null, // Now uses anonymous auth user ID
             items: products.map((product) => ({
               id: crypto.randomUUID(),
-              name: product.name,
+              name: product.title,
               url: product.url,
               image: product.imageUrl || null, // Use separate imageUrl field
               options: product.notes || null,
@@ -322,7 +322,7 @@ export default function QuoteRequestPage() {
           // CRITICAL FIX: Ensure origin_country is properly captured for each product
           if (!product.country) {
             setSubmitError(
-              `Origin country is required for "${product.name || 'one of your products'}". Please select the purchase country.`,
+              `Origin country is required for "${product.title || 'one of your products'}". Please select the purchase country.`,
             );
             setIsSubmitting(false);
             return;
@@ -361,7 +361,7 @@ export default function QuoteRequestPage() {
               items: [
                 {
                   id: crypto.randomUUID(),
-                  name: product.name,
+                  name: product.title,
                   url: product.url,
                   image: product.imageUrl || null, // Use separate imageUrl field
                   options: product.notes || null,
@@ -391,7 +391,7 @@ export default function QuoteRequestPage() {
           if (quoteError || !quote) {
             console.error('Error inserting quote:', quoteError);
             setSubmitError(
-              `Failed to create quote for ${product.name || 'one of your products'}. Some quotes may have been created successfully.`,
+              `Failed to create quote for ${product.title || 'one of your products'}. Some quotes may have been created successfully.`,
             );
             continue;
           }
@@ -414,7 +414,7 @@ export default function QuoteRequestPage() {
 
           // Items are now stored in the JSONB items array within the quote
           // No need for separate quote_items table insertion
-          console.log(`Quote created successfully for ${product.name} with ID: ${quote.id}`);
+          console.log(`Quote created successfully for ${product.title} with ID: ${quote.id}`);
         }
       }
 
@@ -680,7 +680,7 @@ export default function QuoteRequestPage() {
                         setCurrentStep(1);
                         setProducts([
                           {
-                            name: '',
+                            title: '',
                             url: '',
                             file: null,
                             imageUrl: '', // Include imageUrl field in reset

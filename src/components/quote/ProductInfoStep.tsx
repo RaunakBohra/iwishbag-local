@@ -238,7 +238,6 @@ export default function ProductInfoStep({
   };
 
   const updateProduct = (index, field, value) => {
-    console.log(`updateProduct called: index=${index}, field=${field}, value=${value}`);
     const newProducts = [...products];
     newProducts[index] = { ...newProducts[index], [field]: value };
 
