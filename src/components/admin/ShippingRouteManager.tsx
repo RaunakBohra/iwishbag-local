@@ -202,6 +202,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
           max_days: 10,
           price: 25.0,
           active: true,
+          volumetric_divisor: 5000, // Default air freight divisor
         },
       ],
     }));
@@ -501,6 +502,22 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
                   onCheckedChange={(checked) => updateDeliveryOption(index, 'active', checked)}
                 />
                 <Label>Active</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-6 gap-3">
+              <div className="col-span-2">
+                <Label>Volumetric Divisor</Label>
+                <Input
+                  type="number"
+                  value={option.volumetric_divisor || 5000}
+                  onChange={(e) =>
+                    updateDeliveryOption(index, 'volumetric_divisor', parseInt(e.target.value) || 5000)
+                  }
+                  placeholder="5000"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Standard: Air-5000, Sea-6000, Road-4000
+                </p>
               </div>
             </div>
             <Button

@@ -410,12 +410,10 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                           <SleekHSNSearch
                             value={item.hsn_code || ''}
                             onChange={async (hsnCode) => {
-                              // Update HSN code directly without closing the field
-                              onUpdateItem(item.id, { hsn_code: hsnCode });
-                              
-                              // Fetch and update category
+                              // Update HSN code and category
                               if (hsnCode) {
                                 try {
+                                  // Fetch HSN data including category
                                   const { data } = await supabase
                                     .from('hsn_master')
                                     .select('category')
@@ -423,10 +421,20 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                     .single();
                                   
                                   if (data) {
+                                    // Update local state for category display
                                     setHsnCategories(prev => ({
                                       ...prev,
                                       [hsnCode]: data.category
                                     }));
+                                    
+                                    // Update item with both HSN code and category
+                                    onUpdateItem(item.id, { 
+                                      hsn_code: hsnCode,
+                                      category: data.category
+                                    });
+                                  } else {
+                                    // Just update HSN code if no category found
+                                    onUpdateItem(item.id, { hsn_code: hsnCode });
                                   }
                                   
                                   // Also fetch HSN weight
@@ -441,7 +449,12 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   }
                                 } catch (error) {
                                   console.error('Failed to fetch HSN data:', error);
+                                  // Still update the HSN code even if fetch fails
+                                  onUpdateItem(item.id, { hsn_code: hsnCode });
                                 }
+                              } else {
+                                // Clear HSN code
+                                onUpdateItem(item.id, { hsn_code: '' });
                               }
                               
                               // Close the field and trigger recalculation

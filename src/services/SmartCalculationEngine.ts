@@ -18,6 +18,7 @@ import { unifiedTaxFallbackService } from '@/services/UnifiedTaxFallbackService'
 import { autoProductClassifier } from '@/services/AutoProductClassifier';
 import { weightDetectionService } from '@/services/WeightDetectionService';
 import { vatService } from '@/services/VATService';
+import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -185,15 +186,34 @@ export class SmartCalculationEngine {
         },
         0,
       );
-      const totalWeight = input.quote.items.reduce(
-        (sum, item) => {
-          const weight = typeof item.weight === 'number' && !isNaN(item.weight) ? item.weight : 0;
-          const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
-          
-          return sum + weight * quantity;
-        },
-        0,
-      );
+      // Calculate total weight including volumetric weight considerations
+      let totalActualWeight = 0;
+      let totalVolumetricWeight = 0;
+      let totalChargeableWeight = 0;
+      
+      const itemWeightDetails = input.quote.items.map(item => {
+        const actualWeight = typeof item.weight === 'number' && !isNaN(item.weight) ? item.weight : 0;
+        const quantity = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1;
+        
+        // Calculate volumetric weight if dimensions are provided
+        let volumetricWeight = 0;
+        if (item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0) {
+          // We'll use the divisor from the selected delivery option later
+          // For now, just store the volume
+          const volumeCm3 = item.dimensions.length * item.dimensions.width * item.dimensions.height;
+          volumetricWeight = volumeCm3; // Store volume for now, will divide by divisor later
+        }
+        
+        return {
+          actualWeight: actualWeight * quantity,
+          volumeCm3: volumetricWeight * quantity,
+          quantity
+        };
+      });
+      
+      // For initial calculation, use actual weight (volumetric will be applied per delivery option)
+      const totalWeight = itemWeightDetails.reduce((sum, item) => sum + item.actualWeight, 0);
+      totalActualWeight = totalWeight;
 
       // 🆕 ENHANCED: HSN-based per-item tax calculation with 2-tier method selection
       console.log(`[SMART ENGINE DEBUG] About to call calculateHSNBasedTaxes with preferences:`, {

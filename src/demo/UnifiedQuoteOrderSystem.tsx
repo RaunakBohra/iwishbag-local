@@ -853,7 +853,7 @@ export default function UnifiedQuoteOrderSystem({
         await recalculateQuote(updatedItems);
       }
       
-      // Call onUpdate callback if provided
+      // Call onUpdate callback if provided to save items
       if (onUpdate) {
         onUpdate({
           items: updatedItems
