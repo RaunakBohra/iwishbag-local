@@ -92,6 +92,52 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   const [loadingWeight, setLoadingWeight] = useState<{itemId: string, source: string} | null>(null);
   const [editingManualWeight, setEditingManualWeight] = useState<string | null>(null);
 
+  // Pre-fetch weights for all items on mount
+  useEffect(() => {
+    const fetchWeightsForItems = async () => {
+      for (const item of items) {
+        // Skip if weight options already populated
+        if (item.weight_options?.hsn && item.weight_options?.ml) continue;
+        
+        const newWeightOptions: any = { ...item.weight_options };
+        
+        // Fetch HSN weight if available
+        if (item.hsn_code && !newWeightOptions.hsn) {
+          try {
+            const hsnData = await hsnWeightService.getHSNWeight(item.hsn_code);
+            if (hsnData) {
+              newWeightOptions.hsn = hsnData.average;
+            }
+          } catch (error) {
+            console.error(`Failed to fetch HSN weight for ${item.hsn_code}:`, error);
+          }
+        }
+        
+        // Fetch ML weight if not available
+        if (!newWeightOptions.ml) {
+          try {
+            const mlWeight = await smartWeightEstimator.estimateWeight(
+              item.product_name,
+              item.product_url
+            );
+            if (mlWeight && mlWeight.estimated_weight > 0) {
+              newWeightOptions.ml = mlWeight.estimated_weight;
+            }
+          } catch (error) {
+            console.error(`Failed to fetch ML weight for ${item.product_name}:`, error);
+          }
+        }
+        
+        // Update item if we fetched new weights
+        if (newWeightOptions.hsn || newWeightOptions.ml) {
+          onUpdateItem(item.id, { weight_options: newWeightOptions });
+        }
+      }
+    };
+    
+    fetchWeightsForItems();
+  }, [items.length]); // Only re-run when number of items changes
+
   const toggleRowExpansion = (id: string) => {
     setExpandedRows(prev => 
       prev.includes(id) ? prev.filter(row => row !== id) : [...prev, id]
@@ -293,7 +339,25 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                       <div className="w-full">
                         <SmartHSNSearch
                           value={item.hsn_code || ''}
-                          onChange={(hsnCode) => handleFieldEdit(item.id, 'hsn_code', hsnCode)}
+                          onChange={async (hsnCode) => {
+                            handleFieldEdit(item.id, 'hsn_code', hsnCode);
+                            // Also fetch HSN weight when HSN code is selected
+                            if (hsnCode) {
+                              try {
+                                const hsnData = await hsnWeightService.getHSNWeight(hsnCode);
+                                if (hsnData) {
+                                  onUpdateItem(item.id, { 
+                                    weight_options: {
+                                      ...item.weight_options,
+                                      hsn: hsnData.average
+                                    }
+                                  });
+                                }
+                              } catch (error) {
+                                console.error('Failed to fetch HSN weight:', error);
+                              }
+                            }
+                          }}
                           onCancel={() => setEditingField(null)}
                           placeholder="Search HSN"
                           className="h-8 text-xs font-mono"
@@ -376,9 +440,27 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               const IconComponent = icons[source as keyof typeof icons];
                               
                               // Get weight value for this source
-                              const weightValue = source === 'manual' ? item.weight :
-                                source === 'volumetric' && volumetricWeight ? volumetricWeight :
-                                item.weight_options?.[source as keyof typeof item.weight_options] || item.weight;
+                              let weightValue: number | string = 0;
+                              let hasData = false;
+                              
+                              if (source === 'manual') {
+                                weightValue = item.weight;
+                                hasData = true;
+                              } else if (source === 'volumetric' && volumetricWeight) {
+                                weightValue = volumetricWeight;
+                                hasData = true;
+                              } else if (item.weight_options?.[source as keyof typeof item.weight_options]) {
+                                weightValue = item.weight_options[source as keyof typeof item.weight_options] as number;
+                                hasData = true;
+                              } else {
+                                // No data available for this source - skip rendering
+                                hasData = false;
+                              }
+                              
+                              // Don't render if no data available (except manual which is always shown)
+                              if (!hasData && source !== 'manual') {
+                                return null;
+                              }
                               
                               // Special handling for manual weight - make it editable
                               if (source === 'manual' && editingManualWeight === item.id) {
@@ -444,21 +526,39 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                     
                                     try {
                                       // Fetch weight based on source
-                                      if (source === 'hsn' && item.hsn_code) {
+                                      if (source === 'hsn') {
+                                        if (!item.hsn_code) {
+                                          alert('Please assign an HSN code first');
+                                          return;
+                                        }
                                         const hsnData = await hsnWeightService.getHSNWeight(item.hsn_code);
                                         if (hsnData) {
                                           newWeight = hsnData.average;
+                                        } else {
+                                          // No HSN weight data available
+                                          console.warn(`No HSN weight data for code: ${item.hsn_code}`);
+                                          alert(`No weight data available for HSN code ${item.hsn_code}`);
+                                          return;
                                         }
                                       } else if (source === 'ml') {
                                         const mlWeight = await smartWeightEstimator.estimateWeight(
                                           item.product_name, 
                                           item.product_url
                                         );
-                                        if (mlWeight && mlWeight.weight > 0) {
-                                          newWeight = mlWeight.weight;
+                                        if (mlWeight && mlWeight.estimated_weight > 0) {
+                                          newWeight = mlWeight.estimated_weight;
+                                          // Store confidence for potential display
+                                          console.log(`ML weight confidence for ${item.product_name}: ${mlWeight.confidence}`);
+                                        } else {
+                                          console.warn(`Failed to estimate ML weight for: ${item.product_name}`);
+                                          alert(`Could not estimate weight for "${item.product_name}"`);
+                                          return;
                                         }
                                       } else if (source === 'volumetric' && volumetricWeight) {
                                         newWeight = volumetricWeight;
+                                      } else if (source === 'volumetric' && !volumetricWeight) {
+                                        alert('Please enter dimensions to calculate volumetric weight');
+                                        return;
                                       }
                                       
                                       onUpdateItem(item.id, { 
@@ -470,6 +570,9 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                         }
                                       });
                                       onRecalculate();
+                                    } catch (error) {
+                                      console.error(`Error fetching weight for source ${source}:`, error);
+                                      alert(`Error fetching ${source} weight. Please try again.`);
                                     } finally {
                                       setLoadingWeight(null);
                                     }
@@ -482,6 +585,12 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                       : "text-gray-500 hover:bg-gray-100",
                                     loadingWeight?.itemId === item.id && loadingWeight?.source === source && "opacity-50"
                                   )}
+                                  title={
+                                    source === 'hsn' ? 'Weight from HSN master data' :
+                                    source === 'ml' ? 'AI-estimated weight based on product name' :
+                                    source === 'volumetric' ? 'Calculated from dimensions' :
+                                    'Manually entered weight'
+                                  }
                                 >
                                   {loadingWeight?.itemId === item.id && loadingWeight?.source === source ? (
                                     <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -490,7 +599,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   )}
                                   <span className="capitalize">{source}</span>
                                   <span className="font-mono">
-                                    {typeof weightValue === 'number' ? weightValue.toFixed(3) : weightValue}kg
+                                    {typeof weightValue === 'number' ? `${weightValue.toFixed(3)}kg` : `${weightValue}kg`}
                                   </span>
                                 </button>
                               );
