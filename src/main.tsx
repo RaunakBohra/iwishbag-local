@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/react';
 import App from './App.tsx';
 import './index.css';
 import { validateEnv } from './config/env';
+import { logger } from '@/utils/logger';
 
 // Initialize Sentry for error and performance monitoring
 Sentry.init({
@@ -24,7 +25,7 @@ Sentry.init({
 
 // Validate environment variables on startup
 if (!validateEnv()) {
-  console.error('❌ Environment validation failed. Check your environment variables.');
+  logger.error('❌ Environment validation failed. Check your environment variables.');
 }
 
 createRoot(document.getElementById('root')!).render(<App />);

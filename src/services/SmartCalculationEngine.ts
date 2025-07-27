@@ -47,6 +47,7 @@ export interface EnhancedCalculationInput {
       | 'higher_of_both'
       | 'per_item_choice';
     admin_id?: string; // For audit logging
+    force_per_item_calculation?: boolean; // Force per-item tax breakdown even with single method
   };
 }
 
@@ -89,6 +90,32 @@ export class SmartCalculationEngine {
       SmartCalculationEngine.instance = new SmartCalculationEngine();
     }
     return SmartCalculationEngine.instance;
+  }
+
+  /**
+   * Clear cache for a specific quote ID (both legacy and smart cache)
+   */
+  clearCacheForQuote(quoteId: string): void {
+    console.log(`[SMART ENGINE DEBUG] Clearing legacy cache for quote: ${quoteId}`);
+    
+    // Clear legacy calculation cache entries for this quote
+    const keysToDelete: string[] = [];
+    for (const [key] of this.calculationCache) {
+      if (key.includes(quoteId)) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    keysToDelete.forEach(key => this.calculationCache.delete(key));
+    console.log(`[SMART ENGINE DEBUG] Cleared ${keysToDelete.length} legacy cache entries`);
+  }
+
+  /**
+   * Clear all calculation cache (for debugging)
+   */
+  clearAllCache(): void {
+    console.log(`[SMART ENGINE DEBUG] Clearing all legacy cache entries`);
+    this.calculationCache.clear();
   }
 
   /**
@@ -164,14 +191,37 @@ export class SmartCalculationEngine {
         return cachedResult;
       }
 
-      // Legacy cache check for backward compatibility
-      const legacyCacheKey = this.generateCacheKey(input);
-      const legacyCached = this.getCachedResult(legacyCacheKey);
-      if (legacyCached) {
-        console.log(
-          `[SMART ENGINE DEBUG] Legacy Cache HIT - returning cached result`,
-        );
-        return legacyCached;
+      // Check if we need per-item tax calculation before cache lookup
+      const itemTaxMethods = input.quote.items.map(item => item.tax_method || 'hsn');
+      const hasMultipleTaxMethods = new Set(itemTaxMethods).size > 1;
+      const hasNonHsnMethods = itemTaxMethods.some(method => method !== 'hsn');
+      
+      // Force per-item calculation if explicitly requested or if mixed/non-HSN methods
+      const forcePerItemCalculation = input.tax_calculation_preferences?.force_per_item_calculation || false;
+      const shouldUsePerItemTaxes = hasMultipleTaxMethods || hasNonHsnMethods || forcePerItemCalculation;
+      
+      console.log('[EARLY TAX METHOD DETECTION]', {
+        itemTaxMethods,
+        hasMultipleTaxMethods,
+        hasNonHsnMethods,
+        forcePerItemCalculation,
+        shouldUsePerItemTaxes,
+        will_skip_cache: shouldUsePerItemTaxes
+      });
+
+      // Skip legacy cache if per-item calculation is needed to ensure fresh calculation
+      if (!shouldUsePerItemTaxes) {
+        // Legacy cache check for backward compatibility (only when using standard HSN method)
+        const legacyCacheKey = this.generateCacheKey(input);
+        const legacyCached = this.getCachedResult(legacyCacheKey);
+        if (legacyCached) {
+          console.log(
+            `[SMART ENGINE DEBUG] Legacy Cache HIT - returning cached result`,
+          );
+          return legacyCached;
+        }
+      } else {
+        console.log('[SMART ENGINE DEBUG] Skipping legacy cache due to per-item tax methods');
       }
 
       // Calculate base totals with NaN protection
@@ -316,6 +366,13 @@ export class SmartCalculationEngine {
       this.setCachedResult(legacyCacheKey, result);
       
       console.log(`[SMART ENGINE DEBUG] Result cached in both smart cache and legacy cache`);
+      console.log(`[SMART ENGINE DEBUG] Returning calculation result:`, {
+        has_updated_quote: !!result.updated_quote,
+        has_item_breakdowns: !!result.updated_quote?.calculation_data?.item_breakdowns,
+        item_breakdowns_count: result.updated_quote?.calculation_data?.item_breakdowns?.length || 0,
+        has_hsn_tax_breakdown: !!result.hsn_tax_breakdown,
+        hsn_breakdown_count: result.hsn_tax_breakdown?.length || 0,
+      });
       return result;
     } catch (error) {
       return {
@@ -1629,9 +1686,24 @@ export class SmartCalculationEngine {
     // Check if we should use per-item tax methods
     const itemTaxMethods = quote.items.map(item => item.tax_method || 'hsn');
     const hasMultipleTaxMethods = new Set(itemTaxMethods).size > 1;
-    const shouldUsePerItemTaxes = hasMultipleTaxMethods || itemTaxMethods.some(method => method !== 'hsn');
+    const hasNonHsnMethods = itemTaxMethods.some(method => method !== 'hsn');
     
-    if (shouldUsePerItemTaxes && !hsnTaxSummary) {
+    // Force per-item calculation if explicitly requested (for debugging/detailed reports)
+    const forcePerItemCalculation = taxCalculationPreferences?.force_per_item_calculation || false;
+    const shouldUsePerItemTaxes = hasMultipleTaxMethods || hasNonHsnMethods || forcePerItemCalculation;
+    
+    console.log('[TAX METHOD DETECTION]', {
+      itemTaxMethods,
+      hasMultipleTaxMethods,
+      hasNonHsnMethods,
+      forcePerItemCalculation,
+      shouldUsePerItemTaxes,
+      hasHsnTaxSummary: !!hsnTaxSummary,
+      uniqueMethods: [...new Set(itemTaxMethods)]
+    });
+    
+    // 🔧 FIX: Always use per-item calculation when mixed tax methods exist, regardless of hsnTaxSummary
+    if (shouldUsePerItemTaxes) {
       // NEW: Calculate taxes per item based on each item's tax method
       console.log('[TAX SERVICE] Using per-item tax methods for calculation');
       
@@ -1660,6 +1732,15 @@ export class SmartCalculationEngine {
         let itemVatRate = 0;
         
         console.log(`[PER-ITEM TAX] Processing item ${item.id} with method: ${itemTaxMethod}`);
+        console.log(`[PER-ITEM TAX] Item data:`, {
+          id: item.id,
+          name: item.name,
+          tax_method: item.tax_method,
+          hsn_code: item.hsn_code,
+          tax_options: item.tax_options,
+          hasRouteRates: !!routeRates,
+          routeRates
+        });
         
         if (itemTaxMethod === 'hsn' && item.hsn_code) {
           // HSN method for this item
@@ -1675,25 +1756,41 @@ export class SmartCalculationEngine {
           }
         } else if (itemTaxMethod === 'country' && routeRates) {
           // Route/Country method for this item
+          console.log(`[PER-ITEM TAX] Using country/route method for item ${item.id}:`, routeRates);
           itemCustomsRate = routeRates.customs;
           itemSalesTaxRate = routeRates.sales_tax;
           itemVatRate = routeRates.vat;
         } else if (itemTaxMethod === 'manual') {
           // Manual method - use item's tax_options if available
+          console.log(`[PER-ITEM TAX] Using manual method for item ${item.id}:`, item.tax_options?.manual);
           itemCustomsRate = item.tax_options?.manual?.rate || 18;
           itemSalesTaxRate = 0; // Manual doesn't set sales tax
           itemVatRate = 0; // Manual doesn't set VAT
         } else if (itemTaxMethod === 'customs') {
           // Customs method - use default customs rate
+          console.log(`[PER-ITEM TAX] Using customs method for item ${item.id}:`, quote.operational_data?.customs?.percentage);
           itemCustomsRate = quote.operational_data?.customs?.percentage || 10;
           itemSalesTaxRate = 0;
           itemVatRate = 0;
+        } else {
+          console.log(`[PER-ITEM TAX] No matching tax method for item ${item.id}. Method: ${itemTaxMethod}, hasRouteRates: ${!!routeRates}`);
         }
         
         // Calculate item taxes
         const itemCustoms = (itemValue * itemCustomsRate) / 100;
         const itemSalesTax = (itemValue * itemSalesTaxRate) / 100;
         const itemVat = (itemValue * itemVatRate) / 100;
+        
+        console.log(`[PER-ITEM TAX] Final calculations for item ${item.id}:`, {
+          itemValue,
+          customsRate: itemCustomsRate,
+          salesTaxRate: itemSalesTaxRate,
+          vatRate: itemVatRate,
+          customsAmount: itemCustoms,
+          salesTaxAmount: itemSalesTax,
+          vatAmount: itemVat,
+          totalTaxes: itemCustoms + itemSalesTax + itemVat
+        });
         
         perItemCustomsTotal += itemCustoms;
         perItemSalesTaxTotal += itemSalesTax;
@@ -1952,9 +2049,8 @@ export class SmartCalculationEngine {
         valuation_method: valuationMethod,
       },
       // 🆕 NEW: Store item-level tax breakdown for easy access
-      // Use per-item breakdowns if available, otherwise use HSN breakdowns
-      item_breakdowns: quote.calculation_data?.item_breakdowns || 
-        (hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
+      // Always use HSN breakdowns if available, otherwise use existing item_breakdowns
+      item_breakdowns: hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
           item_id: item.item_id,
           item_name: item.item_name,
           hsn_code: item.hsn_code,
@@ -1965,7 +2061,7 @@ export class SmartCalculationEngine {
           total_taxes: item.total_taxes,
           valuation_method: item.valuation_method,
           minimum_valuation_applied: item.minimum_valuation_conversion ? true : false,
-        })) : []),
+        })) : (quote.calculation_data?.item_breakdowns || []),
       // 🆕 NEW: Add HSN calculation metadata
       hsn_calculation: hsnTaxSummary
         ? {
@@ -2069,6 +2165,9 @@ export class SmartCalculationEngine {
       method: updatedQuote.calculation_method_preference,
       final_total: updatedQuote.final_total_usd,
       breakdown: updatedQuote.calculation_data?.breakdown,
+      has_item_breakdowns: !!updatedQuote.calculation_data?.item_breakdowns,
+      item_breakdowns_count: updatedQuote.calculation_data?.item_breakdowns?.length || 0,
+      item_breakdowns_sample: updatedQuote.calculation_data?.item_breakdowns?.[0] || null,
     });
 
     return { updated_quote: updatedQuote };

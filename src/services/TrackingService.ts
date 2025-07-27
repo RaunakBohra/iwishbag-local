@@ -5,6 +5,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { logger } from '@/utils/logger';
 
 type Quote = Database['public']['Tables']['quotes']['Row'];
 type QuoteUpdate = Database['public']['Tables']['quotes']['Update'];
@@ -39,18 +40,18 @@ class TrackingService {
    */
   async generateTrackingId(quoteId: string): Promise<string | null> {
     try {
-      console.log('🆔 Generating iwishBag tracking ID for quote:', quoteId);
+      logger.debug('🆔 Generating iwishBag tracking ID for quote:', quoteId);
 
       // Call database function to generate tracking ID
       const { data, error } = await supabase.rpc('generate_iwish_tracking_id');
 
       if (error) {
-        console.error('❌ Error generating tracking ID:', error);
+        logger.error('❌ Error generating tracking ID:', error);
         return null;
       }
 
       const trackingId = data as string;
-      console.log('✅ Generated tracking ID:', trackingId);
+      logger.debug('✅ Generated tracking ID:', trackingId);
 
       // Update quote with new tracking ID
       const { error: updateError } = await supabase
@@ -59,14 +60,14 @@ class TrackingService {
         .eq('id', quoteId);
 
       if (updateError) {
-        console.error('❌ Error updating quote with tracking ID:', updateError);
+        logger.error('❌ Error updating quote with tracking ID:', updateError);
         return null;
       }
 
-      console.log('✅ Quote updated with tracking ID successfully');
+      logger.debug('✅ Quote updated with tracking ID successfully');
       return trackingId;
     } catch (error) {
-      console.error('❌ Exception in generateTrackingId:', error);
+      logger.error('❌ Exception in generateTrackingId:', error);
       return null;
     }
   }
@@ -76,7 +77,7 @@ class TrackingService {
    */
   async updateTrackingStatus(quoteId: string, update: TrackingUpdate): Promise<boolean> {
     try {
-      console.log('📦 Updating tracking status for quote:', quoteId, update);
+      logger.debug('📦 Updating tracking status for quote:', quoteId, update);
 
       const updateData: QuoteUpdate = {
         tracking_status: update.tracking_status,
@@ -98,14 +99,14 @@ class TrackingService {
       const { error } = await supabase.from('quotes').update(updateData).eq('id', quoteId);
 
       if (error) {
-        console.error('❌ Error updating tracking status:', error);
+        logger.error('❌ Error updating tracking status:', error);
         return false;
       }
 
-      console.log('✅ Tracking status updated successfully');
+      logger.debug('✅ Tracking status updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Exception in updateTrackingStatus:', error);
+      logger.error('❌ Exception in updateTrackingStatus:', error);
       return false;
     }
   }
@@ -124,13 +125,13 @@ class TrackingService {
         .single();
 
       if (error) {
-        console.error('❌ Error fetching tracking info:', error);
+        logger.error('❌ Error fetching tracking info:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('❌ Exception in getBasicTrackingInfo:', error);
+      logger.error('❌ Exception in getBasicTrackingInfo:', error);
       return null;
     }
   }
@@ -140,7 +141,7 @@ class TrackingService {
    */
   async getTrackingInfoByTrackingId(iwishTrackingId: string): Promise<BasicTrackingInfo | null> {
     try {
-      console.log('🔍 Looking up tracking info for:', iwishTrackingId);
+      logger.debug('🔍 Looking up tracking info for:', iwishTrackingId);
 
       const { data, error } = await supabase
         .from('quotes')
@@ -151,14 +152,14 @@ class TrackingService {
         .single();
 
       if (error) {
-        console.error('❌ Error fetching tracking info by tracking ID:', error);
+        logger.error('❌ Error fetching tracking info by tracking ID:', error);
         return null;
       }
 
-      console.log('✅ Found tracking info:', data);
+      logger.debug('✅ Found tracking info:', data);
       return data;
     } catch (error) {
-      console.error('❌ Exception in getTrackingInfoByTrackingId:', error);
+      logger.error('❌ Exception in getTrackingInfoByTrackingId:', error);
       return null;
     }
   }
@@ -169,7 +170,7 @@ class TrackingService {
    */
   async getTrackingInfo(iwishTrackingId: string): Promise<any> {
     try {
-      console.log('🔍 Looking up full quote for customer tracking:', iwishTrackingId);
+      logger.debug('🔍 Looking up full quote for customer tracking:', iwishTrackingId);
 
       // Import UnifiedDataEngine dynamically to avoid circular dependencies
       const { unifiedDataEngine } = await import('@/services/UnifiedDataEngine');
@@ -182,7 +183,7 @@ class TrackingService {
         .single();
 
       if (trackingError || !trackingData) {
-        console.error('❌ Quote not found for tracking ID:', iwishTrackingId);
+        logger.error('❌ Quote not found for tracking ID:', iwishTrackingId);
         return null;
       }
 
@@ -190,14 +191,14 @@ class TrackingService {
       const quote = await unifiedDataEngine.getQuote(trackingData.id);
 
       if (!quote) {
-        console.error('❌ Failed to fetch full quote data');
+        logger.error('❌ Failed to fetch full quote data');
         return null;
       }
 
-      console.log('✅ Found full quote for customer tracking');
+      logger.debug('✅ Found full quote for customer tracking');
       return quote;
     } catch (error) {
-      console.error('❌ Exception in getTrackingInfo for customer:', error);
+      logger.error('❌ Exception in getTrackingInfo for customer:', error);
       return null;
     }
   }
@@ -211,7 +212,7 @@ class TrackingService {
     trackingNumber: string,
     estimatedDeliveryDate?: string,
   ): Promise<boolean> {
-    console.log('🚚 Marking quote as shipped:', {
+    logger.business('🚚 Marking quote as shipped:', {
       quoteId,
       carrier,
       trackingNumber,
@@ -225,7 +226,7 @@ class TrackingService {
     if (!iwishTrackingId) {
       iwishTrackingId = await this.generateTrackingId(quoteId);
       if (!iwishTrackingId) {
-        console.error('❌ Failed to generate tracking ID');
+        logger.error('❌ Failed to generate tracking ID');
         return false;
       }
     }

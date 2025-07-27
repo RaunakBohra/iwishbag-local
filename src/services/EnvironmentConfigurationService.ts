@@ -62,13 +62,6 @@ class EnvironmentConfigurationService {
       required: false,
       category: 'payment',
     },
-    {
-      key: 'VITE_PAYU_SALT',
-      name: 'PayU Salt',
-      description: 'Security salt for PayU payment hash generation',
-      required: false,
-      category: 'payment',
-    },
 
     // Email Services
     {
@@ -204,6 +197,7 @@ class EnvironmentConfigurationService {
     switch (feature) {
       case 'payments':
         // At least one payment gateway should be configured
+        // Note: PayU salt is handled server-side only for security
         const paymentChecks = status.checks.filter((check) => check.category === 'payment');
         return paymentChecks.some((check) => check.hasValue);
 

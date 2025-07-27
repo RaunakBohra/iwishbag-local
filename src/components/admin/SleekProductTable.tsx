@@ -85,6 +85,7 @@ interface SleekProductTableProps {
     carrier: string;
     volumetric_divisor?: number;
   };
+  quote?: any; // Quote object for accessing operational_data
 }
 
 export const SleekProductTable: React.FC<SleekProductTableProps> = ({
@@ -94,6 +95,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   onDuplicateItem,
   onRecalculate,
   selectedShippingOption,
+  quote,
 }) => {
   // State for expanded rows - default to all expanded
   const [expandedRows, setExpandedRows] = useState<string[]>(items.map(item => item.id));
@@ -792,8 +794,26 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               };
                               const IconComponent = icons[method as keyof typeof icons];
                               
-                              // Get tax rate for display
-                              const taxRate = item.tax_options?.[method as keyof typeof item.tax_options]?.rate || 18;
+                              // Get tax rate for display with method-specific logic
+                              const getTaxRateForMethod = (method: string, item: any): number => {
+                                if (method === 'hsn') {
+                                  // For HSN method: check tax_options first, then fall back to stored HSN rate
+                                  return item.tax_options?.hsn?.rate || 
+                                         (item.hsn_code ? 20 : 18); // Default to 20% for HSN items, 18% otherwise
+                                } else if (method === 'customs') {
+                                  // For customs method: use operational_data customs percentage
+                                  return quote?.operational_data?.customs?.percentage || 18;
+                                } else if (method === 'manual') {
+                                  // For manual method: use manual rate or default
+                                  return item.tax_options?.manual?.rate || 18;
+                                } else if (method === 'country') {
+                                  // For route/country method: use route rate or default
+                                  return item.tax_options?.country?.rate || 10;
+                                }
+                                return 18; // Final fallback
+                              };
+                              
+                              const taxRate = getTaxRateForMethod(method, item);
                               
                               // Debug logging for tax rate display
                               if (method === 'hsn' && item.hsn_code) {

@@ -314,6 +314,7 @@ export default function UnifiedQuoteOrderSystem({
   // Track calculated values from SmartCalculationEngine
   const [calculatedHandling, setCalculatedHandling] = useState(0);
   const [calculatedInsurance, setCalculatedInsurance] = useState(0);
+  const [forcePerItemBreakdown, setForcePerItemBreakdown] = useState(true);
   const [handlingMode, setHandlingMode] = useState<'auto' | 'manual'>('auto');
   const [costsDesignOption, setCostsDesignOption] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [showCalculatedValues, setShowCalculatedValues] = useState(false);
@@ -470,7 +471,8 @@ export default function UnifiedQuoteOrderSystem({
         tax_calculation_preferences: {
           calculation_method_preference: quote.tax_method || 'hsn_only',
           valuation_method_preference: valuationPreference,
-          admin_id: isAdmin ? 'admin-user' : undefined
+          admin_id: isAdmin ? 'admin-user' : undefined,
+          force_per_item_calculation: forcePerItemBreakdown
         }
       };
 
@@ -880,8 +882,9 @@ export default function UnifiedQuoteOrderSystem({
       // Update the quote with new calculation and enhanced data
       if (onUpdate && calculationResult) {
         const updateData = {
-          calculation_data: calculationResult.calculation_data || calculationResult,
-          final_total_usd: calculationResult.calculation_data?.totals?.final_total || 
+          calculation_data: calculationResult.updated_quote?.calculation_data || calculationResult.calculation_data || calculationResult,
+          final_total_usd: calculationResult.updated_quote?.final_total_usd ||
+                          calculationResult.calculation_data?.totals?.final_total || 
                           calculationResult.totals?.final_total || 
                           0,
           // Include enhanced calculation metadata
@@ -1614,6 +1617,7 @@ export default function UnifiedQuoteOrderSystem({
                     <SleekProductTable 
                       items={items}
                       selectedShippingOption={selectedShippingOptionId ? availableShippingOptions.find(opt => opt.id === selectedShippingOptionId) : undefined}
+                      quote={quote}
                       onUpdateItem={(itemId, updates) => {
                         console.log('🔍 [UNIFIED] onUpdateItem called:', { itemId, updates });
                         const updatedItems = items.map(item => 
@@ -1622,6 +1626,13 @@ export default function UnifiedQuoteOrderSystem({
                         console.log('🔍 [UNIFIED] Updated items array:', updatedItems);
                         setItems(updatedItems);
                         console.log('🔍 [UNIFIED] Items state updated');
+                        
+                        // Clear cache if tax_method, valuation_method, or hsn_code changed
+                        if (updates.tax_method || updates.valuation_method || updates.hsn_code) {
+                          console.log('🧹 [CACHE] Clearing cache due to tax/valuation/HSN change:', updates);
+                          smartQuoteCacheService.invalidateQuoteCache(quote?.id || '');
+                          smartCalculationEngine.clearCacheForQuote(quote?.id || '');
+                        }
                         
                         // 🚨 CRITICAL: Call onUpdate to save to database immediately
                         if (onUpdate) {
@@ -3361,6 +3372,18 @@ export default function UnifiedQuoteOrderSystem({
                       Clear Cache
                     </Button>
                   </div>
+                  <div className="flex items-center space-x-2 mt-3">
+                    <input
+                      type="checkbox"
+                      id="force-per-item"
+                      checked={forcePerItemBreakdown}
+                      onChange={(e) => setForcePerItemBreakdown(e.target.checked)}
+                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <label htmlFor="force-per-item" className="text-sm text-gray-600">
+                      Force per-item tax breakdown (generates item_breakdowns even with single tax method)
+                    </label>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -3449,6 +3472,17 @@ export default function UnifiedQuoteOrderSystem({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {/* Debug Section for Current Quote */}
+                  {console.log('🔍 [QUOTE DEBUG] Full quote data:', quote)}
+                  {console.log('🔍 [QUOTE DEBUG] Items with tax methods:', items.map(item => ({ 
+                    id: item.id, 
+                    name: item.product_name, 
+                    hsn: item.hsn_code, 
+                    tax_method: item.tax_method || 'hsn',
+                    price: item.price,
+                    quantity: item.quantity 
+                  })))}
+                  
                   {/* Tax Method & Valuation Method */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="bg-purple-50 p-2 rounded">
@@ -3467,21 +3501,134 @@ export default function UnifiedQuoteOrderSystem({
                     </div>
                   </div>
                   
-                  {/* Customs Calculation Detail */}
-                  <div className="border-l-2 border-orange-200 pl-3">
-                    <div className="font-medium text-orange-700 mb-1">Customs Calculation</div>
-                    <div className="space-y-1 text-xs text-gray-600">
-                      <div>Base: {quote.calculation_data.valuation_applied?.original_items_total ? `$${safeToFixed(quote.calculation_data.valuation_applied.original_items_total)}` : 'N/A'} (actual)</div>
-                      {quote.calculation_data.valuation_applied?.customs_calculation_base && (
-                        <div>Customs Base: ${safeToFixed(quote.calculation_data.valuation_applied.customs_calculation_base)} 
-                          {quote.calculation_data.valuation_applied.adjustment_applied && ' (adjusted)'}
+                  {/* Current Items Analysis */}
+                  <div className="bg-gray-50 p-2 rounded">
+                    <div className="font-medium text-gray-700 mb-2">📊 Current Items Analysis</div>
+                    <div className="space-y-1 text-xs">
+                      {items.map((item, index) => (
+                        <div key={item.id} className="flex justify-between bg-white p-1 rounded">
+                          <span>{item.product_name} (HSN: {item.hsn_code || 'None'})</span>
+                          <span>Method: {item.tax_method || 'hsn'} | ${item.price} × {item.quantity}</span>
                         </div>
-                      )}
-                      <div>CIF Value: Base + Shipping (${internationalShipping.toFixed(2)}) + Insurance (${insuranceAmount.toFixed(2)})</div>
-                      <div>Customs %: {customsPercentage}%</div>
-                      <div className="font-medium text-orange-600">= ${extractedCustomsAmount.toFixed(2)}</div>
+                      ))}
                     </div>
                   </div>
+                  
+                  {/* Expected Tax Calculations */}
+                  <div className="bg-yellow-50 p-2 rounded border border-yellow-200">
+                    <div className="font-medium text-yellow-800 mb-2">📝 Expected Tax Calculations (For Debugging)</div>
+                    <div className="space-y-2 text-xs">
+                      <div className="font-medium">Quote: {quote.id} | Route: {quote.origin_country}→{quote.destination_country}</div>
+                      {items.map((item, index) => {
+                        const itemValue = (parseFloat(item.price || '0') * parseInt(item.quantity || '1'));
+                        const hsnCode = item.hsn_code;
+                        let expectedCustomsRate = 'Unknown';
+                        let expectedDestTaxRate = 'Unknown';
+                        
+                        // Set expected values based on actual HSN database data
+                        if (hsnCode === '620442') {
+                          expectedCustomsRate = '12% (Clothing/Kurtas from HSN)';
+                          expectedDestTaxRate = '13% (Nepal country VAT)';
+                        } else if (hsnCode === '841451') {
+                          expectedCustomsRate = '20% (Electric Fans from HSN)';
+                          expectedDestTaxRate = '13% (Nepal country VAT)';
+                        } else if (hsnCode === '3303') {
+                          expectedCustomsRate = '25% (Perfumes/Fragrances from HSN)';
+                          expectedDestTaxRate = '13% (Nepal country VAT)';
+                        } else if (hsnCode === '920600') {
+                          expectedCustomsRate = '15% (Drums/Percussion from HSN)';
+                          expectedDestTaxRate = '13% (Nepal country VAT)';
+                        } else if (hsnCode === '920710') {
+                          expectedCustomsRate = '15% (Keyboards/Digital from HSN)';
+                          expectedDestTaxRate = '13% (Nepal country VAT)';
+                        }
+                        
+                        return (
+                          <div key={item.id} className="bg-white p-2 rounded border">
+                            <div className="font-medium text-yellow-800">{item.product_name}</div>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                              <div>
+                                <div>Value: ${itemValue} (${item.price} × {item.quantity})</div>
+                                <div>HSN: {hsnCode || 'None'}</div>
+                                <div>Method: {item.tax_method || 'hsn'}</div>
+                              </div>
+                              <div>
+                                <div>Expected Customs: {expectedCustomsRate}</div>
+                                <div>Expected Dest. Tax: {expectedDestTaxRate}</div>
+                                {hsnCode && (
+                                  <div className="text-blue-600">
+                                    Should calc from HSN {hsnCode} rates
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Per-Item Tax Breakdown */}
+                  {quote.calculation_data.item_breakdowns && quote.calculation_data.item_breakdowns.length > 0 ? (
+                    <div className="border-l-2 border-blue-200 pl-3">
+                      <div className="font-medium text-blue-700 mb-2">📦 Per-Item Tax Breakdown</div>
+                      {console.log('🔍 [DEBUG] Item breakdowns:', quote.calculation_data.item_breakdowns)}
+                      {quote.calculation_data.item_breakdowns.map((breakdown: any, index: number) => (
+                        <div key={breakdown.item_id || index} className="bg-blue-50 p-2 rounded mb-2">
+                          <div className="text-xs font-medium text-blue-800">{breakdown.item_name} (Method: {breakdown.tax_method})</div>
+                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-1">
+                            <div>Customs: {breakdown.customs_rate}% = ${safeToFixed(breakdown.customs)}</div>
+                            <div>Sales Tax: ${safeToFixed(breakdown.sales_tax || 0)}</div>
+                            <div>Dest. Tax: ${safeToFixed(breakdown.destination_tax)}</div>
+                          </div>
+                          <div className="text-xs font-medium text-blue-700 mt-1">
+                            Total Taxes: ${safeToFixed(breakdown.total_taxes)}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="bg-blue-100 p-2 rounded text-xs font-medium">
+                        <div className="flex justify-between">
+                          <span>Total Item Customs:</span>
+                          <span>${safeToFixed(quote.calculation_data.item_breakdowns.reduce((sum: number, item: any) => sum + (item.customs || 0), 0))}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total Item Dest. Tax:</span>
+                          <span>${safeToFixed(quote.calculation_data.item_breakdowns.reduce((sum: number, item: any) => sum + (item.destination_tax || 0), 0))}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : quote.calculation_data.hsn_tax_breakdown && quote.calculation_data.hsn_tax_breakdown.length > 0 ? (
+                    <div className="border-l-2 border-purple-200 pl-3">
+                      <div className="font-medium text-purple-700 mb-2">🏷️ HSN Tax Breakdown (Legacy)</div>
+                      {console.log('🔍 [DEBUG] HSN breakdowns:', quote.calculation_data.hsn_tax_breakdown)}
+                      {quote.calculation_data.hsn_tax_breakdown.map((breakdown: any, index: number) => (
+                        <div key={breakdown.hsn_code || index} className="bg-purple-50 p-2 rounded mb-2">
+                          <div className="text-xs font-medium text-purple-800">HSN {breakdown.hsn_code}: {breakdown.name}</div>
+                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 mt-1">
+                            <div>Customs: {breakdown.customs_rate}% = ${safeToFixed(breakdown.customs_amount)}</div>
+                            <div>Sales Tax: ${safeToFixed(breakdown.sales_tax || 0)}</div>
+                            <div>Dest. Tax: {breakdown.destination_tax_rate}% = ${safeToFixed(breakdown.destination_tax_amount)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="border-l-2 border-orange-200 pl-3">
+                      <div className="font-medium text-orange-700 mb-1">⚠️ Legacy Customs Calculation</div>
+                      <div className="space-y-1 text-xs text-gray-600">
+                        <div>Base: {quote.calculation_data.valuation_applied?.original_items_total ? `$${safeToFixed(quote.calculation_data.valuation_applied.original_items_total)}` : 'N/A'} (actual)</div>
+                        {quote.calculation_data.valuation_applied?.customs_calculation_base && (
+                          <div>Customs Base: ${safeToFixed(quote.calculation_data.valuation_applied.customs_calculation_base)} 
+                            {quote.calculation_data.valuation_applied.adjustment_applied && ' (adjusted)'}
+                          </div>
+                        )}
+                        <div>CIF Value: Base + Shipping (${internationalShipping.toFixed(2)}) + Insurance (${insuranceAmount.toFixed(2)})</div>
+                        <div>Customs %: {customsPercentage}%</div>
+                        <div className="font-medium text-orange-600">= ${extractedCustomsAmount.toFixed(2)}</div>
+                        <div className="text-orange-500 text-xs mt-1">📝 Note: Using legacy calculation - per-item breakdown not available</div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Sales Tax Detail (US→NP only) */}
                   {`${quote.origin_country}-${quote.destination_country}` === 'US-NP' && (

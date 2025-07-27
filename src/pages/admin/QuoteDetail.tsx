@@ -481,6 +481,22 @@ const AdminQuoteDetail: React.FC = () => {
         });
       }
 
+      // Handle calculation_data updates (including item_breakdowns)
+      if (updates.calculation_data) {
+        console.log('🔍 [MUTATION] Calculation data update detected:', {
+          has_item_breakdowns: !!updates.calculation_data.item_breakdowns,
+          item_breakdowns_count: updates.calculation_data.item_breakdowns?.length || 0,
+          has_breakdown: !!updates.calculation_data.breakdown,
+          has_totals: !!updates.calculation_data.totals
+        });
+        
+        const currentCalculationData = quoteData?.quote?.calculation_data || {};
+        dbUpdates.calculation_data = {
+          ...currentCalculationData,
+          ...updates.calculation_data
+        };
+      }
+
       // Handle notes updates
       if (updates.admin_notes !== undefined) {
         dbUpdates.admin_notes = updates.admin_notes;

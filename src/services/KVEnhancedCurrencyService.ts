@@ -1,6 +1,7 @@
 import { CloudflareKVService } from './CloudflareKVService';
 import { currencyService, Currency } from './CurrencyService';
 import { unifiedConfigService } from './UnifiedConfigurationService';
+import { logger } from '@/utils/logger';
 
 /**
  * KV-Enhanced Currency Service
@@ -34,7 +35,7 @@ class KVEnhancedCurrencyService {
     // Tier 1: Client-side cache (instant, 5min)
     const clientCached = this.clientCache.get(key);
     if (clientCached && Date.now() < clientCached.expires) {
-      console.log(`[KVCurrency] Client cache hit: ${key}`);
+      logger.debug(`[KVCurrency] Client cache hit: ${key}`);
       return clientCached.data;
     }
 
@@ -42,7 +43,7 @@ class KVEnhancedCurrencyService {
       // Tier 2: KV cache (5-20ms globally, configurable TTL)
       const kvData = await this.kvService.get<T>(key);
       if (kvData) {
-        console.log(`[KVCurrency] KV cache hit: ${key}`);
+        logger.debug(`[KVCurrency] KV cache hit: ${key}`);
         // Cache client-side for instant future access
         this.clientCache.set(key, {
           data: kvData,
@@ -51,18 +52,18 @@ class KVEnhancedCurrencyService {
         return kvData;
       }
     } catch (error) {
-      console.warn(`[KVCurrency] KV cache miss for ${key}:`, error.message);
+      logger.warn(`[KVCurrency] KV cache miss for ${key}:`, error.message);
     }
 
     // Tier 3: Database/API (fallback)
-    console.log(`[KVCurrency] Fetching from source: ${key}`);
+    logger.debug(`[KVCurrency] Fetching from source: ${key}`);
     const data = await fetcher();
     
     // Cache in both tiers
     try {
       await this.kvService.set(key, data, { ttl });
     } catch (error) {
-      console.warn(`[KVCurrency] Failed to cache in KV:`, error.message);
+      logger.warn(`[KVCurrency] Failed to cache in KV:`, error.message);
     }
     
     this.clientCache.set(key, {
@@ -140,7 +141,7 @@ class KVEnhancedCurrencyService {
    * Warm up cache with most common exchange rates
    */
   async warmUpCache(): Promise<void> {
-    console.log('[KVCurrency] Warming up cache...');
+    logger.info('[KVCurrency] Warming up cache...');
     
     const commonPairs = [
       // USD pairs (most common)
@@ -155,12 +156,12 @@ class KVEnhancedCurrencyService {
       try {
         await this.getExchangeRate(origin, dest);
       } catch (error) {
-        console.warn(`[KVCurrency] Failed to warm ${origin}→${dest}:`, error.message);
+        logger.warn(`[KVCurrency] Failed to warm ${origin}→${dest}:`, error.message);
       }
     });
 
     await Promise.all(warmupPromises);
-    console.log('[KVCurrency] Cache warmup completed');
+    logger.info('[KVCurrency] Cache warmup completed');
   }
 
   /**
@@ -174,12 +175,12 @@ class KVEnhancedCurrencyService {
         // Clear client cache to force refresh
         this.clientCache.delete(cacheKey);
       } catch (error) {
-        console.warn(`[KVCurrency] Failed to update ${pair}:`, error.message);
+        logger.warn(`[KVCurrency] Failed to update ${pair}:`, error.message);
       }
     });
 
     await Promise.all(updatePromises);
-    console.log(`[KVCurrency] Batch updated ${Object.keys(rates).length} rates`);
+    logger.info(`[KVCurrency] Batch updated ${Object.keys(rates).length} rates`);
   }
 
   /**

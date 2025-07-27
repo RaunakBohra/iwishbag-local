@@ -4,7 +4,7 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import path from 'path';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode: _mode }) => ({
+export default defineConfig(({ mode }) => ({
   base: '/',
   server: {
     host: '::',
@@ -38,5 +38,9 @@ export default defineConfig(({ mode: _mode }) => ({
     sourcemap: true, // Enable sourcemaps for Sentry
     minify: 'esbuild',
     chunkSizeWarningLimit: 1000,
+  },
+  esbuild: {
+    // Remove console statements in production builds
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
   },
 }));

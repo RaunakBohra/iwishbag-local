@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 export enum QuoteCalculationErrorCode {
   // Validation Errors
   MISSING_ITEMS = 'MISSING_ITEMS',
@@ -271,7 +273,7 @@ export class ErrorHandlingService {
     recovery?: Record<string, unknown>;
     userMessage?: string;
   }> {
-    console.error('[ErrorHandlingService] Handling error:', error);
+    logger.error('[ErrorHandlingService] Handling error:', error);
 
     // Log the error
     this.logError(error);
@@ -282,14 +284,14 @@ export class ErrorHandlingService {
         if (action.automatic && action.action) {
           try {
             await action.action();
-            console.log(`[ErrorHandlingService] Auto-recovery successful: ${action.description}`);
+            logger.info(`[ErrorHandlingService] Auto-recovery successful: ${action.description}`);
             return {
               handled: true,
               recovery: 'automatic',
               userMessage: `Recovered from error: ${action.description}`,
             };
           } catch (recoveryError) {
-            console.warn(`[ErrorHandlingService] Auto-recovery failed:`, recoveryError);
+            logger.warn(`[ErrorHandlingService] Auto-recovery failed:`, recoveryError);
           }
         }
       }
@@ -571,7 +573,7 @@ export class ErrorHandlingService {
 
         // Wait before retrying (exponential backoff)
         const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
-        console.warn(
+        logger.warn(
           `[ErrorHandlingService] Attempt ${attempt} failed, retrying in ${delay}ms:`,
           error.message,
         );
@@ -1028,8 +1030,8 @@ export class ErrorHandlingService {
     const logPrefix =
       alertMessage.severity === 'critical' ? '🚨 CRITICAL ALERT' : '⚠️ WARNING ALERT';
 
-    console.error(`${logPrefix}: ${alertMessage.description}`);
-    console.error('Alert Details:', {
+    logger.error(`${logPrefix}: ${alertMessage.description}`);
+    logger.error('Alert Details:', {
       code: alertMessage.errorCode,
       count: alertMessage.errorCount,
       timeWindow: alertMessage.timeWindow,
@@ -1051,7 +1053,7 @@ export class ErrorHandlingService {
     this.logAlert(alertMessage);
 
     // In production, this would integrate with an email service like SendGrid
-    console.error('📧 EMAIL ALERT would be sent to:', {
+    logger.debug('📧 EMAIL ALERT would be sent to:', {
       to: 'alerts@iwishbag.com',
       subject: `[${alertMessage.severity.toUpperCase()}] ${alertMessage.description}`,
       body: JSON.stringify(alertMessage, null, 2),
@@ -1066,7 +1068,7 @@ export class ErrorHandlingService {
     this.logAlert(alertMessage);
 
     // In production, this would make an actual HTTP POST request
-    console.error('🔔 WEBHOOK ALERT would be sent to monitoring service:', {
+    logger.debug('🔔 WEBHOOK ALERT would be sent to monitoring service:', {
       url: 'https://monitoring.iwishbag.com/alerts',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1087,7 +1089,7 @@ export class ErrorHandlingService {
     this.logAlert(alertMessage);
 
     // In production, this would integrate with an SMS service like Twilio
-    console.error('📱 SMS ALERT would be sent:', {
+    logger.debug('📱 SMS ALERT would be sent:', {
       to: '+1234567890',
       message: `${alertMessage.severity.toUpperCase()}: ${alertMessage.description} - ${alertMessage.errorCount} errors in ${alertMessage.timeWindow}`,
     });
@@ -1100,9 +1102,9 @@ export class ErrorHandlingService {
     // In development, log to a local file or development monitoring service
     try {
       // Could integrate with local monitoring tools or development services
-      console.log('🔧 Development webhook simulation:', alertMessage);
+      logger.debug('🔧 Development webhook simulation:', alertMessage);
     } catch (error) {
-      console.error('Failed to simulate webhook:', error);
+      logger.error('Failed to simulate webhook:', error);
     }
   }
 
@@ -1303,7 +1305,7 @@ export class ErrorHandlingService {
     );
 
     this.handleError(testError);
-    console.log(`✅ Test alert dispatched for ${errorCode}`);
+    logger.debug(`✅ Test alert dispatched for ${errorCode}`);
   }
 
   /**
@@ -1313,9 +1315,9 @@ export class ErrorHandlingService {
     const existingConfig = this.alertConfigs.get(errorCode);
     if (existingConfig) {
       this.alertConfigs.set(errorCode, { ...existingConfig, ...config });
-      console.log(`✅ Alert configuration updated for ${errorCode}`);
+      logger.debug(`✅ Alert configuration updated for ${errorCode}`);
     } else {
-      console.warn(`⚠️ No alert configuration found for ${errorCode}`);
+      logger.warn(`⚠️ No alert configuration found for ${errorCode}`);
     }
   }
 
@@ -1336,7 +1338,7 @@ export class ErrorHandlingService {
    */
   setAlertingEnabled(enabled: boolean): void {
     this.config.alerting.enableAlerts = enabled;
-    console.log(`📢 Alerting ${enabled ? 'enabled' : 'disabled'}`);
+    logger.info(`📢 Alerting ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**

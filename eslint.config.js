@@ -1,13 +1,8 @@
-// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-
-
 import js from '@eslint/js';
 import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
-
-
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'coverage'] },
@@ -26,7 +21,6 @@ export default tseslint.config(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
-      prettier: prettierPlugin,
       '@typescript-eslint': tseslint.plugin,
     },
     rules: {
@@ -51,9 +45,6 @@ export default tseslint.config(
         },
       ],
       '@typescript-eslint/no-explicit-any': 'warn', // Warn instead of error
-
-      // Prettier integration
-      'prettier/prettier': 'error',
     },
   },
   // Node.js configuration files
@@ -156,12 +147,4 @@ export default tseslint.config(
       ],
     },
   },
-  ...storybook.configs['flat/recommended'],
-  {
-    files: ['**/*.stories.@(ts|tsx|js|jsx|mjs|cjs)'],
-    rules: {
-      ...storybook.configs['flat/recommended'].rules,
-      ...storybook.configs['flat/addon-interactions'].rules,
-    },
-  }
 );

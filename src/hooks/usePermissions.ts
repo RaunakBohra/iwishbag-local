@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
+import { withRateLimitRetry, isRateLimitError } from '@/utils/rateLimitHandler';
 
 // Types for permissions and roles
 export interface Permission {
@@ -56,12 +58,18 @@ export const usePermissions = (): UsePermissionsReturn => {
       }
 
       try {
-        const { data, error } = await supabase.rpc('get_user_permissions_new', {
-          user_uuid: user.id,
-        });
+        const { data, error } = await withRateLimitRetry(
+          () => supabase.rpc('get_user_permissions_new', { user_uuid: user.id }),
+          { maxRetries: 2, initialDelay: 1000 },
+          'get_user_permissions'
+        );
 
         if (error) {
-          console.error('Error fetching user permissions:', error);
+          // Don't log rate limit errors (they're handled by the handler)
+          if (!isRateLimitError(error)) {
+            logger.error('Error fetching user permissions:', error);
+          }
+          
           // Fallback: Check user_roles table directly
           const { data: roles } = await supabase
             .from('user_roles')
@@ -80,7 +88,9 @@ export const usePermissions = (): UsePermissionsReturn => {
 
         return data || [];
       } catch (err) {
-        console.warn('Falling back to basic permissions check');
+        if (!isRateLimitError(err)) {
+          logger.warn('Falling back to basic permissions check', err);
+        }
         return [
           {
             permission_name: 'user',
@@ -109,12 +119,16 @@ export const usePermissions = (): UsePermissionsReturn => {
       }
 
       try {
-        const { data, error } = await supabase.rpc('get_user_roles_new', {
-          user_uuid: user.id,
-        });
+        const { data, error } = await withRateLimitRetry(
+          () => supabase.rpc('get_user_roles_new', { user_uuid: user.id }),
+          { maxRetries: 2, initialDelay: 1000 },
+          'get_user_roles'
+        );
 
         if (error) {
-          console.error('Error fetching user roles:', error);
+          if (!isRateLimitError(error)) {
+            logger.error('Error fetching user roles:', error);
+          }
           // Fallback: Check user_roles table directly
           const { data: roles } = await supabase
             .from('user_roles')
@@ -132,7 +146,9 @@ export const usePermissions = (): UsePermissionsReturn => {
 
         return data || [];
       } catch (err) {
-        console.warn('Falling back to empty roles');
+        if (!isRateLimitError(err)) {
+          logger.warn('Falling back to empty roles', err);
+        }
         return [];
       }
     },
