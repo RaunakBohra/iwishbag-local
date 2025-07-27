@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { calculationDefaultsService } from '@/services/CalculationDefaultsService';
 import { smartQuoteCacheService } from '@/services/SmartQuoteCacheService';
+import { taxRateService } from '@/services/TaxRateService';
 import { calculateCustomsTier } from '@/lib/customs-tier-calculator';
 import { addBusinessDays, format } from 'date-fns';
 import PerItemTaxCalculator, {
@@ -39,7 +40,7 @@ export interface EnhancedCalculationInput {
   };
   // 2-tier tax system preferences
   tax_calculation_preferences?: {
-    calculation_method_preference?: 'manual' | 'hsn_only' | 'country_based';
+    calculation_method_preference?: 'manual' | 'hsn_only' | 'route_based';
     valuation_method_preference?:
       | 'auto'
       | 'product_value'
@@ -563,7 +564,7 @@ export class SmartCalculationEngine {
       // Fallback to unified tax calculation if HSN calculation fails
       const fallbackMethod =
         input?.tax_calculation_preferences?.calculation_method_preference || 'hsn_only';
-      if (fallbackMethod === 'country_based') {
+      if (fallbackMethod === 'route_based') {
         try {
           const fallbackResults = await this.calculateUnifiedFallbackTaxes(quote, input);
           return fallbackResults;
@@ -1327,8 +1328,8 @@ export class SmartCalculationEngine {
     if (calculationMethod === 'manual') {
       // Manual mode: use customs input value (allow 0)
       customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
-    } else if (calculationMethod === 'country_based') {
-      // Country-based mode: use country tier (simplified for sync)
+    } else if (calculationMethod === 'route_based') {
+      // Route-based mode: use route tier taxes
       customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage ?? 0;
     } else {
       // HSN mode: use existing stored value or fallback
@@ -1522,8 +1523,8 @@ export class SmartCalculationEngine {
     if (calculationMethod === 'manual') {
       // Manual mode: use customs input value (allow 0)
       customsPercentage = quote.operational_data?.customs?.percentage ?? 0;
-    } else if (calculationMethod === 'country_based') {
-      // Country-based mode: use country tier (simplified for sync)
+    } else if (calculationMethod === 'route_based') {
+      // Route-based mode: use route tier taxes
       customsPercentage = quote.operational_data?.customs?.smart_tier?.percentage ?? 0;
     } else {
       // HSN mode: use existing stored value or fallback
@@ -1657,7 +1658,7 @@ export class SmartCalculationEngine {
     }
 
     // ✅ SIMPLIFIED TAX CALCULATION: Read directly from input fields
-    const customsPercentage = quote.operational_data?.customs?.percentage || 0;
+    let customsPercentage = quote.operational_data?.customs?.percentage || 0;
 
     // ✅ CRITICAL FIX: Create separate customs calculation base for ASYNC - ONLY affects customs
     const valuationMethod = quote.valuation_method_preference || 'product_value';
@@ -1795,13 +1796,19 @@ export class SmartCalculationEngine {
         } else if (itemTaxMethod === 'manual') {
           // Manual method - use item's tax_options if available
           console.log(`[PER-ITEM TAX] Using manual method for item ${item.id}:`, item.tax_options?.manual);
-          itemCustomsRate = item.tax_options?.manual?.rate || 18;
+          
+          // Get country-specific manual default instead of hardcoded 18%
+          const countryManualDefault = await taxRateService.getCountryManualDefault(quote.destination_country || 'IN');
+          itemCustomsRate = item.tax_options?.manual?.rate || countryManualDefault;
           itemSalesTaxRate = 0; // Manual doesn't set sales tax
           itemVatRate = 0; // Manual doesn't set VAT
         } else if (itemTaxMethod === 'customs') {
           // Customs method - use default customs rate
           console.log(`[PER-ITEM TAX] Using customs method for item ${item.id}:`, quote.operational_data?.customs?.percentage);
-          itemCustomsRate = quote.operational_data?.customs?.percentage || 10;
+          
+          // Get country-specific customs default instead of hardcoded 10%
+          const countryCustomsDefault = await taxRateService.getCountryCustomsDefault(quote.destination_country || 'IN');
+          itemCustomsRate = quote.operational_data?.customs?.percentage || countryCustomsDefault;
           itemSalesTaxRate = 0;
           itemVatRate = 0;
         } else {

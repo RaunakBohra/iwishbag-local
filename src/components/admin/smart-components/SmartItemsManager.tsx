@@ -20,6 +20,7 @@ import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
 import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
 import { DirectHSNInput } from '@/components/admin/hsn-components/DirectHSNInput';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
+import { taxRateService } from '@/services/TaxRateService';
 import { useToast } from '@/hooks/use-toast';
 import { SmartDualWeightField } from '@/components/admin/SmartDualWeightField';
 import {
@@ -50,6 +51,13 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
   const currencyDisplay = useAdminQuoteCurrency(quote);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
+  
+  // State for dynamic tax rates
+  const [dynamicTaxRates, setDynamicTaxRates] = useState<{
+    customsDefault: number;
+    manualDefault: number;
+    countryVatRate: number;
+  }>({ customsDefault: 10, manualDefault: 15, countryVatRate: 18 });
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<Partial<QuoteItem>>({
     name: '',
@@ -58,7 +66,36 @@ export const SmartItemsManager: React.FC<SmartItemsManagerProps> = ({ quote, onU
     weight: 0,
   });
 
-  // HSN assignment state
+  // Fetch dynamic tax rates based on quote destination country
+  useEffect(() => {
+    const fetchDynamicTaxRates = async () => {
+      if (!quote?.destination_country) return;
+      
+      try {
+        const [customsDefault, manualDefault, countryVatRate] = await Promise.all([
+          taxRateService.getCountryCustomsDefault(quote.destination_country),
+          taxRateService.getCountryManualDefault(quote.destination_country),
+          taxRateService.getCountryVATRate(quote.destination_country)
+        ]);
+
+        setDynamicTaxRates({
+          customsDefault,
+          manualDefault,
+          countryVatRate
+        });
+        
+        console.log(`[SmartItemsManager] Dynamic tax rates loaded for ${quote.destination_country}:`, {
+          customsDefault,
+          manualDefault,
+          countryVatRate
+        });
+      } catch (error) {
+        console.error('Failed to fetch dynamic tax rates:', error);
+      }
+    };
+    
+    fetchDynamicTaxRates();
+  }, [quote?.destination_country]);
 
   const getWeightConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'text-green-600';
@@ -665,8 +702,8 @@ const EditItemDialog: React.FC<EditItemDialogProps> = ({
                           ...prev,
                           hsn_code: hsn.hsn_code,
                           category: hsn.display_name,
-                          customs_rate: hsn.tax_data?.typical_rates?.customs?.common || 15,
-                          local_tax_rate: hsn.tax_data?.typical_rates?.gst?.standard || hsn.tax_data?.typical_rates?.vat?.common || 0,
+                          customs_rate: hsn.tax_data?.typical_rates?.customs?.common || dynamicTaxRates.customsDefault,
+                          local_tax_rate: hsn.tax_data?.typical_rates?.gst?.standard || hsn.tax_data?.typical_rates?.vat?.common || dynamicTaxRates.countryVatRate,
                         }));
                       }}
                       onClear={() => {
@@ -884,8 +921,8 @@ const AddItemDialog: React.FC<AddItemDialogProps> = ({
                           ...prev,
                           hsn_code: hsn.hsn_code,
                           category: hsn.display_name,
-                          customs_rate: hsn.tax_data?.typical_rates?.customs?.common || 15,
-                          local_tax_rate: hsn.tax_data?.typical_rates?.gst?.standard || hsn.tax_data?.typical_rates?.vat?.common || 0,
+                          customs_rate: hsn.tax_data?.typical_rates?.customs?.common || dynamicTaxRates.customsDefault,
+                          local_tax_rate: hsn.tax_data?.typical_rates?.gst?.standard || hsn.tax_data?.typical_rates?.vat?.common || dynamicTaxRates.countryVatRate,
                         }));
                       }}
                       onClear={() => {

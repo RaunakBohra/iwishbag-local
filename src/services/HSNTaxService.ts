@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
+import { taxRateService } from './TaxRateService';
 import * as Sentry from '@sentry/react';
 
 export interface HSNTaxRates {
@@ -66,10 +67,11 @@ class HSNTaxService {
     hsnCode: string,
     destinationCountry: string
   ): Promise<HSNTaxRates | null> {
-    const transaction = Sentry.startTransaction({
-      name: 'HSNTaxService.getHSNTaxRates',
-      op: 'hsn_tax_lookup',
-    });
+    // Temporarily disable Sentry transaction
+    // const transaction = Sentry.startTransaction({
+    //   name: 'HSNTaxService.getHSNTaxRates',
+    //   op: 'hsn_tax_lookup',
+    // });
 
     try {
       // Check cache
@@ -77,7 +79,7 @@ class HSNTaxService {
       const cached = this.getFromCache(cacheKey);
       if (cached) {
         console.log('💾 [HSN TAX] Using cached rates for:', hsnCode);
-        transaction.setStatus('ok');
+        // transaction.setStatus('ok');
         return cached;
       }
 
@@ -95,7 +97,7 @@ class HSNTaxService {
 
       if (error || !hsnData) {
         console.warn('⚠️ [HSN TAX] No HSN data found for:', hsnCode);
-        transaction.setStatus('not_found');
+        // transaction.setStatus('not_found');
         return null;
       }
 
@@ -103,7 +105,7 @@ class HSNTaxService {
       const taxData = hsnData.tax_data as HSNTaxData;
       if (!taxData?.typical_rates) {
         console.warn('⚠️ [HSN TAX] No tax rates in HSN data for:', hsnCode);
-        transaction.setStatus('invalid_data');
+        // transaction.setStatus('invalid_data');
         return null;
       }
 
@@ -122,49 +124,43 @@ class HSNTaxService {
 
       // Cache the result
       this.setCache(cacheKey, rates);
-      transaction.setStatus('ok');
+      // transaction.setStatus('ok');
       return rates;
 
     } catch (error) {
       console.error('❌ [HSN TAX] Error fetching rates:', error);
       Sentry.captureException(error);
-      transaction.setStatus('internal_error');
+      // transaction.setStatus('internal_error');
       return null;
     } finally {
-      transaction.finish();
+      // transaction.finish();
     }
   }
 
   /**
    * Calculate tax rates based on destination country
    */
-  private calculateRatesForDestination(
+  private async calculateRatesForDestination(
     typicalRates: HSNTaxData['typical_rates'],
     destinationCountry: string,
     hsnCode: string
-  ): HSNTaxRates {
+  ): Promise<HSNTaxRates> {
     // Customs rate (common for all destinations)
     const customs = typicalRates?.customs?.common || 
                    typicalRates?.customs?.min || 
                    0;
 
-    // VAT/GST based on destination
+    // VAT/GST based on destination (REMOVED all hardcoded fallbacks)
     let vat = 0;
-    switch (destinationCountry) {
-      case 'NP': // Nepal
-        vat = typicalRates?.vat?.common || 13; // Nepal standard VAT
-        break;
-      case 'IN': // India
-        vat = typicalRates?.gst?.standard || 18; // India standard GST
-        break;
-      case 'US': // United States
-        vat = 0; // US doesn't have VAT
-        break;
-      case 'CN': // China
-        vat = typicalRates?.vat?.common || 13; // China VAT
-        break;
-      default:
-        vat = typicalRates?.vat?.common || 0;
+    
+    // Try HSN-specific rate first, then fallback to country database rate
+    if (typicalRates?.vat?.common || typicalRates?.gst?.standard) {
+      vat = typicalRates?.vat?.common || typicalRates?.gst?.standard || 0;
+      console.log(`💰 [HSN TAX] Using HSN-specific VAT/GST rate: ${vat}% for ${hsnCode}`);
+    } else {
+      // Fallback to country database rate (NO MORE hardcoded 13%/18% values)
+      vat = await taxRateService.getCountryVATRate(destinationCountry);
+      console.log(`💰 [HSN TAX] Using database VAT/GST rate: ${vat}% for ${destinationCountry}`);
     }
 
     // Sales tax (typically for US origin)

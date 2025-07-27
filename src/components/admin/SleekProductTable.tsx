@@ -41,6 +41,7 @@ import {
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { hsnWeightService } from '@/services/HSNWeightService';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
+import { taxRateService } from '@/services/TaxRateService';
 import { supabase } from '@/integrations/supabase/client';
 
 interface QuoteItem {
@@ -105,6 +106,11 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   const [editingManualTaxRate, setEditingManualTaxRate] = useState<string | null>(null);
   const [editingDimension, setEditingDimension] = useState<{itemId: string, field: 'length' | 'width' | 'height'} | null>(null);
   const [hsnCategories, setHsnCategories] = useState<Record<string, string>>({});
+  const [dynamicTaxRates, setDynamicTaxRates] = useState<{
+    customsDefault: number;
+    manualDefault: number;
+    countryVatRate: number;
+  }>({ customsDefault: 10, manualDefault: 15, countryVatRate: 18 });
 
   // Pre-fetch weights for all items on mount
   useEffect(() => {
@@ -178,6 +184,37 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     
     fetchHSNCategories();
   }, [items]);
+
+  // Fetch dynamic tax rates based on quote destination country
+  useEffect(() => {
+    const fetchDynamicTaxRates = async () => {
+      if (!quote?.destination_country) return;
+      
+      try {
+        const [customsDefault, manualDefault, countryVatRate] = await Promise.all([
+          taxRateService.getCountryCustomsDefault(quote.destination_country),
+          taxRateService.getCountryManualDefault(quote.destination_country),
+          taxRateService.getCountryVATRate(quote.destination_country)
+        ]);
+
+        setDynamicTaxRates({
+          customsDefault,
+          manualDefault,
+          countryVatRate
+        });
+        
+        console.log(`[Dynamic Tax Rates] Loaded for ${quote.destination_country}:`, {
+          customsDefault,
+          manualDefault,
+          countryVatRate
+        });
+      } catch (error) {
+        console.error('Failed to fetch dynamic tax rates:', error);
+      }
+    };
+    
+    fetchDynamicTaxRates();
+  }, [quote?.destination_country]);
 
   const toggleRowExpansion = (id: string) => {
     setExpandedRows(prev => 
@@ -447,8 +484,8 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                     }));
                                   }
 
-                                  // Extract tax rate from HSN data
-                                  let hsnTaxRate = 18; // Default
+                                  // Extract tax rate from HSN data (use dynamic rate as fallback)
+                                  let hsnTaxRate = dynamicTaxRates.countryVatRate; // Use dynamic country rate as default
                                   if (hsnCategoryData.data?.tax_data?.typical_rates?.customs?.common) {
                                     hsnTaxRate = hsnCategoryData.data.tax_data.typical_rates.customs.common;
                                   }
@@ -794,23 +831,23 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                               };
                               const IconComponent = icons[method as keyof typeof icons];
                               
-                              // Get tax rate for display with method-specific logic
+                              // Get tax rate for display with method-specific logic (using dynamic rates)
                               const getTaxRateForMethod = (method: string, item: any): number => {
                                 if (method === 'hsn') {
-                                  // For HSN method: check tax_options first, then fall back to stored HSN rate
+                                  // For HSN method: check tax_options first, then fall back to dynamic country rate
                                   return item.tax_options?.hsn?.rate || 
-                                         (item.hsn_code ? 20 : 18); // Default to 20% for HSN items, 18% otherwise
+                                         (item.hsn_code ? dynamicTaxRates.countryVatRate : dynamicTaxRates.countryVatRate);
                                 } else if (method === 'customs') {
-                                  // For customs method: use operational_data customs percentage
-                                  return quote?.operational_data?.customs?.percentage || 18;
+                                  // For customs method: use operational_data customs percentage or dynamic default
+                                  return quote?.operational_data?.customs?.percentage || dynamicTaxRates.customsDefault;
                                 } else if (method === 'manual') {
-                                  // For manual method: use manual rate or default
-                                  return item.tax_options?.manual?.rate || 18;
+                                  // For manual method: use manual rate or dynamic default
+                                  return item.tax_options?.manual?.rate || dynamicTaxRates.manualDefault;
                                 } else if (method === 'country') {
-                                  // For route/country method: use route rate or default
-                                  return item.tax_options?.country?.rate || 10;
+                                  // For route/country method: use route rate or dynamic customs default
+                                  return item.tax_options?.country?.rate || dynamicTaxRates.customsDefault;
                                 }
-                                return 18; // Final fallback
+                                return dynamicTaxRates.manualDefault; // Final fallback to dynamic rate
                               };
                               
                               const taxRate = getTaxRateForMethod(method, item);
@@ -839,7 +876,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                       className="h-6 w-16 text-[11px] px-1"
                                       defaultValue={taxRate}
                                       onBlur={(e) => {
-                                        const newTaxRate = parseFloat(e.target.value) || 18;
+                                        const newTaxRate = parseFloat(e.target.value) || dynamicTaxRates.manualDefault;
                                         onUpdateItem(item.id, { 
                                           tax_method: 'manual',
                                           tax_options: {
@@ -852,7 +889,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                       }}
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
-                                          const newTaxRate = parseFloat(e.currentTarget.value) || 18;
+                                          const newTaxRate = parseFloat(e.currentTarget.value) || dynamicTaxRates.manualDefault;
                                           onUpdateItem(item.id, { 
                                             tax_method: 'manual',
                                             tax_options: {
