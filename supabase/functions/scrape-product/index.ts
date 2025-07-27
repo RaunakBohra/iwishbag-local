@@ -7,6 +7,7 @@ import {
   validateMethod,
 } from '../_shared/auth.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
+import { ScrapingCache } from '../_shared/scraping-cache.ts';
 
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
@@ -57,15 +58,43 @@ serve(async (req) => {
 
     console.log(`🔵 Scraping product from: ${url}`);
 
-    // Try ScrapeAPI first, fallback to Bright Data
+    // Initialize cache
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const cache = new ScrapingCache(supabaseUrl, supabaseServiceKey);
+
+    // Check cache first
+    const cachedData = await cache.get(url);
+    if (cachedData) {
+      console.log(`📦 Returning cached data for: ${url}`);
+      return new Response(JSON.stringify({
+        success: true,
+        data: cachedData,
+        confidence: 1.0,
+        method: 'cache',
+        cached: true,
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    // Try Bright Data first, fallback to ScrapeAPI
     let scrapedData;
     try {
-      scrapedData = await scrapeWithScrapeAPI(url, website_domain);
-      console.log(`✅ Successfully scraped with ScrapeAPI: ${scrapedData.data.title}`);
-    } catch (scrapeApiError) {
-      console.log(`⚠️ ScrapeAPI failed, trying Bright Data: ${scrapeApiError.message}`);
       scrapedData = await scrapeWithBrightData(url, website_domain);
       console.log(`✅ Successfully scraped with Bright Data: ${scrapedData.data.title}`);
+    } catch (brightDataError) {
+      console.log(`⚠️ Bright Data failed, trying ScrapeAPI: ${brightDataError.message}`);
+      scrapedData = await scrapeWithScrapeAPI(url, website_domain);
+      console.log(`✅ Successfully scraped with ScrapeAPI: ${scrapedData.data.title}`);
+    }
+
+    // Cache the successful scrape
+    if (scrapedData.success && scrapedData.data) {
+      await cache.set(url, scrapedData.data, scrapedData.method);
     }
 
     return new Response(JSON.stringify(scrapedData), {
@@ -465,32 +494,316 @@ function extractWeightFromScrapeAPI(product: Record<string, unknown>): number {
 }
 
 async function scrapeWithBrightData(url: string, website: string) {
-  const username = Deno.env.get('BRIGHTDATA_USERNAME');
-  const password = Deno.env.get('BRIGHTDATA_PASSWORD');
+  const apiKey = Deno.env.get('BRIGHTDATA_API_KEY');
 
-  if (!username || !password) {
-    throw new Error('Bright Data credentials not configured');
+  if (!apiKey) {
+    throw new Error('Bright Data API key not configured');
   }
 
-  // Get website-specific selectors
-  const selectors = getWebsiteSelectors(website);
+  console.log(`🔵 Using Bright Data Structured Scraper for ${website}: ${url}`);
 
-  console.log(`🔵 Using selectors for ${website}:`, selectors);
+  // Get the appropriate dataset ID for the website
+  const datasetId = getDatasetIdForWebsite(website);
+  
+  if (!datasetId) {
+    console.log(`⚠️ No structured scraper available for ${website}, falling back to Web Unlocker`);
+    return scrapeWithBrightDataWebUnlocker(url, website);
+  }
 
-  // Bright Data Scraping Browser API
-  const response = await fetch('https://brd.superproxy.io:22225', {
+  // Use Bright Data Synchronous Scraper API for immediate results
+  const response = await fetch('https://api.brightdata.com/datasets/v3/scrape', {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${btoa(`${username}:${password}`)}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      dataset_id: datasetId,
+      input: [{
+        url: url,
+        zipcode: "10001", // Default US zipcode for consistent pricing
+        language: ""
+      }]
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.log(`⚠️ Structured scraper failed: ${response.status} - ${errorText}, falling back to Web Unlocker`);
+    return scrapeWithBrightDataWebUnlocker(url, website);
+  }
+
+  const data = await response.json();
+  console.log(`🔍 Structured scraper response:`, JSON.stringify(data, null, 2));
+  
+  // Check if we got a snapshot_id (async response) instead of direct data
+  if (data.snapshot_id && !data.data) {
+    console.log(`⚠️ Got async response with snapshot_id: ${data.snapshot_id}, falling back to Web Unlocker`);
+    return scrapeWithBrightDataWebUnlocker(url, website);
+  }
+
+  // Extract data from structured response
+  const extractedData = extractStructuredData(data, website);
+  
+  console.log(`🔍 Extracted structured data:`, {
+    title: extractedData.title,
+    price: extractedData.price,
+    weight: extractedData.weight,
+    category: extractedData.category
+  });
+
+  return {
+    success: true,
+    data: {
+      ...extractedData,
+      url: url, // Include the original URL
+    },
+    confidence: calculateConfidence(extractedData, website),
+    method: 'brightdata-structured',
+    rawResponse: data, // For debugging
+  };
+}
+
+function getDatasetIdForWebsite(website: string): string | null {
+  // Dataset IDs for different e-commerce sites
+  // These need to be obtained from your Bright Data account
+  const datasetIds = {
+    'amazon.com': 'gd_l7q7dkf244hwjntr0', // Amazon Products dataset ID
+    'amazon.in': 'gd_l7q7dkf244hwjntr0', // Same Amazon scraper works for different domains
+    'amazon.co.uk': 'gd_l7q7dkf244hwjntr0',
+    'amazon.de': 'gd_l7q7dkf244hwjntr0',
+    'ebay.com': 'gd_lwqk8n1oqkx5y7z2', // eBay Products dataset ID (example)
+    'walmart.com': 'gd_p9w3r2t5y8u1i4o6', // Walmart Products dataset ID (example)
+    // Add more as needed
+  };
+
+  return datasetIds[website] || null;
+}
+
+function extractStructuredData(data: any, website: string) {
+  // Handle structured response from Bright Data scrapers
+  let extractedData = {
+    title: 'Product (Title not found)',
+    price: 0,
+    weight: 0.5,
+    images: [] as string[],
+    availability: 'Unknown',
+    category: 'general',
+    description: '',
+    brand: '',
+    rating: '',
+    reviews_count: '',
+    currency: 'USD',
+    country: 'US',
+  };
+
+  try {
+    // Handle different response formats
+    let product = data;
+    
+    // If response is an array, take the first item
+    if (Array.isArray(data) && data.length > 0) {
+      product = data[0];
+    }
+    
+    // If response has a data field
+    if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+      product = data.data[0];
+    }
+
+    // Extract title
+    if (product.title) {
+      extractedData.title = product.title;
+    } else if (product.name) {
+      extractedData.title = product.name;
+    } else if (product.product_title) {
+      extractedData.title = product.product_title;
+    }
+
+    // Extract price
+    if (product.final_price) {
+      extractedData.price = parseFloat(product.final_price.toString().replace(/[^0-9.]/g, ''));
+    } else if (product.price) {
+      extractedData.price = parseFloat(product.price.toString().replace(/[^0-9.]/g, ''));
+    } else if (product.initial_price) {
+      extractedData.price = parseFloat(product.initial_price.toString().replace(/[^0-9.]/g, ''));
+    }
+
+    // Extract currency and country
+    if (product.currency) {
+      extractedData.currency = product.currency;
+    } else if (product.country) {
+      // Map country to currency
+      const countryToCurrency: Record<string, string> = {
+        'IN': 'INR',
+        'US': 'USD',
+        'GB': 'GBP',
+        'DE': 'EUR',
+        'FR': 'EUR',
+        'JP': 'JPY',
+      };
+      extractedData.currency = countryToCurrency[product.country] || 'USD';
+    }
+    
+    // Handle Indian prices that might be in INR
+    if (website.includes('amazon.in') || website.includes('flipkart.com')) {
+      extractedData.currency = 'INR';
+    }
+
+    // Extract images and filter out tracking pixels
+    const imageUrls = product.image_urls || product.images || product.main_image || [];
+    const images = Array.isArray(imageUrls) ? imageUrls : [imageUrls];
+    
+    extractedData.images = images
+      .filter((url: string) => {
+        if (!url || typeof url !== 'string') return false;
+        // Filter out tracking pixels and non-product images
+        const isTrackingPixel = url.includes('uedata') || 
+                                url.includes('nav-sprite') || 
+                                url.includes('batch/1/OP') ||
+                                url.includes('omaha/images') ||
+                                url.includes('yourprime');
+        return !isTrackingPixel && (url.includes('.jpg') || url.includes('.png') || url.includes('.webp'));
+      })
+      .slice(0, 5);
+      
+    // If no valid images found, try main_image field
+    if (extractedData.images.length === 0 && product.main_image) {
+      extractedData.images = [product.main_image];
+    }
+
+    // Extract availability
+    if (product.availability) {
+      extractedData.availability = product.availability;
+    } else if (product.in_stock !== undefined) {
+      extractedData.availability = product.in_stock ? 'In Stock' : 'Out of Stock';
+    }
+
+    // Extract weight from multiple possible fields
+    const weightSources = [
+      product.weight,
+      product.shipping_weight,
+      product.item_weight,
+      product.package_weight,
+      product.dimensions?.weight,
+      product.product_information?.weight,
+      product.product_information?.item_weight,
+      product.product_information?.shipping_weight
+    ];
+
+    for (const weightSource of weightSources) {
+      if (weightSource) {
+        const weight = extractWeightFromValue(weightSource);
+        if (weight > 0) {
+          extractedData.weight = weight;
+          break;
+        }
+      }
+    }
+
+    // If no direct weight, try parsing from specifications
+    if (extractedData.weight === 0.5 && product.specifications) {
+      const weightMatch = JSON.stringify(product.specifications).match(/(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?|g|grams?|kg|kilograms?)/i);
+      if (weightMatch) {
+        const value = parseFloat(weightMatch[1]);
+        const unit = weightMatch[2].toLowerCase();
+        extractedData.weight = convertWeightToKg(value, unit);
+      }
+    }
+
+    // Extract other fields
+    if (product.description) {
+      extractedData.description = product.description;
+    }
+    
+    if (product.brand) {
+      extractedData.brand = product.brand;
+    }
+    
+    if (product.rating) {
+      extractedData.rating = product.rating.toString();
+    }
+    
+    if (product.reviews_count) {
+      extractedData.reviews_count = product.reviews_count.toString();
+    }
+
+    // Detect category from title if not provided
+    extractedData.category = detectCategory(extractedData.title, website);
+
+    console.log(`✅ Successfully extracted structured data for: ${extractedData.title}`);
+  } catch (error) {
+    console.error(`🔴 Error extracting structured data:`, error);
+  }
+
+  return extractedData;
+}
+
+function extractWeightFromValue(weightValue: any): number {
+  if (typeof weightValue === 'number') {
+    return weightValue;
+  }
+  
+  if (typeof weightValue === 'string') {
+    const weightMatch = weightValue.match(/(\d+(?:\.\d+)?)\s*(ounces?|oz|lbs?|pounds?|g|grams?|kg|kilograms?)/i);
+    if (weightMatch) {
+      const value = parseFloat(weightMatch[1]);
+      const unit = weightMatch[2].toLowerCase();
+      return convertWeightToKg(value, unit);
+    }
+  }
+  
+  return 0;
+}
+
+function convertWeightToKg(value: number, unit: string): number {
+  const unitLower = unit.toLowerCase();
+  
+  if (unitLower.includes('ounce') || unitLower.includes('oz')) {
+    return value * 0.0283495; // Convert to kg
+  } else if (unitLower.includes('lb') || unitLower.includes('pound')) {
+    return value * 0.453592; // Convert to kg
+  } else if (unitLower.includes('g') || unitLower.includes('gram')) {
+    return value / 1000; // Convert to kg
+  } else if (unitLower.includes('kg')) {
+    return value;
+  }
+  
+  return 0.5; // Default weight
+}
+
+// Fallback to Web Unlocker for unsupported sites or when structured scraper fails
+async function scrapeWithBrightDataWebUnlocker(url: string, website: string) {
+  const apiKey = Deno.env.get('BRIGHTDATA_API_KEY');
+  const zone = Deno.env.get('BRIGHTDATA_ZONE');
+
+  if (!apiKey || !zone) {
+    throw new Error('Bright Data credentials not configured');
+  }
+
+  console.log(`🔵 Using Bright Data Web Unlocker for ${website}: ${url}`);
+
+  // Bright Data Web Unlocker API
+  const response = await fetch('https://api.brightdata.com/request', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      zone: zone,
       url: url,
-      browser: 'chrome',
+      format: 'json',
       country: 'us',
-      session_id: Math.random().toString(36).substring(7),
-      // Custom selectors based on website
-      ...selectors,
+      // Add custom headers for better success rate
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+      }
     }),
   });
 
@@ -501,8 +814,37 @@ async function scrapeWithBrightData(url: string, website: string) {
 
   const data = await response.json();
 
-  // Extract data using website-specific rules
-  const extractedData = extractProductData(data.html, website);
+  // Extract data using website-specific rules from HTML content
+  let extractedData;
+  let htmlContent = '';
+  
+  if (data.html) {
+    htmlContent = data.html;
+  } else if (data.body) {
+    htmlContent = data.body;
+  } else if (typeof data === 'string') {
+    htmlContent = data;
+  } else {
+    // Try to extract from any HTML content in the response
+    htmlContent = JSON.stringify(data);
+  }
+
+  // Truncate HTML to prevent memory issues (keep first 500KB)
+  if (htmlContent.length > 500000) {
+    console.log(`⚠️ HTML too large (${htmlContent.length} chars), truncating to 500KB`);
+    htmlContent = htmlContent.substring(0, 500000);
+  }
+
+  console.log(`🔍 HTML content size: ${htmlContent.length} chars`);
+  
+  extractedData = extractProductData(htmlContent, website);
+  
+  console.log(`🔍 Extracted data:`, {
+    title: extractedData.title,
+    price: extractedData.price,
+    weight: extractedData.weight,
+    category: extractedData.category
+  });
 
   return {
     success: true,
@@ -511,7 +853,8 @@ async function scrapeWithBrightData(url: string, website: string) {
       url: url, // Include the original URL
     },
     confidence: calculateConfidence(extractedData, website),
-    rawHtml: data.html, // For debugging
+    method: 'brightdata-webunlocker',
+    rawResponse: data, // For debugging
   };
 }
 
@@ -566,21 +909,30 @@ function extractProductData(html: string, website: string) {
 }
 
 function extractTitle(html: string, website: string): string {
-  const titleSelectors = {
-    'amazon.com': ['#productTitle', '.product-title'],
-    'ebay.com': ['.x-item-title__mainTitle h1', '[data-testid="x-item-title__mainTitle"]'],
-    'walmart.com': ['[data-testid="product-title"]', '.prod-ProductTitle'],
-    'target.com': ['[data-test="product-title"]', '.Heading__StyledHeading'],
-  };
+  // Multiple approaches for title extraction
+  const titlePatterns = [
+    // Amazon specific patterns
+    /<span[^>]*id="productTitle"[^>]*>([^<]+)<\/span>/i,
+    /<h1[^>]*class="[^"]*product[^"]*title[^"]*"[^>]*>([^<]+)<\/h1>/i,
+    /<title>([^<]+)<\/title>/i,
+    // Generic patterns
+    /"name"\s*:\s*"([^"]+)"/i,
+    /"title"\s*:\s*"([^"]+)"/i,
+    // Meta tag patterns
+    /<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i,
+    /<meta[^>]*name="title"[^>]*content="([^"]+)"/i,
+  ];
 
-  const selectors = titleSelectors[website] || titleSelectors['amazon.com'];
-
-  for (const selector of selectors) {
-    const match = html.match(
-      new RegExp(`<[^>]*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^>]*>([^<]*)</`, 'i'),
-    );
+  for (const pattern of titlePatterns) {
+    const match = html.match(pattern);
     if (match && match[1]) {
-      return match[1].trim();
+      let title = match[1].trim();
+      // Clean up common Amazon title artifacts
+      title = title.replace(/\s*-\s*Amazon\.com$/, '');
+      title = title.replace(/\s*:\s*Amazon\.com:.*$/, '');
+      if (title.length > 10) { // Reasonable title length
+        return title;
+      }
     }
   }
 
@@ -588,24 +940,43 @@ function extractTitle(html: string, website: string): string {
 }
 
 function extractPrice(html: string, website: string): number {
-  const priceSelectors = {
-    'amazon.com': ['#priceblock_ourprice', '.a-price-whole', '[data-a-color="price"]'],
-    'ebay.com': ['.x-price-primary .ux-textspans', '[data-testid="x-price-primary"]'],
-    'walmart.com': ['[data-price-type="finalPrice"]', '.price-main'],
-    'target.com': ['[data-test="product-price"]', '.h-text-lg'],
-  };
+  // Multiple approaches for price extraction
+  const pricePatterns = [
+    // Amazon specific patterns
+    /<span[^>]*class="[^"]*a-price-whole[^"]*"[^>]*>([^<]+)<\/span>/i,
+    /<span[^>]*class="[^"]*a-offscreen[^"]*"[^>]*>\$?([0-9,]+\.?\d*)<\/span>/i,
+    // JSON-LD structured data
+    /"price"\s*:\s*"?([0-9,]+\.?\d*)"?/i,
+    /"priceValue"\s*:\s*"?([0-9,]+\.?\d*)"?/i,
+    // Generic price patterns
+    /\$([0-9,]+\.?\d*)/g,
+    // Meta tag patterns
+    /<meta[^>]*property="product:price:amount"[^>]*content="([^"]+)"/i,
+  ];
 
-  const selectors = priceSelectors[website] || priceSelectors['amazon.com'];
-
-  for (const selector of selectors) {
-    const match = html.match(
-      new RegExp(`<[^>]*${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^>]*>([^<]*)</`, 'i'),
-    );
-    if (match && match[1]) {
-      const priceText = match[1].replace(/[^\d.,]/g, '');
-      const price = parseFloat(priceText.replace(',', ''));
-      if (!isNaN(price)) {
-        return price;
+  for (const pattern of pricePatterns) {
+    const matches = html.match(pattern);
+    if (matches) {
+      if (pattern.global) {
+        // For global patterns, find the most reasonable price
+        const prices = [];
+        let match;
+        while ((match = pattern.exec(html)) !== null) {
+          const priceText = match[1].replace(/,/g, '');
+          const price = parseFloat(priceText);
+          if (!isNaN(price) && price > 0 && price < 10000) { // Reasonable price range
+            prices.push(price);
+          }
+        }
+        if (prices.length > 0) {
+          return Math.min(...prices); // Return the lowest reasonable price
+        }
+      } else {
+        const priceText = matches[1].replace(/,/g, '');
+        const price = parseFloat(priceText);
+        if (!isNaN(price) && price > 0) {
+          return price;
+        }
       }
     }
   }
@@ -614,45 +985,118 @@ function extractPrice(html: string, website: string): number {
 }
 
 function extractWeight(html: string, website: string): number {
-  // Weight extraction is complex and often requires multiple approaches
-  const weightPatterns = [
-    /(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?)/gi,
-    /Weight[:\s]*(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?)/gi,
-    /(\d+(?:\.\d+)?)\s*(kg|kilograms?)/gi,
-  ];
-
-  for (const pattern of weightPatterns) {
-    const match = html.match(pattern);
-    if (match) {
-      const value = parseFloat(match[1]);
-      const unit = match[2].toLowerCase();
-
-      if (unit.includes('ounce')) {
-        return value * 0.0283495; // Convert to kg
-      } else if (unit.includes('lb') || unit.includes('pound')) {
-        return value * 0.453592; // Convert to kg
-      } else if (unit.includes('kg')) {
-        return value;
+  try {
+    // Simple search for weight patterns
+    let lowestWeight = null;
+    
+    // Look for "XX kg" pattern
+    const kgMatches = html.match(/(\d+(?:\.\d+)?)\s*kg/gi) || [];
+    for (const match of kgMatches) {
+      const value = parseFloat(match.replace(/[^\d.]/g, ''));
+      if (value > 0.1 && value < 1000) {
+        if (!lowestWeight || value < lowestWeight) {
+          lowestWeight = value;
+        }
       }
     }
+    
+    // Look for "XX pounds" or "XX lbs" pattern
+    const lbMatches = html.match(/(\d+(?:\.\d+)?)\s*(pounds?|lbs?)/gi) || [];
+    for (const match of lbMatches) {
+      const value = parseFloat(match.replace(/[^\d.]/g, '')) * 0.453592; // Convert to kg
+      if (value > 0.1 && value < 1000) {
+        if (!lowestWeight || value < lowestWeight) {
+          lowestWeight = value;
+        }
+      }
+    }
+    
+    // Look for "XX ounces" or "XX oz" pattern
+    const ozMatches = html.match(/(\d+(?:\.\d+)?)\s*(ounces?|oz)/gi) || [];
+    for (const match of ozMatches) {
+      const value = parseFloat(match.replace(/[^\d.]/g, '')) * 0.0283495; // Convert to kg
+      if (value > 0.1 && value < 1000) {
+        if (!lowestWeight || value < lowestWeight) {
+          lowestWeight = value;
+        }
+      }
+    }
+    
+    if (lowestWeight) {
+      console.log(`🔵 Extracted weight: ${lowestWeight} kg`);
+    }
+    
+    return lowestWeight || 0.5; // Default weight if nothing found
+  } catch (error) {
+    console.error('Error extracting weight:', error);
+    return 0.5;
   }
-
-  return 0.5; // Default weight
 }
 
 function extractImages(html: string, website: string): string[] {
-  const imagePattern = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
   const images: string[] = [];
-  let match;
+  const seenUrls = new Set<string>();
+  
+  // Multiple patterns to find product images
+  const imagePatterns = [
+    // Amazon main product image pattern
+    /<img[^>]+data-a-dynamic-image=["']([^"']+)["'][^>]*>/gi,
+    // Standard img src pattern
+    /<img[^>]+src=["']([^"']+)["'][^>]*>/gi,
+    // Amazon image JSON data
+    /imageGalleryData[^{]*({[^}]+})/gi,
+    // Image URLs in JavaScript
+    /"large":\s*"([^"]+\.jpg[^"]*)"/gi,
+    /"hiRes":\s*"([^"]+\.jpg[^"]*)"/gi,
+  ];
 
-  while ((match = imagePattern.exec(html)) !== null) {
-    const src = match[1];
-    if (src && !src.includes('data:') && !src.includes('placeholder')) {
-      images.push(src);
+  for (const pattern of imagePatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      let src = match[1];
+      
+      // Handle Amazon's dynamic image JSON
+      if (src.startsWith('{')) {
+        try {
+          const imageData = JSON.parse(src);
+          // Get the first (usually highest quality) image URL
+          const urls = Object.keys(imageData);
+          if (urls.length > 0) {
+            src = urls[0];
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+      
+      // Filter out non-product images
+      if (src && 
+          !src.includes('data:') && 
+          !src.includes('placeholder') &&
+          !src.includes('transparent-pixel') &&
+          !src.includes('nav-sprite') &&
+          !src.includes('batch/1/OP') &&
+          !src.includes('uedata') &&
+          !seenUrls.has(src) &&
+          (src.includes('.jpg') || src.includes('.png') || src.includes('.webp') || src.includes('.jpeg'))) {
+        
+        // Fix protocol-relative URLs
+        if (src.startsWith('//')) {
+          src = 'https:' + src;
+        }
+        
+        seenUrls.add(src);
+        images.push(src);
+        
+        if (images.length >= 5) break;
+      }
     }
+    
+    if (images.length >= 5) break;
   }
 
-  return images.slice(0, 5); // Return first 5 images
+  console.log(`🔵 Extracted ${images.length} product images`);
+  return images;
 }
 
 function extractAvailability(html: string, website: string): string {
@@ -670,22 +1114,62 @@ function extractAvailability(html: string, website: string): string {
 function detectCategory(title: string, website: string): string {
   const titleLower = title.toLowerCase();
 
+  // Electronics and appliances
   if (
     titleLower.includes('phone') ||
     titleLower.includes('smartphone') ||
-    titleLower.includes('iphone')
+    titleLower.includes('iphone') ||
+    titleLower.includes('laptop') ||
+    titleLower.includes('tablet') ||
+    titleLower.includes('computer') ||
+    titleLower.includes('monitor') ||
+    titleLower.includes('television') ||
+    titleLower.includes('tv ') ||
+    titleLower.includes(' ac ') ||
+    titleLower.includes('air condition') ||
+    titleLower.includes('split ac') ||
+    titleLower.includes('refrigerator') ||
+    titleLower.includes('washing machine') ||
+    titleLower.includes('microwave') ||
+    titleLower.includes('camera') ||
+    titleLower.includes('headphone') ||
+    titleLower.includes('earphone') ||
+    titleLower.includes('speaker')
   ) {
     return 'electronics';
   } else if (
     titleLower.includes('shirt') ||
     titleLower.includes('dress') ||
-    titleLower.includes('pants')
+    titleLower.includes('pants') ||
+    titleLower.includes('jeans') ||
+    titleLower.includes('jacket') ||
+    titleLower.includes('coat') ||
+    titleLower.includes('sweater') ||
+    titleLower.includes('kurta') ||
+    titleLower.includes('saree') ||
+    titleLower.includes('lehenga')
   ) {
     return 'clothing';
+  } else if (
+    titleLower.includes('shoe') ||
+    titleLower.includes('sneaker') ||
+    titleLower.includes('sandal') ||
+    titleLower.includes('boot') ||
+    titleLower.includes('slipper')
+  ) {
+    return 'footwear';
   } else if (titleLower.includes('book') || titleLower.includes('novel')) {
     return 'books';
   } else if (titleLower.includes('toy') || titleLower.includes('game')) {
     return 'toys';
+  } else if (
+    titleLower.includes('watch') ||
+    titleLower.includes('jewelry') ||
+    titleLower.includes('necklace') ||
+    titleLower.includes('ring') ||
+    titleLower.includes('bracelet')
+  ) {
+    return 'accessories';
   }
 
   return 'general';

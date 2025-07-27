@@ -29,7 +29,7 @@ interface HSNCreationModalProps {
     category?: string;
     hsn_code?: string;
   };
-  mode?: 'create' | 'edit';
+  mode?: 'create' | 'edit' | 'user_request';
   editingHSN?: any;
 }
 
@@ -273,8 +273,37 @@ export const HSNCreationModal: React.FC<HSNCreationModalProps> = ({
           title: 'HSN Code Updated',
           description: `HSN ${formData.hsn_code} has been updated successfully.`,
         });
+      } else if (mode === 'user_request') {
+        // Create user request for admin approval
+        const { data: userData } = await supabase.auth.getUser();
+        
+        const requestData = {
+          user_id: userData?.user?.id,
+          hsn_code: formData.hsn_code,
+          description: formData.description,
+          category: formData.category,
+          subcategory: formData.subcategory || null,
+          keywords: formData.keywords,
+          minimum_valuation_usd: formData.minimum_valuation_usd ? parseFloat(formData.minimum_valuation_usd) : null,
+          requires_currency_conversion: formData.requires_currency_conversion,
+          weight_data: hsnData.weight_data,
+          tax_data: hsnData.tax_data,
+          product_name: initialData?.product_name || null,
+          status: 'pending',
+        };
+
+        const { error } = await supabase
+          .from('user_hsn_requests')
+          .insert([requestData]);
+
+        if (error) throw error;
+
+        toast({
+          title: 'HSN Request Submitted',
+          description: 'Your HSN code request has been sent to admin for approval.',
+        });
       } else {
-        // Create new HSN
+        // Create new HSN (admin mode)
         const { error } = await supabase
           .from('hsn_master')
           .insert([hsnData]);
@@ -343,11 +372,13 @@ export const HSNCreationModal: React.FC<HSNCreationModalProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
-              {mode === 'edit' ? 'Edit HSN Code' : 'Add New HSN Code'}
+              {mode === 'edit' ? 'Edit HSN Code' : mode === 'user_request' ? 'Request New HSN Code' : 'Add New HSN Code'}
             </DialogTitle>
             <DialogDescription>
               {mode === 'edit' 
                 ? 'Update HSN code information, tax rates, and weight data.'
+                : mode === 'user_request'
+                ? 'Submit a new HSN code request for admin approval.'
                 : 'Create a new HSN code entry with tax and weight information.'}
             </DialogDescription>
           </DialogHeader>
@@ -700,7 +731,9 @@ export const HSNCreationModal: React.FC<HSNCreationModalProps> = ({
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting 
                 ? 'Saving...' 
-                : mode === 'edit' ? 'Update HSN' : 'Create HSN'}
+                : mode === 'edit' ? 'Update HSN' 
+                : mode === 'user_request' ? 'Submit Request'
+                : 'Create HSN'}
             </Button>
           </DialogFooter>
         </DialogContent>

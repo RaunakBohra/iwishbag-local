@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "brightdata": {
+      "command": "npx",
+      "args": ["@brightdata/mcp"],
+      "env": {
+        "API_TOKEN": "bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b",
+        "RATE_LIMIT": "100/1h",
+        "WEB_UNLOCKER_ZONE": "iwishbag",
+        "BROWSER_ZONE": "mcp_browser"
+      }
+    }
+  }
+}

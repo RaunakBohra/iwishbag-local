@@ -61,6 +61,9 @@ import {
   Zap,
   FileText,
   Eye,
+  Check,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedDataEngine } from '@/services/UnifiedDataEngine';
@@ -104,6 +107,9 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
   const [categories, setCategories] = useState<Array<{value: string, label: string}>>([]);
   const [showCategoryCreateModal, setShowCategoryCreateModal] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState<any>(null);
+  // Pending requests state
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [pendingRequestsLoading, setPendingRequestsLoading] = useState(false);
 
   // Helper function to get empty form data
   const getEmptyFormData = (): HSNFormData => ({
@@ -145,6 +151,7 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
   // Load HSN records
   useEffect(() => {
     loadHSNRecords();
+    loadPendingRequests();
   }, []);
 
   // Filter records based on search and category
@@ -191,6 +198,30 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadPendingRequests = async () => {
+    setPendingRequestsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_hsn_requests')
+        .select('*, user:user_id(email)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      setPendingRequests(data || []);
+    } catch (error) {
+      console.error('Failed to load pending requests:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load pending HSN requests',
+        variant: 'destructive',
+      });
+    } finally {
+      setPendingRequestsLoading(false);
     }
   };
 
@@ -300,6 +331,57 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
 
   const resetForm = () => {
     setFormData(getEmptyFormData());
+  };
+
+  const handleApproveRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .rpc('approve_hsn_request', { request_id: requestId });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request Approved',
+        description: 'HSN code has been added to the database',
+      });
+
+      // Reload data
+      loadPendingRequests();
+      loadHSNRecords();
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve HSN request',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string, reason: string) => {
+    try {
+      const { error } = await supabase
+        .rpc('reject_hsn_request', { 
+          request_id: requestId,
+          reason: reason
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Request Rejected',
+        description: 'HSN request has been rejected',
+      });
+
+      loadPendingRequests();
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject HSN request',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getUniqueCategories = () => {
@@ -416,8 +498,9 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="browse">Browse HSN Codes</TabsTrigger>
+          <TabsTrigger value="requests">Pending Requests</TabsTrigger>
           <TabsTrigger value="test">Test Classification</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="import-export">Import/Export</TabsTrigger>
@@ -538,6 +621,142 @@ export const HSNManagementInterface: React.FC<HSNManagementInterfaceProps> = ({ 
                               className="text-red-600 hover:text-red-800"
                             >
                               <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="requests" className="space-y-4">
+          {/* Pending Requests Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <span>Pending HSN Requests</span>
+                  {pendingRequests.length > 0 && (
+                    <Badge variant="secondary">{pendingRequests.length}</Badge>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadPendingRequests}
+                  disabled={pendingRequestsLoading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${pendingRequestsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </CardTitle>
+              <CardDescription>
+                Review and approve user-submitted HSN code requests
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pendingRequestsLoading ? (
+                <div className="p-8 text-center">
+                  <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-400" />
+                  <p className="text-gray-600">Loading pending requests...</p>
+                </div>
+              ) : pendingRequests.length === 0 ? (
+                <div className="p-8 text-center">
+                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                  <p className="text-gray-600">No pending HSN requests</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>HSN Code</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Requested By</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell>
+                          <div className="font-mono font-medium">{request.hsn_code}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-xs truncate" title={request.description}>
+                            {request.description}
+                          </div>
+                          {request.product_name && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Product: {request.product_name}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {request.category.charAt(0).toUpperCase() + request.category.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-gray-600">
+                            {request.user?.email || 'Unknown'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-gray-600">
+                            {new Date(request.created_at).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingRecord({
+                                  hsn_code: request.hsn_code,
+                                  description: request.description,
+                                  category: request.category,
+                                  subcategory: request.subcategory,
+                                  keywords: request.keywords,
+                                  weight_data: request.weight_data,
+                                  tax_data: request.tax_data,
+                                  minimum_valuation_usd: request.minimum_valuation_usd,
+                                  requires_currency_conversion: request.requires_currency_conversion,
+                                  is_active: true,
+                                } as HSNMasterRecord);
+                                setShowEditDialog(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleApproveRequest(request.id)}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                const reason = prompt('Rejection reason:');
+                                if (reason) {
+                                  handleRejectRequest(request.id, reason);
+                                }
+                              }}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Reject
                             </Button>
                           </div>
                         </TableCell>

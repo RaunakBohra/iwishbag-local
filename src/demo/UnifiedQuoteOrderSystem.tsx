@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { PurchaseItemDialog } from '@/components/admin/PurchaseItemDialog';
 import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
 import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
+import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import {
   Dialog,
   DialogContent,
@@ -267,57 +268,6 @@ export default function UnifiedQuoteOrderSystem({
     }
   }, []); // Run only once on mount
   
-  // Fetch HSN codes from database
-  useEffect(() => {
-    const fetchHSNCodes = async () => {
-      try {
-        setIsLoadingHSN(true);
-        
-        // Fetch HSN codes directly from database with keywords and category for enhanced search
-        const { data: hsnRecords, error } = await supabase
-          .from('hsn_master')
-          .select('hsn_code, description, category, subcategory, tax_data, keywords')
-          .eq('is_active', true)
-          .order('hsn_code');
-        
-        if (error) {
-          throw error;
-        }
-        
-        // Transform HSN records to match the expected format
-        const transformedCodes = (hsnRecords || []).map((record: any) => ({
-          code: record.hsn_code,
-          description: record.description,
-          category: record.category,
-          subcategory: record.subcategory,
-          keywords: record.keywords || [], // Include keywords for enhanced search
-          rate: record.tax_data?.typical_rates?.customs?.common || 
-                record.tax_data?.typical_rates?.gst?.standard || 
-                18 // Default GST rate
-        }));
-        
-        setHsnCodes(transformedCodes);
-        console.log(`✅ Loaded ${transformedCodes.length} HSN codes from database:`, transformedCodes.map(c => c.code));
-      } catch (error) {
-        console.error('❌ Failed to fetch HSN codes:', error);
-        toast({
-          title: 'Failed to load HSN codes',
-          description: 'Using fallback HSN data. Please refresh the page.',
-          variant: 'destructive'
-        });
-        
-        // Fallback to basic HSN codes if fetch fails
-        setHsnCodes([
-          { code: '8517', description: 'Telephone sets, including smartphones', rate: 22 },
-          { code: '8471', description: 'Automatic data processing machines', rate: 18 },
-        ]);
-      } finally {
-        setIsLoadingHSN(false);
-      }
-    };
-    
-    fetchHSNCodes();
-  }, []); // Run once on mount
   
   console.log('Tax rates debug:', {
     customs_rate: quote?.tax_rates?.customs,
@@ -341,13 +291,11 @@ export default function UnifiedQuoteOrderSystem({
   }
   
   const [items, setItems] = useState(quote?.items || []);
-  const [hsnSearchOpen, setHsnSearchOpen] = useState<string | null>(null);
-  const [hsnSearchQuery, setHsnSearchQuery] = useState<Record<string, string>>({});
   const [notesPopoverOpen, setNotesPopoverOpen] = useState<string | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [showHSNCreateModal, setShowHSNCreateModal] = useState(false);
   const [newHSNData, setNewHSNData] = useState<any>(null);
-  const [hsnCodes, setHsnCodes] = useState<Array<{code: string, description: string, rate: number}>>([]);
+;
   const [showCategoryCreateModal, setShowCategoryCreateModal] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState<any>(null);
   const [categories, setCategories] = useState<Array<{value: string, label: string}>>([
@@ -360,7 +308,6 @@ export default function UnifiedQuoteOrderSystem({
     { value: 'toys', label: 'Toys & Games' },
     { value: 'other', label: 'Other' }
   ]);
-  const [isLoadingHSN, setIsLoadingHSN] = useState(true);
   const [adminNotes, setAdminNotes] = useState(quote.admin_notes || '');
   const [internalNotes, setInternalNotes] = useState(quote.internal_notes || '');
   const [insuranceAmount, setInsuranceAmount] = useState(safeNumber(quote.insurance));
@@ -391,32 +338,6 @@ export default function UnifiedQuoteOrderSystem({
     (new Date(quote.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   ) : null;
 
-  // Populate HSN categories for existing items
-  useEffect(() => {
-    if (hsnCodes.length > 0 && items.length > 0) {
-      const updatedItems = items.map(item => {
-        if (item.hsn_code && !item.hsn_category) {
-          const hsnData = hsnCodes.find(hsn => hsn.code === item.hsn_code);
-          if (hsnData && hsnData.category) {
-            return {
-              ...item,
-              hsn_category: hsnData.category
-            };
-          }
-        }
-        return item;
-      });
-      
-      // Only update if categories were added
-      const hasChanges = updatedItems.some((item, index) => 
-        items[index].hsn_category !== item.hsn_category
-      );
-      
-      if (hasChanges) {
-        setItems(updatedItems);
-      }
-    }
-  }, [hsnCodes]); // Only run when hsnCodes are loaded
 
 
   // Recalculate quote when items change
@@ -1645,19 +1566,19 @@ export default function UnifiedQuoteOrderSystem({
                           {orderMode && <col style={{ width: '10%' }} />}  {/* Variance */}
                         </colgroup>
                         <thead className="bg-gray-50 border-b border-gray-200">
-                          <tr>
-                            <th className="text-left px-6 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Product</th>
-                            <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Price</th>
-                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Weight & HSN</th>
-                            <th className="text-left px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Tax & Valuation</th>
+                          <tr className="h-12">
+                            <th className="text-left px-6 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Product</th>
+                            <th className="text-right px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Price</th>
+                            <th className="text-center px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Weight & HSN</th>
+                            <th className="text-center px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Tax & Valuation</th>
                             {orderMode && (
-                              <th className="text-right px-4 py-4 font-medium text-gray-700 text-xs uppercase tracking-wider">Variance</th>
+                              <th className="text-center px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Variance</th>
                             )}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {items.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors h-20">
                               <td className="px-4 py-4 relative">
                                 <div className="flex items-center gap-2 min-w-0">
                                   {item.image_url && (
@@ -1813,7 +1734,7 @@ export default function UnifiedQuoteOrderSystem({
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-right">
-                                <div className="space-y-2">
+                                <div className="flex flex-col items-end justify-center h-full space-y-1">
                                   <InlineEdit
                                     fieldId={`price-${item.id}`}
                                     value={item.price}
@@ -1822,20 +1743,20 @@ export default function UnifiedQuoteOrderSystem({
                                     className="font-semibold text-gray-900 text-base inline-block text-right"
                                     itemId={item.id}
                                   />
-                                  <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
+                                  <div className="text-xs text-gray-500 flex items-center gap-1">
                                     <span>×</span>
                                     <InlineEdit
                                       fieldId={`quantity-${item.id}`}
                                       value={item.quantity}
                                       type="number"
-                                      className="w-12 text-right"
+                                      className="w-8 text-right"
                                       itemId={item.id}
                                     />
                                   </div>
                                 </div>
                               </td>
                               <td className="px-4 py-4">
-                                <div className="space-y-2 overflow-hidden">
+                                <div className="flex flex-col justify-center h-full space-y-3 overflow-hidden">
                                   <div className="w-full min-w-0">
                                     {/* Weight Method Tabs */}
                                     <div>
@@ -2065,196 +1986,39 @@ export default function UnifiedQuoteOrderSystem({
                                     )}
                                   </div>
                                   <div className="relative">
-                                    <div className="flex items-center gap-1 border-b border-gray-300 pb-1 hover:border-gray-400 transition-colors">
-                                      <Search className="w-3 h-3 text-gray-400" />
-                                      <input
-                                        type="text"
-                                        value={hsnSearchOpen === item.id ? (hsnSearchQuery[item.id] || '') : 
-                                               item.hsn_code ? `${item.hsn_code}${item.hsn_category ? ' - ' + item.hsn_category : ''}` : ''}
-                                        onFocus={() => {
-                                          setHsnSearchOpen(item.id);
-                                          setHsnSearchQuery({
-                                            ...hsnSearchQuery,
-                                            [item.id]: item.hsn_code || ''
-                                          });
-                                        }}
-                                        onBlur={() => {
-                                          // Delay closing to allow selection
-                                          setTimeout(() => setHsnSearchOpen(null), 150);
-                                        }}
-                                        onChange={(e) => setHsnSearchQuery({
-                                          ...hsnSearchQuery,
-                                          [item.id]: e.target.value
-                                        })}
-                                        className="flex-1 px-0 text-xs bg-transparent border-none focus:outline-none placeholder-gray-400"
-                                        placeholder="Search HSN code or category..."
-                                      />
-                                    </div>
-                                    {hsnSearchOpen === item.id && (
-                                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
-                                        {isLoadingHSN ? (
-                                          <div className="flex items-center justify-center py-4">
-                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                            <span className="text-sm text-gray-500">Loading HSN codes...</span>
+                                    <SmartHSNSearch
+                                      currentHSNCode={item.hsn_code}
+                                      productName={item.product_name}
+                                      onHSNSelect={(hsn) => {
+                                        const updatedItems = items.map(i => 
+                                          i.id === item.id ? { 
+                                            ...i, 
+                                            hsn_code: hsn.hsn_code,
+                                            hsn_category: hsn.category,
+                                            weight: hsn.weight_data?.typical_weights?.per_unit?.average || item.weight,
+                                            weight_source: hsn.weight_data?.typical_weights?.per_unit?.average ? 'hsn' : item.weight_source
+                                          } : i
+                                        );
+                                        setItems(updatedItems);
+                                        recalculateQuote(updatedItems);
+                                      }}
+                                      size="sm"
+                                      compact={true}
+                                      className="w-full"
+                                      trigger={
+                                        <div className="flex items-center gap-1 border-b border-gray-300 pb-1 hover:border-gray-400 transition-colors cursor-pointer">
+                                          <Search className="w-3 h-3 text-gray-400" />
+                                          <div className="flex-1 px-0 text-xs bg-transparent">
+                                            {item.hsn_code ? `${item.hsn_code}${item.hsn_category ? ' - ' + item.hsn_category : ''}` : <span className="text-gray-400">Search HSN code or category...</span>}
                                           </div>
-                                        ) : (() => {
-                                          const query = hsnSearchQuery[item.id]?.toLowerCase() || '';
-                                          const filtered = hsnCodes.filter(hsn => {
-                                            // Search in HSN code
-                                            if (hsn.code.toLowerCase().includes(query)) return true;
-                                            
-                                            // Search in description
-                                            if (hsn.description.toLowerCase().includes(query)) return true;
-                                            
-                                            // Search in keywords array
-                                            if (hsn.keywords && Array.isArray(hsn.keywords)) {
-                                              return hsn.keywords.some(keyword => 
-                                                keyword.toLowerCase().includes(query)
-                                              );
-                                            }
-                                            
-                                            return false;
-                                          });
-                                          
-                                          if (filtered.length === 0) {
-                                            return (
-                                              <div className="text-center py-6 px-4">
-                                                <div className="mb-3">
-                                                  <Package className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                                                  <p className="text-sm text-gray-600 font-medium mb-1">No HSN code found</p>
-                                                  <p className="text-xs text-gray-500">
-                                                    {query ? `No results for "${hsnSearchQuery[item.id]}"` : 'Start typing to search HSN codes'}
-                                                  </p>
-                                                </div>
-                                                <Button
-                                                  size="sm"
-                                                  variant="default"
-                                                  className="bg-blue-600 hover:bg-blue-700"
-                                                  onClick={() => {
-                                                    setNewHSNData({
-                                                      code: hsnSearchQuery[item.id] || '',
-                                                      product_name: item.product_name,
-                                                      weight: item.weight,
-                                                      category: item.category
-                                                    });
-                                                    setShowHSNCreateModal(true);
-                                                    setHsnSearchOpen(null);
-                                                  }}
-                                                >
-                                                  <Plus className="w-4 h-4 mr-2" />
-                                                  Add New HSN Code
-                                                </Button>
-                                              </div>
-                                            );
-                                          }
-                                          
-                                          return filtered.map((hsn) => {
-                                            // Find matching keywords for display
-                                            const matchingKeywords = hsn.keywords ? 
-                                              hsn.keywords.filter(keyword => 
-                                                keyword.toLowerCase().includes(query)
-                                              ) : [];
-                                            
-                                            return (
-                                              <div
-                                                key={hsn.code}
-                                                className="p-3 hover:bg-gray-50 rounded cursor-pointer border-l-2 border-transparent hover:border-blue-300"
-                                                onClick={async () => {
-                                                  // Update HSN code and category
-                                                  let updatedItem = { 
-                                                    ...item, 
-                                                    hsn_code: hsn.code,
-                                                    hsn_category: hsn.category || hsn.subcategory || ''
-                                                  };
-                                                  
-                                                  // Fetch weight data from HSN
-                                                  try {
-                                                    const weightData = await hsnWeightService.getHSNWeight(hsn.code);
-                                                    if (weightData && weightData.average > 0) {
-                                                      updatedItem = {
-                                                        ...updatedItem,
-                                                        weight: weightData.average,
-                                                        weight_source: 'hsn',
-                                                        weight_confidence: weightData.confidence,
-                                                        hsn_weight_range: {
-                                                          min: weightData.min,
-                                                          max: weightData.max,
-                                                          average: weightData.average,
-                                                          packaging: weightData.packaging
-                                                        }
-                                                      };
-                                                    }
-                                                  } catch (error) {
-                                                    console.error('Failed to fetch HSN weight:', error);
-                                                  }
-                                                  
-                                                  setItems(items.map(i => 
-                                                    i.id === item.id ? updatedItem : i
-                                                  ));
-                                                  setHsnSearchOpen(null);
-                                                  
-                                                  // Trigger recalculation if weight changed
-                                                  if (updatedItem.weight !== item.weight) {
-                                                    await recalculateQuote(items.map(i => 
-                                                      i.id === item.id ? updatedItem : i
-                                                    ));
-                                                  }
-                                                }}
-                                              >
-                                                <div className="flex items-center gap-2">
-                                                  <p className="font-medium text-sm">{hsn.code}</p>
-                                                  {hsn.category && (
-                                                    <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 capitalize">
-                                                      {hsn.category}
-                                                    </Badge>
-                                                  )}
-                                                </div>
-                                                <p className="text-xs text-gray-500 mt-1">{hsn.description}</p>
-                                                {matchingKeywords.length > 0 && (
-                                                  <div className="flex gap-1 mt-1">
-                                                    <span className="text-xs text-blue-600">Keywords:</span>
-                                                    {matchingKeywords.slice(0, 3).map((keyword, idx) => (
-                                                      <Badge key={idx} variant="outline" className="text-xs px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
-                                                        {keyword}
-                                                      </Badge>
-                                                    ))}
-                                                    {matchingKeywords.length > 3 && (
-                                                      <span className="text-xs text-blue-600">+{matchingKeywords.length - 3} more</span>
-                                                    )}
-                                                  </div>
-                                                )}
-                                              </div>
-                                            });
-                                          })()}
-                                          
-                                          {/* Always show Add New HSN Code button at bottom */}
-                                          <div className="border-t pt-2 mt-2">
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                              onClick={() => {
-                                                setNewHSNData({
-                                                  code: hsnSearchQuery[item.id] || '',
-                                                  product_name: item.product_name,
-                                                  weight: item.weight,
-                                                  category: item.category
-                                                });
-                                                setShowHSNCreateModal(true);
-                                                setHsnSearchOpen(null);
-                                              }}
-                                            >
-                                              <Plus className="w-3 h-3 mr-2" />
-                                              Add New HSN Code
-                                            </Button>
-                                          </div>
-                                      </div>
-                                    )}
+                                        </div>
+                                      }
+                                    />
                                   </div>
                                 </div>
                               </td>
                               <td className="px-4 py-4">
-                                <div className="space-y-3">
+                                <div className="flex flex-col justify-center h-full space-y-3">
                                   {/* Tax Method */}
                                   <div>
                                     <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Tax</label>
@@ -2413,8 +2177,9 @@ export default function UnifiedQuoteOrderSystem({
                               </td>
                               {orderMode && (
                                 <td className="px-2 py-3 text-center">
-                                  {item.actual_price ? (
-                                    <div className="space-y-1 text-xs">
+                                  <div className="flex flex-col justify-center h-full">
+                                    {item.actual_price ? (
+                                      <div className="space-y-1 text-xs">
                                       <div className={cn(
                                         "font-medium",
                                         item.actual_price > item.price ? "text-red-600" : "text-green-600"
@@ -2427,10 +2192,11 @@ export default function UnifiedQuoteOrderSystem({
                                       )}>
                                         {item.actual_weight > item.weight ? '+' : '-'}{Math.abs((item.actual_weight || 0) - (item.weight || 0)).toFixed(3)}kg
                                       </div>
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-400 text-xs">Pending</span>
-                                  )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400 text-xs">Pending</span>
+                                    )}
+                                  </div>
                                 </td>
                               )}
                             </tr>
@@ -3652,31 +3418,23 @@ export default function UnifiedQuoteOrderSystem({
           });
           
           // Apply weight to current item if available
-          if (hsnData.weight_data?.typical_weights?.per_unit?.average) {
+          if (hsnData.weight_data?.typical_weights?.per_unit?.average && newHSNData) {
             const weight_avg = hsnData.weight_data.typical_weights.per_unit.average;
-            const itemId = Object.keys(hsnSearchQuery).find(id => hsnSearchQuery[id] === hsnData.hsn_code);
-            if (itemId) {
-              setItems(items.map(item => 
-                item.id === itemId 
-                  ? { 
-                      ...item, 
-                      weight: weight_avg,
-                      weight_source: 'HSN Database',
-                      weight_confidence: 1.0,
-                      hsn_code: hsnData.hsn_code 
-                    } 
-                  : item
-              ));
-            }
+            // Update the item that initiated the HSN creation
+            setItems(items.map(item => 
+              item.product_name === newHSNData.product_name
+                ? { 
+                    ...item, 
+                    weight: weight_avg,
+                    weight_source: 'HSN Database',
+                    weight_confidence: 1.0,
+                    hsn_code: hsnData.hsn_code,
+                    hsn_category: hsnData.category
+                  } 
+                : item
+            ));
           }
           
-          // Refresh HSN codes list
-          const allRecords = await unifiedDataEngine.getAllHSNRecords(200);
-          setHsnCodes(allRecords.map(hsn => ({
-            code: hsn.hsn_code,
-            description: hsn.description,
-            rate: hsn.tax_data?.typical_rates?.customs?.common || 0
-          })));
           
           setNewHSNData(null);
         }}

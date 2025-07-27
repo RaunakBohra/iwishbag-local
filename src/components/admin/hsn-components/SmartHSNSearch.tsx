@@ -19,6 +19,7 @@ import {
   Star,
   Package,
   Scale,
+  Plus,
 } from 'lucide-react';
 import {
   enhancedHSNSearchService,
@@ -26,6 +27,7 @@ import {
   HSNCategoryGroup,
 } from '@/services/EnhancedHSNSearchService';
 import { useToast } from '@/hooks/use-toast';
+import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
 
 interface SmartHSNSearchProps {
   currentHSNCode?: string;
@@ -60,6 +62,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
   const [autoSuggestions, setAutoSuggestions] = useState<HSNSearchResult[]>([]);
   const [currentHSNData, setCurrentHSNData] = useState<HSNSearchResult | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -333,6 +336,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                 <Search className="mr-2.5 h-4 w-4 text-gray-400 group-hover:text-gray-500 flex-shrink-0 transition-colors duration-150" />
                 {currentHSNData ? (
                   <div className="flex items-center min-w-0 flex-1">
+                    <span className="text-base mr-2 flex-shrink-0">{currentHSNData.icon}</span>
                     <div
                       className="w-2 h-2 rounded-full mr-2 flex-shrink-0"
                       style={{ backgroundColor: currentHSNData.color }}
@@ -343,6 +347,10 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                     <span className="mx-2 text-gray-400">-</span>
                     <span className="font-mono font-semibold text-blue-600 flex-shrink-0">
                       {currentHSNData.hsn_code}
+                    </span>
+                    <span className="mx-2 text-gray-400">•</span>
+                    <span className="text-sm text-gray-600 flex-shrink-0">
+                      {currentHSNData.weight_data.typical_weights.per_unit.average}kg
                     </span>
                   </div>
                 ) : (
@@ -362,6 +370,7 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
             shadow-2xl rounded-xl bg-white
             animate-in fade-in-0 zoom-in-95 duration-200
             data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95
+            relative overflow-hidden
           "
           align="start"
           sideOffset={8}
@@ -397,21 +406,10 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
               )}
             </div>
 
-            {/* Search Hints - GitHub style */}
-            {!searchQuery && (
-              <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">↑↓</kbd>
-                <span>to navigate</span>
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">↵</kbd>
-                <span>to select</span>
-                <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">esc</kbd>
-                <span>to close</span>
-              </div>
-            )}
           </div>
 
           {/* Unified Results List */}
-          <div className="max-h-80 overflow-y-auto overscroll-contain">
+          <div className="max-h-80 overflow-y-auto overscroll-contain pb-14">
             <div className="py-1">
               {/* Smart Combined Results */}
               {searchQuery ? (
@@ -449,32 +447,36 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
                       <div className="text-xs text-gray-500 mb-4">
                         Try different keywords or browse categories below
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchQuery('');
-                          inputRef.current?.focus();
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        Clear search and browse categories
-                      </button>
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery('');
+                            inputRef.current?.focus();
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          Clear search and browse categories
+                        </button>
+                        <div className="text-xs text-gray-400">or</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOpen(false);
+                            setShowCreateModal(true);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add New HSN Code
+                        </button>
+                      </div>
                     </div>
                   )}
                 </>
               ) : (
                 /* Popular Categories - Enhanced Design */
                 <>
-                  {/* Section Header */}
-                  <div className="px-4 py-3 border-b border-gray-50">
-                    <div className="flex items-center gap-2">
-                      <Grid3X3 className="h-4 w-4 text-gray-400" />
-                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                        Browse Categories
-                      </span>
-                    </div>
-                  </div>
-
                   {/* Category List */}
                   <div className="py-1">
                     {categoryGroups.slice(0, 6).map((group, index) => (
@@ -529,8 +531,40 @@ export const SmartHSNSearch: React.FC<SmartHSNSearchProps> = ({
               )}
             </div>
           </div>
+          
+          {/* Add HSN Code Button at Bottom - Sticky */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-white border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setShowCreateModal(true);
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Can't find? Add New HSN Code
+            </button>
+          </div>
         </PopoverContent>
       </Popover>
+      
+      {/* HSN Creation Modal */}
+      <HSNCreationModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        mode="user_request"
+        initialData={{
+          product_name: productName,
+        }}
+        onSuccess={(hsnData) => {
+          toast({
+            title: 'HSN Request Submitted',
+            description: 'Your HSN code request has been sent to admin for approval.',
+          });
+          setShowCreateModal(false);
+        }}
+      />
     </div>
   );
 };
@@ -593,10 +627,13 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
       <div className="flex-1 min-w-0">
         {/* Main Line: Category - HSN Code */}
         <div className="flex items-center gap-2 mb-1">
-          <div
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: hsn.color }}
-          />
+          <div className="flex items-center gap-2">
+            <span className="text-base flex-shrink-0">{hsn.icon}</span>
+            <div
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: hsn.color }}
+            />
+          </div>
           <span className="font-medium text-gray-900 text-sm truncate">{hsn.category}</span>
           <span className="text-gray-400 text-sm">-</span>
           <span className="font-mono font-semibold text-blue-600 text-sm">{hsn.hsn_code}</span>
@@ -615,9 +652,19 @@ const ModernHSNItem: React.FC<ModernHSNItemProps> = ({
         {/* Description Line */}
         <div className="text-xs text-gray-600 truncate mb-0.5">{hsn.display_name}</div>
 
-        {/* Tax Info Line */}
-        <div className="text-xs text-gray-500">
-          {hsn.tax_data.typical_rates.customs.common}% customs duty
+        {/* Tax and Weight Info Line */}
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          <div className="flex items-center gap-1">
+            <Scale className="w-3 h-3" />
+            <span>
+              {hsn.weight_data.typical_weights.per_unit.average}kg
+              {hsn.weight_data.typical_weights.per_unit.min !== hsn.weight_data.typical_weights.per_unit.max && 
+                ` (${hsn.weight_data.typical_weights.per_unit.min}-${hsn.weight_data.typical_weights.per_unit.max}kg)`
+              }
+            </span>
+          </div>
+          <span className="text-gray-400">•</span>
+          <span>{hsn.tax_data.typical_rates.customs.common}% customs duty</span>
         </div>
       </div>
 

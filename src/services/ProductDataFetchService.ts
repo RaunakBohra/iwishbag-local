@@ -226,8 +226,8 @@ class ProductDataFetchService {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321';
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
       
-      // Call Supabase Edge Function
-      const response = await fetch(`${supabaseUrl}/functions/v1/scrape-product`, {
+      // Call Supabase Edge Function (MCP-powered for better results)
+      const response = await fetch(`${supabaseUrl}/functions/v1/scrape-product-mcp`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -322,8 +322,14 @@ class ProductDataFetchService {
       }
     }
 
-    // Currency
-    normalized.currency = rawData.currency || this.detectCurrency(rawData.price);
+    // Currency - prefer rawData.currency if available
+    if (rawData.currency) {
+      normalized.currency = rawData.currency;
+    } else if (rawData.price) {
+      normalized.currency = this.detectCurrency(rawData.price);
+    } else {
+      normalized.currency = 'USD';
+    }
 
     // Weight
     if (rawData.weight) {
@@ -354,16 +360,19 @@ class ProductDataFetchService {
   }
 
   /**
-   * Detect currency from price string
+   * Detect currency from price string or number
    */
-  private detectCurrency(priceStr: string): string {
+  private detectCurrency(priceStr: string | number): string {
     if (!priceStr) return 'USD';
     
-    if (priceStr.includes('$')) return 'USD';
-    if (priceStr.includes('₹')) return 'INR';
-    if (priceStr.includes('£')) return 'GBP';
-    if (priceStr.includes('€')) return 'EUR';
-    if (priceStr.includes('¥')) return 'JPY';
+    // Convert number to string if needed
+    const priceString = typeof priceStr === 'number' ? priceStr.toString() : priceStr;
+    
+    if (priceString.includes('$')) return 'USD';
+    if (priceString.includes('₹')) return 'INR';
+    if (priceString.includes('£')) return 'GBP';
+    if (priceString.includes('€')) return 'EUR';
+    if (priceString.includes('¥')) return 'JPY';
     
     return 'USD';
   }

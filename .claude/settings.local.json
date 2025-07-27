@@ -188,7 +188,9 @@
       "Bash(wrangler login:*)",
       "Bash(git reset:*)",
       "Bash(npx wrangler deploy:*)",
-      "Bash(npx wrangler dev:*)"
+      "Bash(npx wrangler dev:*)",
+      "WebFetch(domain:docs.brightdata.com)",
+      "Bash(deno check:*)"
     ],
     "deny": []
   }
