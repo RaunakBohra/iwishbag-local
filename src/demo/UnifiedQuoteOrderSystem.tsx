@@ -375,6 +375,14 @@ export default function UnifiedQuoteOrderSystem({
     quote?.calculation_data?.breakdown?.destination_tax || 0
   );
   
+  // Safe debug data accessor to prevent null pointer exceptions
+  const safeDebugData = debugData || {};
+  const safeShippingData = safeDebugData.shipping_data || {};
+  const safeConfigStatus = safeDebugData.config_status || {};
+  const safeCalculationBreakdown = safeDebugData.calculation_breakdown || {};
+  const safeDetailedCalculations = safeDebugData.detailed_calculations || {};
+  const safeHsnData = safeDebugData.hsn_data || {};
+
   // Debug logging
   console.log('💰 Tax Extraction Debug:', {
     has_item_breakdowns: hasItemBreakdowns,
@@ -3910,9 +3918,9 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="bg-white p-3 rounded-lg border">
                       <div className="text-xs font-medium text-gray-600 mb-2">🚢 Shipping Options</div>
                       <div className="space-y-1 text-xs">
-                        <div><strong>Available Options:</strong> {debugData.shipping_data.options_count}</div>
-                        {debugData.shipping_data.selected_option && (
-                          <div><strong>Selected:</strong> {debugData.shipping_data.selected_option.carrier} - {debugData.shipping_data.selected_option.name}</div>
+                        <div><strong>Available Options:</strong> {debugData?.shipping_data?.options_count || 0}</div>
+                        {debugData?.shipping_data?.selected_option && (
+                          <div><strong>Selected:</strong> {debugData?.shipping_data?.selected_option?.carrier} - {debugData?.shipping_data?.selected_option?.name}</div>
                         )}
                       </div>
                     </div>
@@ -3923,14 +3931,14 @@ export default function UnifiedQuoteOrderSystem({
                     <div className="text-xs font-medium text-gray-600 mb-2">⚙️ Config Status</div>
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${debugData.config_status.has_handling_config ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <strong>Handling Config:</strong> {debugData.config_status.has_handling_config ? 'Found' : 'Missing'}
+                        <span className={`w-2 h-2 rounded-full ${debugData?.config_status?.has_handling_config ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <strong>Handling Config:</strong> {debugData?.config_status?.has_handling_config ? 'Found' : 'Missing'}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${debugData.config_status.has_insurance_config ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <strong>Insurance Config:</strong> {debugData.config_status.has_insurance_config ? 'Found' : 'Missing'}
+                        <span className={`w-2 h-2 rounded-full ${debugData?.config_status?.has_insurance_config ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <strong>Insurance Config:</strong> {debugData?.config_status?.has_insurance_config ? 'Found' : 'Missing'}
                       </div>
-                      <div><strong>Delivery Options:</strong> {debugData.config_status.delivery_options_count}</div>
+                      <div><strong>Delivery Options:</strong> {debugData?.config_status?.delivery_options_count || 0}</div>
                     </div>
                   </div>
 
