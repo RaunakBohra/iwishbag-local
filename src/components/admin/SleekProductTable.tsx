@@ -53,6 +53,7 @@ interface QuoteItem {
   weight_source?: string;
   dimensions?: { length: number; width: number; height: number };
   hsn_code?: string;
+  category?: string;
   tax_method?: string;
   valuation_method?: string;
   image_url?: string;
@@ -94,8 +95,6 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   onRecalculate,
   selectedShippingOption,
 }) => {
-  console.log('🔍 [COMPONENT] SleekProductTable rendered with items:', items.length, 'at', new Date().toISOString());
-  
   // State for expanded rows - default to all expanded
   const [expandedRows, setExpandedRows] = useState<string[]>(items.map(item => item.id));
   const [editingField, setEditingField] = useState<{itemId: string, field: string} | null>(null);
@@ -423,71 +422,58 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                           <SleekHSNSearch
                             value={item.hsn_code || ''}
                             onChange={async (hsnCode) => {
-                              console.log('🔍 [PRODUCT-TABLE] HSN onChange received:', { hsnCode, itemId: item.id });
-                              
-                              // Update HSN code and category
+                              // Single atomic update to prevent race conditions
                               if (hsnCode) {
                                 try {
-                                  console.log('🔍 [PRODUCT-TABLE] Fetching HSN data for:', hsnCode);
-                                  // Fetch HSN data including category
-                                  const { data } = await supabase
-                                    .from('hsn_master')
-                                    .select('category')
-                                    .eq('hsn_code', hsnCode)
-                                    .single();
-                                  
-                                  console.log('🔍 [PRODUCT-TABLE] HSN fetch result:', data);
-                                  
-                                  if (data) {
-                                    // Update local state for category display
+                                  // Fetch HSN data, weight data, and ML weight in parallel
+                                  const [hsnCategoryData, hsnWeightData, mlWeightData] = await Promise.all([
+                                    supabase
+                                      .from('hsn_master')
+                                      .select('category')
+                                      .eq('hsn_code', hsnCode)
+                                      .single(),
+                                    hsnWeightService.getHSNWeight(hsnCode),
+                                    smartWeightEstimator.estimateWeight(item.product_name, item.product_url)
+                                  ]);
+
+                                  // Update local HSN categories state
+                                  if (hsnCategoryData.data) {
                                     setHsnCategories(prev => ({
                                       ...prev,
-                                      [hsnCode]: data.category
+                                      [hsnCode]: hsnCategoryData.data.category
                                     }));
-                                    
-                                    const updateData = { 
-                                      hsn_code: hsnCode,
-                                      category: data.category
-                                    };
-                                    console.log('🔍 [PRODUCT-TABLE] Calling onUpdateItem with:', updateData);
-                                    // Update item with both HSN code and category
-                                    onUpdateItem(item.id, updateData);
-                                  } else {
-                                    const updateData = { hsn_code: hsnCode };
-                                    console.log('🔍 [PRODUCT-TABLE] No category found, calling onUpdateItem with:', updateData);
-                                    // Just update HSN code if no category found
-                                    onUpdateItem(item.id, updateData);
                                   }
-                                  
-                                  // Also fetch HSN weight
-                                  const hsnData = await hsnWeightService.getHSNWeight(hsnCode);
-                                  if (hsnData) {
-                                    const weightUpdateData = { 
-                                      weight_options: {
-                                        ...item.weight_options,
-                                        hsn: hsnData.average
-                                      }
-                                    };
-                                    console.log('🔍 [PRODUCT-TABLE] Calling onUpdateItem with weight data:', weightUpdateData);
-                                    onUpdateItem(item.id, weightUpdateData);
-                                  }
+
+                                  // Create comprehensive update with all data in single call
+                                  const comprehensiveUpdate = {
+                                    hsn_code: hsnCode,
+                                    category: hsnCategoryData.data?.category || '',
+                                    weight_options: {
+                                      ...item.weight_options,
+                                      hsn: hsnWeightData?.average || undefined,
+                                      ml: mlWeightData?.estimated_weight || item.weight_options?.ml
+                                    }
+                                  };
+
+                                  // Single atomic update - prevents race conditions
+                                  onUpdateItem(item.id, comprehensiveUpdate);
+
+                                  // Trigger recalculation for price/tax changes
+                                  onRecalculate();
+
                                 } catch (error) {
                                   console.error('Failed to fetch HSN data:', error);
-                                  // Still update the HSN code even if fetch fails
-                                  const fallbackData = { hsn_code: hsnCode };
-                                  console.log('🔍 [PRODUCT-TABLE] Error occurred, calling onUpdateItem with fallback:', fallbackData);
-                                  onUpdateItem(item.id, fallbackData);
+                                  // Fallback: just update HSN code
+                                  onUpdateItem(item.id, { hsn_code: hsnCode });
+                                  onRecalculate();
                                 }
                               } else {
                                 // Clear HSN code
-                                console.log('🔍 [PRODUCT-TABLE] Clearing HSN code');
-                                onUpdateItem(item.id, { hsn_code: '' });
+                                onUpdateItem(item.id, { hsn_code: '', category: '' });
+                                onRecalculate();
                               }
-                              
-                              // Close the field - recalculation happens automatically via onUpdateItem
-                              console.log('🔍 [PRODUCT-TABLE] Closing field...');
+
                               setEditingField(null);
-                              console.log('🔍 [PRODUCT-TABLE] HSN onChange completed - no manual recalculation needed');
                             }}
                             onCancel={() => setEditingField(null)}
                             placeholder="Type HSN code..."
@@ -517,26 +503,29 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <div 
-                          className="cursor-pointer hover:text-blue-600 transition-colors group"
-                          onClick={() => {
-                            console.log('🔍 [HSN-CLICK] User clicked HSN field for item:', item.id, 'current hsn_code:', item.hsn_code);
-                            setEditingField({itemId: item.id, field: 'hsn_code'});
-                          }}
+                        <div
+                          className="cursor-pointer hover:text-blue-600 transition-colors text-center"
+                          onClick={() => setEditingField({itemId: item.id, field: 'hsn_code'})}
                         >
                           <p className="text-xs text-gray-400 uppercase tracking-wider">HSN</p>
                           {item.hsn_code ? (
                             <div>
-                              <p className="text-sm font-mono font-semibold">{item.hsn_code}</p>
-                              {hsnCategories[item.hsn_code] && (
-                                <p className="text-[10px] text-gray-500 truncate">{hsnCategories[item.hsn_code]}</p>
+                              <p className="font-mono font-semibold">
+                                {item.hsn_code}
+                              </p>
+                              {item.hsn_code && (hsnCategories[item.hsn_code] || item.category) && (
+                                <p className="text-[10px] text-gray-500 truncate">
+                                  {hsnCategories[item.hsn_code] || item.category}
+                                </p>
+                              )}
+                              {item.weight_options?.hsn && (
+                                <p className="text-[10px] text-blue-600 font-medium">
+                                  {item.weight_options.hsn.toFixed(3)}kg
+                                </p>
                               )}
                             </div>
                           ) : (
-                            <div>
-                              {console.log('🔍 [HSN-DISPLAY] Showing "+ Add" for item:', item.id, 'HSN empty')}
-                              <p className="text-sm text-gray-400 group-hover:text-blue-500">+ Add</p>
-                            </div>
+                            <p className="text-sm text-gray-400 hover:text-blue-500">+ Add</p>
                           )}
                         </div>
                       )}
