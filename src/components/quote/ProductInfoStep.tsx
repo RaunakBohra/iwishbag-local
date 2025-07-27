@@ -108,7 +108,6 @@ export default function ProductInfoStep({
   setDestinationCountry,
   next,
 }) {
-  console.log('[ProductInfoStep] Rendering with products:', products);
   const { user } = useAuth();
   const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
   const { data: shippingCountries, isLoading: shippingCountriesLoading } = useShippingCountries();
@@ -239,9 +238,6 @@ export default function ProductInfoStep({
   };
 
   const updateProduct = (index, field, value) => {
-    console.log(`[updateProduct] Updating index=${index}, field=${field}, value=${value}`);
-    console.log('[updateProduct] Current product:', products[index]);
-    
     const newProducts = [...products];
     newProducts[index] = { ...newProducts[index], [field]: value };
 
@@ -254,8 +250,6 @@ export default function ProductInfoStep({
       });
     }
 
-    console.log('[updateProduct] Updated product:', newProducts[index]);
-    console.log('[updateProduct] Calling setProducts with:', newProducts);
     setProducts(newProducts);
   };
 
@@ -342,36 +336,28 @@ export default function ProductInfoStep({
       
       if (result.success && result.data) {
         const productData = result.data;
-        console.log('Auto-fill received product data:', productData);
         
         // Auto-fill the fields using callback to get latest state
         setProducts(currentProducts => {
-          console.log('[Auto-fill] Current products state:', currentProducts);
-          console.log('[Auto-fill] Current product:', currentProducts[productIndex]);
-          
           const newProducts = [...currentProducts];
           const currentProduct = newProducts[productIndex];
           
           // Update title if empty
           if (productData.title && !currentProduct.title) {
-            console.log('[Auto-fill] Setting title:', productData.title);
             newProducts[productIndex] = { ...currentProduct, title: productData.title };
           }
           
           // Update price if empty
           if (productData.price && !currentProduct.price) {
-            console.log('[Auto-fill] Setting price:', productData.price);
             newProducts[productIndex] = { ...newProducts[productIndex], price: productData.price.toString() };
           }
           
           // Update weight if empty
           const weightInKg = productData.weight || productData.weight_value;
           if (weightInKg && typeof weightInKg === 'number' && !currentProduct.weight) {
-            console.log('[Auto-fill] Setting weight:', weightInKg);
             newProducts[productIndex] = { ...newProducts[productIndex], weight: weightInKg.toFixed(2) };
           }
           
-          console.log('[Auto-fill] Updated products:', newProducts);
           return newProducts;
         });
         

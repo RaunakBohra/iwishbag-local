@@ -18,6 +18,7 @@ import { PurchaseItemDialog } from '@/components/admin/PurchaseItemDialog';
 import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
 import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
+import { SleekProductTable } from '@/components/admin/SleekProductTable';
 import {
   Dialog,
   DialogContent,
@@ -955,7 +956,7 @@ export default function UnifiedQuoteOrderSystem({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-40">
-        <div className="max-w-[1600px] mx-auto">
+        <div className="w-full">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm">
@@ -1029,7 +1030,7 @@ export default function UnifiedQuoteOrderSystem({
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-6">
+      <div className="w-full px-6 py-6">
         {/* Debug Panel for Empty Calculation Data */}
         {(!quote.calculation_data || Object.keys(quote.calculation_data).length === 0) && (
           <Alert className="mb-6 border-orange-200 bg-orange-50">
@@ -1064,9 +1065,9 @@ export default function UnifiedQuoteOrderSystem({
           </Alert>
         )}
 
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-[1fr_300px] gap-6">
           {/* Main Content */}
-          <div className="col-span-8">
+          <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -1539,7 +1540,9 @@ export default function UnifiedQuoteOrderSystem({
                               valuation_method: 'actual_price',
                               minimum_valuation_usd: 0,
                               seller: 'Unknown',
-                              image_url: ''
+                              image_url: '',
+                              dimensions: { length: 0, width: 0, height: 0 },
+                              weight_source: 'manual'
                             };
                             const updatedItems = [...items, newItem];
                             setItems(updatedItems);
@@ -1556,656 +1559,34 @@ export default function UnifiedQuoteOrderSystem({
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="border rounded-lg">
-                      <table className="w-full table-fixed">
-                        <colgroup>
-                          <col style={{ width: '35%' }} />  {/* Product */}
-                          <col style={{ width: '18%' }} />  {/* Price & Qty */}
-                          <col style={{ width: '25%' }} />  {/* Weight & HSN */}
-                          <col style={{ width: orderMode ? '17%' : '22%' }} />  {/* Tax & Valuation */}
-                          {orderMode && <col style={{ width: '10%' }} />}  {/* Variance */}
-                        </colgroup>
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                          <tr className="h-12">
-                            <th className="text-left px-6 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Product</th>
-                            <th className="text-right px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Price</th>
-                            <th className="text-center px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Weight & HSN</th>
-                            <th className="text-center px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Tax & Valuation</th>
-                            {orderMode && (
-                              <th className="text-center px-4 py-3 font-medium text-gray-700 text-xs uppercase tracking-wider">Variance</th>
-                            )}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {items.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors h-20">
-                              <td className="px-4 py-4 relative">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  {item.image_url && (
-                                    <img 
-                                      src={item.image_url} 
-                                      alt={item.product_name}
-                                      className="w-10 h-10 object-cover rounded flex-shrink-0"
-                                    />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <div className="flex-1 min-w-0">
-                                        <InlineEdit
-                                          fieldId={`product_name-${item.id}`}
-                                          value={item.product_name}
-                                          className="w-full text-sm"
-                                          itemId={item.id}
-                                          customDisplay={(value, isEditing, startEdit) => {
-                                            if (isEditing) return null;
-                                            return (
-                                              <div 
-                                                onClick={startEdit}
-                                                className="cursor-pointer hover:bg-blue-50 px-2 py-1 -mx-2 -my-1 rounded group flex items-center gap-1"
-                                                onMouseEnter={(e) => {
-                                                  const rect = e.currentTarget.getBoundingClientRect();
-                                                  const tooltip = e.currentTarget.querySelector('.tooltip-content');
-                                                  if (tooltip) {
-                                                    tooltip.style.position = 'fixed';
-                                                    tooltip.style.left = `${rect.left}px`;
-                                                    tooltip.style.top = `${rect.bottom + 4}px`;
-                                                    tooltip.style.zIndex = '9999';
-                                                  }
-                                                }}
-                                              >
-                                                <span className="truncate block">{value || '-'}</span>
-                                                <div 
-                                                  className="tooltip-content opacity-0 group-hover:opacity-100 bg-gray-900 text-white shadow-xl border border-gray-700 rounded px-3 py-2 whitespace-nowrap text-sm pointer-events-none transition-opacity duration-0"
-                                                  style={{ position: 'fixed' }}
-                                                >
-                                                  {value || '-'}
-                                                  <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 border-l border-t border-gray-700 transform rotate-45"></div>
-                                                </div>
-                                                <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-50 flex-shrink-0" />
-                                              </div>
-                                            );
-                                          }}
-                                        />
-                                      </div>
-                                      {item.customer_notes && (
-                                        <Popover open={notesPopoverOpen === item.id} onOpenChange={(open) => setNotesPopoverOpen(open ? item.id : null)}>
-                                          <PopoverTrigger>
-                                            <Badge variant="secondary" className="cursor-pointer flex-shrink-0">
-                                              <MessageCircle className="w-3 h-3" />
-                                            </Badge>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-80">
-                                            <div className="space-y-2">
-                                              <h4 className="font-medium text-sm">Customer Note</h4>
-                                              <p className="text-sm text-gray-600">{item.customer_notes}</p>
-                                            </div>
-                                          </PopoverContent>
-                                        </Popover>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      <InlineEdit
-                                        fieldId={`product_url-${item.id}`}
-                                        value={item.product_url || ''}
-                                        placeholder="Click to add URL..."
-                                        className="flex-1 max-w-xs text-xs"
-                                        itemId={item.id}
-                                        customDisplay={(value, isEditing, startEdit) => {
-                                          if (!value && !isEditing) {
-                                            return null; // Will show placeholder
-                                          }
-                                          if (isEditing) {
-                                            return null; // Will show input
-                                          }
-                                          // Show blue domain box + edit button
-                                          return (
-                                            <div className="group flex items-center gap-1">
-                                              <a 
-                                                href={value}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 rounded-md border border-blue-200 hover:border-blue-300 transition-all duration-200 text-xs font-medium"
-                                                onClick={(e) => e.stopPropagation()}
-                                              >
-                                                {(() => {
-                                                  try {
-                                                    const domain = new URL(value).hostname;
-                                                    return domain;
-                                                  } catch {
-                                                    return 'Link';
-                                                  }
-                                                })()}
-                                              </a>
-                                              <button 
-                                                onClick={startEdit}
-                                                className="w-6 h-6 p-1 hover:bg-gray-100 rounded transition-all duration-200 text-gray-600 hover:text-gray-800 opacity-0 group-hover:opacity-100"
-                                                title="Edit URL"
-                                              >
-                                                <Edit2 className="w-4 h-4" />
-                                              </button>
-                                            </div>
-                                          );
-                                        }}
-                                      />
-                                    </div>
-                                    
-                                    {/* Files Section - Admin can manage customer uploaded files */}
-                                    {item.files && item.files.length > 0 && (
-                                      <div className="mt-2">
-                                        <div className="flex flex-wrap gap-1">
-                                          {item.files.map((file, fileIndex) => (
-                                            <div key={fileIndex} className="inline-flex items-center gap-1 bg-green-50 border border-green-200 rounded px-2 py-1 text-xs">
-                                              <FileText className="h-3 w-3 text-green-600" />
-                                              <span className="text-green-800 font-medium truncate max-w-16">
-                                                {file.file?.name || 'File'}
-                                              </span>
-                                              {file.url && (
-                                                <a 
-                                                  href={file.url} 
-                                                  target="_blank" 
-                                                  rel="noopener noreferrer" 
-                                                  className="text-green-600 hover:text-green-800"
-                                                  title="View file"
-                                                >
-                                                  <Eye className="h-3 w-3" />
-                                                </a>
-                                              )}
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  const updatedFiles = item.files.filter((_, i) => i !== fileIndex);
-                                                  const updatedItems = items.map(i => 
-                                                    i.id === item.id ? { ...i, files: updatedFiles } : i
-                                                  );
-                                                  setItems(updatedItems);
-                                                  recalculateQuote(updatedItems);
-                                                }}
-                                                className="text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5"
-                                                title="Remove file"
-                                              >
-                                                <X className="h-3 w-3" />
-                                              </button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-4 text-right">
-                                <div className="flex flex-col items-end justify-center h-full space-y-1">
-                                  <InlineEdit
-                                    fieldId={`price-${item.id}`}
-                                    value={item.price}
-                                    type="number"
-                                    prefix="$"
-                                    className="font-semibold text-gray-900 text-base inline-block text-right"
-                                    itemId={item.id}
-                                  />
-                                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                                    <span>×</span>
-                                    <InlineEdit
-                                      fieldId={`quantity-${item.id}`}
-                                      value={item.quantity}
-                                      type="number"
-                                      className="w-8 text-right"
-                                      itemId={item.id}
-                                    />
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="flex flex-col justify-center h-full space-y-3 overflow-hidden">
-                                  <div className="w-full min-w-0">
-                                    {/* Weight Method Tabs */}
-                                    <div>
-                                      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Weight</label>
-                                      <div className="inline-flex items-end gap-3 border-b border-gray-200">
-                                        <div
-                                          onClick={() => {
-                                            const updatedItems = items.map(i => 
-                                              i.id === item.id ? { ...i, weight_source: 'manual' } : i
-                                            );
-                                            setItems(updatedItems);
-                                          }}
-                                          className={cn(
-                                            "pb-1 px-1 text-xs transition-all relative flex items-center gap-1 cursor-text",
-                                            (item.weight_source === 'manual' || !item.weight_source)
-                                              ? "text-gray-700 font-medium" 
-                                              : "text-gray-500 hover:text-gray-700"
-                                          )}
-                                        >
-                                          <input
-                                            type="number"
-                                            value={item.weight || 0}
-                                            onChange={(e) => {
-                                              const weight = parseFloat(e.target.value) || 0;
-                                              const updatedItems = items.map(i => 
-                                                i.id === item.id ? { ...i, weight, weight_source: 'manual' } : i
-                                              );
-                                              setItems(updatedItems);
-                                              recalculateQuote(updatedItems);
-                                            }}
-                                            className="w-12 px-0 text-xs text-center text-gray-700 font-medium bg-transparent border-none focus:outline-none"
-                                            step="0.001"
-                                            min="0"
-                                            placeholder="0.0"
-                                          />
-                                          <span className="text-xs text-gray-600">kg</span>
-                                          {(item.weight_source === 'manual' || !item.weight_source) && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-600" />
-                                          )}
-                                        </div>
-                                        <button
-                                          onClick={() => {
-                                            // TODO: Fetch HSN weight and update
-                                            const hsnWeight = 0.75; // Mock HSN weight
-                                            const updatedItems = items.map(i => 
-                                              i.id === item.id ? { ...i, weight: hsnWeight, weight_source: 'hsn' } : i
-                                            );
-                                            setItems(updatedItems);
-                                            recalculateQuote(updatedItems);
-                                          }}
-                                          className={cn(
-                                            "pb-1 px-1 text-xs transition-all relative",
-                                            item.weight_source === 'hsn'
-                                              ? "text-green-600 font-medium" 
-                                              : "text-gray-500 hover:text-gray-700"
-                                          )}
-                                        >
-                                          HSN
-                                          {item.weight_source === 'hsn' && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500" />
-                                          )}
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            // TODO: Fetch ML weight and update
-                                            const mlWeight = 0.68; // Mock ML weight
-                                            const updatedItems = items.map(i => 
-                                              i.id === item.id ? { ...i, weight: mlWeight, weight_source: 'ml' } : i
-                                            );
-                                            setItems(updatedItems);
-                                            recalculateQuote(updatedItems);
-                                          }}
-                                          className={cn(
-                                            "pb-1 px-1 text-xs transition-all relative",
-                                            item.weight_source === 'ml'
-                                              ? "text-blue-600 font-medium" 
-                                              : "text-gray-500 hover:text-gray-700"
-                                          )}
-                                        >
-                                          ML
-                                          {item.weight_source === 'ml' && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />
-                                          )}
-                                        </button>
-                                      </div>
-                                      
-                                      {/* Display current weight value below tabs */}
-                                      {item.weight_source && item.weight_source !== 'manual' && (
-                                        <div className="mt-1 text-xs">
-                                          {item.weight_source === 'hsn' && (
-                                            <span className="text-green-600 font-medium">{item.weight} kg (HSN data)</span>
-                                          )}
-                                          {item.weight_source === 'ml' && (
-                                            <span className="text-blue-600 font-medium">{item.weight} kg (ML prediction)</span>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                    {item.weight_source && (
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <button className="absolute -right-5 top-1/2 -translate-y-1/2">
-                                            <Info className={cn(
-                                              "w-3 h-3",
-                                              item.weight_source === 'HSN Database' && "text-green-600",
-                                              item.weight_source === 'AI Prediction' && "text-yellow-600",
-                                              item.weight_source === 'Category Average' && "text-orange-600",
-                                              !item.weight_source && "text-gray-400"
-                                            )} />
-                                          </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-64 p-3" side="left">
-                                          <div className="space-y-2 text-xs">
-                                            <div className="font-medium flex items-center gap-2">
-                                              <Scale className="w-3 h-3" />
-                                              Weight Source
-                                            </div>
-                                            <div className="space-y-1">
-                                              <div className="flex justify-between">
-                                                <span className="text-gray-600">Source:</span>
-                                                <span className="font-medium">{item.weight_source || 'Manual Entry'}</span>
-                                              </div>
-                                              {item.weight_confidence && (
-                                                <div className="flex justify-between">
-                                                  <span className="text-gray-600">Confidence:</span>
-                                                  <span className="font-medium">{Math.round(item.weight_confidence * 100)}%</span>
-                                                </div>
-                                              )}
-                                              {item.weight_source === 'HSN Database' && (
-                                                <div className="text-green-600 text-xs mt-2">
-                                                  <div>Weight from official HSN database</div>
-                                                  {item.hsn_weight_range && (
-                                                    <div className="mt-1 p-2 bg-green-50 rounded border-green-200 border">
-                                                      <div className="text-xs text-green-700">
-                                                        <div><strong>Range:</strong> {item.hsn_weight_range.min}kg - {item.hsn_weight_range.max}kg</div>
-                                                        <div><strong>Average:</strong> {item.hsn_weight_range.average}kg</div>
-                                                        {item.hsn_weight_range.packaging && (
-                                                          <div><strong>Packaging:</strong> +{item.hsn_weight_range.packaging}kg</div>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                              {/* Weight range validation for any source with HSN range data */}
-                                              {item.hsn_weight_range && item.weight && (
-                                                <div className="mt-2 pt-2 border-t border-gray-200">
-                                                  <div className="text-xs">
-                                                    <div className="font-medium text-gray-700 mb-1">HSN Weight Range Validation:</div>
-                                                    {item.weight >= item.hsn_weight_range.min && item.weight <= item.hsn_weight_range.max ? (
-                                                      <div className="text-green-600 flex items-center gap-1">
-                                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                        Within normal range ({item.hsn_weight_range.min}-{item.hsn_weight_range.max}kg)
-                                                      </div>
-                                                    ) : (
-                                                      <div className="text-red-600 flex items-center gap-1">
-                                                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                        Outside range ({item.hsn_weight_range.min}-{item.hsn_weight_range.max}kg)
-                                                        {item.weight < item.hsn_weight_range.min && (
-                                                          <span className="ml-1">- too light</span>
-                                                        )}
-                                                        {item.weight > item.hsn_weight_range.max && (
-                                                          <span className="ml-1">- too heavy</span>
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                    <div className="flex gap-1 mt-2">
-                                                      <button
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          const updatedItems = items.map(i => 
-                                                            i.id === item.id ? { 
-                                                              ...i, 
-                                                              weight: item.hsn_weight_range.min,
-                                                              weight_source: 'HSN Minimum'
-                                                            } : i
-                                                          );
-                                                          setItems(updatedItems);
-                                                          recalculateQuote(updatedItems);
-                                                        }}
-                                                        className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
-                                                      >
-                                                        Use Min ({item.hsn_weight_range.min}kg)
-                                                      </button>
-                                                      <button
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          const updatedItems = items.map(i => 
-                                                            i.id === item.id ? { 
-                                                              ...i, 
-                                                              weight: item.hsn_weight_range.average,
-                                                              weight_source: 'HSN Average'
-                                                            } : i
-                                                          );
-                                                          setItems(updatedItems);
-                                                          recalculateQuote(updatedItems);
-                                                        }}
-                                                        className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
-                                                      >
-                                                        Use Avg ({item.hsn_weight_range.average}kg)
-                                                      </button>
-                                                      <button
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          const updatedItems = items.map(i => 
-                                                            i.id === item.id ? { 
-                                                              ...i, 
-                                                              weight: item.hsn_weight_range.max,
-                                                              weight_source: 'HSN Maximum'
-                                                            } : i
-                                                          );
-                                                          setItems(updatedItems);
-                                                          recalculateQuote(updatedItems);
-                                                        }}
-                                                        className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
-                                                      >
-                                                        Use Max ({item.hsn_weight_range.max}kg)
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    )}
-                                  </div>
-                                  <div className="relative">
-                                    <SmartHSNSearch
-                                      currentHSNCode={item.hsn_code}
-                                      productName={item.product_name}
-                                      onHSNSelect={(hsn) => {
-                                        const updatedItems = items.map(i => 
-                                          i.id === item.id ? { 
-                                            ...i, 
-                                            hsn_code: hsn.hsn_code,
-                                            hsn_category: hsn.category,
-                                            weight: hsn.weight_data?.typical_weights?.per_unit?.average || item.weight,
-                                            weight_source: hsn.weight_data?.typical_weights?.per_unit?.average ? 'hsn' : item.weight_source
-                                          } : i
-                                        );
-                                        setItems(updatedItems);
-                                        recalculateQuote(updatedItems);
-                                      }}
-                                      size="sm"
-                                      compact={true}
-                                      className="w-full"
-                                      trigger={
-                                        <div className="flex items-center gap-1 border-b border-gray-300 pb-1 hover:border-gray-400 transition-colors cursor-pointer">
-                                          <Search className="w-3 h-3 text-gray-400" />
-                                          <div className="flex-1 px-0 text-xs bg-transparent">
-                                            {item.hsn_code ? `${item.hsn_code}${item.hsn_category ? ' - ' + item.hsn_category : ''}` : <span className="text-gray-400">Search HSN code or category...</span>}
-                                          </div>
-                                        </div>
-                                      }
-                                    />
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                <div className="flex flex-col justify-center h-full space-y-3">
-                                  {/* Tax Method */}
-                                  <div>
-                                    <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Tax</label>
-                                    <div className="inline-flex items-end gap-3 border-b border-gray-200">
-                                      <button
-                                        onClick={() => {
-                                          const updatedItems = items.map(i => 
-                                            i.id === item.id ? { ...i, tax_method: 'hsn' } : i
-                                          );
-                                          setItems(updatedItems);
-                                          recalculateQuote(updatedItems);
-                                        }}
-                                        className={cn(
-                                          "pb-1 px-1 text-xs transition-all relative",
-                                          item.tax_method === 'hsn' || !item.tax_method
-                                            ? "text-orange-600 font-medium" 
-                                            : "text-gray-500 hover:text-gray-700"
-                                        )}
-                                      >
-                                        HSN
-                                        {(item.tax_method === 'hsn' || !item.tax_method) && (
-                                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
-                                        )}
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          const updatedItems = items.map(i => 
-                                            i.id === item.id ? { ...i, tax_method: 'country' } : i
-                                          );
-                                          setItems(updatedItems);
-                                          recalculateQuote(updatedItems);
-                                        }}
-                                        className={cn(
-                                          "pb-1 px-1 text-xs transition-all relative",
-                                          item.tax_method === 'country' 
-                                            ? "text-teal-600 font-medium" 
-                                            : "text-gray-500 hover:text-gray-700"
-                                        )}
-                                      >
-                                        Country
-                                        {item.tax_method === 'country' && (
-                                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-500" />
-                                        )}
-                                      </button>
-                                      
-                                      {item.tax_method === 'manual' ? (
-                                        <div className="relative pb-1 animate-in slide-in-from-right-1 fade-in duration-150">
-                                          <div className="flex items-center gap-0.5">
-                                            <input
-                                              type="number"
-                                              value={item.manual_tax_rate || 0}
-                                              onChange={(e) => {
-                                                const value = parseFloat(e.target.value) || 0;
-                                                const updatedItems = items.map(i => 
-                                                  i.id === item.id ? { ...i, manual_tax_rate: value } : i
-                                                );
-                                                setItems(updatedItems);
-                                                recalculateQuote(updatedItems);
-                                              }}
-                                              className="w-10 px-0.5 text-xs text-center text-purple-600 font-medium bg-transparent border-none focus:outline-none"
-                                              min="0"
-                                              max="100"
-                                              step="0.1"
-                                            />
-                                            <span className="text-xs text-purple-600 font-medium">%</span>
-                                          </div>
-                                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500" />
-                                        </div>
-                                      ) : (
-                                        <button
-                                          onClick={() => {
-                                            const updatedItems = items.map(i => 
-                                              i.id === item.id ? { ...i, tax_method: 'manual' } : i
-                                            );
-                                            setItems(updatedItems);
-                                            recalculateQuote(updatedItems);
-                                          }}
-                                          className={cn(
-                                            "pb-1 px-1 text-xs transition-all relative",
-                                            "text-gray-500 hover:text-gray-700"
-                                          )}
-                                        >
-                                          Manual
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Valuation Method */}
-                                  <div>
-                                    <label className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1 block">Valuation</label>
-                                    <div className="inline-flex items-end gap-3 border-b border-gray-200">
-                                      <button
-                                        onClick={() => {
-                                          const updatedItems = items.map(i => 
-                                            i.id === item.id ? { ...i, valuation_method: 'actual_price' } : i
-                                          );
-                                          setItems(updatedItems);
-                                          recalculateQuote(updatedItems);
-                                        }}
-                                        className={cn(
-                                          "pb-1 px-1 text-xs transition-all relative",
-                                          item.valuation_method === 'actual_price' || !item.valuation_method
-                                            ? "text-orange-600 font-medium" 
-                                            : "text-gray-500 hover:text-gray-700"
-                                        )}
-                                      >
-                                        Product
-                                        {(item.valuation_method === 'actual_price' || !item.valuation_method) && (
-                                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
-                                        )}
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          const updatedItems = items.map(i => 
-                                            i.id === item.id ? { ...i, valuation_method: 'minimum_valuation' } : i
-                                          );
-                                          setItems(updatedItems);
-                                          recalculateQuote(updatedItems);
-                                        }}
-                                        className={cn(
-                                          "pb-1 px-1 text-xs transition-all relative",
-                                          item.valuation_method === 'minimum_valuation' 
-                                            ? "text-teal-600 font-medium" 
-                                            : "text-gray-500 hover:text-gray-700"
-                                        )}
-                                      >
-                                        Min
-                                        {item.valuation_method === 'minimum_valuation' && (
-                                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-500" />
-                                        )}
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          const updatedItems = items.map(i => 
-                                            i.id === item.id ? { ...i, valuation_method: 'higher_of_both' } : i
-                                          );
-                                          setItems(updatedItems);
-                                          recalculateQuote(updatedItems);
-                                        }}
-                                        className={cn(
-                                          "pb-1 px-1 text-xs transition-all relative",
-                                          item.valuation_method === 'higher_of_both' 
-                                            ? "text-purple-600 font-medium" 
-                                            : "text-gray-500 hover:text-gray-700"
-                                        )}
-                                      >
-                                        Higher
-                                        {item.valuation_method === 'higher_of_both' && (
-                                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                              {orderMode && (
-                                <td className="px-2 py-3 text-center">
-                                  <div className="flex flex-col justify-center h-full">
-                                    {item.actual_price ? (
-                                      <div className="space-y-1 text-xs">
-                                      <div className={cn(
-                                        "font-medium",
-                                        item.actual_price > item.price ? "text-red-600" : "text-green-600"
-                                      )}>
-                                        {item.actual_price > item.price ? '+' : '-'}${Math.abs(safeNumber(item.actual_price) - safeNumber(item.price)).toFixed(2)}
-                                      </div>
-                                      <div className={cn(
-                                        "text-gray-500",
-                                        item.actual_weight > item.weight ? "text-red-500" : "text-green-500"
-                                      )}>
-                                        {item.actual_weight > item.weight ? '+' : '-'}{Math.abs((item.actual_weight || 0) - (item.weight || 0)).toFixed(3)}kg
-                                      </div>
-                                      </div>
-                                    ) : (
-                                      <span className="text-gray-400 text-xs">Pending</span>
-                                    )}
-                                  </div>
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <SleekProductTable 
+                      items={items}
+                      onUpdateItem={(itemId, updates) => {
+                        const updatedItems = items.map(item => 
+                          item.id === itemId ? { ...item, ...updates } : item
+                        );
+                        setItems(updatedItems);
+                      }}
+                      onDeleteItem={(itemId) => {
+                        const updatedItems = items.filter(item => item.id !== itemId);
+                        setItems(updatedItems);
+                        recalculateQuote(updatedItems);
+                      }}
+                      onDuplicateItem={(item) => {
+                        const newItem = { 
+                          ...item, 
+                          id: `item-${Date.now()}`,
+                          product_name: item.product_name + ' (Copy)'
+                        };
+                        const updatedItems = [...items, newItem];
+                        setItems(updatedItems);
+                        recalculateQuote(updatedItems);
+                      }}
+                      onRecalculate={() => recalculateQuote(items)}
+                    />
                   </CardContent>
                 </Card>
+
 
                 {/* Additional Costs */}
                 <Card>
@@ -2842,7 +2223,7 @@ export default function UnifiedQuoteOrderSystem({
           </div>
 
           {/* Sidebar */}
-          <div className="col-span-4 space-y-6">
+          <div className="space-y-6">
             {/* Price Summary - Enhanced for Orders */}
             <Card className="sticky top-24">
               <CardHeader>

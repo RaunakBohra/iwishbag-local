@@ -147,6 +147,7 @@ const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns'));
 const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo'));
 const WeightTabDemo = React.lazy(() => import('@/demo/WeightTabDemo'));
 const HSNInputDesigns = React.lazy(() => import('@/demo/HSNInputDesigns'));
+const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants'));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 import UserRoleEnsurer from '@/components/auth/UserRoleEnsurer';
@@ -268,6 +269,10 @@ const router = createBrowserRouter([
       {
         path: 'hsn-designs',
         element: <HSNInputDesigns />,
+      },
+      {
+        path: 'product-table-variants',
+        element: <ProfessionalProductTableVariants />,
       },
     ],
   },

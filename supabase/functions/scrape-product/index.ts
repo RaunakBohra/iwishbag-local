@@ -9,6 +9,582 @@ import {
 import { createCorsHeaders } from '../_shared/cors.ts';
 import { ScrapingCache } from '../_shared/scraping-cache.ts';
 
+// AI Extraction Result Interface
+interface AIExtractionResult {
+  title: string;
+  price: number;
+  currency: string;
+  weight: {
+    value: number;
+    unit: string;
+    confidence: 'high' | 'medium' | 'low';
+    source: string;
+  };
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+    unit: string;
+  };
+  category: string;
+  brand?: string;
+  images: string[];
+  material?: string;
+  hsnSuggestion?: {
+    code: string;
+    reasoning: string;
+  };
+  confidence: number;
+}
+
+// ============================================================================
+// HTML PREPROCESSING FOR AI EXTRACTION
+// ============================================================================
+
+function preprocessHTMLForAI(html: string, url: string): string {
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    
+    // Extract only product-relevant sections based on domain
+    if (domain.includes('amazon')) {
+      return extractAmazonProductSection(html);
+    } else if (domain.includes('flipkart')) {
+      return extractFlipkartProductSection(html);
+    } else if (domain.includes('ebay')) {
+      return extractEbayProductSection(html);
+    }
+    
+    // Generic extraction for other sites
+    return extractGenericProductSection(html);
+  } catch (error) {
+    console.error('HTML preprocessing error:', error);
+    return html.substring(0, 50000); // Fallback to first 50KB
+  }
+}
+
+function extractAmazonProductSection(html: string): string {
+  const sections = [];
+  
+  // Title section
+  const titleMatch = html.match(/<span[^>]*id="productTitle"[^>]*>[\s\S]*?<\/span>/i);
+  if (titleMatch) sections.push(titleMatch[0]);
+  
+  // Price section
+  const priceMatch = html.match(/<div[^>]*class="[^"]*a-price[^"]*"[^>]*>[\s\S]{0,500}<\/div>/gi);
+  if (priceMatch) sections.push(...priceMatch);
+  
+  // Product details section (contains weight)
+  const detailsMatch = html.match(/<div[^>]*id="detailBullets[^"]*"[^>]*>[\s\S]{0,5000}<\/div>/i);
+  if (detailsMatch) sections.push(detailsMatch[0]);
+  
+  // Feature bullets
+  const featureMatch = html.match(/<div[^>]*id="feature-bullets"[^>]*>[\s\S]{0,3000}<\/div>/i);
+  if (featureMatch) sections.push(featureMatch[0]);
+  
+  // Product information table
+  const tableMatch = html.match(/<table[^>]*class="[^"]*prodDetTable[^"]*"[^>]*>[\s\S]{0,5000}<\/table>/i);
+  if (tableMatch) sections.push(tableMatch[0]);
+  
+  // Technical details section
+  const techMatch = html.match(/<div[^>]*class="[^"]*techD[^"]*"[^>]*>[\s\S]{0,5000}<\/div>/i);
+  if (techMatch) sections.push(techMatch[0]);
+  
+  // Additional Information section (often contains actual product weight)
+  const additionalMatch = html.match(/<h2[^>]*>Additional Information<\/h2>[\s\S]{0,3000}(?=<h2|<div[^>]*class="[^"]*section)/i);
+  if (additionalMatch) sections.push(additionalMatch[0]);
+  
+  // Look for weight patterns anywhere in the page
+  const weightPatterns = [
+    /Item Weight[^<]*?(\d+(?:\.\d+)?)\s*(kg|lbs?|pounds?|g|grams?|oz|ounces?)/gi,
+    /Product Weight[^<]*?(\d+(?:\.\d+)?)\s*(kg|lbs?|pounds?|g|grams?|oz|ounces?)/gi,
+    /Net Weight[^<]*?(\d+(?:\.\d+)?)\s*(kg|lbs?|pounds?|g|grams?|oz|ounces?)/gi,
+    /<span[^>]*>Weight<\/span>[^<]*?<span[^>]*>([^<]+)<\/span>/gi
+  ];
+  
+  for (const pattern of weightPatterns) {
+    const matches = html.match(pattern);
+    if (matches) {
+      sections.push(...matches.slice(0, 3));
+    }
+  }
+  
+  return sections.join('\n\n').substring(0, 30000); // Limit to 30KB
+}
+
+function extractFlipkartProductSection(html: string): string {
+  const sections = [];
+  
+  // Product title
+  const titleMatch = html.match(/<h1[^>]*class="[^"]*B_NuCI[^"]*"[^>]*>[\s\S]*?<\/h1>/i);
+  if (titleMatch) sections.push(titleMatch[0]);
+  
+  // Price section
+  const priceMatch = html.match(/<div[^>]*class="[^"]*_30jeq3[^"]*"[^>]*>[\s\S]{0,200}<\/div>/gi);
+  if (priceMatch) sections.push(...priceMatch);
+  
+  // Specifications section
+  const specsMatch = html.match(/<div[^>]*class="[^"]*_2418kt[^"]*"[^>]*>[\s\S]{0,5000}<\/div>/i);
+  if (specsMatch) sections.push(specsMatch[0]);
+  
+  return sections.join('\n\n');
+}
+
+function extractEbayProductSection(html: string): string {
+  const sections = [];
+  
+  // Title
+  const titleMatch = html.match(/<h1[^>]*class="[^"]*it-ttl[^"]*"[^>]*>[\s\S]*?<\/h1>/i);
+  if (titleMatch) sections.push(titleMatch[0]);
+  
+  // Price
+  const priceMatch = html.match(/<span[^>]*class="[^"]*notranslate[^"]*"[^>]*>[\s\S]{0,200}<\/span>/gi);
+  if (priceMatch) sections.push(...priceMatch);
+  
+  // Item specifics
+  const specsMatch = html.match(/<div[^>]*class="[^"]*itemAttr[^"]*"[^>]*>[\s\S]{0,5000}<\/div>/i);
+  if (specsMatch) sections.push(specsMatch[0]);
+  
+  return sections.join('\n\n');
+}
+
+function extractGenericProductSection(html: string): string {
+  // Generic extraction for unknown sites
+  const sections = [];
+  
+  // Look for common product patterns
+  const patterns = [
+    /<h1[^>]*>[\s\S]{0,200}<\/h1>/gi,
+    /<div[^>]*class="[^"]*price[^"]*"[^>]*>[\s\S]{0,500}<\/div>/gi,
+    /<div[^>]*class="[^"]*weight[^"]*"[^>]*>[\s\S]{0,500}<\/div>/gi,
+    /<div[^>]*class="[^"]*spec[^"]*"[^>]*>[\s\S]{0,2000}<\/div>/gi,
+    /<table[^>]*class="[^"]*spec[^"]*"[^>]*>[\s\S]{0,3000}<\/table>/gi,
+  ];
+  
+  for (const pattern of patterns) {
+    const matches = html.match(pattern);
+    if (matches) sections.push(...matches.slice(0, 3)); // Limit matches per pattern
+  }
+  
+  return sections.join('\n\n').substring(0, 20000); // Max 20KB
+}
+
+// ============================================================================
+// AI-POWERED EXTRACTION FUNCTIONS
+// ============================================================================
+
+async function extractWithCloudflareAI(brightDataResponse: any, productUrl: string): Promise<AIExtractionResult> {
+  console.log('🤖 Using Cloudflare AI for product extraction...');
+  
+  // Preprocess HTML if it's raw HTML content
+  let dataToProcess = brightDataResponse;
+  if (typeof brightDataResponse === 'string' || 
+      (brightDataResponse.html && typeof brightDataResponse.html === 'string') ||
+      (brightDataResponse.body && typeof brightDataResponse.body === 'string')) {
+    const htmlContent = typeof brightDataResponse === 'string' ? brightDataResponse : 
+                       (brightDataResponse.body || brightDataResponse.html);
+    console.log(`📄 Preprocessing HTML (${htmlContent.length} chars) for AI...`);
+    dataToProcess = preprocessHTMLForAI(htmlContent, productUrl);
+    console.log(`✂️ Reduced to ${dataToProcess.length} chars after preprocessing`);
+  }
+  
+  const prompt = `You are a product data extraction expert. Analyze this e-commerce product data and extract the most relevant information.
+
+Product URL: ${productUrl}
+
+Product sections:
+${typeof dataToProcess === 'string' ? dataToProcess : JSON.stringify(dataToProcess, null, 2)}
+
+WEIGHT EXTRACTION RULES:
+- Product weight NOT shipping weight
+- Beds/furniture: 10-100kg range typical
+- Look for "Item Weight", "Product Weight", "Net Weight"
+- Ignore "Package Weight", "Shipping Weight"
+
+Return ONLY JSON:
+{
+  "title": "exact product title",
+  "price": numeric_value_only,
+  "currency": "INR/USD/EUR/etc",
+  "weight": {
+    "value": numeric_value,
+    "unit": "kg/lbs/g/oz",
+    "confidence": "high/medium/low",
+    "source": "where you found this weight"
+  },
+  "dimensions": {
+    "length": numeric_value,
+    "width": numeric_value, 
+    "height": numeric_value,
+    "unit": "cm/in"
+  },
+  "category": "furniture/electronics/clothing/accessories/books/toys/general",
+  "brand": "brand name or null",
+  "images": ["url1", "url2"],
+  "material": "material or null",
+  "hsnSuggestion": {
+    "code": "suggested_hsn_code",
+    "reasoning": "why this HSN code fits"
+  },
+  "confidence": 0.85
+}`;
+
+  try {
+    // Since we're running in Supabase Edge Functions (based on Deno), 
+    // we'll use a direct call to Cloudflare AI API
+    const cloudflareAccountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
+    const cloudflareApiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
+    
+    if (!cloudflareAccountId || !cloudflareApiToken) {
+      throw new Error('Cloudflare credentials not configured');
+    }
+
+    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cloudflareAccountId}/ai/run/@cf/meta/llama-3-8b-instruct`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cloudflareApiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        max_tokens: 1500,
+        temperature: 0.1, // Low temperature for consistent extraction
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Cloudflare AI error: ${response.status} - ${errorText}`);
+    }
+
+    const aiResponse = await response.json();
+    console.log('🔍 Raw Cloudflare AI response:', aiResponse);
+    
+    // Parse the AI response - Cloudflare AI returns result.response
+    const aiText = aiResponse.result?.response || aiResponse.result;
+    
+    // Extract JSON from markdown code blocks if present
+    let jsonMatch = aiText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    if (!jsonMatch) {
+      // Try to find JSON without code blocks
+      jsonMatch = aiText.match(/(\{[\s\S]*\})/);
+    }
+    
+    if (!jsonMatch || !jsonMatch[1]) {
+      throw new Error('No valid JSON found in AI response');
+    }
+    
+    // Clean up JSON before parsing
+    let cleanJson = jsonMatch[1]
+      .replace(/\/\/[^\n]*/g, '') // Remove comments
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/`/g, "'") // Replace backticks with single quotes
+      .replace(/\n/g, '\\n') // Escape newlines properly
+      .replace(/\r/g, '\\r') // Escape carriage returns
+      .replace(/\t/g, '\\t'); // Escape tabs
+    
+    // Handle null values without quotes
+    cleanJson = cleanJson.replace(/:\s*null\b/g, ': null');
+    
+    // Additional cleanup for malformed JSON
+    cleanJson = cleanJson
+      .replace(/([^\\])\\([^\\nrt"'])/g, '$1\\\\$2') // Escape unescaped backslashes
+      .replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas before closing braces/brackets
+    
+    const extractedData = JSON.parse(cleanJson);
+    
+    console.log('✅ Cloudflare AI extraction successful');
+    return extractedData;
+    
+  } catch (error) {
+    console.error('❌ Cloudflare AI extraction failed:', error);
+    throw error;
+  }
+}
+
+async function extractWithClaudeHaiku(brightDataResponse: any, productUrl: string): Promise<AIExtractionResult> {
+  console.log('🧠 Using Claude Haiku for complex product extraction...');
+  
+  // Preprocess HTML if it's raw HTML content
+  let dataToProcess = brightDataResponse;
+  if (typeof brightDataResponse === 'string' || 
+      (brightDataResponse.html && typeof brightDataResponse.html === 'string') ||
+      (brightDataResponse.body && typeof brightDataResponse.body === 'string')) {
+    const htmlContent = typeof brightDataResponse === 'string' ? brightDataResponse : 
+                       (brightDataResponse.body || brightDataResponse.html);
+    console.log(`📄 Preprocessing HTML (${htmlContent.length} chars) for AI...`);
+    dataToProcess = preprocessHTMLForAI(htmlContent, productUrl);
+    console.log(`✂️ Reduced to ${dataToProcess.length} chars after preprocessing`);
+  }
+  
+  const prompt = `You are an expert e-commerce product data analyst. Extract accurate product information from this scraped data.
+
+Product URL: ${productUrl}
+
+Product sections:
+${typeof dataToProcess === 'string' ? dataToProcess : JSON.stringify(dataToProcess, null, 2)}
+
+EXTRACTION REQUIREMENTS:
+1. WEIGHT ACCURACY: Find the main product weight, not shipping/packaging weight
+   - For beds/furniture: Expect 10-100kg range
+   - For electronics: Expect appropriate weight for device type
+   - Ignore obviously wrong weights (like 16g for a refrigerator)
+
+2. IMAGE FILTERING: Only product images, exclude:
+   - UI elements, logos, navigation sprites
+   - Amazon/website branding
+   - Tracking pixels
+
+3. CATEGORY DETECTION: Accurate categorization based on product function
+
+4. HSN SUGGESTION: Suggest appropriate Indian HSN code based on:
+   - Material composition
+   - Primary function
+   - Product classification
+
+Return as valid JSON with this structure:
+{
+  "title": "complete product name",
+  "price": number,
+  "currency": "currency_code",
+  "weight": {
+    "value": number,
+    "unit": "kg/lbs/g/oz", 
+    "confidence": "high/medium/low",
+    "source": "field or location where found"
+  },
+  "dimensions": {
+    "length": number,
+    "width": number,
+    "height": number,
+    "unit": "cm/in"
+  },
+  "category": "accurate_category",
+  "brand": "brand_name",
+  "images": ["clean_product_image_urls"],
+  "material": "primary_material",
+  "hsnSuggestion": {
+    "code": "hsn_code",
+    "reasoning": "classification_logic"
+  },
+  "confidence": 0.9
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('ANTHROPIC_API_KEY')}`,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 2000,
+        temperature: 0.1,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
+    const claudeResponse = await response.json();
+    let responseText = claudeResponse.content[0].text;
+    
+    // Extract JSON from markdown code blocks if present
+    let jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    if (!jsonMatch) {
+      // Try to find JSON without code blocks
+      jsonMatch = responseText.match(/(\{[\s\S]*\})/);
+    }
+    
+    if (!jsonMatch || !jsonMatch[1]) {
+      throw new Error('No valid JSON found in Claude response');
+    }
+    
+    // Clean up JSON before parsing (same logic as Cloudflare)
+    let cleanJson = jsonMatch[1]
+      .replace(/\/\/[^\n]*/g, '') // Remove comments
+      .replace(/,\s*}/g, '}') // Remove trailing commas
+      .replace(/`/g, "'") // Replace backticks with single quotes
+      .replace(/\n/g, '\\n') // Escape newlines properly
+      .replace(/\r/g, '\\r') // Escape carriage returns
+      .replace(/\t/g, '\\t'); // Escape tabs
+    
+    // Handle null values without quotes
+    cleanJson = cleanJson.replace(/:\s*null\b/g, ': null');
+    
+    // Additional cleanup for malformed JSON
+    cleanJson = cleanJson
+      .replace(/([^\\])\\([^\\nrt"'])/g, '$1\\\\$2') // Escape unescaped backslashes
+      .replace(/,\s*([}\]])/g, '$1'); // Remove trailing commas before closing braces/brackets
+    
+    const extractedData = JSON.parse(cleanJson);
+    
+    console.log('✅ Claude Haiku extraction successful');
+    return extractedData;
+    
+  } catch (error) {
+    console.error('❌ Claude Haiku extraction failed:', error);
+    throw error;
+  }
+}
+
+async function extractProductDataWithAI(brightDataResponse: any, productUrl: string): Promise<any> {
+  console.log('🚀 Starting AI-powered product extraction...');
+  console.log('📊 Response type:', typeof brightDataResponse);
+  console.log('📊 Response keys:', brightDataResponse ? Object.keys(brightDataResponse).slice(0, 10) : 'null');
+  
+  try {
+    // Try Claude Haiku first (more accurate, larger context window)
+    console.log('🧠 Attempting Claude Haiku extraction...');
+    const claudeResult = await extractWithClaudeHaiku(brightDataResponse, productUrl);
+    console.log(`✅ Claude Haiku succeeded with confidence: ${claudeResult.confidence}`);
+    console.log('🏋️ Claude extracted weight:', claudeResult.weight);
+    return normalizeAIResult(claudeResult);
+    
+  } catch (claudeError) {
+    console.log('⚠️ Claude Haiku failed:', claudeError.message);
+    console.log('⚠️ Falling back to Cloudflare AI...');
+    
+    try {
+      const cfResult = await extractWithCloudflareAI(brightDataResponse, productUrl);
+      
+      if (cfResult.confidence > 0.7) {
+        console.log(`✅ Cloudflare AI succeeded with confidence: ${cfResult.confidence}`);
+        console.log('🏋️ Cloudflare extracted weight:', cfResult.weight);
+        return normalizeAIResult(cfResult);
+      } else {
+        console.log(`⚠️ Cloudflare AI low confidence: ${cfResult.confidence}`);
+        throw new Error('Low confidence from AI extraction');
+      }
+      
+    } catch (cloudflareError) {
+      console.error('❌ Both AI methods failed:', cloudflareError.message);
+      console.error('❌ Using fallback extraction');
+      // Fallback to existing regex method if both AI methods fail
+      return extractStructuredData(brightDataResponse, getWebsiteDomain(productUrl));
+    }
+  }
+}
+
+function normalizeAIResult(aiResult: AIExtractionResult): any {
+  return {
+    title: aiResult.title,
+    price: aiResult.price,
+    currency: aiResult.currency || 'USD',
+    weight: aiResult.weight.value * getKgConversionFactor(aiResult.weight.unit),
+    weight_value: aiResult.weight.value,
+    weight_unit: aiResult.weight.unit,
+    weight_raw: `${aiResult.weight.value} ${aiResult.weight.unit}`,
+    images: aiResult.images || [],
+    availability: 'In Stock', // Default since AI doesn't always extract this
+    category: aiResult.category,
+    brand: aiResult.brand,
+    material: aiResult.material,
+    dimensions: aiResult.dimensions,
+    hsnSuggestion: aiResult.hsnSuggestion,
+    confidence: aiResult.confidence,
+    method: 'ai-enhanced'
+  };
+}
+
+// Function to create HSN suggestion if AI has high confidence
+async function createHSNSuggestionIfNeeded(
+  supabaseClient: any,
+  userId: string | null,
+  productUrl: string,
+  aiResult: AIExtractionResult
+): Promise<void> {
+  try {
+    // Only create suggestions for high-confidence AI extractions
+    if (!aiResult.hsnSuggestion || aiResult.confidence < 0.85 || !userId) {
+      return;
+    }
+
+    const { hsnSuggestion } = aiResult;
+    
+    // Check if HSN code already exists
+    const { data: existingHSN } = await supabaseClient
+      .from('hsn_master')
+      .select('hsn_code')
+      .eq('hsn_code', hsnSuggestion.code)
+      .eq('is_active', true)
+      .single();
+
+    if (existingHSN) {
+      console.log(`HSN code ${hsnSuggestion.code} already exists, skipping suggestion`);
+      return;
+    }
+
+    // Check if there's already a pending request
+    const { data: existingRequest } = await supabaseClient
+      .from('user_hsn_requests')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('hsn_code', hsnSuggestion.code)
+      .eq('status', 'pending')
+      .single();
+
+    if (existingRequest) {
+      console.log(`Pending HSN request for ${hsnSuggestion.code} already exists`);
+      return;
+    }
+
+    // Create AI HSN suggestion
+    const { data: newRequest, error } = await supabaseClient.rpc('create_ai_hsn_suggestion', {
+      p_user_id: userId,
+      p_product_name: aiResult.title,
+      p_product_url: productUrl,
+      p_hsn_code: hsnSuggestion.code,
+      p_description: `${aiResult.category} - ${aiResult.title}`,
+      p_category: aiResult.category,
+      p_subcategory: aiResult.brand || null,
+      p_keywords: [aiResult.category, aiResult.brand, aiResult.material].filter(Boolean),
+      p_ai_confidence: aiResult.confidence,
+      p_ai_reasoning: hsnSuggestion.reasoning,
+      p_extraction_data: {
+        title: aiResult.title,
+        category: aiResult.category,
+        brand: aiResult.brand,
+        material: aiResult.material,
+        weight: aiResult.weight,
+        dimensions: aiResult.dimensions
+      }
+    });
+
+    if (error) {
+      console.error('Failed to create HSN suggestion:', error);
+    } else {
+      console.log(`✅ Created AI HSN suggestion for ${hsnSuggestion.code} with confidence ${aiResult.confidence}`);
+    }
+
+  } catch (error) {
+    console.error('Error creating HSN suggestion:', error);
+  }
+}
+
+function getKgConversionFactor(unit: string): number {
+  const unitLower = unit.toLowerCase();
+  if (unitLower.includes('kg')) return 1;
+  if (unitLower.includes('lb') || unitLower.includes('pound')) return 0.453592;
+  if (unitLower.includes('oz') || unitLower.includes('ounce')) return 0.0283495;
+  if (unitLower.includes('g') && !unitLower.includes('kg')) return 0.001;
+  return 1; // Default to kg
+}
+
+function getWebsiteDomain(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return 'unknown.com';
+  }
+}
+
 serve(async (req) => {
   const corsHeaders = createCorsHeaders(req);
 
@@ -97,6 +673,37 @@ serve(async (req) => {
       await cache.set(url, scrapedData.data, scrapedData.method);
     }
 
+    // Create HSN suggestion if AI extraction was successful and user is authenticated
+    if (scrapedData.success && scrapedData.data && scrapedData.method?.includes('ai') && user?.id) {
+      try {
+        // Convert normalized data back to AI result format for HSN suggestion
+        if (scrapedData.data.hsnSuggestion && scrapedData.data.confidence > 0.85) {
+          const aiResultForHSN: AIExtractionResult = {
+            title: scrapedData.data.title,
+            price: scrapedData.data.price,
+            currency: scrapedData.data.currency || 'USD',
+            weight: {
+              value: scrapedData.data.weight_value || 0.5,
+              unit: scrapedData.data.weight_unit || 'kg',
+              confidence: 'high' as 'high' | 'medium' | 'low',
+              source: 'ai_extraction'
+            },
+            dimensions: scrapedData.data.dimensions,
+            category: scrapedData.data.category,
+            brand: scrapedData.data.brand,
+            images: scrapedData.data.images || [],
+            material: scrapedData.data.material,
+            hsnSuggestion: scrapedData.data.hsnSuggestion,
+            confidence: scrapedData.data.confidence
+          };
+          
+          await createHSNSuggestionIfNeeded(supabaseClient, user.id, url, aiResultForHSN);
+        }
+      } catch (hsnError) {
+        console.error('Failed to create HSN suggestion, but continuing:', hsnError);
+      }
+    }
+
     return new Response(JSON.stringify(scrapedData), {
       headers: {
         ...corsHeaders,
@@ -162,33 +769,14 @@ async function scrapeWithScrapeAPI(url: string, website: string) {
 
   const data = await response.json();
 
-  // Extract data from the structured response
-  const extractedData = extractProductDataFromScrapeAPI(data, website);
-
-  const weightData = extractWeightFromString(extractedData.weight);
+  // Extract data using AI-powered system
+  const extractedData = await extractProductDataWithAI(data, url);
   
   return {
     success: true,
-    data: {
-      title: extractedData.name || 'Product (Title not found)',
-      price: extractPriceFromString(extractedData.price),
-      weight: weightData.kg,
-      weight_value: weightData.value,
-      weight_unit: weightData.unit,
-      weight_raw: weightData.raw,
-      images: extractedData.images,
-      availability: extractedData.availability || 'Unknown',
-      category: extractedData.category || detectCategory(extractedData.name, website),
-      description: extractedData.description,
-      brand: extractedData.brand,
-      rating: extractedData.rating,
-      reviews_count: extractedData.reviews_count,
-      currency: extractedData.currency,
-      country: extractedData.country,
-      // Don't include URL to avoid overwriting the input field
-    },
-    confidence: calculateConfidence(extractedData, website),
-    method: 'scrapeapi',
+    data: extractedData,
+    confidence: extractedData.confidence || 0.8,
+    method: extractedData.method || 'ai-scrapeapi',
   };
 }
 
@@ -227,14 +815,14 @@ async function scrapeAmazonWithScrapeAPI(url: string, apiKey: string) {
 
   const data = await amazonResponse.json();
 
-  // Extract data from Amazon-specific response
-  const extractedData = extractAmazonDataFromScrapeAPI(data, url);
+  // Extract data using AI-powered system
+  const extractedData = await extractProductDataWithAI(data, url);
 
   return {
     success: true,
     data: extractedData,
-    confidence: calculateConfidence(extractedData, 'amazon.com'),
-    method: 'scrapeapi-amazon',
+    confidence: extractedData.confidence || 0.8,
+    method: extractedData.method || 'ai-amazon',
   };
 }
 
@@ -570,22 +1158,36 @@ async function scrapeWithBrightData(url: string, website: string) {
   const data = await response.json();
   console.log(`🔍 Structured scraper response:`, JSON.stringify(data, null, 2));
   
+  // Log specific fields we're looking for
+  if (data && data.data && data.data[0]) {
+    const product = data.data[0];
+    console.log('📦 Product weight fields:', {
+      weight: product.weight,
+      item_weight: product.item_weight,
+      shipping_weight: product.shipping_weight,
+      product_information: product.product_information,
+      specifications: product.specifications,
+    });
+  }
+  
   // Check if we got a snapshot_id (async response) instead of direct data
   if (data.snapshot_id && !data.data) {
     console.log(`⚠️ Got async response with snapshot_id: ${data.snapshot_id}, falling back to Web Unlocker`);
     return scrapeWithBrightDataWebUnlocker(url, website);
   }
 
-  // Extract data from structured response
-  const extractedData = extractStructuredData(data, website);
+  // Extract data using AI-powered system
+  const extractedData = await extractProductDataWithAI(data, url);
   
-  console.log(`🔍 Extracted structured data:`, {
+  console.log(`🔍 AI extracted data:`, {
     title: extractedData.title,
     price: extractedData.price,
     weight: extractedData.weight,
     category: extractedData.category,
     currency: extractedData.currency,
     weight_raw: extractedData.weight_raw,
+    method: extractedData.method,
+    confidence: extractedData.confidence,
   });
 
   return {
@@ -730,6 +1332,7 @@ function extractStructuredData(data: any, website: string) {
     }
 
     // Extract weight from multiple possible fields
+    console.log('🔍 Looking for weight in product data...');
     const weightSources = [
       product.weight,
       product.shipping_weight,
@@ -738,8 +1341,16 @@ function extractStructuredData(data: any, website: string) {
       product.dimensions?.weight,
       product.product_information?.weight,
       product.product_information?.item_weight,
-      product.product_information?.shipping_weight
+      product.product_information?.shipping_weight,
+      product.product_information?.['Item Weight'],
+      product.product_information?.['Package Weight'],
+      product.product_information?.['Shipping Weight'],
+      product.specifications?.weight,
+      product.specifications?.['Item Weight'],
+      product.specifications?.['Product Weight']
     ];
+    
+    console.log('📦 Weight sources found:', weightSources.filter(w => w !== undefined));
 
     let weightData: WeightData | null = null;
     
@@ -757,25 +1368,84 @@ function extractStructuredData(data: any, website: string) {
       }
     }
 
-    // If no direct weight, try parsing from specifications
-    if (!weightData && product.specifications) {
-      const specString = JSON.stringify(product.specifications);
-      const weightMatch = specString.match(/(\d+(?:\.\d+)?)\s*(ounces?|lbs?|pounds?|g|grams?|kg|kilograms?)/i);
-      if (weightMatch) {
-        const value = parseFloat(weightMatch[1]);
-        const unit = weightMatch[2].toLowerCase();
+    // If no direct weight, try parsing from specifications or product_information
+    if (!weightData) {
+      console.log('⚠️ No direct weight found, searching in text fields...');
+      
+      // Try product_information as a whole
+      if (product.product_information) {
+        console.log('📋 Product information:', product.product_information);
+        const infoString = JSON.stringify(product.product_information);
+        // Look for weight patterns, prioritizing kg over other units
+        const patterns = [
+          /(\d+(?:\.\d+)?)\s*(kg|kilograms?)/i,
+          /(\d+(?:\.\d+)?)\s*(lbs?|pounds?)/i,
+          /(\d+(?:\.\d+)?)\s*(g|grams?)(?!\w)/i,
+          /(\d+(?:\.\d+)?)\s*(oz|ounces?)/i
+        ];
         
-        // Normalize unit names
-        let normalizedUnit = unit;
-        if (unit.includes('ounce') || unit === 'oz') normalizedUnit = 'oz';
-        else if (unit.includes('pound') || unit.includes('lb')) normalizedUnit = 'lbs';
-        else if (unit.includes('gram') && !unit.includes('kg')) normalizedUnit = 'g';
-        else if (unit.includes('kg')) normalizedUnit = 'kg';
+        for (const pattern of patterns) {
+          const weightMatch = infoString.match(pattern);
+          if (weightMatch) {
+            const value = parseFloat(weightMatch[1]);
+            const unit = weightMatch[2].toLowerCase();
+            
+            // Skip if value seems unrealistic for the product
+            if (value > 0 && value < 1000) {
+              console.log(`✅ Found weight in product_information: ${weightMatch[0]}`);
+              
+              // Normalize unit names
+              let normalizedUnit = unit;
+              if (unit.includes('ounce') || unit === 'oz') normalizedUnit = 'oz';
+              else if (unit.includes('pound') || unit.includes('lb')) normalizedUnit = 'lbs';
+              else if (unit.includes('gram') && !unit.includes('kg')) normalizedUnit = 'g';
+              else if (unit.includes('kg')) normalizedUnit = 'kg';
+              
+              extractedData.weight = convertWeightToKg(value, unit); // For backward compatibility
+              extractedData.weight_value = value;
+              extractedData.weight_unit = normalizedUnit;
+              extractedData.weight_raw = weightMatch[0];
+              break;
+            }
+          }
+        }
+      }
+      
+      // Try specifications if still no weight
+      if (!extractedData.weight_raw && product.specifications) {
+        console.log('📋 Specifications:', product.specifications);
+        const specString = JSON.stringify(product.specifications);
+        const patterns = [
+          /(\d+(?:\.\d+)?)\s*(kg|kilograms?)/i,
+          /(\d+(?:\.\d+)?)\s*(lbs?|pounds?)/i,
+          /(\d+(?:\.\d+)?)\s*(g|grams?)(?!\w)/i,
+          /(\d+(?:\.\d+)?)\s*(oz|ounces?)/i
+        ];
         
-        extractedData.weight = convertWeightToKg(value, unit); // For backward compatibility
-        extractedData.weight_value = value;
-        extractedData.weight_unit = normalizedUnit;
-        extractedData.weight_raw = weightMatch[0];
+        for (const pattern of patterns) {
+          const weightMatch = specString.match(pattern);
+          if (weightMatch) {
+            const value = parseFloat(weightMatch[1]);
+            const unit = weightMatch[2].toLowerCase();
+            
+            if (value > 0 && value < 1000) {
+              console.log(`✅ Found weight in specifications: ${weightMatch[0]}`);
+              
+              // Normalize unit names
+              let normalizedUnit = unit;
+              if (unit.includes('ounce') || unit === 'oz') normalizedUnit = 'oz';
+              else if (unit.includes('pound') || unit.includes('lb')) normalizedUnit = 'lbs';
+              else if (unit.includes('gram') && !unit.includes('kg')) normalizedUnit = 'g';
+              else if (unit.includes('kg')) normalizedUnit = 'kg';
+              
+              extractedData.weight = convertWeightToKg(value, unit); // For backward compatibility
+              extractedData.weight_value = value;
+              extractedData.weight_unit = normalizedUnit;
+              extractedData.weight_raw = weightMatch[0];
+              break;
+            }
+          }
+        }
       }
     }
 
@@ -908,30 +1578,9 @@ async function scrapeWithBrightDataWebUnlocker(url: string, website: string) {
 
   const data = await response.json();
 
-  // Extract data using website-specific rules from HTML content
-  let extractedData;
-  let htmlContent = '';
-  
-  if (data.html) {
-    htmlContent = data.html;
-  } else if (data.body) {
-    htmlContent = data.body;
-  } else if (typeof data === 'string') {
-    htmlContent = data;
-  } else {
-    // Try to extract from any HTML content in the response
-    htmlContent = JSON.stringify(data);
-  }
-
-  // Truncate HTML to prevent memory issues (keep first 500KB)
-  if (htmlContent.length > 500000) {
-    console.log(`⚠️ HTML too large (${htmlContent.length} chars), truncating to 500KB`);
-    htmlContent = htmlContent.substring(0, 500000);
-  }
-
-  console.log(`🔍 HTML content size: ${htmlContent.length} chars`);
-  
-  extractedData = extractProductData(htmlContent, website);
+  // Extract data using AI-powered system
+  console.log('🔍 Bright Data Web Unlocker response type:', typeof data, 'keys:', Object.keys(data).slice(0, 5));
+  const extractedData = await extractProductDataWithAI(data, url);
   
   console.log(`🔍 Extracted data:`, {
     title: extractedData.title,
@@ -942,13 +1591,9 @@ async function scrapeWithBrightDataWebUnlocker(url: string, website: string) {
 
   return {
     success: true,
-    data: {
-      ...extractedData,
-      // Don't include URL to avoid overwriting the input field
-    },
-    confidence: calculateConfidence(extractedData, website),
-    method: 'brightdata-webunlocker',
-    rawResponse: data, // For debugging
+    data: extractedData,
+    confidence: extractedData.confidence || 0.8,
+    method: extractedData.method || 'ai-brightdata-webunlocker',
   };
 }
 
@@ -1230,6 +1875,23 @@ function extractAvailability(html: string, website: string): string {
 function detectCategory(title: string, website: string): string {
   const titleLower = title.toLowerCase();
 
+  // Furniture and Home
+  if (
+    titleLower.includes('bed') ||
+    titleLower.includes('sofa') ||
+    titleLower.includes('chair') ||
+    titleLower.includes('table') ||
+    titleLower.includes('desk') ||
+    titleLower.includes('wardrobe') ||
+    titleLower.includes('mattress') ||
+    titleLower.includes('furniture') ||
+    titleLower.includes('cabinet') ||
+    titleLower.includes('shelf') ||
+    titleLower.includes('drawer')
+  ) {
+    return 'furniture';
+  }
+  
   // Electronics and appliances
   if (
     titleLower.includes('phone') ||

@@ -190,7 +190,8 @@
       "Bash(npx wrangler deploy:*)",
       "Bash(npx wrangler dev:*)",
       "WebFetch(domain:docs.brightdata.com)",
-      "Bash(deno check:*)"
+      "Bash(deno check:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": []
   }

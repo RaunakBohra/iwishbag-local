@@ -191,7 +191,6 @@ const transformQuoteToUnifiedFormat = (
     // Additional fields needed by the component
     destination_country: quote.destination_country,
     origin_country: quote.origin_country || 'US',
-    tax_method: calculationData.tax_calculation?.method || 'hsn',
     shipping_method: quote.shipping_method || 'standard',
     
     // Smart recommendations from calculation

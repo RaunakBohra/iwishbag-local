@@ -27,11 +27,39 @@ import ZeroTrustSetup from '../pages/demo/ZeroTrustSetup';
 import CloudflareSetupSummary from '../pages/demo/CloudflareSetupSummary';
 import ZeroTrustManualSetup from '../pages/demo/ZeroTrustManualSetup';
 import UrlAutoFillDemo from '../pages/demo/UrlAutoFillDemo';
+import ProfessionalProductTable from './ProfessionalProductTable';
+import ProfessionalProductTableVariants from './ProfessionalProductTableVariants';
 
 const DemoIndex = () => {
   const [selectedDemo, setSelectedDemo] = useState<string | null>(null);
 
   const demos = [
+    {
+      id: 'product-table-variants',
+      title: 'Beautiful Expandable Row Designs',
+      description:
+        'Four stunning variations of expandable product tables with professional layouts and volumetric weight support',
+      features: [
+        'Sleek Dashboard Style with metric cards',
+        'Modern Card Stack with animated elements',
+        'Executive Summary with KPI focus',
+        'Minimal Focus for maximum content clarity',
+      ],
+      component: ProfessionalProductTableVariants,
+    },
+    {
+      id: 'professional-product-table',
+      title: 'Professional Product Table Layouts',
+      description:
+        'Three industry-standard layouts for complex product data management with volumetric weight support',
+      features: [
+        'Enhanced Linear with Expandable Rows (Recommended)',
+        'Linear Narrative (Stripe-inspired)',
+        'Data Card Grid (Notion-inspired)',
+        'Contextual Workspace (Figma-inspired)',
+      ],
+      component: ProfessionalProductTable,
+    },
     {
       id: 'url-autofill',
       title: '🔮 URL Auto-Fill Demo',
