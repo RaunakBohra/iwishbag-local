@@ -576,8 +576,11 @@ class PerItemTaxCalculator {
     console.log(`│ └── Total Cost: $${actualTotalCost.toFixed(2)}`);
 
     // Handle case where no minimum valuation is available
-    if (!hsnData.minimum_valuation_usd || !hsnData.requires_currency_conversion) {
-      console.log(`├── ⚠️ No minimum valuation available for HSN ${hsnData.hsn_code}`);
+    console.log(`├── HSN Data Check: HSN ${hsnData.hsn_code} - minimum_valuation_usd: ${hsnData.minimum_valuation_usd}, requires_conversion: ${hsnData.requires_currency_conversion}`);
+    
+    // Only check if minimum valuation exists - don't require the conversion flag
+    if (!hsnData.minimum_valuation_usd) {
+      console.log(`├── ⚠️ No minimum valuation USD amount for HSN ${hsnData.hsn_code}`);
       console.log(`└── 🎯 Selected Method: actual_price (only option)\n`);
       
       return {
@@ -739,6 +742,7 @@ class PerItemTaxCalculator {
     console.log(`├── Selected Method: ${selected_method}`);
     console.log(`├── Selected Amount: ${auto_selected_amount} ${minimumValuationConversion.originCurrency}`);
     console.log(`├── Valuation Method: ${valuation_method}`);
+    console.log(`├── Original Price: ${originalPrice} | Minimum Amount: ${minimumAmount}`);
     console.log(`└── Final Total Cost: ${(originalPrice + (selected_method === 'actual_price' ? actual_price_calculation.total_tax : minimum_valuation_calculation.total_tax)).toFixed(2)} ${minimumValuationConversion.originCurrency}\n`);
 
     return {
