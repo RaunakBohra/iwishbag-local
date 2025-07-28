@@ -214,6 +214,14 @@ class PerItemTaxCalculator {
         : item.price_origin_currency;
 
       console.log(`[TAX CALC] Using ${valuationOptions.selected_method} for CIF calculation: ${baseAmount} ${valuationOptions.minimum_valuation_conversion?.originCurrency || 'USD'}`);
+      
+      // Log valuation decision for transparency
+      if (valuationOptions.selected_method === 'minimum_valuation') {
+        console.log(`[TAX CALC] ✅ Minimum valuation selected: ${baseAmount} (converted from $${valuationOptions.minimum_valuation_conversion?.usdAmount} USD)`);
+        console.log(`[TAX CALC] → Product price: ${item.price_origin_currency} | Minimum: ${baseAmount} | Using: ${baseAmount}`);
+      } else {
+        console.log(`[TAX CALC] → Product price: ${item.price_origin_currency} | Minimum: ${valuationOptions.auto_selected_amount} | Using: ${item.price_origin_currency}`);
+      }
 
       // Step 3: Calculate CIF value using the correct base amount
       const cifValue = this.calculateCIFValue(
@@ -797,13 +805,13 @@ class PerItemTaxCalculator {
     const customsAmount = (cifValue * customsRate) / 100;
 
     console.log(
-      `[CUSTOMS DEBUG] CIF Value: ${cifValue}, Rate: ${customsRate}%, Amount: ${customsAmount}`,
+      `[CUSTOMS DEBUG] CIF Value: ${cifValue.toFixed(2)}, Rate: ${customsRate}%, Amount: ${customsAmount.toFixed(2)}`,
     );
 
     return {
       rate_percentage: customsRate,
       amount_origin_currency: Math.round(customsAmount * 100) / 100, // Round to 2 decimals
-      basis_amount: cifValue, // Now using CIF as basis
+      basis_amount: cifValue, // Now using CIF as basis (includes selected valuation)
     };
   }
 
