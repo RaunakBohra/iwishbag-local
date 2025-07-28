@@ -377,13 +377,24 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     }
   };
 
-  const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
-    try {
-      setIsCalculating(true);
+  // Add a ref to track calculation debounce
+  const calculationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-      console.log(
-        `[CALCULATION DEBUG] Starting calculation with method: ${quoteData.calculation_method_preference}`,
-      );
+  const calculateSmartFeatures = async (quoteData: UnifiedQuote) => {
+    // Clear any pending calculation
+    if (calculationTimeoutRef.current) {
+      clearTimeout(calculationTimeoutRef.current);
+    }
+
+    // Debounce the calculation by 500ms
+    return new Promise<EnhancedCalculationResult | null>((resolve) => {
+      calculationTimeoutRef.current = setTimeout(async () => {
+        try {
+          setIsCalculating(true);
+
+          console.log(
+            `[CALCULATION DEBUG] Starting calculation with method: ${quoteData.calculation_method_preference}`,
+          );
 
       console.log('[VALUATION DEBUG] Quote data before calculation:', {
         quote_id: quoteData.id,
@@ -452,30 +463,32 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         setOptimizationScore(result.updated_quote.optimization_score);
 
         // Return the updated quote for further processing
-        return updatedQuote;
+        resolve(updatedQuote);
+      } else {
+        resolve(null);
       }
+        } catch (error) {
+          const appError = createCalculationError(
+            'smart features calculation',
+            {
+              quoteId: quote?.id,
+            },
+            error instanceof Error ? error.message : 'Failed to calculate smart features',
+          );
 
-      return null;
-    } catch (error) {
-      const appError = createCalculationError(
-        'smart features calculation',
-        {
-          quoteId: quote?.id,
-        },
-        error instanceof Error ? error.message : 'Failed to calculate smart features',
-      );
+          handleError(appError, {
+            component: 'UnifiedQuoteInterface',
+            action: 'calculateSmartFeatures',
+            quoteId: quote?.id,
+            userId: quote?.user_id,
+          });
 
-      handleError(appError, {
-        component: 'UnifiedQuoteInterface',
-        action: 'calculateSmartFeatures',
-        quoteId: quote?.id,
-        userId: quote?.user_id,
-      });
-
-      return null;
-    } finally {
-      setIsCalculating(false);
-    }
+          resolve(null);
+        } finally {
+          setIsCalculating(false);
+        }
+      }, 500); // 500ms debounce
+    });
   };
 
   // ✅ NEW: Trigger calculation with current form values (for real-time updates)
@@ -1001,11 +1014,21 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       }
     } catch (error) {
       console.error(`[VALUATION METHOD DEBUG] Error during method change:`, error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update valuation method',
-        variant: 'destructive',
-      });
+      
+      // Check for database constraint violation
+      if (error instanceof Error && error.message.includes('constraint')) {
+        toast({
+          title: 'Invalid valuation method',
+          description: 'The selected valuation method is not valid. Please try again.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to update valuation method',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsCalculating(false);
     }

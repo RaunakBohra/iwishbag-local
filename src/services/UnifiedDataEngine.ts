@@ -428,9 +428,12 @@ export class UnifiedDataEngine {
       if (updates.calculation_method_preference)
         dbUpdates.calculation_method_preference = updates.calculation_method_preference;
 
+      console.log('[UNIFIED DATA ENGINE] Updating quote with:', dbUpdates);
+      
       const { error } = await supabase.from('quotes').update(dbUpdates).eq('id', id);
 
       if (error) {
+        console.error('[UNIFIED DATA ENGINE] Update failed:', error);
         throw error;
       }
 

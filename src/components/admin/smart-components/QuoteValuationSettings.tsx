@@ -30,7 +30,18 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
 }) => {
   if (!isEditMode) return null;
 
-  const currentMethod = quote.valuation_method_preference || 'product_value';
+  // Map database values to UI values
+  const mapDbToUiValue = (dbValue: string): string => {
+    if (dbValue === 'actual_price') return 'product_value';
+    return dbValue;
+  };
+
+  const mapUiToDbValue = (uiValue: string): string => {
+    if (uiValue === 'product_value') return 'actual_price';
+    return uiValue;
+  };
+
+  const currentMethod = mapDbToUiValue(quote.valuation_method_preference || 'actual_price');
 
   // Calculate method impact
   const methodInfo = {
@@ -87,7 +98,10 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex-1 mr-4">
-            <Select value={currentMethod} onValueChange={onMethodChange}>
+            <Select 
+              value={currentMethod} 
+              onValueChange={(value) => onMethodChange(mapUiToDbValue(value) as any)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
