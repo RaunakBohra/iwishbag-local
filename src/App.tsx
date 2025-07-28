@@ -54,6 +54,7 @@ const PaypalFailure = React.lazy(() => import('@/pages/PaypalFailure'));
 const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified'));
 // Temporarily remove lazy loading for debugging
 import CustomerQuoteDetail from '@/pages/dashboard/CustomerQuoteDetail';
+import TestQuotePage from '@/pages/TestQuotePage';
 // const CustomerQuoteDetail = React.lazy(() => import('@/pages/dashboard/CustomerQuoteDetail'));
 const UnifiedQuotePage = React.lazy(() => import('@/pages/unified/UnifiedQuotePage'));
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
@@ -442,7 +443,16 @@ const router = createBrowserRouter([
         path: 'quotes/:id',
         element: (
           <ProtectedRoute>
-            <CustomerQuoteDetail />
+            <div style={{ background: 'red', color: 'white', padding: '20px', minHeight: '100vh', fontSize: '24px' }}>
+              🚨 ROUTE MATCHED - quotes/:id 🚨
+              <br />
+              About to render CustomerQuoteDetail component
+              <br />
+              {(() => {
+                console.log('🎯 Route quotes/:id matched, trying TestQuotePage first');
+                return <TestQuotePage />;
+              })()}
+            </div>
           </ProtectedRoute>
         ),
       },
