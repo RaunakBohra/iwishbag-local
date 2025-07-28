@@ -53,11 +53,16 @@ interface CustomerQuoteDetailProps {
 }
 
 const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
+  console.log('🔍 CustomerQuoteDetail component rendered');
+  
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  
+  console.log('📋 Route params:', { id });
+  console.log('👤 User:', user);
 
   // State management
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -75,6 +80,7 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
   } = useQuery({
     queryKey: ['customer-quote', id],
     queryFn: async () => {
+      console.log('🔄 Starting quote fetch for ID:', id);
       if (!id) throw new Error('No quote ID provided');
 
       // Ensure user is authenticated
@@ -237,6 +243,14 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
         calculationResult = { calculation_data: quote.calculation_data };
       }
 
+      console.log('✅ Quote fetch completed:', {
+        quote_id: quote?.id,
+        tracking_id: quote?.iwish_tracking_id,
+        status: quote?.status,
+        has_customer_profile: !!customerProfile,
+        has_calculation: !!calculationResult
+      });
+
       return {
         quote,
         customerProfile,
@@ -249,9 +263,11 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
 
   // Transform quote data for unified display (similar to admin)
   const transformedQuote = useMemo(() => {
+    console.log('🔄 Transform quote memo:', { hasQuoteData: !!quoteData?.quote });
     if (!quoteData?.quote) return null;
     
     const { quote, customerProfile, calculationResult, destinationCurrency } = quoteData;
+    console.log('📊 Transforming quote:', quote.id);
     
     // Parse JSON fields safely
     const items = Array.isArray(quote.items) ? quote.items : [];
@@ -370,6 +386,14 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
       calculation_data: calculationData
     };
 
+    console.log('✅ Quote transformation complete:', {
+      id: transformed.id,
+      status: transformed.status,
+      items_count: transformed.items.length,
+      total: transformed.total,
+      customer_name: transformed.customer.name
+    });
+
     return transformed;
   }, [quoteData]);
 
@@ -444,8 +468,16 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
     window.open(url, '_blank');
   };
 
+  console.log('🎯 Render states:', { 
+    isLoading, 
+    hasError: !!error, 
+    hasQuoteData: !!quoteData?.quote, 
+    hasTransformedQuote: !!transformedQuote 
+  });
+
   // Loading state
   if (isLoading) {
+    console.log('⏳ Rendering loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -458,6 +490,11 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
 
   // Error state
   if (error || !quoteData?.quote || !transformedQuote) {
+    console.log('❌ Rendering error state:', { 
+      error: error?.message, 
+      hasQuoteData: !!quoteData?.quote, 
+      hasTransformedQuote: !!transformedQuote 
+    });
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100 flex items-center justify-center">
         <div className="max-w-md mx-auto p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl text-center">
@@ -483,8 +520,14 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
   }
 
   // Main render
+  console.log('🎨 Rendering main content with transformedQuote:', transformedQuote?.id);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100">
+      {/* Debug Info */}
+      <div className="fixed top-4 right-4 bg-black text-white p-2 text-xs rounded z-50">
+        DEBUG: ID={id}, Loading={String(isLoading)}, HasQuote={String(!!quoteData?.quote)}, HasTransformed={String(!!transformedQuote)}
+      </div>
+      
       {/* Modern header */}
       <div className="bg-white/70 backdrop-blur-md shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -510,8 +553,19 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
         </div>
       </div>
 
-      {/* Main content with ModernQuoteLayout */}
-      <ModernQuoteLayout
+      {/* Main content section */}
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">Quote Details</h1>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <p>Quote ID: {transformedQuote?.id}</p>
+          <p>Status: {transformedQuote?.status}</p>
+          <p>Items: {transformedQuote?.items?.length || 0}</p>
+          <p>Total: {transformedQuote?.currency_symbol}{transformedQuote?.total}</p>
+        </div>
+      </div>
+
+      {/* Original ModernQuoteLayout - commented temporarily for debugging */}
+      {false && <ModernQuoteLayout
         quote={transformedQuote}
         onAddToCart={handleAddToCart}
         onDownloadPDF={handleDownloadPDF}
@@ -712,7 +766,7 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
             quote={transformedQuote}
           />
         </TabsContent>
-      </ModernQuoteLayout>
+      </ModernQuoteLayout>}
     </div>
   );
 };
