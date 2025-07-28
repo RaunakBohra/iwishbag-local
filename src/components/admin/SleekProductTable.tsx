@@ -123,7 +123,9 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     loading?: boolean;
   }>>({});
 
+  // DISABLED: Automatic tax debug data fetching - calculations should only trigger manually
   // Pre-fetch tax debug data for all items
+  /*
   useEffect(() => {
     const fetchTaxDebugData = async () => {
       if (!quote) return;
@@ -169,6 +171,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     
     fetchTaxDebugData();
   }, [items, quote?.origin_country, quote?.destination_country]);
+  */
 
   // Pre-fetch weights for all items on mount
   useEffect(() => {
@@ -274,7 +277,9 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     fetchDynamicTaxRates();
   }, [quote?.destination_country]);
 
+  // DISABLED: Automatic minimum valuation fetching - calculations should only trigger manually
   // Fetch real-time minimum valuations for items missing calculation data
+  /*
   useEffect(() => {
     console.log(`[REALTIME MIN VAL] useEffect triggered`, {
       itemsLength: items.length,
@@ -348,6 +353,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     fetchRealtimeMinimumValuations();
     console.log(`[REALTIME MIN VAL] useEffect completed, function called`);
   }, [items, quote?.origin_country]);
+  */
 
   // Helper function to get minimum valuation with real-time fallback
   const getMinimumValuationWithFallback = (itemId: string): { amount: number; loading: boolean; currency: string } => {
