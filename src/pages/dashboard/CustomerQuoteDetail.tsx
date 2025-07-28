@@ -313,6 +313,15 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
       calculation_data: calculationData
     };
 
+    console.log('🔍 Debug transformed quote:', {
+      discount: transformed.discount,
+      insurance: transformed.insurance,
+      shipping_options: transformed.shipping_options?.length || 0,
+      status: transformed.status,
+      total: transformed.total,
+      calculationData: calculationData
+    });
+
     return transformed;
   }, [quoteData]);
 
@@ -320,8 +329,11 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
   useEffect(() => {
     const checkMembership = async () => {
       if (user?.id) {
+        console.log('🔍 Checking membership for user:', user.id);
         const membership = await MembershipService.getCustomerMembership(user.id);
+        console.log('💳 Membership result:', membership);
         setHasMembership(!!membership && membership.status === 'active');
+        console.log('✅ Has membership:', !!membership && membership.status === 'active');
       }
     };
     checkMembership();
@@ -444,15 +456,36 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
               Back to Dashboard
             </Button>
             
-            {/* Show membership badge if user has Plus */}
-            {hasMembership && (
-              <Badge variant="default" className="bg-gradient-to-r from-purple-600 to-purple-700">
-                <Sparkles className="h-3 w-3 mr-1" />
-                iwishBag Plus Member
-              </Badge>
-            )}
+            {/* Show membership badge - force show for testing */}
+            <div className="flex gap-2">
+              {hasMembership ? (
+                <Badge variant="default" className="bg-gradient-to-r from-purple-600 to-purple-700">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  iwishBag Plus Member
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-gray-300">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  No Membership (Debug)
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Debug info */}
+      <div className="max-w-7xl mx-auto px-4 py-2">
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Debug Info:</strong> Status: {transformedQuote.status} | 
+            Cart button should {transformedQuote.status === 'approved' ? 'show' : 'be hidden'} | 
+            Discount: {transformedQuote.discount} | 
+            Insurance: {transformedQuote.insurance} | 
+            Shipping options: {transformedQuote.shipping_options?.length || 0}
+          </AlertDescription>
+        </Alert>
       </div>
 
       {/* Main content with ModernQuoteLayout */}
@@ -559,18 +592,30 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
             </Card>
           </div>
 
-          {/* Insurance Notice */}
-          {transformedQuote.insurance > 0 && (
-            <Alert className="border-blue-200 bg-blue-50">
-              <Shield className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                This quote includes insurance coverage of {transformedQuote.currency_symbol}{transformedQuote.insurance.toFixed(2)} for your package protection.
+          {/* Insurance Notice - show debug info */}
+          <Alert className="border-blue-200 bg-blue-50">
+            <Shield className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              {transformedQuote.insurance > 0 ? (
+                <>This quote includes insurance coverage of {transformedQuote.currency_symbol}{transformedQuote.insurance.toFixed(2)} for your package protection.</>
+              ) : (
+                <>DEBUG: No insurance (amount: {transformedQuote.insurance}) - but showing for testing</>
+              )}
+            </AlertDescription>
+          </Alert>
+
+          {/* Discount Display - always show for testing */}
+          <div className="mt-6">
+            <Alert className="border-green-200 bg-green-50">
+              <Info className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {transformedQuote.discount > 0 ? (
+                  <>Discount applied: {transformedQuote.currency_symbol}{transformedQuote.discount.toFixed(2)}</>
+                ) : (
+                  <>DEBUG: No discount (amount: {transformedQuote.discount}) - showing DiscountDisplay component anyway</>
+                )}
               </AlertDescription>
             </Alert>
-          )}
-
-          {/* Discount Display */}
-          {transformedQuote.discount > 0 && (
             <DiscountDisplay
               quoteId={transformedQuote.id}
               customerId={user?.id}
@@ -579,9 +624,9 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
               paymentMethod="bank_transfer"
               countryCode={transformedQuote.destination_country}
               currency={transformedQuote.currency}
-              className="mt-6"
+              className="mt-4"
             />
-          )}
+          </div>
         </TabsContent>
 
         <TabsContent value="items" className="space-y-6">
