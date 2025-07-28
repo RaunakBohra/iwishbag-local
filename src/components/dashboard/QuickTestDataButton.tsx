@@ -43,76 +43,89 @@ export const QuickTestDataButton: React.FC = () => {
         return;
       }
 
+      // Ensure customer preferences exist
+      const { error: prefError } = await supabase
+        .from('customer_preferences')
+        .upsert({
+          user_id: user.id,
+          profile_id: user.id
+        }, {
+          onConflict: 'user_id'
+        });
+
       // Generate 3 test packages
       const testPackages = [
         {
           customer_address_id: address.id,
           tracking_number: '1Z999AA1' + Math.random().toString().slice(2, 10),
           carrier: 'UPS',
-          sender: 'Amazon.com',
           sender_name: 'Amazon Fulfillment',
           sender_store: 'Amazon',
           package_description: 'iPhone 15 Pro Case and Screen Protector',
           weight_kg: 0.5,
-          dimensions: { length: 20, width: 15, height: 5, unit: 'cm' },
+          dimensions: JSON.stringify({ length: 20, width: 15, height: 5, unit: 'cm' }),
           declared_value_usd: 45.99,
           received_date: new Date().toISOString(),
           status: 'pending',
           storage_location: 'A-12-B',
           storage_start_date: new Date().toISOString(),
           storage_fee_exempt_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          photos: [
+          photos: JSON.stringify([
             { url: 'https://picsum.photos/400/300?random=1', type: 'package', description: 'Package exterior' },
             { url: 'https://picsum.photos/400/300?random=2', type: 'contents', description: 'Package contents' }
-          ],
-          notes: 'TEST PACKAGE - Development Only'
+          ]),
+          condition_notes: 'TEST PACKAGE - Development Only'
         },
         {
           customer_address_id: address.id,
           tracking_number: '79494771' + Math.random().toString().slice(2, 10),
           carrier: 'FedEx',
-          sender: 'Nike.com',
           sender_name: 'Nike Direct',
           sender_store: 'Nike',
           package_description: 'Air Jordan 1 Retro High OG - Size 10',
           weight_kg: 1.8,
-          dimensions: { length: 35, width: 25, height: 15, unit: 'cm' },
+          dimensions: JSON.stringify({ length: 35, width: 25, height: 15, unit: 'cm' }),
           declared_value_usd: 180.00,
           received_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
           status: 'pending',
           storage_location: 'B-08-A',
           storage_start_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
           storage_fee_exempt_until: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
-          photos: [],
-          notes: 'TEST PACKAGE - Development Only'
+          photos: JSON.stringify([]),
+          condition_notes: 'TEST PACKAGE - Development Only'
         },
         {
           customer_address_id: address.id,
           tracking_number: '92612999' + Math.random().toString().slice(2, 10),
           carrier: 'USPS',
-          sender: 'Best Buy',
           sender_name: 'BestBuy.com',
           sender_store: 'Best Buy',
           package_description: 'PlayStation 5 Controller',
           weight_kg: 0.8,
-          dimensions: { length: 25, width: 20, height: 10, unit: 'cm' },
+          dimensions: JSON.stringify({ length: 25, width: 20, height: 10, unit: 'cm' }),
           declared_value_usd: 69.99,
           received_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
           status: 'pending',
           storage_location: 'C-15-D',
           storage_start_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
           storage_fee_exempt_until: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString(),
-          photos: [],
-          notes: 'TEST PACKAGE - Development Only'
+          photos: JSON.stringify([]),
+          condition_notes: 'TEST PACKAGE - Development Only'
         }
       ];
+
+      // Log what we're trying to insert for debugging
+      console.log('Attempting to insert packages:', testPackages);
 
       const { data, error } = await supabase
         .from('received_packages')
         .insert(testPackages)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
 
       toast({
         title: 'Test Packages Created!',

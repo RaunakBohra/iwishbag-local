@@ -19,8 +19,8 @@ import { HSNCreationModal } from '@/components/admin/HSNCreationModal';
 import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { SleekProductTable } from '@/components/admin/SleekProductTable';
-import { SmartTaxBreakdown } from '@/components/admin/tax/SmartTaxBreakdown';
-import { AdminStatusManager } from '@/components/admin/AdminStatusManager';
+import { EnhancedSmartTaxBreakdown } from '@/components/admin/tax/EnhancedSmartTaxBreakdown';
+import { CompactStatusManager } from '@/components/admin/CompactStatusManager';
 import {
   Dialog,
   DialogContent,
@@ -1119,15 +1119,11 @@ export default function UnifiedQuoteOrderSystem({
                 Back to Quotes
               </Button>
               <Separator orientation="vertical" className="h-6" />
-              <div>
+              <div className="flex-1">
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-semibold">
                     {orderMode ? 'Order' : 'Quote'} {quote.tracking_id}
                   </h1>
-                  <Badge className={cn(statusColor, 'text-white')}>
-                    <StatusIcon className="w-3 h-3 mr-1" />
-                    {statusConfig[quote.status as keyof typeof statusConfig]?.label}
-                  </Badge>
                   {!orderMode && daysUntilExpiry <= 3 && (
                     <Badge variant="destructive">
                       <Clock className="w-3 h-3 mr-1" />
@@ -1140,6 +1136,31 @@ export default function UnifiedQuoteOrderSystem({
                   Last updated {new Date(quote.updated_at).toLocaleTimeString()}
                 </p>
               </div>
+              
+              {/* Compact Status Manager */}
+              {isAdmin && (
+                <CompactStatusManager
+                  quote={{
+                    id: quote.id,
+                    status: quote.status,
+                    display_id: quote.display_id,
+                    iwish_tracking_id: quote.iwish_tracking_id,
+                    customer: quote.customer,
+                    created_at: quote.created_at,
+                    updated_at: quote.updated_at,
+                  }}
+                  onStatusChange={(newStatus, notes) => {
+                    // Handle status change through the existing onUpdate callback
+                    if (onUpdate) {
+                      onUpdate({
+                        status: newStatus,
+                        admin_notes: notes ? `${adminNotes}\n\nStatus Change: ${notes}` : adminNotes,
+                      });
+                    }
+                  }}
+                  isUpdating={false} // You might want to track this state
+                />
+              )}
             </div>
             <div className="flex items-center gap-2">
               {orderMode && (
@@ -2335,231 +2356,44 @@ export default function UnifiedQuoteOrderSystem({
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Price Summary - Enhanced for Orders */}
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {orderMode ? 'Order Summary' : 'Price Summary'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span>{quote.currency_symbol || '$'}{
-                      safeNumber(quote.subtotal) > 0 
-                        ? safeNumber(quote.subtotal).toFixed(2)
-                        : items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)
-                    }</span>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2 text-sm">
-                    {(safeNumber(quote.shipping) > 0 || safeNumber(internationalShipping) > 0) && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Shipping</span>
-                        <span>{quote.currency_symbol || '$'}{(safeNumber(quote.shipping) || safeNumber(internationalShipping)).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {safeNumber(quote.customs) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Customs ({(() => {
-                            const rate = safeNumber(quote.tax_rates?.customs);
-                            // If we have a rate, format it properly
-                            if (rate > 0) return formatTaxPercentage(rate);
-                            // Fallback: calculate from customs amount and subtotal
-                            const subtotal = safeNumber(quote.subtotal) > 0 
-                              ? safeNumber(quote.subtotal)
-                              : items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0);
-                            if (subtotal > 0) {
-                              return calculateTaxPercentage(safeNumber(quote.customs), subtotal).toFixed(1);
-                            }
-                            return '0.0';
-                          })()}%)
-                        </span>
-                        <span>{quote.currency_symbol || '$'}{safeNumber(quote.customs).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {safeNumber(quote.sales_tax) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Sales Tax ({(() => {
-                            const rate = safeNumber(quote.tax_rates?.sales_tax);
-                            if (rate > 0) return formatTaxPercentage(rate);
-                            // Fallback calculation
-                            const subtotal = safeNumber(quote.subtotal) > 0 
-                              ? safeNumber(quote.subtotal)
-                              : items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0);
-                            return subtotal > 0 ? calculateTaxPercentage(safeNumber(quote.sales_tax), subtotal).toFixed(1) : '0.0';
-                          })()}%)
-                        </span>
-                        <span>{quote.currency_symbol || '$'}{safeNumber(quote.sales_tax).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {safeNumber(quote.destination_tax) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          VAT/GST ({(() => {
-                            const rate = safeNumber(quote.tax_rates?.destination_tax);
-                            if (rate > 0) return formatTaxPercentage(rate);
-                            // Fallback calculation based on total after customs
-                            const baseForVAT = safeNumber(quote.subtotal) + safeNumber(quote.customs) + safeNumber(quote.shipping);
-                            return baseForVAT > 0 ? calculateTaxPercentage(safeNumber(quote.destination_tax), baseForVAT).toFixed(1) : '0.0';
-                          })()}%)
-                        </span>
-                        <span>{quote.currency_symbol || '$'}{safeNumber(quote.destination_tax).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {safeNumber(quote.handling) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Handling</span>
-                        <span>{quote.currency_symbol || '$'}{safeNumber(quote.handling).toFixed(2)}</span>
-                      </div>
-                    )}
-                    {safeNumber(quote.insurance) > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Insurance</span>
-                        <span>{quote.currency_symbol || '$'}{safeNumber(quote.insurance).toFixed(2)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-semibold text-lg">
-                    <span>Total</span>
-                    <span>{quote.currency_symbol || '$'}{(() => {
-                      // If we have international shipping selected, add it to the total
-                      const baseTotal = safeNumber(quote.total);
-                      const shippingCost = safeNumber(internationalShipping);
-                      // Only add if it's not already included in quote.total
-                      if (shippingCost > 0 && !quote.shipping) {
-                        return (baseTotal + shippingCost).toFixed(2);
-                      }
-                      return baseTotal.toFixed(2);
-                    })()}</span>
-                  </div>
+            {/* Enhanced Smart Tax Breakdown - Merged Price Summary */}
+            <EnhancedSmartTaxBreakdown
+              quote={quote}
+              className="sticky top-24"
+              orderMode={orderMode}
+              forcePerItemBreakdown={forcePerItemBreakdown}
+              onForcePerItemChange={setForcePerItemBreakdown}
+              onSave={() => {
+                // Save all changes
+                if (onUpdate) {
+                  onUpdate({
+                    items: items,
+                    admin_notes: adminNotes,
+                    internal_notes: internalNotes,
+                    handling: handlingAmount,
+                    insurance: insuranceAmount,
+                    discount: discountAmount,
+                    domestic_shipping: domesticShipping,
+                    international_shipping: internationalShipping,
+                    calculation_data: {
+                      ...quote.calculation_metadata,
+                      domestic_shipping: domesticShipping
+                    },
+                    operational_data: {
+                      ...quote.operational_data,
+                      activities: quote.activity_log || quote.activities
+                    }
+                  });
+                  toast({
+                    title: "Quote Saved",
+                    description: "All changes have been saved successfully."
+                  });
+                }
+              }}
+              isSaving={isRecalculating}
+            />
 
-                  {/* Margin Analysis for Orders */}
-                  {orderMode && (
-                    <>
-                      <Separator />
-                      <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                        <h4 className="font-medium text-sm flex items-center gap-2">
-                          <BarChart3 className="w-4 h-4" />
-                          Margin Analysis
-                        </h4>
-                        <div className="space-y-1 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Selling Price</span>
-                            <span className="font-medium">${quote.margin?.selling_price || 0}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Purchase Cost</span>
-                            <span className="text-red-600">-${quote.margin?.actual_purchase || 0}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">All Expenses</span>
-                            <span className="text-red-600">-${quote.margin?.other_expenses || 0}</span>
-                          </div>
-                          <Separator className="my-1" />
-                          <div className="flex justify-between font-medium">
-                            <span>Gross Margin</span>
-                            <span className="text-green-600">${quote.margin?.gross_margin || 0}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Margin %</span>
-                            <span className="font-medium">{quote.margin?.margin_percentage || 0}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">CS Score</span>
-                            <span className="font-medium text-blue-600">${quote.margin?.cs_score || 0}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="mt-6 space-y-3">
-                  {/* Instructions */}
-                  <div className="text-center text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <div className="font-medium text-blue-900">💡 Quick Workflow</div>
-                    <div className="mt-1">Press <kbd className="px-2 py-1 bg-white border rounded text-xs font-mono">Enter</kbd> to calculate • Then click <strong>Save Quote</strong> to persist</div>
-                  </div>
-
-                  {/* Single Save Quote Button */}
-                  <Button 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      // Save all changes
-                      if (onUpdate) {
-                        onUpdate({
-                          items: items,
-                          admin_notes: adminNotes,
-                          internal_notes: internalNotes,
-                          handling: handlingAmount,
-                          insurance: insuranceAmount,
-                          discount: discountAmount,
-                          domestic_shipping: domesticShipping,
-                          international_shipping: internationalShipping,
-                          calculation_data: {
-                            ...quote.calculation_metadata,
-                            domestic_shipping: domesticShipping
-                          },
-                          operational_data: {
-                            ...quote.operational_data,
-                            activities: quote.activity_log || quote.activities
-                          }
-                        });
-                        toast({
-                          title: "Quote Saved",
-                          description: "All changes have been saved successfully."
-                        });
-                      }
-                    }}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Quote
-                  </Button>
-                  <div className="flex items-center space-x-2 mt-3">
-                    <input
-                      type="checkbox"
-                      id="force-per-item"
-                      checked={forcePerItemBreakdown}
-                      onChange={(e) => setForcePerItemBreakdown(e.target.checked)}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor="force-per-item" className="text-sm text-gray-600">
-                      Force per-item tax breakdown (generates item_breakdowns even with single tax method)
-                    </label>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Admin Status Management - Only in Admin Mode */}
-            {isAdmin && (
-              <AdminStatusManager
-                quote={{
-                  id: quote.id,
-                  status: quote.status,
-                  display_id: quote.display_id,
-                  iwish_tracking_id: quote.iwish_tracking_id,
-                  customer: quote.customer,
-                  created_at: quote.created_at,
-                  updated_at: quote.updated_at,
-                }}
-                onStatusChange={(newStatus, notes) => {
-                  // Handle status change through the existing onUpdate callback
-                  if (onUpdate) {
-                    onUpdate({
-                      status: newStatus,
-                      admin_notes: notes ? `${adminNotes}\n\nStatus Change: ${notes}` : adminNotes,
-                    });
-                  }
-                }}
-                isUpdating={false} // You might want to track this state
-              />
-            )}
+            {/* Quick Actions and other components remain here */}
 
             {/* Order Actions - Only in Order Mode */}
             {orderMode && (
@@ -2627,17 +2461,6 @@ export default function UnifiedQuoteOrderSystem({
               </Card>
             )}
 
-            {/* NEW: Smart Tax Breakdown Component */}
-            {quote?.calculation_data && (
-              <div className="mt-4">
-                <SmartTaxBreakdown 
-                  quote={quote}
-                  showEducation={true}
-                  compact={false}
-                  title="Tax Calculation Breakdown"
-                />
-              </div>
-            )}
 
 
           </div>
