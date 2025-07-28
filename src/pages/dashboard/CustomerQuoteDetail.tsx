@@ -53,7 +53,31 @@ interface CustomerQuoteDetailProps {
 }
 
 const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
+  console.log('🚀🚀🚀 CUSTOMER QUOTE DETAIL COMPONENT LOADED 🚀🚀🚀');
   console.log('🔍 CustomerQuoteDetail component rendered');
+  
+  // Early return for testing
+  if (window.location.pathname.includes('quotes')) {
+    console.log('🎯 Detected quotes route, rendering test component');
+    return (
+      <div style={{ 
+        minHeight: '100vh', 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontSize: '24px',
+        fontWeight: 'bold'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1>🎉 CUSTOMER QUOTE DETAIL COMPONENT IS WORKING! 🎉</h1>
+          <p>Route: {window.location.pathname}</p>
+          <p>Time: {new Date().toLocaleTimeString()}</p>
+        </div>
+      </div>
+    );
+  }
   
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -772,3 +796,5 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
 };
 
 export default CustomerQuoteDetail;
+
+console.log('📁 CustomerQuoteDetail module loaded successfully');
