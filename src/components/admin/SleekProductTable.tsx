@@ -276,17 +276,40 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
 
   // Fetch real-time minimum valuations for items missing calculation data
   useEffect(() => {
-    const fetchRealtimeMinimumValuations = async () => {
-      if (!quote?.origin_country) return;
+    console.log(`[REALTIME MIN VAL] useEffect triggered`, {
+      itemsLength: items.length,
+      originCountry: quote?.origin_country,
+      hasItems: items.length > 0,
+      hasQuote: !!quote
+    });
 
+    const fetchRealtimeMinimumValuations = async () => {
+      if (!quote?.origin_country) {
+        console.log(`[REALTIME MIN VAL] No origin country available: ${quote?.origin_country}`);
+        return;
+      }
+
+      console.log(`[REALTIME MIN VAL] Starting fetch for ${items.length} items`);
       const newRealtimeValuations: Record<string, any> = {};
       
       for (const item of items) {
         // Skip if we already have calculation data or no HSN code
-        if (!item.hsn_code) continue;
+        if (!item.hsn_code) {
+          console.log(`[REALTIME MIN VAL] Skipping ${item.id} - no HSN code`);
+          continue;
+        }
         
         const hasCalculationData = getItemMinimumValuation(quote, item.id) > 0;
-        if (hasCalculationData) continue;
+        console.log(`[REALTIME MIN VAL] Item ${item.id} (${item.product_name}):`, {
+          hsn_code: item.hsn_code,
+          hasCalculationData,
+          calculationAmount: getItemMinimumValuation(quote, item.id)
+        });
+        
+        if (hasCalculationData) {
+          console.log(`[REALTIME MIN VAL] Skipping ${item.id} - already has calculation data`);
+          continue;
+        }
 
         // Set loading state
         setRealtimeMinimumValuations(prev => ({
@@ -321,23 +344,32 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
       }
     };
 
+    // Call the function
     fetchRealtimeMinimumValuations();
+    console.log(`[REALTIME MIN VAL] useEffect completed, function called`);
   }, [items, quote?.origin_country]);
 
   // Helper function to get minimum valuation with real-time fallback
   const getMinimumValuationWithFallback = (itemId: string): { amount: number; loading: boolean } => {
     // First try the enhanced utility function (includes fallbacks)
     const calculationAmount = getItemMinimumValuation(quote, itemId);
+    console.log(`[FALLBACK HELPER] Item ${itemId}: calculationAmount = ${calculationAmount}`);
+    
     if (calculationAmount > 0) {
+      console.log(`[FALLBACK HELPER] Using calculation amount: ${calculationAmount}`);
       return { amount: calculationAmount, loading: false };
     }
 
     // Fall back to real-time data
     const realtimeData = realtimeMinimumValuations[itemId];
+    console.log(`[FALLBACK HELPER] Real-time data for ${itemId}:`, realtimeData);
+    
     if (realtimeData) {
+      console.log(`[FALLBACK HELPER] Using real-time amount: ${realtimeData.amount}, loading: ${realtimeData.loading}`);
       return { amount: realtimeData.amount, loading: realtimeData.loading || false };
     }
 
+    console.log(`[FALLBACK HELPER] No data found for ${itemId}, returning 0`);
     return { amount: 0, loading: false };
   };
 

@@ -60,6 +60,9 @@ export function getItemMinimumValuation(quote: UnifiedQuote | null, itemId: stri
     console.log(`├── 💡 Found HSN minimum in USD: $${item.minimum_valuation_usd} (needs currency conversion)`);
     // For now, return the USD amount as a basic fallback
     return item.minimum_valuation_usd;
+  } else if (item?.hsn_code) {
+    console.log(`├── 🔍 Item has HSN code ${item.hsn_code} but no minimum_valuation_usd field`);
+    console.log(`├── 📋 Available item fields:`, Object.keys(item));
   }
 
   console.log(`└── ❌ No minimum valuation data found for item ${itemId}`);
@@ -183,7 +186,10 @@ export async function fetchItemMinimumValuation(
     }
 
     // Convert USD to origin currency
+    console.log(`[FETCH MIN VAL] Getting currency for country: ${originCountry}`);
     const originCurrency = await currencyService.getCurrencyForCountry(originCountry);
+    
+    console.log(`[FETCH MIN VAL] Currency lookup result:`, originCurrency);
     
     if (!originCurrency) {
       console.error(`[FETCH MIN VAL] No currency data for ${originCountry}`);
@@ -194,13 +200,30 @@ export async function fetchItemMinimumValuation(
       };
     }
 
-    const convertedAmount = hsnData.minimum_valuation_usd * originCurrency.exchange_rate;
+    // Check if exchange rate is valid
+    const exchangeRate = originCurrency.rate_from_usd || originCurrency.exchange_rate;
+    console.log(`[FETCH MIN VAL] Exchange rate lookup:`, {
+      rate_from_usd: originCurrency.rate_from_usd,
+      exchange_rate: originCurrency.exchange_rate,
+      finalRate: exchangeRate
+    });
 
-    console.log(`[FETCH MIN VAL] ✅ HSN ${item.hsn_code}: $${hsnData.minimum_valuation_usd} USD → ${convertedAmount.toFixed(2)} ${originCurrency.code}`);
+    if (!exchangeRate || exchangeRate <= 0) {
+      console.error(`[FETCH MIN VAL] Invalid exchange rate for ${originCountry}:`, exchangeRate);
+      return {
+        amount: hsnData.minimum_valuation_usd,
+        currency: originCurrency.currency || 'USD',
+        usdAmount: hsnData.minimum_valuation_usd
+      };
+    }
+
+    const convertedAmount = hsnData.minimum_valuation_usd * exchangeRate;
+
+    console.log(`[FETCH MIN VAL] ✅ HSN ${item.hsn_code}: $${hsnData.minimum_valuation_usd} USD → ${convertedAmount.toFixed(2)} ${originCurrency.currency}`);
 
     return {
       amount: convertedAmount,
-      currency: originCurrency.code,
+      currency: originCurrency.currency || originCurrency.code || 'USD',
       usdAmount: hsnData.minimum_valuation_usd
     };
 
