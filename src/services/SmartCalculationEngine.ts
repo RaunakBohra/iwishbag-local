@@ -2,6 +2,11 @@
 // SMART CALCULATION ENGINE - Enhanced with Multiple Shipping Options
 // Replaces QuoteCalculatorService + unified-shipping-calculator + 10+ components
 // Provides all shipping options with smart recommendations
+//
+// TAX PERCENTAGE HANDLING:
+// - All tax services return percentage values (13 = 13%, not 0.13)
+// - Single conversion point: amount * (percentage / 100) during calculations
+// - Migration 20250128000014 standardized database to percentage format
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
@@ -2052,6 +2057,8 @@ export class SmartCalculationEngine {
         
         // ✅ FIXED: Include gateway fees in destination tax base (tax compliance)
         const taxableBase = preGatewaySubtotal + paymentGatewayFee;
+        // ✅ CRITICAL: Single conversion point - VATService returns 13 (meaning 13%), 
+        // we convert to decimal (0.13) ONLY at calculation time
         destinationTaxAmount = taxableBase * (vatResult.percentage / 100);
 
         console.log(`[DESTINATION TAX DEBUG] Calculated destination tax with gateway fees:`, {

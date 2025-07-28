@@ -152,6 +152,7 @@ class HSNTaxService {
 
     // ✅ CRITICAL FIX: VAT/GST should ALWAYS be based on destination country, NOT HSN data
     // HSN data may contain origin country tax rates, but destination tax must come from destination
+    // TaxRateService now returns percentage values (13 = 13%) after migration 20250128000014
     const vat = await taxRateService.getCountryVATRate(destinationCountry);
     console.log(`💰 [HSN TAX] Using destination country VAT/GST rate: ${vat}% for ${destinationCountry} (ignoring any HSN VAT data)`);
     
