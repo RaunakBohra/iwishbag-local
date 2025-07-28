@@ -151,6 +151,11 @@ const PackageForwarding = React.lazy(() => import('@/pages/dashboard/PackageForw
 const WarehouseManagement = React.lazy(() => import('@/pages/admin/WarehouseManagement').then((m) => ({ default: m.WarehouseManagement })));
 const WarehouseAnalytics = React.lazy(() => import('@/pages/admin/WarehouseAnalytics'));
 
+// Unified integration pages
+const UnifiedCustomerDashboard = React.lazy(() => import('@/pages/dashboard/UnifiedCustomerDashboard'));
+const UnifiedAdminDashboard = React.lazy(() => import('@/pages/admin/UnifiedAdminDashboard'));
+const IntegrationTestRunner = React.lazy(() => import('@/pages/admin/IntegrationTestRunner'));
+
 // Demo pages for weight recommendation designs (chunked separately)
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex' /* webpackChunkName: "demo-index" */));
 const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns' /* webpackChunkName: "demo-tax-designs" */));
@@ -296,6 +301,22 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <WarehouseAnalytics />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'unified',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <UnifiedAdminDashboard />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'integration-test',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <IntegrationTestRunner />
               </ErrorBoundary>
             ),
           },
@@ -528,6 +549,14 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <PackageForwarding />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'dashboard/unified',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <UnifiedCustomerDashboard />
               </ErrorBoundary>
             ),
           },

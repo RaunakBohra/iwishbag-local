@@ -63,6 +63,7 @@ export function getItemMinimumValuation(quote: UnifiedQuote | null, itemId: stri
   } else if (item?.hsn_code) {
     console.log(`├── 🔍 Item has HSN code ${item.hsn_code} but no minimum_valuation_usd field`);
     console.log(`├── 📋 Available item fields:`, Object.keys(item));
+    console.log(`├── ℹ️ This is expected - quote items don't store minimum valuation, it's looked up from HSN master data`);
   }
 
   console.log(`└── ❌ No minimum valuation data found for item ${itemId}`);

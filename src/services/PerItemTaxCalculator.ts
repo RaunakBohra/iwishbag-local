@@ -12,6 +12,7 @@
 
 import CurrencyConversionService, { MinimumValuationConversion } from './CurrencyConversionService';
 import { unifiedTaxFallbackService, UnifiedTaxData } from './UnifiedTaxFallbackService';
+import { fetchItemMinimumValuation } from '@/utils/valuationUtils';
 
 interface QuoteItem {
   id: string;
@@ -571,21 +572,41 @@ class PerItemTaxCalculator {
       };
     }
 
-    // Convert minimum valuation from USD to origin country currency (maintains uniformity)
-    const minimumValuationConversion = await this.currencyService.convertMinimumValuation(
-      hsnData.minimum_valuation_usd,
-      originCountry,
-    );
+    // Convert minimum valuation from USD to origin country currency using the updated fetchItemMinimumValuation
+    const minimumValuationResult = await fetchItemMinimumValuation(item, originCountry);
+    
+    if (!minimumValuationResult) {
+      console.log(`├── ⚠️ fetchItemMinimumValuation returned null for HSN ${hsnData.hsn_code}`);
+      console.log(`└── 🎯 Selected Method: actual_price (fallback)\n`);
+      
+      return {
+        actual_price_calculation,
+        selected_method: 'actual_price',
+        auto_selected_amount: originalPrice,
+        valuation_method: 'original_price',
+      };
+    }
 
-    const minimumAmount = minimumValuationConversion.convertedAmount;
+    const minimumAmount = minimumValuationResult.amount;
+    
+    // Create MinimumValuationConversion object for compatibility with existing code
+    const minimumValuationConversion: MinimumValuationConversion = {
+      usdAmount: minimumValuationResult.usdAmount,
+      originCurrency: minimumValuationResult.currency,
+      convertedAmount: minimumValuationResult.amount,
+      exchangeRate: minimumValuationResult.amount / minimumValuationResult.usdAmount,
+      conversionTimestamp: new Date(),
+      roundingMethod: 'nearest',
+      cacheSource: 'real_time',
+    };
     
     // 🧮 DEBUG LOG: Currency Conversion Details
-    console.log(`├── Currency Conversion:`);
-    console.log(`│   ├── USD Amount: $${hsnData.minimum_valuation_usd}`);
+    console.log(`├── Currency Conversion (Enhanced):`);
+    console.log(`│   ├── USD Amount: $${minimumValuationResult.usdAmount}`);
     console.log(`│   ├── Origin Country: ${originCountry}`);
-    console.log(`│   ├── Target Currency: ${minimumValuationConversion.originCurrency}`);
+    console.log(`│   ├── Target Currency: ${minimumValuationResult.currency}`);
     console.log(`│   ├── Exchange Rate: ${minimumValuationConversion.exchangeRate}`);
-    console.log(`│   └── Converted Amount: ${minimumAmount} ${minimumValuationConversion.originCurrency}`);
+    console.log(`│   └── Converted Amount: ${minimumAmount} ${minimumValuationResult.currency}`);
 
     // Calculate minimum valuation taxes
     const minimumValuationCustoms = (minimumAmount * taxRates.customs_rate) / 100;
