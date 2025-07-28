@@ -52,7 +52,9 @@ const PaymentTest = React.lazy(() => import('@/pages/PaymentTest'));
 const PaypalSuccess = React.lazy(() => import('@/pages/PaypalSuccess'));
 const PaypalFailure = React.lazy(() => import('@/pages/PaypalFailure'));
 const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified'));
-const CustomerQuoteDetail = React.lazy(() => import('@/pages/dashboard/CustomerQuoteDetail'));
+// Temporarily remove lazy loading for debugging
+import CustomerQuoteDetail from '@/pages/dashboard/CustomerQuoteDetail';
+// const CustomerQuoteDetail = React.lazy(() => import('@/pages/dashboard/CustomerQuoteDetail'));
 const UnifiedQuotePage = React.lazy(() => import('@/pages/unified/UnifiedQuotePage'));
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
 const EmailConfirmation = React.lazy(() => import('@/pages/auth/EmailConfirmation'));
