@@ -53,20 +53,31 @@ interface CustomerQuoteDetailProps {
 }
 
 const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
-  console.log('🚀 CustomerQuoteDetail component loaded');
+  console.log('🚀🚀🚀 CustomerQuoteDetail component loaded and rendering! 🚀🚀🚀');
   
-  // Simple working version first
+  // Test with very obvious styling to see if it's rendering
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100">
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Quote Details</h1>
-          <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-            <p className="text-green-800 font-semibold">✅ CustomerQuoteDetail component is working!</p>
-            <p className="text-green-700 mt-2">URL: {window.location.pathname}</p>
-            <p className="text-green-700">Time: {new Date().toLocaleString()}</p>
-          </div>
-        </div>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 9999,
+      background: 'linear-gradient(45deg, #ff0000, #00ff00, #0000ff)',
+      color: 'white',
+      fontSize: '32px',
+      fontWeight: 'bold',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center'
+    }}>
+      <div>
+        <h1>🎯 CUSTOMER QUOTE DETAIL IS RENDERING! 🎯</h1>
+        <p>URL: {window.location.pathname}</p>
+        <p>Time: {new Date().toLocaleString()}</p>
+        <p>This should overlay everything if rendering correctly!</p>
       </div>
     </div>
   );
