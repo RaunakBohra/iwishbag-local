@@ -883,12 +883,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
           `[TAX METHOD DEBUG] Cache invalidated (including HSN), triggering recalculation`,
         );
 
-        // Trigger recalculation with updated quote data
-        console.log(`[TAX METHOD DEBUG] Calling calculateSmartFeatures with updatedLiveQuote:`, {
-          id: updatedLiveQuote.id,
-          method: updatedLiveQuote.calculation_method_preference,
-        });
+        // Don't trigger automatic recalculation - user will press Enter or click Calculate
+        console.log('[TAX METHOD DEBUG] Method updated. Press Enter or click Calculate to apply.');
+        
+        /* Commented out automatic calculation
         const calculatedQuote = await calculateSmartFeatures(updatedLiveQuote);
+        */
+        const calculatedQuote = null;
 
         console.log(`[TAX METHOD DEBUG] Recalculation completed successfully`);
 
@@ -927,8 +928,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         }
 
         toast({
-          title: 'Tax method updated',
-          description: `Now using ${method === 'manual' ? 'Manual Input' : method === 'hsn' ? 'HSN Based' : 'Route Based'} calculation`,
+          title: 'Tax method preference saved',
+          description: `Set to ${method === 'manual' ? 'Manual Input' : method === 'hsn' ? 'HSN Based' : 'Route Based'}. Press Enter to calculate.`,
         });
       } else {
         console.error(`[TAX METHOD DEBUG] Database update failed`);
@@ -988,11 +989,16 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         await queryClient.invalidateQueries({ queryKey: ['quotes'] });
 
         console.log(
-          `[VALUATION METHOD DEBUG] Cache invalidated, triggering recalculation`,
+          `[VALUATION METHOD DEBUG] Cache invalidated, method updated to: ${method}`,
         );
 
-        // Trigger recalculation with updated quote data
+        // Don't trigger automatic recalculation - user will press Enter or click Calculate
+        console.log('[VALUATION METHOD DEBUG] Method updated. Press Enter or click Calculate to apply.');
+        
+        /* Commented out automatic calculation
         const calculatedQuote = await calculateSmartFeatures(updatedLiveQuote);
+        */
+        const calculatedQuote = null;
 
         console.log(`[VALUATION METHOD DEBUG] Recalculation completed successfully`);
 
@@ -1004,8 +1010,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         }
 
         toast({
-          title: 'Valuation method updated',
-          description: `Now using ${method === 'product_value' ? 'Actual Price' : method === 'minimum_valuation' ? 'Minimum Valuation' : 'Higher of Both'} for customs`,
+          title: 'Valuation method preference saved',
+          description: `Set to ${method === 'product_value' || method === 'actual_price' ? 'Actual Price' : method === 'minimum_valuation' ? 'Minimum Valuation' : 'Higher of Both'}. Press Enter to calculate.`,
         });
       } else {
         console.error(`[VALUATION METHOD DEBUG] Database update failed`);
