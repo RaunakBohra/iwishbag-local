@@ -462,6 +462,10 @@ class PerItemTaxCalculator {
    * ENHANCED METHOD: Calculate both actual price and minimum valuation options
    * Returns both calculations for admin choice, maintains currency uniformity
    */
+  /**
+   * ENHANCED VALUATION CALCULATOR WITH COMPREHENSIVE DEBUG LOGGING
+   * Calculates all three valuation methods with detailed breakdowns and logging
+   */
   private async calculateBothValuationOptions(
     item: QuoteItem,
     hsnData: HSNData,
@@ -488,6 +492,31 @@ class PerItemTaxCalculator {
     valuation_method: 'original_price' | 'minimum_valuation' | 'higher_of_both';
   }> {
     const originalPrice = item.price_origin_currency;
+
+    // 🧮 START COMPREHENSIVE DEBUG LOGGING
+    console.log(`\n🧮 [VALUATION DEBUG] Item: ${item.name}`);
+    console.log(`├── Product Price: ${originalPrice} (origin currency)`);
+    console.log(`├── HSN Code: ${hsnData.hsn_code}`);
+    console.log(`├── HSN Minimum: $${hsnData.minimum_valuation_usd || 0} USD`);
+    console.log(`├── Customs Rate: ${taxRates.customs_rate}%`);
+    
+    // Determine local tax rate and type for display
+    let localTaxRate = 0;
+    let localTaxType = 'Unknown';
+    if (taxRates.state_tax_rate || taxRates.local_tax_rate) {
+      localTaxRate = (taxRates.state_tax_rate || 0) + (taxRates.local_tax_rate || 0);
+      localTaxType = 'US State+Local Tax';
+    } else if (taxRates.gst_rate && taxRates.cess_rate) {
+      localTaxRate = (taxRates.gst_rate || 0) + (taxRates.cess_rate || 0);
+      localTaxType = 'India GST+CESS';
+    } else if (taxRates.gst_rate && taxRates.pst_rate) {
+      localTaxRate = (taxRates.gst_rate || 0) + (taxRates.pst_rate || 0);
+      localTaxType = 'Canada GST+PST';
+    } else {
+      localTaxRate = taxRates.gst_rate || taxRates.vat_rate || taxRates.sales_tax_rate || 0;
+      localTaxType = taxRates.gst_rate ? 'GST' : taxRates.vat_rate ? 'VAT' : 'Sales Tax';
+    }
+    console.log(`├── Local Tax Rate: ${localTaxRate}% (${localTaxType})`);
 
     // Calculate actual price taxes
     const actualPriceCustoms = (originalPrice * taxRates.customs_rate) / 100;
@@ -520,8 +549,20 @@ class PerItemTaxCalculator {
       total_tax: Math.round((actualPriceCustoms + actualPriceLocalTax) * 100) / 100,
     };
 
-    // If no minimum valuation required, return only actual price calculation
+    // 🧮 DEBUG LOG: Actual Price Method
+    const actualTotalCost = originalPrice + actual_price_calculation.total_tax;
+    console.log(`├─┬ Actual Price Method:`);
+    console.log(`│ ├── Tax Base: $${actual_price_calculation.basis_amount}`);
+    console.log(`│ ├── Customs: $${actual_price_calculation.customs_amount}`);
+    console.log(`│ ├── Local Tax: $${actual_price_calculation.local_tax_amount}`);
+    console.log(`│ ├── Total Tax: $${actual_price_calculation.total_tax}`);
+    console.log(`│ └── Total Cost: $${actualTotalCost.toFixed(2)}`);
+
+    // Handle case where no minimum valuation is available
     if (!hsnData.minimum_valuation_usd || !hsnData.requires_currency_conversion) {
+      console.log(`├── ⚠️ No minimum valuation available for HSN ${hsnData.hsn_code}`);
+      console.log(`└── 🎯 Selected Method: actual_price (only option)\n`);
+      
       return {
         actual_price_calculation,
         selected_method: 'actual_price',
@@ -537,6 +578,14 @@ class PerItemTaxCalculator {
     );
 
     const minimumAmount = minimumValuationConversion.convertedAmount;
+    
+    // 🧮 DEBUG LOG: Currency Conversion Details
+    console.log(`├── Currency Conversion:`);
+    console.log(`│   ├── USD Amount: $${hsnData.minimum_valuation_usd}`);
+    console.log(`│   ├── Origin Country: ${originCountry}`);
+    console.log(`│   ├── Target Currency: ${minimumValuationConversion.originCurrency}`);
+    console.log(`│   ├── Exchange Rate: ${minimumValuationConversion.exchangeRate}`);
+    console.log(`│   └── Converted Amount: ${minimumAmount} ${minimumValuationConversion.originCurrency}`);
 
     // Calculate minimum valuation taxes
     const minimumValuationCustoms = (minimumAmount * taxRates.customs_rate) / 100;
@@ -570,6 +619,28 @@ class PerItemTaxCalculator {
       currency_conversion_details: `$${hsnData.minimum_valuation_usd} USD → ${minimumAmount} ${minimumValuationConversion.originCurrency}`,
     };
 
+    // 🧮 DEBUG LOG: Minimum Valuation Method
+    const minTotalCost = originalPrice + minimum_valuation_calculation.total_tax;
+    const savings = actualTotalCost - minTotalCost;
+    console.log(`├─┬ Minimum Valuation Method:`);
+    console.log(`│ ├── Tax Base: $${minimum_valuation_calculation.basis_amount} (converted from $${hsnData.minimum_valuation_usd} USD)`);
+    console.log(`│ ├── Customs: $${minimum_valuation_calculation.customs_amount}`);
+    console.log(`│ ├── Local Tax: $${minimum_valuation_calculation.local_tax_amount}`);
+    console.log(`│ ├── Total Tax: $${minimum_valuation_calculation.total_tax}`);
+    console.log(`│ └── Total Cost: $${minTotalCost.toFixed(2)} ${savings > 0 ? `(💰 Saves $${savings.toFixed(2)})` : savings < 0 ? `(💸 Costs $${Math.abs(savings).toFixed(2)} more)` : ''}`);
+
+    // 🧮 DEBUG LOG: Higher of Both Method
+    const higherAmount = Math.max(originalPrice, minimumAmount);
+    const higherCalculation = higherAmount === originalPrice ? actual_price_calculation : minimum_valuation_calculation;
+    const higherTotalCost = originalPrice + higherCalculation.total_tax;
+    
+    console.log(`├─┬ Higher of Both Method:`);
+    console.log(`│ ├── Tax Base: $${higherAmount} (${higherAmount === originalPrice ? 'actual price' : 'minimum valuation'})`);
+    console.log(`│ ├── Customs: $${higherCalculation.customs_amount}`);
+    console.log(`│ ├── Local Tax: $${higherCalculation.local_tax_amount}`);
+    console.log(`│ ├── Total Tax: $${higherCalculation.total_tax}`);
+    console.log(`│ └── Total Cost: $${higherTotalCost.toFixed(2)}`);
+
     // Determine which method to auto-select based on admin preferences
     let selected_method: 'actual_price' | 'minimum_valuation';
     let auto_selected_amount: number;
@@ -578,6 +649,7 @@ class PerItemTaxCalculator {
     // Handle admin preferences for valuation method
     switch (valuationMethodPreference) {
       case 'product_value':
+      case 'actual_price':
         selected_method = 'actual_price';
         auto_selected_amount = originalPrice;
         valuation_method = 'original_price';
@@ -589,11 +661,17 @@ class PerItemTaxCalculator {
         break;
       case 'higher_of_both':
         // Use the higher amount (existing logic)
+        console.log(`├── Comparison Logic (higher_of_both):`);
+        console.log(`│   ├── Original Price: ${originalPrice} ${minimumValuationConversion.originCurrency}`);
+        console.log(`│   ├── Minimum Amount: ${minimumAmount} ${minimumValuationConversion.originCurrency}`);
+        console.log(`│   ├── Comparison: ${originalPrice} >= ${minimumAmount} = ${originalPrice >= minimumAmount}`);
         if (originalPrice >= minimumAmount) {
+          console.log(`│   └── ✅ Selected: Actual Price (${originalPrice} is higher)`);
           selected_method = 'actual_price';
           auto_selected_amount = originalPrice;
           valuation_method = 'higher_of_both';
         } else {
+          console.log(`│   └── ✅ Selected: Minimum Valuation (${minimumAmount} is higher)`);
           selected_method = 'minimum_valuation';
           auto_selected_amount = minimumAmount;
           valuation_method = 'minimum_valuation';
@@ -601,17 +679,30 @@ class PerItemTaxCalculator {
         break;
       default:
         // 'auto' or undefined - use higher amount (default behavior)
+        console.log(`├── Comparison Logic (auto/default):`);
+        console.log(`│   ├── Original Price: ${originalPrice} ${minimumValuationConversion.originCurrency}`);
+        console.log(`│   ├── Minimum Amount: ${minimumAmount} ${minimumValuationConversion.originCurrency}`);
+        console.log(`│   ├── Comparison: ${originalPrice} >= ${minimumAmount} = ${originalPrice >= minimumAmount}`);
         if (originalPrice >= minimumAmount) {
+          console.log(`│   └── ✅ Selected: Actual Price (${originalPrice} is higher)`);
           selected_method = 'actual_price';
           auto_selected_amount = originalPrice;
           valuation_method = 'higher_of_both';
         } else {
+          console.log(`│   └── ✅ Selected: Minimum Valuation (${minimumAmount} is higher)`);
           selected_method = 'minimum_valuation';
           auto_selected_amount = minimumAmount;
           valuation_method = 'minimum_valuation';
         }
         break;
     }
+
+    // 🧮 DEBUG LOG: Method Selection
+    console.log(`\n🎯 [METHOD SELECTION] Preference: ${valuationMethodPreference || 'auto'}`);
+    console.log(`├── Selected Method: ${selected_method}`);
+    console.log(`├── Selected Amount: ${auto_selected_amount} ${minimumValuationConversion.originCurrency}`);
+    console.log(`├── Valuation Method: ${valuation_method}`);
+    console.log(`└── Final Total Cost: ${(originalPrice + (selected_method === 'actual_price' ? actual_price_calculation.total_tax : minimum_valuation_calculation.total_tax)).toFixed(2)} ${minimumValuationConversion.originCurrency}\n`);
 
     return {
       actual_price_calculation,

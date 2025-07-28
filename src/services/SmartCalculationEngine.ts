@@ -1646,7 +1646,6 @@ export class SmartCalculationEngine {
     );
 
     // ✅ SIMPLIFIED: Always read tax values from input fields (single source of truth)
-    let customsAmount = 0;
     let localTaxesAmount = 0;
     let destinationTaxAmount = 0;
     let insuranceAmount = 0;
@@ -1665,6 +1664,8 @@ export class SmartCalculationEngine {
 
     // ✅ SIMPLIFIED TAX CALCULATION: Read directly from input fields
     let customsPercentage = quote.operational_data?.customs?.percentage || 0;
+    let customsAmount = 0; // Will be set by per-item calculations or percentage-based calculation
+    let customsSetByHSN = false; // Flag to track if HSN already provided customs amount
 
     // ✅ CRITICAL FIX: Create separate customs calculation base for ASYNC - ONLY affects customs
     const valuationMethod = quote.valuation_method_preference || 'product_value';
@@ -1742,7 +1743,7 @@ export class SmartCalculationEngine {
     insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
 
     // ✅ FIXED: Calculate customs using CIF value with actual item cost (including purchase tax)
-    if (customsPercentage > 0) {
+    if (customsPercentage > 0 && !customsSetByHSN) {
       // Use customs calculation base but include purchase tax for accurate CIF
       const customsBaseWithPurchaseTax = customsCalculationBase + purchaseTaxAmount;
       const cifValue = customsBaseWithPurchaseTax + selectedShipping.cost_usd + insuranceAmount;
@@ -1757,6 +1758,8 @@ export class SmartCalculationEngine {
         customs_rate: customsPercentage,
         customs_amount: customsAmount
       });
+    } else if (customsSetByHSN) {
+      console.log(`[CUSTOMS CALCULATION] Skipping percentage-based calculation - using HSN value: ${customsAmount}`);
     }
 
     // ✅ ENHANCED: Per-item tax calculation based on individual tax methods
@@ -1931,6 +1934,8 @@ export class SmartCalculationEngine {
       if (perItemCustomsTotal > 0) {
         customsPercentage = (perItemCustomsTotal / itemsTotal) * 100;
         customsAmount = perItemCustomsTotal;
+        customsSetByHSN = true;
+        console.log(`[PER-ITEM CUSTOMS] Set customs from HSN calculations: ${customsAmount} (${customsPercentage.toFixed(2)}%)`);
       }
       
       // Sales tax only for US→NP route
