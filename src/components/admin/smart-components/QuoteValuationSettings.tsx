@@ -32,16 +32,21 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
 
   // Map database values to UI values
   const mapDbToUiValue = (dbValue: string): string => {
+    console.log('[VALUATION SETTINGS] Mapping DB value to UI:', dbValue);
     if (dbValue === 'actual_price') return 'product_value';
+    if (dbValue === 'auto') return 'product_value'; // Map 'auto' to 'product_value' as default
     return dbValue;
   };
 
   const mapUiToDbValue = (uiValue: string): string => {
+    console.log('[VALUATION SETTINGS] Mapping UI value to DB:', uiValue);
     if (uiValue === 'product_value') return 'actual_price';
     return uiValue;
   };
 
+  console.log('[VALUATION SETTINGS] Quote valuation_method_preference:', quote.valuation_method_preference);
   const currentMethod = mapDbToUiValue(quote.valuation_method_preference || 'actual_price');
+  console.log('[VALUATION SETTINGS] Current method after mapping:', currentMethod);
 
   // Calculate method impact
   const methodInfo = {
@@ -100,7 +105,12 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
           <div className="flex-1 mr-4">
             <Select 
               value={currentMethod} 
-              onValueChange={(value) => onMethodChange(mapUiToDbValue(value) as any)}
+              onValueChange={(value) => {
+                console.log('[VALUATION SETTINGS] Select onChange triggered with:', value);
+                const dbValue = mapUiToDbValue(value);
+                console.log('[VALUATION SETTINGS] Calling onMethodChange with:', dbValue);
+                onMethodChange(dbValue as 'actual_price' | 'minimum_valuation' | 'higher_of_both');
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />

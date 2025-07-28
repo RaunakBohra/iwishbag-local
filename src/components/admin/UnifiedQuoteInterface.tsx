@@ -951,12 +951,13 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
   };
 
   // Handle valuation method change
-  const handleValuationMethodChange = async (method: 'product_value' | 'minimum_valuation' | 'higher_of_both') => {
+  const handleValuationMethodChange = async (method: 'product_value' | 'minimum_valuation' | 'higher_of_both' | 'actual_price') => {
     if (!quote) return;
 
     console.log(
       `[VALUATION METHOD DEBUG] Starting method change from ${quote.valuation_method_preference} to ${method}`,
     );
+    console.log('[VALUATION METHOD DEBUG] Quote ID:', quote.id);
 
     try {
       setIsCalculating(true);
@@ -967,7 +968,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         updated_at: new Date().toISOString(), // Force timestamp update
       };
 
+      console.log('[VALUATION METHOD DEBUG] Calling updateQuote with payload:', updatePayload);
       const success = await unifiedDataEngine.updateQuote(quote.id, updatePayload);
+      console.log('[VALUATION METHOD DEBUG] Update result:', success);
 
       if (success) {
         // Update local state immediately

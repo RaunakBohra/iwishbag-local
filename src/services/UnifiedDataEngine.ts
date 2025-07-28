@@ -430,12 +430,14 @@ export class UnifiedDataEngine {
 
       console.log('[UNIFIED DATA ENGINE] Updating quote with:', dbUpdates);
       
-      const { error } = await supabase.from('quotes').update(dbUpdates).eq('id', id);
+      const { data, error } = await supabase.from('quotes').update(dbUpdates).eq('id', id).select();
 
       if (error) {
         console.error('[UNIFIED DATA ENGINE] Update failed:', error);
         throw error;
       }
+      
+      console.log('[UNIFIED DATA ENGINE] Update successful, returned data:', data);
 
       // Clear cache aggressively for status updates
       this.clearCache(`quote_${id}`);
