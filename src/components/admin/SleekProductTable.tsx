@@ -45,6 +45,7 @@ import { taxRateService } from '@/services/TaxRateService';
 import { hsnTaxService } from '@/services/HSNTaxService';
 import { routeTierTaxService } from '@/services/RouteTierTaxService';
 import { supabase } from '@/integrations/supabase/client';
+import { getItemMinimumValuation, getValuationComparison, formatValuationAmount } from '@/utils/valuationUtils';
 import type { QuoteItem } from '@/types/unified-quote';
 
 // Extended interface for SleekProductTable specific features
@@ -1257,15 +1258,28 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                         </div>
                       </div>
                       
-                      {/* Valuation */}
+                      {/* Enhanced Valuation with Debug Logging */}
                       <div className="col-span-3">
                         <div className="flex items-center gap-3 justify-end">
                           <span className="text-xs font-medium text-gray-500">Valuation</span>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => {
+                                // 🧮 DEBUG LOG: Valuation Method Selection
+                                console.log(`\n🎯 [UI VALUATION] User selected: Actual Price Method`);
+                                console.log(`├── Item: ${item.product_name}`);
+                                console.log(`├── Product Price: $${item.price}`);
+                                console.log(`├── HSN Code: ${item.hsn_code || 'Not set'}`);
+                                console.log(`├── Previous Method: ${item.valuation_method || 'actual_price'}`);
+                                console.log(`└── New Method: actual_price`);
+                                
                                 onUpdateItem(item.id, { valuation_method: 'actual_price' });
-                                onRecalculate();
+                                
+                                // 🧮 Trigger enhanced calculation with logging
+                                setTimeout(() => {
+                                  console.log(`🔄 [RECALCULATION] Starting quote recalculation for valuation method change...`);
+                                  onRecalculate();
+                                }, 100);
                               }}
                               className={cn(
                                 "px-2 py-1 rounded-md text-xs transition-all",
@@ -1273,6 +1287,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   ? "bg-purple-100 text-purple-700 font-medium" 
                                   : "text-gray-500 hover:bg-gray-100"
                               )}
+                              title={`Actual Price Method: Uses product price ($${item.price}) for tax calculation`}
                             >
                               <span>Actual</span>
                               <span className="font-mono ml-1">${item.price}</span>
@@ -1280,8 +1295,26 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                             
                             <button
                               onClick={() => {
+                                // 🧮 DEBUG LOG: Valuation Method Selection
+                                const minValuation = getItemMinimumValuation(quote, item.id);
+                                console.log(`\n🎯 [UI VALUATION] User selected: Minimum Valuation Method`);
+                                console.log(`├── Item: ${item.product_name}`);
+                                console.log(`├── Product Price: $${item.price}`);
+                                console.log(`├── HSN Minimum: $${minValuation} (from HSN breakdown data)`);
+                                console.log(`├── HSN Code: ${item.hsn_code || 'Not set'}`);
+                                console.log(`├── Previous Method: ${item.valuation_method || 'actual_price'}`);
+                                console.log(`├── New Method: minimum_valuation`);
+                                if (minValuation === 0) {
+                                  console.log(`└── ⚠️ Warning: No minimum valuation available for HSN ${item.hsn_code}`);
+                                }
+                                
                                 onUpdateItem(item.id, { valuation_method: 'minimum_valuation' });
-                                onRecalculate();
+                                
+                                // 🧮 Trigger enhanced calculation with logging
+                                setTimeout(() => {
+                                  console.log(`🔄 [RECALCULATION] Starting quote recalculation for valuation method change...`);
+                                  onRecalculate();
+                                }, 100);
                               }}
                               className={cn(
                                 "px-2 py-1 rounded-md text-xs transition-all",
@@ -1289,15 +1322,34 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   ? "bg-purple-100 text-purple-700 font-medium" 
                                   : "text-gray-500 hover:bg-gray-100"
                               )}
+                              title={`Minimum Valuation Method: Uses HSN minimum valuation ($${getItemMinimumValuation(quote, item.id)}) for tax calculation`}
                             >
                               <span>Minimum</span>
-                              <span className="font-mono ml-1">${item.minimum_valuation_usd || 0}</span>
+                              <span className="font-mono ml-1">${getItemMinimumValuation(quote, item.id)}</span>
                             </button>
                             
                             <button
                               onClick={() => {
+                                // 🧮 DEBUG LOG: Valuation Method Selection
+                                const minValuation = getItemMinimumValuation(quote, item.id);
+                                const higherAmount = Math.max(item.price, minValuation);
+                                const isActualHigher = item.price >= minValuation;
+                                console.log(`\n🎯 [UI VALUATION] User selected: Higher of Both Method`);
+                                console.log(`├── Item: ${item.product_name}`);
+                                console.log(`├── Product Price: $${item.price}`);
+                                console.log(`├── HSN Minimum: $${minValuation} (from HSN breakdown data)`);
+                                console.log(`├── Higher Amount: $${higherAmount} (${isActualHigher ? 'actual price' : 'minimum valuation'})`);
+                                console.log(`├── HSN Code: ${item.hsn_code || 'Not set'}`);
+                                console.log(`├── Previous Method: ${item.valuation_method || 'actual_price'}`);
+                                console.log(`└── New Method: higher_of_both`);
+                                
                                 onUpdateItem(item.id, { valuation_method: 'higher_of_both' });
-                                onRecalculate();
+                                
+                                // 🧮 Trigger enhanced calculation with logging
+                                setTimeout(() => {
+                                  console.log(`🔄 [RECALCULATION] Starting quote recalculation for valuation method change...`);
+                                  onRecalculate();
+                                }, 100);
                               }}
                               className={cn(
                                 "px-2 py-1 rounded-md text-xs transition-all",
@@ -1305,10 +1357,11 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   ? "bg-purple-100 text-purple-700 font-medium" 
                                   : "text-gray-500 hover:bg-gray-100"
                               )}
+                              title={`Higher of Both Method: Uses the higher amount between actual price and minimum valuation ($${Math.max(item.price, getItemMinimumValuation(quote, item.id))})`}
                             >
                               <span>Higher</span>
                               <span className="font-mono ml-1">
-                                ${Math.max(item.price, item.minimum_valuation_usd || 0)}
+                                ${Math.max(item.price, getItemMinimumValuation(quote, item.id))}
                               </span>
                             </button>
                           </div>
