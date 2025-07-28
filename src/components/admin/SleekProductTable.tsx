@@ -45,7 +45,7 @@ import { taxRateService } from '@/services/TaxRateService';
 import { hsnTaxService } from '@/services/HSNTaxService';
 import { routeTierTaxService } from '@/services/RouteTierTaxService';
 import { supabase } from '@/integrations/supabase/client';
-import { getItemMinimumValuation, getValuationComparison, formatValuationAmount } from '@/utils/valuationUtils';
+import { getItemMinimumValuation, getValuationComparison, formatValuationAmount, fetchItemMinimumValuation } from '@/utils/valuationUtils';
 import type { QuoteItem } from '@/types/unified-quote';
 
 // Extended interface for SleekProductTable specific features
@@ -113,6 +113,14 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
   const [debugTaxData, setDebugTaxData] = useState<Record<string, {
     hsnRates?: { customs: number; vat: number; sales_tax: number; };
     routeRates?: { customs: number; vat: number; sales_tax: number; };
+  }>>({});
+
+  // State for real-time minimum valuations (fallback when calculation_data is not available)
+  const [realtimeMinimumValuations, setRealtimeMinimumValuations] = useState<Record<string, {
+    amount: number;
+    currency: string;
+    usdAmount: number;
+    loading?: boolean;
   }>>({});
 
   // Pre-fetch tax debug data for all items
@@ -265,6 +273,73 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     
     fetchDynamicTaxRates();
   }, [quote?.destination_country]);
+
+  // Fetch real-time minimum valuations for items missing calculation data
+  useEffect(() => {
+    const fetchRealtimeMinimumValuations = async () => {
+      if (!quote?.origin_country) return;
+
+      const newRealtimeValuations: Record<string, any> = {};
+      
+      for (const item of items) {
+        // Skip if we already have calculation data or no HSN code
+        if (!item.hsn_code) continue;
+        
+        const hasCalculationData = getItemMinimumValuation(quote, item.id) > 0;
+        if (hasCalculationData) continue;
+
+        // Set loading state
+        setRealtimeMinimumValuations(prev => ({
+          ...prev,
+          [item.id]: { amount: 0, currency: 'USD', usdAmount: 0, loading: true }
+        }));
+
+        try {
+          console.log(`[REALTIME MIN VAL] Fetching for item ${item.id} (${item.product_name})`);
+          const realtimeData = await fetchItemMinimumValuation(item, quote.origin_country);
+          
+          if (realtimeData) {
+            newRealtimeValuations[item.id] = {
+              amount: realtimeData.amount,
+              currency: realtimeData.currency,
+              usdAmount: realtimeData.usdAmount,
+              loading: false
+            };
+            console.log(`[REALTIME MIN VAL] ✅ Fetched for ${item.id}: ${realtimeData.amount} ${realtimeData.currency}`);
+          } else {
+            console.log(`[REALTIME MIN VAL] ❌ No data found for ${item.id}`);
+            newRealtimeValuations[item.id] = { amount: 0, currency: 'USD', usdAmount: 0, loading: false };
+          }
+        } catch (error) {
+          console.error(`[REALTIME MIN VAL] Error fetching for ${item.id}:`, error);
+          newRealtimeValuations[item.id] = { amount: 0, currency: 'USD', usdAmount: 0, loading: false };
+        }
+      }
+
+      if (Object.keys(newRealtimeValuations).length > 0) {
+        setRealtimeMinimumValuations(prev => ({ ...prev, ...newRealtimeValuations }));
+      }
+    };
+
+    fetchRealtimeMinimumValuations();
+  }, [items, quote?.origin_country]);
+
+  // Helper function to get minimum valuation with real-time fallback
+  const getMinimumValuationWithFallback = (itemId: string): { amount: number; loading: boolean } => {
+    // First try the enhanced utility function (includes fallbacks)
+    const calculationAmount = getItemMinimumValuation(quote, itemId);
+    if (calculationAmount > 0) {
+      return { amount: calculationAmount, loading: false };
+    }
+
+    // Fall back to real-time data
+    const realtimeData = realtimeMinimumValuations[itemId];
+    if (realtimeData) {
+      return { amount: realtimeData.amount, loading: realtimeData.loading || false };
+    }
+
+    return { amount: 0, loading: false };
+  };
 
   const toggleRowExpansion = (id: string) => {
     setExpandedRows(prev => 
@@ -1296,15 +1371,16 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                             <button
                               onClick={() => {
                                 // 🧮 DEBUG LOG: Valuation Method Selection
-                                const minValuation = getItemMinimumValuation(quote, item.id);
+                                const minValData = getMinimumValuationWithFallback(item.id);
                                 console.log(`\n🎯 [UI VALUATION] User selected: Minimum Valuation Method`);
                                 console.log(`├── Item: ${item.product_name}`);
                                 console.log(`├── Product Price: $${item.price}`);
-                                console.log(`├── HSN Minimum: $${minValuation} (from HSN breakdown data)`);
+                                console.log(`├── HSN Minimum: $${minValData.amount} (enhanced with fallback)`);
                                 console.log(`├── HSN Code: ${item.hsn_code || 'Not set'}`);
                                 console.log(`├── Previous Method: ${item.valuation_method || 'actual_price'}`);
                                 console.log(`├── New Method: minimum_valuation`);
-                                if (minValuation === 0) {
+                                console.log(`├── Data Source: ${minValData.amount > 0 ? 'Available' : 'Missing'}`);
+                                if (minValData.amount === 0) {
                                   console.log(`└── ⚠️ Warning: No minimum valuation available for HSN ${item.hsn_code}`);
                                 }
                                 
@@ -1316,31 +1392,40 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   onRecalculate();
                                 }, 100);
                               }}
+                              disabled={getMinimumValuationWithFallback(item.id).loading}
                               className={cn(
-                                "px-2 py-1 rounded-md text-xs transition-all",
+                                "px-2 py-1 rounded-md text-xs transition-all flex items-center gap-1",
                                 item.valuation_method === 'minimum_valuation'
                                   ? "bg-purple-100 text-purple-700 font-medium" 
-                                  : "text-gray-500 hover:bg-gray-100"
+                                  : "text-gray-500 hover:bg-gray-100",
+                                getMinimumValuationWithFallback(item.id).loading && "opacity-50 cursor-wait"
                               )}
-                              title={`Minimum Valuation Method: Uses HSN minimum valuation ($${getItemMinimumValuation(quote, item.id)}) for tax calculation`}
+                              title={`Minimum Valuation Method: Uses HSN minimum valuation ($${getMinimumValuationWithFallback(item.id).amount}) for tax calculation`}
                             >
                               <span>Minimum</span>
-                              <span className="font-mono ml-1">${getItemMinimumValuation(quote, item.id)}</span>
+                              {getMinimumValuationWithFallback(item.id).loading ? (
+                                <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1" />
+                              ) : (
+                                <span className="font-mono ml-1">
+                                  ${getMinimumValuationWithFallback(item.id).amount.toFixed(0)}
+                                </span>
+                              )}
                             </button>
                             
                             <button
                               onClick={() => {
                                 // 🧮 DEBUG LOG: Valuation Method Selection
-                                const minValuation = getItemMinimumValuation(quote, item.id);
-                                const higherAmount = Math.max(item.price, minValuation);
-                                const isActualHigher = item.price >= minValuation;
+                                const minValData = getMinimumValuationWithFallback(item.id);
+                                const higherAmount = Math.max(item.price, minValData.amount);
+                                const isActualHigher = item.price >= minValData.amount;
                                 console.log(`\n🎯 [UI VALUATION] User selected: Higher of Both Method`);
                                 console.log(`├── Item: ${item.product_name}`);
                                 console.log(`├── Product Price: $${item.price}`);
-                                console.log(`├── HSN Minimum: $${minValuation} (from HSN breakdown data)`);
+                                console.log(`├── HSN Minimum: $${minValData.amount} (enhanced with fallback)`);
                                 console.log(`├── Higher Amount: $${higherAmount} (${isActualHigher ? 'actual price' : 'minimum valuation'})`);
                                 console.log(`├── HSN Code: ${item.hsn_code || 'Not set'}`);
                                 console.log(`├── Previous Method: ${item.valuation_method || 'actual_price'}`);
+                                console.log(`├── Data Loading: ${minValData.loading}`);
                                 console.log(`└── New Method: higher_of_both`);
                                 
                                 onUpdateItem(item.id, { valuation_method: 'higher_of_both' });
@@ -1351,18 +1436,24 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   onRecalculate();
                                 }, 100);
                               }}
+                              disabled={getMinimumValuationWithFallback(item.id).loading}
                               className={cn(
-                                "px-2 py-1 rounded-md text-xs transition-all",
+                                "px-2 py-1 rounded-md text-xs transition-all flex items-center gap-1",
                                 item.valuation_method === 'higher_of_both'
                                   ? "bg-purple-100 text-purple-700 font-medium" 
-                                  : "text-gray-500 hover:bg-gray-100"
+                                  : "text-gray-500 hover:bg-gray-100",
+                                getMinimumValuationWithFallback(item.id).loading && "opacity-50 cursor-wait"
                               )}
-                              title={`Higher of Both Method: Uses the higher amount between actual price and minimum valuation ($${Math.max(item.price, getItemMinimumValuation(quote, item.id))})`}
+                              title={`Higher of Both Method: Uses the higher amount between actual price and minimum valuation ($${Math.max(item.price, getMinimumValuationWithFallback(item.id).amount)})`}
                             >
                               <span>Higher</span>
-                              <span className="font-mono ml-1">
-                                ${Math.max(item.price, getItemMinimumValuation(quote, item.id))}
-                              </span>
+                              {getMinimumValuationWithFallback(item.id).loading ? (
+                                <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin ml-1" />
+                              ) : (
+                                <span className="font-mono ml-1">
+                                  ${Math.max(item.price, getMinimumValuationWithFallback(item.id).amount).toFixed(0)}
+                                </span>
+                              )}
                             </button>
                           </div>
                         </div>
