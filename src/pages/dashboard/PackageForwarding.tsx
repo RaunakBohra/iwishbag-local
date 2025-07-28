@@ -45,6 +45,7 @@ import {
   type ConsolidationOption,
 } from '@/services/PackageForwardingService';
 import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
+import QuickTestDataButton from '@/components/dashboard/QuickTestDataButton';
 
 interface ConsolidationDialogProps {
   packages: IntegratedPackageData[];
@@ -440,6 +441,7 @@ export const PackageForwarding: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <QuickTestDataButton />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Package Forwarding</h1>

@@ -37,12 +37,15 @@ import {
   ClipboardList,
   TrendingUp,
   AlertCircle,
+  Database,
+  TestTube,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { R2StorageServiceSimple } from '@/services/R2StorageServiceSimple';
 import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
 import { storageFeeService, type StorageFeeOverview, type StorageFeeCalculation } from '@/services/StorageFeeService';
+import PackageTestDataGenerator from '@/components/admin/PackageTestDataGenerator';
 import {
   warehouseManagementService,
   type WarehouseDashboard,
@@ -699,7 +702,7 @@ export const WarehouseManagement: React.FC = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="tasks" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="tasks" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             Tasks
@@ -719,6 +722,10 @@ export const WarehouseManagement: React.FC = () => {
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Analytics
+          </TabsTrigger>
+          <TabsTrigger value="test-data" className="flex items-center gap-2">
+            <TestTube className="h-4 w-4" />
+            Test Data
           </TabsTrigger>
         </TabsList>
 
@@ -1128,6 +1135,21 @@ export const WarehouseManagement: React.FC = () => {
               </Card>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="test-data" className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Test Data Generator</h2>
+                <p className="text-muted-foreground">
+                  Generate test packages for testing the package forwarding system
+                </p>
+              </div>
+            </div>
+            
+            <PackageTestDataGenerator />
+          </div>
         </TabsContent>
       </Tabs>
 
