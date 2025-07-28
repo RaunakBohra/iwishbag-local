@@ -2,6 +2,10 @@
  * TAX RATE SERVICE
  * Dynamic tax rate lookup from database instead of hardcoded values
  * Replaces all hardcoded tax rates with database-driven configuration
+ * 
+ * IMPORTANT: Database stores tax values as percentages (13 = 13%, not 0.13)
+ * This service returns raw percentage values that must be divided by 100 
+ * during calculations: amount * (rate / 100)
  */
 
 import { supabase } from '@/integrations/supabase/client';

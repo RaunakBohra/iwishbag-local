@@ -2,6 +2,9 @@
 // VAT SERVICE - Hierarchical VAT Lookup System
 // Implements VAT hierarchy: shipping_routes → country_settings → fallback
 // Follows same pattern as CurrencyService for consistency
+//
+// IMPORTANT: Returns raw percentage values (13 = 13%, not 0.13)
+// Database migration 20250128000014 standardized all values to percentage format
 // ============================================================================
 
 import { supabase } from '@/integrations/supabase/client';
