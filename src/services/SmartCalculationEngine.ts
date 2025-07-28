@@ -370,7 +370,8 @@ export class SmartCalculationEngine {
       await smartQuoteCacheService.setCachedCalculation(input, result);
       
       // Legacy cache for backward compatibility
-      this.setCachedResult(legacyCacheKey, result);
+      const cacheKey = this.generateCacheKey(input);
+      this.setCachedResult(cacheKey, result);
       
       console.log(`[SMART ENGINE DEBUG] Result cached in both smart cache and legacy cache`);
       console.log(`[SMART ENGINE DEBUG] Returning calculation result:`, {

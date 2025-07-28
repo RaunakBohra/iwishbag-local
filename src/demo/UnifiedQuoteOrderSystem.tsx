@@ -20,6 +20,7 @@ import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { SleekProductTable } from '@/components/admin/SleekProductTable';
 import { SmartTaxBreakdown } from '@/components/admin/tax/SmartTaxBreakdown';
+import { AdminStatusManager } from '@/components/admin/AdminStatusManager';
 import {
   Dialog,
   DialogContent,
@@ -3398,6 +3399,31 @@ export default function UnifiedQuoteOrderSystem({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Admin Status Management - Only in Admin Mode */}
+            {isAdmin && (
+              <AdminStatusManager
+                quote={{
+                  id: quote.id,
+                  status: quote.status,
+                  display_id: quote.display_id,
+                  iwish_tracking_id: quote.iwish_tracking_id,
+                  customer: quote.customer,
+                  created_at: quote.created_at,
+                  updated_at: quote.updated_at,
+                }}
+                onStatusChange={(newStatus, notes) => {
+                  // Handle status change through the existing onUpdate callback
+                  if (onUpdate) {
+                    onUpdate({
+                      status: newStatus,
+                      admin_notes: notes ? `${adminNotes}\n\nStatus Change: ${notes}` : adminNotes,
+                    });
+                  }
+                }}
+                isUpdating={false} // You might want to track this state
+              />
+            )}
 
             {/* Order Actions - Only in Order Mode */}
             {orderMode && (

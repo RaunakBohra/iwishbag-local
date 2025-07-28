@@ -146,6 +146,10 @@ const ApiAnalytics = React.lazy(() => import('@/pages/admin/ApiAnalytics'));
 const PerformanceMonitor = React.lazy(() => import('@/components/admin/PerformanceMonitor' /* webpackChunkName: "admin-performance" */));
 const ApiDocumentation = React.lazy(() => import('@/pages/admin/ApiDocumentation' /* webpackChunkName: "admin-docs" */));
 
+// Package Forwarding pages
+const PackageForwarding = React.lazy(() => import('@/pages/dashboard/PackageForwarding').then((m) => ({ default: m.PackageForwarding })));
+const WarehouseManagement = React.lazy(() => import('@/pages/admin/WarehouseManagement').then((m) => ({ default: m.WarehouseManagement })));
+
 // Demo pages for weight recommendation designs (chunked separately)
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex' /* webpackChunkName: "demo-index" */));
 const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns' /* webpackChunkName: "demo-tax-designs" */));
@@ -275,6 +279,14 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <ApiDocumentation />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'warehouse',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <WarehouseManagement />
               </ErrorBoundary>
             ),
           },
@@ -501,6 +513,14 @@ const router = createBrowserRouter([
           {
             path: 'dashboard/orders/:id',
             element: <OrderDetail />,
+          },
+          {
+            path: 'dashboard/package-forwarding',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <PackageForwarding />
+              </ErrorBoundary>
+            ),
           },
           {
             path: 'support',

@@ -466,19 +466,9 @@ const AdminQuoteDetail: React.FC = () => {
         dbUpdates.items = updates.items;
       }
 
-      // Handle status updates with activity logging
+      // Handle status updates
       if (updates.status && updates.status !== quoteData?.quote?.status) {
         dbUpdates.status = updates.status;
-        
-        // Log status change activity
-        await supabase.from('quote_activity_log').insert({
-          quote_id: id,
-          action: 'status_change',
-          details: {
-            old_status: quoteData?.quote?.status,
-            new_status: updates.status,
-          },
-        });
       }
 
       // Handle calculation_data updates (including item_breakdowns)

@@ -8,6 +8,30 @@ International shopping platform (Amazon, Flipkart, eBay, Alibaba) → customers 
 **CRITICAL**: User side vs admin side - clarify which when making changes.
 **NEVER RESET DB**: `supabase db reset` destroys all data.
 
+## MCP Servers Configuration
+This project uses enhanced MCP servers for improved memory, precision, and development capabilities:
+
+### Active MCP Servers:
+1. **memory** - Persistent context across sessions
+2. **sequential-thinking** - Complex logic and problem solving
+3. **postgres** - Database operations (Supabase)
+4. **github** - Repository management (requires GitHub token)
+5. **filesystem** - Enhanced file operations
+6. **fetch** - API interactions
+7. **redis** - Caching and sessions
+8. **stripe** - Payment processing (API key configured)
+9. **supabase** - Direct Supabase integration (requires service role key)
+10. **cloudflare** - CDN and edge computing
+11. **brave-search** - Web search capabilities
+
+### Starting with MCP:
+Run `./start-claude-mcp.sh` to launch Claude Code with all MCP servers enabled.
+
+### Quick Setup:
+1. Add missing API keys to `.env.mcp`
+2. Run `./setup-mcp-profile.sh` for shell integration
+3. Use `claude-project` alias to start with MCP servers
+
 ## Warnings and Critical Alerts
 - DO NOT RESET MY DB EVER !!!!! im warning you
 - donot reset database to run migration ever !
@@ -205,7 +229,7 @@ npm run lint             # ESLint validation
 
 ### ALWAYS:
 - ✅ Use core services for all operations
-- ✅ Store in USD but quotes have origin country currency as well, display in user currency
+- ✅ Store in USD, display in user currency
 - ✅ Validate status transitions
 - ✅ Check RLS policies for data access
 - ✅ Test both admin and customer views
@@ -236,3 +260,8 @@ npm run lint             # ESLint validation
 - **Data Flow**: Database (USD) → Service → Formatter → UI (User Currency)
 - **State**: Zustand (client) + React Query (server) + localStorage
 - **Auth**: Supabase → RLS → Roles → Components
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

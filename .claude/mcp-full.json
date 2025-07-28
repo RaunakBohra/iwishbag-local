@@ -1,19 +1,5 @@
 {
   "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
-    },
     "postgres": {
       "command": "npx",
       "args": [
@@ -31,7 +17,7 @@
         "@modelcontextprotocol/server-github"
       ],
       "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+        "GITHUB_TOKEN": "YOUR_GITHUB_TOKEN_HERE"
       }
     },
     "filesystem": {
@@ -42,23 +28,6 @@
         "/Users/raunakbohra/Desktop/global-wishlist-hub"
       ]
     },
-    "fetch": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-fetch"
-      ]
-    },
-    "redis": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-redis"
-      ],
-      "env": {
-        "REDIS_URL": "redis://localhost:6379"
-      }
-    },
     "stripe": {
       "command": "npx",
       "args": [
@@ -66,7 +35,30 @@
         "@modelcontextprotocol/server-stripe"
       ],
       "env": {
-        "STRIPE_API_KEY": "${STRIPE_SECRET_KEY}"
+        "STRIPE_API_KEY": "YOUR_STRIPE_SECRET_KEY_HERE"
+      }
+    },
+    "paypal": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-paypal"
+      ],
+      "env": {
+        "PAYPAL_CLIENT_ID": "YOUR_PAYPAL_CLIENT_ID",
+        "PAYPAL_CLIENT_SECRET": "YOUR_PAYPAL_CLIENT_SECRET",
+        "PAYPAL_MODE": "sandbox"
+      }
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cloudflare/mcp-server-cloudflare"
+      ],
+      "env": {
+        "CLOUDFLARE_ACCOUNT_ID": "610762493d34333f1a6d72a037b345cf",
+        "CLOUDFLARE_API_TOKEN": "4Y_WjuGIEtTpK85hmE6XrGwbi85d8zN5Me0T_45l"
       }
     },
     "supabase": {
@@ -77,29 +69,22 @@
       ],
       "env": {
         "SUPABASE_URL": "http://127.0.0.1:54321",
-        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+        "SUPABASE_SERVICE_ROLE_KEY": "YOUR_SUPABASE_SERVICE_ROLE_KEY"
       }
     },
-    "cloudflare": {
+    "web-browser": {
       "command": "npx",
       "args": [
         "-y",
-        "@cloudflare/mcp-server-cloudflare"
-      ],
-      "env": {
-        "CLOUDFLARE_ACCOUNT_ID": "${CLOUDFLARE_ACCOUNT_ID}",
-        "CLOUDFLARE_API_TOKEN": "${CLOUDFLARE_API_TOKEN}"
-      }
+        "@modelcontextprotocol/server-puppeteer"
+      ]
     },
-    "brave-search": {
+    "shell": {
       "command": "npx",
       "args": [
         "-y",
-        "@modelcontextprotocol/server-brave-search"
-      ],
-      "env": {
-        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-      }
+        "@modelcontextprotocol/server-shell"
+      ]
     }
   }
 }

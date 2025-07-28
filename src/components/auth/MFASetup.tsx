@@ -20,6 +20,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { mfaService, type MFASetupResponse } from '@/services/MFAService';
 import { logger } from '@/utils/logger';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MFASetupProps {
   onComplete: () => void;
@@ -340,7 +341,22 @@ Store these codes in a secure location. You'll need them if you lose access to y
               <Download className="mr-2 h-4 w-4" />
               Download Codes
             </Button>
-            <Button onClick={onComplete}>
+            <Button onClick={async () => {
+              try {
+                // Create MFA session after setup completion
+                const { data, error } = await supabase.rpc('create_mfa_session_after_setup');
+                if (error) throw error;
+                
+                if (data?.success && data?.sessionToken) {
+                  sessionStorage.setItem('mfa_session', data.sessionToken);
+                  logger.info('MFA session created:', data.sessionToken);
+                }
+              } catch (error) {
+                logger.error('Failed to create MFA session:', error);
+              }
+              
+              onComplete();
+            }}>
               I've Saved My Codes
             </Button>
           </div>

@@ -1,0 +1,900 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Package,
+  MapPin,
+  Truck,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Users,
+  BarChart3,
+  Activity,
+  Archive,
+  Camera,
+  Plus,
+  Search,
+  Filter,
+  Eye,
+  Edit,
+  Loader2,
+  Package2,
+  Scale,
+  Ruler,
+  DollarSign,
+  Warehouse,
+  ClipboardList,
+  TrendingUp,
+  AlertCircle,
+} from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  warehouseManagementService,
+  type WarehouseDashboard,
+  type WarehouseTask,
+  type WarehouseLocation,
+  type StaffPerformance,
+  type TaskAssignmentData,
+} from '@/services/WarehouseManagementService';
+import {
+  packageForwardingService,
+  type ReceivedPackage,
+  type ConsolidationGroup,
+  type PackageReceivingData,
+} from '@/services/PackageForwardingService';
+
+interface PackageReceivingFormProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const PackageReceivingForm: React.FC<PackageReceivingFormProps> = ({ onClose, onSuccess }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState<Partial<PackageReceivingData>>({
+    suiteNumber: '',
+    carrier: 'ups',
+    weight: 0,
+    dimensions: { length: 0, width: 0, height: 0 },
+    photos: [],
+    receivedByStaffId: user?.id || '',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.suiteNumber || !formData.weight || !formData.receivedByStaffId) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await packageForwardingService.logReceivedPackage(formData as PackageReceivingData);
+      toast({
+        title: 'Package Received',
+        description: 'Package has been successfully logged in the system.',
+      });
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: 'Failed to Receive Package',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Receive New Package</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="suiteNumber">Suite Number *</Label>
+              <Input
+                id="suiteNumber"
+                value={formData.suiteNumber}
+                onChange={(e) => setFormData({ ...formData, suiteNumber: e.target.value })}
+                placeholder="IWB12345"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="carrier">Carrier *</Label>
+              <Select
+                value={formData.carrier}
+                onValueChange={(value) => setFormData({ ...formData, carrier: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ups">UPS</SelectItem>
+                  <SelectItem value="fedex">FedEx</SelectItem>
+                  <SelectItem value="usps">USPS</SelectItem>
+                  <SelectItem value="dhl">DHL</SelectItem>
+                  <SelectItem value="amazon">Amazon</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="trackingNumber">Tracking Number</Label>
+              <Input
+                id="trackingNumber"
+                value={formData.trackingNumber || ''}
+                onChange={(e) => setFormData({ ...formData, trackingNumber: e.target.value })}
+                placeholder="1Z999AA1234567890"
+              />
+            </div>
+            <div>
+              <Label htmlFor="weight">Weight (kg) *</Label>
+              <Input
+                id="weight"
+                type="number"
+                step="0.1"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Dimensions (cm) *</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Input
+                placeholder="Length"
+                type="number"
+                value={formData.dimensions?.length}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  dimensions: {
+                    ...formData.dimensions!,
+                    length: parseFloat(e.target.value) || 0
+                  }
+                })}
+                required
+              />
+              <Input
+                placeholder="Width"
+                type="number"
+                value={formData.dimensions?.width}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  dimensions: {
+                    ...formData.dimensions!,
+                    width: parseFloat(e.target.value) || 0
+                  }
+                })}
+                required
+              />
+              <Input
+                placeholder="Height"
+                type="number"
+                value={formData.dimensions?.height}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  dimensions: {
+                    ...formData.dimensions!,
+                    height: parseFloat(e.target.value) || 0
+                  }
+                })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="senderName">Sender Name</Label>
+              <Input
+                id="senderName"
+                value={formData.senderName || ''}
+                onChange={(e) => setFormData({ ...formData, senderName: e.target.value })}
+                placeholder="John Doe"
+              />
+            </div>
+            <div>
+              <Label htmlFor="senderStore">Sender Store</Label>
+              <Input
+                id="senderStore"
+                value={formData.senderStore || ''}
+                onChange={(e) => setFormData({ ...formData, senderStore: e.target.value })}
+                placeholder="Amazon, eBay, Target, etc."
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="declaredValue">Declared Value (USD)</Label>
+              <Input
+                id="declaredValue"
+                type="number"
+                step="0.01"
+                value={formData.declaredValue || ''}
+                onChange={(e) => setFormData({ ...formData, declaredValue: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="storageLocation">Storage Location</Label>
+              <Input
+                id="storageLocation"
+                value={formData.storageLocation || ''}
+                onChange={(e) => setFormData({ ...formData, storageLocation: e.target.value })}
+                placeholder="Auto-assigned if empty"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="description">Package Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Electronics, clothing, books, etc."
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-between pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Package className="h-4 w-4 mr-2" />
+                  Receive Package
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const TaskCard: React.FC<{
+  task: WarehouseTask;
+  onComplete: (taskId: string, notes?: string) => void;
+  onAssign: (taskId: string, staffId: string) => void;
+}> = ({ task, onComplete, onAssign }) => {
+  const [showNotes, setShowNotes] = useState(false);
+  const [completionNotes, setCompletionNotes] = useState('');
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'normal': return 'bg-blue-100 text-blue-800';
+      case 'low': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="font-semibold">{task.description}</h3>
+            <p className="text-sm text-muted-foreground capitalize">{task.task_type.replace('_', ' ')}</p>
+          </div>
+          <div className="flex gap-2">
+            <Badge className={getPriorityColor(task.priority)}>
+              {task.priority}
+            </Badge>
+            <Badge className={getStatusColor(task.status)}>
+              {task.status.replace('_', ' ')}
+            </Badge>
+          </div>
+        </div>
+
+        {task.instructions && (
+          <p className="text-sm text-muted-foreground mb-3">{task.instructions}</p>
+        )}
+
+        <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground mb-3">
+          <div>
+            <span>Created: {new Date(task.created_at).toLocaleDateString()}</span>
+          </div>
+          <div>
+            <span>
+              {task.assigned_to ? `Assigned to: ${task.assigned_to}` : 'Unassigned'}
+            </span>
+          </div>
+        </div>
+
+        {task.status === 'pending' && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowNotes(true)}
+            >
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Complete
+            </Button>
+            {!task.assigned_to && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onAssign(task.id, 'current-user')} // Would get actual user ID
+              >
+                <Users className="h-3 w-3 mr-1" />
+                Assign to Me
+              </Button>
+            )}
+          </div>
+        )}
+
+        {showNotes && (
+          <Dialog open={showNotes} onOpenChange={setShowNotes}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Complete Task</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="notes">Completion Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={completionNotes}
+                    onChange={(e) => setCompletionNotes(e.target.value)}
+                    placeholder="Add any notes about the task completion..."
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={() => setShowNotes(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => {
+                    onComplete(task.id, completionNotes);
+                    setShowNotes(false);
+                  }}>
+                    Complete Task
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export const WarehouseManagement: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [showReceivingForm, setShowReceivingForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [taskFilter, setTaskFilter] = useState<string>('');
+
+  // Fetch warehouse dashboard data
+  const { data: dashboard, isLoading: dashboardLoading } = useQuery({
+    queryKey: ['warehouse-dashboard'],
+    queryFn: (): Promise<WarehouseDashboard> => warehouseManagementService.getDashboardData(),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch warehouse tasks
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ['warehouse-tasks', taskFilter],
+    queryFn: (): Promise<WarehouseTask[]> => 
+      warehouseManagementService.getTasks(
+        taskFilter ? { status: taskFilter } : undefined
+      ),
+  });
+
+  // Fetch consolidation groups needing processing
+  const { data: pendingConsolidations = [], isLoading: consolidationsLoading } = useQuery({
+    queryKey: ['pending-consolidations'],
+    queryFn: async (): Promise<ConsolidationGroup[]> => {
+      // This would fetch consolidation groups with status 'pending'
+      // For now, return empty array as placeholder
+      return [];
+    },
+  });
+
+  // Fetch recent packages
+  const { data: recentPackages = [], isLoading: packagesLoading } = useQuery({
+    queryKey: ['recent-packages'],
+    queryFn: async (): Promise<ReceivedPackage[]> => {
+      // This would fetch recent packages across all customers
+      // For now, return empty array as placeholder
+      return [];
+    },
+  });
+
+  // Complete task mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: async ({ taskId, notes }: { taskId: string; notes?: string }) => {
+      return await warehouseManagementService.completeTask(taskId, notes);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['warehouse-dashboard'] });
+      toast({
+        title: 'Task Completed',
+        description: 'Task has been marked as completed successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to Complete Task',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Assign task mutation
+  const assignTaskMutation = useMutation({
+    mutationFn: async ({ taskId, staffId }: { taskId: string; staffId: string }) => {
+      return await warehouseManagementService.assignTask(taskId, staffId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouse-tasks'] });
+      toast({
+        title: 'Task Assigned',
+        description: 'Task has been assigned successfully.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Failed to Assign Task',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleReceivePackageSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['warehouse-dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['recent-packages'] });
+  };
+
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = searchTerm === '' || 
+      task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.task_type.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || statusFilter === '' || task.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Access denied. Staff privileges required.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Warehouse Management</h1>
+          <p className="text-muted-foreground">
+            Manage packages, tasks, and warehouse operations
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowReceivingForm(true)}>
+            <Package className="h-4 w-4 mr-2" />
+            Receive Package
+          </Button>
+        </div>
+      </div>
+
+      {/* Dashboard Overview */}
+      {dashboardLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : dashboard ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboard.total_packages}</div>
+              <p className="text-xs text-muted-foreground">
+                Across all zones
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboard.pending_tasks.total}</div>
+              <p className="text-xs text-muted-foreground">
+                {dashboard.pending_tasks.by_priority.urgent || 0} urgent
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Location Usage</CardTitle>
+              <Warehouse className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {dashboard.location_utilization.utilization_percentage.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {dashboard.location_utilization.occupied_locations} / {dashboard.location_utilization.total_locations} locations
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Consolidation Requests</CardTitle>
+              <Archive className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboard.consolidation_requests}</div>
+              <p className="text-xs text-muted-foreground">
+                Awaiting processing
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="tasks" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="tasks" className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Tasks
+          </TabsTrigger>
+          <TabsTrigger value="packages" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Recent Packages
+          </TabsTrigger>
+          <TabsTrigger value="consolidations" className="flex items-center gap-2">
+            <Archive className="h-4 w-4" />
+            Consolidations
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tasks" className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search tasks..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {tasksLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : filteredTasks.length > 0 ? (
+            <div className="space-y-4">
+              {filteredTasks.map(task => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onComplete={(taskId, notes) => 
+                    completeTaskMutation.mutate({ taskId, notes })
+                  }
+                  onAssign={(taskId, staffId) => 
+                    assignTaskMutation.mutate({ taskId, staffId })
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Tasks Found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter 
+                    ? 'Try adjusting your filters.'
+                    : 'All tasks are completed or no tasks have been assigned.'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="packages" className="space-y-4">
+          <h2 className="text-xl font-semibold">Recent Package Arrivals</h2>
+          
+          {packagesLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : recentPackages.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {recentPackages.map(pkg => (
+                <Card key={pkg.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold">{pkg.sender_store || pkg.sender_name}</h3>
+                        <p className="text-sm text-muted-foreground">{pkg.package_description}</p>
+                      </div>
+                      <Badge variant="outline">
+                        {pkg.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Scale className="h-3 w-3 text-muted-foreground" />
+                        <span>{pkg.weight_kg}kg</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        <span>{pkg.storage_location}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Recent Packages</h3>
+                <p className="text-muted-foreground">
+                  Recent package arrivals will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="consolidations" className="space-y-4">
+          <h2 className="text-xl font-semibold">Pending Consolidation Requests</h2>
+          
+          {consolidationsLoading ? (
+            <div className="space-y-4">
+              {[1, 2].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : pendingConsolidations.length > 0 ? (
+            <div className="space-y-4">
+              {pendingConsolidations.map(group => (
+                <Card key={group.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold">{group.group_name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {group.package_count} packages to consolidate
+                        </p>
+                      </div>
+                      <Badge variant="outline">
+                        {group.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-3 w-3 mr-1" />
+                        View Details
+                      </Button>
+                      <Button size="sm">
+                        <Archive className="h-3 w-3 mr-1" />
+                        Process Consolidation
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Pending Consolidations</h3>
+                <p className="text-muted-foreground">
+                  Consolidation requests will appear here when customers request them.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <h2 className="text-xl font-semibold">Warehouse Analytics</h2>
+          
+          {dashboard && (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Package Status Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(dashboard.packages_by_status).map(([status, count]) => (
+                      <div key={status} className="flex justify-between items-center">
+                        <span className="capitalize">{status.replace('_', ' ')}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-blue-600 h-2 rounded-full" 
+                              style={{ 
+                                width: `${(count / dashboard.total_packages) * 100}%` 
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Task Priority Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(dashboard.pending_tasks.by_priority).map(([priority, count]) => (
+                      <div key={priority} className="flex justify-between items-center">
+                        <span className="capitalize">{priority}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-orange-600 h-2 rounded-full" 
+                              style={{ 
+                                width: `${(count / dashboard.pending_tasks.total) * 100}%` 
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Package Receiving Form */}
+      {showReceivingForm && (
+        <PackageReceivingForm
+          onClose={() => setShowReceivingForm(false)}
+          onSuccess={handleReceivePackageSuccess}
+        />
+      )}
+    </div>
+  );
+};

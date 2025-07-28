@@ -1,0 +1,76 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@anthropic/mcp-sequential-thinking"
+      ]
+    },
+    "claude-memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "whenmoon-memory"
+      ]
+    },
+    "zep-cloud": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-zep-cloud"
+      ],
+      "env": {
+        "ZEP_API_KEY": "YOUR_ZEP_API_KEY",
+        "ZEP_PROJECT_ID": "YOUR_PROJECT_ID"
+      }
+    },
+    "redis": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-redis"
+      ],
+      "env": {
+        "REDIS_URL": "redis://localhost:6379"
+      }
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ]
+    },
+    "sentry": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sentry"
+      ],
+      "env": {
+        "SENTRY_DSN": "YOUR_SENTRY_DSN",
+        "SENTRY_ORG": "YOUR_ORG",
+        "SENTRY_PROJECT": "YOUR_PROJECT"
+      }
+    },
+    "adobe-commerce": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "adobe-commerce-mcp"
+      ],
+      "env": {
+        "ADOBE_COMMERCE_URL": "YOUR_STORE_URL",
+        "ADOBE_COMMERCE_TOKEN": "YOUR_API_TOKEN"
+      }
+    }
+  }
+}

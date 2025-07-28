@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Activity,
   Book,
+  Warehouse,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -101,6 +102,11 @@ const menuGroups = [
         title: 'Blog Management',
         url: '/admin/blog',
         icon: Edit,
+      },
+      {
+        title: 'Warehouse Management',
+        url: '/admin/warehouse',
+        icon: Warehouse,
       },
     ],
   },

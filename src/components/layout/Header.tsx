@@ -15,6 +15,7 @@ import {
   HelpCircle,
   Search,
   Command,
+  Truck,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -489,6 +490,19 @@ const Header = () => {
                           variant="outline"
                           className="w-full justify-start"
                           onClick={() => {
+                            navigate('/dashboard/package-forwarding');
+                            setIsSheetOpen(false);
+                          }}
+                        >
+                          <Truck className="mr-3 h-4 w-4" />
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">Package Forwarding</span>
+                          </div>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => {
                             navigate('/support/my-tickets');
                             setIsSheetOpen(false);
                           }}
@@ -607,6 +621,18 @@ const Header = () => {
                         <div className="flex flex-col">
                           <span className="font-medium text-gray-900">Dashboard</span>
                           <span className="text-xs text-gray-500">View your quotes and orders</span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      asChild
+                      className="cursor-pointer rounded-md hover:bg-gray-50"
+                    >
+                      <Link to="/dashboard/package-forwarding" className="flex items-center w-full">
+                        <Truck className="mr-3 h-4 w-4" />
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">Package Forwarding</span>
+                          <span className="text-xs text-gray-500">US warehouse & shipping</span>
                         </div>
                       </Link>
                     </DropdownMenuItem>

@@ -59,12 +59,15 @@ interface NotificationCenterProps {
 }
 
 // Individual notification item component
-const NotificationItem: React.FC<{
-  notification: NotificationRecord;
-  onRead: (id: string) => void;
-  onDismiss: (id: string) => void;
-  compact?: boolean;
-}> = ({ notification, onRead, onDismiss, compact = false }) => {
+const NotificationItem = React.forwardRef<
+  HTMLDivElement,
+  {
+    notification: NotificationRecord;
+    onRead: (id: string) => void;
+    onDismiss: (id: string) => void;
+    compact?: boolean;
+  }
+>(({ notification, onRead, onDismiss, compact = false }, ref) => {
   const [isActioning, setIsActioning] = useState(false);
   const config = getNotificationConfig(notification.type);
 
@@ -146,6 +149,7 @@ const NotificationItem: React.FC<{
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
@@ -271,7 +275,9 @@ const NotificationItem: React.FC<{
       </div>
     </motion.div>
   );
-};
+});
+
+NotificationItem.displayName = 'NotificationItem';
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   className,

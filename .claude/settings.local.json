@@ -191,7 +191,23 @@
       "Bash(npx wrangler dev:*)",
       "WebFetch(domain:docs.brightdata.com)",
       "Bash(deno check:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "mcp__redis__list",
+      "mcp__sequential-thinking__sequentialthinking",
+      "mcp__memory__search_nodes",
+      "mcp__redis__get",
+      "mcp__memory__read_graph",
+      "mcp__redis__get",
+      "Bash(redis-cli:*)",
+      "Bash(env)",
+      "Bash(./fix-mcp-servers.sh:*)",
+      "Bash(./check-mcp-health.sh:*)",
+      "mcp__memory__create_entities",
+      "Bash(npx:*)",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/fix-mcp-connection.sh:*)",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/setup-claude-auto-mcp.sh)",
+      "mcp__memory__create_relations",
+      "mcp__redis__set"
     ],
     "deny": []
   }
