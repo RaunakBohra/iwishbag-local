@@ -443,13 +443,21 @@ const router = createBrowserRouter([
         path: 'quotes/:id',
         element: (
           <ProtectedRoute>
-            <div style={{ background: 'red', color: 'white', padding: '20px', minHeight: '100vh', fontSize: '24px' }}>
-              🚨 ROUTE MATCHED - quotes/:id 🚨
-              <br />
-              About to render CustomerQuoteDetail component
-              <br />
+            <div style={{ 
+              background: 'linear-gradient(45deg, #ff0000, #ff6600)', 
+              color: 'white', 
+              padding: '40px', 
+              minHeight: '100vh', 
+              fontSize: '32px',
+              textAlign: 'center',
+              fontWeight: 'bold'
+            }}>
+              <h1>🎯 SUCCESS! /quotes/:id ROUTE MATCHED! 🎯</h1>
+              <p>URL: {window.location.href}</p>
+              <p>Time: {new Date().toLocaleString()}</p>
+              <hr style={{margin: '20px 0'}} />
               {(() => {
-                console.log('🎯 Route quotes/:id matched, trying TestQuotePage first');
+                console.log('🎯 Route /quotes/:id matched successfully!');
                 return <TestQuotePage />;
               })()}
             </div>
@@ -543,14 +551,15 @@ const router = createBrowserRouter([
             path: 'dashboard/quotes',
             element: <Quotes />,
           },
-          {
-            path: 'dashboard/quotes/:id',
-            element: (
-              <ErrorBoundary fallback={AdminErrorFallback}>
-                <QuoteDetailUnified />
-              </ErrorBoundary>
-            ),
-          },
+          // Temporarily commented out to test route conflict
+          // {
+          //   path: 'dashboard/quotes/:id',
+          //   element: (
+          //     <ErrorBoundary fallback={AdminErrorFallback}>
+          //       <QuoteDetailUnified />
+          //     </ErrorBoundary>
+          //   ),
+          // },
           {
             path: 'dashboard/orders',
             element: <Orders />,
