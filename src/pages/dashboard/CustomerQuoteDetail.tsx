@@ -10,9 +10,40 @@ import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import type { Tables } from '@/integrations/supabase/types';
 import type { UnifiedQuote } from '@/types/unified-quote';
 
-// Components we'll add in next phases
+// UI Components
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { 
+  ArrowLeft, 
+  Loader2, 
+  ShoppingCart,
+  Download,
+  Share2,
+  User,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  Package,
+  AlertCircle,
+  Info,
+  Shield,
+  Sparkles,
+} from 'lucide-react';
+
+// Customer Components
+import { ModernQuoteLayout } from '@/components/customer/ModernQuoteLayout';
+import { ModernItemsDisplay } from '@/components/customer/ModernItemsDisplay';
+import { QuoteActivityTimeline } from '@/components/customer/QuoteActivityTimeline';
+import { EnhancedSmartTaxBreakdown } from '@/components/admin/tax/EnhancedSmartTaxBreakdown';
+import { DiscountDisplay } from '@/components/dashboard/DiscountDisplay';
+import { MembershipDashboard } from '@/components/dashboard/MembershipDashboard';
+import { useQuoteState } from '@/hooks/useQuoteState';
+import { MembershipService } from '@/services/MembershipService';
 
 type Quote = Tables<'quotes'>;
 
@@ -29,6 +60,11 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
 
   // State management
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [hasMembership, setHasMembership] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  
+  // Initialize quote state hook for cart functionality
+  const quoteStateHook = useQuoteState(id || '');
 
   // Fetch quote data with related information
   const {
@@ -336,6 +372,59 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
     return transformed;
   }, [quoteData]);
 
+  // Check for membership
+  useEffect(() => {
+    const checkMembership = async () => {
+      if (user?.id) {
+        const membership = await MembershipService.getCustomerMembership(user.id);
+        setHasMembership(!!membership && membership.status === 'active');
+      }
+    };
+    checkMembership();
+  }, [user]);
+
+  // Handlers
+  const handleAddToCart = async () => {
+    try {
+      setIsAddingToCart(true);
+      await quoteStateHook.addToCart();
+      toast({
+        title: 'Added to Cart',
+        description: 'Quote has been added to your cart.',
+      });
+      navigate('/cart');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to add quote to cart. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    toast({
+      title: 'Downloading PDF',
+      description: 'Your quote PDF is being generated...',
+    });
+    // TODO: Implement PDF download
+  };
+
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}/quotes/${id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: 'Link Copied',
+      description: 'Quote link has been copied to clipboard.',
+    });
+  };
+
+  const handleViewProduct = (url: string) => {
+    window.open(url, '_blank');
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -377,7 +466,7 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
   // Main render
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100">
-      {/* Modern header - will be enhanced in Phase 2 */}
+      {/* Modern header */}
       <div className="bg-white/70 backdrop-blur-md shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -390,20 +479,221 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Button>
+            
+            {/* Show membership badge if user has Plus */}
+            {hasMembership && (
+              <Badge variant="default" className="bg-gradient-to-r from-purple-600 to-purple-700">
+                <Sparkles className="h-3 w-3 mr-1" />
+                iwishBag Plus Member
+              </Badge>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Main content area - will be populated in Phase 2 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center py-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Quote Details</h1>
-          <p className="text-gray-600">
-            Quote ID: {transformedQuote.id}
-          </p>
-          {/* More content will be added in subsequent phases */}
-        </div>
-      </div>
+      {/* Main content with ModernQuoteLayout */}
+      <ModernQuoteLayout
+        quote={transformedQuote}
+        onAddToCart={handleAddToCart}
+        onDownloadPDF={handleDownloadPDF}
+        onShare={handleShare}
+        isAddingToCart={isAddingToCart}
+      >
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Customer Information */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{transformedQuote.customer.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{transformedQuote.customer.email}</p>
+                </div>
+                {transformedQuote.customer.phone && (
+                  <div>
+                    <p className="text-sm text-gray-500">Phone</p>
+                    <p className="font-medium">{transformedQuote.customer.phone}</p>
+                  </div>
+                )}
+                <Separator />
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Customer Type</p>
+                  <Badge variant="secondary">
+                    {transformedQuote.customer.type}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Shipping Address */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Shipping Address
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  <p className="font-medium">{transformedQuote.shipping_address.name}</p>
+                  <p className="text-sm text-gray-600">{transformedQuote.shipping_address.line1}</p>
+                  {transformedQuote.shipping_address.line2 && (
+                    <p className="text-sm text-gray-600">{transformedQuote.shipping_address.line2}</p>
+                  )}
+                  <p className="text-sm text-gray-600">
+                    {transformedQuote.shipping_address.city}, {transformedQuote.shipping_address.state} {transformedQuote.shipping_address.postal_code}
+                  </p>
+                  <p className="text-sm font-medium text-gray-900 mt-2">
+                    {transformedQuote.shipping_address.country}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Quote Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Total Items</span>
+                  <span className="font-medium">{transformedQuote.items.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Total Weight</span>
+                  <span className="font-medium">
+                    {transformedQuote.items.reduce((sum, item) => sum + item.weight * item.quantity, 0).toFixed(2)} kg
+                  </span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Route</span>
+                  <span className="font-medium">
+                    {transformedQuote.origin_country} → {transformedQuote.destination_country}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Created</span>
+                  <span className="font-medium">
+                    {new Date(transformedQuote.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Insurance Notice */}
+          {transformedQuote.insurance > 0 && (
+            <Alert className="border-blue-200 bg-blue-50">
+              <Shield className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                This quote includes insurance coverage of {transformedQuote.currency_symbol}{transformedQuote.insurance.toFixed(2)} for your package protection.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Discount Display */}
+          {transformedQuote.discount > 0 && (
+            <DiscountDisplay
+              quoteId={transformedQuote.id}
+              customerId={user?.id}
+              subtotal={transformedQuote.subtotal}
+              handlingFee={transformedQuote.handling}
+              paymentMethod="bank_transfer" // Default for display
+              countryCode={transformedQuote.destination_country}
+              currency={transformedQuote.currency}
+              className="mt-6"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="items" className="space-y-6">
+          <ModernItemsDisplay
+            items={transformedQuote.items}
+            currency={transformedQuote.currency}
+            currencySymbol={transformedQuote.currency_symbol}
+            onViewProduct={handleViewProduct}
+          />
+        </TabsContent>
+
+        <TabsContent value="breakdown" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="lg:col-span-1">
+              <EnhancedSmartTaxBreakdown
+                quote={transformedQuote}
+                showEducation={true}
+                compact={false}
+                title="Price Breakdown"
+                className="h-full"
+              />
+            </div>
+            
+            {/* Shipping Options */}
+            {transformedQuote.shipping_options && transformedQuote.shipping_options.length > 0 && (
+              <Card className="lg:col-span-1">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Shipping Options
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {transformedQuote.shipping_options.slice(0, 3).map((option: any) => (
+                      <div
+                        key={option.id}
+                        className={`p-4 rounded-lg border ${
+                          option.recommended ? 'border-primary bg-primary/5' : 'border-gray-200'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">{option.name}</p>
+                            <p className="text-sm text-gray-600">{option.carrier}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Delivery: {option.days} days
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">
+                              {transformedQuote.currency_symbol}{option.cost_usd.toFixed(2)}
+                            </p>
+                            {option.recommended && (
+                              <Badge variant="default" className="mt-1">
+                                Recommended
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activity" className="space-y-6">
+          <QuoteActivityTimeline
+            activities={[]}
+            quote={transformedQuote}
+          />
+        </TabsContent>
+      </ModernQuoteLayout>
     </div>
   );
 };
