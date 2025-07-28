@@ -7,7 +7,7 @@
 
 import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
 import { supabase } from '@/integrations/supabase/client';
-import { currencyService } from '@/services/CurrencyService';
+import { getCountrySettings } from '@/services/CurrencyService';
 
 /**
  * Extract minimum valuation amount for an item with fallback data sources
@@ -198,15 +198,14 @@ export async function fetchItemMinimumValuation(
       return null;
     }
 
-    // Convert USD to origin currency
-    console.log(`[FETCH MIN VAL] Getting currency for country: ${originCountry}`);
-    const originCurrency = await currencyService.getCurrencyForCountry(originCountry);
+    // Convert USD to origin currency using country_settings table
+    console.log(`[FETCH MIN VAL] Getting country settings for: ${originCountry}`);
+    const countrySettings = await getCountrySettings(originCountry);
     
-    console.log(`[FETCH MIN VAL] Currency lookup result:`, originCurrency);
-    console.log(`[FETCH MIN VAL] Available currency fields:`, Object.keys(originCurrency || {}));
+    console.log(`[FETCH MIN VAL] Country settings result:`, countrySettings);
     
-    if (!originCurrency) {
-      console.error(`[FETCH MIN VAL] No currency data for ${originCountry}`);
+    if (!countrySettings) {
+      console.error(`[FETCH MIN VAL] No country settings found for ${originCountry}`);
       return {
         amount: hsnData.minimum_valuation_usd,
         currency: 'USD',
@@ -215,35 +214,30 @@ export async function fetchItemMinimumValuation(
     }
 
     // Check if exchange rate is valid
-    const exchangeRate = originCurrency.rate_from_usd || originCurrency.exchange_rate;
-    console.log(`[FETCH MIN VAL] Exchange rate lookup:`, {
-      rate_from_usd: originCurrency.rate_from_usd,
-      exchange_rate: originCurrency.exchange_rate,
-      finalRate: exchangeRate
+    const exchangeRate = countrySettings.rate_from_usd;
+    console.log(`[FETCH MIN VAL] Exchange rate from country_settings:`, {
+      rate_from_usd: countrySettings.rate_from_usd,
+      currency: countrySettings.currency,
+      country_name: countrySettings.name
     });
 
     if (!exchangeRate || exchangeRate <= 0) {
       console.error(`[FETCH MIN VAL] Invalid exchange rate for ${originCountry}:`, exchangeRate);
-      console.error(`[FETCH MIN VAL] Available currency object:`, {
-        currency: originCurrency.currency,
-        code: originCurrency.code,
-        name: originCurrency.name,
-        symbol: originCurrency.symbol
-      });
+      console.error(`[FETCH MIN VAL] Full country settings:`, countrySettings);
       return {
         amount: hsnData.minimum_valuation_usd,
-        currency: originCurrency.currency || originCurrency.code || 'USD',
+        currency: countrySettings.currency || 'USD',
         usdAmount: hsnData.minimum_valuation_usd
       };
     }
 
     const convertedAmount = hsnData.minimum_valuation_usd * exchangeRate;
 
-    console.log(`[FETCH MIN VAL] ✅ HSN ${item.hsn_code}: $${hsnData.minimum_valuation_usd} USD → ${convertedAmount.toFixed(2)} ${originCurrency.currency}`);
+    console.log(`[FETCH MIN VAL] ✅ HSN ${item.hsn_code}: $${hsnData.minimum_valuation_usd} USD → ${convertedAmount.toFixed(2)} ${countrySettings.currency} (rate: ${exchangeRate})`);
 
     return {
       amount: convertedAmount,
-      currency: originCurrency.currency || originCurrency.code || 'USD',
+      currency: countrySettings.currency || 'USD',
       usdAmount: hsnData.minimum_valuation_usd
     };
 

@@ -188,6 +188,54 @@ class CurrencyService {
   }
 
   /**
+   * Get full country settings including currency and exchange rate data
+   * This is the function needed for proper currency conversion
+   */
+  async getCountrySettings(countryCode: string): Promise<CountrySettings | null> {
+    console.log(`[CURRENCY SERVICE] Getting country settings for: ${countryCode}`);
+    
+    try {
+      const { data, error } = await supabase
+        .from('country_settings')
+        .select('code, name, currency, rate_from_usd, minimum_payment_amount, decimal_places, thousand_separator, decimal_separator, symbol_position, symbol_space')
+        .eq('code', countryCode)
+        .single();
+
+      if (error) {
+        console.error(`[CURRENCY SERVICE] Error fetching country settings for ${countryCode}:`, error);
+        return null;
+      }
+
+      if (!data) {
+        console.warn(`[CURRENCY SERVICE] No country settings found for ${countryCode}`);
+        return null;
+      }
+
+      console.log(`[CURRENCY SERVICE] ✅ Found settings for ${countryCode}:`, {
+        currency: data.currency,
+        rate_from_usd: data.rate_from_usd,
+        name: data.name
+      });
+
+      return {
+        code: data.code,
+        name: data.name,
+        currency: data.currency,
+        rate_from_usd: data.rate_from_usd,
+        minimum_payment_amount: data.minimum_payment_amount,
+        decimal_places: data.decimal_places,
+        thousand_separator: data.thousand_separator,
+        decimal_separator: data.decimal_separator,
+        symbol_position: data.symbol_position,
+        symbol_space: data.symbol_space,
+      };
+    } catch (error) {
+      console.error(`[CURRENCY SERVICE] Exception getting country settings for ${countryCode}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Get all currencies available for a specific country
    * (For now, returns all currencies but highlights the country's default)
    */
@@ -707,6 +755,8 @@ export const getCurrencyForCountry = (countryCode: string) =>
   currencyService.getCurrencyForCountry(countryCode);
 export const getCurrencyForCountrySync = (countryCode: string) =>
   currencyService.getCurrencyForCountrySync(countryCode);
+export const getCountrySettings = (countryCode: string) =>
+  currencyService.getCountrySettings(countryCode);
 export const getAvailableCurrenciesForCountry = (countryCode: string) =>
   currencyService.getAvailableCurrenciesForCountry(countryCode);
 export const isValidCurrency = (currencyCode: string) =>
