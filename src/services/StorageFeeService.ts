@@ -143,11 +143,11 @@ class StorageFeeService {
       }
 
       // Convert to display currency
-      const totalUnpaidDisplay = await this.currencyService.formatAmount(
+      const totalUnpaidDisplay = await currencyService.formatAmount(
         totalUnpaidFeesUsd, 
         currency.currency
       );
-      const upcomingFeesDisplay = await this.currencyService.formatAmount(
+      const upcomingFeesDisplay = await currencyService.formatAmount(
         upcomingFees7DaysUsd, 
         currency.currency
       );
