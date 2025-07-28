@@ -39,6 +39,7 @@ import {
   type IntegratedPackageData,
 } from '@/services/IntegratedPackageForwardingService';
 import {
+  packageForwardingService,
   type CustomerAddress,
   type ConsolidationGroup,
   type ConsolidationOption,
