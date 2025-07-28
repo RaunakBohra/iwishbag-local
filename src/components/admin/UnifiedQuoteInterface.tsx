@@ -349,8 +349,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         // Populate form with quote data
         populateFormFromQuote(quoteData);
 
-        // Calculate smart features
-        await calculateSmartFeatures(quoteData);
+        // Don't calculate automatically on load - user will press Enter
+        // await calculateSmartFeatures(quoteData);
 
         break;
       } catch (error) {
@@ -1170,7 +1170,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
     batchMultipleUpdates,
   ]);
 
-  // Optimized calculation scheduling - prevents layout shifts
+  // Disabled automatic calculation scheduling - user will press Enter
+  /* 
   useEffect(() => {
     if (isEditMode && quote) {
       const formValues = form.getValues();
@@ -1184,6 +1185,7 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       scheduleCalculation('shipping-recalculation', () => recalculateShipping(), dependencies);
     }
   }, [isEditMode, scheduleCalculation, recalculateShipping, quote]);
+  */
   const [liveQuote, setLiveQuote] = useState<UnifiedQuote | null>(null);
 
   // 🆕 NEW: Watch for HSN code changes and auto-prefill if method is hsn
@@ -1711,23 +1713,9 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         },
       };
 
-      // Use SmartCalculationEngine sync mode for instant live updates
-      const calculationResult = smartCalculationEngine.calculateLiveSync({
-        quote: updatedQuote,
-        preferences: {
-          speed_priority: 'medium',
-          cost_priority: 'medium',
-          show_all_options: false, // Simplified for live editing
-        },
-      });
-
-      if (calculationResult.success) {
-        if (import.meta.env.DEV) {
-        }
-        return calculationResult.updated_quote;
-      } else {
-        return quote;
-      }
+      // Don't calculate automatically - user will press Enter
+      // Return the updated quote without calculations
+      return updatedQuote;
     } catch (error) {
       return quote;
     }
@@ -1739,25 +1727,8 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
       // Edit mode: Use real-time calculated quote
       setLiveQuote(createLiveQuote);
     } else if (quote) {
-      // View mode: Recalculate using SmartCalculationEngine for consistency
-      try {
-        const calculationResult = smartCalculationEngine.calculateLiveSync({
-          quote,
-          preferences: {
-            speed_priority: 'medium',
-            cost_priority: 'medium',
-            show_all_options: false,
-          },
-        });
-
-        if (calculationResult.success) {
-          setLiveQuote(calculationResult.updated_quote);
-        } else {
-          setLiveQuote(quote); // Fallback to original
-        }
-      } catch (error) {
-        setLiveQuote(quote); // Fallback to original
-      }
+      // View mode: Don't recalculate automatically - use stored values
+      setLiveQuote(quote);
     } else {
       setLiveQuote(quote);
     }
