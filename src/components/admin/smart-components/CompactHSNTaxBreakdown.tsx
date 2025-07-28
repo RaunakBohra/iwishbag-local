@@ -65,6 +65,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
   const [taxBreakdowns, setTaxBreakdowns] = useState<ItemTaxBreakdown[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasCalculated, setHasCalculated] = useState(false);
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -142,7 +143,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       const breakdowns = await taxCalculator.calculateMultipleItemTaxes(calculatorItems, context);
       return breakdowns;
     },
-    enabled: !!quote?.id && !!quote?.items?.length,
+    enabled: false, // Disable automatic query - will be triggered manually
     staleTime: 30000, // 30 second stale time
     refetchOnWindowFocus: false,
     retry: 2,
@@ -166,6 +167,20 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
       setError(null);
     }
   }, [hsnTaxQuery.data, hsnTaxQuery.error, hsnTaxQuery.isLoading]);
+
+  // Manual calculation trigger
+  const triggerCalculation = async () => {
+    console.log('[HSN TAX BREAKDOWN] Manual calculation triggered');
+    setIsLoading(true);
+    setError(null);
+    try {
+      await hsnTaxQuery.refetch();
+      setHasCalculated(true);
+    } catch (err) {
+      console.error('[HSN TAX BREAKDOWN] Calculation error:', err);
+      setError('Failed to calculate taxes');
+    }
+  };
 
   // Calculate summary metrics following Stripe/Shopify patterns
   const summary = React.useMemo(() => {
@@ -260,7 +275,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
             size="sm"
             onClick={() => {
               setError(null);
-              if (onRecalculate) onRecalculate();
+              triggerCalculation();
             }}
             className="mt-2 text-xs"
           >
@@ -306,6 +321,25 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
         </CardHeader>
 
         <CardContent className="pt-0">
+          {/* Show calculate button if not calculated yet */}
+          {!hasCalculated && !isLoading && !error ? (
+            <div className="space-y-3">
+              <div className="text-center p-4 border-2 border-dashed border-gray-300 rounded-lg">
+                <p className="text-sm text-gray-600 mb-3">
+                  Tax calculations will be performed when you press Enter or click Calculate
+                </p>
+                <Button
+                  onClick={triggerCalculation}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Calculator className="w-4 h-4 mr-2" />
+                  Calculate Taxes
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* Main Summary - Always Visible (Stripe/Shopify Pattern) */}
           {summary.itemsWithHSN === 0 ? (
             <div className="flex items-center space-x-2 text-amber-600">
@@ -564,7 +598,7 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  if (onRecalculate) onRecalculate();
+                  triggerCalculation();
                 }}
                 disabled={isLoading || isCalculating}
                 className="text-xs"
@@ -576,6 +610,8 @@ export const CompactHSNTaxBreakdown: React.FC<CompactHSNTaxBreakdownProps> = ({
                 Last updated: {new Date().toLocaleTimeString()}
               </div>
             </div>
+          )}
+          </>
           )}
         </CardContent>
       </Card>

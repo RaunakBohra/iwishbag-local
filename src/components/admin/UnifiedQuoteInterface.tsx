@@ -2408,13 +2408,19 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
                 <form
                   onSubmit={form.handleSubmit(onFormSubmit)}
                   onKeyDown={(e) => {
-                    // Prevent Enter key from submitting form unless it's in a textarea
+                    // Trigger calculation on Enter key (except in textarea)
                     if (
                       e.key === 'Enter' &&
                       e.target instanceof HTMLElement &&
                       e.target.tagName !== 'TEXTAREA'
                     ) {
                       e.preventDefault();
+                      console.log('[UNIFIED QUOTE] Enter key pressed - triggering calculation');
+                      calculateSmartFeatures(liveQuote || quote);
+                      toast({
+                        title: 'Calculating...',
+                        description: 'Tax calculations in progress',
+                      });
                     }
                   }}
                   className="space-y-6"
