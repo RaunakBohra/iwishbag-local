@@ -437,6 +437,14 @@ const router = createBrowserRouter([
         element: <QuoteDetailUnified isShareToken={true} />,
       },
       {
+        path: 'quotes/:id',
+        element: (
+          <ProtectedRoute>
+            <CustomerQuoteDetail />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'guest-checkout',
         element: (
           <ErrorBoundary fallback={PaymentErrorFallback}>
