@@ -145,13 +145,26 @@ export function getValuationComparison(quote: UnifiedQuote | null, item: QuoteIt
 }
 
 /**
- * Format currency amount for display
+ * Format currency amount for display with proper currency symbol
  */
 export function formatValuationAmount(amount: number, currency: string = 'USD'): string {
-  if (amount === 0) return '$0';
+  if (amount === 0) return '0';
   
-  // For now, always show as $ since we're displaying converted amounts
-  return `$${amount.toFixed(0)}`;
+  // Map common currencies to their symbols
+  const currencySymbols: Record<string, string> = {
+    'USD': '$',
+    'NPR': 'Rs.',
+    'INR': '₹',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'CNY': '¥',
+    'CAD': 'C$',
+    'AUD': 'A$',
+  };
+  
+  const symbol = currencySymbols[currency] || currency;
+  return `${symbol}${amount.toFixed(0)}`;
 }
 
 /**
@@ -190,6 +203,7 @@ export async function fetchItemMinimumValuation(
     const originCurrency = await currencyService.getCurrencyForCountry(originCountry);
     
     console.log(`[FETCH MIN VAL] Currency lookup result:`, originCurrency);
+    console.log(`[FETCH MIN VAL] Available currency fields:`, Object.keys(originCurrency || {}));
     
     if (!originCurrency) {
       console.error(`[FETCH MIN VAL] No currency data for ${originCountry}`);
@@ -210,9 +224,15 @@ export async function fetchItemMinimumValuation(
 
     if (!exchangeRate || exchangeRate <= 0) {
       console.error(`[FETCH MIN VAL] Invalid exchange rate for ${originCountry}:`, exchangeRate);
+      console.error(`[FETCH MIN VAL] Available currency object:`, {
+        currency: originCurrency.currency,
+        code: originCurrency.code,
+        name: originCurrency.name,
+        symbol: originCurrency.symbol
+      });
       return {
         amount: hsnData.minimum_valuation_usd,
-        currency: originCurrency.currency || 'USD',
+        currency: originCurrency.currency || originCurrency.code || 'USD',
         usdAmount: hsnData.minimum_valuation_usd
       };
     }
