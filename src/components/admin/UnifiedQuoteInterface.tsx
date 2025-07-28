@@ -385,6 +385,12 @@ export const UnifiedQuoteInterface: React.FC<UnifiedQuoteInterfaceProps> = ({ in
         `[CALCULATION DEBUG] Starting calculation with method: ${quoteData.calculation_method_preference}`,
       );
 
+      console.log('[VALUATION DEBUG] Quote data before calculation:', {
+        quote_id: quoteData.id,
+        valuation_method_preference: quoteData.valuation_method_preference,
+        calculation_method_preference: quoteData.calculation_method_preference,
+      });
+
       const result = await smartCalculationEngine.calculateWithShippingOptions({
         quote: quoteData,
         preferences: {

@@ -466,7 +466,9 @@ export class SmartCalculationEngine {
 
       console.log(`[HSN TAX CALCULATION DEBUG] Calculation context prepared:`, {
         input_tax_prefs: input?.tax_calculation_preferences?.calculation_method_preference,
+        input_valuation_prefs: input?.tax_calculation_preferences?.valuation_method_preference,
         quote_method: quote.calculation_method_preference,
+        quote_valuation_method: quote.valuation_method_preference,
         effective_method: effectiveTaxMethod?.calculation_method,
         final_calculation_method: context.calculation_method_preference,
         final_valuation_method: context.valuation_method_preference,

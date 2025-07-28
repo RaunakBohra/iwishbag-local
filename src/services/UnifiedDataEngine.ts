@@ -423,6 +423,10 @@ export class UnifiedDataEngine {
         dbUpdates.weight_confidence = updates.weight_confidence;
       if (updates.optimization_score !== undefined)
         dbUpdates.optimization_score = updates.optimization_score;
+      if (updates.valuation_method_preference)
+        dbUpdates.valuation_method_preference = updates.valuation_method_preference;
+      if (updates.calculation_method_preference)
+        dbUpdates.calculation_method_preference = updates.calculation_method_preference;
 
       const { error } = await supabase.from('quotes').update(dbUpdates).eq('id', id);
 
