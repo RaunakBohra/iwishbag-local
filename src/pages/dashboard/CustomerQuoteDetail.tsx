@@ -33,6 +33,7 @@ import {
   Info,
   Shield,
   Sparkles,
+  Truck,
 } from 'lucide-react';
 
 // Customer Components
@@ -42,8 +43,8 @@ import { QuoteActivityTimeline } from '@/components/customer/QuoteActivityTimeli
 import { EnhancedSmartTaxBreakdown } from '@/components/admin/tax/EnhancedSmartTaxBreakdown';
 import { DiscountDisplay } from '@/components/dashboard/DiscountDisplay';
 import { MembershipDashboard } from '@/components/dashboard/MembershipDashboard';
-import { useQuoteState } from '@/hooks/useQuoteState';
 import { MembershipService } from '@/services/MembershipService';
+import { useCartStore } from '@/stores/cartStore';
 
 type Quote = Tables<'quotes'>;
 
@@ -63,8 +64,8 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
   const [hasMembership, setHasMembership] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   
-  // Initialize quote state hook for cart functionality
-  const quoteStateHook = useQuoteState(id || '');
+  // Cart store for add to cart functionality
+  const addToCart = useCartStore((state) => state.addItem);
 
   // Fetch quote data with related information
   const {
@@ -385,15 +386,33 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
 
   // Handlers
   const handleAddToCart = async () => {
+    if (!transformedQuote) return;
+    
     try {
       setIsAddingToCart(true);
-      await quoteStateHook.addToCart();
+      
+      // Add to cart using the store
+      await addToCart({
+        quoteId: transformedQuote.id,
+        productName: transformedQuote.items[0]?.product_name || 'Quote',
+        total: transformedQuote.total,
+        currency: transformedQuote.currency,
+        status: transformedQuote.status,
+      });
+      
+      // Update quote in_cart flag in database
+      await supabase
+        .from('quotes')
+        .update({ in_cart: true })
+        .eq('id', id);
+      
       toast({
         title: 'Added to Cart',
         description: 'Quote has been added to your cart.',
       });
       navigate('/cart');
     } catch (error) {
+      console.error('Error adding to cart:', error);
       toast({
         title: 'Error',
         description: 'Failed to add quote to cart. Please try again.',
