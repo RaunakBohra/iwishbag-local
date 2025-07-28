@@ -30,7 +30,8 @@ import {
   Star,
   Settings,
   Bell,
-  Calculator
+  Calculator,
+  Crown
 } from 'lucide-react';
 
 import { unifiedUserContextService, type UnifiedUserProfile } from '@/services/UnifiedUserContextService';
@@ -38,6 +39,7 @@ import { masterServiceOrchestrator } from '@/services/MasterServiceOrchestrator'
 import { currencyService } from '@/services/CurrencyService';
 import { ShippingCalculator } from '@/components/dashboard/ShippingCalculator';
 import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
+import { MembershipDashboard } from '@/components/dashboard/MembershipDashboard';
 
 // ============================================================================
 // UNIFIED DASHBOARD COMPONENT
@@ -224,11 +226,15 @@ export default function UnifiedCustomerDashboard() {
       {/* Main Content Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <div className="flex items-center justify-between">
-          <TabsList className="grid w-full max-w-md grid-cols-5">
+          <TabsList className="grid w-full max-w-lg grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="quotes">Quotes</TabsTrigger>
             <TabsTrigger value="packages">Packages</TabsTrigger>
             <TabsTrigger value="calculator">Calculator</TabsTrigger>
+            <TabsTrigger value="membership" className="flex items-center gap-1">
+              <Crown className="h-3 w-3" />
+              Plus
+            </TabsTrigger>
             <TabsTrigger value="support">Support</TabsTrigger>
           </TabsList>
 
@@ -285,6 +291,11 @@ export default function UnifiedCustomerDashboard() {
               console.log('Quote created for shipping option:', option);
             }}
           />
+        </TabsContent>
+
+        {/* Membership Tab */}
+        <TabsContent value="membership" className="space-y-4">
+          <MembershipDashboard />
         </TabsContent>
 
         {/* Support Tab */}

@@ -1,282 +1,538 @@
-import { H1, H2, H3, Body, BodyLarge } from '@/components/ui/typography';
-import { AlertCircle } from 'lucide-react';
+/**
+ * Dynamic Returns Page
+ * 
+ * Integrates the ReturnRequestForm with existing return policy information.
+ * Provides both policy information and functional return request capability.
+ */
 
-const Returns = () => {
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertCircle,
+  RefreshCw,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ArrowLeft,
+  Lightbulb,
+  Package,
+  DollarSign,
+  Truck,
+  Search,
+} from 'lucide-react';
+import ReturnRequestForm from '@/components/returns/ReturnRequestForm';
+import PackageReturnForm from '@/components/returns/PackageReturnForm';
+import ReturnStatusTracker from '@/components/returns/ReturnStatusTracker';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/use-toast';
+
+const Returns: React.FC = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'policy' | 'refund' | 'return' | 'track'>('policy');
+  const [showRefundForm, setShowRefundForm] = useState(false);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
+  const [submittedRmaNumber, setSubmittedRmaNumber] = useState<string | null>(null);
+
+  const handleRefundSuccess = (refundRequestId: string) => {
+    setSubmittedRequestId(refundRequestId);
+    setShowRefundForm(false);
+    toast({
+      title: 'Refund Request Submitted',
+      description: 'Your refund request has been submitted and is being reviewed.',
+    });
+  };
+
+  const handleReturnSuccess = (rmaNumber: string) => {
+    setSubmittedRmaNumber(rmaNumber);
+    setShowReturnForm(false);
+    toast({
+      title: 'Return Request Submitted',
+      description: `Your return request ${rmaNumber} has been created.`,
+    });
+  };
+
+  const handleStartRefund = () => {
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in to submit a refund request.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setActiveTab('refund');
+    setShowRefundForm(true);
+  };
+
+  const handleStartReturn = () => {
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in to submit a return request.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setActiveTab('return');
+    setShowReturnForm(true);
+  };
+
+  if (showRefundForm) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              onClick={() => setShowRefundForm(false)}
+              className="mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Returns
+            </Button>
+          </div>
+          
+          <ReturnRequestForm
+            onSuccess={handleRefundSuccess}
+            onCancel={() => setShowRefundForm(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (showReturnForm) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              onClick={() => setShowReturnForm(false)}
+              className="mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Returns
+            </Button>
+          </div>
+          
+          <PackageReturnForm
+            onSuccess={handleReturnSuccess}
+            onCancel={() => setShowReturnForm(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (submittedRequestId || submittedRmaNumber) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-16">
+        <div className="max-w-4xl mx-auto px-6">
+          <Card>
+            <CardContent className="text-center py-12">
+              <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
+              <h1 className="text-2xl font-bold mb-4">
+                {submittedRequestId ? 'Refund Request Submitted' : 'Return Request Created'}
+              </h1>
+              <p className="text-muted-foreground mb-6">
+                {submittedRequestId 
+                  ? 'Your refund request has been submitted successfully. We\'ll review it and get back to you within 2-3 business days.'
+                  : `Your return request ${submittedRmaNumber} has been created. You'll receive return instructions via email within 2-3 business days.`
+                }
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button onClick={() => {
+                  setSubmittedRequestId(null);
+                  setSubmittedRmaNumber(null);
+                }}>
+                  Submit Another Request
+                </Button>
+                <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
+                  Go to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <section className="py-16 bg-white border-b border-gray-100">
+      <section className="py-16 bg-gradient-to-br from-blue-50 to-indigo-100 border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center">
-            <h1 className="text-4xl font-semibold text-gray-900 mb-4">Returns and Refunds</h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              We want you to be completely satisfied with your purchase. Here's our returns policy.
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Returns & Refunds</h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+              We want you to be completely satisfied with your purchase. Review our policy and submit return requests easily.
             </p>
+            
+            {user ? (
+              <div className="flex gap-4">
+                <Button 
+                  size="lg" 
+                  onClick={handleStartRefund}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Request Refund
+                </Button>
+                <Button 
+                  size="lg" 
+                  onClick={handleStartReturn}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Package className="h-5 w-5 mr-2" />
+                  Return Packages
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Button 
+                  size="lg" 
+                  onClick={() => window.location.href = '/auth/login'}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Login to Submit Return
+                </Button>
+                <p className="text-sm text-gray-500">
+                  Need to create an account? <a href="/auth/signup" className="text-blue-600 hover:underline">Sign up here</a>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Quick Overview */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">30-Day Window</h3>
-              <p className="text-gray-600">Return items within 30 days of delivery</p>
-            </div>
-
-            <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Original Condition</h3>
-              <p className="text-gray-600">Items must be unused and in original packaging</p>
-            </div>
-
-            <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Easy Process</h3>
-              <p className="text-gray-600">Simple online return request system</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Content */}
+      {/* Main Content */}
       <section className="py-16">
         <div className="max-w-4xl mx-auto px-6">
-          <div className="prose prose-gray max-w-none">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
-              Return Policy Overview
-            </h2>
-            <p className="text-gray-600 mb-12 leading-relaxed">
-              We offer a 30-day return policy for most items. Due to the international nature of our
-              service, please review our policy carefully before making a purchase.
-            </p>
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'policy' | 'refund' | 'return' | 'track')}>
+            <TabsList className="grid w-full grid-cols-4 mb-8">
+              <TabsTrigger value="policy" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Return Policy
+              </TabsTrigger>
+              <TabsTrigger value="refund" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Request Refund
+              </TabsTrigger>
+              <TabsTrigger value="return" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Return Packages
+              </TabsTrigger>
+              <TabsTrigger value="track" className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Track Status
+              </TabsTrigger>
+            </TabsList>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Eligible Returns</h2>
-            <div className="bg-green-50 border border-green-200 p-6 rounded-lg mb-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Items We Can Accept</h3>
-              <ul className="space-y-3">
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Unopened items in original packaging
-                  </p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Defective or damaged items upon arrival
-                  </p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Items not matching product description
-                  </p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">Clothing with tags still attached</p>
-                </li>
-              </ul>
-            </div>
+            <TabsContent value="policy" className="space-y-8">
+              {/* Quick Overview */}
+              <div className="grid md:grid-cols-3 gap-6">
+                <Card>
+                  <CardContent className="text-center p-6">
+                    <Clock className="h-8 w-8 text-blue-600 mx-auto mb-3" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">30-Day Window</h3>
+                    <p className="text-gray-600">Return items within 30 days of delivery</p>
+                  </CardContent>
+                </Card>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
-              Non-Returnable Items
-            </h2>
-            <div className="bg-red-50 border border-red-200 p-6 rounded-lg mb-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Items We Cannot Accept</h3>
-              <ul className="space-y-3">
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Perishable goods (food, flowers, etc.)
-                  </p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Personal care items (cosmetics, underwear)
-                  </p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">Custom or personalized items</p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">
-                    Items damaged by normal wear and tear
-                  </p>
-                </li>
-                <li className="flex items-start">
-                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  <p className="text-gray-700 leading-relaxed">Items returned after 30 days</p>
-                </li>
-              </ul>
-            </div>
+                <Card>
+                  <CardContent className="text-center p-6">
+                    <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-3" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Original Condition</h3>
+                    <p className="text-gray-600">Items must be unused and in original packaging</p>
+                  </CardContent>
+                </Card>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
-              How to Return an Item
-            </h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              Our return process is designed to be as simple as possible. Follow these steps:
-            </p>
-
-            <div className="space-y-6 mb-12">
-              <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold">1</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Contact Us</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Email us at returns@iwishbag.com with your order number and reason for return.
-                    We'll respond within 24 hours.
-                  </p>
-                </div>
+                <Card>
+                  <CardContent className="text-center p-6">
+                    <Lightbulb className="h-8 w-8 text-yellow-600 mx-auto mb-3" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Easy Process</h3>
+                    <p className="text-gray-600">Simple online return request system</p>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold">2</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Get Return Authorization
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    We'll review your request and provide a return authorization number and prepaid
-                    shipping label if approved.
-                  </p>
-                </div>
-              </div>
+              {/* Eligible Returns */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Items We Can Accept
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">✓</Badge>
+                        <span>Unopened items in original packaging</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">✓</Badge>
+                        <span>Defective or damaged items upon arrival</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">✓</Badge>
+                        <span>Items not matching description</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">✓</Badge>
+                        <span>Clothing with tags still attached</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold">3</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Package and Ship</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Securely package the item(s) with all original accessories and documentation.
-                    Attach the prepaid label and drop off at any authorized location.
-                  </p>
-                </div>
-              </div>
+              {/* Non-Returnable Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <XCircle className="h-5 w-5 text-red-600" />
+                    Items We Cannot Accept
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-red-100 text-red-800">✗</Badge>
+                        <span>Perishable goods (food, flowers, etc.)</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-red-100 text-red-800">✗</Badge>
+                        <span>Personal care items (cosmetics, underwear)</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-red-100 text-red-800">✗</Badge>
+                        <span>Custom or personalized items</span>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-red-100 text-red-800">✗</Badge>
+                        <span>Items damaged by normal wear</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="bg-red-100 text-red-800">✗</Badge>
+                        <span>Items returned after 30 days</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="flex items-start space-x-4 p-6 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold">4</span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Receive Refund</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    Once we receive and inspect your return, we'll process your refund within 5-10
-                    business days to your original payment method.
-                  </p>
-                </div>
-              </div>
-            </div>
+              {/* Return Process */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>How to Return an Item</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-sm">1</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-1">Submit Request Online</h3>
+                        <p className="text-gray-600 text-sm">
+                          Use our online form to submit your return request with order details and reason.
+                        </p>
+                      </div>
+                    </div>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Refund Information</h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              Refunds will be processed to your original payment method once we receive and inspect
-              the returned items.
-            </p>
+                    <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-sm">2</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-1">Get Authorization</h3>
+                        <p className="text-gray-600 text-sm">
+                          We'll review your request and provide return authorization and shipping instructions.
+                        </p>
+                      </div>
+                    </div>
 
-            <div className="bg-gray-50 p-6 rounded-lg mb-12">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">What Gets Refunded</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Item Purchase Price</span>
-                  <span className="text-green-600 font-medium">✓ Full Refund</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">iwishBag Service Fee</span>
-                  <span className="text-green-600 font-medium">✓ Full Refund</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">International Shipping</span>
-                  <span className="text-red-600 font-medium">✗ Non-Refundable</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Customs Duties/Taxes</span>
-                  <span className="text-red-600 font-medium">✗ Non-Refundable</span>
-                </div>
-              </div>
-            </div>
+                    <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-sm">3</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-1">Ship the Item</h3>
+                        <p className="text-gray-600 text-sm">
+                          Package securely and ship using provided instructions and tracking.
+                        </p>
+                      </div>
+                    </div>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Exchanges</h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              We don't offer direct exchanges due to the international nature of our service. For
-              size or color changes, please return the item and place a new order.
-            </p>
+                    <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-semibold text-sm">4</span>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900 mb-1">Receive Refund</h3>
+                        <p className="text-gray-600 text-sm">
+                          Once received and inspected, we'll process your refund within 5-10 business days.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg mb-12">
-              <div className="flex items-start">
-                <AlertCircle className="w-5 h-5 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Important Notes</h3>
-                  <ul className="space-y-3">
-                    <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <p className="text-gray-700 leading-relaxed">
-                        Return shipping costs are the customer's responsibility unless the item was
-                        defective or incorrectly described
-                      </p>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <p className="text-gray-700 leading-relaxed">
-                        International return shipping can be expensive - consider this when placing
-                        orders
-                      </p>
-                    </li>
-                    <li className="flex items-start">
-                      <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                      <p className="text-gray-700 leading-relaxed">
-                        Items damaged during return shipping may not be eligible for refund
-                      </p>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+              {/* Important Notes */}
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Important:</strong> Return shipping costs are the customer's responsibility unless the item was defective or incorrectly described. International return shipping can be expensive - please consider this when placing orders.
+                </AlertDescription>
+              </Alert>
 
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">
-              Damaged or Defective Items
-            </h2>
-            <p className="text-gray-600 mb-12 leading-relaxed">
-              If you receive a damaged or defective item, please contact us immediately with photos
-              of the damage. We'll arrange for a replacement or full refund at no cost to you.
-            </p>
-
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Warranty Claims</h2>
-            <p className="text-gray-600 mb-12 leading-relaxed">
-              For items still under manufacturer warranty, we can help facilitate warranty claims
-              with the original manufacturer. Contact us for assistance.
-            </p>
-
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Questions?</h2>
-            <p className="text-gray-600 mb-8 leading-relaxed">
-              If you have any questions about our returns policy or need help with a return, please
-              don't hesitate to contact us.
-            </p>
-
-            <div className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
-              <div className="space-y-2">
-                <p className="text-gray-700">
-                  <strong>Email:</strong> returns@iwishbag.com
+              {/* CTA */}
+              <div className="text-center py-8">
+                <h3 className="text-xl font-semibold mb-4">Need to Make a Return?</h3>
+                <p className="text-gray-600 mb-6">
+                  Choose the right option for your situation.
                 </p>
-                <p className="text-gray-700">
-                  <strong>Phone:</strong> +1 (555) 123-4567
-                </p>
-                <p className="text-gray-700">
-                  <strong>Hours:</strong> Monday-Friday, 9AM-6PM EST
-                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button 
+                    size="lg" 
+                    onClick={handleStartRefund}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    Request Refund
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    onClick={handleStartReturn}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Package className="h-5 w-5 mr-2" />
+                    Return Packages
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="refund">
+              {user ? (
+                <div className="space-y-6">
+                  <Alert>
+                    <Lightbulb className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Refund Request:</strong> Use this if you want your money back for a paid order. You don't need to return physical packages for most refunds.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="text-center py-8">
+                    <h3 className="text-xl font-semibold mb-4">Request Money Back</h3>
+                    <p className="text-gray-600 mb-6">
+                      Submit a refund request for orders you've already paid for.
+                    </p>
+                    <Button 
+                      size="lg" 
+                      onClick={() => setShowRefundForm(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <DollarSign className="h-5 w-5 mr-2" />
+                      Open Refund Form
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-amber-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Login Required</h3>
+                    <p className="text-gray-600 mb-6">
+                      You need to be logged in to submit a refund request.
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                      <Button onClick={() => window.location.href = '/auth/login'}>
+                        Login
+                      </Button>
+                      <Button variant="outline" onClick={() => window.location.href = '/auth/signup'}>
+                        Sign Up
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="return">
+              {user ? (
+                <div className="space-y-6">
+                  <Alert>
+                    <Lightbulb className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Package Return:</strong> Use this if you need to physically send packages back to our warehouse (defective items, wrong items, etc.).
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="text-center py-8">
+                    <h3 className="text-xl font-semibold mb-4">Return Physical Packages</h3>
+                    <p className="text-gray-600 mb-6">
+                      Create a return request for packages you need to send back to us.
+                    </p>
+                    <Button 
+                      size="lg" 
+                      onClick={() => setShowReturnForm(true)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Package className="h-5 w-5 mr-2" />
+                      Open Package Return Form
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-amber-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Login Required</h3>
+                    <p className="text-gray-600 mb-6">
+                      You need to be logged in to submit a package return request.
+                    </p>
+                    <div className="flex gap-4 justify-center">
+                      <Button onClick={() => window.location.href = '/auth/login'}>
+                        Login
+                      </Button>
+                      <Button variant="outline" onClick={() => window.location.href = '/auth/signup'}>
+                        Sign Up
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="track">
+              <ReturnStatusTracker 
+                onContactSupport={(returnId, type) => {
+                  // Handle contact support - could integrate with support system
+                  toast({
+                    title: 'Contact Support',
+                    description: `Please contact support regarding your ${type} request: ${returnId}`,
+                  });
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
     </div>

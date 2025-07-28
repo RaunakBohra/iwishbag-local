@@ -27,6 +27,8 @@ import { vatService } from '@/services/VATService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { hsnTaxService } from '@/services/HSNTaxService';
 import { routeTierTaxService } from '@/services/RouteTierTaxService';
+import { DiscountService } from '@/services/DiscountService';
+import { MembershipService } from '@/services/MembershipService';
 import type {
   UnifiedQuote,
   ShippingOption,
@@ -1377,8 +1379,9 @@ export class SmartCalculationEngine {
       quote.operational_data?.payment_gateway_fee ||
       (subtotal * 0.029 + 0.3);
 
-    // Get discount amount and subtract it from final total
+    // ✅ ENHANCED: Get discount amount (sync version uses cached/existing discount)
     const discount = quote.calculation_data?.discount || 0;
+    const discountBreakdown = quote.calculation_data?.discount_breakdown || [];
     const finalTotal = subtotal + paymentGatewayFee - discount;
 
     // 🔍 [DEBUG] Log breakdown shipping assignment
@@ -1408,6 +1411,7 @@ export class SmartCalculationEngine {
           source: 'cached',
           confidence: 0.9,
         },
+        discount_breakdown: discountBreakdown.length > 0 ? discountBreakdown : undefined,
       },
       operational_data: {
         ...quote.operational_data,
@@ -1544,6 +1548,7 @@ export class SmartCalculationEngine {
     const customsAmount = cifValue * (customsPercentage / 100);
     const domesticShipping = quote.operational_data?.domestic_shipping || 0;
     const discount = quote.calculation_data?.discount || 0;
+    const discountBreakdown = quote.calculation_data?.discount_breakdown || [];
 
     // ✅ FIXED: Payment gateway fee uses ACTUAL product prices, not customs basis
     const paymentGatewayFee =
@@ -1594,6 +1599,7 @@ export class SmartCalculationEngine {
           rate: exchangeRate,
           source: 'direct',
         },
+        discount_breakdown: discountBreakdown.length > 0 ? discountBreakdown : undefined,
         // ✅ FIXED: Track valuation method and customs calculation basis separately
         valuation_applied: {
           method: valuationMethod,
@@ -2129,10 +2135,50 @@ export class SmartCalculationEngine {
       vatAmount = 0; // Deprecated - destination tax is calculated separately
     }
 
+    // ✅ ENHANCED: Calculate discounts using DiscountService
+    const customerId = quote.customer_id || quote.customer?.id;
+    let totalDiscountAmount = 0;
+    let discountBreakdown = [];
+    
+    if (customerId) {
+      // Calculate applicable discounts
+      const discountCalculation = await DiscountService.calculateDiscounts(
+        customerId,
+        actualItemCost + selectedShipping.cost_usd + insuranceAmount + customsAmount + 
+        handlingFee + localTaxesAmount + destinationTaxAmount, // Pre-discount subtotal
+        handlingFee, // Pass handling fee for smart discount application
+        quote.payment_method,
+        quote.destination_country,
+        quote.discount_codes // Array of discount codes if any
+      );
+      
+      totalDiscountAmount = discountCalculation.total_discount;
+      discountBreakdown = discountCalculation.discounts;
+      
+      console.log('[DISCOUNT CALCULATION]', {
+        customer_id: customerId,
+        subtotal: actualItemCost + selectedShipping.cost_usd + insuranceAmount + customsAmount + 
+                  handlingFee + localTaxesAmount + destinationTaxAmount,
+        handling_fee: handlingFee,
+        payment_method: quote.payment_method,
+        total_discount: totalDiscountAmount,
+        savings_percentage: discountCalculation.savings_percentage,
+        discounts_applied: discountBreakdown.map(d => ({
+          source: d.discount_source,
+          type: d.discount_type,
+          value: d.discount_value,
+          amount: d.discount_amount,
+          applies_to: d.applies_to
+        }))
+      });
+    } else {
+      // Use existing discount if no customer ID (legacy support)
+      totalDiscountAmount = quote.calculation_data?.discount || 0;
+    }
+    
     // ✅ FIXED: Calculate final total using corrected flow
-    const discount = quote.calculation_data?.discount || 0;
     const finalTotal = actualItemCost + selectedShipping.cost_usd + insuranceAmount + customsAmount + 
-                      handlingFee + localTaxesAmount + paymentGatewayFee + destinationTaxAmount - discount;
+                      handlingFee + localTaxesAmount + paymentGatewayFee + destinationTaxAmount - totalDiscountAmount;
     
     console.log(`[FINAL TOTAL CALCULATION] Complete breakdown:`, {
       actual_item_cost: actualItemCost,
@@ -2144,7 +2190,7 @@ export class SmartCalculationEngine {
       local_taxes: localTaxesAmount,
       payment_gateway_fee: paymentGatewayFee,
       destination_tax: destinationTaxAmount,
-      discount: discount,
+      discount: totalDiscountAmount,
       final_total: finalTotal
     });
 
@@ -2171,13 +2217,15 @@ export class SmartCalculationEngine {
         fees: paymentGatewayFee,
         handling: handlingFee,
         insurance: insuranceAmount,
-        discount: discount,
+        discount: totalDiscountAmount,
       },
       exchange_rate: {
         rate: exchangeRate,
         source: 'currency_service',
         confidence: 0.95,
       },
+      // ✅ NEW: Add discount breakdown details
+      discount_breakdown: discountBreakdown.length > 0 ? discountBreakdown : undefined,
       // Add tax calculation details with rates
       tax_calculation: {
         customs_percentage: customsPercentage,

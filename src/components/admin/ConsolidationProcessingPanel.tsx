@@ -40,6 +40,8 @@ import {
   Download,
   Plus,
   ArrowRight,
+  CreditCard,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +55,12 @@ interface ConsolidationWithDetails extends ConsolidationGroup {
     full_name?: string;
   };
   packages: ReceivedPackage[];
+  quote?: {
+    id: string;
+    status: string;
+    final_total_usd: number;
+    created_at: string;
+  };
 }
 
 interface ProcessingData {
@@ -116,13 +124,24 @@ export const ConsolidationProcessingPanel: React.FC = () => {
         profiles = profileData || [];
       }
 
-      // Fetch packages for each group
+      // Fetch packages for each group and quote information
       const groupsWithPackages = await Promise.all(
         (data || []).map(async (group) => {
           const { data: packages } = await supabase
             .from('received_packages')
             .select('*')
             .in('id', group.original_package_ids || []);
+
+          // Fetch associated quote if quote_id exists
+          let quote = null;
+          if (group.quote_id) {
+            const { data: quoteData } = await supabase
+              .from('quotes')
+              .select('id, status, final_total_usd, created_at')
+              .eq('id', group.quote_id)
+              .single();
+            quote = quoteData;
+          }
 
           const profile = profiles?.find(p => p.id === group.user_id);
 
@@ -134,6 +153,7 @@ export const ConsolidationProcessingPanel: React.FC = () => {
               full_name: profile?.full_name,
             },
             packages: packages || [],
+            quote,
           };
         })
       );
@@ -310,6 +330,22 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  const getPaymentStatusColor = (quoteStatus: string) => {
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      payment_pending: 'bg-yellow-100 text-yellow-800',
+      paid: 'bg-green-100 text-green-800',
+      approved: 'bg-blue-100 text-blue-800',
+      ordered: 'bg-indigo-100 text-indigo-800',
+      shipped: 'bg-purple-100 text-purple-800',
+      completed: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800',
+      cancelled: 'bg-gray-100 text-gray-800',
+      expired: 'bg-gray-100 text-gray-800',
+    };
+    return colors[quoteStatus] || 'bg-gray-100 text-gray-800';
+  };
+
   const calculateTotalValue = (packages: ReceivedPackage[]) => {
     return packages.reduce((sum, pkg) => sum + (pkg.declared_value_usd || 0), 0);
   };
@@ -386,9 +422,17 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
                           </span>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(group.status)}>
-                        {group.status}
-                      </Badge>
+                      <div className="flex gap-2">
+                        <Badge className={getStatusColor(group.status)}>
+                          {group.status}
+                        </Badge>
+                        {group.quote && (
+                          <Badge className={getPaymentStatusColor(group.quote.status)}>
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            {group.quote.status}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -422,8 +466,15 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <p className="text-sm font-medium">${group.consolidation_fee_usd}</p>
-                          <p className="text-xs text-muted-foreground">Consolidation fee</p>
+                          <p className="text-sm font-medium">
+                            {group.quote 
+                              ? `$${group.quote.final_total_usd?.toFixed(2) || '0.00'}` 
+                              : `$${group.consolidation_fee_usd}`
+                            }
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {group.quote ? 'Total quote' : 'Consolidation fee'}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -464,6 +515,28 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
                       </Alert>
                     )}
 
+                    {/* Payment Status Alert (if quote exists and not paid) */}
+                    {group.quote && group.quote.status !== 'paid' && (
+                      <Alert className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          <div className="flex items-center justify-between">
+                            <span>
+                              Payment required before processing. Status: <strong>{group.quote.status}</strong>
+                            </span>
+                            {group.quote && (
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={`/dashboard/quotes/${group.quote.id}`} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View Quote
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     {/* Actions */}
                     <div className="flex justify-end gap-2">
                       {group.status === 'pending' && (
@@ -480,6 +553,12 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
                               });
                               setShowProcessDialog(true);
                             }}
+                            disabled={group.quote && group.quote.status !== 'paid'}
+                            title={
+                              group.quote && group.quote.status !== 'paid' 
+                                ? 'Payment required before processing' 
+                                : undefined
+                            }
                           >
                             <Archive className="h-4 w-4 mr-2" />
                             Start Processing
@@ -507,6 +586,18 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
                             Generate Label
                           </Button>
                         </>
+                      )}
+                      {group.quote && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          asChild
+                        >
+                          <a href={`/dashboard/quotes/${group.quote.id}`} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            View Quote
+                          </a>
+                        </Button>
                       )}
                       <Button 
                         variant="outline" 
@@ -718,6 +809,37 @@ Generated: ${new Date(labelData.timestamp).toLocaleString()}
                       <Label className="text-sm font-medium">Consolidation Fee</Label>
                       <p className="text-sm">${selectedGroupForDetails.consolidation_fee_usd}</p>
                     </div>
+                    {selectedGroupForDetails.quote && (
+                      <>
+                        <div>
+                          <Label className="text-sm font-medium">Payment Status</Label>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getPaymentStatusColor(selectedGroupForDetails.quote.status)}>
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              {selectedGroupForDetails.quote.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Quote Total</Label>
+                          <p className="text-sm">${selectedGroupForDetails.quote.final_total_usd?.toFixed(2) || '0.00'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Quote Actions</Label>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            asChild
+                            className="mt-1"
+                          >
+                            <a href={`/dashboard/quotes/${selectedGroupForDetails.quote.id}`} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Open Quote Details
+                            </a>
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>

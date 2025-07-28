@@ -113,6 +113,8 @@ const UnifiedQuoteInterface = React.lazy(() => import('@/components/admin/Unifie
 //   })),
 // );
 const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement'));
+const MembershipManagementPage = React.lazy(() => import('@/pages/admin/MembershipManagement'));
+const DiscountManagementPage = React.lazy(() => import('@/pages/admin/DiscountManagement'));
 const WAFManagement = React.lazy(() => import('@/pages/admin/WAFManagement'));
 const RateLimitManagement = React.lazy(() => import('@/pages/admin/RateLimitManagement'));
 const BankAccountSettings = React.lazy(() =>
@@ -149,8 +151,11 @@ const ApiDocumentation = React.lazy(() => import('@/pages/admin/ApiDocumentation
 // Package Forwarding pages
 const PackageForwarding = React.lazy(() => import('@/pages/dashboard/PackageForwarding').then((m) => ({ default: m.PackageForwarding })));
 const WarehouseManagement = React.lazy(() => import('@/pages/admin/WarehouseManagement').then((m) => ({ default: m.WarehouseManagement })));
+const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement'));
 const WarehouseAnalytics = React.lazy(() => import('@/pages/admin/WarehouseAnalytics'));
 
+// Test pages
+const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDiscount'));
 
 // Demo pages for weight recommendation designs (chunked separately)
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex' /* webpackChunkName: "demo-index" */));
@@ -244,6 +249,8 @@ const router = createBrowserRouter([
           { path: 'ml/weight-estimator', element: <MLWeightEstimatorTester /> },
           { path: 'dev/hsn-test', element: <HSNTestPage /> },
           { path: 'blog', element: <BlogManagementPage /> },
+          { path: 'memberships', element: <MembershipManagementPage /> },
+          { path: 'discounts', element: <DiscountManagementPage /> },
           {
             path: 'audit-logs',
             element: (
@@ -297,6 +304,14 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <WarehouseAnalytics />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'returns',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <ReturnManagement />
               </ErrorBoundary>
             ),
           },
@@ -579,6 +594,10 @@ const router = createBrowserRouter([
           {
             path: 'esewa-test',
             element: <EsewaTest />,
+          },
+          {
+            path: 'test-membership-discount',
+            element: <TestMembershipDiscount />,
           },
         ],
       },

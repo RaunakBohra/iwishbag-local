@@ -26,6 +26,9 @@ import {
   Activity,
   Book,
   Warehouse,
+  RotateCcw,
+  Users,
+  Tag,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -107,6 +110,21 @@ const menuGroups = [
         title: 'Warehouse Management',
         url: '/admin/warehouse',
         icon: Warehouse,
+      },
+      {
+        title: 'Return Management',
+        url: '/admin/returns',
+        icon: RotateCcw,
+      },
+      {
+        title: 'Membership Management',
+        url: '/admin/memberships',
+        icon: Users,
+      },
+      {
+        title: 'Discount Management',
+        url: '/admin/discounts',
+        icon: Tag,
       },
     ],
   },

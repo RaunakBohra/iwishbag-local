@@ -48,6 +48,8 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { PackagePhotoUpload } from './PackagePhotoUpload';
+import { packagePhotoService } from '@/services/PackagePhotoService';
 import { R2StorageServiceSimple } from '@/services/R2StorageServiceSimple';
 import type { ReceivedPackage } from '@/services/PackageForwardingService';
 
@@ -82,6 +84,7 @@ export const PackageManagementPanel: React.FC = () => {
   const [newStatus, setNewStatus] = useState<string>('');
   const [statusNotes, setStatusNotes] = useState('');
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [packagePhotos, setPackagePhotos] = useState<any[]>([]);
 
   // Fetch packages with customer data
   const { data: packages = [], isLoading } = useQuery({
@@ -94,7 +97,8 @@ export const PackageManagementPanel: React.FC = () => {
           customer_addresses!inner(
             suite_number,
             user_id
-          )
+          ),
+          package_photos(count)
         `)
         .order('received_date', { ascending: false });
 
@@ -513,14 +517,21 @@ export const PackageManagementPanel: React.FC = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
+                          onClick={async () => {
                             setSelectedPackage(pkg);
+                            try {
+                              const photos = await packagePhotoService.getPackagePhotos(pkg.id);
+                              setPackagePhotos(photos);
+                            } catch (error) {
+                              console.error('Failed to fetch photos:', error);
+                              setPackagePhotos([]);
+                            }
                             setShowPhotoDialog(true);
                           }}
                         >
                           <Camera className="h-4 w-4" />
-                          {pkg.photos && pkg.photos.length > 0 && (
-                            <span className="ml-1 text-xs">{pkg.photos.length}</span>
+                          {pkg.package_photos && pkg.package_photos[0]?.count > 0 && (
+                            <span className="ml-1 text-xs">{pkg.package_photos[0].count}</span>
                           )}
                         </Button>
                       </div>
@@ -621,52 +632,31 @@ export const PackageManagementPanel: React.FC = () => {
       {/* Photo Management Dialog */}
       {showPhotoDialog && selectedPackage && (
         <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
-          <DialogContent className="max-w-2xl" aria-describedby="photo-management-description">
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" aria-describedby="photo-management-description">
             <DialogHeader>
               <DialogTitle>Package Photos - Suite {selectedPackage.customer_addresses.suite_number}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4" id="photo-management-description">
-              <p className="text-sm text-muted-foreground">View and manage photos for this package.</p>
-              {/* Existing Photos */}
-              {selectedPackage.photos && selectedPackage.photos.length > 0 && (
-                <div>
-                  <Label>Existing Photos</Label>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    {selectedPackage.photos.map((photo, index) => (
-                      <img
-                        key={index}
-                        src={photo.url}
-                        alt={`Package photo ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Upload New Photos */}
-              <div>
-                <Label>Upload New Photos</Label>
-                <Input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    if (files.length > 0) {
-                      handlePhotoUpload(files);
-                    }
-                  }}
-                  disabled={uploadingPhotos}
-                />
-              </div>
-
-              {uploadingPhotos && (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Uploading photos...</span>
-                </div>
-              )}
+            <div id="photo-management-description">
+              <PackagePhotoUpload
+                packageId={selectedPackage.id}
+                existingPhotos={packagePhotos}
+                onPhotosUpdated={async () => {
+                  // Refresh photos
+                  try {
+                    const photos = await packagePhotoService.getPackagePhotos(selectedPackage.id);
+                    setPackagePhotos(photos);
+                  } catch (error) {
+                    console.error('Failed to refresh photos:', error);
+                  }
+                  // Refresh package data
+                  queryClient.invalidateQueries({ queryKey: ['admin-packages'] });
+                  queryClient.invalidateQueries({ queryKey: ['integrated-customer-packages'] });
+                  toast({
+                    title: 'Photos updated',
+                    description: 'Package photos have been updated successfully',
+                  });
+                }}
+              />
             </div>
           </DialogContent>
         </Dialog>

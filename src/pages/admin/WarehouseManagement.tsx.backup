@@ -40,7 +40,6 @@ import {
   AlertCircle,
   Database,
   TestTube,
-  Bell,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,10 +50,8 @@ import PackageTestDataGenerator from '@/components/admin/PackageTestDataGenerato
 import MinimalPackageTest from '@/components/admin/MinimalPackageTest';
 import { StorageFeeManager } from '@/components/admin/StorageFeeManager';
 import DirectPackageTest from '@/components/admin/DirectPackageTest';
-import { EnhancedPackageManagementPanel } from '@/components/admin/EnhancedPackageManagementPanel';
+import PackageManagementPanel from '@/components/admin/PackageManagementPanel';
 import ConsolidationProcessingPanel from '@/components/admin/ConsolidationProcessingPanel';
-import { CustomerNotificationManager } from '@/components/admin/CustomerNotificationManager';
-import { PackageNotificationManager } from '@/components/admin/PackageNotificationManager';
 import {
   warehouseManagementService,
   type WarehouseDashboard,
@@ -709,9 +706,9 @@ export const WarehouseManagement: React.FC = () => {
         </div>
       ) : null}
 
-      {/* Main Content Tabs - Expanded to 5 Core Tabs */}
+      {/* Main Content Tabs - Simplified to 3 Core Tabs */}
       <Tabs defaultValue="operations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="operations" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             Operations
@@ -720,17 +717,9 @@ export const WarehouseManagement: React.FC = () => {
             <Package className="h-4 w-4" />
             Package Management
           </TabsTrigger>
-          <TabsTrigger value="incoming" className="flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            Incoming Packages
-          </TabsTrigger>
           <TabsTrigger value="financial" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
             Financial
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Customer Notifications
           </TabsTrigger>
         </TabsList>
 
@@ -860,7 +849,7 @@ export const WarehouseManagement: React.FC = () => {
               <TabsTrigger value="consolidations">Consolidations</TabsTrigger>
             </TabsList>
             <TabsContent value="packages">
-              <EnhancedPackageManagementPanel />
+              <PackageManagementPanel />
             </TabsContent>
             <TabsContent value="consolidations">
               <ConsolidationProcessingPanel />
@@ -868,16 +857,148 @@ export const WarehouseManagement: React.FC = () => {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="incoming" className="space-y-4">
-          <PackageNotificationManager />
-        </TabsContent>
-
         <TabsContent value="financial" className="space-y-4">
           <StorageFeeManager />
-        </TabsContent>
+            <h2 className="text-xl font-semibold">Storage Fee Management</h2>
+            <Button
+              onClick={async () => {
+                try {
+                  const result = await storageFeeService.generateStorageFeeRecords();
+                  toast({
+                    title: 'Storage Fees Updated',
+                    description: `Created ${result.created} new fees, updated ${result.updated} existing fees.`,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['storage-fee-overview'] });
+                } catch (error: any) {
+                  toast({
+                    title: 'Failed to Update Fees',
+                    description: error.message,
+                    variant: 'destructive',
+                  });
+                }
+              }}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Update Fee Records
+            </Button>
+          </div>
 
-        <TabsContent value="notifications" className="space-y-4">
-          <CustomerNotificationManager />
+          {storageFeesLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : storageFeeOverview ? (
+            <div className="space-y-6">
+              {/* Storage Fee Overview Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{storageFeeOverview.total_packages}</div>
+                    <p className="text-xs text-muted-foreground">
+                      In storage system
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Free Period</CardTitle>
+                    <Clock className="h-4 w-4 text-green-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {storageFeeOverview.packages_in_free_period}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Not yet accruing fees
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Accruing Fees</CardTitle>
+                    <DollarSign className="h-4 w-4 text-orange-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {storageFeeOverview.packages_accruing_fees}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Beyond free period
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Unpaid Fees</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      ${storageFeeOverview.total_unpaid_fees_usd.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Awaiting payment
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Revenue Metrics */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Revenue Collected</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">
+                      ${storageFeeOverview.total_paid_fees_usd.toFixed(2)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Total fees collected</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly Revenue Est.</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">
+                      ${storageFeeOverview.estimated_monthly_revenue_usd.toFixed(2)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Based on current packages</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Average Storage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">
+                      {storageFeeOverview.average_storage_days.toFixed(1)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Days per package</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : null}
         </TabsContent>
 
       </Tabs>

@@ -208,6 +208,17 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
     setChangeReason('');
   };
 
+  // Handle case where status config is not found
+  if (!currentStatusConfig) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <Badge variant="outline" className="h-8 px-3">
+          Unknown Status: {quote.status}
+        </Badge>
+      </div>
+    );
+  }
+
   const StatusIcon = getStatusIcon(currentStatusConfig.icon);
 
   return (

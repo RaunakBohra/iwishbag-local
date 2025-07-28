@@ -929,6 +929,329 @@ Suite: ${suiteNumber}`;
       logger.warn('Failed to send consolidation notification:', error);
     }
   }
+
+  // ============================================================================
+  // BULK OPERATIONS
+  // ============================================================================
+
+  /**
+   * Bulk update package status
+   */
+  async bulkUpdatePackageStatus(
+    packageIds: string[],
+    status: ReceivedPackage['status'],
+    notes?: string,
+    adminId?: string
+  ): Promise<{
+    processed: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    let processed = 0;
+
+    try {
+      // Update all packages at once
+      const { error } = await supabase
+        .from('received_packages')
+        .update({
+          status,
+          condition_notes: notes || null,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', packageIds);
+
+      if (error) {
+        throw error;
+      }
+
+      processed = packageIds.length;
+      logger.info(`Bulk status update completed: ${processed} packages updated to ${status}`);
+
+      return { processed, errors };
+    } catch (error) {
+      const errorMsg = `Failed to bulk update package status: ${error}`;
+      logger.error(errorMsg);
+      errors.push(errorMsg);
+      return { processed, errors };
+    }
+  }
+
+  /**
+   * Bulk add notes to packages
+   */
+  async bulkAddPackageNotes(
+    packageIds: string[],
+    notes: string,
+    noteType: 'general' | 'processing' | 'quality' | 'customer' | 'warehouse' = 'general',
+    adminId?: string
+  ): Promise<{
+    processed: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    let processed = 0;
+
+    try {
+      // Get existing packages to append notes
+      const { data: packages, error: fetchError } = await supabase
+        .from('received_packages')
+        .select('id, condition_notes')
+        .in('id', packageIds);
+
+      if (fetchError) throw fetchError;
+
+      // Update each package with appended notes
+      for (const pkg of packages || []) {
+        try {
+          const timestamp = new Date().toLocaleString();
+          const newNote = `[${timestamp}] ${noteType.toUpperCase()}: ${notes}`;
+          const existingNotes = pkg.condition_notes || '';
+          const updatedNotes = existingNotes 
+            ? `${existingNotes}\n${newNote}`
+            : newNote;
+
+          const { error } = await supabase
+            .from('received_packages')
+            .update({
+              condition_notes: updatedNotes,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', pkg.id);
+
+          if (error) throw error;
+          processed++;
+        } catch (error) {
+          const errorMsg = `Failed to add notes to package ${pkg.id}: ${error}`;
+          logger.error(errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+
+      logger.info(`Bulk notes addition completed: ${processed} packages updated`);
+
+      return { processed, errors };
+    } catch (error) {
+      const errorMsg = `Failed to bulk add package notes: ${error}`;
+      logger.error(errorMsg);
+      errors.push(errorMsg);
+      return { processed, errors };
+    }
+  }
+
+  /**
+   * Bulk assign storage locations
+   */
+  async bulkAssignStorageLocations(
+    packageIds: string[],
+    location: string,
+    adminId?: string
+  ): Promise<{
+    processed: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    let processed = 0;
+
+    try {
+      const { error } = await supabase
+        .from('received_packages')
+        .update({
+          storage_location: location,
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', packageIds);
+
+      if (error) throw error;
+
+      processed = packageIds.length;
+      logger.info(`Bulk storage location assignment completed: ${processed} packages assigned to ${location}`);
+
+      return { processed, errors };
+    } catch (error) {
+      const errorMsg = `Failed to bulk assign storage locations: ${error}`;
+      logger.error(errorMsg);
+      errors.push(errorMsg);
+      return { processed, errors };
+    }
+  }
+
+  /**
+   * Bulk delete packages (admin only)
+   */
+  async bulkDeletePackages(
+    packageIds: string[],
+    reason: string,
+    adminId: string
+  ): Promise<{
+    processed: number;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+    let processed = 0;
+
+    try {
+      // First, check if any packages are in consolidation or shipped status
+      const { data: packages, error: fetchError } = await supabase
+        .from('received_packages')
+        .select('id, status, tracking_number')
+        .in('id', packageIds);
+
+      if (fetchError) throw fetchError;
+
+      const protectedStatuses = ['consolidated', 'shipped', 'delivered'];
+      const protectedPackages = packages?.filter(pkg => 
+        protectedStatuses.includes(pkg.status)
+      ) || [];
+
+      if (protectedPackages.length > 0) {
+        const protectedIds = protectedPackages.map(p => p.tracking_number || p.id);
+        throw new Error(`Cannot delete packages in protected status: ${protectedIds.join(', ')}`);
+      }
+
+      // Delete package photos first (if they exist)
+      const { error: photosError } = await supabase
+        .from('package_photos')
+        .delete()
+        .in('package_id', packageIds);
+
+      // Note: We don't throw on photo deletion errors as they might not exist
+
+      // Delete storage fees
+      const { error: feesError } = await supabase
+        .from('storage_fees')
+        .delete()
+        .in('package_id', packageIds);
+
+      // Delete the packages
+      const { error: deleteError } = await supabase
+        .from('received_packages')
+        .delete()
+        .in('id', packageIds);
+
+      if (deleteError) throw deleteError;
+
+      processed = packageIds.length;
+      logger.warn(`Bulk package deletion completed: ${processed} packages deleted by admin ${adminId}. Reason: ${reason}`);
+
+      return { processed, errors };
+    } catch (error) {
+      const errorMsg = `Failed to bulk delete packages: ${error}`;
+      logger.error(errorMsg);
+      errors.push(errorMsg);
+      return { processed, errors };
+    }
+  }
+
+  /**
+   * Export packages data for selected packages
+   */
+  async exportPackagesData(packageIds: string[]): Promise<{
+    data: any[];
+    filename: string;
+  }> {
+    try {
+      const { data: packages, error } = await supabase
+        .from('received_packages')
+        .select(`
+          *,
+          customer_addresses!inner(
+            suite_number,
+            user_id,
+            profiles(email, full_name)
+          )
+        `)
+        .in('id', packageIds);
+
+      if (error) throw error;
+
+      const exportData = (packages || []).map(pkg => ({
+        suite_number: pkg.customer_addresses.suite_number,
+        customer_name: pkg.customer_addresses.profiles?.full_name || 'Unknown',
+        customer_email: pkg.customer_addresses.profiles?.email || 'Unknown',
+        tracking_number: pkg.tracking_number || 'N/A',
+        carrier: pkg.carrier || 'Unknown',
+        sender_name: pkg.sender_name || 'Unknown',
+        sender_store: pkg.sender_store || 'Unknown',
+        package_description: pkg.package_description || 'No description',
+        weight_kg: pkg.weight_kg,
+        dimensions: `${pkg.dimensions.length}×${pkg.dimensions.width}×${pkg.dimensions.height}cm`,
+        declared_value_usd: pkg.declared_value_usd || 0,
+        status: pkg.status,
+        received_date: pkg.received_date.split('T')[0],
+        storage_location: pkg.storage_location || 'Not assigned',
+        condition_notes: pkg.condition_notes || 'None',
+        created_at: pkg.created_at.split('T')[0],
+      }));
+
+      const filename = `packages-export-${new Date().toISOString().split('T')[0]}.csv`;
+
+      return {
+        data: exportData,
+        filename,
+      };
+    } catch (error) {
+      logger.error('Failed to export packages data', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get packages with advanced filtering for bulk operations
+   */
+  async getPackagesForBulkOperations(filters?: {
+    status?: string[];
+    carrier?: string[];
+    hasIssues?: boolean;
+    hasPhotos?: boolean;
+    storageDaysMin?: number;
+    storageDaysMax?: number;
+    packageIds?: string[];
+  }): Promise<ReceivedPackage[]> {
+    try {
+      let query = supabase
+        .from('received_packages')
+        .select(`
+          *,
+          customer_addresses!inner(
+            suite_number,
+            user_id
+          )
+        `);
+
+      if (filters?.packageIds && filters.packageIds.length > 0) {
+        query = query.in('id', filters.packageIds);
+      }
+
+      if (filters?.status && filters.status.length > 0) {
+        query = query.in('status', filters.status);
+      }
+
+      if (filters?.carrier && filters.carrier.length > 0) {
+        query = query.in('carrier', filters.carrier);
+      }
+
+      if (filters?.hasIssues) {
+        query = query.eq('status', 'issue');
+      }
+
+      if (filters?.hasPhotos !== undefined) {
+        if (filters.hasPhotos) {
+          query = query.not('photos', 'is', null).neq('photos', '[]');
+        } else {
+          query = query.or('photos.is.null,photos.eq.[]');
+        }
+      }
+
+      const { data: packages, error } = await query;
+
+      if (error) throw error;
+
+      return packages || [];
+    } catch (error) {
+      logger.error('Failed to get packages for bulk operations', error);
+      throw error;
+    }
+  }
 }
 
 // ============================================================================

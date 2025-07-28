@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -34,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   integratedPackageForwardingService,
   type IntegratedPackageData,
@@ -48,11 +51,15 @@ import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery'
 import QuickTestDataButton from '@/components/dashboard/QuickTestDataButton';
 import SimpleTestDataButton from '@/components/dashboard/SimpleTestDataButton';
 import ShippingCalculator from '@/components/dashboard/ShippingCalculator';
+import { PackageNotificationsList } from '@/components/dashboard/PackageNotificationsList';
+import { PackageSupportButton } from '@/components/support/PackageSupportButton';
+import { StorageFeeAlert } from '@/components/dashboard/StorageFeeAlert';
 
 interface ConsolidationDialogProps {
   packages: IntegratedPackageData[];
   onClose: () => void;
   onConsolidate: (packageIds: string[], groupName?: string) => void;
+  onCreateQuote?: (packageIds: string[], groupName?: string, destinationCountry?: string) => void;
   isLoading: boolean;
 }
 
@@ -60,12 +67,15 @@ const ConsolidationDialog: React.FC<ConsolidationDialogProps> = ({
   packages,
   onClose,
   onConsolidate,
+  onCreateQuote,
   isLoading,
 }) => {
   const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
   const [groupName, setGroupName] = useState('');
   const [options, setOptions] = useState<ConsolidationOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<ConsolidationOption | null>(null);
+  const [mode, setMode] = useState<'consolidate' | 'checkout'>('consolidate');
+  const [destinationCountry, setDestinationCountry] = useState('NP'); // Default to Nepal
 
   // Calculate consolidation options when packages are selected
   React.useEffect(() => {
@@ -106,11 +116,19 @@ const ConsolidationDialog: React.FC<ConsolidationDialogProps> = ({
     }
   };
 
+  const handleCreateQuote = () => {
+    if (selectedOption && onCreateQuote) {
+      onCreateQuote(selectedPackages, groupName || undefined, destinationCountry);
+    }
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Package Consolidation</DialogTitle>
+          <DialogTitle>
+            {mode === 'consolidate' ? 'Package Consolidation' : 'Package Forwarding Checkout'}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 h-[60vh]">
@@ -172,6 +190,24 @@ const ConsolidationDialog: React.FC<ConsolidationDialogProps> = ({
                   />
                 </div>
 
+                {mode === 'checkout' && (
+                  <div>
+                    <Label htmlFor="destinationCountry">Destination Country</Label>
+                    <Select value={destinationCountry} onValueChange={setDestinationCountry}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select destination" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="NP">Nepal</SelectItem>
+                        <SelectItem value="IN">India</SelectItem>
+                        <SelectItem value="BD">Bangladesh</SelectItem>
+                        <SelectItem value="PK">Pakistan</SelectItem>
+                        <SelectItem value="LK">Sri Lanka</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {options.map((option, index) => (
                   <Card
                     key={index}
@@ -221,25 +257,64 @@ const ConsolidationDialog: React.FC<ConsolidationDialogProps> = ({
         </div>
 
         <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConsolidate}
-            disabled={!selectedOption || isLoading}
-          >
-            {isLoading ? (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            {mode === 'checkout' && (
+              <Button variant="outline" onClick={() => setMode('consolidate')}>
+                Back to Consolidation
+              </Button>
+            )}
+          </div>
+          
+          <div className="flex gap-2">
+            {mode === 'consolidate' ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
+                <Button
+                  variant="outline"
+                  onClick={() => setMode('checkout')}
+                  disabled={!selectedOption}
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Proceed to Checkout
+                </Button>
+                <Button
+                  onClick={handleConsolidate}
+                  disabled={!selectedOption || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Request Consolidation
+                    </>
+                  )}
+                </Button>
               </>
             ) : (
-              <>
-                <Archive className="h-4 w-4 mr-2" />
-                Request Consolidation
-              </>
+              <Button
+                onClick={handleCreateQuote}
+                disabled={!selectedOption || isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating Quote...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Create Quote & Checkout
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -327,9 +402,31 @@ const PackageCard: React.FC<{ package: IntegratedPackageData; onViewPhotos: (pkg
         {/* Condition Notes */}
         {pkg.condition_notes && (
           <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-yellow-800">{pkg.condition_notes}</span>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 flex-1">
+                <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <span className="text-sm text-yellow-800">{pkg.condition_notes}</span>
+              </div>
+              <PackageSupportButton
+                package={{
+                  id: pkg.id,
+                  tracking_number: pkg.tracking_number || '',
+                  sender_name: pkg.sender_name || pkg.sender_store || 'Unknown',
+                  created_at: pkg.received_date,
+                  condition_notes: pkg.condition_notes,
+                  carrier: pkg.carrier || 'unknown',
+                  weight_lbs: pkg.weight_kg * 2.20462,
+                  dimensions_l: pkg.dimensions.length,
+                  dimensions_w: pkg.dimensions.width,
+                  dimensions_h: pkg.dimensions.height,
+                  status: pkg.status,
+                } as any}
+                variant="ghost"
+                size="sm"
+                buttonText="Report"
+                showIcon={true}
+                className="text-yellow-700 hover:text-yellow-900 hover:bg-yellow-100"
+              />
             </div>
           </div>
         )}
@@ -351,20 +448,39 @@ const PackageCard: React.FC<{ package: IntegratedPackageData; onViewPhotos: (pkg
           </div>
           
           <div className="flex gap-2">
-            {pkg.photos && pkg.photos.length > 0 && (
+            {pkg.package_photos && pkg.package_photos.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onViewPhotos(pkg)}
               >
                 <Camera className="h-3 w-3 mr-1" />
-                Photos ({pkg.photos.length})
+                Photos ({pkg.package_photos.length})
               </Button>
             )}
             <Button variant="outline" size="sm">
               <Eye className="h-3 w-3 mr-1" />
               Details
             </Button>
+            <PackageSupportButton
+              package={{
+                id: pkg.id,
+                tracking_number: pkg.tracking_number || '',
+                sender_name: pkg.sender_name || pkg.sender_store || 'Unknown',
+                created_at: pkg.received_date,
+                condition_notes: pkg.condition_notes,
+                carrier: pkg.carrier || 'unknown',
+                weight_lbs: pkg.weight_kg * 2.20462, // Convert kg to lbs
+                dimensions_l: pkg.dimensions.length,
+                dimensions_w: pkg.dimensions.width,
+                dimensions_h: pkg.dimensions.height,
+                status: pkg.status,
+              } as any}
+              variant="outline"
+              size="sm"
+              buttonText="Report Issue"
+              showIcon={false}
+            />
           </div>
         </div>
       </CardContent>
@@ -376,6 +492,7 @@ export const PackageForwarding: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   const [showConsolidationDialog, setShowConsolidationDialog] = useState(false);
   const [selectedPackageForPhotos, setSelectedPackageForPhotos] = useState<IntegratedPackageData | null>(null);
@@ -459,6 +576,59 @@ export const PackageForwarding: React.FC = () => {
     },
   });
 
+  // Quote creation mutation for checkout
+  const createQuoteMutation = useMutation({
+    mutationFn: async ({ 
+      packageIds, 
+      groupName, 
+      destinationCountry 
+    }: { 
+      packageIds: string[]; 
+      groupName?: string; 
+      destinationCountry: string;
+    }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      // First create a consolidation group if it doesn't exist
+      const consolidationResult = await packageForwardingService.processConsolidation(user.id, packageIds, groupName);
+      
+      // Then create a quote for the consolidation group using the existing database function
+      const { data, error } = await supabase.rpc('create_consolidation_quote', {
+        p_consolidation_group_id: consolidationResult.consolidation_group_id,
+        p_destination_country: destinationCountry,
+        p_customer_data: {
+          info: {
+            name: user.user_metadata?.full_name || user.email,
+            email: user.email,
+          }
+        }
+      });
+
+      if (error) throw error;
+      return { quote_id: data, consolidation_group_id: consolidationResult.consolidation_group_id };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['integrated-customer-packages'] });
+      queryClient.invalidateQueries({ queryKey: ['consolidation-groups'] });
+      setShowConsolidationDialog(false);
+      
+      toast({
+        title: 'Quote Created Successfully',
+        description: 'Your consolidation quote has been created. Redirecting to checkout...',
+      });
+      
+      // Navigate to the quote detail page which will show checkout options
+      navigate(`/dashboard/quotes/${result.quote_id}`);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Quote Creation Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleCopyAddress = async () => {
     if (virtualAddress?.full_address) {
       await navigator.clipboard.writeText(virtualAddress.full_address);
@@ -498,6 +668,9 @@ export const PackageForwarding: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Storage Fee Alerts */}
+      <StorageFeeAlert />
 
       {/* Virtual Address Section */}
       <Card>
@@ -575,7 +748,11 @@ export const PackageForwarding: React.FC = () => {
 
       {/* Packages Tabs */}
       <Tabs defaultValue="available" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="notify" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Notify Warehouse
+          </TabsTrigger>
           <TabsTrigger value="available" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Available ({availablePackages.length})
@@ -597,6 +774,10 @@ export const PackageForwarding: React.FC = () => {
             Calculator
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="notify" className="space-y-4">
+          <PackageNotificationsList />
+        </TabsContent>
 
         <TabsContent value="available" className="space-y-4">
           <div className="flex items-center justify-between">
@@ -853,14 +1034,22 @@ export const PackageForwarding: React.FC = () => {
           onConsolidate={(packageIds, groupName) =>
             consolidationMutation.mutate({ packageIds, groupName })
           }
-          isLoading={consolidationMutation.isPending}
+          onCreateQuote={(packageIds, groupName, destinationCountry) =>
+            createQuoteMutation.mutate({ packageIds, groupName, destinationCountry })
+          }
+          isLoading={consolidationMutation.isPending || createQuoteMutation.isPending}
         />
       )}
 
       {/* Enhanced Package Photo Gallery */}
       {selectedPackageForPhotos && (
         <PackagePhotoGallery
-          photos={selectedPackageForPhotos.photos}
+          photos={selectedPackageForPhotos.package_photos?.map(p => ({
+            url: p.photo_url,
+            type: p.photo_type,
+            caption: p.caption,
+            uploaded_at: p.created_at
+          })) || []}
           packageInfo={{
             suiteNumber: virtualAddress?.suite_number,
             senderStore: selectedPackageForPhotos.sender_store,

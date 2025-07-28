@@ -744,6 +744,31 @@ class CurrencyService {
       throw new Error(`Exchange rate unavailable for ${fromCurrency} to ${toCurrency}`);
     }
   }
+
+  /**
+   * Convert amount between currencies
+   * @param amount - Amount to convert
+   * @param fromCurrency - Source currency code
+   * @param toCurrency - Target currency code
+   * @returns Promise<number> - Converted amount
+   */
+  async convertAmount(amount: number, fromCurrency: string, toCurrency: string): Promise<number> {
+    if (fromCurrency === toCurrency) {
+      return amount;
+    }
+
+    const rate = await this.getExchangeRateByCurrency(fromCurrency, toCurrency);
+    return amount * rate;
+  }
+
+  /**
+   * Get currency by country code
+   * @param countryCode - Country code (e.g. 'US', 'IN')
+   * @returns Currency code (e.g. 'USD', 'INR')
+   */
+  getCurrencyByCountry(countryCode: string): string {
+    return this.getCurrencyForCountrySync(countryCode);
+  }
 }
 
 // Export singleton instance
@@ -763,3 +788,9 @@ export const isValidCurrency = (currencyCode: string) =>
   currencyService.isValidCurrency(currencyCode);
 export const getCurrencyDisplayInfo = (currencyCode: string) =>
   currencyService.getCurrencyDisplayInfo(currencyCode);
+export const formatAmount = (amount: number, currencyCode: string) =>
+  currencyService.formatAmount(amount, currencyCode);
+export const convertAmount = (amount: number, fromCurrency: string, toCurrency: string) =>
+  currencyService.convertAmount(amount, fromCurrency, toCurrency);
+export const getCurrencyByCountry = (countryCode: string) =>
+  currencyService.getCurrencyByCountry(countryCode);

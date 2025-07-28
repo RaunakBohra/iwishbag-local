@@ -62,6 +62,13 @@ export interface IntegratedPackageData extends ReceivedPackage {
   quote_id?: string;
   storage_fees_accrued?: number;
   estimated_shipping_cost?: number;
+  package_photos?: Array<{
+    id: string;
+    photo_url: string;
+    photo_type: string;
+    caption?: string;
+    created_at: string;
+  }>;
 }
 
 export interface PackageForwardingQuoteRequest {
@@ -259,7 +266,7 @@ United States`;
         return []; // No virtual address = no packages
       }
 
-      // Get packages with enhanced data
+      // Get packages with enhanced data including photos
       const { data: packages, error } = await supabase
         .from('received_packages')
         .select(`
@@ -269,6 +276,13 @@ United States`;
             user_id,
             suite_number,
             full_address
+          ),
+          package_photos(
+            id,
+            photo_url,
+            photo_type,
+            caption,
+            created_at
           )
         `)
         .eq('customer_addresses.user_id', userId)
@@ -300,6 +314,7 @@ United States`;
             customer_profile: customerProfile,
             customer_display_data: customerDisplayData,
             storage_fees_accrued: storageFees?.total_fee_usd || 0,
+            package_photos: pkg.package_photos || [],
           };
         })
       );
