@@ -199,32 +199,7 @@ class PerItemTaxCalculator {
       // Use default quoteTotals if not provided (for backward compatibility)
       const totals = quoteTotals || this.getQuoteTotals([item], context);
 
-      // Step 1: Calculate CIF value per item (Cost + Insurance + Freight)
-      const cifValue = this.calculateCIFValue(
-        item,
-        context,
-        totals.totalItemsValue,
-        totals.totalShippingCost,
-        totals.totalInsuranceAmount,
-        totals.totalHandlingFee,
-      );
-
-      // Step 2: Calculate customs duty on CIF basis (international standard)
-      const customsCalculation = this.calculateCustoms(cifValue, taxRates.customs_rate, context);
-
-      // Step 3: Calculate landed cost (CIF + Customs + Handling)
-      const landedCost = this.calculateLandedCost(
-        cifValue,
-        customsCalculation.amount_origin_currency,
-        totals.totalHandlingFee,
-        totals.totalItemsValue,
-        item.price_origin_currency,
-      );
-
-      // Step 4: Calculate local taxes on landed cost basis (international standard)
-      const localTaxCalculation = await this.calculateLocalTaxes(landedCost, taxRates, context);
-
-      // Calculate both valuation options with the new CIF/landed cost logic
+      // FIXED: Step 1 - First determine valuation method and get the correct base amount
       const valuationOptions = await this.calculateBothValuationOptions(
         item,
         hsnData,
@@ -232,6 +207,39 @@ class PerItemTaxCalculator {
         taxRates,
         context.valuation_method_preference,
       );
+
+      // Step 2: Use the selected valuation amount for CIF calculation
+      const baseAmount = valuationOptions.selected_method === 'minimum_valuation' 
+        ? valuationOptions.auto_selected_amount 
+        : item.price_origin_currency;
+
+      console.log(`[TAX CALC] Using ${valuationOptions.selected_method} for CIF calculation: ${baseAmount} ${valuationOptions.minimum_valuation_conversion?.originCurrency || 'USD'}`);
+
+      // Step 3: Calculate CIF value using the correct base amount
+      const cifValue = this.calculateCIFValue(
+        item,
+        context,
+        totals.totalItemsValue,
+        totals.totalShippingCost,
+        totals.totalInsuranceAmount,
+        totals.totalHandlingFee,
+        baseAmount, // Pass the selected valuation amount
+      );
+
+      // Step 4: Calculate customs duty on CIF basis (now using correct valuation)
+      const customsCalculation = this.calculateCustoms(cifValue, taxRates.customs_rate, context);
+
+      // Step 5: Calculate landed cost (CIF + Customs + Handling)
+      const landedCost = this.calculateLandedCost(
+        cifValue,
+        customsCalculation.amount_origin_currency,
+        totals.totalHandlingFee,
+        totals.totalItemsValue,
+        baseAmount, // Use selected amount instead of item price
+      );
+
+      // Step 6: Calculate local taxes on landed cost basis
+      const localTaxCalculation = await this.calculateLocalTaxes(landedCost, taxRates, context);
 
       // Build enhanced calculation options object
       const calculation_options = {
@@ -251,23 +259,23 @@ class PerItemTaxCalculator {
         // CIF/Landed Cost details (international standard)
         original_price_origin_currency: item.price_origin_currency,
         minimum_valuation_conversion: valuationOptions.minimum_valuation_conversion,
-        taxable_amount_origin_currency: landedCost, // Now shows landed cost for transparency
+        taxable_amount_origin_currency: baseAmount, // Use the selected valuation amount
         valuation_method: valuationOptions.valuation_method,
 
         // Enhanced: Both calculation options for admin choice
         calculation_options,
 
-        // Tax calculations (based on CIF/landed cost)
+        // Tax calculations (based on CIF/landed cost with correct valuation)
         customs_calculation: {
           ...customsCalculation,
-          basis_amount: cifValue, // CIF basis for customs
+          basis_amount: cifValue, // CIF basis for customs (now includes correct valuation)
         },
         local_tax_calculation: {
           ...localTaxCalculation,
           basis_amount: landedCost, // Landed cost basis for local tax
         },
 
-        // Totals
+        // Totals (now calculated with correct valuation method)
         total_customs: customsCalculation.amount_origin_currency,
         total_local_taxes: localTaxCalculation.amount_origin_currency,
         total_taxes:
@@ -746,13 +754,18 @@ class PerItemTaxCalculator {
     totalShippingCost: number,
     totalInsuranceAmount: number,
     totalHandlingFee: number,
+    baseAmount?: number, // NEW: Optional base amount to use instead of item price
   ): number {
-    // ✅ FIXED: Add protection against invalid item price and division by zero
-    const itemPrice = typeof item.price_origin_currency === 'number' && !isNaN(item.price_origin_currency) 
-      ? item.price_origin_currency 
-      : 0;
+    // Use the provided base amount or fall back to item price
+    const itemPrice = baseAmount !== undefined 
+      ? baseAmount 
+      : (typeof item.price_origin_currency === 'number' && !isNaN(item.price_origin_currency) 
+        ? item.price_origin_currency 
+        : 0);
     
-    if (itemPrice !== item.price_origin_currency) {
+    if (baseAmount !== undefined) {
+      console.log(`[CIF CALCULATION] Using valuation base amount: ${baseAmount} for item "${item.name}"`);
+    } else if (itemPrice !== item.price_origin_currency) {
       console.warn(`[CIF CALCULATION] Invalid price for item "${item.name}": ${item.price_origin_currency}, using 0 instead`);
     }
     
@@ -772,7 +785,7 @@ class PerItemTaxCalculator {
     // CIF = Cost + Insurance + Freight (including handling as part of freight)
     const cifValue = itemPrice + allocatedShipping + allocatedInsurance + allocatedHandling;
 
-    console.log(`[CIF DEBUG] Item: ${item.name}, Price: ${itemPrice}, Proportion: ${itemProportion.toFixed(4)}, CIF: ${cifValue.toFixed(2)}`);
+    console.log(`[CIF DEBUG] Item: ${item.name}, Base: ${itemPrice}, Proportion: ${itemProportion.toFixed(4)}, CIF: ${cifValue.toFixed(2)}`);
 
     return cifValue;
   }
@@ -806,7 +819,8 @@ class PerItemTaxCalculator {
     itemValue: number,
   ): number {
     // Allocate handling fee proportionally to item value
-    const itemProportion = itemValue / totalItemsValue;
+    const safeTotal = totalItemsValue > 0 ? totalItemsValue : 1;
+    const itemProportion = itemValue / safeTotal;
     const allocatedHandling = totalHandlingFee * itemProportion;
 
     const landedCost = cifValue + customsAmount + allocatedHandling;
