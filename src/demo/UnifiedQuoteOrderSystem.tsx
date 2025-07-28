@@ -316,7 +316,6 @@ export default function UnifiedQuoteOrderSystem({
   // Track calculated values from SmartCalculationEngine
   const [calculatedHandling, setCalculatedHandling] = useState(0);
   const [calculatedInsurance, setCalculatedInsurance] = useState(0);
-  const [forcePerItemBreakdown, setForcePerItemBreakdown] = useState(true);
   const [handlingMode, setHandlingMode] = useState<'auto' | 'manual'>('auto');
   const [costsDesignOption, setCostsDesignOption] = useState<2>(2);
   const [showCalculatedValues, setShowCalculatedValues] = useState(false);
@@ -474,7 +473,7 @@ export default function UnifiedQuoteOrderSystem({
           calculation_method_preference: quote.tax_method || 'hsn_only',
           valuation_method_preference: valuationPreference,
           admin_id: isAdmin ? 'admin-user' : undefined,
-          force_per_item_calculation: forcePerItemBreakdown
+          force_per_item_calculation: false
         }
       };
 
@@ -2361,8 +2360,6 @@ export default function UnifiedQuoteOrderSystem({
               quote={quote}
               className="sticky top-24"
               orderMode={orderMode}
-              forcePerItemBreakdown={forcePerItemBreakdown}
-              onForcePerItemChange={setForcePerItemBreakdown}
               onSave={() => {
                 // Save all changes
                 if (onUpdate) {
@@ -2432,34 +2429,6 @@ export default function UnifiedQuoteOrderSystem({
               </Card>
             )}
 
-            {/* Quick Actions */}
-            {!orderMode && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm">
-                      <Copy className="w-3 h-3 mr-1" />
-                      Duplicate
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <FileText className="w-3 h-3 mr-1" />
-                      Convert to Order
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Clock className="w-3 h-3 mr-1" />
-                      Extend Expiry
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-red-600">
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
 
 

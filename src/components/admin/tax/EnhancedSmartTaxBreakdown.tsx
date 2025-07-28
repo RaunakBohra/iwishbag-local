@@ -42,8 +42,6 @@ interface EnhancedSmartTaxBreakdownProps {
   onSave?: () => void;
   isSaving?: boolean;
   orderMode?: boolean;
-  forcePerItemBreakdown?: boolean;
-  onForcePerItemChange?: (value: boolean) => void;
   className?: string;
 }
 
@@ -55,8 +53,6 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
   onSave,
   isSaving = false,
   orderMode = false,
-  forcePerItemBreakdown = false,
-  onForcePerItemChange,
   className = '',
 }) => {
   const [isExpanded, setIsExpanded] = useState(!compact);
@@ -344,15 +340,6 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
 
           {/* Action Section */}
           <div className="mt-6 space-y-3">
-            {/* Instructions */}
-            <div className="text-center text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <div className="font-medium text-blue-900">💡 Quick Workflow</div>
-              <div className="mt-1">
-                Press <kbd className="px-2 py-1 bg-white border rounded text-xs font-mono">Enter</kbd> to calculate 
-                • Then click <strong>Save Quote</strong> to persist
-              </div>
-            </div>
-
             {/* Save Button */}
             {onSave && (
               <Button 
@@ -365,21 +352,6 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
               </Button>
             )}
 
-            {/* Force per-item checkbox */}
-            {onForcePerItemChange && (
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="force-per-item"
-                  checked={forcePerItemBreakdown}
-                  onChange={(e) => onForcePerItemChange(e.target.checked)}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="force-per-item" className="text-sm text-gray-600">
-                  Force per-item tax breakdown
-                </label>
-              </div>
-            )}
           </div>
 
           {/* Expandable Detailed Breakdown */}

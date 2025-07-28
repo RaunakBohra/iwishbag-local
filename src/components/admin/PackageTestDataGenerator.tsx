@@ -192,7 +192,6 @@ export const PackageTestDataGenerator: React.FC = () => {
           customer_address_id: virtualAddress.id,
           tracking_number: generateTrackingNumber(store.carrier),
           carrier: store.carrier,
-          sender: store.sender,
           sender_name: store.name,
           sender_store: store.name,
           package_description: item.desc,
@@ -216,19 +215,28 @@ export const PackageTestDataGenerator: React.FC = () => {
               description: 'Package contents'
             }
           ] : [],
-          notes: i % 2 === 0 ? 'Handle with care - Fragile' : null
+          condition_notes: i % 2 === 0 ? 'Handle with care - Fragile' : null
         };
         
         packages.push(packageData);
       }
 
       // Insert all packages
+      console.log('Attempting to insert packages:', JSON.stringify(packages, null, 2));
+      
       const { data, error } = await supabase
         .from('received_packages')
         .insert(packages)
         .select();
 
       if (error) {
+        console.error('Supabase insert error:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
 
