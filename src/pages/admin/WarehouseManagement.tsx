@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,10 @@ import { R2StorageServiceSimple } from '@/services/R2StorageServiceSimple';
 import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
 import { storageFeeService, type StorageFeeOverview, type StorageFeeCalculation } from '@/services/StorageFeeService';
 import PackageTestDataGenerator from '@/components/admin/PackageTestDataGenerator';
+import MinimalPackageTest from '@/components/admin/MinimalPackageTest';
+import DirectPackageTest from '@/components/admin/DirectPackageTest';
+import PackageManagementPanel from '@/components/admin/PackageManagementPanel';
+import ConsolidationProcessingPanel from '@/components/admin/ConsolidationProcessingPanel';
 import {
   warehouseManagementService,
   type WarehouseDashboard,
@@ -700,36 +705,24 @@ export const WarehouseManagement: React.FC = () => {
         </div>
       ) : null}
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="tasks" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="tasks" className="flex items-center gap-2">
+      {/* Main Content Tabs - Simplified to 3 Core Tabs */}
+      <Tabs defaultValue="operations" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="operations" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
-            Tasks
+            Operations
           </TabsTrigger>
           <TabsTrigger value="packages" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Recent Packages
+            Package Management
           </TabsTrigger>
-          <TabsTrigger value="consolidations" className="flex items-center gap-2">
-            <Archive className="h-4 w-4" />
-            Consolidations
-          </TabsTrigger>
-          <TabsTrigger value="storage-fees" className="flex items-center gap-2">
+          <TabsTrigger value="financial" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
-            Storage Fees
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="test-data" className="flex items-center gap-2">
-            <TestTube className="h-4 w-4" />
-            Test Data
+            Financial
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tasks" className="space-y-4">
+        <TabsContent value="operations" className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -797,143 +790,73 @@ export const WarehouseManagement: React.FC = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* Essential Analytics Section */}
+          {dashboard && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Quick Analytics</h3>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Package Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {Object.entries(dashboard.packages_by_status).slice(0, 4).map(([status, count]) => (
+                        <div key={status} className="flex justify-between items-center text-sm">
+                          <span className="capitalize">{status.replace('_', ' ')}</span>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Task Priority</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {Object.entries(dashboard.pending_tasks.by_priority).map(([priority, count]) => (
+                        <div key={priority} className="flex justify-between items-center text-sm">
+                          <span className="capitalize">{priority}</span>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="mt-4 flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">Essential metrics overview</p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/admin/analytics">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    View Detailed Analytics
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="packages" className="space-y-4">
-          <h2 className="text-xl font-semibold">Recent Package Arrivals</h2>
-          
-          {packagesLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map(i => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : recentPackages.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {recentPackages.map(pkg => (
-                <Card key={pkg.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold">{pkg.sender_store || pkg.sender_name}</h3>
-                        <p className="text-sm text-muted-foreground">{pkg.package_description}</p>
-                      </div>
-                      <Badge variant="outline">
-                        {pkg.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Scale className="h-3 w-3 text-muted-foreground" />
-                        <span>{pkg.weight_kg}kg</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span>{pkg.storage_location}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Camera className="h-3 w-3 text-muted-foreground" />
-                        <button
-                          onClick={() => setSelectedPackagePhotos({
-                            photos: pkg.photos || [],
-                            packageInfo: {
-                              suiteNumber: pkg.customer_addresses?.suite_number,
-                              senderStore: pkg.sender_store,
-                              description: pkg.package_description
-                            }
-                          })}
-                          className="text-primary hover:underline"
-                        >
-                          {pkg.photos?.length || 0} photos
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Recent Packages</h3>
-                <p className="text-muted-foreground">
-                  Recent package arrivals will appear here.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          <Tabs defaultValue="packages" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="packages">Packages</TabsTrigger>
+              <TabsTrigger value="consolidations">Consolidations</TabsTrigger>
+            </TabsList>
+            <TabsContent value="packages">
+              <PackageManagementPanel />
+            </TabsContent>
+            <TabsContent value="consolidations">
+              <ConsolidationProcessingPanel />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
-        <TabsContent value="consolidations" className="space-y-4">
-          <h2 className="text-xl font-semibold">Pending Consolidation Requests</h2>
-          
-          {consolidationsLoading ? (
-            <div className="space-y-4">
-              {[1, 2].map(i => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : pendingConsolidations.length > 0 ? (
-            <div className="space-y-4">
-              {pendingConsolidations.map(group => (
-                <Card key={group.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold">{group.group_name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {group.package_count} packages to consolidate
-                        </p>
-                      </div>
-                      <Badge variant="outline">
-                        {group.status}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-3 w-3 mr-1" />
-                        View Details
-                      </Button>
-                      <Button size="sm">
-                        <Archive className="h-3 w-3 mr-1" />
-                        Process Consolidation
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Pending Consolidations</h3>
-                <p className="text-muted-foreground">
-                  Consolidation requests will appear here when customers request them.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="storage-fees" className="space-y-4">
+        <TabsContent value="financial" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Storage Fee Management</h2>
             <Button
@@ -1077,80 +1000,6 @@ export const WarehouseManagement: React.FC = () => {
           ) : null}
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
-          <h2 className="text-xl font-semibold">Warehouse Analytics</h2>
-          
-          {dashboard && (
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Package Status Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(dashboard.packages_by_status).map(([status, count]) => (
-                      <div key={status} className="flex justify-between items-center">
-                        <span className="capitalize">{status.replace('_', ' ')}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
-                              style={{ 
-                                width: `${(count / dashboard.total_packages) * 100}%` 
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{count}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Task Priority Breakdown</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {Object.entries(dashboard.pending_tasks.by_priority).map(([priority, count]) => (
-                      <div key={priority} className="flex justify-between items-center">
-                        <span className="capitalize">{priority}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-orange-600 h-2 rounded-full" 
-                              style={{ 
-                                width: `${(count / dashboard.pending_tasks.total) * 100}%` 
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium">{count}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="test-data" className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Test Data Generator</h2>
-                <p className="text-muted-foreground">
-                  Generate test packages for testing the package forwarding system
-                </p>
-              </div>
-            </div>
-            
-            <PackageTestDataGenerator />
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* Package Receiving Form */}
@@ -1169,6 +1018,25 @@ export const WarehouseManagement: React.FC = () => {
           open={true}
           onClose={() => setSelectedPackagePhotos(null)}
         />
+      )}
+      
+      {/* Developer Tools Section (Hidden by default) */}
+      {process.env.NODE_ENV === 'development' && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TestTube className="h-4 w-4" />
+              Developer Tools
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <PackageTestDataGenerator />
+              <MinimalPackageTest />
+              <DirectPackageTest />
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

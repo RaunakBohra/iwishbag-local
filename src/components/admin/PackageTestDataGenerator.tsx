@@ -31,14 +31,14 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Sample data for generating realistic packages
 const SAMPLE_STORES = [
-  { name: 'Amazon', sender: 'Amazon.com', carrier: 'UPS' },
-  { name: 'Nike', sender: 'Nike.com', carrier: 'FedEx' },
-  { name: 'Apple', sender: 'Apple Store', carrier: 'UPS' },
-  { name: 'Best Buy', sender: 'BestBuy.com', carrier: 'UPS' },
-  { name: 'Walmart', sender: 'Walmart.com', carrier: 'FedEx' },
-  { name: 'Target', sender: 'Target.com', carrier: 'USPS' },
-  { name: 'eBay', sender: 'eBay Seller', carrier: 'USPS' },
-  { name: 'Newegg', sender: 'Newegg.com', carrier: 'UPS' },
+  { name: 'Amazon', sender: 'Amazon.com', carrier: 'ups' },
+  { name: 'Nike', sender: 'Nike.com', carrier: 'fedex' },
+  { name: 'Apple', sender: 'Apple Store', carrier: 'ups' },
+  { name: 'Best Buy', sender: 'BestBuy.com', carrier: 'ups' },
+  { name: 'Walmart', sender: 'Walmart.com', carrier: 'fedex' },
+  { name: 'Target', sender: 'Target.com', carrier: 'usps' },
+  { name: 'eBay', sender: 'eBay Seller', carrier: 'usps' },
+  { name: 'Newegg', sender: 'Newegg.com', carrier: 'ups' },
 ];
 
 const SAMPLE_ITEMS = [
@@ -68,13 +68,13 @@ export const PackageTestDataGenerator: React.FC = () => {
     let tracking = '';
     
     switch (carrier) {
-      case 'UPS':
+      case 'ups':
         tracking = '1Z' + Array.from({ length: 16 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
         break;
-      case 'FedEx':
+      case 'fedex':
         tracking = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join('');
         break;
-      case 'USPS':
+      case 'usps':
         tracking = '9261' + Array.from({ length: 16 }, () => Math.floor(Math.random() * 10)).join('');
         break;
       default:
@@ -199,7 +199,7 @@ export const PackageTestDataGenerator: React.FC = () => {
           dimensions: generateDimensions(),
           declared_value_usd: item.value,
           received_date: receivedDate.toISOString(),
-          status: 'pending',
+          status: 'received',
           storage_location: `${String.fromCharCode(65 + Math.floor(Math.random() * 5))}-${Math.floor(Math.random() * 20) + 1}-${String.fromCharCode(65 + Math.floor(Math.random() * 5))}`,
           storage_start_date: receivedDate.toISOString(),
           storage_fee_exempt_until: new Date(receivedDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from receipt
@@ -214,7 +214,7 @@ export const PackageTestDataGenerator: React.FC = () => {
               type: 'contents',
               description: 'Package contents'
             }
-          ] : [],
+          ] : null, // Use null instead of empty array
           condition_notes: i % 2 === 0 ? 'Handle with care - Fragile' : null
         };
         

@@ -388,7 +388,8 @@ const CustomerQuoteDetail: React.FC = () => {
                 <CardContent>
                   <UploadedFilesDisplay 
                     sessionId={quote.customer_data.sessionId} 
-                    isAdmin={false} 
+                    isAdmin={false}
+                    quoteCreatedAt={quote.created_at}
                   />
                 </CardContent>
               </Card>

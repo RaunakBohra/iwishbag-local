@@ -4359,13 +4359,16 @@ export type Database = {
           daily_rate_usd: number | null
           days_stored: number | null
           end_date: string | null
+          fee_type: string | null
           id: string
           is_paid: boolean | null
+          notes: string | null
           package_id: string | null
           payment_date: string | null
           quote_id: string | null
           start_date: string
           total_fee_usd: number | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -4373,13 +4376,16 @@ export type Database = {
           daily_rate_usd?: number | null
           days_stored?: number | null
           end_date?: string | null
+          fee_type?: string | null
           id?: string
           is_paid?: boolean | null
+          notes?: string | null
           package_id?: string | null
           payment_date?: string | null
           quote_id?: string | null
           start_date: string
           total_fee_usd?: number | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -4387,13 +4393,16 @@ export type Database = {
           daily_rate_usd?: number | null
           days_stored?: number | null
           end_date?: string | null
+          fee_type?: string | null
           id?: string
           is_paid?: boolean | null
+          notes?: string | null
           package_id?: string | null
           payment_date?: string | null
           quote_id?: string | null
           start_date?: string
           total_fee_usd?: number | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [

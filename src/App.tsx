@@ -149,6 +149,7 @@ const ApiDocumentation = React.lazy(() => import('@/pages/admin/ApiDocumentation
 // Package Forwarding pages
 const PackageForwarding = React.lazy(() => import('@/pages/dashboard/PackageForwarding').then((m) => ({ default: m.PackageForwarding })));
 const WarehouseManagement = React.lazy(() => import('@/pages/admin/WarehouseManagement').then((m) => ({ default: m.WarehouseManagement })));
+const WarehouseAnalytics = React.lazy(() => import('@/pages/admin/WarehouseAnalytics'));
 
 // Demo pages for weight recommendation designs (chunked separately)
 const DemoIndex = React.lazy(() => import('@/demo/DemoIndex' /* webpackChunkName: "demo-index" */));
@@ -287,6 +288,14 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <WarehouseManagement />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'analytics',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <WarehouseAnalytics />
               </ErrorBoundary>
             ),
           },

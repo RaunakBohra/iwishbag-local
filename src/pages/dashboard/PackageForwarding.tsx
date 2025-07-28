@@ -47,6 +47,7 @@ import {
 import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
 import QuickTestDataButton from '@/components/dashboard/QuickTestDataButton';
 import SimpleTestDataButton from '@/components/dashboard/SimpleTestDataButton';
+import ShippingCalculator from '@/components/dashboard/ShippingCalculator';
 
 interface ConsolidationDialogProps {
   packages: IntegratedPackageData[];
@@ -296,16 +297,57 @@ const PackageCard: React.FC<{ package: IntegratedPackageData; onViewPhotos: (pkg
           </div>
         </div>
 
+        {/* Storage and Condition Information */}
+        <div className="mb-3">
+          {(() => {
+            const daysInStorage = Math.floor((Date.now() - new Date(pkg.received_date).getTime()) / (1000 * 60 * 60 * 24));
+            const freePeriodDays = 30;
+            const isAccruingFees = daysInStorage > freePeriodDays;
+            
+            return (
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-4">
+                  <span className="text-muted-foreground">
+                    Received: {new Date(pkg.received_date).toLocaleDateString()}
+                  </span>
+                  <span className={`font-medium ${isAccruingFees ? 'text-orange-600' : 'text-green-600'}`}>
+                    {daysInStorage} days stored
+                  </span>
+                </div>
+                {isAccruingFees && (
+                  <Badge variant="outline" className="text-xs text-orange-600 border-orange-200">
+                    Storage fees apply
+                  </Badge>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Condition Notes */}
+        {pkg.condition_notes && (
+          <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <span className="text-sm text-yellow-800">{pkg.condition_notes}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Tracking Information */}
         {pkg.tracking_number && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
             <Package className="h-4 w-4" />
-            <span>Tracking: {pkg.tracking_number}</span>
+            <span className="font-mono">{pkg.tracking_number}</span>
+            <span className="text-xs bg-gray-100 px-2 py-1 rounded capitalize">
+              {pkg.carrier || 'Unknown carrier'}
+            </span>
           </div>
         )}
 
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
-            Received: {new Date(pkg.received_date).toLocaleDateString()}
+            Last updated: {new Date(pkg.updated_at || pkg.received_date).toLocaleDateString()}
           </div>
           
           <div className="flex gap-2">
@@ -319,6 +361,10 @@ const PackageCard: React.FC<{ package: IntegratedPackageData; onViewPhotos: (pkg
                 Photos ({pkg.photos.length})
               </Button>
             )}
+            <Button variant="outline" size="sm">
+              <Eye className="h-3 w-3 mr-1" />
+              Details
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -529,7 +575,7 @@ export const PackageForwarding: React.FC = () => {
 
       {/* Packages Tabs */}
       <Tabs defaultValue="available" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="available" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Available ({availablePackages.length})
@@ -546,6 +592,10 @@ export const PackageForwarding: React.FC = () => {
             <Archive className="h-4 w-4" />
             Groups ({consolidationGroups.length})
           </TabsTrigger>
+          <TabsTrigger value="calculator" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Calculator
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="available" className="space-y-4">
@@ -558,6 +608,64 @@ export const PackageForwarding: React.FC = () => {
               </Button>
             )}
           </div>
+
+          {/* Package Statistics */}
+          {availablePackages.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <p className="text-2xl font-bold">{availablePackages.length}</p>
+                      <p className="text-xs text-muted-foreground">Ready to Ship</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-green-600" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {availablePackages.reduce((sum, p) => sum + p.weight_kg, 0).toFixed(1)}kg
+                      </p>
+                      <p className="text-xs text-muted-foreground">Total Weight</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-purple-600" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        ${availablePackages.reduce((sum, p) => sum + (p.declared_value_usd || 0), 0).toFixed(0)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Total Value</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {Math.max(...availablePackages.map(p => 
+                          Math.floor((Date.now() - new Date(p.received_date).getTime()) / (1000 * 60 * 60 * 24))
+                        ))}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Oldest (days)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {packagesLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -722,6 +830,18 @@ export const PackageForwarding: React.FC = () => {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="calculator" className="space-y-4">
+          <ShippingCalculator 
+            packages={availablePackages}
+            onCalculate={(option) => {
+              toast({
+                title: 'Quote Created',
+                description: `Shipping quote for ${option} has been added to your quotes.`,
+              });
+            }}
+          />
         </TabsContent>
       </Tabs>
 
