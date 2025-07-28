@@ -53,31 +53,166 @@ interface CustomerQuoteDetailProps {
 }
 
 const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
-  console.log('🚀🚀🚀 CustomerQuoteDetail component loaded and rendering! 🚀🚀🚀');
+  console.log('🚀 CustomerQuoteDetail component rendering');
   
-  // Test with very obvious styling to see if it's rendering
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Simple quote data fetching
+  const {
+    data: quoteData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['customer-quote', id],
+    queryFn: async () => {
+      if (!id) throw new Error('No quote ID provided');
+
+      const { data: quote, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      
+      // Basic access check
+      if (quote.user_id !== user?.id) {
+        throw new Error('Access denied to this quote');
+      }
+
+      return quote;
+    },
+    enabled: Boolean(id && user),
+  });
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600">Loading quote details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !quoteData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow-sm text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Quote Not Found</h2>
+          <p className="text-gray-600 mb-6">
+            {error?.message || "The quote you're looking for doesn't exist."}
+          </p>
+          <Button onClick={() => navigate('/dashboard')} variant="outline">
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Success state with quote data
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 9999,
-      background: 'linear-gradient(45deg, #ff0000, #00ff00, #0000ff)',
-      color: 'white',
-      fontSize: '32px',
-      fontWeight: 'bold',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      textAlign: 'center'
-    }}>
-      <div>
-        <h1>🎯 CUSTOMER QUOTE DETAIL IS RENDERING! 🎯</h1>
-        <p>URL: {window.location.pathname}</p>
-        <p>Time: {new Date().toLocaleString()}</p>
-        <p>This should overlay everything if rendering correctly!</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard')}
+              className="mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Quote Details</h1>
+            <p className="text-gray-600 mt-1">Quote ID: {quoteData.id}</p>
+          </div>
+        </div>
+
+        {/* Quote Information Card */}
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Status</label>
+              <div className="mt-1">
+                <Badge variant={quoteData.status === 'approved' ? 'default' : 'secondary'}>
+                  {quoteData.status}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Total Amount</label>
+              <p className="mt-1 text-lg font-semibold text-gray-900">
+                ${quoteData.final_total_usd?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Created</label>
+              <p className="mt-1 text-gray-900">
+                {new Date(quoteData.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Route</label>
+              <p className="mt-1 text-gray-900">
+                {quoteData.origin_country} → {quoteData.destination_country}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Items */}
+        {quoteData.items && Array.isArray(quoteData.items) && quoteData.items.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Items</h2>
+            <div className="space-y-4">
+              {quoteData.items.map((item: any, index: number) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      {item.name || item.product_name || `Item ${index + 1}`}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Quantity: {item.quantity || 1} • Weight: {item.weight || 0} kg
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">
+                      ${(item.costprice_origin || item.price || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        {quoteData.status === 'approved' && (
+          <div className="mt-6 flex gap-3">
+            <Button className="bg-green-600 hover:bg-green-700">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Add to Cart
+            </Button>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+            <Button variant="outline">
+              <Share2 className="h-4 w-4 mr-2" />
+              Share Quote
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
