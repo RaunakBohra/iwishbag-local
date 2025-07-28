@@ -442,26 +442,25 @@ const router = createBrowserRouter([
       {
         path: 'quotes/:id',
         element: (
-          <ProtectedRoute>
-            <div style={{ 
-              background: 'linear-gradient(45deg, #ff0000, #ff6600)', 
-              color: 'white', 
-              padding: '40px', 
-              minHeight: '100vh', 
-              fontSize: '32px',
-              textAlign: 'center',
-              fontWeight: 'bold'
-            }}>
-              <h1>🎯 SUCCESS! /quotes/:id ROUTE MATCHED! 🎯</h1>
-              <p>URL: {window.location.href}</p>
-              <p>Time: {new Date().toLocaleString()}</p>
-              <hr style={{margin: '20px 0'}} />
-              {(() => {
-                console.log('🎯 Route /quotes/:id matched successfully!');
-                return <TestQuotePage />;
-              })()}
-            </div>
-          </ProtectedRoute>
+          <div style={{ 
+            background: 'linear-gradient(45deg, #ff0000, #ff6600)', 
+            color: 'white', 
+            padding: '40px', 
+            minHeight: '100vh', 
+            fontSize: '32px',
+            textAlign: 'center',
+            fontWeight: 'bold'
+          }}>
+            <h1>🎯 SUCCESS! /quotes/:id ROUTE MATCHED! 🎯</h1>
+            <p>URL: {window.location.href}</p>
+            <p>Time: {new Date().toLocaleString()}</p>
+            <p>NO PROTECTED ROUTE - DIRECT ACCESS</p>
+            <hr style={{margin: '20px 0'}} />
+            {(() => {
+              console.log('🎯 Route /quotes/:id matched successfully WITHOUT ProtectedRoute!');
+              return <TestQuotePage />;
+            })()}
+          </div>
         ),
       },
       {
@@ -631,8 +630,37 @@ const router = createBrowserRouter([
         ],
       },
       {
+        path: 'quotes/*',
+        element: (
+          <div style={{ 
+            background: 'purple', 
+            color: 'white', 
+            padding: '40px', 
+            minHeight: '100vh', 
+            fontSize: '24px' 
+          }}>
+            <h1>🟣 QUOTES WILDCARD ROUTE MATCHED</h1>
+            <p>URL: {window.location.href}</p>
+            <p>This means quotes/:id didn't match but quotes/* did</p>
+          </div>
+        ),
+      },
+      {
         path: '*',
-        element: <NotFound />,
+        element: (
+          <div style={{ 
+            background: 'black', 
+            color: 'white', 
+            padding: '40px', 
+            minHeight: '100vh', 
+            fontSize: '24px' 
+          }}>
+            <h1>⚫ CATCH-ALL ROUTE MATCHED</h1>
+            <p>URL: {window.location.href}</p>
+            <p>This means no other route matched</p>
+            <NotFound />
+          </div>
+        ),
       },
     ],
   },
