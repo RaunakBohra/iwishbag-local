@@ -439,14 +439,7 @@ const router = createBrowserRouter([
         path: 's/:shareToken',
         element: <QuoteDetailUnified isShareToken={true} />,
       },
-      {
-        path: 'quotes/:id',
-        element: (
-          <ProtectedRoute>
-            <CustomerQuoteDetail />
-          </ProtectedRoute>
-        ),
-      },
+      // Moved quotes/:id to ProtectedRoute children section below
       {
         path: 'guest-checkout',
         element: (
@@ -609,6 +602,10 @@ const router = createBrowserRouter([
           {
             path: 'test-membership-discount',
             element: <TestMembershipDiscount />,
+          },
+          {
+            path: 'quotes/:id',
+            element: <CustomerQuoteDetail />,
           },
         ],
       },
