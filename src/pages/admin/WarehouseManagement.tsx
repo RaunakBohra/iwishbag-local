@@ -40,6 +40,9 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { R2StorageServiceSimple } from '@/services/R2StorageServiceSimple';
+import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
+import { storageFeeService, type StorageFeeOverview, type StorageFeeCalculation } from '@/services/StorageFeeService';
 import {
   warehouseManagementService,
   type WarehouseDashboard,
@@ -74,6 +77,40 @@ const PackageReceivingForm: React.FC<PackageReceivingFormProps> = ({ onClose, on
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+
+  const handlePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setPhotoFiles(files);
+    }
+  };
+
+  const uploadPhotos = async (): Promise<string[]> => {
+    if (photoFiles.length === 0) return [];
+    
+    setUploadingPhotos(true);
+    const r2Service = R2StorageServiceSimple.getInstance();
+    const photoUrls: string[] = [];
+    
+    try {
+      for (const file of photoFiles) {
+        const result = await r2Service.uploadFile(file, {
+          folder: 'package-photos',
+          contentType: file.type,
+          metadata: {
+            suiteNumber: formData.suiteNumber || '',
+            uploadedBy: user?.id || ''
+          }
+        });
+        photoUrls.push(result.url);
+      }
+      return photoUrls;
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +125,16 @@ const PackageReceivingForm: React.FC<PackageReceivingFormProps> = ({ onClose, on
 
     setIsSubmitting(true);
     try {
-      await packageForwardingService.logReceivedPackage(formData as PackageReceivingData);
+      // Upload photos first
+      const photoUrls = await uploadPhotos();
+      
+      // Add photo URLs to form data
+      const finalFormData = {
+        ...formData,
+        photos: photoUrls
+      } as PackageReceivingData;
+
+      await packageForwardingService.logReceivedPackage(finalFormData);
       toast({
         title: 'Package Received',
         description: 'Package has been successfully logged in the system.',
@@ -269,15 +315,40 @@ const PackageReceivingForm: React.FC<PackageReceivingFormProps> = ({ onClose, on
             />
           </div>
 
+          <div>
+            <Label htmlFor="photos">Package Photos</Label>
+            <div className="space-y-2">
+              <Input
+                id="photos"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePhotosChange}
+                disabled={isSubmitting || uploadingPhotos}
+              />
+              {photoFiles.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {photoFiles.length} photo(s) selected
+                </div>
+              )}
+              {uploadingPhotos && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Uploading photos...
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex justify-between pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || uploadingPhotos}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
+                  {uploadingPhotos ? 'Uploading Photos...' : 'Processing...'}
                 </>
               ) : (
                 <>
@@ -423,6 +494,10 @@ export const WarehouseManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [taskFilter, setTaskFilter] = useState<string>('');
+  const [selectedPackagePhotos, setSelectedPackagePhotos] = useState<{
+    photos: string[];
+    packageInfo: any;
+  } | null>(null);
 
   // Fetch warehouse dashboard data
   const { data: dashboard, isLoading: dashboardLoading } = useQuery({
@@ -443,21 +518,25 @@ export const WarehouseManagement: React.FC = () => {
   // Fetch consolidation groups needing processing
   const { data: pendingConsolidations = [], isLoading: consolidationsLoading } = useQuery({
     queryKey: ['pending-consolidations'],
-    queryFn: async (): Promise<ConsolidationGroup[]> => {
-      // This would fetch consolidation groups with status 'pending'
-      // For now, return empty array as placeholder
-      return [];
-    },
+    queryFn: (): Promise<ConsolidationGroup[]> => 
+      packageForwardingService.getPendingConsolidations(),
+    refetchInterval: 60000, // Refresh every minute
   });
 
   // Fetch recent packages
   const { data: recentPackages = [], isLoading: packagesLoading } = useQuery({
     queryKey: ['recent-packages'],
-    queryFn: async (): Promise<ReceivedPackage[]> => {
-      // This would fetch recent packages across all customers
-      // For now, return empty array as placeholder
-      return [];
-    },
+    queryFn: (): Promise<ReceivedPackage[]> => 
+      packageForwardingService.getRecentPackages(20),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  // Fetch storage fee overview
+  const { data: storageFeeOverview, isLoading: storageFeesLoading } = useQuery({
+    queryKey: ['storage-fee-overview'],
+    queryFn: (): Promise<StorageFeeOverview> => 
+      storageFeeService.getAdminStorageFeeOverview(),
+    refetchInterval: 60000, // Refresh every minute
   });
 
   // Complete task mutation
@@ -620,7 +699,7 @@ export const WarehouseManagement: React.FC = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="tasks" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="tasks" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             Tasks
@@ -632,6 +711,10 @@ export const WarehouseManagement: React.FC = () => {
           <TabsTrigger value="consolidations" className="flex items-center gap-2">
             <Archive className="h-4 w-4" />
             Consolidations
+          </TabsTrigger>
+          <TabsTrigger value="storage-fees" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Storage Fees
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -740,7 +823,7 @@ export const WarehouseManagement: React.FC = () => {
                       </Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="grid grid-cols-3 gap-2 text-sm">
                       <div className="flex items-center gap-1">
                         <Scale className="h-3 w-3 text-muted-foreground" />
                         <span>{pkg.weight_kg}kg</span>
@@ -748,6 +831,22 @@ export const WarehouseManagement: React.FC = () => {
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         <span>{pkg.storage_location}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Camera className="h-3 w-3 text-muted-foreground" />
+                        <button
+                          onClick={() => setSelectedPackagePhotos({
+                            photos: pkg.photos || [],
+                            packageInfo: {
+                              suiteNumber: pkg.customer_addresses?.suite_number,
+                              senderStore: pkg.sender_store,
+                              description: pkg.package_description
+                            }
+                          })}
+                          className="text-primary hover:underline"
+                        >
+                          {pkg.photos?.length || 0} photos
+                        </button>
                       </div>
                     </div>
                   </CardContent>
@@ -827,6 +926,150 @@ export const WarehouseManagement: React.FC = () => {
           )}
         </TabsContent>
 
+        <TabsContent value="storage-fees" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Storage Fee Management</h2>
+            <Button
+              onClick={async () => {
+                try {
+                  const result = await storageFeeService.generateStorageFeeRecords();
+                  toast({
+                    title: 'Storage Fees Updated',
+                    description: `Created ${result.created} new fees, updated ${result.updated} existing fees.`,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['storage-fee-overview'] });
+                } catch (error: any) {
+                  toast({
+                    title: 'Failed to Update Fees',
+                    description: error.message,
+                    variant: 'destructive',
+                  });
+                }
+              }}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Update Fee Records
+            </Button>
+          </div>
+
+          {storageFeesLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map(i => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : storageFeeOverview ? (
+            <div className="space-y-6">
+              {/* Storage Fee Overview Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{storageFeeOverview.total_packages}</div>
+                    <p className="text-xs text-muted-foreground">
+                      In storage system
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Free Period</CardTitle>
+                    <Clock className="h-4 w-4 text-green-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {storageFeeOverview.packages_in_free_period}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Not yet accruing fees
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Accruing Fees</CardTitle>
+                    <DollarSign className="h-4 w-4 text-orange-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {storageFeeOverview.packages_accruing_fees}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Beyond free period
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Unpaid Fees</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      ${storageFeeOverview.total_unpaid_fees_usd.toFixed(2)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Awaiting payment
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Revenue Metrics */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Revenue Collected</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600">
+                      ${storageFeeOverview.total_paid_fees_usd.toFixed(2)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Total fees collected</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly Revenue Est.</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600">
+                      ${storageFeeOverview.estimated_monthly_revenue_usd.toFixed(2)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Based on current packages</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Average Storage</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">
+                      {storageFeeOverview.average_storage_days.toFixed(1)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Days per package</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          ) : null}
+        </TabsContent>
+
         <TabsContent value="analytics" className="space-y-4">
           <h2 className="text-xl font-semibold">Warehouse Analytics</h2>
           
@@ -893,6 +1136,16 @@ export const WarehouseManagement: React.FC = () => {
         <PackageReceivingForm
           onClose={() => setShowReceivingForm(false)}
           onSuccess={handleReceivePackageSuccess}
+        />
+      )}
+
+      {/* Package Photo Gallery */}
+      {selectedPackagePhotos && (
+        <PackagePhotoGallery
+          photos={selectedPackagePhotos.photos}
+          packageInfo={selectedPackagePhotos.packageInfo}
+          open={true}
+          onClose={() => setSelectedPackagePhotos(null)}
         />
       )}
     </div>

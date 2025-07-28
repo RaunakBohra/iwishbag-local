@@ -75,7 +75,7 @@ const transformQuoteToUnifiedFormat = (
     currency_symbol: destinationCurrency?.symbol || '$',
     
     // Additional fields
-    discount: 0, // Can be calculated from calculation data if available
+    discount: calculationData.breakdown?.discount || calculationData.discount || 0, // Extract discount from calculation data
     additional_due: 0, // Calculate based on payment status
     
     // Customer information using proper display utilities
@@ -484,6 +484,28 @@ const AdminQuoteDetail: React.FC = () => {
         dbUpdates.calculation_data = {
           ...currentCalculationData,
           ...updates.calculation_data
+        };
+      }
+
+      // Handle direct field updates (discount, handling, insurance) and map to calculation_data.breakdown
+      if (updates.discount !== undefined || updates.handling !== undefined || updates.insurance !== undefined) {
+        console.log('🔍 [MUTATION] Direct field updates detected:', {
+          discount: updates.discount,
+          handling: updates.handling,
+          insurance: updates.insurance
+        });
+        
+        const currentCalculationData = quoteData?.quote?.calculation_data || {};
+        const currentBreakdown = currentCalculationData.breakdown || {};
+        
+        dbUpdates.calculation_data = {
+          ...currentCalculationData,
+          breakdown: {
+            ...currentBreakdown,
+            ...(updates.discount !== undefined && { discount: updates.discount }),
+            ...(updates.handling !== undefined && { handling: updates.handling }),
+            ...(updates.insurance !== undefined && { insurance: updates.insurance })
+          }
         };
       }
 

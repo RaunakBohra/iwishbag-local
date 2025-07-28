@@ -808,6 +808,62 @@ Suite: ${suiteNumber}`;
   }
 
   // ============================================================================
+  // ADMIN QUERY METHODS
+  // ============================================================================
+
+  /**
+   * Get recent packages across all customers (for admin dashboard)
+   */
+  async getRecentPackages(limit: number = 20): Promise<ReceivedPackage[]> {
+    try {
+      const { data, error } = await supabase
+        .from('received_packages')
+        .select(`
+          *,
+          customer_addresses!inner(
+            user_id,
+            suite_number
+          )
+        `)
+        .order('received_date', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(`Failed to fetch recent packages: ${error.message}`);
+      }
+
+      return data || [];
+
+    } catch (error) {
+      logger.error('❌ Failed to get recent packages:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending consolidation groups (for admin dashboard)
+   */
+  async getPendingConsolidations(): Promise<ConsolidationGroup[]> {
+    try {
+      const { data, error } = await supabase
+        .from('consolidation_groups')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        throw new Error(`Failed to fetch pending consolidations: ${error.message}`);
+      }
+
+      return data || [];
+
+    } catch (error) {
+      logger.error('❌ Failed to get pending consolidations:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
   // NOTIFICATION METHODS (Placeholder implementations)
   // ============================================================================
 

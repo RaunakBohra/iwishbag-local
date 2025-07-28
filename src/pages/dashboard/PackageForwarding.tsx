@@ -41,6 +41,7 @@ import {
   type ConsolidationGroup,
   type ConsolidationOption,
 } from '@/services/PackageForwardingService';
+import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
 
 interface ConsolidationDialogProps {
   packages: ReceivedPackage[];
@@ -727,38 +728,18 @@ export const PackageForwarding: React.FC = () => {
         />
       )}
 
-      {/* Package Photos Dialog */}
+      {/* Enhanced Package Photo Gallery */}
       {selectedPackageForPhotos && (
-        <Dialog open={true} onOpenChange={() => setSelectedPackageForPhotos(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Package Photos</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {selectedPackageForPhotos.photos.map((photo, index) => (
-                  <img
-                    key={index}
-                    src={photo}
-                    alt={`Package photo ${index + 1}`}
-                    className="w-full h-48 object-cover rounded-lg"
-                  />
-                ))}
-              </div>
-              <div>
-                <h4 className="font-semibold">Package Details</h4>
-                <p className="text-sm text-muted-foreground">
-                  {selectedPackageForPhotos.package_description}
-                </p>
-                {selectedPackageForPhotos.condition_notes && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    <strong>Condition Notes:</strong> {selectedPackageForPhotos.condition_notes}
-                  </p>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <PackagePhotoGallery
+          photos={selectedPackageForPhotos.photos}
+          packageInfo={{
+            suiteNumber: virtualAddress?.suite_number,
+            senderStore: selectedPackageForPhotos.sender_store,
+            description: selectedPackageForPhotos.package_description
+          }}
+          open={true}
+          onClose={() => setSelectedPackageForPhotos(null)}
+        />
       )}
     </div>
   );

@@ -1,0 +1,33 @@
+# Cloudflare Pages Configuration
+name = "iwishbag-pages"
+compatibility_date = "2024-01-01"
+account_id = "610762493d34333f1a6d72a037b345cf"
+
+[env.production]
+# Production environment variables
+# These should be set in the Cloudflare Pages dashboard as well
+
+[[env.production.kv_namespaces]]
+binding = "IWISHBAG_CACHE"
+id = "6f5087b9d89146dfbeb8efa92a9b4756"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "iwishbag-edge-cache"
+database_id = "3c663e4c-cad7-4262-a73d-f1ec9a4367a9"
+
+[[env.production.r2_buckets]]
+binding = "IWISHBAG_NEW"
+bucket_name = "iwishbag-new"
+
+[env.preview]
+# Preview environment (same as production for now)
+
+[[env.preview.kv_namespaces]]
+binding = "IWISHBAG_CACHE"
+id = "6f5087b9d89146dfbeb8efa92a9b4756"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "iwishbag-edge-cache"
+database_id = "3c663e4c-cad7-4262-a73d-f1ec9a4367a9"

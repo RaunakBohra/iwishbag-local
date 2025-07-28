@@ -207,7 +207,9 @@
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/fix-mcp-connection.sh:*)",
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/setup-claude-auto-mcp.sh)",
       "mcp__memory__create_relations",
-      "mcp__redis__set"
+      "mcp__redis__set",
+      "mcp__redis__set",
+      "mcp__memory__add_observations"
     ],
     "deny": []
   }

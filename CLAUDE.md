@@ -16,26 +16,23 @@ International shopping platform (Amazon, Flipkart, eBay, Alibaba) → customers 
 ## Database Reset Recovery - CRITICAL SECTION
 **IF a database reset accidentally happens, immediately run this recovery process:**
 
-### 1. **Apply All Migrations**
+### 1. **Apply Consolidated Database Migration**
 ```bash
-# Apply all migrations in order
+# Apply the single consolidated migration (replaces all previous migrations)
 supabase db push --include-all
 ```
 
-### 2. **Run Essential Functions Script**
-```bash
-# Execute the essential functions script via psql or Supabase SQL Editor
-psql -h localhost -p 54322 -d postgres -U postgres -f src/scripts/ensure-database-functions.sql
-```
+**NOTE**: Database is now consolidated into single baseline migration: `00000000000000_initial_complete_database.sql`
 
-### 2.5. **Apply Enhanced HSN System (Single Migration)**
-If HSN tables are missing after reset, apply the enhanced all-in-one migration:
-```bash
-# Apply Enhanced HSN System Complete Migration (includes everything)
-PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250725200000_enhanced_hsn_system_complete.sql
-```
+### 2. **Verify Database State**
+After applying the consolidated migration, the database will have:
+- Complete schema with all tables, functions, triggers
+- Full seed data (countries, HSN codes, configurations)
+- Package forwarding system
+- MFA system (currently disabled for development)
 
-**OR** apply individual migrations (legacy method):
+### 2.5. **Legacy Migration Recovery (DEPRECATED)**
+**DEPRECATED**: Individual migrations have been consolidated. The following commands are kept for reference only:
 ```bash
 # Apply HSN atomic migration (DB-reset safe)
 PGPASSWORD=postgres psql -h localhost -p 54322 -d postgres -U postgres -f supabase/migrations/20250725000000_hsn_system_atomic_migration.sql
@@ -65,12 +62,12 @@ SELECT * FROM get_user_roles_new(auth.uid());
 -- Test tracking system
 SELECT generate_iwish_tracking_id() as sample_tracking_id;
 
--- Test HSN system tables (Should return 23, 4, 1 respectively)
+-- Test HSN system tables (Should return 70, 8, 1 respectively)
 SELECT COUNT(*) as hsn_master_count FROM hsn_master;
 SELECT COUNT(*) as unified_config_count FROM unified_configuration;
 SELECT COUNT(*) as admin_overrides_count FROM admin_overrides;
 
--- Verify HSN category coverage (Should show 15 categories)
+-- Verify HSN category coverage (Should show 23 categories)
 SELECT COUNT(DISTINCT category) as category_count, 
        STRING_AGG(DISTINCT category, ', ') as categories 
 FROM hsn_master;
@@ -78,8 +75,12 @@ FROM hsn_master;
 -- Test HSN currency conversion function
 SELECT get_hsn_with_currency_conversion('6204', 'NP')->'currency_conversion' as nepal_kurta_test;
 
--- Test HSN search optimization (should return 23 records)
+-- Test HSN search optimization (should return 70 records)
 SELECT COUNT(*) as hsn_search_records FROM hsn_search_optimized;
+
+-- Test package forwarding system
+SELECT COUNT(*) as customer_addresses_count FROM customer_addresses;
+SELECT COUNT(*) as received_packages_count FROM received_packages;
 
 -- Test search functionality
 SELECT hsn_code, display_name, icon FROM hsn_search_optimized 
@@ -130,6 +131,9 @@ This ensures:
 - **State**: Zustand, React Query
 - **Forms**: React Hook Form + Zod
 - **Payment**: PayU, Stripe
+- **Security**: MFA with TOTP (currently disabled for development)
+- **Package Forwarding**: Virtual addresses, consolidation, warehouse management
+- **ML**: Weight estimation with persistent learning
 - **Principles**: DRY, reuse components, simplest solutions
 
 ## Core Systems
