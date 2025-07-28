@@ -1,586 +1,407 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  ArrowLeft,
-  ShoppingCart,
-  Info,
-  Calculator,
-  Package,
-  Clock,
-  MapPin,
-  User,
-  Calendar,
-  Download,
-  Share2,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Truck,
-  Shield,
-  CreditCard,
-  Globe,
-  FileText,
-  MessageSquare,
-  ChevronRight,
-  Upload,
-} from 'lucide-react';
-import { QuoteBreakdownDetails } from '@/components/dashboard/QuoteBreakdownDetails';
-import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
-import { useStatusManagement } from '@/hooks/useStatusManagement';
-import { useQuoteState } from '@/hooks/useQuoteState';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-// import { useGuestCurrency } from '@/contexts/GuestCurrencyContext'; // Not needed for authenticated users
+import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
+import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
-import { formatCurrency } from '@/utils/currencyConversion';
-import { InsuranceToggle } from '@/components/customer/InsuranceToggle';
-import { useShippingRoutes } from '@/hooks/useShippingRoutes';
+import type { Tables } from '@/integrations/supabase/types';
+import type { UnifiedQuote } from '@/types/unified-quote';
 
-const CustomerQuoteDetail: React.FC = () => {
-  const navigate = useNavigate();
+// Components we'll add in next phases
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Loader2 } from 'lucide-react';
+
+type Quote = Tables<'quotes'>;
+
+interface CustomerQuoteDetailProps {
+  // Props can be added later if needed
+}
+
+const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const { getStatusConfig } = useStatusManagement();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isUpdatingInsurance, setIsUpdatingInsurance] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  // Initialize quote state hook
-  const quoteStateHook = useQuoteState(id || '');
+  // State management
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
-  // Fetch quote data with all relations
+  // Fetch quote data with related information
   const {
-    data: quote,
+    data: quoteData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['customer-quote-detail', id],
+    queryKey: ['customer-quote', id],
     queryFn: async () => {
       if (!id) throw new Error('No quote ID provided');
 
-      const { data, error } = await supabase
+      // Ensure user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Fetch quote with related data - try both ID and tracking ID
+      let quote = null;
+      let quoteError = null;
+
+      // First try by UUID
+      const { data: quoteById, error: errorById } = await supabase
         .from('quotes')
-        .select(
-          `
-          *,
-          profiles!quotes_user_id_fkey(
-            id,
-            full_name,
-            email,
-            preferred_display_currency
-          ),
-          payment_transactions(
-            id,
-            amount,
-            currency,
-            status,
-            created_at
-          )
-        `,
-        )
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      return data;
+      if (!errorById && quoteById) {
+        // Verify user has access to this quote
+        if (quoteById.user_id !== user.id && !quoteById.customer_data?.email?.includes(user.email || '')) {
+          throw new Error('Access denied to this quote');
+        }
+        quote = quoteById;
+      } else {
+        // Try by tracking ID
+        const { data: quoteByTracking, error: errorByTracking } = await supabase
+          .from('quotes')
+          .select('*')
+          .eq('iwish_tracking_id', id)
+          .single();
+
+        if (!errorByTracking && quoteByTracking) {
+          // Verify user has access to this quote
+          if (quoteByTracking.user_id !== user.id && !quoteByTracking.customer_data?.email?.includes(user.email || '')) {
+            throw new Error('Access denied to this quote');
+          }
+          quote = quoteByTracking;
+        } else {
+          quoteError = errorById || errorByTracking;
+        }
+      }
+
+      if (!quote || quoteError) {
+        console.error('Quote fetch error:', quoteError, 'ID:', id);
+        throw quoteError || new Error('Quote not found');
+      }
+
+      // Fetch customer profile if available
+      let customerProfile = null;
+      if (quote.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', quote.user_id)
+          .single();
+        customerProfile = profile;
+      }
+
+      // Get destination currency
+      let destinationCurrency = null;
+      try {
+        const currencyCode = await optimizedCurrencyService.getCurrencyForCountry(quote.destination_country);
+        destinationCurrency = {
+          code: currencyCode,
+          symbol: optimizedCurrencyService.getCurrencySymbol(currencyCode),
+          rate: 1 // This service doesn't provide rates
+        };
+      } catch (error) {
+        console.error('Error getting currency:', error);
+        // Fallback to USD if currency service fails
+        destinationCurrency = { code: 'USD', symbol: '$', rate: 1 };
+      }
+
+      // Calculate real-time pricing (similar to admin side)
+      let calculationResult = null;
+      try {
+        const initialCalculationInput = {
+          quote: {
+            id: quote.id,
+            items: (quote.items || []).map((item: any, index: number) => ({
+              id: item.id || `item-${index}`,
+              name: item.name || item.product_name || '',
+              url: item.url || item.product_url || '',
+              image: item.image_url || '',
+              customer_notes: item.customer_notes || '',
+              quantity: typeof item.quantity === 'number' ? item.quantity : 1,
+              costprice_origin: typeof item.costprice_origin === 'number' ? item.costprice_origin : (item.price || 0),
+              weight: typeof item.weight === 'number' ? item.weight : 0,
+              hsn_code: item.hsn_code || '',
+              category: item.category || '',
+              valuation_method: item.valuation_method || 'actual_price',
+              minimum_valuation_usd: item.minimum_valuation_usd || 0,
+              actual_price: item.actual_price || item.costprice_origin || item.price || 0,
+              smart_data: {
+                weight_confidence: item.weight ? 0.8 : 0.3,
+                price_confidence: item.costprice_origin || item.price ? 0.9 : 0.5,
+                category_detected: item.category || 'General',
+                customs_suggestions: item.hsn_code ? [`HSN ${item.hsn_code} classification`] : ['Manual classification needed'],
+                optimization_hints: [
+                  ...(item.weight < 0.1 ? ['Consider weight verification'] : []),
+                  ...(item.price < 1 ? ['Price seems unusually low'] : []),
+                  ...(item.hsn_code ? [] : ['HSN code missing'])
+                ],
+                weight_source: item.weight ? 'manual' : 'estimated',
+                weight_suggestions: {
+                  hsn_weight: item.weight || 0,
+                  hsn_min: (item.weight || 0) * 0.8,
+                  hsn_max: (item.weight || 0) * 1.2,
+                  hsn_packaging: (item.weight || 0) * 0.1,
+                  ml_weight: item.weight || 0,
+                  hsn_confidence: item.hsn_code ? 0.8 : 0.3,
+                  ml_confidence: 0.6
+                }
+              }
+            })),
+            destination_country: quote.destination_country,
+            origin_country: quote.origin_country,
+            status: quote.status,
+            calculation_data: quote.calculation_data || {},
+            operational_data: quote.operational_data || {},
+            customer_data: quote.customer_data || {},
+          },
+          preferences: {
+            speed_priority: 'medium',
+            cost_priority: 'medium',
+            show_all_options: true,
+          },
+          tax_calculation_preferences: {
+            calculation_method_preference: quote.calculation_data?.tax_calculation?.method || 'hsn_only',
+            valuation_method_preference: 'auto',
+            admin_id: 'customer-quote-detail'
+          }
+        };
+
+        console.group('🛍️ CUSTOMER QUOTE DETAIL - INITIAL CALCULATION');
+        console.log('📋 QUOTE LOADED FROM DATABASE:', {
+          quote_id: quote.id,
+          tracking_id: quote.iwish_tracking_id,
+          status: quote.status,
+          items_count: quote.items?.length || 0,
+          has_calculation_data: !!quote.calculation_data,
+          has_operational_data: !!quote.operational_data,
+          route: `${quote.origin_country} → ${quote.destination_country}`,
+          created_at: quote.created_at,
+          updated_at: quote.updated_at,
+          customer_insurance_preference: quote.customer_data?.preferences?.insurance_opted_in
+        });
+        
+        console.log('💱 CURRENCY CONTEXT:', {
+          destination_currency: destinationCurrency,
+          customer_profile_available: !!customerProfile
+        });
+        
+        console.groupEnd();
+
+        calculationResult = await smartCalculationEngine.calculateWithShippingOptions(initialCalculationInput);
+      } catch (error) {
+        console.error('Error calculating quote:', error);
+        // Use existing calculation data if engine fails
+        calculationResult = { calculation_data: quote.calculation_data };
+      }
+
+      return {
+        quote,
+        customerProfile,
+        destinationCurrency,
+        calculationResult,
+      };
     },
     enabled: Boolean(id),
   });
 
-  // Get display currency - for authenticated users, use their preferred currency
-  const displayCurrency = quote?.profiles?.preferred_display_currency || quote?.currency || 'USD';
-
-  // Get status configuration
-  const statusConfig = quote ? getStatusConfig(quote.status, 'quote') : null;
-  
-  // Fetch shipping routes for insurance calculation
-  const { data: shippingRoutes } = useShippingRoutes(
-    quote?.origin_country || 'US',
-    quote?.destination_country || 'US'
-  );
-  
-  // Get selected shipping option
-  const selectedShippingOption = shippingRoutes?.shippingOptions?.find(
-    option => option.id === quote?.operational_data?.shipping?.selected_option
-  );
-
-  // Calculate totals
-  const itemsTotal =
-    quote?.items?.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0) || 0;
-
-  const handleAddToCart = async () => {
-    try {
-      await quoteStateHook.addToCart();
-      toast({
-        title: 'Added to Cart',
-        description: 'Quote has been added to your cart.',
-      });
-      navigate('/cart');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add quote to cart. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleInsuranceToggle = async (enabled: boolean) => {
-    if (!quote) return;
+  // Transform quote data for unified display (similar to admin)
+  const transformedQuote = useMemo(() => {
+    if (!quoteData?.quote) return null;
     
-    setIsUpdatingInsurance(true);
-    try {
-      // Update the quote's insurance preference
-      const { error } = await supabase
-        .from('quotes')
-        .update({
-          customer_data: {
-            ...quote.customer_data,
-            preferences: {
-              ...quote.customer_data?.preferences,
-              insurance_opted_in: enabled,
-            },
-          },
-        })
-        .eq('id', quote.id);
+    const { quote, customerProfile, calculationResult, destinationCurrency } = quoteData;
+    
+    // Parse JSON fields safely
+    const items = Array.isArray(quote.items) ? quote.items : [];
+    const customerData = quote.customer_data || {};
+    const calculationData = calculationResult?.calculation_data || quote.calculation_data || {};
+    const operationalData = quote.operational_data || {};
+    
+    // Use customer display utilities for proper customer info
+    const customerDisplay = customerDisplayUtils.getCustomerDisplayData(quote, customerProfile);
 
-      if (error) throw error;
-
-      toast({
-        title: enabled ? 'Insurance Added' : 'Insurance Removed',
-        description: enabled
-          ? 'Package protection has been added to your quote'
-          : 'Package protection has been removed from your quote',
-      });
+    // Transform to UnifiedQuote format (simplified for customer view)
+    const transformed: UnifiedQuote = {
+      id: quote.iwish_tracking_id || quote.display_id || quote.id,
+      status: quote.status,
+      created_at: quote.created_at,
+      updated_at: quote.updated_at,
+      expires_at: quote.expires_at,
       
-      // Refresh the quote data
-      window.location.reload();
-    } catch (error) {
-      console.error('Failed to update insurance:', error);
-      toast({
-        title: 'Update Failed',
-        description: 'Could not update insurance preference. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdatingInsurance(false);
-    }
-  };
+      // Financial data from real calculations
+      subtotal: calculationData.breakdown?.subtotal || 
+                calculationData.totals?.items_total ||
+                items.reduce((sum: any, item: any) => sum + ((item.costprice_origin || item.price || 0) * (item.quantity || 1)), 0),
+      shipping: calculationData.breakdown?.shipping || calculationData.totals?.shipping_total || 0,
+      insurance: calculationData.breakdown?.insurance || calculationData.totals?.insurance || 0,
+      handling: calculationData.breakdown?.handling || calculationData.totals?.handling || 0,
+      customs: calculationData.breakdown?.customs || calculationData.totals?.customs_total || 0,
+      sales_tax: calculationData.breakdown?.sales_tax || calculationData.totals?.sales_tax || 0,
+      destination_tax: calculationData.breakdown?.destination_tax || calculationData.totals?.destination_tax || 0,
+      total: calculationData.totals?.final_total || quote.final_total_usd || 0,
+      
+      // Tax and calculation details
+      tax_method: calculationData.tax_calculation?.method || 'hsn',
+      tax_rates: {
+        customs: calculationData.tax_calculation?.customs_rate || 
+                 calculationData.totals?.customs_rate ||
+                 calculationData.breakdown?.customs_rate || 0,
+        sales_tax: calculationData.tax_calculation?.sales_tax_rate || 
+                   calculationData.totals?.sales_tax_rate ||
+                   calculationData.breakdown?.sales_tax_rate || 0,
+        destination_tax: calculationData.tax_calculation?.destination_tax_rate || 
+                         calculationData.totals?.destination_tax_rate ||
+                         calculationData.breakdown?.destination_tax_rate || 0,
+      },
+      
+      // Currency info
+      currency: destinationCurrency?.code || 'USD',
+      currency_symbol: destinationCurrency?.symbol || '$',
+      
+      // Additional fields
+      discount: calculationData.breakdown?.discount || calculationData.discount || 0,
+      additional_due: 0, // Calculate based on payment status if needed
+      
+      // Customer information using proper display utilities
+      customer: {
+        id: quote.user_id || 'guest',
+        name: customerDisplay.name,
+        email: customerDisplay.email,
+        phone: customerDisplay.phone || '',
+        avatar: customerProfile?.avatar_url || 'https://github.com/shadcn.png',
+        location: `${quote.destination_country}`,
+        customer_since: customerProfile?.created_at || quote.created_at,
+        total_orders: customerProfile?.metadata?.total_orders || 0,
+        total_spent: customerProfile?.metadata?.total_spent || 0,
+        loyalty_tier: customerProfile?.metadata?.loyalty_tier || 'Standard',
+        type: customerDisplay.isGuest ? 'Guest' : (customerDisplay.isOAuth ? 'OAuth' : 'Registered')
+      },
+      
+      // Shipping address
+      shipping_address: {
+        name: customerData.shipping_address?.name || customerData.name || '',
+        line1: customerData.shipping_address?.line1 || '',
+        line2: customerData.shipping_address?.line2 || '',
+        city: customerData.shipping_address?.city || '',
+        state: customerData.shipping_address?.state || '',
+        postal_code: customerData.shipping_address?.postal_code || '',
+        country: quote.destination_country
+      },
+      
+      // Transform items
+      items: items.map((item: any, index: number) => ({
+        id: item.id || `item-${index}`,
+        product_name: item.name || item.product_name || '',
+        product_url: item.url || item.product_url || '',
+        sku: item.sku || '',
+        quantity: item.quantity || 1,
+        price: item.costprice_origin || item.price || 0,
+        weight: item.weight || 0,
+        hsn_code: item.hsn_code || '',
+        category: item.category || '',
+        seller: item.seller || 'Unknown',
+        image_url: item.image_url || '',
+        
+        // Tax calculation data
+        tax_method: item.tax_method || calculationData.tax_calculation?.method || 'hsn',
+        customs_value: item.customs_value || item.price,
+        customs_amount: item.customs_amount || 0,
+        sales_tax_amount: item.sales_tax_amount || 0,
+        destination_tax_amount: item.destination_tax_amount || 0,
+      })),
+      
+      // Shipping options from calculation
+      shipping_options: calculationResult?.shipping_options || [],
+      
+      // Smart suggestions
+      smart_suggestions: calculationResult?.smart_suggestions || [],
+      
+      // Additional fields needed by components
+      destination_country: quote.destination_country,
+      origin_country: quote.origin_country,
+      shipping_method: quote.shipping_method || 'standard',
+      
+      // Include customer data for insurance preferences and other customer info
+      customer_data: customerData,
+      
+      // Include raw calculation data for tax breakdown
+      calculation_data: calculationData
+    };
 
+    return transformed;
+  }, [quoteData]);
+
+  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading quote details...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">Loading quote details...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !quote) {
+  // Error state
+  if (error || !quoteData?.quote || !transformedQuote) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-8 text-center">
-            <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-            <h1 className="text-2xl font-semibold text-gray-900 mb-4">Quote Not Found</h1>
-            <p className="text-gray-600 mb-6">
-              The quote you're looking for doesn't exist or you don't have permission to view it.
-            </p>
-            <Button onClick={() => navigate('/dashboard')} className="w-full">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="max-w-md mx-auto p-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ArrowLeft className="h-8 w-8 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Quote Not Found</h1>
+          <p className="text-gray-600 mb-6">
+            {error?.message === 'Access denied to this quote' 
+              ? "You don't have permission to view this quote." 
+              : "The quote you're looking for doesn't exist."}
+          </p>
+          <Button
+            onClick={() => navigate('/dashboard')}
+            className="inline-flex items-center"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main render
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100">
+      {/* Modern header - will be enhanced in Phase 2 */}
+      <div className="bg-white/70 backdrop-blur-md shadow-sm border-b sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const customerData = customerDisplayUtils.getCustomerDisplayData(quote, quote.profiles);
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-              <div className="flex items-center space-x-3">
-                <Package className="h-5 w-5 text-gray-400" />
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">
-                    Quote #{quote.display_id || quote.id.slice(0, 8)}
-                  </h1>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <Badge
-                      variant={(statusConfig?.variant as any) || 'outline'}
-                      className={statusConfig?.className}
-                    >
-                      {statusConfig?.icon && <statusConfig.icon className="h-3 w-3 mr-1" />}
-                      {statusConfig?.label || quote.status}
-                    </Badge>
-                    <span>•</span>
-                    <span>{new Date(quote.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-              {quote.status === 'approved' && (
-                <Button size="sm" onClick={handleAddToCart}>
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  Add to Cart
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Double Column Layout */}
+      {/* Main content area - will be populated in Phase 2 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Quote Details */}
-          <div className="space-y-6">
-            {/* Customer Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Customer Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Name</p>
-                    <p className="font-medium">{customerData.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{customerData.email}</p>
-                  </div>
-                  {customerData.phone && (
-                    <div>
-                      <p className="text-sm text-gray-500">Phone</p>
-                      <p className="font-medium">{customerData.phone}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Shipping Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Shipping Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Destination</p>
-                    <p className="font-medium flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
-                      {quote.destination_country}
-                    </p>
-                  </div>
-                  {quote.shipping_address && (
-                    <div>
-                      <p className="text-sm text-gray-500">Address</p>
-                      <p className="font-medium text-sm">
-                        {quote.shipping_address.formatted ||
-                          `${quote.shipping_address.street}, ${quote.shipping_address.city}, ${quote.shipping_address.state} ${quote.shipping_address.postalCode}`}
-                      </p>
-                    </div>
-                  )}
-                  {quote.shipping_option && (
-                    <div>
-                      <p className="text-sm text-gray-500">Shipping Method</p>
-                      <p className="font-medium flex items-center gap-2">
-                        <Truck className="h-4 w-4" />
-                        {quote.shipping_option.name}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Items */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Items ({quote.items?.length || 0})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {quote.items?.map((item: any, index: number) => (
-                    <div key={item.id || index} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{item.name}</h4>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Quantity: {item.quantity} ×{' '}
-                            {formatCurrency(item.price, displayCurrency)}
-                          </p>
-                          {item.product_url && (
-                            <a
-                              href={item.product_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:underline mt-1 inline-block"
-                            >
-                              View Product
-                            </a>
-                          )}
-                        </div>
-                        <p className="font-medium">
-                          {formatCurrency(item.price * item.quantity, displayCurrency)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Uploaded Files */}
-            {quote.customer_data?.sessionId && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Uploaded Files
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <UploadedFilesDisplay 
-                    sessionId={quote.customer_data.sessionId} 
-                    isAdmin={false}
-                    quoteCreatedAt={quote.created_at}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Additional Information */}
-            {quote.notes && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Special Instructions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{quote.notes}</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right Column - Pricing & Actions */}
-          <div className="space-y-6">
-            {/* Price Breakdown */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
-                  Price Breakdown
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <QuoteBreakdownDetails
-                  quote={quote}
-                  displayCurrency={displayCurrency}
-                  showEducation={true}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Payment Status */}
-            {quote.payment_transactions && quote.payment_transactions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment History
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {quote.payment_transactions.map((payment: any) => (
-                      <div
-                        key={payment.id}
-                        className="flex justify-between items-center py-2 border-b last:border-0"
-                      >
-                        <div>
-                          <p className="font-medium">
-                            {formatCurrency(parseFloat(payment.amount), payment.currency)}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {new Date(payment.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <Badge variant={payment.status === 'completed' ? 'success' : 'secondary'}>
-                          {payment.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Timeline */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">Quote Created</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(quote.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {quote.status === 'approved' && quote.approved_at && (
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <CheckCircle className="h-4 w-4 text-blue-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">Quote Approved</p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(quote.approved_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {quote.expires_at && (
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-                          <Clock className="h-4 w-4 text-yellow-600" />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">Expires</p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(quote.expires_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            {quote.status === 'approved' && (
-              <>
-                {/* Insurance Option */}
-                <InsuranceToggle
-                  quote={quote}
-                  selectedShippingOption={selectedShippingOption}
-                  onToggle={handleInsuranceToggle}
-                  isLoading={isUpdatingInsurance}
-                />
-
-                <Card className="bg-green-50 border-green-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-center mb-4">
-                      <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                      <p className="font-medium text-green-900">Quote Approved</p>
-                    </div>
-                    <p className="text-sm text-green-800 mb-4">
-                      Your quote has been approved and is ready for checkout.
-                    </p>
-                    <Button className="w-full" size="lg" onClick={handleAddToCart}>
-                      <ShoppingCart className="mr-2 h-5 w-5" />
-                      Add to Cart
-                    </Button>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-
-            {quote.status === 'pending' && (
-              <Card className="bg-yellow-50 border-yellow-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    <Clock className="h-5 w-5 text-yellow-600 mr-2" />
-                    <p className="font-medium text-yellow-900">Pending Review</p>
-                  </div>
-                  <p className="text-sm text-yellow-800">
-                    Your quote is being reviewed by our team. We'll notify you once it's approved.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {quote.status === 'rejected' && (
-              <Card className="bg-red-50 border-red-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center mb-4">
-                    <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                    <p className="font-medium text-red-900">Quote Rejected</p>
-                  </div>
-                  <p className="text-sm text-red-800">
-                    {quote.rejection_reason ||
-                      'This quote has been rejected. Please contact support for more information.'}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Quote Details</h1>
+          <p className="text-gray-600">
+            Quote ID: {transformedQuote.id}
+          </p>
+          {/* More content will be added in subsequent phases */}
         </div>
       </div>
     </div>
