@@ -224,6 +224,11 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
               {isDualCurrency && (
                 <Badge variant="outline" className="text-xs">
                   {currencyDisplay.originCurrency}/{currencyDisplay.destinationCurrency}
+                  {currencyDisplay.exchangeRate && currencyDisplay.exchangeRate !== 1 && (
+                    <span className="ml-1 font-normal">
+                      (1:{currencyDisplay.exchangeRate.toFixed(2)})
+                    </span>
+                  )}
                 </Badge>
               )}
               {compact && (
@@ -244,14 +249,14 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Subtotal</span>
-              <span>{formatSingleAmount(itemsTotal)}</span>
+              <span>{formatDualAmount(itemsTotal)}</span>
             </div>
             <Separator />
             <div className="space-y-2 text-sm">
               {shipping > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span>{formatSingleAmount(shipping)}</span>
+                  <span>{formatDualAmount(shipping)}</span>
                 </div>
               )}
               {customs > 0 && (
@@ -259,7 +264,7 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
                   <span className="text-gray-600">
                     Customs ({formatTaxPercentage(customsRate)}%)
                   </span>
-                  <span>{formatSingleAmount(customs)}</span>
+                  <span>{formatDualAmount(customs)}</span>
                 </div>
               )}
               {salesTax > 0 && (
@@ -267,7 +272,7 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
                   <span className="text-gray-600">
                     Sales Tax ({formatTaxPercentage(salesTaxRate)}%)
                   </span>
-                  <span>{formatSingleAmount(salesTax)}</span>
+                  <span>{formatDualAmount(salesTax)}</span>
                 </div>
               )}
               {destinationTax > 0 && (
@@ -275,26 +280,26 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
                   <span className="text-gray-600">
                     VAT/GST ({formatTaxPercentage(destinationTaxRate)}%)
                   </span>
-                  <span>{formatSingleAmount(destinationTax)}</span>
+                  <span>{formatDualAmount(destinationTax)}</span>
                 </div>
               )}
               {handling > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Handling</span>
-                  <span>{formatSingleAmount(handling)}</span>
+                  <span>{formatDualAmount(handling)}</span>
                 </div>
               )}
               {insurance > 0 && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Insurance</span>
-                  <span>{formatSingleAmount(insurance)}</span>
+                  <span>{formatDualAmount(insurance)}</span>
                 </div>
               )}
             </div>
             <Separator />
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>{formatSingleAmount(finalTotal)}</span>
+              <span>{formatDualAmount(finalTotal)}</span>
             </div>
           </div>
 

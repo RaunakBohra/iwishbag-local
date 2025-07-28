@@ -107,6 +107,7 @@ export default function ProductInfoStep({
   destinationCountry,
   setDestinationCountry,
   next,
+  sessionId,
 }) {
   const { user } = useAuth();
   const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
@@ -260,11 +261,8 @@ export default function ProductInfoStep({
       throw new Error('Authentication required');
     }
 
-    // Get or create session ID
-    const sessionId = localStorage.getItem('anonymous_session_id') || crypto.randomUUID();
-    if (!localStorage.getItem('anonymous_session_id')) {
-      localStorage.setItem('anonymous_session_id', sessionId);
-    }
+    // Use the sessionId provided by the parent component
+    // This ensures each quote has its own unique sessionId
 
     // Upload to R2 via worker
     const r2Service = R2StorageService.getInstance();

@@ -31,12 +31,14 @@ interface UploadedFilesDisplayProps {
   sessionId?: string;
   isAdmin?: boolean;
   className?: string;
+  quoteCreatedAt?: string;
 }
 
 export const UploadedFilesDisplay: React.FC<UploadedFilesDisplayProps> = ({
   sessionId,
   isAdmin = false,
-  className = ''
+  className = '',
+  quoteCreatedAt
 }) => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +56,67 @@ export const UploadedFilesDisplay: React.FC<UploadedFilesDisplayProps> = ({
         setError(null);
         const r2Service = R2StorageService.getInstance();
         const uploadedFiles = await r2Service.getQuoteFiles(sessionId);
-        setFiles(uploadedFiles);
+        
+        // Debug logging
+        console.log('UploadedFilesDisplay Debug:', {
+          sessionId,
+          quoteCreatedAt,
+          totalFiles: uploadedFiles.length,
+          files: uploadedFiles.map(f => ({
+            name: f.originalName,
+            uploaded: f.uploaded,
+            uploadedDate: new Date(f.uploaded).toISOString()
+          }))
+        });
+        
+        // Check if this is a legacy quote
+        // Legacy quotes have sessionIds that are reused across multiple quotes
+        // We can detect this by checking if multiple files span across many days
+        const fileDates = uploadedFiles.map(f => new Date(f.uploaded).getTime());
+        const earliestUpload = fileDates.length > 0 ? new Date(Math.min(...fileDates)) : null;
+        const latestUpload = fileDates.length > 0 ? new Date(Math.max(...fileDates)) : null;
+        const uploadSpanDays = earliestUpload && latestUpload ? 
+          (latestUpload.getTime() - earliestUpload.getTime()) / (1000 * 60 * 60 * 24) : 0;
+        
+        // If files span more than 7 days, it's likely a legacy shared sessionId
+        const isLegacyQuote = uploadSpanDays > 7 || uploadedFiles.length > 10;
+        
+        console.log('Legacy quote check:', {
+          quoteCreatedAt,
+          sessionId,
+          totalFiles: uploadedFiles.length,
+          earliestUpload: earliestUpload?.toISOString(),
+          latestUpload: latestUpload?.toISOString(),
+          uploadSpanDays,
+          isLegacyQuote
+        });
+        
+        if (isLegacyQuote && quoteCreatedAt) {
+          // For legacy quotes, filter files by upload time
+          const quoteDate = new Date(quoteCreatedAt);
+          const dayBefore = new Date(quoteDate.getTime() - 24 * 60 * 60 * 1000);
+          const dayAfter = new Date(quoteDate.getTime() + 24 * 60 * 60 * 1000);
+          
+          console.log('Time window for filtering:', {
+            quoteDate: quoteDate.toISOString(),
+            dayBefore: dayBefore.toISOString(),
+            dayAfter: dayAfter.toISOString()
+          });
+          
+          const filteredFiles = uploadedFiles.filter(file => {
+            const uploadDate = new Date(file.uploaded);
+            const isWithinWindow = uploadDate >= dayBefore && uploadDate <= dayAfter;
+            console.log(`File ${file.originalName}: uploaded ${uploadDate.toISOString()}, within window: ${isWithinWindow}`);
+            return isWithinWindow;
+          });
+          
+          console.log(`Legacy quote filtering: ${uploadedFiles.length} files -> ${filteredFiles.length} files within time window`);
+          setFiles(filteredFiles);
+        } else {
+          // For new quotes, use all files with the sessionId
+          console.log('Not a legacy quote, showing all files with sessionId:', sessionId);
+          setFiles(uploadedFiles);
+        }
       } catch (err) {
         console.error('Error fetching uploaded files:', err);
         setError('Failed to load uploaded files');
@@ -64,7 +126,7 @@ export const UploadedFilesDisplay: React.FC<UploadedFilesDisplayProps> = ({
     };
 
     fetchFiles();
-  }, [sessionId]);
+  }, [sessionId, quoteCreatedAt]);
 
   // Group files by product index
   const groupedFiles = React.useMemo(() => {
@@ -161,93 +223,64 @@ export const UploadedFilesDisplay: React.FC<UploadedFilesDisplayProps> = ({
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {Object.entries(groupedFiles).map(([productIndex, productFiles]) => (
-        <div key={productIndex} className="space-y-3">
-          {Object.keys(groupedFiles).length > 1 && (
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-gray-500" />
-              <Badge variant="secondary">
-                Product {parseInt(productIndex) + 1}
-              </Badge>
-            </div>
-          )}
-          
-          <div className="grid gap-3">
-            {productFiles.map((file, index) => (
-              <div
-                key={file.key}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex-shrink-0 text-gray-500">
-                    {getFileIcon(file.originalName || '')}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {file.originalName || `file-${index + 1}`}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
-                      <div className="flex items-center gap-1">
-                        <HardDrive className="h-3 w-3" />
-                        {formatFileSize(file.size)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(file.uploaded).toLocaleDateString()}
-                      </div>
+    <div className={`${className}`}>
+      <div className="overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left text-xs font-medium text-gray-500 pb-2">File</th>
+              <th className="text-left text-xs font-medium text-gray-500 pb-2 hidden sm:table-cell">Product</th>
+              <th className="text-right text-xs font-medium text-gray-500 pb-2">Size</th>
+              <th className="text-right text-xs font-medium text-gray-500 pb-2 w-20">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {files.map((file, index) => {
+              const productIndex = file.metadata?.productIndex || file.productIndex || '0';
+              return (
+                <tr key={file.key} className="border-b hover:bg-gray-50 transition-colors">
+                  <td className="py-2 pr-2">
+                    <div className="flex items-center gap-2">
+                      {getFileIcon(file.originalName || '')}
+                      <span className="text-sm font-medium truncate max-w-[200px]">
+                        {file.originalName || `file-${index + 1}`}
+                      </span>
                     </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {canPreview(file.originalName || '') && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePreview(file)}
-                      className="h-8 w-8 p-0"
-                      title="Preview file"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  )}
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownload(file)}
-                    className="h-8 w-8 p-0"
-                    title="Download file"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => window.open(file.url, '_blank')}
-                    className="h-8 w-8 p-0"
-                    title="Open in new tab"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-      
-      {isAdmin && files.length > 0 && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800">
-            <strong>Admin Note:</strong> These files were uploaded by the customer during quote submission. 
-            Review them for accurate pricing and product identification.
-          </p>
-        </div>
-      )}
+                  </td>
+                  <td className="py-2 text-sm text-gray-600 hidden sm:table-cell">
+                    {Object.keys(groupedFiles).length > 1 && `Product ${parseInt(productIndex) + 1}`}
+                  </td>
+                  <td className="py-2 text-sm text-gray-600 text-right">
+                    {formatFileSize(file.size)}
+                  </td>
+                  <td className="py-2 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {canPreview(file.originalName || '') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePreview(file)}
+                          className="h-7 w-7 p-0"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload(file)}
+                        className="h-7 w-7 p-0"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

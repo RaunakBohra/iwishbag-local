@@ -36,6 +36,7 @@ import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightServic
 import { unifiedDataEngine, type HSNMasterRecord } from '@/services/UnifiedDataEngine';
 import { smartQuoteCacheService } from '@/services/SmartQuoteCacheService';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Package,
   User,
@@ -117,7 +118,8 @@ import {
   Circle,
   Calculator,
   Plane,
-  Scale
+  Scale,
+  Paperclip
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuoteMessaging } from '@/components/messaging/QuoteMessaging';
@@ -156,6 +158,24 @@ export default function UnifiedQuoteOrderSystem({
   onUpdate, 
   isAdmin = false 
 }: UnifiedQuoteOrderSystemProps = {}) {
+  const { user } = useAuth();
+  
+  // Country name mapping helper
+  const getCountryName = (countryCode: string): string => {
+    const countryMap: Record<string, string> = {
+      'US': 'United States',
+      'IN': 'India', 
+      'NP': 'Nepal',
+      'CN': 'China',
+      'UK': 'United Kingdom',
+      'CA': 'Canada',
+      'AU': 'Australia',
+      'DE': 'Germany',
+      'JP': 'Japan'
+    };
+    return countryMap[countryCode] || countryCode;
+  };
+  
   // Utility function to safely convert to number and prevent NaN
   const safeNumber = (value: any, fallback: number = 0): number => {
     if (value === null || value === undefined || value === '') return fallback;
@@ -297,6 +317,8 @@ export default function UnifiedQuoteOrderSystem({
   const [newHSNData, setNewHSNData] = useState<any>(null);
   const [showCategoryCreateModal, setShowCategoryCreateModal] = useState(false);
   const [newCategoryData, setNewCategoryData] = useState<any>(null);
+  const [showUploadedFilesModal, setShowUploadedFilesModal] = useState(false);
+  const [customerFilesCount, setCustomerFilesCount] = useState(0);
   const [categories, setCategories] = useState<Array<{value: string, label: string}>>([
     { value: 'electronics', label: 'Electronics' },
     { value: 'clothing', label: 'Clothing' },
@@ -330,6 +352,46 @@ export default function UnifiedQuoteOrderSystem({
 
   const StatusIcon = statusConfig[quote.status as keyof typeof statusConfig]?.icon || FileText;
   const statusColor = statusConfig[quote.status as keyof typeof statusConfig]?.color || 'bg-gray-500';
+  
+  // Check for customer uploaded files
+  useEffect(() => {
+    const checkCustomerFiles = async () => {
+      if (quote.customer_data?.sessionId) {
+        try {
+          const r2Service = R2StorageService.getInstance();
+          const files = await r2Service.getQuoteFiles(quote.customer_data.sessionId);
+          // Apply the same filtering logic as UploadedFilesDisplay
+          const fileDates = files.map(f => new Date(f.uploaded).getTime());
+          const earliestUpload = fileDates.length > 0 ? new Date(Math.min(...fileDates)) : null;
+          const latestUpload = fileDates.length > 0 ? new Date(Math.max(...fileDates)) : null;
+          const uploadSpanDays = earliestUpload && latestUpload ? 
+            (latestUpload.getTime() - earliestUpload.getTime()) / (1000 * 60 * 60 * 24) : 0;
+          
+          const isLegacyQuote = uploadSpanDays > 7 || files.length > 10;
+          
+          if (isLegacyQuote && quote.created_at) {
+            const quoteDate = new Date(quote.created_at);
+            const dayBefore = new Date(quoteDate.getTime() - 24 * 60 * 60 * 1000);
+            const dayAfter = new Date(quoteDate.getTime() + 24 * 60 * 60 * 1000);
+            
+            const filteredFiles = files.filter(file => {
+              const uploadDate = new Date(file.uploaded);
+              return uploadDate >= dayBefore && uploadDate <= dayAfter;
+            });
+            
+            setCustomerFilesCount(filteredFiles.length);
+          } else {
+            setCustomerFilesCount(files.length);
+          }
+        } catch (error) {
+          console.error('Error checking customer files:', error);
+          setCustomerFilesCount(0);
+        }
+      }
+    };
+    
+    checkCustomerFiles();
+  }, [quote.customer_data?.sessionId, quote.created_at]);
   
   // Extract tax calculations from quote data
   // First check if we have item-level breakdowns (new HSN system)
@@ -1130,6 +1192,24 @@ export default function UnifiedQuoteOrderSystem({
                     </Badge>
                   )}
                 </div>
+                
+                {/* Route Display */}
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium text-gray-700">
+                      {getCountryName(quote.origin_country)}
+                    </span>
+                    <div className="flex items-center gap-1 text-xs text-gray-400">
+                      <span>({quote.origin_country})</span>
+                      <Plane className="w-3 h-3 text-blue-500" />
+                      <span>({quote.destination_country})</span>
+                    </div>
+                    <span className="font-medium text-gray-700">
+                      {getCountryName(quote.destination_country)}
+                    </span>
+                  </div>
+                </div>
+                
                 <p className="text-sm text-gray-500 mt-1">
                   Created on {new Date(quote.created_at).toLocaleDateString()} • 
                   Last updated {new Date(quote.updated_at).toLocaleTimeString()}
@@ -1149,15 +1229,41 @@ export default function UnifiedQuoteOrderSystem({
                     updated_at: quote.updated_at,
                   }}
                   onStatusChange={(newStatus, notes) => {
+                    console.log('🔍 [STATUS-CHANGE] Called with:', { newStatus, notes, currentStatus: quote.status });
                     // Handle status change through the existing onUpdate callback
                     if (onUpdate) {
-                      onUpdate({
+                      // Create activity log entry for status change
+                      const currentActivities = quote.activity_log || quote.activities || [];
+                      console.log('🔍 [STATUS-CHANGE] Current activities:', currentActivities);
+                      
+                      const newActivity = {
+                        id: crypto.randomUUID(),
+                        type: 'status',
+                        action: `Status changed from "${quote.status}" to "${newStatus}"${notes ? ` - ${notes}` : ''}`,
+                        user: user?.email || user?.full_name || 'Admin',
+                        timestamp: new Date().toISOString()
+                      };
+                      console.log('🔍 [STATUS-CHANGE] New activity:', newActivity);
+                      
+                      const updatedActivities = [newActivity, ...currentActivities];
+                      console.log('🔍 [STATUS-CHANGE] Updated activities:', updatedActivities);
+                      
+                      const updatePayload = {
                         status: newStatus,
                         admin_notes: notes ? `${adminNotes}\n\nStatus Change: ${notes}` : adminNotes,
-                      });
+                        activity_log: updatedActivities,
+                        operational_data: {
+                          ...quote.operational_data,
+                          activities: updatedActivities
+                        }
+                      };
+                      console.log('🔍 [STATUS-CHANGE] Calling onUpdate with:', updatePayload);
+                      
+                      onUpdate(updatePayload);
                     }
                   }}
                   isUpdating={false} // You might want to track this state
+                  hasUncheckedFiles={customerFilesCount > 0}
                 />
               )}
             </div>
@@ -1240,14 +1346,13 @@ export default function UnifiedQuoteOrderSystem({
           </Alert>
         )}
 
-        <div className="grid grid-cols-[1fr_300px] gap-6">
+        <div className="grid grid-cols-[1fr_350px] gap-6">
           {/* Main Content */}
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-5 w-full">
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="items">Items & Tax</TabsTrigger>
-                <TabsTrigger value="shipping">Shipping & Fees</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
               </TabsList>
@@ -1605,26 +1710,6 @@ export default function UnifiedQuoteOrderSystem({
               </TabsContent>
 
               <TabsContent value="items" className="mt-6 space-y-6">
-                {/* Customer Uploaded Files */}
-                {quote.customer_data?.sessionId && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Upload className="h-5 w-5" />
-                        Customer Uploaded Files
-                      </CardTitle>
-                      <CardDescription>
-                        Files uploaded by customer during quote request - review for accurate pricing
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <UploadedFilesDisplay 
-                        sessionId={quote.customer_data.sessionId} 
-                        isAdmin={true} 
-                      />
-                    </CardContent>
-                  </Card>
-                )}
 
                 {/* Items Management */}
                 <Card>
@@ -1637,6 +1722,16 @@ export default function UnifiedQuoteOrderSystem({
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
+                        {customerFilesCount > 0 && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setShowUploadedFilesModal(true)}
+                          >
+                            <Paperclip className="w-4 h-4 mr-2" />
+                            Customer Files ({customerFilesCount})
+                          </Button>
+                        )}
                         <Button variant="outline" size="sm">
                           <Upload className="w-4 h-4 mr-2" />
                           Import
@@ -1968,335 +2063,6 @@ export default function UnifiedQuoteOrderSystem({
                 </Card>
               </TabsContent>
 
-              <TabsContent value="shipping" className="mt-6 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Shipping Configuration</CardTitle>
-                    <CardDescription>
-                      Manage shipping routes, carriers, and costs
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {/* Route Visualization */}
-                      <div className="bg-gray-50 rounded-lg p-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <span className="font-medium">{quote.origin_country}</span>
-                          </div>
-                          <div className="flex-1 mx-4 border-t-2 border-dashed border-gray-300 relative">
-                            <Truck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-600">DE</span>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          </div>
-                          <div className="flex-1 mx-4 border-t-2 border-dashed border-gray-300"></div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{quote.destination_country || 'IN'}</span>
-                            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Shipping Options */}
-                      <div className="space-y-4">
-                        <h3 className="font-medium flex items-center gap-2">
-                          <Package className="w-4 h-4" />
-                          Available Shipping Methods
-                        </h3>
-                        {availableShippingOptions.length > 0 ? (
-                          <div className="space-y-3">
-                            {availableShippingOptions.map((option: any) => (
-                              <div
-                                key={option.id}
-                                className={cn(
-                                  "p-4 border rounded-lg cursor-pointer transition-all",
-                                  selectedShippingOptionId === option.id 
-                                    ? "border-blue-500 bg-blue-50 shadow-sm" 
-                                    : "border-gray-200 hover:border-gray-300"
-                                )}
-                                onClick={() => {
-                                  setSelectedShippingOptionId(option.id);
-                                  setInternationalShipping(option.cost_usd);
-                                  recalculateQuote(items);
-                                }}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="font-medium">{option.name}</h4>
-                                      {selectedShippingOptionId === option.id && (
-                                        <Badge variant="secondary" className="text-xs">Selected</Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                                      <span className="flex items-center gap-1">
-                                        <Truck className="w-3 h-3" />
-                                        {option.carrier}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        {option.days}
-                                      </span>
-                                      {option.tracking_available && (
-                                        <span className="flex items-center gap-1">
-                                          <Package className="w-3 h-3" />
-                                          Tracking included
-                                        </span>
-                                      )}
-                                    </div>
-                                    {option.description && (
-                                      <p className="text-xs text-gray-500 mt-2">{option.description}</p>
-                                    )}
-                                  </div>
-                                  <div className="text-right ml-4">
-                                    <p className="font-semibold">${safeToFixed(option.cost_usd)}</p>
-                                    <p className="text-xs text-gray-500">USD</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-500">
-                            <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                            <p>No shipping options available</p>
-                            <p className="text-sm mt-1">Please check the route configuration</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Shipping Route Details */}
-                      {selectedShippingOptionId && (
-                        <div className="space-y-4 border-t pt-4">
-                          <h3 className="font-medium">Route Details</h3>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-sm text-gray-500">Handling Fee</p>
-                              <p className="font-medium">{quote.currency_symbol || '$'}{calculatedHandling.toFixed(2)}</p>
-                              {selectedShippingOptionId && availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.handling_charge && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Base + {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.handling_charge.percentage_of_value}% of value
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-sm text-gray-500">Insurance</p>
-                              <p className="font-medium">
-                                {insuranceAmount > 0 
-                                  ? `${quote.currency_symbol || '$'}${insuranceAmount.toFixed(2)}` 
-                                  : 'Not included'}
-                              </p>
-                              {selectedShippingOptionId && availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.insurance_options?.available && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.insurance_options.coverage_percentage}% coverage available
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Comprehensive Shipping Cost Breakdown */}
-                      {(internationalShipping > 0 || domesticShipping > 0 || handlingAmount > 0) && (
-                        <div className="space-y-4 border-t pt-4">
-                          <h3 className="font-medium flex items-center gap-2">
-                            <Calculator className="w-4 h-4" />
-                            Cost Breakdown
-                          </h3>
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="space-y-3">
-                              {/* Product Subtotal */}
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Product Subtotal</span>
-                                <span className="font-medium">
-                                  {quote.currency_symbol || '$'}
-                                  {items.reduce((sum, item) => sum + (safeNumber(item.price) * safeNumber(item.quantity, 1)), 0).toFixed(2)}
-                                </span>
-                              </div>
-
-                              {/* Shipping Costs */}
-                              {internationalShipping > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600 flex items-center gap-1">
-                                    <Plane className="w-3 h-3" />
-                                    International Shipping
-                                  </span>
-                                  <span className="font-medium">
-                                    {quote.currency_symbol || '$'}{internationalShipping.toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
-
-                              {domesticShipping > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600 flex items-center gap-1">
-                                    <Truck className="w-3 h-3" />
-                                    Domestic Delivery
-                                  </span>
-                                  <span className="font-medium">
-                                    {quote.currency_symbol || '$'}{domesticShipping.toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
-
-                              {handlingAmount > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600">Processing & Handling</span>
-                                  <span className="font-medium">
-                                    {quote.currency_symbol || '$'}{handlingAmount.toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
-
-                              {insuranceAmount > 0 && (
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-gray-600 flex items-center gap-1">
-                                    <Shield className="w-3 h-3" />
-                                    Insurance Coverage
-                                  </span>
-                                  <span className="font-medium">
-                                    {quote.currency_symbol || '$'}{insuranceAmount.toFixed(2)}
-                                  </span>
-                                </div>
-                              )}
-
-                              <Separator className="my-2" />
-
-                              {/* Total Shipping & Fees */}
-                              <div className="flex justify-between">
-                                <span className="font-medium">Total Shipping & Fees</span>
-                                <span className="font-semibold text-lg">
-                                  {quote.currency_symbol || '$'}
-                                  {(
-                                    safeNumber(internationalShipping) +
-                                    safeNumber(domesticShipping) +
-                                    safeNumber(handlingAmount) +
-                                    safeNumber(insuranceAmount)
-                                  ).toFixed(2)}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Estimated Timeline */}
-                            {selectedShippingOptionId && (
-                              <div className="mt-4 pt-4 border-t">
-                                <h4 className="text-sm font-medium mb-2">Estimated Timeline</h4>
-                                <div className="text-xs text-gray-600 space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                    <span>Order Processing: 1-2 business days</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                    <span>
-                                      International Transit: {availableShippingOptions.find(opt => opt.id === selectedShippingOptionId)?.days || 'N/A'}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                    <span>Customs Clearance: 2-4 business days</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <span>Final Delivery: 1-2 business days</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Legacy shipping options (if any) */}
-                      {quote.shipping_options && quote.shipping_options.length > 0 && (
-                        <div className="space-y-4 border-t pt-4">
-                          <h3 className="font-medium text-gray-600">Legacy Options</h3>
-                          <div className="space-y-3">
-                            {quote.shipping_options.map((option: any, index: number) => (
-                              <div
-                                key={index}
-                                className={cn(
-                                  "p-4 border rounded-lg cursor-pointer transition-colors opacity-60",
-                                  option.selected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"
-                                )}
-                                onClick={() => {
-                                  // Update shipping selection
-                                  const updatedOptions = quote.shipping_options.map((opt: any, i: number) => ({
-                                    ...opt,
-                                    selected: i === index
-                                  }));
-                                  if (onUpdate) {
-                                    onUpdate({
-                                      shipping_options: updatedOptions,
-                                      shipping: option.cost
-                                    });
-                                  }
-                                }}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <Truck className="w-5 h-5 text-gray-600" />
-                                    <div>
-                                      <p className="font-medium">{option.name}</p>
-                                      <p className="text-sm text-gray-500">
-                                        {option.delivery_time} • {option.carrier}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-medium">${safeNumber(option.cost).toFixed(2)}</p>
-                                    {option.tracking_available && (
-                                      <p className="text-xs text-green-600">Tracking included</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Communication & Notes */}
-                      <div className="space-y-4">
-                        <h3 className="font-medium">Customer Communication</h3>
-                        <div>
-                          <Label>Notes for Customer</Label>
-                          <textarea 
-                            placeholder="Add any notes that will be visible to the customer..."
-                            className="mt-2 flex min-h-[80px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-gray-900 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:border-teal-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50 md:text-sm transition-colors"
-                            rows={3}
-                            value={adminNotes}
-                            onChange={(e) => setAdminNotes(e.target.value)}
-                          />
-                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                            <Eye className="w-3 h-3" />
-                            Visible to customer on quote
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <Label>Internal Notes</Label>
-                          <textarea 
-                            placeholder="Private notes for internal reference..."
-                            className="mt-2 flex min-h-[80px] w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-base text-gray-900 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:border-teal-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50 md:text-sm transition-colors"
-                            rows={3}
-                            value={internalNotes}
-                            onChange={(e) => setInternalNotes(e.target.value)}
-                          />
-                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                            <Lock className="w-3 h-3" />
-                            Only visible to admin users
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
               <TabsContent value="activity" className="mt-6">
                 <Card>
                   <CardHeader>
@@ -2580,6 +2346,33 @@ export default function UnifiedQuoteOrderSystem({
               setNewCategoryData(null);
             }}>
               Add Category
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Files Modal */}
+      <Dialog open={showUploadedFilesModal} onOpenChange={setShowUploadedFilesModal}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Customer Uploaded Files
+            </DialogTitle>
+            <DialogDescription>
+              Files uploaded by the customer during quote request
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <UploadedFilesDisplay 
+              sessionId={quote.customer_data?.sessionId} 
+              isAdmin={true}
+              quoteCreatedAt={quote.created_at}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUploadedFilesModal(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

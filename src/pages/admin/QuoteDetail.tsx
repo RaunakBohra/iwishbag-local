@@ -188,15 +188,22 @@ const transformQuoteToUnifiedFormat = (
     },
     
     // Activity timeline (from operational_data or create default)
+    activity_log: operationalData.activities || [
+      {
+        id: '1',
+        type: 'system',
+        action: `Quote created with ${items.length} items`,
+        timestamp: quote.created_at,
+        user: 'System'
+      }
+    ],
     activities: operationalData.activities || [
       {
         id: '1',
-        type: 'status_change',
-        title: 'Quote Created',
-        description: `New quote generated for ${items.length} items`,
+        type: 'system',
+        action: `Quote created with ${items.length} items`,
         timestamp: quote.created_at,
-        user: 'System',
-        icon: 'FileText'
+        user: 'System'
       }
     ],
     
@@ -439,7 +446,7 @@ const AdminQuoteDetail: React.FC = () => {
       const dbUpdates: any = {};
 
       // Handle operational data updates (purchase tracking, etc.)
-      if (updates.purchase_details || updates.payment_info || updates.activities) {
+      if (updates.purchase_details || updates.payment_info || updates.activities || updates.activity_log) {
         const currentOperationalData = quoteData?.quote?.operational_data || {};
         dbUpdates.operational_data = {
           ...currentOperationalData,
@@ -456,7 +463,7 @@ const AdminQuoteDetail: React.FC = () => {
             ...currentOperationalData.customer_payments,
             ...updates.customer_payments
           },
-          activities: updates.activities || currentOperationalData.activities
+          activities: updates.activity_log || updates.activities || currentOperationalData.activities
         };
       }
 

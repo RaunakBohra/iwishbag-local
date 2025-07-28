@@ -52,6 +52,7 @@ export default function QuoteRequestPage() {
   const { countries } = useCountryUtils();
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteType, setQuoteType] = useState('separate');
+  const [sessionId] = useState(() => crypto.randomUUID()); // Generate unique sessionId for this quote
   const [products, setProducts] = useState([
     {
       title: '',
@@ -132,6 +133,7 @@ export default function QuoteRequestPage() {
             destinationCountry={destinationCountry}
             setDestinationCountry={setDestinationCountry}
             next={nextStep}
+            sessionId={sessionId}
           />
         );
       case 2:
@@ -225,8 +227,8 @@ export default function QuoteRequestPage() {
           originCurrency = 'USD';
         }
 
-        // Get session ID for linking uploaded files
-        const sessionId = localStorage.getItem('anonymous_session_id');
+        // Use the sessionId generated at the start of this quote process
+        // sessionId is already available from state
 
         // Submit combined quote to Supabase using unified structure
         const { data: quote, error: quoteError } = await supabase
@@ -347,8 +349,8 @@ export default function QuoteRequestPage() {
             productOriginCurrency = 'USD';
           }
 
-          // Get session ID for linking uploaded files
-          const sessionId = localStorage.getItem('anonymous_session_id');
+          // Use the sessionId generated at the start of this quote process
+          // sessionId is already available from state
 
           // Submit individual quote to Supabase using unified structure
           const { data: quote, error: quoteError } = await supabase

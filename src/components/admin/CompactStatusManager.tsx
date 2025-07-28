@@ -60,6 +60,7 @@ interface CompactStatusManagerProps {
   onStatusChange: (newStatus: string, notes?: string) => void;
   isUpdating?: boolean;
   className?: string;
+  hasUncheckedFiles?: boolean;
 }
 
 // Icon mapping for status display
@@ -83,6 +84,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
   onStatusChange,
   isUpdating = false,
   className = '',
+  hasUncheckedFiles = false,
 }) => {
   const { toast } = useToast();
   const { quoteStatuses, getStatusConfig, getAllowedTransitions, isValidTransition } = useStatusManagement();
@@ -118,7 +120,7 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
       if (sentStatus) {
         actions.push({
           status: sentStatus,
-          label: 'Send Quote',
+          label: hasUncheckedFiles ? 'Send Quote ⚠️' : 'Send Quote',
           variant: 'default' as const,
           icon: Send,
         });
@@ -353,6 +355,18 @@ export const CompactStatusManager: React.FC<CompactStatusManagerProps> = ({
               />
             </div>
 
+            {hasUncheckedFiles && selectedStatus === 'sent' && (
+              <div className="bg-amber-50 p-3 rounded-lg mb-3">
+                <div className="flex items-start gap-2 text-sm text-amber-700">
+                  <AlertTriangle className="h-4 w-4 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Customer has uploaded files!</p>
+                    <p className="text-xs mt-1">Please review customer files before sending the quote to ensure accurate pricing.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {getStatusConfig(selectedStatus, 'quote')?.triggersEmail && (
               <div className="bg-blue-50 p-3 rounded-lg">
                 <div className="flex items-center gap-2 text-sm text-blue-700">
