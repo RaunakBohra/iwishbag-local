@@ -957,6 +957,37 @@ export default function UnifiedQuoteOrderSystem({
     }
   };
 
+  // Add Enter key handler for quick calculation
+  useEffect(() => {
+    const handleKeyPress = async (event: KeyboardEvent) => {
+      // Only trigger on Enter key, and not when user is typing in input fields
+      if (event.key === 'Enter' && !['INPUT', 'TEXTAREA'].includes((event.target as HTMLElement)?.tagName)) {
+        event.preventDefault();
+        console.log('[UnifiedQuoteOrderSystem] Enter key pressed - triggering calculation');
+        
+        setIsRecalculating(true);
+        try {
+          await recalculateQuote(items);
+          toast({
+            title: "Calculated",
+            description: "Quote totals updated. Click 'Save Quote' to persist changes."
+          });
+        } catch (error) {
+          toast({
+            title: "Calculation Failed", 
+            description: "Failed to calculate quote. Please try again.",
+            variant: "destructive"
+          });
+        } finally {
+          setIsRecalculating(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [items, recalculateQuote, toast]);
+
   // Inline edit handlers
   const startEdit = (fieldId: string, currentValue: any) => {
     setEditingField(fieldId);
@@ -2448,9 +2479,16 @@ export default function UnifiedQuoteOrderSystem({
                   )}
                 </div>
 
-                <div className="mt-6 space-y-2">
+                <div className="mt-6 space-y-3">
+                  {/* Instructions */}
+                  <div className="text-center text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <div className="font-medium text-blue-900">💡 Quick Workflow</div>
+                    <div className="mt-1">Press <kbd className="px-2 py-1 bg-white border rounded text-xs font-mono">Enter</kbd> to calculate • Then click <strong>Save Quote</strong> to persist</div>
+                  </div>
+
+                  {/* Single Save Quote Button */}
                   <Button 
-                    className="w-full"
+                    className="w-full bg-green-600 hover:bg-green-700"
                     onClick={() => {
                       // Save all changes
                       if (onUpdate) {
@@ -2461,6 +2499,8 @@ export default function UnifiedQuoteOrderSystem({
                           handling: handlingAmount,
                           insurance: insuranceAmount,
                           discount: discountAmount,
+                          domestic_shipping: domesticShipping,
+                          international_shipping: internationalShipping,
                           calculation_data: {
                             ...quote.calculation_metadata,
                             domestic_shipping: domesticShipping
@@ -2471,67 +2511,15 @@ export default function UnifiedQuoteOrderSystem({
                           }
                         });
                         toast({
-                          title: "Changes Saved",
-                          description: "Quote has been updated successfully."
+                          title: "Quote Saved",
+                          description: "All changes have been saved successfully."
                         });
                       }
                     }}
                   >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Save Changes
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Quote
                   </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={async () => {
-                        setIsRecalculating(true);
-                        try {
-                          await recalculateQuote(items);
-                          toast({
-                            title: "Recalculated",
-                            description: "Quote has been recalculated with latest rates."
-                          });
-                        } catch (error) {
-                          toast({
-                            title: "Recalculation Failed",
-                            description: "Failed to recalculate quote. Please try again.",
-                            variant: "destructive"
-                          });
-                        } finally {
-                          setIsRecalculating(false);
-                        }
-                      }}
-                      disabled={isRecalculating}
-                    >
-                      {isRecalculating ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                      )}
-                      Recalculate
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={async () => {
-                        try {
-                          await smartQuoteCacheService.clearAllCaches();
-                          toast({
-                            title: "Cache Cleared",
-                            description: "All calculation caches have been cleared."
-                          });
-                        } catch (error) {
-                          toast({
-                            title: "Cache Clear Failed",
-                            description: "Failed to clear cache. Please try again.",
-                            variant: "destructive"
-                          });
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Clear Cache
-                    </Button>
-                  </div>
                   <div className="flex items-center space-x-2 mt-3">
                     <input
                       type="checkbox"

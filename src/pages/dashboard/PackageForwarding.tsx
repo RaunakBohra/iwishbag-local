@@ -35,16 +35,18 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  packageForwardingService,
+  integratedPackageForwardingService,
+  type IntegratedPackageData,
+} from '@/services/IntegratedPackageForwardingService';
+import {
   type CustomerAddress,
-  type ReceivedPackage,
   type ConsolidationGroup,
   type ConsolidationOption,
 } from '@/services/PackageForwardingService';
 import { PackagePhotoGallery } from '@/components/warehouse/PackagePhotoGallery';
 
 interface ConsolidationDialogProps {
-  packages: ReceivedPackage[];
+  packages: IntegratedPackageData[];
   onClose: () => void;
   onConsolidate: (packageIds: string[], groupName?: string) => void;
   isLoading: boolean;
@@ -240,7 +242,7 @@ const ConsolidationDialog: React.FC<ConsolidationDialogProps> = ({
   );
 };
 
-const PackageCard: React.FC<{ package: ReceivedPackage; onViewPhotos: (pkg: ReceivedPackage) => void }> = ({
+const PackageCard: React.FC<{ package: IntegratedPackageData; onViewPhotos: (pkg: IntegratedPackageData) => void }> = ({
   package: pkg,
   onViewPhotos,
 }) => {
@@ -327,25 +329,27 @@ export const PackageForwarding: React.FC = () => {
   const queryClient = useQueryClient();
   
   const [showConsolidationDialog, setShowConsolidationDialog] = useState(false);
-  const [selectedPackageForPhotos, setSelectedPackageForPhotos] = useState<ReceivedPackage | null>(null);
+  const [selectedPackageForPhotos, setSelectedPackageForPhotos] = useState<IntegratedPackageData | null>(null);
   const [copiedAddress, setCopiedAddress] = useState(false);
 
-  // Fetch customer's virtual address
-  const { data: virtualAddress, isLoading: addressLoading } = useQuery({
-    queryKey: ['customer-address', user?.id],
-    queryFn: async (): Promise<CustomerAddress | null> => {
+  // Fetch customer's integrated profile with virtual address
+  const { data: customerProfile, isLoading: addressLoading } = useQuery({
+    queryKey: ['integrated-customer-profile', user?.id],
+    queryFn: async () => {
       if (!user?.id) return null;
-      return await packageForwardingService.getCustomerAddress(user.id);
+      return await integratedPackageForwardingService.getIntegratedCustomerProfile(user.id);
     },
     enabled: !!user?.id,
   });
 
-  // Fetch customer's packages
+  const virtualAddress = customerProfile?.virtual_address;
+
+  // Fetch customer's packages with integrated data
   const { data: packages = [], isLoading: packagesLoading } = useQuery({
-    queryKey: ['customer-packages', user?.id],
-    queryFn: async (): Promise<ReceivedPackage[]> => {
+    queryKey: ['integrated-customer-packages', user?.id],
+    queryFn: async (): Promise<IntegratedPackageData[]> => {
       if (!user?.id) return [];
-      return await packageForwardingService.getCustomerPackages(user.id);
+      return await integratedPackageForwardingService.getCustomerPackagesIntegrated(user.id);
     },
     enabled: !!user?.id,
   });
@@ -360,14 +364,14 @@ export const PackageForwarding: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  // Assign virtual address mutation
+  // Assign virtual address mutation using integrated service
   const assignAddressMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
-      return await packageForwardingService.assignVirtualAddress(user.id);
+      return await integratedPackageForwardingService.assignIntegratedVirtualAddress(user.id);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer-address'] });
+      queryClient.invalidateQueries({ queryKey: ['integrated-customer-profile'] });
       toast({
         title: 'Address Assigned',
         description: 'Your virtual warehouse address has been assigned successfully!',
@@ -389,7 +393,7 @@ export const PackageForwarding: React.FC = () => {
       return await packageForwardingService.processConsolidation(user.id, packageIds, groupName);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customer-packages'] });
+      queryClient.invalidateQueries({ queryKey: ['integrated-customer-packages'] });
       queryClient.invalidateQueries({ queryKey: ['consolidation-groups'] });
       setShowConsolidationDialog(false);
       toast({
