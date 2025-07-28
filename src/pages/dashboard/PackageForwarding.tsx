@@ -618,7 +618,7 @@ export const PackageForwarding: React.FC = () => {
       });
       
       // Navigate to the quote detail page which will show checkout options
-      navigate(`/dashboard/quotes/${result.quote_id}`);
+      navigate(`/quotes/${result.quote_id}`);
     },
     onError: (error: Error) => {
       toast({

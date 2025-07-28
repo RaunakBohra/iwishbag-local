@@ -182,7 +182,7 @@ const QuoteCard = ({
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Link to={`/dashboard/quotes/${quote.id}`} className="flex-1">
+          <Link to={`/quotes/${quote.id}`} className="flex-1">
             <Button variant="outline" size="sm" className="w-full h-10 text-sm">
               <Eye className="h-3 w-3 mr-1" />
               View Details
@@ -244,7 +244,7 @@ const QuoteCard = ({
               </div>
             </div>
             <StatusBadge status={quote.status} category="quote" />
-            <Link to={`/dashboard/quotes/${quote.id}`}>
+            <Link to={`/quotes/${quote.id}`}>
               <Button variant="outline" size="sm" className="h-9">
                 <Eye className="h-3 w-3 mr-1" />
                 View
