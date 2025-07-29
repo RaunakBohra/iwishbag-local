@@ -495,10 +495,16 @@ export default function UnifiedQuoteOrderSystem({
 
 
   // Recalculate quote when items change
-  const recalculateQuote = async (updatedItems: any[], skipSave = false) => {
-    console.log('🔍 [UNIFIED] recalculateQuote called with items:', updatedItems, 'skipSave:', skipSave);
+  const recalculateQuote = async (updatedItems: any[], skipSave = false, forceRecalculation = false) => {
+    console.log('🔍 [UNIFIED] recalculateQuote called with items:', updatedItems, 'skipSave:', skipSave, 'force:', forceRecalculation);
     try {
       setIsRecalculating(true);
+      
+      // Clear cache if force recalculation
+      if (forceRecalculation) {
+        console.log('🔄 [UNIFIED] Force recalculation requested, clearing cache');
+        await smartQuoteCacheService.invalidateQuoteCache(quote.id);
+      }
       
       // Create detailed item mapping with analysis
       const mappedItems = updatedItems.map((item, index) => createQuoteItem(item, index));
@@ -2121,6 +2127,31 @@ export default function UnifiedQuoteOrderSystem({
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Recalculate Button for Admins */}
+            {isAdmin && (
+              <Button
+                onClick={() => {
+                  console.log('🔄 [Admin] Manual recalculation triggered');
+                  recalculateQuote(items, false, true); // Skip save, force recalculation
+                }}
+                disabled={isRecalculating}
+                variant="outline"
+                className="w-full"
+              >
+                {isRecalculating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Recalculating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Recalculate Quote
+                  </>
+                )}
+              </Button>
+            )}
+            
             {/* Enhanced Smart Tax Breakdown - Merged Price Summary */}
             <EnhancedSmartTaxBreakdown
               quote={quote}

@@ -325,10 +325,26 @@ const AdminQuoteDetail: React.FC = () => {
         destinationCurrency = { code: 'USD', symbol: '$', rate: 1 };
       }
 
-      // Calculate real-time pricing
+      // Calculate real-time pricing - only if needed
       let calculationResult = null;
-      try {
-        const initialCalculationInput = {
+      
+      // Check if we already have valid calculation data
+      const hasValidCalculation = quote.calculation_data?.breakdown && 
+                                  quote.calculation_data?.item_breakdowns &&
+                                  quote.calculation_data?.exchange_rate;
+      
+      if (hasValidCalculation) {
+        console.log('✅ [Admin Quote Detail] Using existing calculation data, skipping recalculation');
+        calculationResult = { 
+          calculation_data: quote.calculation_data,
+          shipping_options: [], // We'll load these separately if needed
+          smart_recommendations: [],
+          optimization_suggestions: []
+        };
+      } else {
+        console.log('🔄 [Admin Quote Detail] No valid calculation data found, performing calculation');
+        try {
+          const initialCalculationInput = {
           quote: {
             id: quote.id,
             items: (quote.items || []).map((item: any, index: number) => ({
@@ -408,11 +424,12 @@ const AdminQuoteDetail: React.FC = () => {
         
         console.groupEnd();
 
-        calculationResult = await smartCalculationEngine.calculateWithShippingOptions(initialCalculationInput);
-      } catch (error) {
-        console.error('Error calculating quote:', error);
-        // Use existing calculation data if engine fails
-        calculationResult = { calculation_data: quote.calculation_data };
+          calculationResult = await smartCalculationEngine.calculateWithShippingOptions(initialCalculationInput);
+        } catch (error) {
+          console.error('Error calculating quote:', error);
+          // Use existing calculation data if engine fails
+          calculationResult = { calculation_data: quote.calculation_data };
+        }
       }
 
       return {
@@ -428,12 +445,32 @@ const AdminQuoteDetail: React.FC = () => {
   // Transform quote data for UnifiedQuoteOrderSystem
   const transformedQuote = useMemo(() => {
     if (!quoteData?.quote) return null;
-    return transformQuoteToUnifiedFormat(
+    
+    console.log('🔍 [Admin Quote Detail] Transforming quote data:', {
+      quote_id: quoteData.quote.id,
+      items_count: quoteData.quote.items?.length,
+      first_item_hsn: quoteData.quote.items?.[0]?.hsn_code,
+      all_hsn_codes: quoteData.quote.items?.map(item => item.hsn_code),
+      calculation_method: quoteData.quote.calculation_data?.tax_calculation?.method,
+      has_breakdown: !!quoteData.quote.calculation_data?.breakdown,
+      has_item_breakdowns: !!quoteData.quote.calculation_data?.item_breakdowns
+    });
+    
+    const transformed = transformQuoteToUnifiedFormat(
       quoteData.quote,
       quoteData.customerProfile,
       quoteData.calculationResult,
       quoteData.destinationCurrency
     );
+    
+    console.log('🔍 [Admin Quote Detail] Transformed quote:', {
+      items_count: transformed.items?.length,
+      first_item: transformed.items?.[0],
+      tax_method: transformed.tax_method,
+      calculation_metadata: transformed.calculation_metadata
+    });
+    
+    return transformed;
   }, [quoteData]);
 
   // Handle quote updates
