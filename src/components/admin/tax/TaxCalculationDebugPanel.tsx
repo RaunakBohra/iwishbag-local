@@ -869,7 +869,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         const manualResult = actualCustomsBase * (manualRate / 100);
         
         inputs.push({
-          name: `├─ Manual Rate`,
+          name: `├─ Manual Customs Rate`,
           value: manualRate,
           source: manualRate > 0 
             ? `From ${manualItemsCount} item${manualItemsCount > 1 ? 's' : ''} with manual method`
@@ -877,6 +877,13 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
               ? `Found ${manualItemsCount} manual item(s) but rate is 0`
               : 'No items with manual method',
           rate: manualRate,
+        });
+        
+        inputs.push({
+          name: `├─ Customs Calculation`,
+          value: manualResult,
+          source: `CIF $${actualCustomsBase.toFixed(2)} × ${manualRate.toFixed(1)}% = $${manualResult.toFixed(2)}`,
+          rate: 0,
         });
         
         // Get destination tax (VAT) from route rates for manual method
@@ -893,7 +900,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         inputs.push({
-          name: `├─ Manual Calculation`,
+          name: `├─ Total Tax (Manual)`,
           value: manualResult + manualDestTaxAmount,
           source: `Customs: $${manualResult.toFixed(2)} + VAT: $${manualDestTaxAmount.toFixed(2)} = $${(manualResult + manualDestTaxAmount).toFixed(2)}`,
           rate: 0,
