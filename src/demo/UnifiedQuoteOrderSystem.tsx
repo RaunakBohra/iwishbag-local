@@ -530,7 +530,11 @@ export default function UnifiedQuoteOrderSystem({
           origin_country: quote.origin_country,
           status: quote.status,
           calculation_data: quote.calculation_metadata || {},
-          operational_data: {},
+          operational_data: {
+            shipping: {
+              selected_option: selectedShippingOptionId
+            }
+          },
           customer_data: quote.customer_data || {}
         },
         preferences: {
@@ -880,6 +884,16 @@ export default function UnifiedQuoteOrderSystem({
       });
       
       if (calculationResult.shipping_options && calculationResult.shipping_options.length > 0) {
+        console.log('[UNIFIED QUOTE DEBUG] Received shipping options from SmartCalculationEngine:', {
+          count: calculationResult.shipping_options.length,
+          options: calculationResult.shipping_options.map(opt => ({
+            id: opt.id,
+            name: opt.name,
+            carrier: opt.carrier,
+            cost: opt.cost_usd
+          }))
+        });
+        
         setAvailableShippingOptions(calculationResult.shipping_options);
         
         // If no shipping option is selected, select the first one
@@ -1878,12 +1892,19 @@ export default function UnifiedQuoteOrderSystem({
                                 {internationalShipping.toFixed(2)}
                               </button>
                               {availableShippingOptions.length > 0 && (
-                                <Select 
+                                <>
+                                  {console.log('[DROPDOWN RENDER DEBUG] Available shipping options at render:', availableShippingOptions.map(opt => ({ id: opt.id, name: opt.name, carrier: opt.carrier })))}
+                                  <Select 
                                   value={selectedShippingOptionId || ''} 
-                                  onValueChange={(value) => {
+                                  onValueChange={async (value) => {
+                                    console.log('[DROPDOWN DEBUG] Selected shipping option:', value);
                                     setSelectedShippingOptionId(value);
                                     const option = availableShippingOptions.find(opt => opt.id === value);
-                                    if (option) setInternationalShipping(option.cost_usd);
+                                    if (option) {
+                                      setInternationalShipping(option.cost_usd);
+                                      // Trigger recalculation with the new shipping option
+                                      await recalculateQuote(items, true);
+                                    }
                                   }}
                                 >
                                   <SelectTrigger className="h-7 text-xs border-gray-300 hover:border-blue-400 transition-colors">
@@ -1897,6 +1918,7 @@ export default function UnifiedQuoteOrderSystem({
                                     ))}
                                   </SelectContent>
                                 </Select>
+                                </>
                               )}
                             </div>
                           </div>

@@ -337,12 +337,20 @@ export class SmartCalculationEngine {
 
       // Select optimal shipping option (or use existing selection)
       console.log('[SMART ENGINE DEBUG] About to select optimal shipping option from:', shippingOptions.length, 'options');
+      console.log('[SMART ENGINE DEBUG] Current selection from input:', input.quote.operational_data?.shipping?.selected_option);
       const selectedOption = this.selectOptimalShippingOption(
         shippingOptions,
         input.preferences,
         input.quote.operational_data?.shipping?.selected_option,
       );
-      console.log('[SMART ENGINE DEBUG] Selected shipping option:', selectedOption?.id, selectedOption?.carrier);
+      console.log('[SMART ENGINE DEBUG] Selected shipping option:', {
+        id: selectedOption?.id,
+        carrier: selectedOption?.carrier,
+        name: selectedOption?.name,
+        cost: selectedOption?.cost_usd,
+        handling_charge: selectedOption?.handling_charge,
+        insurance_options: selectedOption?.insurance_options
+      });
 
       // Calculate all costs with selected shipping (now includes HSN taxes)
       console.log('[SMART ENGINE DEBUG] About to calculate complete costs');
@@ -792,6 +800,15 @@ export class SmartCalculationEngine {
         }));
 
       // 🔍 ENHANCED DEBUG: Log final results summary
+      console.log(`[SHIPPING CALCULATION] Final shipping options after sorting:`, {
+        total_options: finalOptions.length,
+        options: finalOptions.map(opt => ({
+          id: opt.id,
+          carrier: opt.carrier,
+          name: opt.name,
+          cost: opt.cost_usd
+        }))
+      });
 
       return finalOptions;
     } catch (error) {
@@ -885,8 +902,22 @@ export class SmartCalculationEngine {
     }
 
     // Generate options for each delivery option
+    console.log(`[SHIPPING DEBUG] Processing ${deliveryOptions.length} delivery options for ${route.origin_country}→${route.destination_country}`);
+    console.log(`[SHIPPING DEBUG] Raw delivery options from DB:`, JSON.stringify(deliveryOptions, null, 2));
+    
     for (const deliveryOption of deliveryOptions || []) {
-      if (!deliveryOption.active) continue; // Skip inactive options
+      console.log(`[SHIPPING DEBUG] Processing delivery option:`, {
+        id: deliveryOption.id,
+        name: deliveryOption.name,
+        carrier: deliveryOption.carrier,
+        active: deliveryOption.active,
+        price: deliveryOption.price
+      });
+      
+      if (!deliveryOption.active) {
+        console.log(`[SHIPPING DEBUG] Skipping inactive option: ${deliveryOption.name}`);
+        continue; // Skip inactive options
+      }
 
       // Calculate chargeable weight using delivery option's volumetric divisor
       let chargeableWeight = params.weight; // Default to actual weight
@@ -981,14 +1012,31 @@ export class SmartCalculationEngine {
           weight_rate_per_kg: weightTier?.cost || 0,
           weight_cost: weightTier ? (chargeableWeight * weightTier.cost) : 0,
           delivery_premium: deliveryPremium,
+          cost_percentage: route.cost_percentage || 0,
+          processing_days: route.processing_days || 2,
+          customs_clearance_days: route.customs_clearance_days || 3,
           // Volumetric weight information
           actual_weight: params.weight,
           volumetric_weight: volumetricWeight,
           chargeable_weight: chargeableWeight,
           volumetric_divisor: deliveryOption.volumetric_divisor,
+          // Exchange rate for currency conversion
+          exchange_rate: route.exchange_rate || 1,
+          origin_country: route.origin_country,
+          destination_country: route.destination_country,
         },
       });
     }
+
+    console.log(`[SHIPPING DEBUG] Returning ${options.length} shipping options from route ${route.origin_country}→${route.destination_country}:`, 
+      options.map(opt => ({
+        id: opt.id,
+        carrier: opt.carrier,
+        name: opt.name,
+        cost: opt.cost_usd
+      }))
+    );
+    console.log(`[SHIPPING DEBUG] Full option details:`, JSON.stringify(options, null, 2));
 
     return options;
   }
@@ -2226,6 +2274,32 @@ export class SmartCalculationEngine {
       },
       // ✅ NEW: Add discount breakdown details
       discount_breakdown: discountBreakdown.length > 0 ? discountBreakdown : undefined,
+      // ✅ NEW: Store selected shipping option details
+      selected_shipping: {
+        id: selectedShipping.id,
+        carrier: selectedShipping.carrier,
+        name: selectedShipping.name,
+        cost_usd: selectedShipping.cost_usd,
+        days: selectedShipping.days,
+        route_data: selectedShipping.route_data
+      },
+      // ✅ NEW: Add detailed shipping breakdown
+      shipping_breakdown: selectedShipping.route_data ? {
+        base_cost: selectedShipping.route_data.base_shipping_cost,
+        weight_tier_used: selectedShipping.route_data.weight_tier_used,
+        weight_rate_per_kg: selectedShipping.route_data.weight_rate_per_kg,
+        weight_cost: selectedShipping.route_data.weight_cost,
+        delivery_premium: selectedShipping.route_data.delivery_premium,
+        actual_weight: selectedShipping.route_data.actual_weight,
+        volumetric_weight: selectedShipping.route_data.volumetric_weight,
+        chargeable_weight: selectedShipping.route_data.chargeable_weight,
+        volumetric_divisor: selectedShipping.route_data.volumetric_divisor,
+        cost_percentage: selectedShipping.route_data.cost_percentage || 0,
+        total_cost: selectedShipping.cost_usd,
+        carrier: selectedShipping.carrier,
+        delivery_option: selectedShipping.name,
+        delivery_days: selectedShipping.days
+      } : undefined,
       // Add tax calculation details with rates
       tax_calculation: {
         customs_percentage: customsPercentage,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnifiedQuote } from '@/types/unified-quote';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TaxCalculationDebugPanelProps {
   quote: UnifiedQuote;
@@ -49,6 +50,27 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [routeData, setRouteData] = useState<any>(null);
+
+  // Fetch the shipping route data
+  useEffect(() => {
+    const fetchRouteData = async () => {
+      if (!quote.origin_country || !quote.destination_country) return;
+      
+      const { data, error } = await supabase
+        .from('shipping_routes')
+        .select('*')
+        .eq('origin_country', quote.origin_country)
+        .eq('destination_country', quote.destination_country)
+        .single();
+        
+      if (!error && data) {
+        setRouteData(data);
+      }
+    };
+    
+    fetchRouteData();
+  }, [quote.origin_country, quote.destination_country]);
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
@@ -70,85 +92,172 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     : parseFloat(quote.calculation_data?.exchange_rate) || 1;
 
   // Helper to extract shipping data from various possible locations
-  const getShippingBreakdown = () => {
+  const getShippingBreakdown = (fetchedRouteData: any) => {
     const shippingTotal = breakdown.shipping || 0;
     const totalWeight = quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0;
     
     // Extract all shipping-related data
     const selectedShipping = quote.calculation_data?.selected_shipping || {};
-    const routeData = selectedShipping.route_data || {};
+    const embeddedRouteData = selectedShipping.route_data || {};
     const shippingBreakdownData = quote.calculation_data?.shipping_breakdown || {};
     
+    // Try to get the actual route's delivery options
+    const routeDeliveryOptions = fetchedRouteData?.delivery_options || 
+                                embeddedRouteData?.delivery_options || 
+                                quote.calculation_data?.route?.delivery_options || 
+                                [];
+    
     // Try to find shipping breakdown data in various locations
-    const baseShipping = shippingBreakdownData.base_cost || 
-                        routeData.base_shipping_cost ||
-                        quote.calculation_data?.shipping_data?.base_cost || 0;
+    // Priority: calculation_data.shipping_breakdown > embedded route data > fetched route data
+    const calcShippingBreakdown = quote.calculation_data?.shipping_breakdown || {};
     
-    const weightRate = shippingBreakdownData.weight_rate || 
-                      routeData.weight_rate_per_kg ||
-                      quote.calculation_data?.shipping_data?.weight_rate || 0;
+    const baseShipping = Number(calcShippingBreakdown.base_cost) ||
+                        Number(shippingBreakdownData.base_cost) || 
+                        Number(embeddedRouteData.base_shipping_cost) ||
+                        Number(fetchedRouteData?.base_shipping_cost) ||
+                        Number(quote.calculation_data?.shipping_data?.base_cost) || 0;
     
-    const deliveryPremium = shippingBreakdownData.delivery_premium || 
-                           routeData.delivery_premium ||
-                           quote.calculation_data?.shipping_data?.delivery_premium || 0;
+    // Use shipping_per_kg or cost_per_kg from database
+    const weightRate = Number(calcShippingBreakdown.weight_rate_per_kg) ||
+                      Number(shippingBreakdownData.weight_rate) || 
+                      Number(embeddedRouteData.weight_rate_per_kg) ||
+                      Number(fetchedRouteData?.shipping_per_kg) ||
+                      Number(fetchedRouteData?.cost_per_kg) ||
+                      Number(quote.calculation_data?.shipping_data?.weight_rate) || 0;
     
-    // Extract additional details
-    const shippingMethod = quote.shipping_method || selectedShipping.carrier || 'Standard';
-    const deliveryOption = selectedShipping.delivery_option || selectedShipping.name || 'Economy';
-    const weightTier = routeData.weight_tier_used || 'N/A';
-    const weightCost = routeData.weight_cost || (totalWeight * weightRate);
-    const costPercentage = quote.calculation_data?.shipping_percentage || routeData.cost_percentage || 0;
-    const processingDays = selectedShipping.estimated_days || routeData.processing_days || 'N/A';
-    const volumetricWeight = routeData.volumetric_weight || 0;
-    const chargeableWeight = routeData.chargeable_weight || totalWeight;
+    const deliveryPremium = Number(calcShippingBreakdown.delivery_premium) ||
+                           Number(shippingBreakdownData.delivery_premium) || 
+                           Number(embeddedRouteData.delivery_premium) ||
+                           Number(quote.calculation_data?.shipping_data?.delivery_premium) || 0;
+    
+    // Extract carrier from delivery options if available
+    let actualCarrier = '';
+    let deliveryOptionName = '';
+    
+    // First try to get from calculation_data.selected_shipping
+    const calcSelectedShipping = quote.calculation_data?.selected_shipping;
+    if (calcSelectedShipping?.carrier) {
+      actualCarrier = calcSelectedShipping.carrier;
+      deliveryOptionName = calcSelectedShipping.name || '';
+    }
+    // Then try to get from selected delivery option
+    else if (selectedShipping.carrier) {
+      actualCarrier = selectedShipping.carrier;
+      deliveryOptionName = selectedShipping.name || selectedShipping.delivery_option || '';
+    } 
+    // Then try to get from route delivery options
+    else if (routeDeliveryOptions.length > 0) {
+      // Find the selected option or use the first one
+      const selectedOptionId = selectedShipping.id || selectedShipping.option_id;
+      const selectedOption = selectedOptionId 
+        ? routeDeliveryOptions.find((opt: any) => opt.id === selectedOptionId) 
+        : routeDeliveryOptions[0];
+      
+      if (selectedOption) {
+        actualCarrier = selectedOption.carrier || '';
+        deliveryOptionName = selectedOption.name || '';
+      }
+    }
+    // Fall back to other sources
+    else {
+      actualCarrier = embeddedRouteData.carrier || quote.shipping_carrier || '';
+      deliveryOptionName = selectedShipping.delivery_option || selectedShipping.name || '';
+    }
+    
+    const shippingMethod = quote.shipping_method || '';
+    const deliveryOption = deliveryOptionName;
     
     // Extract weight tier details for rate breakdown
-    const weightTiers = quote.calculation_data?.route_weight_tiers || 
+    const weightTiers = fetchedRouteData?.weight_tiers || 
+                       quote.calculation_data?.route_weight_tiers || 
                        selectedShipping.weight_tiers || 
-                       routeData.weight_tiers || [];
-    const rateSource = routeData.rate_source || 
+                       embeddedRouteData.weight_tiers || [];
+    
+    // Determine weight tier from actual weight
+    let weightTierUsed = calcShippingBreakdown.weight_tier_used || 'N/A';
+    if (weightTierUsed === 'N/A' && weightTiers && weightTiers.length > 0) {
+      for (const tier of weightTiers) {
+        if (totalWeight >= tier.min && (tier.max === null || totalWeight <= tier.max)) {
+          weightTierUsed = `${tier.min}-${tier.max || '∞'}kg`;
+          break;
+        }
+      }
+    }
+    const weightTier = weightTierUsed || embeddedRouteData.weight_tier_used || 'N/A';
+    const weightCost = Number(calcShippingBreakdown.weight_cost) || 
+                      Number(embeddedRouteData.weight_cost) || 
+                      (totalWeight * weightRate);
+    const costPercentage = Number(quote.calculation_data?.shipping_percentage) || 
+                          Number(embeddedRouteData.cost_percentage) || 
+                          Number(fetchedRouteData?.cost_percentage) || 0;
+    const processingDays = selectedShipping.estimated_days || 
+                          embeddedRouteData.processing_days || 
+                          fetchedRouteData?.processing_days || 
+                          'N/A';
+    const volumetricWeight = embeddedRouteData.volumetric_weight || 0;
+    const chargeableWeight = embeddedRouteData.chargeable_weight || totalWeight;
+    
+    const rateSource = embeddedRouteData.rate_source || 
                       (weightTier !== 'N/A' ? 'weight_tier' : 'per_kg_fallback');
     
     // Check if this is IN→NP route with INR rates
     const isINtoNP = quote.origin_country === 'IN' && quote.destination_country === 'NP';
     const currencySymbol = isINtoNP ? '₹' : '$';
+    const routeExchangeRate = Number(fetchedRouteData?.exchange_rate) || 1;
     
     // If we still don't have breakdown data, estimate it from the total
     if (baseShipping === 0 && weightRate === 0 && deliveryPremium === 0 && shippingTotal > 0) {
       // For IN->NP route, we know the configuration from database
-      if (isINtoNP) {
-        // Route has: base ₹100, tiers ₹15-45/kg, 2.5% of product cost
-        const baseINR = 100;
-        const exchangeRate = quote.calculation_data?.exchange_rate || 1.6019;
+      if (isINtoNP && fetchedRouteData) {
+        // Use actual route data from database
+        const baseINR = Number(fetchedRouteData.base_shipping_cost) || 100;
+        const exchangeRate = routeExchangeRate || quote.calculation_data?.exchange_rate || 1.6019;
         const baseUSD = baseINR / exchangeRate;
         
-        // Calculate what the weight-based cost might be
-        // 1.70kg falls in 1-3kg tier = ₹25/kg
-        const tierForWeight = totalWeight <= 1 ? 15 : totalWeight <= 3 ? 25 : totalWeight <= 5 ? 35 : 45;
+        // Calculate weight-based cost using actual tiers from DB
+        const routeTiers = fetchedRouteData.weight_tiers || weightTiers;
+        let tierForWeight = 0;
+        
+        // Find the appropriate tier for the weight
+        for (const tier of routeTiers) {
+          if (totalWeight >= tier.min && (tier.max === null || totalWeight <= tier.max)) {
+            tierForWeight = Number(tier.cost) || 0;
+            break;
+          }
+        }
+        
         const weightCostINR = totalWeight * tierForWeight;
         const weightCostUSD = weightCostINR / exchangeRate;
         
-        // Cost percentage component (2.5% of items)
+        // Cost percentage component from route data
         const itemsTotal = breakdown.items_total || 0;
-        const percentageCost = itemsTotal * 0.025;
+        const routeCostPercentage = Number(fetchedRouteData.cost_percentage) || 2.5;
+        const percentageCost = itemsTotal * (routeCostPercentage / 100);
         
         // The difference is likely delivery premium or other fees
         const calculatedBase = baseUSD + weightCostUSD + percentageCost;
         const estimatedPremium = Math.max(0, shippingTotal - calculatedBase);
+        
+        // Get the actual carrier from route delivery options
+        let routeCarrier = actualCarrier;
+        if (!routeCarrier && fetchedRouteData?.delivery_options?.length > 0) {
+          routeCarrier = fetchedRouteData.delivery_options[0].carrier || '';
+        }
         
         return {
           base: baseUSD,
           rate: tierForWeight / exchangeRate,
           premium: estimatedPremium,
           method: shippingMethod,
-          deliveryOption: deliveryOption,
+          carrier: routeCarrier,
+          deliveryOption: deliveryOption || fetchedRouteData?.delivery_options?.[0]?.name || 'Standard',
           weightTier: `${totalWeight <= 1 ? '0-1' : totalWeight <= 3 ? '1-3' : totalWeight <= 5 ? '3-5' : '5-∞'}kg`,
           weightCost: weightCostUSD,
-          costPercentage: 2.5,
+          costPercentage: routeCostPercentage,
           processingDays: processingDays,
           volumetricWeight: 0,
           chargeableWeight: totalWeight,
-          weightTiers: [
+          weightTiers: fetchedRouteData?.weight_tiers || [
             {min: 0, max: 1, cost: 15},
             {min: 1, max: 3, cost: 25},
             {min: 3, max: 5, cost: 35},
@@ -166,7 +275,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         rate: estimatedRate,
         premium: 0,
         method: shippingMethod,
-        deliveryOption: deliveryOption,
+        carrier: actualCarrier,
+        deliveryOption: deliveryOption || 'Standard',
         weightTier: 'Unknown',
         weightCost: shippingTotal,
         costPercentage: 0,
@@ -184,7 +294,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       rate: weightRate,
       premium: deliveryPremium,
       method: shippingMethod,
-      deliveryOption: deliveryOption,
+      carrier: actualCarrier,
+      deliveryOption: deliveryOption || 'Standard',
       weightTier: weightTier,
       weightCost: weightCost,
       costPercentage: costPercentage,
@@ -197,7 +308,11 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     };
   };
 
-  const shippingBreakdown = getShippingBreakdown();
+  const shippingBreakdown = getShippingBreakdown(routeData);
+
+  // Get currency symbol for display
+  const isINtoNP = quote.origin_country === 'IN' && quote.destination_country === 'NP';
+  const currencySymbol = isINtoNP ? '₹' : '$';
 
   // Build calculation steps
   const calculationSteps: Record<string, CalculationStep> = {
@@ -243,7 +358,9 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         {
           name: 'Shipping Method',
           value: null,
-          source: `${shippingBreakdown.method} - ${shippingBreakdown.deliveryOption}`,
+          source: shippingBreakdown.carrier ? 
+            `${shippingBreakdown.carrier} - ${shippingBreakdown.deliveryOption}` : 
+            (shippingBreakdown.deliveryOption ? shippingBreakdown.deliveryOption : 'Not specified'),
         },
         {
           name: 'Route',
@@ -276,10 +393,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           source: shippingBreakdown.weightTier,
         },
         {
-          name: 'Weight Rate Breakdown',
+          name: 'Weight Rate',
           value: shippingBreakdown.rate,
           source: shippingBreakdown.weightTier !== 'N/A' && shippingBreakdown.weightTier !== 'Unknown' 
-            ? `Tier ${shippingBreakdown.weightTier} rate` 
+            ? `Tier ${shippingBreakdown.weightTier} @ ${currencySymbol}${shippingBreakdown.rate.toFixed(2)}/kg` 
             : shippingBreakdown.note || 'Route per-kg rate',
           rate: shippingBreakdown.rate,
         },
@@ -289,12 +406,12 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           value: 0,
           source: quote.origin_country === 'IN' && quote.destination_country === 'NP' 
             ? shippingBreakdown.weightTiers.map((tier: any) => {
-                const exchangeRate = quote.calculation_data?.exchange_rate || 1.6019;
-                const usdRate = tier.cost / exchangeRate;
-                return `${tier.min}-${tier.max || '∞'}kg: ₹${tier.cost}/kg ($${usdRate.toFixed(2)}/kg)`;
+                const exchangeRate = Number(quote.calculation_data?.exchange_rate) || 1.6019;
+                const usdRate = Number(tier.cost) / exchangeRate;
+                return `${tier.min}-${tier.max || '∞'}kg: ₹${tier.cost}/kg ($${Number.isFinite(usdRate) ? usdRate.toFixed(2) : '0.00'}/kg)`;
               }).join(', ')
             : shippingBreakdown.weightTiers.map((tier: any) => 
-                `${tier.min}-${tier.max || '∞'}kg: $${tier.cost.toFixed(2)}/kg`
+                `${tier.min}-${tier.max || '∞'}kg: $${Number.isFinite(tier.cost) ? Number(tier.cost).toFixed(2) : '0.00'}/kg`
               ).join(', '),
         }] : []),
         {
@@ -307,7 +424,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         {
           name: 'Weight Cost',
           value: shippingBreakdown.weightCost,
-          source: `${shippingBreakdown.chargeableWeight.toFixed(2)} kg × $${shippingBreakdown.rate.toFixed(2)}/kg`,
+          source: `${(shippingBreakdown.chargeableWeight || 0).toFixed(2)} kg × $${(shippingBreakdown.rate || 0).toFixed(2)}/kg`,
         },
         {
           name: 'Delivery Premium',
