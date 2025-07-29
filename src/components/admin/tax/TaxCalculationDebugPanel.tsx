@@ -24,6 +24,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnifiedQuote } from '@/types/unified-quote';
 import { supabase } from '@/integrations/supabase/client';
+import { hsnTaxService } from '@/services/HSNTaxService';
+import { routeTierTaxService } from '@/services/RouteTierTaxService';
 
 interface TaxCalculationDebugPanelProps {
   quote: UnifiedQuote;
@@ -51,6 +53,11 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [routeData, setRouteData] = useState<any>(null);
+  
+  // Live tax data states
+  const [liveHsnRates, setLiveHsnRates] = useState<Record<string, any>>({});
+  const [liveRouteRates, setLiveRouteRates] = useState<any>(null);
+  const [isLoadingLiveData, setIsLoadingLiveData] = useState(false);
 
   // Fetch the shipping route data
   useEffect(() => {
@@ -71,6 +78,59 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     
     fetchRouteData();
   }, [quote.origin_country, quote.destination_country]);
+  
+  // Fetch live tax data
+  useEffect(() => {
+    const fetchLiveTaxData = async () => {
+      if (!quote.origin_country || !quote.destination_country) return;
+      
+      setIsLoadingLiveData(true);
+      
+      try {
+        // Fetch route tier taxes (like item debug does)
+        const totalWeight = quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0;
+        const itemsTotal = quote.items?.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0) || 0;
+        
+        const routeRates = await routeTierTaxService.getRouteTierTaxes(
+          quote.origin_country,
+          quote.destination_country,
+          itemsTotal,
+          totalWeight
+        );
+        
+        setLiveRouteRates(routeRates);
+        
+        // Fetch HSN rates for items with HSN codes
+        const hsnData: Record<string, any> = {};
+        
+        if (quote.items) {
+          for (const item of quote.items) {
+            if (item.hsn_code) {
+              try {
+                const hsnRates = await hsnTaxService.getHSNTaxRates(
+                  item.hsn_code,
+                  quote.destination_country
+                );
+                if (hsnRates) {
+                  hsnData[item.hsn_code] = hsnRates;
+                }
+              } catch (error) {
+                console.error(`Error fetching HSN rates for ${item.hsn_code}:`, error);
+              }
+            }
+          }
+        }
+        
+        setLiveHsnRates(hsnData);
+      } catch (error) {
+        console.error('Error fetching live tax data:', error);
+      } finally {
+        setIsLoadingLiveData(false);
+      }
+    };
+    
+    fetchLiveTaxData();
+  }, [quote.origin_country, quote.destination_country, quote.items]);
 
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
@@ -517,7 +577,16 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         // Check if HSN data is available
         const hasHsnData = quote.items?.some(item => item.hsn_code) || false;
-        const hsnRate = hasHsnData ? (taxRates.customs || 0) : 0;
+        const storedHsnRate = hasHsnData ? (taxRates.customs || 0) : 0;
+        
+        // Get live HSN rate (average if multiple items)
+        let liveHsnRate = 0;
+        if (hasHsnData && Object.keys(liveHsnRates).length > 0) {
+          const rates = Object.values(liveHsnRates).map((r: any) => r.customs || 0);
+          liveHsnRate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+        }
+        
+        const hsnRate = liveHsnRate || storedHsnRate; // Prefer live data
         const hsnResult = actualCustomsBase * (hsnRate / 100);
         
         inputs.push({
@@ -528,11 +597,29 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         inputs.push({
-          name: `├─ HSN Rate`,
-          value: hsnRate,
-          source: hasHsnData ? 'From HSN master table' : 'No HSN data available',
-          rate: hsnRate,
+          name: `├─ HSN Rate (Stored)`,
+          value: storedHsnRate,
+          source: storedHsnRate > 0 ? 'From calculation_data' : 'No stored data',
+          rate: storedHsnRate,
         });
+        
+        if (hasHsnData) {
+          inputs.push({
+            name: `├─ HSN Rate (Live)`,
+            value: liveHsnRate,
+            source: isLoadingLiveData ? 'Loading...' : liveHsnRate > 0 ? '🟢 LIVE from HSN service' : 'No live data',
+            rate: liveHsnRate,
+          });
+          
+          if (liveHsnRate > 0 && storedHsnRate !== liveHsnRate) {
+            inputs.push({
+              name: `├─ ⚠️ Rate Mismatch`,
+              value: Math.abs(liveHsnRate - storedHsnRate),
+              source: `Live: ${liveHsnRate}% vs Stored: ${storedHsnRate}%`,
+              rate: 0,
+            });
+          }
+        }
         
         inputs.push({
           name: `├─ HSN Calculation`,
@@ -551,23 +638,42 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         // Check if route data is available
         const routeKey = `${quote.origin_country}-${quote.destination_country}`;
-        const routeCustoms = operationalData?.customs?.smart_tier?.percentage || 0;
+        const storedRouteCustoms = operationalData?.customs?.smart_tier?.percentage || 0;
+        const liveRouteCustoms = liveRouteRates?.customs || 0;
+        const routeCustoms = liveRouteCustoms || storedRouteCustoms; // Prefer live data
         const routeResult = actualCustomsBase * (routeCustoms / 100);
-        const hasRouteData = routeCustoms > 0;
+        const hasStoredRouteData = storedRouteCustoms > 0;
+        const hasLiveRouteData = liveRouteCustoms > 0;
         
         inputs.push({
           name: `├─ Route Available`,
-          value: hasRouteData ? 1 : 0,
-          source: hasRouteData ? `Route ${routeKey} has tier data` : `Route ${routeKey} missing from route_customs_tiers`,
+          value: hasLiveRouteData || hasStoredRouteData ? 1 : 0,
+          source: hasLiveRouteData || hasStoredRouteData ? `Route ${routeKey} has tier data` : `Route ${routeKey} missing from route_customs_tiers`,
           rate: 0,
         });
         
         inputs.push({
-          name: `├─ Route Rate`,
-          value: routeCustoms,
-          source: hasRouteData ? `From route_customs_tiers table` : 'No route tier data',
-          rate: routeCustoms,
+          name: `├─ Route Rate (Stored)`,
+          value: storedRouteCustoms,
+          source: hasStoredRouteData ? 'From operational_data' : 'No stored data',
+          rate: storedRouteCustoms,
         });
+        
+        inputs.push({
+          name: `├─ Route Rate (Live)`,
+          value: liveRouteCustoms,
+          source: isLoadingLiveData ? 'Loading...' : liveRouteCustoms > 0 ? `🟢 LIVE: ${liveRouteRates?.tier_name || 'tier'}` : 'No route tier data',
+          rate: liveRouteCustoms,
+        });
+        
+        if (liveRouteCustoms > 0 && storedRouteCustoms !== liveRouteCustoms) {
+          inputs.push({
+            name: `├─ ⚠️ Rate Mismatch`,
+            value: Math.abs(liveRouteCustoms - storedRouteCustoms),
+            source: `Live: ${liveRouteCustoms}% vs Stored: ${storedRouteCustoms}%`,
+            rate: 0,
+          });
+        }
         
         inputs.push({
           name: `├─ Route Calculation`,
@@ -649,10 +755,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         const methods = [
-          { name: 'HSN', result: hsnResult, available: hasHsnData },
-          { name: 'Country/Route', result: routeResult, available: hasRouteData },
-          { name: 'Manual', result: manualResult, available: manualRate > 0 },
-          { name: 'Customs', result: customsMethodResult, available: true } // Always available as fallback
+          { name: 'HSN', result: hsnResult, available: hasHsnData, isLive: liveHsnRate > 0 },
+          { name: 'Country/Route', result: routeResult, available: hasLiveRouteData || hasStoredRouteData, isLive: hasLiveRouteData },
+          { name: 'Manual', result: manualResult, available: manualRate > 0, isLive: false },
+          { name: 'Customs', result: customsMethodResult, available: true, isLive: false } // Always available as fallback
         ];
         
         const availableMethods = methods.filter(m => m.available);
@@ -663,9 +769,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           const isLowest = method.result === minResult && availableMethods.length > 1;
           const isHighest = method.result === maxResult && availableMethods.length > 1;
           const status = isLowest ? '🟢 LOWEST' : isHighest ? '🔴 HIGHEST' : '🟡 MIDDLE';
+          const liveIndicator = method.isLive ? ' (LIVE)' : '';
           
           inputs.push({
-            name: `├─ ${method.name}`,
+            name: `├─ ${method.name}${liveIndicator}`,
             value: method.result,
             source: `${status} - $${method.result.toFixed(2)}`,
             rate: 0,
@@ -1025,6 +1132,11 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
               <Badge variant="outline">
                 Exchange Rate: {Number(exchangeRate).toFixed(2)}
               </Badge>
+              {isLoadingLiveData && (
+                <Badge variant="secondary" className="animate-pulse">
+                  Loading Live Data...
+                </Badge>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
