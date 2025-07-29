@@ -37,13 +37,9 @@ export async function upsertShippingRoute(
     weight_unit: routeData.weightUnit,
     delivery_options: routeData.deliveryOptions,
     weight_tiers: routeData.weightTiers,
-    max_weight: routeData.maxWeight,
-    restricted_items: routeData.restrictedItems,
-    requires_documentation: routeData.requiresDocumentation,
     is_active: routeData.isActive,
     exchange_rate: routeData.exchangeRate,
-    vat_percentage: routeData.vatPercentage,
-    customs_percentage: routeData.customsPercentage,
+    // Removed columns: max_weight, restricted_items, requires_documentation, vat_percentage, customs_percentage
   };
 
   let result;

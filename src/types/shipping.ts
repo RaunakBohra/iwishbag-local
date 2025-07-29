@@ -70,9 +70,7 @@ export interface ShippingRoute {
   deliveryOptions: DeliveryOption[];
   weightTiers: WeightTier[];
   // carriers field removed - use delivery_options.carrier instead
-  maxWeight?: number;
-  restrictedItems?: string[];
-  requiresDocumentation: boolean;
+  // Removed fields: maxWeight, restrictedItems, requiresDocumentation, vatPercentage, customsPercentage
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -160,8 +158,6 @@ export interface ShippingRouteFormData {
   deliveryOptions: DeliveryOption[];
   weightTiers: WeightTier[];
   // carriers field removed - use delivery_options.carrier instead
-  maxWeight?: number;
-  restrictedItems?: string[];
-  requiresDocumentation: boolean;
+  // Removed fields: maxWeight, restrictedItems, requiresDocumentation, vatPercentage, customsPercentage
   isActive: boolean;
 }

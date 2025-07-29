@@ -1903,7 +1903,7 @@ export default function UnifiedQuoteOrderSystem({
                                     if (option) {
                                       setInternationalShipping(option.cost_usd);
                                       // Trigger recalculation with the new shipping option
-                                      await recalculateQuote(items, true);
+                                      await recalculateQuote(items, false);
                                     }
                                   }}
                                 >

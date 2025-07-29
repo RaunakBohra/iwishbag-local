@@ -89,9 +89,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
       { min: 5, max: null, cost: 45.0 },
     ],
     carriers: initialData?.carriers || [],
-    maxWeight: initialData?.maxWeight,
-    restrictedItems: initialData?.restrictedItems || [],
-    requiresDocumentation: initialData?.requiresDocumentation || false,
+    // Removed fields: maxWeight, restrictedItems, requiresDocumentation, vatPercentage, customsPercentage
     isActive: initialData?.isActive !== undefined ? initialData.isActive : true,
     exchangeRate: initialData?.exchangeRate ?? 1,
   });
@@ -561,49 +559,9 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <Label htmlFor="maxWeight">Max Weight ({formData.weightUnit.toUpperCase()})</Label>
-          <Input
-            id="maxWeight"
-            type="number"
-            step="0.01"
-            value={formData.maxWeight || ''}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                maxWeight: parseFloat(e.target.value) || undefined,
-              }))
-            }
-          />
-        </div>
+        {/* Removed Max Weight field - column no longer exists */}
       </div>
-      <div>
-        <Label htmlFor="restrictedItems">Restricted Items (comma-separated)</Label>
-        <Input
-          id="restrictedItems"
-          value={formData.restrictedItems?.join(', ') || ''}
-          onChange={(e) =>
-            setFormData((prev) => ({
-              ...prev,
-              restrictedItems: e.target.value
-                .split(',')
-                .map((item) => item.trim())
-                .filter(Boolean),
-            }))
-          }
-          placeholder="electronics, liquids, batteries"
-        />
-      </div>
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="requiresDocumentation"
-          checked={formData.requiresDocumentation}
-          onCheckedChange={(checked) =>
-            setFormData((prev) => ({ ...prev, requiresDocumentation: checked }))
-          }
-        />
-        <Label htmlFor="requiresDocumentation">Requires Documentation</Label>
-      </div>
+      {/* Removed Restricted Items and Requires Documentation fields - columns no longer exist */}
       <div className="flex items-center space-x-2">
         <Switch
           id="isActive"
@@ -728,9 +686,7 @@ export function ShippingRouteManager() {
     deliveryOptions: route.delivery_options || [],
     weightTiers: route.weight_tiers || [],
     carriers: [], // Deprecated: use delivery_options instead
-    maxWeight: route.max_weight,
-    restrictedItems: route.restricted_items || [],
-    requiresDocumentation: route.requires_documentation || false,
+    // Removed fields: maxWeight, restrictedItems, requiresDocumentation, vatPercentage, customsPercentage
     isActive: route.is_active !== undefined ? route.is_active : true,
     exchangeRate: route.exchange_rate ?? 1,
   });
