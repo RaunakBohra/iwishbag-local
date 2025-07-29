@@ -1884,12 +1884,22 @@ export class SmartCalculationEngine {
         totalWeight
       );
       
+      // Calculate CIF components for per-item customs calculation
+      const totalItemsValue = quote.items.reduce((sum, item) => 
+        sum + (item.costprice_origin || 0) * (item.quantity || 1), 0);
+      
       for (const item of quote.items) {
         const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
         const itemTaxMethod = item.tax_method || 'hsn';
         let itemCustomsRate = 0;
         let itemSalesTaxRate = 0;
         let itemVatRate = 0;
+        
+        // Calculate item's proportional share of shipping and insurance for CIF
+        const itemValueRatio = totalItemsValue > 0 ? itemValue / totalItemsValue : 0;
+        const itemShippingShare = selectedShipping.cost_usd * itemValueRatio;
+        const itemInsuranceShare = insuranceAmount * itemValueRatio;
+        const itemCIF = itemValue + itemShippingShare + itemInsuranceShare;
         
         console.log(`[PER-ITEM TAX] Processing item ${item.id} with method: ${itemTaxMethod}`);
         console.log(`[PER-ITEM TAX] Item data:`, {
@@ -1950,8 +1960,8 @@ export class SmartCalculationEngine {
           console.log(`[PER-ITEM TAX] No matching tax method for item ${item.id}. Method: ${itemTaxMethod}, hasRouteRates: ${!!routeRates}`);
         }
         
-        // Calculate item taxes
-        const itemCustoms = (itemValue * itemCustomsRate) / 100;
+        // Calculate item taxes - customs uses CIF, others use item value
+        const itemCustoms = (itemCIF * itemCustomsRate) / 100;
         const itemSalesTax = (itemValue * itemSalesTaxRate) / 100;
         const itemVat = (itemValue * itemVatRate) / 100;
         
@@ -1959,13 +1969,19 @@ export class SmartCalculationEngine {
         console.log(`[TAX CALCULATION SUMMARY] Item ${item.id} (${item.name}):`, {
           tax_method: itemTaxMethod,
           item_value: itemValue,
+          cif_calculation: {
+            item_value: itemValue,
+            shipping_share: itemShippingShare,
+            insurance_share: itemInsuranceShare,
+            cif_value: itemCIF
+          },
           rates: {
             customs: `${itemCustomsRate}%`,
             sales_tax: `${itemSalesTaxRate}%`,
             vat: `${itemVatRate}%`
           },
           amounts: {
-            customs: `$${itemCustoms.toFixed(2)}`,
+            customs: `$${itemCustoms.toFixed(2)} (CIF × ${itemCustomsRate}%)`,
             sales_tax: `$${itemSalesTax.toFixed(2)}`,
             vat: `$${itemVat.toFixed(2)}`,
             total_tax: `$${(itemCustoms + itemSalesTax + itemVat).toFixed(2)}`
@@ -1982,7 +1998,7 @@ export class SmartCalculationEngine {
         perItemSalesTaxTotal += itemSalesTax;
         perItemVatTotal += itemVat;
         
-        // Store item breakdown
+        // Store item breakdown with CIF details
         itemBreakdowns.push({
           item_id: item.id,
           item_name: item.name,
@@ -1993,7 +2009,10 @@ export class SmartCalculationEngine {
           sales_tax: itemSalesTax,
           destination_tax: itemVat,
           total_taxes: itemCustoms + itemSalesTax + itemVat,
-          customs_value: itemValue,
+          customs_value: itemCIF,  // Changed to CIF value
+          item_value: itemValue,    // Keep original item value for reference
+          shipping_share: itemShippingShare,
+          insurance_share: itemInsuranceShare,
           valuation_method: item.valuation_method || 'actual_price'
         });
       }
@@ -2047,17 +2066,28 @@ export class SmartCalculationEngine {
       let hsnBasedSalesTaxTotal = 0;
       let hsnBasedVatTotal = 0;
       
+      // Calculate total items value for CIF calculation
+      const totalItemsValue = quote.items.reduce((sum, item) => 
+        sum + (item.costprice_origin || 0) * (item.quantity || 1), 0);
+      
       for (const item of quote.items) {
         if (item.hsn_code) {
           const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+          
+          // Calculate item's proportional share of shipping and insurance for CIF
+          const itemValueRatio = totalItemsValue > 0 ? itemValue / totalItemsValue : 0;
+          const itemShippingShare = selectedShipping.cost_usd * itemValueRatio;
+          const itemInsuranceShare = insuranceAmount * itemValueRatio;
+          const itemCIF = itemValue + itemShippingShare + itemInsuranceShare;
+          
           const hsnRates = await hsnTaxService.getHSNTaxRates(
             item.hsn_code,
             quote.destination_country
           );
           
           if (hsnRates) {
-            // Calculate item-level taxes
-            hsnBasedCustomsTotal += (itemValue * hsnRates.customs) / 100;
+            // Calculate item-level taxes - customs uses CIF, others use item value
+            hsnBasedCustomsTotal += (itemCIF * hsnRates.customs) / 100;
             hsnBasedSalesTaxTotal += (itemValue * hsnRates.sales_tax) / 100;
             hsnBasedVatTotal += (itemValue * hsnRates.vat) / 100;
           }
