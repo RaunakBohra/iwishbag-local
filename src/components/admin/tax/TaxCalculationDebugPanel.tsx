@@ -627,7 +627,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: '├─ Item Methods',
           value: 0,
-          source: '4 types: hsn, country (route), manual, customs',
+          source: '3 types: hsn, route, manual',
           rate: 0,
         });
         
@@ -744,11 +744,11 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
-        // 4. Country/Route Method Analysis (Note: Called 'country' in item calculations)
+        // 4. Route Method Analysis
         inputs.push({
-          name: '🌍 COUNTRY/ROUTE METHOD',
+          name: '🌍 ROUTE METHOD',
           value: 0,
-          source: '─── Route Tier Analysis (country method) ───',
+          source: '─── Route Tier Analysis ───',
           rate: 0,
         });
         
@@ -806,7 +806,26 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
-        const manualRate = operationalData?.customs?.percentage || 0;
+        // For per-item calculations, get manual rate from items
+        let manualRate = 0;
+        if (hasItemLevelMethods && quote.items) {
+          const manualItems = quote.items.filter(item => item.tax_method === 'manual');
+          if (manualItems.length > 0) {
+            // Calculate weighted average manual rate
+            let weightedSum = 0;
+            let totalValue = 0;
+            manualItems.forEach(item => {
+              const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+              const itemRate = item.tax_options?.manual?.rate || 0;
+              weightedSum += itemRate * itemValue;
+              totalValue += itemValue;
+            });
+            manualRate = totalValue > 0 ? weightedSum / totalValue : 0;
+          }
+        } else {
+          // Quote level - manual rates are only at item level now
+          manualRate = 0;
+        }
         const manualResult = actualCustomsBase * (manualRate / 100);
         
         inputs.push({
@@ -830,37 +849,6 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
-        // 6. Customs Method Analysis (4th method - uses operational_data customs)
-        inputs.push({
-          name: '📦 CUSTOMS METHOD',
-          value: 0,
-          source: '─── Customs Default Method ───',
-          rate: 0,
-        });
-        
-        const customsMethodRate = operationalData?.customs?.percentage || 10; // Default 10% if not set
-        const customsMethodResult = actualCustomsBase * (customsMethodRate / 100);
-        
-        inputs.push({
-          name: `├─ Customs Rate`,
-          value: customsMethodRate,
-          source: 'Operational data customs (default fallback)',
-          rate: customsMethodRate,
-        });
-        
-        inputs.push({
-          name: `├─ Customs Calculation`,
-          value: customsMethodResult,
-          source: `$${actualCustomsBase.toFixed(2)} × ${customsMethodRate}% = $${customsMethodResult.toFixed(2)}`,
-          rate: 0,
-        });
-        
-        inputs.push({
-          name: `├─ Note`,
-          value: 0,
-          source: 'Uses customs default, no destination taxes',
-          rate: 0,
-        });
         
         // 7. Method Comparison
         inputs.push({
@@ -872,9 +860,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         const methods = [
           { name: 'HSN', result: hsnResult, available: hasHsnData, isLive: liveHsnRate > 0 },
-          { name: 'Country/Route', result: routeResult, available: hasLiveRouteData || hasStoredRouteData, isLive: hasLiveRouteData },
-          { name: 'Manual', result: manualResult, available: manualRate > 0, isLive: false },
-          { name: 'Customs', result: customsMethodResult, available: true, isLive: false } // Always available as fallback
+          { name: 'Route', result: routeResult, available: hasLiveRouteData || hasStoredRouteData, isLive: hasLiveRouteData },
+          { name: 'Manual', result: manualResult, available: manualRate > 0, isLive: false }
         ];
         
         const availableMethods = methods.filter(m => m.available);
@@ -990,7 +977,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             available: hasHsnData,
             source: hasHsnData ? (liveHsnRate > 0 ? 'Live HSN Service' : 'Stored HSN Data') : 'No HSN codes'
           },
-          country: {
+          route: {
             rate: liveRouteCustoms || storedRouteCustoms,
             base: actualCustomsBase,
             amount: actualCustomsBase * ((liveRouteCustoms || storedRouteCustoms) / 100),
@@ -1004,15 +991,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             amount: actualCustomsBase * (manualRate / 100),
             isLive: false,
             available: manualRate > 0,
-            source: manualRate > 0 ? 'User Input' : 'Not configured'
-          },
-          customs: {
-            rate: customsMethodRate,
-            base: actualCustomsBase,
-            amount: actualCustomsBase * (customsMethodRate / 100),
-            isLive: false,
-            available: true,
-            source: 'System Default'
+            source: manualRate > 0 ? 'Item-level rates' : 'Not configured'
           }
         };
         
@@ -1043,11 +1022,9 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
               return methodMatrix.hsn.amount;
             case 'route':
             case 'route_based':
-              return methodMatrix.country.amount;
+              return methodMatrix.route.amount;
             case 'manual':
               return methodMatrix.manual.amount;
-            case 'customs':
-              return methodMatrix.customs.amount;
             default:
               return 0;
           }
