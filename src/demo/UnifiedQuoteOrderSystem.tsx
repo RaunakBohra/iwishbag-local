@@ -1803,6 +1803,17 @@ export default function UnifiedQuoteOrderSystem({
                       quote={quote}
                       onUpdateItem={(itemId, updates) => {
                         console.log('🔍 [UNIFIED] onUpdateItem called:', { itemId, updates });
+                        
+                        // Log tax_options specifically if being updated
+                        if (updates.tax_options) {
+                          console.log('📋 [TAX_OPTIONS] Updating tax_options for item:', {
+                            itemId,
+                            tax_method: updates.tax_method,
+                            tax_options: updates.tax_options,
+                            manual_rate: updates.tax_options?.manual?.rate
+                          });
+                        }
+                        
                         const updatedItems = items.map(item => 
                           item.id === itemId ? { ...item, ...updates } : item
                         );

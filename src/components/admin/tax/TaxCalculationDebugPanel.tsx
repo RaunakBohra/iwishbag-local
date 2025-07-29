@@ -846,16 +846,18 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             let totalValue = 0;
             manualItems.forEach(item => {
               const itemValue = (item.costprice_origin || item.price) * (item.quantity || 1);
-              // Manual rate is stored as customs_amount / customs_value
-              const itemRate = item.customs_amount && item.customs_value ? 
-                (item.customs_amount / item.customs_value) * 100 : 0;
+              // Manual rate is stored in tax_options.manual.rate OR calculated from customs_amount/customs_value
+              const itemRate = item.tax_options?.manual?.rate || 
+                (item.customs_amount && item.customs_value ? 
+                  (item.customs_amount / item.customs_value) * 100 : 0);
               console.log('[DEBUG PANEL] Manual item rate:', {
                 item_name: item.product_name || item.name,
                 item_value: itemValue,
                 manual_rate: itemRate,
-                customs_amount: item.customs_amount,
-                customs_value: item.customs_value,
-                calculated_from: 'customs_amount / customs_value * 100',
+                tax_options_rate: item.tax_options?.manual?.rate,
+                customs_calculation: item.customs_amount && item.customs_value ? 
+                  `${item.customs_amount}/${item.customs_value} = ${(item.customs_amount / item.customs_value) * 100}%` : 'N/A',
+                using: item.tax_options?.manual?.rate ? 'tax_options' : 'customs calculation',
                 full_item: item
               });
               weightedSum += itemRate * itemValue;
