@@ -1038,12 +1038,26 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                       defaultValue={taxRate}
                                       onBlur={(e) => {
                                         const newTaxRate = parseFloat(e.target.value) || dynamicTaxRates.manualDefault;
+                                        const itemValue = (item.costprice_origin || item.price) * (item.quantity || 1);
+                                        const newCustomsAmount = itemValue * (newTaxRate / 100);
+                                        
+                                        console.log('💡 [MANUAL TAX] Updating manual rate:', {
+                                          item_id: item.id,
+                                          old_rate: item.tax_options?.manual?.rate || 'none',
+                                          new_rate: newTaxRate,
+                                          item_value: itemValue,
+                                          new_customs_amount: newCustomsAmount
+                                        });
+                                        
                                         onUpdateItem(item.id, { 
                                           tax_method: 'manual',
                                           tax_options: {
                                             ...item.tax_options,
                                             manual: { rate: newTaxRate, amount: 0 }
-                                          }
+                                          },
+                                          // Also update customs_amount directly
+                                          customs_amount: newCustomsAmount,
+                                          customs_value: itemValue
                                         });
                                         onRecalculate();
                                         setEditingManualTaxRate(null);
@@ -1051,12 +1065,26 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                           const newTaxRate = parseFloat(e.currentTarget.value) || dynamicTaxRates.manualDefault;
+                                          const itemValue = (item.costprice_origin || item.price) * (item.quantity || 1);
+                                          const newCustomsAmount = itemValue * (newTaxRate / 100);
+                                          
+                                          console.log('💡 [MANUAL TAX] Updating manual rate:', {
+                                            item_id: item.id,
+                                            old_rate: item.tax_options?.manual?.rate || 'none',
+                                            new_rate: newTaxRate,
+                                            item_value: itemValue,
+                                            new_customs_amount: newCustomsAmount
+                                          });
+                                          
                                           onUpdateItem(item.id, { 
                                             tax_method: 'manual',
                                             tax_options: {
                                               ...item.tax_options,
                                               manual: { rate: newTaxRate, amount: 0 }
-                                            }
+                                            },
+                                            // Also update customs_amount directly
+                                            customs_amount: newCustomsAmount,
+                                            customs_value: itemValue
                                           });
                                           onRecalculate();
                                           setEditingManualTaxRate(null);
