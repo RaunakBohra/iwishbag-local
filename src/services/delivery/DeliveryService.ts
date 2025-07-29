@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../integrations/supabase/client';
 import { DeliveryProviderRegistry } from './DeliveryProviderRegistry';
 import { 
   DeliveryProvider, 
@@ -44,7 +44,7 @@ export class DeliveryService {
           credentials: config.credentials, // Should be decrypted
           settings: config.settings,
           countryOverrides: config.country_overrides
-        });
+        } as ProviderConfig);
       } catch (err) {
         console.error(`Failed to initialize provider ${config.code}:`, err);
       }

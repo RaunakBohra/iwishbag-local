@@ -829,7 +829,14 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
               id: item.id,
               name: item.product_name,
               tax_method: item.tax_method,
-              tax_options_manual: item.tax_options?.manual
+              tax_options: item.tax_options,
+              // Check if manual rate might be stored elsewhere
+              operational_data: item.operational_data,
+              customs_rate: item.customs_rate,
+              manual_rate: item.manual_rate,
+              tax_rate: item.tax_rate,
+              // Check all properties
+              all_props: Object.keys(item).filter(key => key.includes('tax') || key.includes('manual') || key.includes('rate'))
             }))
           });
           
@@ -1082,20 +1089,42 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         // If per-item methods, show breakdown
         if (hasItemLevelMethods && itemBreakdowns.length > 0) {
+          console.log('[DEBUG PANEL] Item breakdowns:', {
+            itemBreakdowns,
+            quote_items: quote.items,
+            itemBreakdowns_count: itemBreakdowns.length,
+            quote_items_count: quote.items?.length || 0,
+            calculation_data: quote.calculation_data
+          });
+          
           inputs.push({
             name: '📋 ITEM BREAKDOWN',
             value: 0,
-            source: '─── Per-Item Method Application ───',
+            source: `─── Per-Item Method Application (${itemBreakdowns.length} items) ───`,
             rate: 0,
           });
           
-          itemBreakdowns.forEach((itemBreakdown, idx) => {
-            const item = quote.items?.[idx];
+          itemBreakdowns.forEach((itemBreakdown) => {
+            // Find the matching item by ID or name
+            const item = quote.items?.find(i => 
+              i.id === itemBreakdown.item_id || 
+              i.product_name === itemBreakdown.item_name ||
+              i.name === itemBreakdown.item_name
+            );
+            
             if (item) {
               inputs.push({
-                name: `├─ ${item.product_name}`,
+                name: `├─ ${item.product_name || item.name || itemBreakdown.item_name}`,
                 value: itemBreakdown.customs || 0,
-                source: `Method: ${item.tax_method || 'hsn'} → $${(itemBreakdown.customs || 0).toFixed(2)}`,
+                source: `Method: ${itemBreakdown.tax_method || item.tax_method || 'hsn'} → $${(itemBreakdown.customs || 0).toFixed(2)}`,
+                rate: 0,
+              });
+            } else {
+              // Show breakdown even if item not found
+              inputs.push({
+                name: `├─ ${itemBreakdown.item_name || `Item ${itemBreakdown.item_id}`}`,
+                value: itemBreakdown.customs || 0,
+                source: `Method: ${itemBreakdown.tax_method || 'unknown'} → $${(itemBreakdown.customs || 0).toFixed(2)}`,
                 rate: 0,
               });
             }

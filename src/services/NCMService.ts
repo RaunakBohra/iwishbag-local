@@ -1,4 +1,4 @@
-import { env } from '../config/env';
+import { supabase } from '../integrations/supabase/client';
 
 export interface NCMBranch {
   name: string;
@@ -57,17 +57,35 @@ export interface NCMCreateOrderResponse {
 
 class NCMService {
   private static instance: NCMService;
-  private readonly baseUrl: string;
-  private readonly apiToken: string;
-  private readonly headers: HeadersInit;
+  private baseUrl: string = 'https://demo.nepalcanmove.com';
+  private apiToken: string = '';
+  private headers: HeadersInit = {};
+  private initialized = false;
 
-  private constructor() {
-    this.baseUrl = env.NCM_API_BASE_URL;
-    this.apiToken = env.NCM_API_TOKEN;
+  private constructor() {}
+  
+  private async initialize() {
+    if (this.initialized) return;
+    
+    // Fetch NCM config from database
+    const { data, error } = await supabase
+      .from('delivery_provider_configs' as any)
+      .select('credentials, settings')
+      .eq('code', 'NCM')
+      .single() as { data: any, error: any };
+      
+    if (error || !data) {
+      throw new Error('NCM configuration not found');
+    }
+    
+    this.apiToken = data?.credentials?.api_token || '';
+    this.baseUrl = data?.settings?.baseUrl || this.baseUrl;
     this.headers = {
       'Authorization': `Token ${this.apiToken}`,
       'Content-Type': 'application/json',
     };
+    
+    this.initialized = true;
   }
 
   static getInstance(): NCMService {
@@ -78,6 +96,8 @@ class NCMService {
   }
 
   private async fetchApi(endpoint: string, options?: RequestInit) {
+    await this.initialize();
+    
     const url = `${this.baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
