@@ -457,15 +457,17 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       inputs: (() => {
         const inputs = [];
         
-        // 1. Current Active Method
-        const activeMethod = quote.calculation_method_preference || quote.tax_method || 'hsn_only';
+        // 1. Current Active Method - Check both quote-level and item-level
+        const quoteLevelMethod = quote.calculation_method_preference || quote.tax_method || 'hsn_only';
+        const hasItemLevelMethods = quote.items?.some(item => item.tax_method) || false;
+        const itemMethods = hasItemLevelMethods ? [...new Set(quote.items?.map(item => item.tax_method || 'hsn'))] : [];
         const activeValuation = quote.valuation_method_preference || 'product_value';
         const cifValue = (breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0);
         
         inputs.push({
           name: '🎯 ACTIVE METHOD',
-          value: activeMethod.toUpperCase(),
-          source: `${activeMethod} mode with ${activeValuation} valuation`,
+          value: hasItemLevelMethods ? 'PER-ITEM' : quoteLevelMethod.toUpperCase(),
+          source: hasItemLevelMethods ? `Item methods: ${itemMethods.join(', ')}` : `${quoteLevelMethod} mode with ${activeValuation} valuation`,
           rate: 0,
         });
         
@@ -511,11 +513,11 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
-        // 4. Route-based Method Analysis
+        // 4. Country/Route Method Analysis (Note: Called 'country' in item calculations)
         inputs.push({
-          name: '🛤️ ROUTE METHOD',
+          name: '🌍 COUNTRY/ROUTE METHOD',
           value: 0,
-          source: '─── Route Tier Analysis ───',
+          source: '─── Route Tier Analysis (country method) ───',
           rate: 0,
         });
         
@@ -550,7 +552,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: '✏️ MANUAL METHOD',
           value: 0,
-          source: '─── Manual Input Analysis ───',
+          source: '─── Manual Input Analysis (User customs + Route dest tax) ───',
           rate: 0,
         });
         
@@ -565,13 +567,52 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         inputs.push({
+          name: `├─ Destination Tax`,
+          value: routeCustoms > 0 ? 'From route' : 'No route data',
+          source: 'Manual method uses route destination tax',
+          rate: 0,
+        });
+        
+        inputs.push({
           name: `├─ Manual Calculation`,
           value: manualResult,
           source: `$${cifValue.toFixed(2)} × ${manualRate}% = $${manualResult.toFixed(2)}`,
           rate: 0,
         });
         
-        // 6. Method Comparison
+        // 6. Customs Method Analysis (4th method - uses operational_data customs)
+        inputs.push({
+          name: '📦 CUSTOMS METHOD',
+          value: 0,
+          source: '─── Customs Default Method ───',
+          rate: 0,
+        });
+        
+        const customsMethodRate = operationalData?.customs?.percentage || 10; // Default 10% if not set
+        const customsMethodResult = cifValue * (customsMethodRate / 100);
+        
+        inputs.push({
+          name: `├─ Customs Rate`,
+          value: customsMethodRate,
+          source: 'Operational data customs (default fallback)',
+          rate: customsMethodRate,
+        });
+        
+        inputs.push({
+          name: `├─ Customs Calculation`,
+          value: customsMethodResult,
+          source: `$${cifValue.toFixed(2)} × ${customsMethodRate}% = $${customsMethodResult.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: `├─ Note`,
+          value: 0,
+          source: 'Uses customs default, no destination taxes',
+          rate: 0,
+        });
+        
+        // 7. Method Comparison
         inputs.push({
           name: '📈 COMPARISON',
           value: 0,
@@ -581,8 +622,9 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         const methods = [
           { name: 'HSN', result: hsnResult, available: hasHsnData },
-          { name: 'Route', result: routeResult, available: hasRouteData },
-          { name: 'Manual', result: manualResult, available: manualRate > 0 }
+          { name: 'Country/Route', result: routeResult, available: hasRouteData },
+          { name: 'Manual', result: manualResult, available: manualRate > 0 },
+          { name: 'Customs', result: customsMethodResult, available: true } // Always available as fallback
         ];
         
         const availableMethods = methods.filter(m => m.available);
@@ -649,15 +691,41 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: '✅ FINAL RESULT',
           value: breakdown.customs || 0,
-          source: `Applied: ${activeMethod} method with ${activeValuation} valuation`,
+          source: hasItemLevelMethods 
+            ? `Applied: Per-item methods (${itemMethods.join(', ')}) with ${activeValuation} valuation`
+            : `Applied: ${quoteLevelMethod} method with ${activeValuation} valuation`,
           rate: 0,
         });
         
+        // If per-item methods, show breakdown
+        if (hasItemLevelMethods && itemBreakdowns.length > 0) {
+          inputs.push({
+            name: '📋 ITEM BREAKDOWN',
+            value: 0,
+            source: '─── Per-Item Method Application ───',
+            rate: 0,
+          });
+          
+          itemBreakdowns.forEach((itemBreakdown, idx) => {
+            const item = quote.items?.[idx];
+            if (item) {
+              inputs.push({
+                name: `├─ ${item.product_name}`,
+                value: itemBreakdown.customs || 0,
+                source: `Method: ${item.tax_method || 'hsn'} → $${(itemBreakdown.customs || 0).toFixed(2)}`,
+                rate: 0,
+              });
+            }
+          });
+        }
+        
         return inputs;
       })(),
-      calculation: `Current: ${(quote.calculation_method_preference || quote.tax_method || 'hsn_only').toUpperCase()} method`,
+      calculation: hasItemLevelMethods 
+        ? `Current: PER-ITEM methods (${itemMethods.join(', ')})`
+        : `Current: ${quoteLevelMethod.toUpperCase()} method`,
       result: breakdown.customs || 0,
-      notes: `Comprehensive analysis of all available customs calculation methods for ${quote.origin_country}→${quote.destination_country} route. Compare methods to optimize costs while ensuring compliance.`,
+      notes: `Comprehensive analysis of all 4 customs calculation methods (HSN, Country/Route, Manual, Customs) for ${quote.origin_country}→${quote.destination_country} route. Item-level methods override quote-level preferences when set.`,
     },
 
     sales_tax: {
