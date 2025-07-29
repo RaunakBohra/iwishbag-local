@@ -80,8 +80,8 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
   const customs = breakdown.customs || 0;
   const salesTax = breakdown.sales_tax || 0;
   
-  // Step 4: Pre-gateway subtotal
-  const preGatewaySubtotal = actualItemCost + shipping + insurance + handling + customs;
+  // Step 4: Pre-gateway subtotal (includes all taxes except destination tax)
+  const preGatewaySubtotal = actualItemCost + shipping + insurance + handling + customs + salesTax;
   
   // Step 5: Payment gateway fees (calculated before destination tax)
   const paymentGatewayFee = breakdown.fees || operationalData.payment_gateway_fee || 0;
@@ -295,6 +295,12 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
                   <span>{formatDualAmount(insurance)}</span>
                 </div>
               )}
+              {paymentGatewayFee > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Payment Fee</span>
+                  <span>{formatDualAmount(paymentGatewayFee)}</span>
+                </div>
+              )}
             </div>
             <Separator />
             <div className="flex justify-between font-semibold text-lg">
@@ -418,6 +424,16 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
                       amount={customs}
                       rate={customsRate}
                       description="Calculated on CIF value"
+                    />
+                  )}
+                  
+                  {salesTax > 0 && (
+                    <TaxBreakdownRow
+                      icon={Receipt}
+                      label="Sales Tax"
+                      amount={salesTax}
+                      rate={salesTaxRate}
+                      description="Origin country sales tax (US→NP)"
                     />
                   )}
                   
