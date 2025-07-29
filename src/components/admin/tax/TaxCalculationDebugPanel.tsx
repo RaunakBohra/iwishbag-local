@@ -856,6 +856,96 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           });
         }
         
+        // Phase 4: Comprehensive Method Comparison Matrix
+        inputs.push({
+          name: '📊 METHOD MATRIX',
+          value: 0,
+          source: '─── All Methods Side-by-Side ───',
+          rate: 0,
+        });
+        
+        // Calculate all methods with same base for fair comparison
+        const methodMatrix = {
+          hsn: {
+            rate: liveHsnRate || storedHsnRate,
+            base: actualCustomsBase,
+            amount: actualCustomsBase * ((liveHsnRate || storedHsnRate) / 100),
+            isLive: liveHsnRate > 0,
+            available: hasHsnData,
+            source: hasHsnData ? (liveHsnRate > 0 ? 'Live HSN Service' : 'Stored HSN Data') : 'No HSN codes'
+          },
+          country: {
+            rate: liveRouteCustoms || storedRouteCustoms,
+            base: actualCustomsBase,
+            amount: actualCustomsBase * ((liveRouteCustoms || storedRouteCustoms) / 100),
+            isLive: hasLiveRouteData,
+            available: hasLiveRouteData || hasStoredRouteData,
+            source: hasLiveRouteData ? 'Live Route Data' : (hasStoredRouteData ? 'Stored Route Data' : 'No route data')
+          },
+          manual: {
+            rate: manualRate,
+            base: actualCustomsBase,
+            amount: actualCustomsBase * (manualRate / 100),
+            isLive: false,
+            available: manualRate > 0,
+            source: manualRate > 0 ? 'User Input' : 'Not configured'
+          },
+          customs: {
+            rate: customsMethodRate,
+            base: actualCustomsBase,
+            amount: actualCustomsBase * (customsMethodRate / 100),
+            isLive: false,
+            available: true,
+            source: 'System Default'
+          }
+        };
+        
+        // Display matrix
+        Object.entries(methodMatrix).forEach(([method, data]) => {
+          const statusIcon = data.available ? (data.isLive ? '🟢' : '🟡') : '🔴';
+          const methodName = method.charAt(0).toUpperCase() + method.slice(1);
+          
+          inputs.push({
+            name: `├─ ${statusIcon} ${methodName}`,
+            value: data.amount,
+            source: `${data.rate.toFixed(1)}% × $${data.base.toFixed(2)} = $${data.amount.toFixed(2)} | ${data.source}`,
+            rate: data.rate,
+          });
+        });
+        
+        // Show active method result vs others
+        const activeMethod = hasItemLevelMethods ? 'per-item' : quoteLevelMethod;
+        const actualCustoms = breakdown.customs || 0;
+        const perItemCustomsTotal = itemBreakdowns.reduce((sum, ib) => sum + (ib.customs || 0), 0);
+        const expectedFromMatrix = (() => {
+          if (hasItemLevelMethods) {
+            return perItemCustomsTotal;
+          }
+          switch (activeMethod) {
+            case 'hsn':
+            case 'hsn_only':
+              return methodMatrix.hsn.amount;
+            case 'route':
+            case 'route_based':
+              return methodMatrix.country.amount;
+            case 'manual':
+              return methodMatrix.manual.amount;
+            case 'customs':
+              return methodMatrix.customs.amount;
+            default:
+              return 0;
+          }
+        })();
+        
+        if (Math.abs(actualCustoms - expectedFromMatrix) > 0.01) {
+          inputs.push({
+            name: `├─ ⚠️ DISCREPANCY`,
+            value: actualCustoms - expectedFromMatrix,
+            source: `Actual ($${actualCustoms.toFixed(2)}) vs Expected ($${expectedFromMatrix.toFixed(2)})`,
+            rate: 0,
+          });
+        }
+
         // Show actual current calculation
         inputs.push({
           name: '✅ FINAL RESULT',
@@ -885,6 +975,14 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
                 rate: 0,
               });
             }
+          });
+          
+          // Show per-item total
+          inputs.push({
+            name: `├─ Per-Item Total`,
+            value: perItemCustomsTotal,
+            source: `Sum of all item customs: $${perItemCustomsTotal.toFixed(2)}`,
+            rate: 0,
           });
         }
         
