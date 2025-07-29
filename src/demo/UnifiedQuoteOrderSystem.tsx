@@ -20,6 +20,7 @@ import { UploadedFilesDisplay } from '@/components/quote/UploadedFilesDisplay';
 import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { SleekProductTable } from '@/components/admin/SleekProductTable';
 import { EnhancedSmartTaxBreakdown } from '@/components/admin/tax/EnhancedSmartTaxBreakdown';
+import { TaxCalculationDebugPanel } from '@/components/admin/tax/TaxCalculationDebugPanel';
 import { CompactStatusManager } from '@/components/admin/CompactStatusManager';
 import {
   Dialog,
@@ -1356,11 +1357,12 @@ export default function UnifiedQuoteOrderSystem({
           {/* Main Content */}
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className={`grid ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} w-full`}>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="items">Items & Tax</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
+                {isAdmin && <TabsTrigger value="debug">Debug</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="overview" className="mt-6 space-y-6">
@@ -2122,6 +2124,12 @@ export default function UnifiedQuoteOrderSystem({
                   quoteUserId={quote.user_id || quote.customer?.id}
                 />
               </TabsContent>
+
+              {isAdmin && (
+                <TabsContent value="debug" className="mt-6">
+                  <TaxCalculationDebugPanel quote={quote} />
+                </TabsContent>
+              )}
             </Tabs>
           </div>
 
