@@ -149,10 +149,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           volumetricWeight: 0,
           chargeableWeight: totalWeight,
           weightTiers: [
-            {min: 0, max: 1, cost: 15/exchangeRate},
-            {min: 1, max: 3, cost: 25/exchangeRate},
-            {min: 3, max: 5, cost: 35/exchangeRate},
-            {min: 5, max: null, cost: 45/exchangeRate}
+            {min: 0, max: 1, cost: 15},
+            {min: 1, max: 3, cost: 25},
+            {min: 3, max: 5, cost: 35},
+            {min: 5, max: null, cost: 45}
           ],
           rateSource: 'route_config',
           note: 'Reconstructed from IN→NP route configuration'
@@ -289,8 +289,9 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           value: 0,
           source: quote.origin_country === 'IN' && quote.destination_country === 'NP' 
             ? shippingBreakdown.weightTiers.map((tier: any) => {
-                const inrRate = tier.cost * (quote.calculation_data?.exchange_rate || 1.6019);
-                return `${tier.min}-${tier.max || '∞'}kg: ₹${inrRate.toFixed(0)}/kg ($${tier.cost.toFixed(2)}/kg)`;
+                const exchangeRate = quote.calculation_data?.exchange_rate || 1.6019;
+                const usdRate = tier.cost / exchangeRate;
+                return `${tier.min}-${tier.max || '∞'}kg: ₹${tier.cost}/kg ($${usdRate.toFixed(2)}/kg)`;
               }).join(', ')
             : shippingBreakdown.weightTiers.map((tier: any) => 
                 `${tier.min}-${tier.max || '∞'}kg: $${tier.cost.toFixed(2)}/kg`
@@ -325,7 +326,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           source: `${shippingBreakdown.processingDays} days`,
         },
       ],
-      calculation: `${shippingBreakdown.base.toFixed(2)} + (${shippingBreakdown.chargeableWeight.toFixed(2)} × ${shippingBreakdown.rate.toFixed(2)}) + ${shippingBreakdown.premium.toFixed(2)}${shippingBreakdown.costPercentage > 0 ? ` + ${((breakdown.items_total || 0) * (shippingBreakdown.costPercentage / 100)).toFixed(2)}` : ''}`,
+      calculation: `${(shippingBreakdown.base || 0).toFixed(2)} + (${(shippingBreakdown.chargeableWeight || 0).toFixed(2)} × ${(shippingBreakdown.rate || 0).toFixed(2)}) + ${(shippingBreakdown.premium || 0).toFixed(2)}${shippingBreakdown.costPercentage > 0 ? ` + ${((breakdown.items_total || 0) * (shippingBreakdown.costPercentage / 100)).toFixed(2)}` : ''}`,
       result: breakdown.shipping || 0,
       notes: shippingBreakdown.note ? `Cross-border freight charges (${shippingBreakdown.note})` : 
              quote.origin_country === 'IN' && quote.destination_country === 'NP' ? 
