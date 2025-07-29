@@ -1924,15 +1924,6 @@ export class SmartCalculationEngine {
             itemVatRate = 0;
             console.log(`[PER-ITEM TAX] Manual method: No route rates available, using 0% destination tax`);
           }
-        } else if (itemTaxMethod === 'customs') {
-          // Customs method - use default customs rate
-          console.log(`[PER-ITEM TAX] Using customs method for item ${item.id}:`, quote.operational_data?.customs?.percentage);
-          
-          // Get country-specific customs default instead of hardcoded 10%
-          const countryCustomsDefault = await taxRateService.getCountryCustomsDefault(quote.destination_country || 'IN');
-          itemCustomsRate = quote.operational_data?.customs?.percentage || countryCustomsDefault;
-          itemSalesTaxRate = 0;
-          itemVatRate = 0;
         } else {
           console.log(`[PER-ITEM TAX] No matching tax method for item ${item.id}. Method: ${itemTaxMethod}, hasRouteRates: ${!!routeRates}`);
         }

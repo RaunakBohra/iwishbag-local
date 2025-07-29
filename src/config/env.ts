@@ -12,6 +12,11 @@ export const env = {
   // PayU configuration handled server-side for security
   // Payment URLs are fetched from database configuration
 
+  // NCM API Configuration (Nepal Can Move)
+  NCM_API_TOKEN: import.meta.env.VITE_NCM_API_TOKEN || '',
+  NCM_API_BASE_URL: import.meta.env.VITE_NCM_API_BASE_URL || 'https://demo.nepalcanmove.com',
+  NCM_API_EMAIL: import.meta.env.VITE_NCM_API_EMAIL || '',
+
   // Development settings
   NODE_ENV: import.meta.env.NODE_ENV,
   DEV: import.meta.env.DEV,
