@@ -65,7 +65,9 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
   const operationalData = quote.operational_data || {};
   const itemBreakdowns = quote.calculation_data?.item_breakdowns || [];
   const taxRates = quote.tax_rates || {};
-  const exchangeRate = quote.calculation_data?.exchange_rate || 1;
+  const exchangeRate = typeof quote.calculation_data?.exchange_rate === 'number' 
+    ? quote.calculation_data.exchange_rate 
+    : parseFloat(quote.calculation_data?.exchange_rate) || 1;
 
   // Build calculation steps
   const calculationSteps: Record<string, CalculationStep> = {
@@ -384,7 +386,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
                 {quote.tax_method || 'Unknown'} Method
               </Badge>
               <Badge variant="outline">
-                Exchange Rate: {exchangeRate.toFixed(2)}
+                Exchange Rate: {Number(exchangeRate).toFixed(2)}
               </Badge>
               <Button
                 variant="ghost"
