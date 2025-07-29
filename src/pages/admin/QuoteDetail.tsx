@@ -153,10 +153,13 @@ const transformQuoteToUnifiedFormat = (
         
         // Tax calculation data
         tax_method: item.tax_method || calculationData.tax_calculation?.method || 'hsn',
-        customs_value: itemTaxBreakdown?.customs_value || item.price,
-        customs_amount: itemTaxBreakdown?.customs || 0,
+        customs_value: item.customs_value || itemTaxBreakdown?.customs_value || item.price,
+        customs_amount: item.customs_amount || itemTaxBreakdown?.customs || 0,
         sales_tax_amount: itemTaxBreakdown?.sales_tax || 0,
         destination_tax_amount: itemTaxBreakdown?.destination_tax || 0,
+        
+        // Preserve tax_options if present
+        tax_options: item.tax_options,
         
         // Purchase tracking fields (from operational_data or item level)
         actual_price: item.actual_price || operationalData.purchase_details?.[item.id]?.actual_price || null,
