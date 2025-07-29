@@ -192,10 +192,33 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           source: quote.tax_method === 'hsn' ? 'HSN Classification' : 'Route/Manual',
           rate: taxRates.customs,
         },
+        // Add per-item breakdown if multiple items
+        ...(quote.items && quote.items.length > 1 ? quote.items.map((item, idx) => {
+          const itemTotal = item.price * item.quantity;
+          const itemProportion = (breakdown.items_total || 0) > 0 ? itemTotal / (breakdown.items_total || 1) : 0;
+          
+          // Try to get actual item customs from item_breakdowns
+          const itemBreakdown = itemBreakdowns.find(b => b.item_id === item.id || b.item_id === `item-${idx}`);
+          const itemCustoms = itemBreakdown?.customs || 
+                             item.customs_amount || 
+                             ((breakdown.customs || 0) * itemProportion);
+          
+          // Calculate the effective rate for this item
+          const itemRate = itemTotal > 0 ? (itemCustoms / itemTotal) * 100 : 0;
+          
+          return {
+            name: `├─ ${item.product_name} (${item.quantity}x)`,
+            value: itemCustoms,
+            source: itemBreakdown ? 'Actual calculation' : `${(itemProportion * 100).toFixed(1)}% of total`,
+            rate: itemRate,
+          };
+        }) : []),
       ],
       calculation: `${((breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0)).toFixed(2)} × ${(taxRates.customs || 0) / 100}`,
       result: breakdown.customs || 0,
-      notes: 'Import duty based on CIF valuation',
+      notes: quote.items && quote.items.length > 1 
+        ? 'Import duty based on CIF valuation (distributed by item value proportion)'
+        : 'Import duty based on CIF valuation',
     },
 
     sales_tax: {
@@ -337,13 +360,15 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
                 <span className="text-xs font-medium text-gray-600">Input Values</span>
               </div>
               <div className="space-y-2">
-                {step.inputs.map((input, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600">{input.name}:</span>
-                      {input.rate !== undefined && (
-                        <Badge variant="secondary" className="text-xs">
-                          {input.rate >= 1 ? `${input.rate}%` : `${(input.rate * 100).toFixed(1)}%`}
+                {step.inputs.map((input, idx) => {
+                  const isItemBreakdown = input.name.startsWith('├─');
+                  return (
+                    <div key={idx} className={`flex items-center justify-between text-xs ${isItemBreakdown ? 'ml-4 pt-1' : ''}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`${isItemBreakdown ? 'text-gray-500' : 'text-gray-600'}`}>{input.name}:</span>
+                        {input.rate !== undefined && (
+                          <Badge variant="secondary" className="text-xs">
+                            {input.rate >= 1 ? `${input.rate.toFixed(1)}%` : `${(input.rate * 100).toFixed(1)}%`}
                         </Badge>
                       )}
                     </div>
@@ -352,7 +377,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
                       <span className="text-gray-400 text-xs">({input.source})</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
