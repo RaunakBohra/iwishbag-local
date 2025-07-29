@@ -1892,9 +1892,9 @@ export class SmartCalculationEngine {
             itemSalesTaxRate = hsnRates.sales_tax;
             itemVatRate = hsnRates.vat;
           }
-        } else if (itemTaxMethod === 'country' && routeRates) {
-          // Route/Country method for this item
-          console.log(`[PER-ITEM TAX] Using country/route method for item ${item.id}:`, routeRates);
+        } else if (itemTaxMethod === 'route' && routeRates) {
+          // Route method for this item
+          console.log(`[PER-ITEM TAX] Using route method for item ${item.id}:`, routeRates);
           itemCustomsRate = routeRates.customs;
           itemSalesTaxRate = routeRates.sales_tax;
           itemVatRate = routeRates.vat;
@@ -1950,9 +1950,8 @@ export class SmartCalculationEngine {
           },
           data_sources: {
             customs_source: itemTaxMethod === 'hsn' ? 'HSN table' : 
-                           itemTaxMethod === 'country' ? 'Shipping route' :
-                           itemTaxMethod === 'manual' ? 'User input' :
-                           itemTaxMethod === 'customs' ? 'Customs default' : 'Unknown',
+                           itemTaxMethod === 'route' ? 'Shipping route' :
+                           itemTaxMethod === 'manual' ? 'User input' : 'Unknown',
             destination_tax_source: routeRates ? 'Shipping route' : 'No route data'
           }
         });
