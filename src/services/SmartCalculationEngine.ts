@@ -1548,9 +1548,15 @@ export class SmartCalculationEngine {
     
     
     // Determine customs calculation base based on valuation method (for CUSTOMS ONLY)
+    console.log(`[VALUATION METHOD] Processing valuation method: ${valuationMethod}`);
     if (valuationMethod === 'minimum_valuation' || valuationMethod === 'higher_of_both') {
       // For sync calculation, check if HSN calculation data with minimum valuation is available
       const hsnCalculationData = quote.calculation_data?.hsn_calculation;
+      console.log(`[VALUATION METHOD] HSN calculation data:`, {
+        has_data: !!hsnCalculationData,
+        items_with_minimum: hsnCalculationData?.items_with_minimum_valuation || 0,
+        recalculated_total: hsnCalculationData?.recalculated_items_total || 0
+      });
       if (hsnCalculationData && hsnCalculationData.items_with_minimum_valuation > 0) {
         // Use the recalculated total from HSN calculation that respects valuation method
         const hsnTotal = hsnCalculationData.recalculated_items_total || itemsTotal;
@@ -1737,6 +1743,13 @@ export class SmartCalculationEngine {
     } else if (valuationMethod === 'minimum_valuation' || valuationMethod === 'higher_of_both') {
       // Non-HSN calculation: check if minimum valuation data is available
       const hsnCalculationData = quote.calculation_data?.hsn_calculation;
+      console.log(`[VALUATION METHOD ASYNC] Non-HSN valuation check:`, {
+        valuation_method: valuationMethod,
+        has_hsn_data: !!hsnCalculationData,
+        items_with_minimum: hsnCalculationData?.items_with_minimum_valuation || 0,
+        recalculated_total: hsnCalculationData?.recalculated_items_total || 0,
+        current_base: customsCalculationBase
+      });
       if (hsnCalculationData && hsnCalculationData.items_with_minimum_valuation > 0) {
         const hsnTotal = hsnCalculationData.recalculated_items_total || itemsTotal;
         
