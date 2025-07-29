@@ -314,6 +314,11 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
   const isINtoNP = quote.origin_country === 'IN' && quote.destination_country === 'NP';
   const currencySymbol = isINtoNP ? '₹' : '$';
 
+  // Calculate method info outside IIFE for reuse
+  const quoteLevelMethod = quote.calculation_method_preference || quote.tax_method || 'hsn_only';
+  const hasItemLevelMethods = quote.items?.some(item => item.tax_method) || false;
+  const itemMethods = hasItemLevelMethods ? [...new Set(quote.items?.map(item => item.tax_method || 'hsn'))] : [];
+
   // Build calculation steps
   const calculationSteps: Record<string, CalculationStep> = {
     items_total: {
@@ -458,9 +463,6 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         const inputs = [];
         
         // 1. Current Active Method - Check both quote-level and item-level
-        const quoteLevelMethod = quote.calculation_method_preference || quote.tax_method || 'hsn_only';
-        const hasItemLevelMethods = quote.items?.some(item => item.tax_method) || false;
-        const itemMethods = hasItemLevelMethods ? [...new Set(quote.items?.map(item => item.tax_method || 'hsn'))] : [];
         const activeValuation = quote.valuation_method_preference || 'product_value';
         const cifValue = (breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0);
         
@@ -471,11 +473,37 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
-        // 2. CIF Calculation Base
+        // 2. CIF Calculation Base & Actual Customs Base
         inputs.push({
-          name: '💰 CIF Valuation Base',
+          name: '💰 CIF Components',
           value: cifValue,
           source: `Items($${(breakdown.items_total || 0).toFixed(2)}) + Shipping($${(breakdown.shipping || 0).toFixed(2)}) + Insurance($${(breakdown.insurance || 0).toFixed(2)})`,
+          rate: 0,
+        });
+        
+        // Get the actual customs calculation base used
+        const hsnCalculationData = quote.calculation_data?.hsn_calculation;
+        const hasMinimumValuationData = hsnCalculationData?.items_with_minimum_valuation > 0;
+        const recalculatedTotal = hsnCalculationData?.recalculated_items_total || breakdown.items_total || 0;
+        
+        // Determine what customs base was actually used based on valuation method
+        let actualCustomsBase = cifValue;
+        let customsBaseExplanation = 'Using standard CIF value';
+        
+        if (activeValuation === 'minimum_valuation' && hasMinimumValuationData) {
+          actualCustomsBase = (recalculatedTotal || breakdown.items_total || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0);
+          customsBaseExplanation = 'Using HSN minimum valuation for items';
+        } else if (activeValuation === 'higher_of_both' && hasMinimumValuationData) {
+          const productCIF = cifValue;
+          const minimumCIF = (recalculatedTotal || breakdown.items_total || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0);
+          actualCustomsBase = Math.max(productCIF, minimumCIF);
+          customsBaseExplanation = `Using higher of: Product($${productCIF.toFixed(2)}) vs Minimum($${minimumCIF.toFixed(2)})`;
+        }
+        
+        inputs.push({
+          name: '🎯 ACTUAL CUSTOMS BASE',
+          value: actualCustomsBase,
+          source: customsBaseExplanation,
           rate: 0,
         });
         
@@ -490,7 +518,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         // Check if HSN data is available
         const hasHsnData = quote.items?.some(item => item.hsn_code) || false;
         const hsnRate = hasHsnData ? (taxRates.customs || 0) : 0;
-        const hsnResult = cifValue * (hsnRate / 100);
+        const hsnResult = actualCustomsBase * (hsnRate / 100);
         
         inputs.push({
           name: `├─ HSN Available`,
@@ -509,7 +537,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: `├─ HSN Calculation`,
           value: hsnResult,
-          source: `$${cifValue.toFixed(2)} × ${hsnRate}% = $${hsnResult.toFixed(2)}`,
+          source: `$${actualCustomsBase.toFixed(2)} × ${hsnRate}% = $${hsnResult.toFixed(2)}`,
           rate: 0,
         });
         
@@ -524,7 +552,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         // Check if route data is available
         const routeKey = `${quote.origin_country}-${quote.destination_country}`;
         const routeCustoms = operationalData?.customs?.smart_tier?.percentage || 0;
-        const routeResult = cifValue * (routeCustoms / 100);
+        const routeResult = actualCustomsBase * (routeCustoms / 100);
         const hasRouteData = routeCustoms > 0;
         
         inputs.push({
@@ -544,7 +572,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: `├─ Route Calculation`,
           value: routeResult,
-          source: `$${cifValue.toFixed(2)} × ${routeCustoms}% = $${routeResult.toFixed(2)}`,
+          source: `$${actualCustomsBase.toFixed(2)} × ${routeCustoms}% = $${routeResult.toFixed(2)}`,
           rate: 0,
         });
         
@@ -557,7 +585,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         const manualRate = operationalData?.customs?.percentage || 0;
-        const manualResult = cifValue * (manualRate / 100);
+        const manualResult = actualCustomsBase * (manualRate / 100);
         
         inputs.push({
           name: `├─ Manual Rate`,
@@ -576,7 +604,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: `├─ Manual Calculation`,
           value: manualResult,
-          source: `$${cifValue.toFixed(2)} × ${manualRate}% = $${manualResult.toFixed(2)}`,
+          source: `$${actualCustomsBase.toFixed(2)} × ${manualRate}% = $${manualResult.toFixed(2)}`,
           rate: 0,
         });
         
@@ -589,7 +617,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         const customsMethodRate = operationalData?.customs?.percentage || 10; // Default 10% if not set
-        const customsMethodResult = cifValue * (customsMethodRate / 100);
+        const customsMethodResult = actualCustomsBase * (customsMethodRate / 100);
         
         inputs.push({
           name: `├─ Customs Rate`,
@@ -601,7 +629,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: `├─ Customs Calculation`,
           value: customsMethodResult,
-          source: `$${cifValue.toFixed(2)} × ${customsMethodRate}% = $${customsMethodResult.toFixed(2)}`,
+          source: `$${actualCustomsBase.toFixed(2)} × ${customsMethodRate}% = $${customsMethodResult.toFixed(2)}`,
           rate: 0,
         });
         
@@ -663,29 +691,63 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         const productValue = breakdown.items_total || 0;
-        const minimumValuation = quote.calculation_data?.hsn_calculation?.recalculated_items_total || productValue * 1.2; // Estimated if no HSN data
+        const minimumValuation = hasMinimumValuationData 
+          ? recalculatedTotal 
+          : productValue * 1.2; // Estimated if no HSN data
         const higherOfBoth = Math.max(productValue, minimumValuation);
+        
+        // Show which valuation is active
+        const valuationInUse = activeValuation === 'minimum_valuation' 
+          ? minimumValuation 
+          : activeValuation === 'higher_of_both' 
+          ? higherOfBoth 
+          : productValue;
         
         inputs.push({
           name: `├─ Product Value`,
           value: productValue,
-          source: `Actual item prices: $${productValue.toFixed(2)}`,
+          source: activeValuation === 'product_value' ? '✅ ACTIVE' : 'Actual item prices',
           rate: 0,
         });
         
         inputs.push({
           name: `├─ Minimum Valuation`,
           value: minimumValuation,
-          source: `HSN minimum (est.): $${minimumValuation.toFixed(2)}`,
+          source: activeValuation === 'minimum_valuation' 
+            ? `✅ ACTIVE${hasMinimumValuationData ? ' (HSN data)' : ' (estimated 20% higher)'}`
+            : hasMinimumValuationData ? 'From HSN data' : 'Estimated +20%',
           rate: 0,
         });
         
         inputs.push({
           name: `├─ Higher of Both`,
           value: higherOfBoth,
-          source: `Used for customs: $${higherOfBoth.toFixed(2)}`,
+          source: activeValuation === 'higher_of_both' 
+            ? `✅ ACTIVE (${higherOfBoth === minimumValuation ? 'minimum' : 'product'} value wins)`
+            : `Max of product vs minimum`,
           rate: 0,
         });
+        
+        // Show the valuation difference impact
+        const valuationDifference = valuationInUse - productValue;
+        if (valuationDifference > 0) {
+          inputs.push({
+            name: `├─ Valuation Impact`,
+            value: valuationDifference,
+            source: `+$${valuationDifference.toFixed(2)} added to item value for customs`,
+            rate: 0,
+          });
+        }
+        
+        // Show HSN minimum valuation details if available
+        if (hasMinimumValuationData && hsnCalculationData) {
+          inputs.push({
+            name: `├─ HSN Details`,
+            value: hsnCalculationData.items_with_minimum_valuation,
+            source: `${hsnCalculationData.items_with_minimum_valuation} items have HSN minimum valuations`,
+            rate: 0,
+          });
+        }
         
         // Show actual current calculation
         inputs.push({
