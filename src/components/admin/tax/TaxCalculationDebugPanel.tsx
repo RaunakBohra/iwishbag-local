@@ -522,6 +522,101 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       inputs: (() => {
         const inputs = [];
         
+        // Phase 5: Quote vs Item Level Clarity
+        inputs.push({
+          name: '🎭 TAX METHOD HIERARCHY',
+          value: 0,
+          source: '─── Understanding Quote vs Item Level ───',
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: '├─ Quote Level',
+          value: 0,
+          source: `Set on quote: ${quoteLevelMethod} (applies to all items without individual methods)`,
+          rate: 0,
+        });
+        
+        if (hasItemLevelMethods) {
+          const itemsWithMethods = quote.items?.filter(item => item.tax_method) || [];
+          const itemsWithoutMethods = quote.items?.filter(item => !item.tax_method) || [];
+          
+          inputs.push({
+            name: '├─ Item Level Override',
+            value: itemsWithMethods.length,
+            source: `${itemsWithMethods.length} items have custom methods (overrides quote level)`,
+            rate: 0,
+          });
+          
+          if (itemsWithoutMethods.length > 0) {
+            inputs.push({
+              name: '├─ Default Items',
+              value: itemsWithoutMethods.length,
+              source: `${itemsWithoutMethods.length} items use quote-level method (${quoteLevelMethod})`,
+              rate: 0,
+            });
+          }
+          
+          // Show which items use which methods
+          const methodCounts: Record<string, number> = {};
+          quote.items?.forEach(item => {
+            const method = item.tax_method || quoteLevelMethod;
+            methodCounts[method] = (methodCounts[method] || 0) + 1;
+          });
+          
+          Object.entries(methodCounts).forEach(([method, count]) => {
+            inputs.push({
+              name: `├─ ${method} method`,
+              value: count,
+              source: `Used by ${count} item${count > 1 ? 's' : ''}`,
+              rate: 0,
+            });
+          });
+        } else {
+          inputs.push({
+            name: '├─ All Items',
+            value: quote.items?.length || 0,
+            source: `All ${quote.items?.length || 0} items use quote-level method`,
+            rate: 0,
+          });
+        }
+        
+        // Add clarity on how the system works
+        inputs.push({
+          name: '📌 HOW IT WORKS',
+          value: 0,
+          source: '─── Tax Method Priority Rules ───',
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: '├─ Priority',
+          value: 0,
+          source: 'Item-level methods ALWAYS override quote-level method',
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: '├─ Quote Methods',
+          value: 0,
+          source: '3 types: manual, hsn_only, route_based',
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: '├─ Item Methods',
+          value: 0,
+          source: '4 types: hsn, country (route), manual, customs',
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: '├─ Current Mode',
+          value: 0,
+          source: hasItemLevelMethods ? '🔸 ITEM MODE: Each item calculated separately' : '🔹 QUOTE MODE: All items use same method',
+          rate: 0,
+        });
+        
         // 1. Current Active Method - Check both quote-level and item-level
         const activeValuation = quote.valuation_method_preference || 'product_value';
         const cifValue = (breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0);
