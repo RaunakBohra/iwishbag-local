@@ -115,7 +115,51 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     
     // If we still don't have breakdown data, estimate it from the total
     if (baseShipping === 0 && weightRate === 0 && deliveryPremium === 0 && shippingTotal > 0) {
-      // Simple estimation: assume shipping is primarily weight-based
+      // For IN->NP route, we know the configuration from database
+      if (isINtoNP) {
+        // Route has: base ₹100, tiers ₹15-45/kg, 2.5% of product cost
+        const baseINR = 100;
+        const exchangeRate = quote.calculation_data?.exchange_rate || 1.6019;
+        const baseUSD = baseINR / exchangeRate;
+        
+        // Calculate what the weight-based cost might be
+        // 1.70kg falls in 1-3kg tier = ₹25/kg
+        const tierForWeight = totalWeight <= 1 ? 15 : totalWeight <= 3 ? 25 : totalWeight <= 5 ? 35 : 45;
+        const weightCostINR = totalWeight * tierForWeight;
+        const weightCostUSD = weightCostINR / exchangeRate;
+        
+        // Cost percentage component (2.5% of items)
+        const itemsTotal = breakdown.items_total || 0;
+        const percentageCost = itemsTotal * 0.025;
+        
+        // The difference is likely delivery premium or other fees
+        const calculatedBase = baseUSD + weightCostUSD + percentageCost;
+        const estimatedPremium = Math.max(0, shippingTotal - calculatedBase);
+        
+        return {
+          base: baseUSD,
+          rate: tierForWeight / exchangeRate,
+          premium: estimatedPremium,
+          method: shippingMethod,
+          deliveryOption: deliveryOption,
+          weightTier: `${totalWeight <= 1 ? '0-1' : totalWeight <= 3 ? '1-3' : totalWeight <= 5 ? '3-5' : '5-∞'}kg`,
+          weightCost: weightCostUSD,
+          costPercentage: 2.5,
+          processingDays: processingDays,
+          volumetricWeight: 0,
+          chargeableWeight: totalWeight,
+          weightTiers: [
+            {min: 0, max: 1, cost: 15/exchangeRate},
+            {min: 1, max: 3, cost: 25/exchangeRate},
+            {min: 3, max: 5, cost: 35/exchangeRate},
+            {min: 5, max: null, cost: 45/exchangeRate}
+          ],
+          rateSource: 'route_config',
+          note: 'Reconstructed from IN→NP route configuration'
+        };
+      }
+      
+      // For other routes, simple estimation
       const estimatedRate = totalWeight > 0 ? shippingTotal / totalWeight : 0;
       return {
         base: 0,
@@ -243,9 +287,14 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         ...(shippingBreakdown.weightTiers && shippingBreakdown.weightTiers.length > 0 ? [{
           name: '├─ Available Tiers',
           value: 0,
-          source: shippingBreakdown.weightTiers.map((tier: any) => 
-            `${tier.min}-${tier.max || '∞'}kg: $${tier.cost}/kg`
-          ).join(', '),
+          source: quote.origin_country === 'IN' && quote.destination_country === 'NP' 
+            ? shippingBreakdown.weightTiers.map((tier: any) => {
+                const inrRate = tier.cost * (quote.calculation_data?.exchange_rate || 1.6019);
+                return `${tier.min}-${tier.max || '∞'}kg: ₹${inrRate.toFixed(0)}/kg ($${tier.cost.toFixed(2)}/kg)`;
+              }).join(', ')
+            : shippingBreakdown.weightTiers.map((tier: any) => 
+                `${tier.min}-${tier.max || '∞'}kg: $${tier.cost.toFixed(2)}/kg`
+              ).join(', '),
         }] : []),
         {
           name: '├─ Rate Source',
@@ -267,7 +316,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         ...(shippingBreakdown.costPercentage > 0 ? [{
           name: 'Value-based Fee',
           value: (breakdown.items_total || 0) * (shippingBreakdown.costPercentage / 100),
-          source: `${shippingBreakdown.costPercentage}% of item value`,
+          source: `${shippingBreakdown.costPercentage}% of product cost ($${(breakdown.items_total || 0).toFixed(2)})`,
           rate: shippingBreakdown.costPercentage,
         }] : []),
         {
