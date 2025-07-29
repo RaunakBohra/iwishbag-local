@@ -818,30 +818,51 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         // For per-item calculations, get manual rate from items
         let manualRate = 0;
-        if (hasItemLevelMethods && quote.items) {
+        let manualItemsCount = 0;
+        if (quote.items) {
           const manualItems = quote.items.filter(item => item.tax_method === 'manual');
+          manualItemsCount = manualItems.length;
+          console.log('[DEBUG PANEL] Manual items check:', {
+            total_items: quote.items.length,
+            manual_items_found: manualItemsCount,
+            items_with_methods: quote.items.map(item => ({
+              id: item.id,
+              name: item.product_name,
+              tax_method: item.tax_method,
+              tax_options_manual: item.tax_options?.manual
+            }))
+          });
+          
           if (manualItems.length > 0) {
             // Calculate weighted average manual rate
             let weightedSum = 0;
             let totalValue = 0;
             manualItems.forEach(item => {
-              const itemValue = (item.costprice_origin || 0) * (item.quantity || 1);
+              const itemValue = (item.costprice_origin || item.price) * (item.quantity || 1);
               const itemRate = item.tax_options?.manual?.rate || 0;
+              console.log('[DEBUG PANEL] Manual item rate:', {
+                item_name: item.product_name || item.name,
+                item_value: itemValue,
+                manual_rate: itemRate,
+                tax_options: item.tax_options,
+                full_item: item
+              });
               weightedSum += itemRate * itemValue;
               totalValue += itemValue;
             });
             manualRate = totalValue > 0 ? weightedSum / totalValue : 0;
           }
-        } else {
-          // Quote level - manual rates are only at item level now
-          manualRate = 0;
         }
         const manualResult = actualCustomsBase * (manualRate / 100);
         
         inputs.push({
           name: `├─ Manual Rate`,
           value: manualRate,
-          source: manualRate > 0 ? 'User/Admin input' : 'No manual rate set',
+          source: manualRate > 0 
+            ? `From ${manualItemsCount} item${manualItemsCount > 1 ? 's' : ''} with manual method`
+            : manualItemsCount > 0 
+              ? `Found ${manualItemsCount} manual item(s) but rate is 0`
+              : 'No items with manual method',
           rate: manualRate,
         });
         
