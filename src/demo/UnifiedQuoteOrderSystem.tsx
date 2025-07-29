@@ -22,6 +22,7 @@ import { SleekProductTable } from '@/components/admin/SleekProductTable';
 import { EnhancedSmartTaxBreakdown } from '@/components/admin/tax/EnhancedSmartTaxBreakdown';
 import { TaxCalculationDebugPanel } from '@/components/admin/tax/TaxCalculationDebugPanel';
 import { CompactStatusManager } from '@/components/admin/CompactStatusManager';
+import { DeliveryManagement } from '@/components/admin/DeliveryManagement';
 import {
   Dialog,
   DialogContent,
@@ -1371,11 +1372,14 @@ export default function UnifiedQuoteOrderSystem({
           {/* Main Content */}
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className={`grid ${isAdmin && quote.status !== 'pending' && quote.status !== 'sent' ? 'grid-cols-5' : 'grid-cols-4'} w-full`}>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="items">Items & Tax</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
+                {isAdmin && quote.status !== 'pending' && quote.status !== 'sent' && (
+                  <TabsTrigger value="delivery">Delivery</TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="overview" className="mt-6 space-y-6">
@@ -2145,6 +2149,26 @@ export default function UnifiedQuoteOrderSystem({
                   quoteUserId={quote.user_id || quote.customer?.id}
                 />
               </TabsContent>
+              
+              {/* Delivery Management Tab - Admin Only */}
+              {isAdmin && quote.status !== 'pending' && quote.status !== 'sent' && (
+                <TabsContent value="delivery" className="mt-6">
+                  <DeliveryManagement 
+                    quote={{
+                      ...quote,
+                      items: items,
+                      payment_method: quote.payment_method || 'pending',
+                      payment_status: quote.payment_status || (quote.status === 'paid' ? 'paid' : 'pending')
+                    }}
+                    onUpdate={() => {
+                      // Refresh the quote data
+                      if (onUpdate) {
+                        onUpdate({ refresh: true });
+                      }
+                    }}
+                  />
+                </TabsContent>
+              )}
             </Tabs>
           </div>
 
