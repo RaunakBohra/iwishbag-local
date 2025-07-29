@@ -669,8 +669,12 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         // Get the actual customs calculation base used
         const hsnCalculationData = quote.calculation_data?.hsn_calculation;
-        const hasMinimumValuationData = hsnCalculationData?.items_with_minimum_valuation > 0;
-        const recalculatedTotal = hsnCalculationData?.recalculated_items_total || breakdown.items_total || 0;
+        const valuationAppliedData = quote.calculation_data?.valuation_applied;
+        const hasMinimumValuationData = hsnCalculationData?.items_with_minimum_valuation > 0 || 
+                                        valuationAppliedData?.adjustment_applied;
+        const recalculatedTotal = valuationAppliedData?.customs_calculation_base || 
+                                 hsnCalculationData?.recalculated_items_total || 
+                                 breakdown.items_total || 0;
         
         // Determine what customs base was actually used based on valuation method
         let actualCustomsBase = cifValue;
@@ -957,6 +961,17 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
+        // Debug logging
+        console.log('💎 [VALUATION DEBUG]', {
+          activeValuation,
+          hasMinimumValuationData,
+          recalculatedTotal,
+          valuationAppliedData,
+          hsnCalculationData,
+          breakdown_items_total: breakdown.items_total,
+          quote_valuation_preference: quote.valuation_method_preference
+        });
+        
         const productValue = breakdown.items_total || 0;
         const minimumValuation = hasMinimumValuationData 
           ? recalculatedTotal 
@@ -970,39 +985,56 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           ? higherOfBoth 
           : productValue;
         
+        // Calculate the customs impact based on valuation
+        const customsRate = taxRates.customs || 0;
+        const productValueCustoms = (productValue * customsRate) / 100;
+        const minimumValuationCustoms = (minimumValuation * customsRate) / 100;
+        const higherOfBothCustoms = (higherOfBoth * customsRate) / 100;
+        
         inputs.push({
           name: `├─ Product Value`,
           value: productValue,
-          source: activeValuation === 'product_value' ? '✅ ACTIVE' : 'Actual item prices',
-          rate: 0,
+          source: activeValuation === 'product_value' || activeValuation === 'actual_price' 
+            ? `✅ ACTIVE (Customs: $${productValueCustoms.toFixed(2)} @ ${customsRate}%)`
+            : `Actual prices (Customs: $${productValueCustoms.toFixed(2)} @ ${customsRate}%)`,
+          rate: customsRate,
         });
         
         inputs.push({
           name: `├─ Minimum Valuation`,
           value: minimumValuation,
           source: activeValuation === 'minimum_valuation' 
-            ? `✅ ACTIVE${hasMinimumValuationData ? ' (HSN data)' : ' (estimated 20% higher)'}`
-            : hasMinimumValuationData ? 'From HSN data' : 'Estimated +20%',
-          rate: 0,
+            ? `✅ ACTIVE (Customs: $${minimumValuationCustoms.toFixed(2)} @ ${customsRate}%)${hasMinimumValuationData ? ' - HSN data' : ' - estimated'}`
+            : `${hasMinimumValuationData ? 'From HSN data' : 'Estimated +20%'} (Customs: $${minimumValuationCustoms.toFixed(2)} @ ${customsRate}%)`,
+          rate: customsRate,
         });
         
         inputs.push({
           name: `├─ Higher of Both`,
           value: higherOfBoth,
           source: activeValuation === 'higher_of_both' 
-            ? `✅ ACTIVE (${higherOfBoth === minimumValuation ? 'minimum' : 'product'} value wins)`
-            : `Max of product vs minimum`,
-          rate: 0,
+            ? `✅ ACTIVE (Customs: $${higherOfBothCustoms.toFixed(2)} @ ${customsRate}%) - ${higherOfBoth === minimumValuation ? 'minimum' : 'product'} wins`
+            : `Max value (Customs: $${higherOfBothCustoms.toFixed(2)} @ ${customsRate}%)`,
+          rate: customsRate,
         });
         
         // Show the valuation difference impact
         const valuationDifference = valuationInUse - productValue;
+        const customsDifference = ((valuationInUse * customsRate) / 100) - ((productValue * customsRate) / 100);
+        
         if (valuationDifference > 0) {
           inputs.push({
             name: `├─ Valuation Impact`,
             value: valuationDifference,
-            source: `+$${valuationDifference.toFixed(2)} added to item value for customs`,
+            source: `+$${valuationDifference.toFixed(2)} added to base value`,
             rate: 0,
+          });
+          
+          inputs.push({
+            name: `├─ Customs Impact`,
+            value: customsDifference,
+            source: `+$${customsDifference.toFixed(2)} additional customs (${customsRate}% of $${valuationDifference.toFixed(2)})`,
+            rate: customsRate,
           });
         }
         
