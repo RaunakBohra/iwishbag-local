@@ -109,6 +109,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     const rateSource = routeData.rate_source || 
                       (weightTier !== 'N/A' ? 'weight_tier' : 'per_kg_fallback');
     
+    // Check if this is IN→NP route with INR rates
+    const isINtoNP = quote.origin_country === 'IN' && quote.destination_country === 'NP';
+    const currencySymbol = isINtoNP ? '₹' : '$';
+    
     // If we still don't have breakdown data, estimate it from the total
     if (baseShipping === 0 && weightRate === 0 && deliveryPremium === 0 && shippingTotal > 0) {
       // Simple estimation: assume shipping is primarily weight-based
@@ -194,12 +198,12 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       inputs: [
         {
           name: 'Shipping Method',
-          value: 0,
+          value: null,
           source: `${shippingBreakdown.method} - ${shippingBreakdown.deliveryOption}`,
         },
         {
           name: 'Route',
-          value: 0,
+          value: null,
           source: `${quote.origin_country} → ${quote.destination_country}`,
         },
         {
@@ -274,7 +278,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       ],
       calculation: `${shippingBreakdown.base.toFixed(2)} + (${shippingBreakdown.chargeableWeight.toFixed(2)} × ${shippingBreakdown.rate.toFixed(2)}) + ${shippingBreakdown.premium.toFixed(2)}${shippingBreakdown.costPercentage > 0 ? ` + ${((breakdown.items_total || 0) * (shippingBreakdown.costPercentage / 100)).toFixed(2)}` : ''}`,
       result: breakdown.shipping || 0,
-      notes: shippingBreakdown.note ? `Cross-border freight charges (${shippingBreakdown.note})` : 'Cross-border freight charges',
+      notes: shippingBreakdown.note ? `Cross-border freight charges (${shippingBreakdown.note})` : 
+             quote.origin_country === 'IN' && quote.destination_country === 'NP' ? 
+             'Cross-border freight charges (IN→NP route uses INR rates: ₹15-45/kg, converted to USD)' : 
+             'Cross-border freight charges',
     },
 
     customs: {
@@ -473,7 +480,9 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-medium">${input.value.toFixed(2)}</span>
+                      {input.value !== null && input.value !== undefined ? (
+                        <span className="font-mono font-medium">${Number(input.value).toFixed(2)}</span>
+                      ) : null}
                       <span className="text-gray-400 text-xs">({input.source})</span>
                     </div>
                   </div>
