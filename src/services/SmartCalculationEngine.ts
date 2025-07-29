@@ -1799,23 +1799,32 @@ export class SmartCalculationEngine {
     insuranceAmount = await this.calculateRouteBasedInsurance(selectedShipping, itemsTotal, quote);
 
     // ✅ FIXED: Calculate customs using CIF value with actual item cost (including purchase tax)
+    console.log(`[CUSTOMS CALCULATION] Decision point:`, {
+      customsPercentage,
+      customsSetByHSN,
+      customsAmount_before: customsAmount,
+      will_recalculate: customsPercentage > 0 && !customsSetByHSN
+    });
+    
     if (customsPercentage > 0 && !customsSetByHSN) {
       // Use customs calculation base but include purchase tax for accurate CIF
       const customsBaseWithPurchaseTax = customsCalculationBase + purchaseTaxAmount;
       const cifValue = customsBaseWithPurchaseTax + selectedShipping.cost_usd + insuranceAmount;
+      const oldCustomsAmount = customsAmount;
       customsAmount = cifValue * (customsPercentage / 100);
-      console.log(`[CUSTOMS CALCULATION] CIF breakdown:`, {
+      console.log(`[CUSTOMS CALCULATION] ⚠️ OVERRIDING customs amount:`, {
+        old_amount: oldCustomsAmount,
+        new_amount: customsAmount,
         customs_base: customsCalculationBase,
         purchase_tax: purchaseTaxAmount,
         customs_base_with_tax: customsBaseWithPurchaseTax,
         shipping: selectedShipping.cost_usd,
         insurance: insuranceAmount,
         cif_value: cifValue,
-        customs_rate: customsPercentage,
-        customs_amount: customsAmount
+        customs_rate: customsPercentage
       });
     } else if (customsSetByHSN) {
-      console.log(`[CUSTOMS CALCULATION] Skipping percentage-based calculation - using HSN value: ${customsAmount}`);
+      console.log(`[CUSTOMS CALCULATION] ✅ Keeping per-item customs value: ${customsAmount}`);
     }
 
     // ✅ ENHANCED: Per-item tax calculation based on individual tax methods
@@ -1977,11 +1986,23 @@ export class SmartCalculationEngine {
       }
       
       // Apply per-item calculated rates
-      if (perItemCustomsTotal > 0) {
+      if (perItemCustomsTotal > 0 || hasPerItemMethods) {
         customsPercentage = (perItemCustomsTotal / itemsTotal) * 100;
         customsAmount = perItemCustomsTotal;
         customsSetByHSN = true;
-        console.log(`[PER-ITEM CUSTOMS] Set customs from HSN calculations: ${customsAmount} (${customsPercentage.toFixed(2)}%)`);
+        console.log(`[PER-ITEM CUSTOMS] CRITICAL DEBUG:`, {
+          perItemCustomsTotal,
+          customsAmount,
+          customsPercentage: customsPercentage.toFixed(2),
+          itemBreakdowns: itemBreakdowns.map(ib => ({
+            item: ib.item_name,
+            method: ib.tax_method,
+            rate: ib.customs_rate,
+            customs: ib.customs
+          })),
+          hasPerItemMethods,
+          totalItems: quote.items.length
+        });
       }
       
       // Sales tax only for US→NP route
@@ -2233,7 +2254,7 @@ export class SmartCalculationEngine {
     });
 
     // Update quote data structures with HSN tax information
-    console.log(`[SMART ENGINE DEBUG] Tax breakdown summary:`, {
+    console.log(`[SMART ENGINE DEBUG] FINAL Tax breakdown summary:`, {
       customs: customsAmount,
       taxes: salesTax + localTaxesAmount + vatAmount + destinationTaxAmount,
       localTaxes: localTaxesAmount,
@@ -2241,6 +2262,9 @@ export class SmartCalculationEngine {
       vatAmount: vatAmount,
       destinationTax: destinationTaxAmount,
       method: quote.calculation_method_preference,
+      hasPerItemMethods,
+      perItemCustomsTotal_debug: itemBreakdowns.reduce((sum, ib) => sum + (ib.customs || 0), 0),
+      customsSetByHSN
     });
 
     const updatedCalculationData: CalculationData = {
