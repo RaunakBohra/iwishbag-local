@@ -74,18 +74,33 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     const shippingTotal = breakdown.shipping || 0;
     const totalWeight = quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0;
     
+    // Extract all shipping-related data
+    const selectedShipping = quote.calculation_data?.selected_shipping || {};
+    const routeData = selectedShipping.route_data || {};
+    const shippingBreakdownData = quote.calculation_data?.shipping_breakdown || {};
+    
     // Try to find shipping breakdown data in various locations
-    const baseShipping = quote.calculation_data?.shipping_breakdown?.base_cost || 
-                        quote.calculation_data?.selected_shipping?.route_data?.base_shipping_cost ||
+    const baseShipping = shippingBreakdownData.base_cost || 
+                        routeData.base_shipping_cost ||
                         quote.calculation_data?.shipping_data?.base_cost || 0;
     
-    const weightRate = quote.calculation_data?.shipping_breakdown?.weight_rate || 
-                      quote.calculation_data?.selected_shipping?.route_data?.weight_rate_per_kg ||
+    const weightRate = shippingBreakdownData.weight_rate || 
+                      routeData.weight_rate_per_kg ||
                       quote.calculation_data?.shipping_data?.weight_rate || 0;
     
-    const deliveryPremium = quote.calculation_data?.shipping_breakdown?.delivery_premium || 
-                           quote.calculation_data?.selected_shipping?.route_data?.delivery_premium ||
+    const deliveryPremium = shippingBreakdownData.delivery_premium || 
+                           routeData.delivery_premium ||
                            quote.calculation_data?.shipping_data?.delivery_premium || 0;
+    
+    // Extract additional details
+    const shippingMethod = quote.shipping_method || selectedShipping.carrier || 'Standard';
+    const deliveryOption = selectedShipping.delivery_option || selectedShipping.name || 'Economy';
+    const weightTier = routeData.weight_tier_used || 'N/A';
+    const weightCost = routeData.weight_cost || (totalWeight * weightRate);
+    const costPercentage = quote.calculation_data?.shipping_percentage || routeData.cost_percentage || 0;
+    const processingDays = selectedShipping.estimated_days || routeData.processing_days || 'N/A';
+    const volumetricWeight = routeData.volumetric_weight || 0;
+    const chargeableWeight = routeData.chargeable_weight || totalWeight;
     
     // If we still don't have breakdown data, estimate it from the total
     if (baseShipping === 0 && weightRate === 0 && deliveryPremium === 0 && shippingTotal > 0) {
@@ -95,6 +110,14 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         base: 0,
         rate: estimatedRate,
         premium: 0,
+        method: shippingMethod,
+        deliveryOption: deliveryOption,
+        weightTier: 'Unknown',
+        weightCost: shippingTotal,
+        costPercentage: 0,
+        processingDays: processingDays,
+        volumetricWeight: 0,
+        chargeableWeight: totalWeight,
         note: 'Estimated from total shipping cost'
       };
     }
@@ -103,6 +126,14 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       base: baseShipping,
       rate: weightRate,
       premium: deliveryPremium,
+      method: shippingMethod,
+      deliveryOption: deliveryOption,
+      weightTier: weightTier,
+      weightCost: weightCost,
+      costPercentage: costPercentage,
+      processingDays: processingDays,
+      volumetricWeight: volumetricWeight,
+      chargeableWeight: chargeableWeight,
       note: null
     };
   };
@@ -151,28 +182,69 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       formula: 'base_shipping_cost + (weight × rate_per_kg) + delivery_premium',
       inputs: [
         {
-          name: 'Base Shipping Cost',
-          value: shippingBreakdown.base,
-          source: `Route: ${quote.origin_country}→${quote.destination_country}`,
+          name: 'Shipping Method',
+          value: 0,
+          source: `${shippingBreakdown.method} - ${shippingBreakdown.deliveryOption}`,
         },
         {
-          name: 'Total Weight',
+          name: 'Route',
+          value: 0,
+          source: `${quote.origin_country} → ${quote.destination_country}`,
+        },
+        {
+          name: 'Base Shipping Cost',
+          value: shippingBreakdown.base,
+          source: `Base rate for route`,
+        },
+        {
+          name: 'Actual Weight',
           value: quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0,
-          source: 'Sum of all item weights',
+          source: 'Sum of all item weights (kg)',
+        },
+        ...(shippingBreakdown.volumetricWeight > 0 ? [{
+          name: 'Volumetric Weight',
+          value: shippingBreakdown.volumetricWeight,
+          source: 'L×W×H / dimensional factor',
+        }] : []),
+        {
+          name: 'Chargeable Weight',
+          value: shippingBreakdown.chargeableWeight,
+          source: 'Max(actual, volumetric)',
+        },
+        {
+          name: 'Weight Tier',
+          value: 0,
+          source: shippingBreakdown.weightTier,
         },
         {
           name: 'Weight Rate',
           value: shippingBreakdown.rate,
-          source: shippingBreakdown.note || 'Weight tier or per-kg rate',
+          source: 'Per kg rate',
           rate: shippingBreakdown.rate,
+        },
+        {
+          name: 'Weight Cost',
+          value: shippingBreakdown.weightCost,
+          source: `${shippingBreakdown.chargeableWeight.toFixed(2)} kg × $${shippingBreakdown.rate.toFixed(2)}/kg`,
         },
         {
           name: 'Delivery Premium',
           value: shippingBreakdown.premium,
-          source: 'Selected delivery option',
+          source: `${shippingBreakdown.deliveryOption} option`,
+        },
+        ...(shippingBreakdown.costPercentage > 0 ? [{
+          name: 'Value-based Fee',
+          value: (breakdown.items_total || 0) * (shippingBreakdown.costPercentage / 100),
+          source: `${shippingBreakdown.costPercentage}% of item value`,
+          rate: shippingBreakdown.costPercentage,
+        }] : []),
+        {
+          name: 'Processing Time',
+          value: 0,
+          source: `${shippingBreakdown.processingDays} days`,
         },
       ],
-      calculation: `${shippingBreakdown.base.toFixed(2)} + (${(quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0).toFixed(2)} × ${shippingBreakdown.rate.toFixed(2)}) + ${shippingBreakdown.premium.toFixed(2)}`,
+      calculation: `${shippingBreakdown.base.toFixed(2)} + (${shippingBreakdown.chargeableWeight.toFixed(2)} × ${shippingBreakdown.rate.toFixed(2)}) + ${shippingBreakdown.premium.toFixed(2)}${shippingBreakdown.costPercentage > 0 ? ` + ${((breakdown.items_total || 0) * (shippingBreakdown.costPercentage / 100)).toFixed(2)}` : ''}`,
       result: breakdown.shipping || 0,
       notes: shippingBreakdown.note ? `Cross-border freight charges (${shippingBreakdown.note})` : 'Cross-border freight charges',
     },
