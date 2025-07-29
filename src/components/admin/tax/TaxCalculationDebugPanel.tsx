@@ -879,17 +879,23 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: manualRate,
         });
         
+        // Get destination tax (VAT) from route rates for manual method
+        const manualDestTaxRate = liveRouteRates?.vat || 0;
+        const manualDestTaxAmount = actualCustomsBase * (manualDestTaxRate / 100);
+        
         inputs.push({
           name: `├─ Destination Tax`,
-          value: routeCustoms > 0 ? 'From route' : 'No route data',
-          source: 'Manual method uses route destination tax',
-          rate: 0,
+          value: manualDestTaxAmount,
+          source: manualDestTaxRate > 0 
+            ? `${manualDestTaxRate}% VAT from route (${quote.origin_country}→${quote.destination_country})`
+            : 'No route VAT data available',
+          rate: manualDestTaxRate,
         });
         
         inputs.push({
           name: `├─ Manual Calculation`,
-          value: manualResult,
-          source: `$${actualCustomsBase.toFixed(2)} × ${manualRate}% = $${manualResult.toFixed(2)}`,
+          value: manualResult + manualDestTaxAmount,
+          source: `Customs: $${manualResult.toFixed(2)} + VAT: $${manualDestTaxAmount.toFixed(2)} = $${(manualResult + manualDestTaxAmount).toFixed(2)}`,
           rate: 0,
         });
         
@@ -905,7 +911,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         const methods = [
           { name: 'HSN', result: hsnResult, available: hasHsnData, isLive: liveHsnRate > 0 },
           { name: 'Route', result: routeResult, available: hasLiveRouteData || hasStoredRouteData, isLive: hasLiveRouteData },
-          { name: 'Manual', result: manualResult, available: manualRate > 0, isLive: false }
+          { name: 'Manual', result: manualResult + manualDestTaxAmount, available: manualRate > 0, isLive: false }
         ];
         
         const availableMethods = methods.filter(m => m.available);
