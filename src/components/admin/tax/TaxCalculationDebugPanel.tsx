@@ -452,47 +452,212 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     },
 
     customs: {
-      label: 'Customs Duty',
-      formula: 'CIF_value × customs_rate',
-      inputs: [
-        {
-          name: 'CIF Value',
-          value: (breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0),
-          source: 'Cost + Insurance + Freight',
-        },
-        {
-          name: 'Customs Rate',
-          value: taxRates.customs || 0,
-          source: quote.tax_method === 'hsn' ? 'HSN Classification' : 'Route/Manual',
-          rate: taxRates.customs,
-        },
-        // Add per-item breakdown if multiple items
-        ...(quote.items && quote.items.length > 1 ? quote.items.map((item, idx) => {
-          const itemTotal = item.price * item.quantity;
-          const itemProportion = (breakdown.items_total || 0) > 0 ? itemTotal / (breakdown.items_total || 1) : 0;
+      label: 'Customs Duty Analysis',
+      formula: 'Comprehensive breakdown of all calculation methods',
+      inputs: (() => {
+        const inputs = [];
+        
+        // 1. Current Active Method
+        const activeMethod = quote.calculation_method_preference || quote.tax_method || 'hsn_only';
+        const activeValuation = quote.valuation_method_preference || 'product_value';
+        const cifValue = (breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0);
+        
+        inputs.push({
+          name: '🎯 ACTIVE METHOD',
+          value: activeMethod.toUpperCase(),
+          source: `${activeMethod} mode with ${activeValuation} valuation`,
+          rate: 0,
+        });
+        
+        // 2. CIF Calculation Base
+        inputs.push({
+          name: '💰 CIF Valuation Base',
+          value: cifValue,
+          source: `Items($${(breakdown.items_total || 0).toFixed(2)}) + Shipping($${(breakdown.shipping || 0).toFixed(2)}) + Insurance($${(breakdown.insurance || 0).toFixed(2)})`,
+          rate: 0,
+        });
+        
+        // 3. HSN Method Analysis
+        inputs.push({
+          name: '📊 HSN METHOD',
+          value: 0,
+          source: '─── HSN Classification Analysis ───',
+          rate: 0,
+        });
+        
+        // Check if HSN data is available
+        const hasHsnData = quote.items?.some(item => item.hsn_code) || false;
+        const hsnRate = hasHsnData ? (taxRates.customs || 0) : 0;
+        const hsnResult = cifValue * (hsnRate / 100);
+        
+        inputs.push({
+          name: `├─ HSN Available`,
+          value: hasHsnData ? 1 : 0,
+          source: hasHsnData ? `${quote.items?.filter(i => i.hsn_code).length}/${quote.items?.length || 0} items have HSN codes` : 'No HSN codes found',
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: `├─ HSN Rate`,
+          value: hsnRate,
+          source: hasHsnData ? 'From HSN master table' : 'No HSN data available',
+          rate: hsnRate,
+        });
+        
+        inputs.push({
+          name: `├─ HSN Calculation`,
+          value: hsnResult,
+          source: `$${cifValue.toFixed(2)} × ${hsnRate}% = $${hsnResult.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        // 4. Route-based Method Analysis
+        inputs.push({
+          name: '🛤️ ROUTE METHOD',
+          value: 0,
+          source: '─── Route Tier Analysis ───',
+          rate: 0,
+        });
+        
+        // Check if route data is available
+        const routeKey = `${quote.origin_country}-${quote.destination_country}`;
+        const routeCustoms = operationalData?.customs?.smart_tier?.percentage || 0;
+        const routeResult = cifValue * (routeCustoms / 100);
+        const hasRouteData = routeCustoms > 0;
+        
+        inputs.push({
+          name: `├─ Route Available`,
+          value: hasRouteData ? 1 : 0,
+          source: hasRouteData ? `Route ${routeKey} has tier data` : `Route ${routeKey} missing from route_customs_tiers`,
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: `├─ Route Rate`,
+          value: routeCustoms,
+          source: hasRouteData ? `From route_customs_tiers table` : 'No route tier data',
+          rate: routeCustoms,
+        });
+        
+        inputs.push({
+          name: `├─ Route Calculation`,
+          value: routeResult,
+          source: `$${cifValue.toFixed(2)} × ${routeCustoms}% = $${routeResult.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        // 5. Manual Method Analysis
+        inputs.push({
+          name: '✏️ MANUAL METHOD',
+          value: 0,
+          source: '─── Manual Input Analysis ───',
+          rate: 0,
+        });
+        
+        const manualRate = operationalData?.customs?.percentage || 0;
+        const manualResult = cifValue * (manualRate / 100);
+        
+        inputs.push({
+          name: `├─ Manual Rate`,
+          value: manualRate,
+          source: manualRate > 0 ? 'User/Admin input' : 'No manual rate set',
+          rate: manualRate,
+        });
+        
+        inputs.push({
+          name: `├─ Manual Calculation`,
+          value: manualResult,
+          source: `$${cifValue.toFixed(2)} × ${manualRate}% = $${manualResult.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        // 6. Method Comparison
+        inputs.push({
+          name: '📈 COMPARISON',
+          value: 0,
+          source: '─── Method Results Comparison ───',
+          rate: 0,
+        });
+        
+        const methods = [
+          { name: 'HSN', result: hsnResult, available: hasHsnData },
+          { name: 'Route', result: routeResult, available: hasRouteData },
+          { name: 'Manual', result: manualResult, available: manualRate > 0 }
+        ];
+        
+        const availableMethods = methods.filter(m => m.available);
+        const minResult = availableMethods.reduce((min, m) => Math.min(min, m.result), Infinity);
+        const maxResult = availableMethods.reduce((max, m) => Math.max(max, m.result), -Infinity);
+        
+        availableMethods.forEach(method => {
+          const isLowest = method.result === minResult && availableMethods.length > 1;
+          const isHighest = method.result === maxResult && availableMethods.length > 1;
+          const status = isLowest ? '🟢 LOWEST' : isHighest ? '🔴 HIGHEST' : '🟡 MIDDLE';
           
-          // Try to get actual item customs from item_breakdowns
-          const itemBreakdown = itemBreakdowns.find(b => b.item_id === item.id || b.item_id === `item-${idx}`);
-          const itemCustoms = itemBreakdown?.customs || 
-                             item.customs_amount || 
-                             ((breakdown.customs || 0) * itemProportion);
-          
-          // Calculate the effective rate for this item
-          const itemRate = itemTotal > 0 ? (itemCustoms / itemTotal) * 100 : 0;
-          
-          return {
-            name: `├─ ${item.product_name} (${item.quantity}x)`,
-            value: itemCustoms,
-            source: itemBreakdown ? 'Actual calculation' : `${(itemProportion * 100).toFixed(1)}% of total`,
-            rate: itemRate,
-          };
-        }) : []),
-      ],
-      calculation: `${((breakdown.items_total || 0) + (breakdown.purchase_tax || 0) + (breakdown.shipping || 0) + (breakdown.insurance || 0)).toFixed(2)} × ${(taxRates.customs || 0) / 100}`,
+          inputs.push({
+            name: `├─ ${method.name}`,
+            value: method.result,
+            source: `${status} - $${method.result.toFixed(2)}`,
+            rate: 0,
+          });
+        });
+        
+        if (availableMethods.length > 1) {
+          const savings = maxResult - minResult;
+          inputs.push({
+            name: `├─ Potential Savings`,
+            value: savings,
+            source: `Using lowest method saves $${savings.toFixed(2)}`,
+            rate: 0,
+          });
+        }
+        
+        // 7. Valuation Method Impact
+        inputs.push({
+          name: '💎 VALUATION IMPACT',
+          value: 0,
+          source: '─── Valuation Method Analysis ───',
+          rate: 0,
+        });
+        
+        const productValue = breakdown.items_total || 0;
+        const minimumValuation = quote.calculation_data?.hsn_calculation?.recalculated_items_total || productValue * 1.2; // Estimated if no HSN data
+        const higherOfBoth = Math.max(productValue, minimumValuation);
+        
+        inputs.push({
+          name: `├─ Product Value`,
+          value: productValue,
+          source: `Actual item prices: $${productValue.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: `├─ Minimum Valuation`,
+          value: minimumValuation,
+          source: `HSN minimum (est.): $${minimumValuation.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        inputs.push({
+          name: `├─ Higher of Both`,
+          value: higherOfBoth,
+          source: `Used for customs: $${higherOfBoth.toFixed(2)}`,
+          rate: 0,
+        });
+        
+        // Show actual current calculation
+        inputs.push({
+          name: '✅ FINAL RESULT',
+          value: breakdown.customs || 0,
+          source: `Applied: ${activeMethod} method with ${activeValuation} valuation`,
+          rate: 0,
+        });
+        
+        return inputs;
+      })(),
+      calculation: `Current: ${(quote.calculation_method_preference || quote.tax_method || 'hsn_only').toUpperCase()} method`,
       result: breakdown.customs || 0,
-      notes: quote.items && quote.items.length > 1 
-        ? 'Import duty based on CIF valuation (distributed by item value proportion)'
-        : 'Import duty based on CIF valuation',
+      notes: `Comprehensive analysis of all available customs calculation methods for ${quote.origin_country}→${quote.destination_country} route. Compare methods to optimize costs while ensuring compliance.`,
     },
 
     sales_tax: {
