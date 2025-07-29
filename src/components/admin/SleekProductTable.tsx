@@ -123,9 +123,7 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     loading?: boolean;
   }>>({});
 
-  // DISABLED: Automatic tax debug data fetching - calculations should only trigger manually
-  // Pre-fetch tax debug data for all items
-  /*
+  // Pre-fetch tax debug data for all items (for display only, not calculation)
   useEffect(() => {
     const fetchTaxDebugData = async () => {
       if (!quote) return;
@@ -171,7 +169,6 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
     
     fetchTaxDebugData();
   }, [items, quote?.origin_country, quote?.destination_country]);
-  */
 
   // Pre-fetch weights for all items on mount
   useEffect(() => {
