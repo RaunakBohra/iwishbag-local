@@ -981,18 +981,16 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                         <div className="flex items-center gap-3 justify-end">
                           <span className="text-xs font-medium text-gray-500 w-8">Tax</span>
                           <div className="flex items-center gap-2 flex-wrap">
-                            {['hsn', 'country', 'customs', 'manual'].map((method) => {
+                            {['hsn', 'route', 'manual'].map((method) => {
                               const isActive = (item.tax_method || 'hsn') === method;
                               const icons = { 
-                                customs: Database, 
                                 hsn: Hash, 
-                                country: Globe, 
+                                route: Globe, 
                                 manual: Settings 
                               };
                               const labels = {
-                                customs: 'Customs',
                                 hsn: 'HSN',
-                                country: 'Route',
+                                route: 'Route',
                                 manual: 'Manual'
                               };
                               const IconComponent = icons[method as keyof typeof icons];
@@ -1003,15 +1001,12 @@ export const SleekProductTable: React.FC<SleekProductTableProps> = ({
                                   // For HSN method: check tax_options first, then fall back to dynamic country rate
                                   return item.tax_options?.hsn?.rate || 
                                          (item.hsn_code ? dynamicTaxRates.countryVatRate : dynamicTaxRates.countryVatRate);
-                                } else if (method === 'customs') {
-                                  // For customs method: use operational_data customs percentage or dynamic default
-                                  return quote?.operational_data?.customs?.percentage || dynamicTaxRates.customsDefault;
                                 } else if (method === 'manual') {
                                   // For manual method: use manual rate or dynamic default
                                   return item.tax_options?.manual?.rate || dynamicTaxRates.manualDefault;
-                                } else if (method === 'country') {
-                                  // For route/country method: use route rate or dynamic customs default
-                                  return item.tax_options?.country?.rate || dynamicTaxRates.customsDefault;
+                                } else if (method === 'route') {
+                                  // For route method: use route rate or dynamic customs default
+                                  return item.tax_options?.route?.rate || dynamicTaxRates.customsDefault;
                                 }
                                 return dynamicTaxRates.manualDefault; // Final fallback to dynamic rate
                               };
