@@ -102,6 +102,13 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     const volumetricWeight = routeData.volumetric_weight || 0;
     const chargeableWeight = routeData.chargeable_weight || totalWeight;
     
+    // Extract weight tier details for rate breakdown
+    const weightTiers = quote.calculation_data?.route_weight_tiers || 
+                       selectedShipping.weight_tiers || 
+                       routeData.weight_tiers || [];
+    const rateSource = routeData.rate_source || 
+                      (weightTier !== 'N/A' ? 'weight_tier' : 'per_kg_fallback');
+    
     // If we still don't have breakdown data, estimate it from the total
     if (baseShipping === 0 && weightRate === 0 && deliveryPremium === 0 && shippingTotal > 0) {
       // Simple estimation: assume shipping is primarily weight-based
@@ -118,6 +125,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         processingDays: processingDays,
         volumetricWeight: 0,
         chargeableWeight: totalWeight,
+        weightTiers: [],
+        rateSource: 'estimated',
         note: 'Estimated from total shipping cost'
       };
     }
@@ -134,6 +143,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       processingDays: processingDays,
       volumetricWeight: volumetricWeight,
       chargeableWeight: chargeableWeight,
+      weightTiers: weightTiers,
+      rateSource: rateSource,
       note: null
     };
   };
@@ -212,15 +223,32 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           source: 'Max(actual, volumetric)',
         },
         {
-          name: 'Weight Tier',
+          name: 'Weight Tier Applied',
           value: 0,
           source: shippingBreakdown.weightTier,
         },
         {
-          name: 'Weight Rate',
+          name: 'Weight Rate Breakdown',
           value: shippingBreakdown.rate,
-          source: 'Per kg rate',
+          source: shippingBreakdown.weightTier !== 'N/A' && shippingBreakdown.weightTier !== 'Unknown' 
+            ? `Tier ${shippingBreakdown.weightTier} rate` 
+            : shippingBreakdown.note || 'Route per-kg rate',
           rate: shippingBreakdown.rate,
+        },
+        // Show available weight tiers if we have them
+        ...(shippingBreakdown.weightTiers && shippingBreakdown.weightTiers.length > 0 ? [{
+          name: '├─ Available Tiers',
+          value: 0,
+          source: shippingBreakdown.weightTiers.map((tier: any) => 
+            `${tier.min}-${tier.max || '∞'}kg: $${tier.cost}/kg`
+          ).join(', '),
+        }] : []),
+        {
+          name: '├─ Rate Source',
+          value: 0,
+          source: shippingBreakdown.rateSource === 'weight_tier' 
+            ? 'Weight tier system' 
+            : 'Per-kg fallback rate',
         },
         {
           name: 'Weight Cost',
