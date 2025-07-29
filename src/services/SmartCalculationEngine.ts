@@ -2338,8 +2338,10 @@ export class SmartCalculationEngine {
         valuation_method: valuationMethod,
       },
       // 🆕 NEW: Store item-level tax breakdown for easy access
-      // Always use HSN breakdowns if available, otherwise use existing item_breakdowns
-      item_breakdowns: hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
+      // Use per-item breakdowns if we have mixed tax methods, otherwise use HSN breakdowns
+      item_breakdowns: shouldUsePerItemTaxes && quote.calculation_data?.item_breakdowns ? 
+        quote.calculation_data.item_breakdowns : // Use the breakdowns we just calculated for ALL items
+        hsnTaxBreakdown ? hsnTaxBreakdown.map(item => ({
           item_id: item.item_id,
           item_name: item.item_name,
           hsn_code: item.hsn_code,
