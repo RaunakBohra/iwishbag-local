@@ -521,7 +521,48 @@ const AdminQuoteDetail: React.FC = () => {
           }
         });
         
-        dbUpdates.items = updates.items;
+        // Ensure tax_options and customs fields are preserved
+        dbUpdates.items = updates.items.map((item: any) => {
+          const baseItem = {
+            id: item.id,
+            name: item.name || item.product_name,
+            url: item.url || item.product_url,
+            image: item.image || item.image_url,
+            customer_notes: item.customer_notes || '',
+            quantity: item.quantity || 1,
+            costprice_origin: item.costprice_origin || item.price || 0,
+            weight: item.weight || 0,
+            hsn_code: item.hsn_code || '',
+            category: item.category || '',
+            tax_method: item.tax_method || 'hsn',
+            valuation_method: item.valuation_method || 'actual_price',
+            minimum_valuation_usd: item.minimum_valuation_usd || 0,
+            actual_price: item.actual_price || item.costprice_origin || item.price || 0,
+            smart_data: item.smart_data || {}
+          };
+          
+          // Add tax_options if present
+          if (item.tax_options) {
+            baseItem.tax_options = item.tax_options;
+          }
+          
+          // Add customs fields if present
+          if (item.customs_amount !== undefined) {
+            baseItem.customs_amount = item.customs_amount;
+          }
+          if (item.customs_value !== undefined) {
+            baseItem.customs_value = item.customs_value;
+          }
+          
+          console.log(`📦 [MUTATION] Prepared item ${item.id} for save:`, {
+            has_tax_options: !!baseItem.tax_options,
+            tax_options: baseItem.tax_options,
+            customs_amount: baseItem.customs_amount,
+            customs_value: baseItem.customs_value
+          });
+          
+          return baseItem;
+        });
       }
 
       // Handle status updates
