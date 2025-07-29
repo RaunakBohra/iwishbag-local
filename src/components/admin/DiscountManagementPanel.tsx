@@ -58,12 +58,36 @@ export function DiscountManagementPanel() {
         setDiscountCodes(codes);
       }
 
-      // Calculate stats
-      const { data: statsData, error: statsError } = await supabase
-        .rpc('get_discount_stats');
-      
-      if (!statsError && statsData) {
-        setStats(statsData[0]);
+      // Calculate stats manually for now since get_discount_stats RPC doesn't exist
+      try {
+        // Get total discounts used
+        const { count: totalUsed } = await supabase
+          .from('discount_codes')
+          .select('*', { count: 'exact', head: true })
+          .gt('usage_count', 0);
+
+        // Get active campaigns count
+        const { count: activeCampaignCount } = await supabase
+          .from('discount_campaigns')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_active', true);
+
+        // Set basic stats
+        setStats({
+          total_discounts_used: totalUsed || 0,
+          total_savings: 0, // Would need to calculate from orders
+          active_campaigns: activeCampaignCount || 0,
+          conversion_rate: 0 // Would need to calculate from analytics
+        });
+      } catch (error) {
+        console.warn('Could not calculate discount stats:', error);
+        // Set default stats
+        setStats({
+          total_discounts_used: 0,
+          total_savings: 0,
+          active_campaigns: campaigns.length,
+          conversion_rate: 0
+        });
       }
 
     } catch (error) {
@@ -180,8 +204,8 @@ export function DiscountManagementPanel() {
                     {campaign.discount_type && (
                       <Badge variant="outline">
                         {campaign.discount_type.type === 'percentage' 
-                          ? `${campaign.discount_type.value}% off`
-                          : `$${campaign.discount_type.value} off`
+                          ? `${campaign.discount_type.value || 0}% off`
+                          : `$${campaign.discount_type.value || 0} off`
                         }
                       </Badge>
                     )}
@@ -254,8 +278,8 @@ export function DiscountManagementPanel() {
                   </td>
                   <td className="p-4">
                     {code.discount_type?.type === 'percentage' 
-                      ? `${code.discount_type.value}%`
-                      : `$${code.discount_type.value}`
+                      ? `${code.discount_type?.value || 0}%`
+                      : `$${code.discount_type?.value || 0}`
                     }
                   </td>
                   <td className="p-4">
@@ -813,9 +837,9 @@ function CampaignDetailsDialog({ campaign, open, onOpenChange }: {
             <div className="space-y-2">
               <p className="text-sm font-medium">Discount</p>
               <p className="text-2xl font-bold">
-                {campaign.discount_type.type === 'percentage' 
-                  ? `${campaign.discount_type.value}% off`
-                  : `$${campaign.discount_type.value} off`
+                {campaign.discount_type?.type === 'percentage' 
+                  ? `${campaign.discount_type?.value || 0}% off`
+                  : `$${campaign.discount_type?.value || 0} off`
                 }
               </p>
             </div>

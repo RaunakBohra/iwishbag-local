@@ -52,11 +52,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               'Auth',
             );
           } else {
-            // No session exists, create anonymous session only for non-admin routes
-            const isAdminRoute = window.location.pathname.startsWith('/admin');
-            if (!isAdminRoute) {
-              await signInAnonymously();
-            }
+            // No session exists - don't auto-create anonymous session
+            logger.debug('No session found, user needs to sign in', null, 'Auth');
           }
         }
       } catch (error) {
@@ -200,13 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // For anonymous users, don't clear everything - just sign in anonymously again
-      if (user?.is_anonymous) {
-        await signInAnonymously();
-        return;
-      }
-
-      // For registered users, do full sign out
+      // Sign out all users (including anonymous)
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
@@ -218,16 +209,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('supabase.auth.token');
       localStorage.removeItem('sb-htycplcuyoqfukhrughf-auth-token');
 
-      // Sign in anonymously for continued browsing
-      await signInAnonymously();
+      logger.debug('User signed out successfully', null, 'Auth');
     } catch (error) {
       logger.error('Error signing out', error, 'Auth');
-      // Fallback: just try to sign in anonymously
-      try {
-        await signInAnonymously();
-      } catch (fallbackError) {
-        logger.error('Error in fallback anonymous sign in', fallbackError, 'Auth');
-      }
       throw error;
     }
   };

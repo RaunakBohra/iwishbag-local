@@ -133,15 +133,32 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   };
 
   const handleSignInWithGoogle = async () => {
+    console.log('🔐 [AuthForm] Starting Google OAuth sign-in...');
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
+    
+    // Clear any existing anonymous session first
+    const { data: currentSession } = await supabase.auth.getSession();
+    if (currentSession?.session?.user?.is_anonymous) {
+      console.log('🔐 [AuthForm] Clearing anonymous session before OAuth...');
+      await supabase.auth.signOut();
+    }
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         scopes: 'openid profile email https://www.googleapis.com/auth/user.addresses.read',
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
+    
+    console.log('🔐 [AuthForm] OAuth response:', { data, error });
+    
     if (error) {
+      console.error('🔐 [AuthForm] Google sign-in error:', error);
       toast({
         title: 'Google sign-in error',
         description: error.message,

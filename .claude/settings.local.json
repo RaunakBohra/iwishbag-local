@@ -124,7 +124,6 @@
       "Bash(python3:*)",
       "Bash(npx prettier:*)",
       "Bash(npx lhci:*)",
-      "Bash(./reset-db.sh:*)",
       "Bash(./fix-database-schema.sh:*)",
       "Bash(vercel:*)",
       "Bash(for file in \"src/pages/auth/ResetPassword.tsx\" \"src/pages/PaymentFailure.tsx\" \"src/components/AddressHistory.tsx\" \"src/pages/About.tsx\" \"src/pages/auth/EmailConfirmation.tsx\")",
@@ -209,7 +208,8 @@
       "mcp__memory__create_relations",
       "mcp__redis__set",
       "mcp__redis__set",
-      "mcp__memory__add_observations"
+      "mcp__memory__add_observations",
+      "Bash(docker volume:*)"
     ],
     "deny": []
   }

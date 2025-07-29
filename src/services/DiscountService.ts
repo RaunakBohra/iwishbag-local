@@ -191,18 +191,45 @@ class DiscountServiceClass {
       if (error) throw error;
 
       // Add auto-applied discounts
-      if (autoDiscounts) {
+      if (autoDiscounts && autoDiscounts.length > 0) {
         for (const discount of autoDiscounts) {
+          // Map RPC response to ApplicableDiscount format
           discounts.push({
-            discount_source: discount.discount_source,
-            discount_type: discount.discount_type,
-            discount_value: discount.discount_value,
-            discount_amount: discount.discount_amount,
-            applies_to: discount.applies_to,
-            is_stackable: discount.is_stackable,
-            description: this.getDiscountDescription(discount)
+            discount_source: 'payment_method',
+            discount_type: discount.discount_type as 'percentage' | 'fixed_amount',
+            discount_value: Number(discount.value),
+            discount_amount: Number(discount.discount_amount),
+            applies_to: 'handling',
+            is_stackable: true,
+            description: `${paymentMethod?.replace('_', ' ')} discount: ${discount.value}% off handling fee`
           });
         }
+      }
+
+      // Check for membership discounts
+      try {
+        const { data: membershipDiscount, error: membershipError } = await supabase
+          .rpc('calculate_membership_discount', {
+            p_customer_id: customerId,
+            p_amount: quoteTotal
+          });
+
+        if (!membershipError && membershipDiscount && membershipDiscount.length > 0) {
+          const md = membershipDiscount[0];
+          if (md.has_discount && md.discount_percentage > 0) {
+            discounts.push({
+              discount_source: 'membership',
+              discount_type: 'percentage',
+              discount_value: md.discount_percentage,
+              discount_amount: Number(md.discount_amount),
+              applies_to: 'total',
+              is_stackable: true,
+              description: `${md.membership_name} membership: ${md.discount_percentage}% off`
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Could not check membership discount:', error);
       }
 
       // Add manual discount code if provided

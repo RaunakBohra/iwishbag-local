@@ -10,15 +10,47 @@ const OAuthCallback = () => {
 
   useEffect(() => {
     const handleOAuthCallback = async () => {
+      console.log('🔄 [OAuthCallback] Starting OAuth callback handling...');
+      console.log('🔄 [OAuthCallback] Current URL:', window.location.href);
+      
       try {
-        // Handle the OAuth callback
-        const { data, error } = await supabase.auth.getSession();
+        // Check URL parameters first
+        const searchParams = new URLSearchParams(window.location.search);
+        const error = searchParams.get('error');
+        const error_description = searchParams.get('error_description');
+        const code = searchParams.get('code');
+        
+        console.log('🔄 [OAuthCallback] URL parameters:', {
+          error,
+          error_description,
+          code: code ? 'present' : 'none',
+          hashParams: window.location.hash,
+        });
 
         if (error) {
-          console.error('OAuth callback error:', error);
+          console.error('🔄 [OAuthCallback] OAuth error in URL:', error, error_description);
           toast({
             title: 'Authentication Error',
-            description: error.message,
+            description: error_description || error,
+            variant: 'destructive',
+          });
+          navigate('/auth');
+          return;
+        }
+
+        // Handle the OAuth callback
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        
+        console.log('🔄 [OAuthCallback] Session check result:', {
+          hasSession: !!data.session,
+          sessionError,
+        });
+
+        if (sessionError) {
+          console.error('OAuth callback error:', sessionError);
+          toast({
+            title: 'Authentication Error',
+            description: sessionError.message,
             variant: 'destructive',
           });
           navigate('/');
@@ -31,10 +63,15 @@ const OAuthCallback = () => {
           const provider = user.app_metadata?.provider;
 
           // Log OAuth metadata for debugging
-          console.log('OAuth user metadata:', {
+          console.log('🔐 [OAuthCallback] OAuth user data:', {
+            id: user.id,
+            email: user.email,
+            is_anonymous: user.is_anonymous,
             provider,
             phone: user.phone,
-            raw_metadata: user.user_metadata,
+            app_metadata: user.app_metadata,
+            user_metadata: user.user_metadata,
+            created_at: user.created_at,
           });
 
           // Provide provider-specific welcome messages

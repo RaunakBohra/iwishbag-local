@@ -200,6 +200,15 @@ United States`;
         throw new Error('Customer profile not found. Please ensure user is properly registered.');
       }
 
+      // Ensure profile exists in database
+      const { data: profileId, error: profileError } = await supabase
+        .rpc('ensure_profile_exists', { user_id: userId });
+      
+      if (profileError) {
+        logger.error('Failed to ensure profile exists:', profileError);
+        throw new Error('Failed to create user profile');
+      }
+
       // Check if virtual address already exists
       if (customerProfile.virtual_address?.status === 'active') {
         logger.info(`📮 Returning existing integrated address for user ${userId}`);

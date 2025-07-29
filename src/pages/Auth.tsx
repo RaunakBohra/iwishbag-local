@@ -10,11 +10,13 @@ import { useMFAAuth } from '@/hooks/useMFAAuth';
 import { useMFAGuard } from '@/hooks/useMFAGuard';
 import { MFASetup } from '@/components/auth/MFASetup';
 import { MFAVerification } from '@/components/auth/MFAVerification';
+import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const { session, isAnonymous } = useAuth();
   const location = useLocation();
   const message = location.state?.message;
+  const { toast } = useToast();
   const {
     authState,
     loading,
@@ -32,6 +34,48 @@ const Auth = () => {
     mfaEnabled,
   } = useMFAGuard();
 
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 [Auth Page] Debug Info:', {
+      session: session,
+      sessionUser: session?.user,
+      isAnonymous,
+      mfaLoading,
+      requiresMFA,
+      hasValidMFASession,
+      mfaEnabled,
+      authState,
+      pathname: location.pathname,
+      message
+    });
+  }, [session, isAnonymous, mfaLoading, requiresMFA, hasValidMFASession, mfaEnabled, authState, location.pathname, message]);
+
+  // Check URL for OAuth redirect
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const error = searchParams.get('error');
+    const error_description = searchParams.get('error_description');
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+
+    console.log('🔐 [Auth Page] URL parameters:', {
+      error,
+      error_description,
+      code: code ? 'present' : 'none',
+      state: state ? 'present' : 'none',
+      fullURL: window.location.href,
+    });
+
+    if (error) {
+      console.error('🔐 [Auth Page] OAuth error detected:', error, error_description);
+      toast({
+        title: 'Authentication Error',
+        description: error_description || error,
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
   useEffect(() => {
     // Clear the message from location state after display
     if (message) {
@@ -39,9 +83,33 @@ const Auth = () => {
     }
   }, [message]);
 
+  // Monitor auth state changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔄 [Auth Page] Auth state changed:', {
+        event,
+        hasSession: !!session,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        isAnonymous: session?.user?.is_anonymous,
+      });
+
+      if (event === 'SIGNED_IN' && session) {
+        console.log('✅ [Auth Page] User signed in successfully');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   // Handle authenticated users with MFA requirements
   if (session && !isAnonymous) {
+    console.log('🔐 [Auth Page] User is authenticated, checking MFA requirements...');
+    
     if (mfaLoading) {
+      console.log('⏳ [Auth Page] MFA still loading...');
       return (
         <div className="h-screen flex items-center justify-center">
           <div className="text-center">
@@ -54,6 +122,7 @@ const Auth = () => {
     
     // If user doesn't require MFA or has valid MFA session, redirect
     if (!requiresMFA || hasValidMFASession) {
+      console.log('✅ [Auth Page] No MFA required or valid session, redirecting to home...');
       return <Navigate to="/" replace />;
     }
     

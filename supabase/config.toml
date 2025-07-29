@@ -109,7 +109,7 @@ enabled = true
 # in emails.
 site_url = "http://localhost:8080"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://192.168.1.85:8080", "http://localhost:8081", "http://localhost:8080/auth/confirm", "http://localhost:8080/auth/reset", "https://whyteclub.com/auth/confirm", "https://whyteclub.com/auth/reset"]
+additional_redirect_urls = ["http://192.168.1.85:8080", "http://localhost:8081", "http://localhost:8080/auth/confirm", "http://localhost:8080/auth/reset", "https://whyteclub.com/auth/confirm", "https://whyteclub.com/auth/reset", "http://localhost:8083/auth/callback", "http://localhost:8082/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.

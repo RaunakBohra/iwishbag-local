@@ -40,11 +40,14 @@ export const useMFAGuard = () => {
   const checkMFARequirements = async () => {
     if (!user?.id) return;
 
+    console.log('🔍 [MFA Guard] Checking MFA requirements for user:', user.id);
+
     try {
       setState(prev => ({ ...prev, loading: true }));
 
       // Check if user requires MFA
       const requiresMFA = await mfaService.requiresMFA(user.id);
+      console.log('🔍 [MFA Guard] User requires MFA:', requiresMFA);
       
       if (!requiresMFA) {
         // User doesn't need MFA (regular user)
