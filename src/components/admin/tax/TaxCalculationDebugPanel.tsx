@@ -522,6 +522,27 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       inputs: (() => {
         const inputs = [];
         
+        // Phase 6: Add data validation warnings
+        const warnings = [];
+        if (!quote.items || quote.items.length === 0) {
+          warnings.push('No items in quote');
+        }
+        if (!quote.origin_country || !quote.destination_country) {
+          warnings.push('Missing origin or destination country');
+        }
+        if (!breakdown.customs && breakdown.customs !== 0) {
+          warnings.push('No customs data in calculation');
+        }
+        
+        if (warnings.length > 0) {
+          inputs.push({
+            name: '⚠️ DATA WARNINGS',
+            value: warnings.length,
+            source: warnings.join(' | '),
+            rate: 0,
+          });
+        }
+        
         // Phase 5: Quote vs Item Level Clarity
         inputs.push({
           name: '🎭 TAX METHOD HIERARCHY',
@@ -702,7 +723,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           inputs.push({
             name: `├─ HSN Rate (Live)`,
             value: liveHsnRate,
-            source: isLoadingLiveData ? 'Loading...' : liveHsnRate > 0 ? '🟢 LIVE from HSN service' : 'No live data',
+            source: isLoadingLiveData ? '⏳ Loading...' : liveHsnRate > 0 ? '🟢 LIVE from HSN service' : '⚪ No live data',
             rate: liveHsnRate,
           });
           
@@ -757,7 +778,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: `├─ Route Rate (Live)`,
           value: liveRouteCustoms,
-          source: isLoadingLiveData ? 'Loading...' : liveRouteCustoms > 0 ? `🟢 LIVE: ${liveRouteRates?.tier_name || 'tier'}` : 'No route tier data',
+          source: isLoadingLiveData ? '⏳ Loading...' : liveRouteCustoms > 0 ? `🟢 LIVE: ${liveRouteRates?.tier_name || 'tier'}` : '⚪ No route tier data',
           rate: liveRouteCustoms,
         });
         
@@ -1077,6 +1098,65 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             name: `├─ Per-Item Total`,
             value: perItemCustomsTotal,
             source: `Sum of all item customs: $${perItemCustomsTotal.toFixed(2)}`,
+            rate: 0,
+          });
+        }
+        
+        // Phase 6: Root Cause Analysis
+        if (Math.abs(actualCustoms - expectedFromMatrix) > 0.01) {
+          inputs.push({
+            name: '🔍 ROOT CAUSE ANALYSIS',
+            value: 0,
+            source: '─── Why the Discrepancy? ───',
+            rate: 0,
+          });
+          
+          // Check for common issues
+          if (hasItemLevelMethods && perItemCustomsTotal === 0) {
+            inputs.push({
+              name: '├─ Issue',
+              value: 0,
+              source: '❌ Per-item calculations returning $0',
+              rate: 0,
+            });
+            inputs.push({
+              name: '├─ Likely Cause',
+              value: 0,
+              source: 'Missing HSN codes or route data for items',
+              rate: 0,
+            });
+          } else if (actualCustoms === 0 && expectedFromMatrix > 0) {
+            inputs.push({
+              name: '├─ Issue',
+              value: 0,
+              source: '❌ Calculation engine returning $0',
+              rate: 0,
+            });
+            inputs.push({
+              name: '├─ Likely Cause',
+              value: 0,
+              source: 'Tax method not properly set or data not saved',
+              rate: 0,
+            });
+          } else if (actualCustoms > 0 && actualCustoms !== expectedFromMatrix) {
+            inputs.push({
+              name: '├─ Issue',
+              value: 0,
+              source: '❌ Calculation mismatch',
+              rate: 0,
+            });
+            inputs.push({
+              name: '├─ Likely Cause',
+              value: 0,
+              source: 'Stored data outdated - recalculation needed',
+              rate: 0,
+            });
+          }
+          
+          inputs.push({
+            name: '├─ Solution',
+            value: 0,
+            source: '💡 Click "Recalculate Quote" to update',
             rate: 0,
           });
         }
