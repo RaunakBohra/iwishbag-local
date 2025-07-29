@@ -69,6 +69,46 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
     ? quote.calculation_data.exchange_rate 
     : parseFloat(quote.calculation_data?.exchange_rate) || 1;
 
+  // Helper to extract shipping data from various possible locations
+  const getShippingBreakdown = () => {
+    const shippingTotal = breakdown.shipping || 0;
+    const totalWeight = quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0;
+    
+    // Try to find shipping breakdown data in various locations
+    const baseShipping = quote.calculation_data?.shipping_breakdown?.base_cost || 
+                        quote.calculation_data?.selected_shipping?.route_data?.base_shipping_cost ||
+                        quote.calculation_data?.shipping_data?.base_cost || 0;
+    
+    const weightRate = quote.calculation_data?.shipping_breakdown?.weight_rate || 
+                      quote.calculation_data?.selected_shipping?.route_data?.weight_rate_per_kg ||
+                      quote.calculation_data?.shipping_data?.weight_rate || 0;
+    
+    const deliveryPremium = quote.calculation_data?.shipping_breakdown?.delivery_premium || 
+                           quote.calculation_data?.selected_shipping?.route_data?.delivery_premium ||
+                           quote.calculation_data?.shipping_data?.delivery_premium || 0;
+    
+    // If we still don't have breakdown data, estimate it from the total
+    if (baseShipping === 0 && weightRate === 0 && deliveryPremium === 0 && shippingTotal > 0) {
+      // Simple estimation: assume shipping is primarily weight-based
+      const estimatedRate = totalWeight > 0 ? shippingTotal / totalWeight : 0;
+      return {
+        base: 0,
+        rate: estimatedRate,
+        premium: 0,
+        note: 'Estimated from total shipping cost'
+      };
+    }
+    
+    return {
+      base: baseShipping,
+      rate: weightRate,
+      premium: deliveryPremium,
+      note: null
+    };
+  };
+
+  const shippingBreakdown = getShippingBreakdown();
+
   // Build calculation steps
   const calculationSteps: Record<string, CalculationStep> = {
     items_total: {
@@ -112,7 +152,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
       inputs: [
         {
           name: 'Base Shipping Cost',
-          value: quote.calculation_data?.shipping_breakdown?.base_cost || 0,
+          value: shippingBreakdown.base,
           source: `Route: ${quote.origin_country}→${quote.destination_country}`,
         },
         {
@@ -122,19 +162,19 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         },
         {
           name: 'Weight Rate',
-          value: quote.calculation_data?.shipping_breakdown?.weight_rate || 0,
-          source: 'Weight tier or per-kg rate',
-          rate: quote.calculation_data?.shipping_breakdown?.weight_rate,
+          value: shippingBreakdown.rate,
+          source: shippingBreakdown.note || 'Weight tier or per-kg rate',
+          rate: shippingBreakdown.rate,
         },
         {
           name: 'Delivery Premium',
-          value: quote.calculation_data?.shipping_breakdown?.delivery_premium || 0,
+          value: shippingBreakdown.premium,
           source: 'Selected delivery option',
         },
       ],
-      calculation: `${quote.calculation_data?.shipping_breakdown?.base_cost || 0} + (${quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0} × ${quote.calculation_data?.shipping_breakdown?.weight_rate || 0}) + ${quote.calculation_data?.shipping_breakdown?.delivery_premium || 0}`,
+      calculation: `${shippingBreakdown.base.toFixed(2)} + (${(quote.items?.reduce((sum, item) => sum + (item.weight || 0) * item.quantity, 0) || 0).toFixed(2)} × ${shippingBreakdown.rate.toFixed(2)}) + ${shippingBreakdown.premium.toFixed(2)}`,
       result: breakdown.shipping || 0,
-      notes: 'Cross-border freight charges',
+      notes: shippingBreakdown.note ? `Cross-border freight charges (${shippingBreakdown.note})` : 'Cross-border freight charges',
     },
 
     customs: {
