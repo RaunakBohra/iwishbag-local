@@ -1357,12 +1357,11 @@ export default function UnifiedQuoteOrderSystem({
           {/* Main Content */}
           <div>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className={`grid ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} w-full`}>
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="items">Items & Tax</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>
                 <TabsTrigger value="messages">Messages</TabsTrigger>
-                {isAdmin && <TabsTrigger value="debug">Debug</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="overview" className="mt-6 space-y-6">
@@ -2124,12 +2123,6 @@ export default function UnifiedQuoteOrderSystem({
                   quoteUserId={quote.user_id || quote.customer?.id}
                 />
               </TabsContent>
-
-              {isAdmin && (
-                <TabsContent value="debug" className="mt-6">
-                  <TaxCalculationDebugPanel quote={quote} />
-                </TabsContent>
-              )}
             </Tabs>
           </div>
 
@@ -2194,6 +2187,14 @@ export default function UnifiedQuoteOrderSystem({
               }}
               isSaving={isRecalculating}
             />
+
+            {/* Tax Calculation Debug Panel - Admin Only */}
+            {isAdmin && (
+              <TaxCalculationDebugPanel 
+                quote={quote} 
+                className="mt-4"
+              />
+            )}
 
             {/* Quick Actions and other components remain here */}
 
