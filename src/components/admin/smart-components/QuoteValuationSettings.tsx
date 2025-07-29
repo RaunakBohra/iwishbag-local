@@ -106,9 +106,19 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
             <Select 
               value={currentMethod} 
               onValueChange={(value) => {
-                console.log('[VALUATION SETTINGS] Select onChange triggered with:', value);
+                console.log('🎯 [VALUATION SETTINGS] Select onChange triggered with:', value);
+                console.log('🎯 [VALUATION SETTINGS] Current quote data:', {
+                  quote_id: quote.id,
+                  origin_country: quote.origin_country,
+                  items_with_hsn: quote.items?.filter(item => item.hsn_code).map(item => ({
+                    id: item.id,
+                    name: item.name || item.product_name,
+                    hsn_code: item.hsn_code,
+                    price: item.costprice_origin || item.price
+                  }))
+                });
                 const dbValue = mapUiToDbValue(value);
-                console.log('[VALUATION SETTINGS] Calling onMethodChange with:', dbValue);
+                console.log('🎯 [VALUATION SETTINGS] Calling onMethodChange with:', dbValue);
                 onMethodChange(dbValue as 'actual_price' | 'minimum_valuation' | 'higher_of_both');
               }}
             >
