@@ -534,6 +534,16 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           warnings.push('No customs data in calculation');
         }
         
+        // Phase 8: Check for rate mismatches early
+        const earlyRateMismatch = 
+          (liveHsnRates && Object.keys(liveHsnRates).length > 0 && 
+           Object.values(liveHsnRates).some((r: any) => r.customs !== taxRates.customs)) ||
+          (liveRouteRates && liveRouteRates.customs !== operationalData?.customs?.smart_tier?.percentage);
+          
+        if (earlyRateMismatch) {
+          warnings.push('⚠️ TAX RATES OUTDATED - Recalculation needed');
+        }
+        
         if (warnings.length > 0) {
           inputs.push({
             name: '⚠️ DATA WARNINGS',
@@ -1079,8 +1089,13 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           });
         }
         
+        // Check for rate mismatches
+        const hasRateMismatch = 
+          (liveHsnRate > 0 && Math.abs(liveHsnRate - storedHsnRate) > 0.01) ||
+          (liveRouteCustoms > 0 && Math.abs(liveRouteCustoms - storedRouteCustoms) > 0.01);
+        
         // Phase 6: Root Cause Analysis
-        if (Math.abs(actualCustoms - expectedFromMatrix) > 0.01) {
+        if (Math.abs(actualCustoms - expectedFromMatrix) > 0.01 || hasRateMismatch) {
           inputs.push({
             name: '🔍 ROOT CAUSE ANALYSIS',
             value: 0,
@@ -1126,6 +1141,22 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
               name: '├─ Likely Cause',
               value: 0,
               source: 'Stored data outdated - recalculation needed',
+              rate: 0,
+            });
+          }
+          
+          // Check for rate mismatches specifically
+          if (hasRateMismatch) {
+            inputs.push({
+              name: '├─ Issue',
+              value: 0,
+              source: '❌ Tax rates have changed',
+              rate: 0,
+            });
+            inputs.push({
+              name: '├─ Details',
+              value: 0,
+              source: 'Live rates differ from stored calculation',
               rate: 0,
             });
           }
