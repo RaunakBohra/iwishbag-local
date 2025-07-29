@@ -507,6 +507,20 @@ const AdminQuoteDetail: React.FC = () => {
       // Handle items updates
       if (updates.items) {
         console.log('🔍 [MUTATION] Items update detected:', updates.items);
+        
+        // Log tax_options specifically
+        updates.items.forEach((item: any, idx: number) => {
+          if (item.tax_options) {
+            console.log(`📋 [MUTATION] Item ${idx} tax_options:`, {
+              item_id: item.id,
+              item_name: item.product_name || item.name,
+              tax_method: item.tax_method,
+              tax_options: item.tax_options,
+              manual_rate: item.tax_options?.manual?.rate
+            });
+          }
+        });
+        
         dbUpdates.items = updates.items;
       }
 
@@ -575,6 +589,24 @@ const AdminQuoteDetail: React.FC = () => {
       }
 
       console.log('🔍 [MUTATION] Database update successful, returned data:', data);
+      
+      // Log items with tax_options from the returned data
+      if (data.items && Array.isArray(data.items)) {
+        console.log('📊 [MUTATION] Saved items analysis:');
+        data.items.forEach((item: any, idx: number) => {
+          console.log(`  Item ${idx}:`, {
+            name: item.product_name || item.name,
+            tax_method: item.tax_method,
+            has_tax_options: !!item.tax_options,
+            tax_options: item.tax_options,
+            customs_amount: item.customs_amount,
+            customs_value: item.customs_value,
+            calculated_rate: item.customs_amount && item.customs_value ? 
+              `${(item.customs_amount / item.customs_value * 100).toFixed(1)}%` : 'N/A'
+          });
+        });
+      }
+      
       return data;
     },
     onSuccess: () => {
