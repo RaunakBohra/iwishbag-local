@@ -662,7 +662,7 @@ export default function AdminShippingFeesEnhanced() {
               <div>
                 <Label>Fulfillment Notes</Label>
                 <Textarea 
-                  placeholder="Notes for warehouse/fulfillment team..."
+                  placeholder="Notes for fulfillment team..."
                   className="mt-2"
                 />
               </div>

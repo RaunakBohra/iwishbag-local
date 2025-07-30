@@ -18,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useToast } from '../../hooks/use-toast';
 import { useCountryUtils } from '../../lib/countryUtils';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import type {
   ShippingRouteFormData,
   DeliveryOption,
@@ -30,8 +30,8 @@ import { supabase } from '../../integrations/supabase/client';
 import { CustomsTiersManager } from './CustomsTiersManager';
 import { CurrencyInputLabel } from './DualCurrencyDisplay';
 import { ExchangeRateManager } from './ExchangeRateManager';
-import { CountrySettingsManager } from './CountrySettingsManager';
-import { MarkupManager } from './MarkupManager';
+// import { CountrySettingsManager } from './CountrySettingsManager'; // Removed with countries tab
+// import { MarkupManager } from './MarkupManager'; // Removed with markups tab
 import { ShippingRouteDisplay } from '../shared/ShippingRouteDisplay';
 import { RouteBasedOptionsManager } from './RouteBasedOptionsManager';
 
@@ -128,7 +128,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         if (!initialData?.exchangeRate) {
           toast({
             title: 'Exchange Rate Updated',
-            description: `Calculated rate: 1 ${optimizedCurrencyService.getCurrencySymbol(optimizedCurrencyService.getCurrencyForCountrySync(originCountry))} = ${calculatedRate} ${optimizedCurrencyService.getCurrencySymbol(optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry))}`,
+            description: `Calculated rate: 1 ${currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(originCountry))} = ${calculatedRate} ${currencyService.getCurrencySymbol(currencyService.getCurrencyForCountrySync(destinationCountry))}`,
           });
         }
       }
@@ -297,8 +297,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         {formData.originCountry && (
           <div className="text-sm text-gray-600 bg-teal-50 p-3 rounded-lg">
             <strong>Currency:</strong> All costs below should be entered in{' '}
-            {optimizedCurrencyService.getCurrencySymbol(
-              optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry),
+            {currencyService.getCurrencySymbol(
+              currencyService.getCurrencyForCountrySync(formData.originCountry),
             )}{' '}
             ({formData.originCountry} currency)
           </div>
@@ -377,12 +377,12 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
             {formData.originCountry && formData.destinationCountry && (
               <div className="text-xs text-gray-500 mt-1">
                 1{' '}
-                {optimizedCurrencyService.getCurrencySymbol(
-                  optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry),
+                {currencyService.getCurrencySymbol(
+                  currencyService.getCurrencyForCountrySync(formData.originCountry),
                 )}{' '}
                 = {formData.exchangeRate}{' '}
-                {optimizedCurrencyService.getCurrencySymbol(
-                  optimizedCurrencyService.getCurrencyForCountrySync(formData.destinationCountry),
+                {currencyService.getCurrencySymbol(
+                  currencyService.getCurrencyForCountrySync(formData.destinationCountry),
                 )}
                 {formData.exchangeRate !== 1 && (
                   <span className="ml-2 text-green-600 font-medium">✓ Auto-calculated</span>
@@ -536,8 +536,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
         onUpdateDeliveryOptions={(options) =>
           setFormData((prev) => ({ ...prev, deliveryOptions: options }))
         }
-        currencySymbol={optimizedCurrencyService.getCurrencySymbol(
-          optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry),
+        currencySymbol={currencyService.getCurrencySymbol(
+          currencyService.getCurrencyForCountrySync(formData.originCountry),
         )}
       />
 
@@ -606,8 +606,8 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
                 className="w-24"
               />
               <span className="text-xs text-gray-500">
-                {optimizedCurrencyService.getCurrencySymbol(
-                  optimizedCurrencyService.getCurrencyForCountrySync(formData.originCountry || 'US'),
+                {currencyService.getCurrencySymbol(
+                  currencyService.getCurrencyForCountrySync(formData.originCountry || 'US'),
                 )}
               </span>
             </div>
@@ -636,7 +636,7 @@ function ShippingRouteForm({ onSubmit, onCancel, initialData }: ShippingRouteFor
 
 export function ShippingRouteManager() {
   const [activeTab, setActiveTab] = useState<
-    'routes' | 'customs' | 'rates' | 'countries' | 'markups'
+    'routes' | 'customs' | 'rates'
   >('routes');
   const { routes, loading, error, createRoute, updateRoute, removeRoute } = useShippingRoutes();
   const { data: _countries = [], isLoading: _countriesLoading } = useAllCountries();
@@ -735,18 +735,7 @@ export function ShippingRouteManager() {
         >
           Exchange Rates
         </button>
-        <button
-          className={`px-4 py-2 font-semibold rounded-t ${activeTab === 'countries' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}
-          onClick={() => setActiveTab('countries')}
-        >
-          Countries
-        </button>
-        <button
-          className={`px-4 py-2 font-semibold rounded-t ${activeTab === 'markups' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}
-          onClick={() => setActiveTab('markups')}
-        >
-          Markups
-        </button>
+        {/* Countries and Markups tabs removed */}
       </div>
       {activeTab === 'routes' ? (
         <div>
@@ -827,12 +816,12 @@ export function ShippingRouteManager() {
                       </CardTitle>
                       <CardDescription>
                         Base:{' '}
-                        {optimizedCurrencyService.getCurrencySymbol(
-                          optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(route.origin_country),
                         )}
                         {route.base_shipping_cost} +{' '}
-                        {optimizedCurrencyService.getCurrencySymbol(
-                          optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(route.origin_country),
                         )}
                         {route.shipping_per_kg || 0}/
                         {route.weight_unit || 'kg'}
@@ -840,12 +829,12 @@ export function ShippingRouteManager() {
                         {route.exchange_rate && route.exchange_rate !== 1 && (
                           <span className="text-xs text-teal-600 block mt-1">
                             Rate: 1{' '}
-                            {optimizedCurrencyService.getCurrencySymbol(
-                              optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(route.origin_country),
                             )}{' '}
                             = {route.exchange_rate}{' '}
-                            {optimizedCurrencyService.getCurrencySymbol(
-                              optimizedCurrencyService.getCurrencyForCountrySync(route.destination_country),
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(route.destination_country),
                             )}
                           </span>
                         )}
@@ -887,8 +876,8 @@ export function ShippingRouteManager() {
                             <li key={index}>
                               {tier.min}-{tier.max || '∞'}
                               {route.weight_unit || 'kg'}:{' '}
-                              {optimizedCurrencyService.getCurrencySymbol(
-                                optimizedCurrencyService.getCurrencyForCountrySync(route.origin_country),
+                              {currencyService.getCurrencySymbol(
+                                currencyService.getCurrencyForCountrySync(route.origin_country),
                               )}
                               {tier.cost}
                             </li>
@@ -948,111 +937,11 @@ export function ShippingRouteManager() {
           </div>
           <ExchangeRateManager />
         </div>
-      ) : activeTab === 'countries' ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">Countries & Exchange Rates</h2>
-              <p className="text-gray-600">
-                Manage country settings, currencies, and exchange rates
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-4">
-            {_countriesLoading ? (
-              <div className="text-center py-8">Loading countries...</div>
-            ) : _countries.length > 0 ? (
-              _countries.map((country: any) => (
-              <Card key={country.code}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center space-x-2">
-                        <span>
-                          {country.name} ({country.code})
-                        </span>
-                        <Badge variant="secondary">{country.currency}</Badge>
-                      </CardTitle>
-                      <CardDescription>
-                        Exchange Rate: {country.rate_from_usd} {country.currency}/USD
-                        {country.sales_tax > 0 && ` • Sales Tax: ${country.sales_tax}%`}
-                        {country.vat > 0 && ` • VAT: ${country.vat}%`}
-                      </CardDescription>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          // This would open the CountrySettingsManager for this specific country
-                          // For now, we'll just show a message
-                          toast({
-                            title: 'Edit Country',
-                            description: `Edit functionality for ${country.name} will be implemented`,
-                          });
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <strong>Payment Gateway:</strong>
-                      <div className="mt-1 space-y-1">
-                        <div>Gateway: {country.payment_gateway || 'stripe'}</div>
-                        <div>Default: {country.default_gateway || 'bank_transfer'}</div>
-                      </div>
-                    </div>
-                    <div>
-                      <strong>Shipping:</strong>
-                      <div className="mt-1 space-y-1">
-                        <div>Min Shipping: {country.min_shipping || 0}</div>
-                        <div>Additional: {country.additional_shipping || 0}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-sm">
-                    <strong>Additional Info:</strong>
-                    <div className="mt-1 grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="text-gray-600">Last Updated:</span>{' '}
-                        {new Date(country.updated_at).toLocaleDateString()}
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Routes:</span>{' '}
-                        {
-                          routes.filter(
-                            (r) =>
-                              r.origin_country === country.code ||
-                              r.destination_country === country.code,
-                          ).length
-                        }
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              ))
-            ) : (
-              <div className="text-center py-8">No countries available</div>
-            )}
-          </div>
-          {!_countriesLoading && _countries.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-gray-600">No countries configured yet.</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Countries are automatically managed through the system.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
       ) : (
-        <MarkupManager />
+        <div className="text-center py-8 text-gray-500">
+          {/* Countries and Markups tabs removed */}
+          <p>Invalid tab selected</p>
+        </div>
       )}
     </div>
   );

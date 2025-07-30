@@ -1,6 +1,5 @@
 import React from 'react';
 import { StripeWeightSelector } from './StripeWeightSelector';
-import { SmartHSNSearch } from '@/components/admin/hsn-components/SmartHSNSearch';
 import { cn } from '@/lib/utils';
 
 interface WeightSuggestion {
@@ -34,11 +33,8 @@ export const InlineStripeSelectors: React.FC<InlineStripeSelectorsProps> = ({
   weight,
   weightSuggestions,
   onWeightChange,
-  currentHSN,
-  hsnSuggestions,
-  onHSNSelect,
-  onHSNRemove,
-  className,
+  currenthsnSuggestions,
+  ononclassName,
 }) => {
   return (
     <div className={cn('flex items-center gap-6 flex-wrap', className)}>
@@ -52,7 +48,7 @@ export const InlineStripeSelectors: React.FC<InlineStripeSelectorsProps> = ({
 
       <SmartHSNSearch
         currentHSNCode={currentHSN?.code}
-        onSelect={(hsn) => onHSNSelect({ code: hsn.hsn_code, description: hsn.display_name })}
+        onSelect={(hsn) => ondescription: hsn.display_name })}
         compact={true}
         size="sm"
       />

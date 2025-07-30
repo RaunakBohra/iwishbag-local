@@ -71,18 +71,19 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       const sessionToken = this.generateSessionToken();
 
       const { data, error } = await supabase
-        .from('guest_checkout_sessions')
+        .from('checkout_sessions')
         .insert({
           session_token: sessionToken,
-          quote_id: request.quote_id,
+          quote_ids: [request.quote_id], // Convert single quote_id to array
           guest_name: request.guest_name,
           guest_email: request.guest_email,
           guest_phone: request.guest_phone,
-          shipping_address: request.shipping_address,
+          temporary_shipping_address: request.shipping_address, // Use unified field name
           payment_currency: request.payment_currency,
           payment_method: request.payment_method,
           payment_amount: request.payment_amount,
           status: 'active',
+          is_guest: true, // Mark as guest checkout
           expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
         })
         .select()
@@ -93,7 +94,16 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
         return { success: false, error: error.message };
       }
 
-      return { success: true, session: data };
+      // Transform the data to match the expected guest session format
+      const guestSession: GuestCheckoutSession = {
+        ...data,
+        quote_id: data.quote_ids[0], // Get first quote ID for guest sessions
+        guest_name: data.guest_name || '',
+        guest_email: data.guest_email || '',
+        guest_phone: data.guest_phone || '',
+        shipping_address: data.temporary_shipping_address,
+      };
+      return { success: true, session: guestSession };
     } catch (error) {
       console.error('Error in createSession:', error);
       return {
@@ -125,10 +135,11 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       if (request.status !== undefined) updateData.status = request.status;
 
       const { data, error } = await supabase
-        .from('guest_checkout_sessions')
+        .from('checkout_sessions')
         .update(updateData)
         .eq('session_token', request.session_token)
         .eq('status', 'active') // Only update active sessions
+        .eq('is_guest', true) // Only update guest sessions
         .select()
         .single();
 
@@ -167,7 +178,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       const sessionToken = this.generateSessionToken();
 
       const { data, error } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .insert({
           session_token: sessionToken,
           user_id: request.user_id,
@@ -177,6 +188,7 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
           payment_method: request.payment_method,
           payment_amount: request.payment_amount,
           status: 'active',
+          is_guest: false, // Mark as authenticated checkout
           expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
         })
         .select()
@@ -218,10 +230,11 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
       if (request.status !== undefined) updateData.status = request.status;
 
       const { data, error } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .update(updateData)
         .eq('session_token', request.session_token)
         .eq('status', 'active') // Only update active sessions
+        .eq('is_guest', false) // Only update authenticated sessions
         .select()
         .single();
 
@@ -256,10 +269,11 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   ): Promise<UnifiedSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .select('*')
         .eq('user_id', userId)
         .eq('status', 'active')
+        .eq('is_guest', false)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
@@ -289,10 +303,11 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
     try {
       // Get the session first
       const { data: sessionData, error: sessionError } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .select('*')
         .eq('session_token', sessionToken)
         .eq('status', 'active')
+        .eq('is_guest', false)
         .single();
 
       if (sessionError || !sessionData) {
@@ -324,13 +339,14 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
 
       // Mark session as completed
       const { data, error } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .update({
           status: 'completed',
           updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .eq('status', 'active')
+        .eq('is_guest', false)
         .select()
         .single();
 
@@ -384,9 +400,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   private async getGuestSession(sessionToken: string): Promise<GuestSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('guest_checkout_sessions')
+        .from('checkout_sessions')
         .select('*')
         .eq('session_token', sessionToken)
+        .eq('is_guest', true)
         .single();
 
       if (error) {
@@ -416,9 +433,10 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   private async getAuthenticatedSession(sessionToken: string): Promise<UnifiedSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .select('*')
         .eq('session_token', sessionToken)
+        .eq('is_guest', false)
         .single();
 
       if (error) {
@@ -481,13 +499,14 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   private async completeGuestSession(sessionToken: string): Promise<GuestSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('guest_checkout_sessions')
+        .from('checkout_sessions')
         .update({
           status: 'completed',
           updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
         .eq('status', 'active')
+        .eq('is_guest', true)
         .select()
         .single();
 
@@ -546,12 +565,13 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   private async expireGuestSession(sessionToken: string): Promise<GuestSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('guest_checkout_sessions')
+        .from('checkout_sessions')
         .update({
           status: 'expired',
           updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
+        .eq('is_guest', true)
         .neq('status', 'completed') // Don't expire completed sessions
         .select()
         .single();
@@ -577,12 +597,13 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   private async expireAuthenticatedSession(sessionToken: string): Promise<UnifiedSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('authenticated_checkout_sessions')
+        .from('checkout_sessions')
         .update({
           status: 'expired',
           updated_at: new Date().toISOString(),
         })
         .eq('session_token', sessionToken)
+        .eq('is_guest', false)
         .neq('status', 'completed') // Don't expire completed sessions
         .select()
         .single();
@@ -629,10 +650,11 @@ class CheckoutSessionServiceImpl implements GuestSessionService {
   async getSessionByQuoteId(quoteId: string): Promise<GuestSessionResponse> {
     try {
       const { data, error } = await supabase
-        .from('guest_checkout_sessions')
+        .from('checkout_sessions')
         .select('*')
-        .eq('quote_id', quoteId)
+        .contains('quote_ids', [quoteId]) // Check if quote_id is in the array
         .eq('status', 'active')
+        .eq('is_guest', true)
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)

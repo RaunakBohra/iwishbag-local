@@ -498,12 +498,13 @@ const PaymentSuccess: React.FC = () => {
       // Handle guest checkout session if present
       if (guestSessionToken) {
         const { error: sessionError } = await supabase
-          .from('guest_checkout_sessions')
+          .from('checkout_sessions')
           .update({
             status: 'completed',
             updated_at: new Date().toISOString(),
           })
-          .eq('session_token', guestSessionToken);
+          .eq('session_token', guestSessionToken)
+          .eq('is_guest', true); // Only update guest sessions
 
         if (sessionError) {
           console.error('Error updating guest session:', sessionError);

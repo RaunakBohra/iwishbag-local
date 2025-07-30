@@ -25,3 +25,5 @@ export const AdminLayout = () => {
     </ErrorBoundary>
   );
 };
+
+export default AdminLayout;

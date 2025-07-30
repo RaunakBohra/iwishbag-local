@@ -47,7 +47,6 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
     destinationCountry: '',
     itemPrice: '',
     itemWeight: '',
-    customsCategory: '',
   });
   const [estimate, setEstimate] = useState<CostEstimate | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -76,18 +75,6 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
       shipping: countryData.filter((c) => c.shipping_allowed),
     };
   }, [countryData]);
-
-  // Memoized query for customs categories
-  const { data: customsCategories, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['customs-categories'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('customs_categories').select('*').order('name');
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 300000, // Cache for 5 minutes
-    cacheTime: 600000, // Keep in cache for 10 minutes
-  });
 
   // Memoized form validation
   const isFormValid = useMemo(() => {
@@ -158,9 +145,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
           handling_charge: 0,
           insurance_amount: 0,
           customs: {
-            percentage: customsCategory
-              ? customsCategories?.find((c) => c.id === customsCategory)?.duty_percent || 0
-              : 10, // Default 10%
+            percentage: 10, 
           },
         },
         optimization_score: 0,
@@ -204,7 +189,6 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
           destination_country: destinationCountry,
           item_price: itemPrice,
           item_weight: itemWeight,
-          category: customsCategory,
         });
       }
     } catch (error) {
@@ -218,7 +202,7 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
     } finally {
       setIsCalculating(false);
     }
-  }, [formData, isFormValid, toast, countryData, customsCategories]);
+  }, [formData, isFormValid, toast, countryData]);
 
   // Reset form
   const handleReset = useCallback(() => {
@@ -227,13 +211,12 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
       destinationCountry: '',
       itemPrice: '',
       itemWeight: '',
-      customsCategory: '',
     });
     setEstimate(null);
     setError('');
   }, []);
 
-  const isLoading = countriesLoading || categoriesLoading;
+  const isLoading = countriesLoading;
 
   if (isLoading) {
     return (
@@ -339,28 +322,6 @@ export const OptimizedCostEstimator: React.FC<OptimizedCostEstimatorProps> = ({
             step="0.1"
           />
         </div>
-
-        {/* Customs Category (Optional) */}
-        {customsCategories && customsCategories.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="customs-category">Customs Category (Optional)</Label>
-            <Select
-              value={formData.customsCategory}
-              onValueChange={(value) => updateFormData('customsCategory', value)}
-            >
-              <SelectTrigger id="customs-category">
-                <SelectValue placeholder="Select category (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {customsCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
 
         {/* Error Message */}
         {error && (

@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { InsuranceToggle } from './InsuranceToggle';
 import { CustomerShippingSelector } from './CustomerShippingSelector';
 import type { UnifiedQuote, ShippingOption, CustomerPreferences } from '@/types/unified-quote';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { normalizeShippingOptionId } from '@/utils/shippingOptionUtils';
 
 interface CustomerQuoteOptionsProps {
@@ -39,7 +39,7 @@ export const CustomerQuoteOptions: React.FC<CustomerQuoteOptionsProps> = ({
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
-  const currencySymbol = optimizedCurrencyService.getCurrencySymbol(quote.currency);
+  const currencySymbol = currencyService.getCurrencySymbol(quote.currency);
 
   // Get current selections
   const selectedShippingOptionId = quote.operational_data?.shipping?.selected_option;

@@ -181,26 +181,9 @@ serve(async (req) => {
     if (txById) {
       transaction = txById;
     } else {
-      // Try to find by payment_ledger.id (which references payment_transaction_id)
-      const { data: ledgerEntry, error: ledgerError } = await supabaseAdmin
-        .from('payment_ledger')
-        .select('payment_transaction_id')
-        .eq('id', refundRequest.paymentTransactionId)
-        .single();
-
-      if (ledgerEntry?.payment_transaction_id) {
-        const { data: txByLedger, error: errorByLedger } = await supabaseAdmin
-          .from('payment_transactions')
-          .select('*')
-          .eq('id', ledgerEntry.payment_transaction_id)
-          .single();
-
-        if (txByLedger) {
-          transaction = txByLedger;
-        } else {
-          transactionError = errorByLedger;
-        }
-      } else {
+      // Since payment_ledger is consolidated into payment_transactions, 
+      // we'll look for transactions by payment-related fields
+      {
         // If not found by ledger, try to find by paypal_order_id or paypal_capture_id
         const { data: txByPayPalId, error: errorByPayPalId } = await supabaseAdmin
           .from('payment_transactions')
@@ -518,29 +501,33 @@ serve(async (req) => {
       console.log('✅ Refund record stored in gateway_refunds:', gatewayRefund?.id);
     }
 
-    // Create payment ledger entry for the refund
-    const { data: ledgerEntry, error: ledgerError } = await supabaseAdmin
-      .from('payment_ledger')
+    // Create refund transaction entry in payment_transactions (negative amount)
+    const { data: refundTransaction, error: refundError } = await supabaseAdmin
+      .from('payment_transactions')
       .insert({
-        payment_transaction_id: transaction.id,
-        type: 'refund',
+        quote_id: transaction.quote_id,
         amount: -refundRequest.refundAmount, // Negative amount for refund
         currency: refundRequest.currency,
-        description: `PayPal refund - ${refundRequest.reason || 'Refund processed'}`,
-        reference_type: 'gateway_refund',
-        reference_id: gatewayRefund?.id || refundResponse.id,
+        status: 'completed',
+        payment_method: 'paypal',
+        payment_type: 'refund',
+        paypal_order_id: transaction.paypal_order_id,
+        paypal_capture_id: transaction.paypal_capture_id,
+        gateway_code: 'paypal',
         gateway_transaction_id: refundResponse.id,
         gateway_response: refundResponse,
-        status: 'processing', // Match gateway_refunds status
-        processed_at: new Date().toISOString(),
+        reference_number: `PayPal refund - ${refundRequest.reason || 'Refund processed'}`,
+        notes: refundRequest.note,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
 
-    if (ledgerError) {
-      console.error('⚠️ Failed to create payment ledger entry:', ledgerError);
+    if (refundError) {
+      console.error('⚠️ Failed to create refund transaction entry:', refundError);
     } else {
-      console.log('✅ Payment ledger entry created:', ledgerEntry?.id);
+      console.log('✅ Refund transaction entry created:', refundTransaction?.id);
     }
 
     // Update payment transaction with refund info

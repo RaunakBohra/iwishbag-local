@@ -21,7 +21,7 @@ export const useDeliveryIntegration = () => {
       await deliveryService.initialize();
 
       // Prepare addresses based on destination country
-      const fromAddress = getWarehouseAddress(quote.origin_country || 'US');
+      const fromAddress = getOriginAddress(quote.origin_country || 'US');
       const toAddress = getCustomerAddress(quote);
 
       if (!toAddress.phone || !toAddress.addressLine1 || !toAddress.city) {
@@ -108,7 +108,7 @@ export const useDeliveryIntegration = () => {
       const deliveryService = DeliveryService.getInstance();
       await deliveryService.initialize();
 
-      const fromAddress = getWarehouseAddress(quote.origin_country || 'US');
+      const fromAddress = getOriginAddress(quote.origin_country || 'US');
       const toAddress = getCustomerAddress(quote);
 
       // Calculate total weight
@@ -152,10 +152,10 @@ export const useDeliveryIntegration = () => {
 };
 
 // Helper functions
-function getWarehouseAddress(country: string): DeliveryAddress {
-  const warehouses: Record<string, DeliveryAddress> = {
+function getOriginAddress(country: string): DeliveryAddress {
+  const originAddresses: Record<string, DeliveryAddress> = {
     US: {
-      name: 'iwishBag US Warehouse',
+      name: 'iwishBag US Hub',
       phone: '+14155552671',
       addressLine1: '123 Warehouse Ave',
       city: 'San Francisco',
@@ -183,7 +183,7 @@ function getWarehouseAddress(country: string): DeliveryAddress {
     }
   };
 
-  return warehouses[country] || warehouses.US;
+  return originAddresses[country] || originAddresses.US;
 }
 
 function getCustomerAddress(quote: any): DeliveryAddress {

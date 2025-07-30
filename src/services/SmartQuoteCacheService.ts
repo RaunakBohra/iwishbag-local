@@ -99,9 +99,7 @@ export class SmartQuoteCacheService {
   private generateCacheKey(input: EnhancedCalculationInput): QuoteCacheKey {
     const quote = input.quote;
     
-    // Create items hash (includes prices, weights, quantities, HSN codes)
-    const itemsData = quote.items.map(item => ({
-      name: item.name,
+    // Create items hash (includes prices, weights, quantities,
       price: item.costprice_origin,
       weight: item.weight,
       quantity: item.quantity,
@@ -281,8 +279,7 @@ export class SmartQuoteCacheService {
     
     const cacheKey = `tax_${calculationMethod}_${originCountry}_${destinationCountry}_${itemsSignature}`;
     
-    // Tax calculations have medium TTL (HSN codes and rates change occasionally)
-    this.setMemoryCache(cacheKey, taxResult, 20 * 60 * 1000); // 20 minutes
+    // Tax calculations have medium TTL (taxResult, 20 * 60 * 1000); // 20 minutes
     console.log(`[QuoteCache] Cached tax calculation: ${cacheKey}`);
   }
 

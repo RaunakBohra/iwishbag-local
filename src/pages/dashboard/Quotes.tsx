@@ -33,19 +33,12 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { getQuoteRouteCountries } from '@/lib/route-specific-customs';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
-import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
 
 // AddToCartButton component
 const AddToCartButton = ({ quoteId, className = '' }: { quoteId: string; className?: string }) => {
   const { addToCart } = useQuoteState(quoteId);
 
   const handleAddToCart = async () => {
-    // Track add to cart activity
-    await userActivityService.trackQuoteActivity(ACTIVITY_TYPES.PRODUCT_ADD_TO_CART, quoteId, {
-      action: 'add_to_cart',
-      source: 'quotes_page',
-    });
-
     await addToCart();
   };
 

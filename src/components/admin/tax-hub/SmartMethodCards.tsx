@@ -114,7 +114,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
           name: 'Auto (Intelligent)',
           shortDescription: 'System chooses the best method automatically',
           fullDescription:
-            'Intelligent selection between HSN and fallback based on data availability, confidence scores, and historical performance. Adapts automatically as data improves.',
+            'Intelligent selection between confidence scores, and historical performance. Adapts automatically as data improves.',
           icon: <Zap className="h-5 w-5" />,
           confidence: 0.95,
           status: 'recommended',
@@ -140,11 +140,8 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
         },
         {
           id: 'hsn_only',
-          name: 'HSN Per-Item',
-          shortDescription: 'Precise per-item calculation using HSN codes',
-          fullDescription:
-            'Calculate taxes for each item individually using HSN classification codes with minimum valuations and currency conversion. Most accurate when HSN data is complete.',
-          icon: <BarChart3 className="h-5 w-5" />,
+          name: 'shortDescription: 'Precise per-item calculation using fullDescription:
+            'Calculate taxes for each item individually using icon: <BarChart3 className="h-5 w-5" />,
           confidence: comparison.hsn_available ? 0.92 : 0.25,
           status: comparison.hsn_available ? 'optimal' : 'limited',
           pros: [
@@ -154,8 +151,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
             'Detailed item-level breakdown',
           ],
           cons: [
-            'Requires HSN codes for all items',
-            'More complex calculations',
+            'Requires 'More complex calculations',
             'May be slower than other methods',
           ],
           costImpact: {
@@ -164,9 +160,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
           },
           availability: {
             dataAvailable: comparison.hsn_available,
-            requirements: ['HSN codes assigned to items', 'HSN master data'],
-            missingRequirements: comparison.hsn_available ? [] : ['HSN codes for items'],
-          },
+            requirements: [''missingRequirements: comparison.hsn_available ? [] : ['},
         },
         {
           id: 'legacy_fallback',
@@ -203,8 +197,7 @@ export const SmartMethodCards: React.FC<SmartMethodCardsProps> = ({
           name: 'Manual Control',
           shortDescription: 'Full admin control with hybrid approach',
           fullDescription:
-            'Manual method selection with hybrid calculation approach. Uses HSN where available and falls back to route data otherwise. Best for experienced admins who understand tax implications.',
-          icon: <Settings className="h-5 w-5" />,
+            'Manual method selection with hybrid calculation approach. Uses icon: <Settings className="h-5 w-5" />,
           confidence: 0.85,
           status: 'available',
           pros: [

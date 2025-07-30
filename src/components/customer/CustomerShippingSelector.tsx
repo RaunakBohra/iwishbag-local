@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Truck, Clock, DollarSign, Zap, CheckCircle, Package } from 'lucide-react';
 import type { UnifiedQuote, ShippingOption, RouteHandlingCharge } from '@/types/unified-quote';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import {
   formatDeliveryDays,
   isExpressDelivery,
@@ -33,7 +33,7 @@ export const CustomerShippingSelector: React.FC<CustomerShippingSelectorProps> =
   showHandlingCharges = true,
   isLoading = false,
 }) => {
-  const currencySymbol = optimizedCurrencyService.getCurrencySymbol(quote.currency);
+  const currencySymbol = currencyService.getCurrencySymbol(quote.currency);
 
   // Calculate items total for handling calculation
   const itemsTotal =

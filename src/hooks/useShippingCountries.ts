@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const useShippingCountries = () => {
   return useQuery({
-    queryKey: ['countries', 'shipping-allowed'],
+    queryKey: ['country_settings_table', 'shipping-allowed'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('country_settings')

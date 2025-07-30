@@ -470,10 +470,12 @@ serve(async (req) => {
       console.log('⚠️ Could not store payment transaction:', txError);
       // Try guest checkout session as fallback
       const sessionId = crypto.randomUUID();
-      const { error: sessionError } = await supabaseAdmin.from('guest_checkout_sessions').insert({
+      const { error: sessionError } = await supabaseAdmin.from('checkout_sessions').insert({
         id: sessionId,
+        session_token: crypto.randomUUID(),
+        quote_ids: quoteIds,
+        is_guest: true,
         checkout_data: {
-          quote_ids: quoteIds,
           amount: amount,
           currency: currency,
           customer_email: customerEmail,
@@ -482,7 +484,12 @@ serve(async (req) => {
           paypal_order_id: paypalOrderData.id,
           created_at: new Date().toISOString(),
         },
+        metadata: {
+          paypal_order_id: paypalOrderData.id,
+        },
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
 
       if (sessionError) {

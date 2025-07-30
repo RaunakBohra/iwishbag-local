@@ -12,8 +12,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
 import * as Sentry from '@sentry/react';
 import { currencyService } from '@/services/CurrencyService';
-import { userActivityService } from '@/services/UserActivityService';
-import { notificationService } from '@/services/NotificationService';
 import type { CountrySettings } from '@/types/CountrySettings';
 
 // ============================================================================
@@ -46,18 +44,7 @@ export interface UnifiedUserProfile {
   
   // Activity & engagement
   activity_summary: ActivitySummary;
-  notification_preferences: NotificationPreferences;
   
-  // Integration data
-  addresses: Address[];
-  payment_methods: PaymentMethod[];
-  
-  // Metadata
-  created_at: string;
-  updated_at: string;
-  last_active_at: string;
-}
-
 export interface CustomerContext {
   // Profile status
   profile_type: 'registered' | 'guest' | 'admin_created' | 'oauth';
@@ -108,22 +95,7 @@ export interface UserPreferences {
   number_format: string;
   
   // Communication preferences
-  email_notifications: boolean;
-  sms_notifications: boolean;
-  push_notifications: boolean;
-  marketing_emails: boolean;
-  
-  // Feature preferences
-  auto_approve_quotes: boolean;
-  preferred_payment_gateway: string | null;
-  default_shipping_method: string | null;
-  
-  // Privacy settings
-  profile_visibility: 'public' | 'private';
-  activity_tracking: boolean;
-  data_sharing: boolean;
-}
-
+  email_
 export interface ActivitySummary {
   // Recent activity
   last_login: string | null;
@@ -264,18 +236,13 @@ class UnifiedUserContextService {
         await this.updateUserPreferences(userId, updates.preferences);
       }
 
-      // Update notification preferences
-      if (updates.notification_preferences) {
-        await this.updateNotificationPreferences(userId, updates.notification_preferences);
-      }
+            if (updates.notification_preferences) {
+        await this.update      }
 
       // Invalidate cache
       this.invalidateUserCache(userId);
 
-      // Track activity
-      await userActivityService.trackActivity('profile:update', {
-        user_id: userId,
-        updated_fields: Object.keys(updates),
+      // Activity tracking removed
       });
 
       return true;
@@ -314,13 +281,11 @@ class UnifiedUserContextService {
       // Get activity summary
       const activitySummary = await this.buildActivitySummary(userId);
 
-      // Get notification preferences
-      const notificationPreferences = await this.getNotificationPreferences(userId);
-
+            const notificationPreferences = await this.get
       // Get addresses and payment methods
       const [addresses, paymentMethods] = await Promise.all([
-        this.getUserAddresses(userId),
-        this.getUserPaymentMethods(userId),
+        this.getDeliveryAddresses(userId),
+        this.getUserPaymentMethods(userId)
       ]);
 
       // Get user permissions
@@ -353,8 +318,7 @@ class UnifiedUserContextService {
 
         // Activity & engagement
         activity_summary: activitySummary,
-        notification_preferences: notificationPreferences,
-
+        
         // Integration data
         addresses,
         payment_methods: paymentMethods,
@@ -362,7 +326,7 @@ class UnifiedUserContextService {
         // Metadata
         created_at: profile?.created_at || user.user.created_at,
         updated_at: profile?.updated_at || new Date().toISOString(),
-        last_active_at: profile?.last_active_at || new Date().toISOString(),
+        last_active_at: profile?.last_active_at || new Date().toISOString()
       };
 
       return unifiedProfile;
@@ -420,7 +384,7 @@ class UnifiedUserContextService {
         in_transit_orders: inTransitOrders,
         joined_date: joinedDate,
         last_order_date: lastOrderDate,
-        customer_segment: customerSegment,
+        customer_segment: customerSegment
       };
     } catch (error) {
       logger.error('Failed to build customer context', { userId, error });
@@ -437,7 +401,7 @@ class UnifiedUserContextService {
         in_transit_orders: 0,
         joined_date: new Date().toISOString(),
         last_order_date: null,
-        customer_segment: 'new',
+        customer_segment: 'new'
       };
     }
   }
@@ -484,7 +448,7 @@ class UnifiedUserContextService {
           postal_code: addr.postal_code,
           country: addr.country,
           is_default: addr.is_default,
-          created_at: addr.created_at,
+          created_at: addr.created_at
         })) || [],
         default_address_id: addresses?.find(a => a.is_default)?.id || null,
         total_packages_received: totalPackagesReceived,
@@ -508,7 +472,7 @@ class UnifiedUserContextService {
         total_shipping_spent: 0,
         auto_consolidation_enabled: false,
         preferred_carrier: null,
-        storage_alert_threshold: 30,
+        storage_alert_threshold: 30
       };
     }
   }
@@ -517,10 +481,8 @@ class UnifiedUserContextService {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
-      // Get recent activity
-      const activities = await userActivityService.getRecentActivities(undefined, 100);
-      
-      const loginCount30d = activities.filter(a => 
+      // Activity tracking removed
+      const loginCount30d = 0; // activities.filter(a => 
         a.activity_type === 'page:view' && 
         new Date(a.created_at) > thirtyDaysAgo
       ).length;
@@ -544,7 +506,7 @@ class UnifiedUserContextService {
         support_tickets_30d: 0, // Calculate from support
         favorite_categories: [],
         preferred_shopping_times: [],
-        average_order_value: 0,
+        average_order_value: 0
       };
     } catch (error) {
       logger.error('Failed to build activity summary', { userId, error });
@@ -557,7 +519,7 @@ class UnifiedUserContextService {
         support_tickets_30d: 0,
         favorite_categories: [],
         preferred_shopping_times: [],
-        average_order_value: 0,
+        average_order_value: 0
       };
     }
   }
@@ -607,38 +569,21 @@ class UnifiedUserContextService {
       currency_code: currency?.code || 'USD',
       date_format: 'MM/DD/YYYY',
       number_format: 'en-US',
-      email_notifications: true,
-      sms_notifications: false,
-      push_notifications: true,
-      marketing_emails: true,
+      email_      sms_      push_      marketing_emails: true,
       auto_approve_quotes: false,
-      preferred_payment_gateway: null,
       default_shipping_method: null,
       profile_visibility: 'private',
       activity_tracking: true,
       data_sharing: false,
-      ...profile?.preferences,
+      ...profile?.preferences
     };
   }
 
-  private async getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
-    return {
-      email_enabled: true,
-      sms_enabled: false,
-      push_enabled: true,
-      order_updates: true,
-      promotional_offers: true,
-      system_announcements: true,
-      package_alerts: true,
-      quiet_hours_start: null,
-      quiet_hours_end: null,
-      digest_frequency: 'real_time',
-    };
-  }
+  private async get  }
 
-  private async getUserAddresses(userId: string): Promise<Address[]> {
+  private async getDeliveryAddresses(userId: string): Promise<Address[]> {
     const { data: addresses } = await supabase
-      .from('customer_addresses')
+      .from('warehouse_suite_addresses')
       .select('*')
       .eq('user_id', userId);
 
@@ -647,7 +592,7 @@ class UnifiedUserContextService {
       type: addr.type,
       full_address: `${addr.address_line_1}, ${addr.city}, ${addr.country}`,
       is_default: addr.is_default,
-      country_code: addr.country_code,
+      country_code: addr.country_code
     })) || [];
   }
 
@@ -663,7 +608,7 @@ class UnifiedUserContextService {
         full_name: updates.full_name,
         phone_number: updates.phone_number,
         country_code: updates.country_code,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .eq('id', userId);
 
@@ -675,26 +620,14 @@ class UnifiedUserContextService {
       .from('profiles')
       .update({
         preferences,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .eq('id', userId);
 
     if (error) throw error;
   }
 
-  private async updateNotificationPreferences(
-    userId: string, 
-    preferences: NotificationPreferences
-  ): Promise<void> {
-    // Store notification preferences
-    const { error } = await supabase
-      .from('user_notification_preferences')
-      .upsert({
-        user_id: userId,
-        preferences,
-        updated_at: new Date().toISOString(),
-      });
-
+  private async update
     if (error) throw error;
   }
 
@@ -713,7 +646,7 @@ class UnifiedUserContextService {
   private cacheUser(userId: string, profile: UnifiedUserProfile): void {
     this.userCache.set(userId, {
       data: profile,
-      expires: Date.now() + this.CACHE_DURATION,
+      expires: Date.now() + this.CACHE_DURATION
     });
   }
 
@@ -733,7 +666,7 @@ class UnifiedUserContextService {
     const transaction = typeof Sentry?.startTransaction === 'function'
       ? Sentry.startTransaction({
           name: `UnifiedUserContextService.${operation}`,
-          op: 'user_context',
+          op: 'user_context'
         })
       : null;
 
@@ -741,16 +674,16 @@ class UnifiedUserContextService {
       Sentry.captureException(error, {
         tags: {
           service: 'UnifiedUserContextService',
-          operation,
+          operation
         },
-        extra: context,
+        extra: context
       });
       transaction.finish();
     }
 
     logger.error(`UnifiedUserContextService.${operation} failed`, {
       error: error.message,
-      context,
+      context
     });
   }
 
@@ -813,5 +746,5 @@ export type {
   NotificationPreferences,
   VirtualAddress,
   Address,
-  PaymentMethod,
+  PaymentMethod
 };

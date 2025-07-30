@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Package, Truck, Clock, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 
 // Delivery option interface
@@ -468,12 +468,12 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                                 exchangeRate?: number,
                               ) => {
                                 const originCurrency =
-                                  optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
+                                  currencyService.getCurrencyForCountrySync(originCountry);
                                 const destinationCurrency =
-                                  optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
+                                  currencyService.getCurrencyForCountrySync(destinationCountry);
 
                                 const originSymbol =
-                                  optimizedCurrencyService.getCurrencySymbol(originCurrency);
+                                  currencyService.getCurrencySymbol(originCurrency);
                                 const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
                                 if (exchangeRate && exchangeRate !== 1) {
@@ -492,7 +492,7 @@ export const DeliveryOptionsManager: React.FC<DeliveryOptionsManagerProps> = ({
                                     convertedAmount = Math.round(convertedAmount * 100) / 100;
                                   }
                                   const destinationSymbol =
-                                    optimizedCurrencyService.getCurrencySymbol(destinationCurrency);
+                                    currencyService.getCurrencySymbol(destinationCurrency);
                                   const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
 
                                   return {

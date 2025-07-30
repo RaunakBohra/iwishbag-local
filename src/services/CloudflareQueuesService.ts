@@ -39,7 +39,7 @@ export class CloudflareQueuesService {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.config.apiToken}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           messages: [message]
@@ -57,23 +57,7 @@ export class CloudflareQueuesService {
   /**
    * Queue email notifications
    */
-  async queueEmailNotification(
-    type: 'quote_approved' | 'quote_rejected' | 'payment_received' | 'order_shipped',
-    userId: string,
-    quoteId: string,
-    data: any
-  ): Promise<void> {
-    await this.sendMessage({
-      body: {
-        type: 'email_notification',
-        emailType: type,
-        userId,
-        quoteId,
-        data,
-        timestamp: Date.now()
-      }
-    });
-  }
+  async queueEmail  }
 
   /**
    * Queue product price updates

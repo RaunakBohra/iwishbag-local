@@ -7,7 +7,6 @@
 // =============================================
 
 import { supabase } from '@/integrations/supabase/client';
-import { userActivityService } from './UserActivityService';
 
 // Search result interfaces
 export interface SearchResult {
@@ -343,12 +342,8 @@ class SearchService {
     resultCount: number,
   ): Promise<void> {
     try {
-      // Use both UserActivityService and RPC function for comprehensive tracking
+      // Track search activity via RPC function
       await Promise.all([
-        userActivityService.trackSearchActivity(query, resultCount, {
-          search_source: 'command_palette',
-          search_context: 'global_search',
-        }),
         supabase.rpc('log_search_activity', {
           user_id: userId,
           search_query: query,

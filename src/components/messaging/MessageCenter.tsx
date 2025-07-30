@@ -1,21 +1,14 @@
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { AdminMessageCenterComplete as AdminMessageCenter } from './AdminMessageCenterComplete';
 import { CustomerMessageCenter } from './CustomerMessageCenter';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const MessageCenter = () => {
-  const { data: hasAdminRole } = useAdminRole();
-
-  if (hasAdminRole === undefined) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (hasAdminRole) {
+  const { user } = useAuth();
+  
+  // All authenticated users get admin message center (simplified access)
+  if (user) {
     return <AdminMessageCenter />;
   }
-
+  
   return <CustomerMessageCenter />;
 };

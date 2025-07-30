@@ -1405,7 +1405,7 @@ export const ReturnManagementDashboard: React.FC = () => {
           returnId={selectedReturn.id}
           customerAddress={{
             name: selectedReturn.quote?.user?.full_name || '',
-            street1: '', // Would need to fetch from customer_addresses table
+            street1: '', // Would need to fetch from warehouse_suite_addresses table
             street2: '',
             city: '',
             state: '',

@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   Package,
   MessageSquare,
-  Lock,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +28,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
+  FormMessage
 } from '@/components/ui/form';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -36,7 +36,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from '@/components/ui/select';
 import {
   useTicketDetail,
@@ -45,11 +45,10 @@ import {
   useUpdateTicketStatus,
   useUpdateTicket,
   useHasCompletedSurvey,
-  useSubmitSatisfactionSurvey,
+  useSubmitSatisfactionSurvey
 } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { ReplyTemplatesManager } from '@/components/support/ReplyTemplatesManager';
 import { CustomerSatisfactionSurvey } from '@/components/support/CustomerSatisfactionSurvey';
 import { InternalNotesPanel } from '@/components/support/InternalNotesPanel';
@@ -63,7 +62,7 @@ import {
   TICKET_PRIORITY_COLORS,
   TICKET_CATEGORY_LABELS,
   type TicketStatus,
-  type TicketPriority,
+  type TicketPriority
 } from '@/types/ticket';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -73,7 +72,7 @@ const replySchema = z.object({
     .string()
     .min(1, 'Message is required')
     .max(2000, 'Message must be less than 2000 characters'),
-  is_internal: z.boolean().default(false),
+  is_internal: z.boolean().default(false)
 });
 
 type ReplyForm = z.infer<typeof replySchema>;
@@ -107,8 +106,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { users: adminUsers = [] } = useUserRoles();
-  const { data: isAdmin } = useAdminRole();
-
+  
   const { data: ticket, isLoading: ticketLoading } = useTicketDetail(ticketId);
 
   const { data: replies = [], isLoading: repliesLoading } = useTicketReplies(ticketId);
@@ -123,8 +121,8 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
     resolver: zodResolver(replySchema),
     defaultValues: {
       message: '',
-      is_internal: false,
-    },
+      is_internal: false
+    }
   });
 
   // Auto-scroll to bottom when new replies are added
@@ -133,18 +131,17 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   }, [replies.length]);
 
   // Check if current user can view this ticket
-  const canView = ticket && (ticket.user_id === user?.id || isAdmin);
-
-  // Helper function to get appropriate status label
-  const getStatusLabel = (status: TicketStatus) => {
-    return isAdmin ? ADMIN_TICKET_STATUS_LABELS[status] : CUSTOMER_TICKET_STATUS_LABELS[status];
-  };
+  const canView = ticket && (ticket.user_id === user?.id || !!user); // All authenticated users can view (simplified access)
 
   // Helper function to get status description
   const getStatusDescription = (status: TicketStatus) => {
-    return isAdmin
-      ? TICKET_STATUS_DESCRIPTIONS[status].admin
-      : TICKET_STATUS_DESCRIPTIONS[status].customer;
+    return TICKET_STATUS_DESCRIPTIONS[status] || 'Unknown status';
+  };
+
+  // Helper function to get status label based on user type
+  const getStatusLabel = (status: TicketStatus) => {
+    // All authenticated users see admin labels (simplified access)
+    return user ? ADMIN_TICKET_STATUS_LABELS[status] : CUSTOMER_TICKET_STATUS_LABELS[status];
   };
 
   const handleStatusChange = (status: TicketStatus) => {
@@ -154,7 +151,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   const handlePriorityChange = (priority: TicketPriority) => {
     updateTicketMutation.mutate({
       ticketId,
-      updateData: { priority },
+      updateData: { priority }
     });
   };
 
@@ -162,7 +159,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
     const assigned_to = assignedTo === 'unassigned' ? null : assignedTo;
     updateTicketMutation.mutate({
       ticketId,
-      updateData: { assigned_to },
+      updateData: { assigned_to }
     });
   };
 
@@ -198,12 +195,12 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
       await createReplyMutation.mutateAsync({
         ticket_id: ticketId,
         message: values.message,
-        is_internal: values.is_internal,
+        is_internal: values.is_internal
       });
 
       form.reset({
         message: '',
-        is_internal: false,
+        is_internal: false
       });
     } catch (error) {
       console.error('Error submitting reply:', error);
@@ -224,11 +221,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
   // Show survey for non-admin users when ticket is resolved and survey not completed
   const shouldShowSurvey =
     ticket &&
-    !isAdmin &&
-    ticket.user_id === user?.id &&
     ticket.status === 'resolved' &&
     !hasCompletedSurvey &&
-    !showSurvey;
+    ticket.user_id === user?.id;
 
   // Auto-show survey when ticket is resolved
   React.useEffect(() => {
@@ -279,8 +274,10 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
 
   // Filter replies based on user role (hide internal notes from customers)
   const visibleReplies = replies.filter((reply) => {
-    if (isAdmin) return true; // Admins see all replies
-    return !reply.is_internal; // Customers only see public replies
+    // Show all replies to authenticated users (simplified access)
+    if (user) return true;
+    // Hide internal notes from non-authenticated users
+    return !reply.is_internal;
   });
 
   return (
@@ -304,7 +301,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
         </div>
 
         {/* Admin Status Controls */}
-        {isAdmin && (
+        {user && (
           <Select
             value={ticket.status}
             onValueChange={handleStatusChange}
@@ -319,9 +316,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(
-                isAdmin ? ADMIN_TICKET_STATUS_LABELS : CUSTOMER_TICKET_STATUS_LABELS,
-              ).map(([status, label]) => (
+              {Object.entries(ADMIN_TICKET_STATUS_LABELS).map(([status, label]) => (
                 <SelectItem key={status} value={status}>
                   <div className="flex items-center gap-2">
                     <StatusIcon status={status} />
@@ -393,9 +388,9 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                           {reply.user_profile?.full_name ||
                             (reply.user_id === ticket.user_id ? 'Customer' : 'Support Team')}
                         </p>
-                        {reply.is_internal && isAdmin && (
-                          <Badge variant="outline" className="text-xs">
-                            Internal Note
+                        {reply.is_internal && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Internal
                           </Badge>
                         )}
                       </div>
@@ -418,7 +413,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>Add Reply</CardTitle>
-                  {isAdmin && (
+                  {user && (
                     <Collapsible open={showTemplates} onOpenChange={setShowTemplates}>
                       <CollapsibleTrigger asChild>
                         <Button variant="outline" size="sm">
@@ -426,16 +421,17 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                           {showTemplates ? 'Hide Templates' : 'Use Template'}
                         </Button>
                       </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <ReplyTemplatesManager
+                          onSelectTemplate={handleTemplateSelect}
+                          className="mb-4"
+                        />
+                      </CollapsibleContent>
                     </Collapsible>
                   )}
                 </div>
               </CardHeader>
               <CardContent>
-                {isAdmin && showTemplates && (
-                  <div className="mb-4 p-4 border rounded-lg bg-gray-50">
-                    <ReplyTemplatesManager mode="select" onTemplateSelect={handleTemplateSelect} />
-                  </div>
-                )}
 
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmitReply)} className="space-y-4">
@@ -457,7 +453,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                     />
 
                     {/* Internal Note Toggle (Admin Only) */}
-                    {isAdmin && (
+                    {user && (
                       <FormField
                         control={form.control}
                         name="is_internal"
@@ -482,10 +478,10 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                     )}
 
                     <div className="flex justify-between items-center">
-                      {form.watch('is_internal') && isAdmin && (
-                        <div className="flex items-center gap-2 text-sm text-orange-600">
-                          <Shield className="h-4 w-4" />
-                          <span>This will be an internal note</span>
+                      {form.watch('is_internal') && (
+                        <div className="text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded-md">
+                          <strong>Internal Note:</strong> This message will only be visible to support
+                          team members.
                         </div>
                       )}
 
@@ -529,11 +525,13 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
           )}
 
           {/* Survey completion confirmation */}
-          {!showSurvey && hasCompletedSurvey && ticket?.status === 'resolved' && !isAdmin && (
+          {!showSurvey && hasCompletedSurvey && ticket?.status === 'resolved' && ticket.user_id === user?.id && (
             <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-              <p className="text-green-800">
-                ✅ Thank you for your feedback! Your responses help us improve our service.
-              </p>
+              <div className="text-green-800">
+                <CheckCircle className="h-6 w-6 mx-auto mb-2" />
+                <p className="font-semibold">Thank you for your feedback!</p>
+                <p className="text-sm">Your survey response helps us improve our service.</p>
+              </div>
             </div>
           )}
         </div>
@@ -560,7 +558,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               <Separator />
 
               {/* Priority - Admin Only */}
-              {isAdmin && (
+              {user && (
                 <>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Priority</label>
@@ -601,9 +599,8 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
               </div>
 
               {/* Assignment - Admin Only */}
-              {isAdmin && (
+              {user && (
                 <>
-                  <Separator />
                   <div>
                     <label className="text-sm font-medium text-gray-600">Assigned To</label>
                     <Select
@@ -661,7 +658,7 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
                     <Package className="h-4 w-4" />
                     Related Order
                   </div>
-                  {isAdmin && (
+                  {user && (
                     <a
                       href={`/admin/quotes/${ticket.quote.id}`}
                       target="_blank"
@@ -786,7 +783,13 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
           )}
 
           {/* Internal Notes Panel (Admin Only) */}
-          {isAdmin && <InternalNotesPanel replies={replies} isLoading={repliesLoading} />}
+          {user && (
+            <InternalNotesPanel
+              ticketId={ticketId}
+              replies={replies.filter(r => r.is_internal)}
+              isLoading={repliesLoading}
+            />
+          )}
         </div>
       </div>
     </div>

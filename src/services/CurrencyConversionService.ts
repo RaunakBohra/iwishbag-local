@@ -1,12 +1,4 @@
-/**
- * Currency Conversion Service for HSN System
- *
- * CRITICAL FEATURE: Converts minimum valuations from USD to origin country currency
- * This addresses the key requirement where minimum valuations are stored in USD
- * but quotes are calculated in origin country currency.
- *
- * Example: Nepal kurta with $10 USD minimum → ~1330 NPR → apply 12% customs
- */
+
 
 interface MinimumValuationConversion {
   usdAmount: number;

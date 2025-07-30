@@ -451,7 +451,6 @@ export class CloudflareWAFService {
     }
   }
 
-
   /**
    * Toggle rule status
    */

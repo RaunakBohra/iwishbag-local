@@ -146,7 +146,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
 
   // Get primary address for display
   const primaryAddress =
-    customer.user_addresses?.find((addr) => addr.is_primary) || customer.user_addresses?.[0];
+    customer.delivery_addresses?.find((addr) => addr.is_primary) || customer.delivery_addresses?.[0];
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

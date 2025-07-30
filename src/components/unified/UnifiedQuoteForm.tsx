@@ -35,7 +35,7 @@ import { cn } from '@/lib/utils';
 import { useQuoteTheme, useConversionColors } from '@/contexts/QuoteThemeContext';
 import { useColorVariantTesting } from '@/hooks/useColorVariantTesting';
 import type { UnifiedQuote } from '@/types/unified-quote';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+// import { TurnstileProtectedForm } from .* // Component removed
 
 // Security: File upload validation
 const ALLOWED_FILE_TYPES = {
@@ -570,15 +570,8 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
         </CardHeader>
 
         <CardContent>
-          <TurnstileProtectedForm
-            onSubmit={(turnstileToken) => {
-              const data = form.getValues();
-              handleSubmit(data, turnstileToken);
-            }}
-            isSubmitting={isSubmitting}
-            submitButtonText={isSubmitting ? "Submitting Quote..." : mode === 'edit' ? "Update Quote" : "Submit Quote"}
-            submitButtonClassName="w-full h-12 text-base"
-            action="quote_submission"
+          <form 
+            onSubmit={form.handleSubmit((data) => handleSubmit(data, undefined))}
             className="space-y-8"
             id="unified-quote-form"
           >
@@ -1015,7 +1008,13 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
 
             {/* Form Actions */}
             <div className="flex items-center gap-3 pt-6 border-t border-gray-200">
-              {/* Submit button is now handled by TurnstileProtectedForm */}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 text-base"
+              >
+{isSubmitting ? "Submitting Quote..." : mode === 'edit' ? "Update Quote" : "Submit Quote Request"}
+              </Button>
 
               {onCancel && (
                 <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
@@ -1028,7 +1027,7 @@ export const UnifiedQuoteForm = memo<UnifiedQuoteFormProps>(
                 <span>Secure & Encrypted</span>
               </div>
             </div>
-          </TurnstileProtectedForm>
+          </form>
         </CardContent>
       </Card>
     );

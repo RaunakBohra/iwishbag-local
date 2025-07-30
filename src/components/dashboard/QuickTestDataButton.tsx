@@ -28,7 +28,7 @@ export const QuickTestDataButton: React.FC = () => {
     try {
       // First check if user has a virtual address
       const { data: address } = await supabase
-        .from('customer_addresses')
+        .from('warehouse_suite_addresses')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
@@ -56,7 +56,7 @@ export const QuickTestDataButton: React.FC = () => {
       // Generate 3 test packages
       const testPackages = [
         {
-          customer_address_id: address.id,
+          warehouse_suite_address_id: address.id,
           tracking_number: '1Z999AA1' + Math.random().toString().slice(2, 10),
           carrier: 'ups',
           sender_name: 'Amazon Fulfillment',
@@ -77,7 +77,7 @@ export const QuickTestDataButton: React.FC = () => {
           condition_notes: 'TEST PACKAGE - Development Only'
         },
         {
-          customer_address_id: address.id,
+          warehouse_suite_address_id: address.id,
           tracking_number: '79494771' + Math.random().toString().slice(2, 10),
           carrier: 'fedex',
           sender_name: 'Nike Direct',
@@ -95,7 +95,7 @@ export const QuickTestDataButton: React.FC = () => {
           condition_notes: 'TEST PACKAGE - Development Only'
         },
         {
-          customer_address_id: address.id,
+          warehouse_suite_address_id: address.id,
           tracking_number: '92612999' + Math.random().toString().slice(2, 10),
           carrier: 'usps',
           sender_name: 'BestBuy.com',

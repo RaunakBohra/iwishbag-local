@@ -60,16 +60,14 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
     },
     minimum_valuation: {
       label: 'Minimum Valuation',
-      description: 'Use HSN minimum valuation for customs (may be higher)',
-      icon: <TrendingUp className="w-4 h-4" />,
+      description: 'Use icon: <TrendingUp className="w-4 h-4" />,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200',
     },
     higher_of_both: {
       label: 'Higher of Both',
-      description: 'Use whichever is higher: actual price or HSN minimum',
-      icon: <Zap className="w-4 h-4" />,
+      description: 'Use whichever is higher: actual price or icon: <Zap className="w-4 h-4" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
@@ -78,9 +76,9 @@ export const QuoteValuationSettings: React.FC<QuoteValuationSettingsProps> = ({
 
   const selectedInfo = methodInfo[currentMethod];
 
-  // Count items with HSN minimum valuations
+  
   const itemsWithMinimum = quote.items?.filter((item) => {
-    // Check if item has HSN code and potentially minimum valuation
+    
     return item.hsn_code;
   })?.length || 0;
   const totalItems = quote.items?.length || 0;

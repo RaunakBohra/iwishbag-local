@@ -63,23 +63,42 @@ export const BankAccountSettings = () => {
   };
 
   // Filter bank accounts by country
-  const filteredAccounts =
-    countryFilter === 'all'
+  const filteredAccounts = (() => {
+    let filtered = countryFilter === 'all'
       ? bankAccounts
       : countryFilter === 'fallback'
         ? bankAccounts.filter((account) => account.is_fallback)
         : bankAccounts.filter((account) => account.destination_country === countryFilter);
+    
+    // Apply consistent sorting to maintain order after updates
+    return filtered.sort((a, b) => {
+      // First sort by destination country
+      if (a.destination_country !== b.destination_country) {
+        return (a.destination_country || '').localeCompare(b.destination_country || '');
+      }
+      // Then by fallback status (fallback accounts first)
+      if (a.is_fallback !== b.is_fallback) {
+        return b.is_fallback ? 1 : -1;
+      }
+      // Then by bank name
+      if (a.bank_name !== b.bank_name) {
+        return (a.bank_name || '').localeCompare(b.bank_name || '');
+      }
+      // Finally by creation date
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+  })();
 
   if (isLoadingBankAccounts) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="max-w-7xl mx-auto px-6 py-8">
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-4 w-64" />
           </div>
         </div>
-        <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="space-y-6">
             <Skeleton className="h-20 w-full rounded-lg bg-white" />
             <Skeleton className="h-20 w-full rounded-lg bg-white" />
@@ -94,7 +113,7 @@ export const BankAccountSettings = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
               <H1 className="text-2xl font-semibold text-gray-900 mb-2">Bank accounts</H1>
@@ -133,7 +152,7 @@ export const BankAccountSettings = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {isFormOpen ? (
           <FlexibleBankAccountForm
             editingAccount={editingAccount}
@@ -224,3 +243,5 @@ export const BankAccountSettings = () => {
     </div>
   );
 };
+
+export default BankAccountSettings;

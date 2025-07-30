@@ -133,7 +133,7 @@ class ReturnShippingService {
 
       // 2. Get customer address
       const { data: customerAddress } = await supabase
-        .from('customer_addresses')
+        .from('warehouse_suite_addresses')
         .select('*')
         .eq('user_id', packageReturn.user_id)
         .eq('is_default', true)

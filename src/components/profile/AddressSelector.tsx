@@ -8,14 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Plus, MapPin, CheckCircle } from 'lucide-react';
-import { AddressForm } from './AddressForm';
+import { AddressFormCompact } from './AddressFormCompact';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 interface AddressSelectorProps {
   selectedAddressId?: string;
-  onSelectAddress: (address: Tables<'user_addresses'>) => void;
+  onSelectAddress: (address: Tables<'delivery_addresses'>) => void;
   showAddButton?: boolean;
   className?: string;
 }
@@ -30,11 +30,11 @@ export function AddressSelector({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: addresses, isLoading } = useQuery({
-    queryKey: ['user_addresses', user?.id],
+    queryKey: ['delivery_addresses', user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .order('is_default', { ascending: false })
@@ -46,7 +46,7 @@ export function AddressSelector({
     enabled: !!user,
   });
 
-  const handleAddressAdded = (newAddress?: Tables<'user_addresses'>) => {
+  const handleAddressAdded = (newAddress?: Tables<'delivery_addresses'>) => {
     setDialogOpen(false);
     if (newAddress) {
       onSelectAddress(newAddress);
@@ -86,7 +86,7 @@ export function AddressSelector({
             <DialogHeader>
               <DialogTitle>Add New Address</DialogTitle>
             </DialogHeader>
-            <AddressForm onSuccess={handleAddressAdded} />
+            <AddressFormCompact onSuccess={handleAddressAdded} />
           </DialogContent>
         </Dialog>
       </div>
@@ -162,7 +162,7 @@ export function AddressSelector({
           <DialogHeader>
             <DialogTitle>Add New Address</DialogTitle>
           </DialogHeader>
-          <AddressForm onSuccess={handleAddressAdded} />
+          <AddressFormCompact onSuccess={handleAddressAdded} />
         </DialogContent>
       </Dialog>
     </div>

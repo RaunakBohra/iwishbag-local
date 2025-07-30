@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShippingAddress } from '@/types/address';
-import { unifiedToUserAddress, shippingAddressToUnified } from '@/lib/addressUtils';
+import { unifiedToDeliveryAddress, shippingAddressToUnified } from '@/lib/addressUtils';
 
 export const useAddressSynchronization = () => {
   const { user } = useAuth();
@@ -29,7 +29,7 @@ export const useAddressSynchronization = () => {
 
       // Check if address already exists for this user
       const { data: existingAddresses } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .eq('address_line1', unifiedAddress.addressLine1)
@@ -44,14 +44,14 @@ export const useAddressSynchronization = () => {
       // If setting as default, unset other defaults first
       if (setAsDefault) {
         await supabase
-          .from('user_addresses')
+          .from('delivery_addresses')
           .update({ is_default: false })
           .eq('user_id', user.id)
           .eq('is_default', true);
       }
 
       // Convert to user address format and save
-      const userAddress = unifiedToUserAddress(
+      const userAddress = unifiedToDeliveryAddress(
         {
           ...unifiedAddress,
           isDefault: setAsDefault,
@@ -60,7 +60,7 @@ export const useAddressSynchronization = () => {
       );
 
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .insert(userAddress)
         .select()
         .single();

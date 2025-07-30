@@ -104,7 +104,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onOpen
       if (profileError) throw profileError;
 
       // Add address
-      const { error: addressError } = await supabase.from('user_addresses').insert({
+      const { error: addressError } = await supabase.from('delivery_addresses').insert({
         user_id: userId,
         address_line1: data.addressLine1,
         address_line2: data.addressLine2 || null,

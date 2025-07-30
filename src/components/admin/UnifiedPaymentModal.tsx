@@ -50,7 +50,7 @@ import {
 } from 'lucide-react';
 import { useQuoteCurrency } from '@/hooks/useCurrency';
 import { getCurrencySymbol, getDestinationCountryFromQuote } from '@/lib/currencyUtils';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -184,7 +184,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
   // Get currency information
   const destinationCountry = quote ? getDestinationCountryFromQuote(quote) : 'US';
-  const currency = optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
+  const currency = currencyService.getCurrencyForCountrySync(destinationCountry);
   const currencySymbol = getCurrencySymbol(currency);
 
   // Fetch payment data
@@ -193,9 +193,9 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     queryFn: async () => {
       console.log('Fetching payment data for quote:', quote.id);
 
-      // Try to fetch from payment_ledger table first
+      // Fetch from consolidated payment_transactions table
       const { data: ledgerData, error: ledgerError } = await supabase
-        .from('payment_ledger')
+        .from('payment_transactions')
         .select('*')
         .eq('quote_id', quote.id)
         .order('created_at', { ascending: false });
@@ -464,7 +464,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
     onPaymentConfirmed: (_transaction) => {
       toast({
         title: 'Payment Confirmed',
-        description: `Payment confirmed for ${optimizedCurrencyService.formatAmount(_transaction.amount, currency)}`,
+        description: `Payment confirmed for ${currencyService.formatAmount(_transaction.amount, currency)}`,
       });
       // Switch to history tab to show the updated payment
       setActiveTab('history');
@@ -554,7 +554,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
       toast({
         title: 'Payment Recorded',
-        description: `Successfully recorded ${optimizedCurrencyService.formatAmount(amount, paymentCurrency)} payment.`,
+        description: `Successfully recorded ${currencyService.formatAmount(amount, paymentCurrency)} payment.`,
       });
 
       // Reset form
@@ -640,7 +640,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
 
       toast({
         title: 'Payment Verified',
-        description: `Successfully verified payment of ${optimizedCurrencyService.formatAmount(amount, currency)}.`,
+        description: `Successfully verified payment of ${currencyService.formatAmount(amount, currency)}.`,
       });
 
       // Reset form
@@ -1014,7 +1014,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">Total Payments</p>
                       <p className="text-lg font-semibold text-green-600">
-                        {optimizedCurrencyService.formatAmount(paymentSummary.totalPayments, currency)}
+                        {currencyService.formatAmount(paymentSummary.totalPayments, currency)}
                       </p>
                     </div>
 
@@ -1023,7 +1023,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">Total Refunds</p>
                         <p className="text-lg font-semibold text-red-600">
-                          -{optimizedCurrencyService.formatAmount(paymentSummary.totalRefunds, currency)}
+                          -{currencyService.formatAmount(paymentSummary.totalRefunds, currency)}
                         </p>
                       </div>
                     )}
@@ -1034,7 +1034,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium">Net Paid</p>
                           <p className="text-xl font-bold">
-                            {optimizedCurrencyService.formatAmount(paymentSummary.totalPaid, currency)}
+                            {currencyService.formatAmount(paymentSummary.totalPaid, currency)}
                           </p>
                         </div>
                       </div>
@@ -1091,7 +1091,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         <div className="flex items-center justify-between bg-orange-50 p-3 rounded-lg">
                           <p className="text-sm font-medium text-orange-800">Balance Due</p>
                           <p className="text-xl font-bold text-orange-600">
-                            {optimizedCurrencyService.formatAmount(paymentSummary.remaining, currency)}
+                            {currencyService.formatAmount(paymentSummary.remaining, currency)}
                           </p>
                         </div>
                       )}
@@ -1101,7 +1101,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                       <div className="flex items-center justify-between bg-teal-50 p-3 rounded-lg">
                         <p className="text-sm font-medium text-teal-800">Overpayment</p>
                         <p className="text-xl font-bold text-teal-600">
-                          {optimizedCurrencyService.formatAmount(paymentSummary.overpaidAmount, currency)}
+                          {currencyService.formatAmount(paymentSummary.overpaidAmount, currency)}
                         </p>
                       </div>
                     )}
@@ -1158,7 +1158,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                           onLinkCreated={(link) => {
                             toast({
                               title: 'Enhanced Payment Link Created',
-                              description: `${link.apiVersion?.includes('rest') ? 'Advanced' : 'Legacy'} payment link for ${optimizedCurrencyService.formatAmount(paymentSummary.remaining, currency)} has been created.`,
+                              description: `${link.apiVersion?.includes('rest') ? 'Advanced' : 'Legacy'} payment link for ${currencyService.formatAmount(paymentSummary.remaining, currency)} has been created.`,
                             });
                             // Refresh payment data after link creation
                             queryClient.invalidateQueries({
@@ -1734,10 +1734,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         onClick={async () => {
                           console.log('Manually checking payment data...');
                           const { data: ledger, error: ledgerErr } = await supabase
-                            .from('payment_ledger')
+                            .from('payment_transactions')
                             .select('*')
-                            .eq('quote_id', quote.id);
-                          console.log('Direct ledger query:', {
+                            .eq('quote_id', quote.id)
+                            .order('created_at', { ascending: false });
+                          console.log('Direct payment transactions query:', {
                             data: ledger,
                             error: ledgerErr,
                           });
@@ -1918,13 +1919,13 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         <div>
                           <p className="text-sm text-muted-foreground">Total Payments</p>
                           <p className="text-lg font-semibold text-green-600">
-                            {optimizedCurrencyService.formatAmount(paymentSummary.totalPayments, currency)}
+                            {currencyService.formatAmount(paymentSummary.totalPayments, currency)}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Total Refunds</p>
                           <p className="text-lg font-semibold text-red-600">
-                            {optimizedCurrencyService.formatAmount(paymentSummary.totalRefunds, currency)}
+                            {currencyService.formatAmount(paymentSummary.totalRefunds, currency)}
                           </p>
                         </div>
                         <div>
@@ -1978,7 +1979,7 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-medium">
-                                  {optimizedCurrencyService.formatAmount(link.amount, link.currency)}
+                                  {currencyService.formatAmount(link.amount, link.currency)}
                                 </p>
                                 {link.api_version === 'v2_rest' && (
                                   <Badge
@@ -2078,11 +2079,11 @@ export const UnifiedPaymentModal: React.FC<UnifiedPaymentModalProps> = ({
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
                           Total paid amount:{' '}
-                          {optimizedCurrencyService.formatAmount(paymentSummary.totalPaid, currency)}
+                          {currencyService.formatAmount(paymentSummary.totalPaid, currency)}
                           {paymentSummary.isOverpaid && (
                             <span className="block mt-1 text-teal-600">
                               Overpaid by:{' '}
-                              {optimizedCurrencyService.formatAmount(
+                              {currencyService.formatAmount(
                                 paymentSummary.overpaidAmount,
                                 currency,
                               )}

@@ -484,7 +484,7 @@ const renderWithProviders = (
 
   // User addresses cache - required by checkout component
   queryClient.setQueryData(
-    ['user_addresses', 'test-user-id', 'US'],
+    ['delivery_addresses', 'test-user-id', 'US'],
     [
       {
         id: 'addr-1',

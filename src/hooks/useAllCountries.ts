@@ -2,15 +2,37 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAllCountries = () => {
-  return useQuery({
-    queryKey: ['countries', 'all'],
+  const result = useQuery({
+    queryKey: ['country_settings_table', 'all_countries_array'],
+    staleTime: 0, // Always refetch in development
+    cacheTime: 0, // Don't cache in development
     queryFn: async () => {
+      console.log('[useAllCountries] Fetching countries from database...');
       const { data, error } = await supabase.from('country_settings').select('*').order('name');
-      if (error) throw new Error(error.message);
+      console.log('[useAllCountries] Database response:', { data: data?.length, error });
+      console.log('[useAllCountries] First 5 countries:', data?.slice(0, 5));
+      
+      if (error) {
+        console.error('[useAllCountries] Database error:', error);
+        throw new Error(error.message);
+      }
+      
       // Ensure we always return an array
-      return Array.isArray(data) ? data : [];
+      const result = Array.isArray(data) ? data : [];
+      console.log('[useAllCountries] Returning countries count:', result.length);
+      return result;
     },
-    // Set initial data to empty array to prevent undefined issues
-    initialData: [],
   });
+  
+  // Debug what the hook is actually returning
+  console.log('[useAllCountries] Hook returning:', {
+    data: result.data,
+    isArray: Array.isArray(result.data),
+    length: result.data?.length,
+    isLoading: result.isLoading,
+    error: result.error,
+    status: result.status
+  });
+  
+  return result;
 };

@@ -1,78 +1,4 @@
-/**
- * Valuation Utilities
- * 
- * Helper functions to extract and display valuation data from quotes,
- * specifically for handling minimum valuation amounts from HSN breakdown data.
- */
 
-import type { UnifiedQuote, QuoteItem } from '@/types/unified-quote';
-import { supabase } from '@/integrations/supabase/client';
-import { getCountrySettings } from '@/services/CurrencyService';
-
-/**
- * Extract minimum valuation amount for an item with fallback data sources
- * 
- * ENHANCED VERSION WITH FALLBACK CHAIN:
- * 1. Try quote.calculation_data.item_breakdowns (post-calculation data)
- * 2. Try individual item.minimum_valuation_conversion (item-level data)
- * 3. Try direct HSN lookup from database (real-time fallback)
- * 4. Return 0 if no data available
- */
-export function getItemMinimumValuation(quote: UnifiedQuote | null, itemId: string): number {
-  console.log(`\n🔍 [VALUATION UTILS] Getting minimum valuation for item ${itemId}`);
-  
-  if (!quote) {
-    console.log(`├── ❌ No quote provided`);
-    return 0;
-  }
-
-  // 🔄 FALLBACK 1: Try calculation_data.item_breakdowns (primary source)
-  if (quote.calculation_data?.item_breakdowns) {
-    const itemBreakdown = quote.calculation_data.item_breakdowns.find(
-      (breakdown: any) => breakdown.item_id === itemId
-    );
-
-    if (itemBreakdown?.minimum_valuation_conversion?.convertedAmount) {
-      const amount = itemBreakdown.minimum_valuation_conversion.convertedAmount;
-      console.log(`├── ✅ Found in calculation_data: $${amount} (${itemBreakdown.minimum_valuation_conversion.originCurrency})`);
-      return amount;
-    } else {
-      console.log(`├── ❌ Not found in calculation_data item_breakdowns`);
-    }
-  } else {
-    console.log(`├── ❌ No calculation_data.item_breakdowns available`);
-  }
-
-  // 🔄 FALLBACK 2: Try individual item.minimum_valuation_conversion
-  const item = quote.items?.find(item => item.id === itemId);
-  if (item?.minimum_valuation_conversion?.convertedAmount) {
-    const amount = item.minimum_valuation_conversion.convertedAmount;
-    console.log(`├── ✅ Found in item data: $${amount} (${item.minimum_valuation_conversion.originCurrency})`);
-    return amount;
-  } else {
-    console.log(`├── ❌ Not found in individual item data`);
-  }
-
-  // 🔄 FALLBACK 3: Try HSN-based lookup (this would need async but we'll store in item for now)
-  if (item?.hsn_code && item?.minimum_valuation_usd) {
-    // If we have HSN minimum in USD, we can estimate conversion
-    // This is a basic fallback - real conversion would need exchange rates
-    console.log(`├── 💡 Found HSN minimum in USD: $${item.minimum_valuation_usd} (needs currency conversion)`);
-    // For now, return the USD amount as a basic fallback
-    return item.minimum_valuation_usd;
-  } else if (item?.hsn_code) {
-    console.log(`├── 🔍 Item has HSN code ${item.hsn_code} but no minimum_valuation_usd field`);
-    console.log(`├── 📋 Available item fields:`, Object.keys(item));
-    console.log(`├── ℹ️ This is expected - quote items don't store minimum valuation, it's looked up from HSN master data`);
-  }
-
-  console.log(`└── ❌ No minimum valuation data found for item ${itemId}`);
-  return 0;
-}
-
-/**
- * Get the origin currency for minimum valuation conversion with fallback
- */
 export function getItemMinimumValuationCurrency(quote: UnifiedQuote | null, itemId: string): string {
   if (!quote) return 'USD';
 
@@ -120,7 +46,7 @@ export function hasMinimumValuation(quote: UnifiedQuote | null, itemId: string):
     return true;
   }
 
-  // 🔄 FALLBACK 3: Check if HSN minimum exists
+  
   if (item?.hsn_code && item?.minimum_valuation_usd) {
     return true;
   }
@@ -169,12 +95,7 @@ export function formatValuationAmount(amount: number, currency: string = 'USD'):
 }
 
 /**
- * Real-time HSN minimum valuation lookup with currency conversion
- * This function fetches HSN data directly from the database and converts to origin currency
- */
-export async function fetchItemMinimumValuation(
-  item: QuoteItem,
-  originCountry: string
+ * Real-time originCountry: string
 ): Promise<{ amount: number; currency: string; usdAmount: number } | null> {
   if (!item.hsn_code) {
     console.log(`[FETCH MIN VAL] No HSN code for item ${item.id}`);
@@ -182,8 +103,7 @@ export async function fetchItemMinimumValuation(
   }
 
   try {
-    // Fetch HSN data from database
-    const { data: hsnData, error } = await supabase
+    // Fetch error } = await supabase
       .from('hsn_master')
       .select('minimum_valuation_usd, hsn_code')
       .eq('hsn_code', item.hsn_code)

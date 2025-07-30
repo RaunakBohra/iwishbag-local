@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { UnifiedPaymentModal } from './UnifiedPaymentModal';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 interface PaymentManagementWidgetProps {
   quote: Tables<'quotes'>;
@@ -74,14 +74,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
   const { data: paymentLedger } = useQuery({
     queryKey: ['payment-ledger-widget', quote.id],
     queryFn: async () => {
-      // Fetch from payment_ledger
-      const { data: ledgerData } = await supabase
-        .from('payment_ledger')
-        .select('*')
-        .eq('quote_id', quote.id)
-        .order('created_at', { ascending: false });
-
-      // Fetch from payment_transactions
+      // Fetch from consolidated payment_transactions table
       const { data: transactionData } = await supabase
         .from('payment_transactions')
         .select('*')
@@ -89,32 +82,8 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
         .in('status', ['completed', 'success'])
         .order('created_at', { ascending: false });
 
-      // Combine both sources
-      const combinedData = [];
-
-      if (transactionData && transactionData.length > 0) {
-        transactionData.forEach((tx) => {
-          const existsInLedger = ledgerData?.some(
-            (l) =>
-              l.reference_number === tx.transaction_id ||
-              (l.payment_type === 'customer_payment' && Math.abs(l.amount - tx.amount) < 0.01),
-          );
-
-          if (!existsInLedger) {
-            combinedData.push({
-              payment_type: 'customer_payment',
-              amount: tx.amount,
-              status: tx.status,
-            });
-          }
-        });
-      }
-
-      if (ledgerData && ledgerData.length > 0) {
-        combinedData.push(...ledgerData);
-      }
-
-      return combinedData;
+      // Return transaction data directly since payment_ledger is consolidated into payment_transactions
+      return transactionData || [];
     },
     enabled: !!quote.id,
   });
@@ -267,7 +236,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Order Total</span>
               <span className="font-semibold">
-                {optimizedCurrencyService.formatAmount(paymentSummary.finalTotal, paymentCurrency)}
+                {currencyService.formatAmount(paymentSummary.finalTotal, paymentCurrency)}
               </span>
             </div>
 
@@ -280,7 +249,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                   paymentSummary.totalPayments > 0 ? 'text-green-600' : 'text-gray-500',
                 )}
               >
-                {optimizedCurrencyService.formatAmount(paymentSummary.totalPayments, paymentCurrency)}
+                {currencyService.formatAmount(paymentSummary.totalPayments, paymentCurrency)}
               </span>
             </div>
 
@@ -289,7 +258,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Refunds</span>
                 <span className="font-semibold text-red-600">
-                  -{optimizedCurrencyService.formatAmount(paymentSummary.totalRefunds, paymentCurrency)}
+                  -{currencyService.formatAmount(paymentSummary.totalRefunds, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -300,7 +269,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Net Paid</span>
                   <span className="font-bold">
-                    {optimizedCurrencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
+                    {currencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
                   </span>
                 </div>
               </div>
@@ -312,7 +281,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                 <div className="flex items-center justify-between bg-orange-50 p-2 rounded">
                   <span className="text-sm font-medium text-orange-800">Balance Due</span>
                   <span className="font-bold text-orange-600">
-                    {optimizedCurrencyService.formatAmount(paymentSummary.remaining, paymentCurrency)}
+                    {currencyService.formatAmount(paymentSummary.remaining, paymentCurrency)}
                   </span>
                 </div>
               )}
@@ -322,7 +291,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div className="flex items-center justify-between bg-teal-50 p-2 rounded">
                 <span className="text-sm font-medium text-teal-800">Overpayment</span>
                 <span className="font-bold text-teal-600">
-                  {optimizedCurrencyService.formatAmount(paymentSummary.overpaidAmount, paymentCurrency)}
+                  {currencyService.formatAmount(paymentSummary.overpaidAmount, paymentCurrency)}
                 </span>
               </div>
             )}
@@ -346,7 +315,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
                             netAmount > 0 ? 'text-green-700' : 'text-red-700',
                           )}
                         >
-                          {optimizedCurrencyService.formatAmount(Math.abs(netAmount), curr)}
+                          {currencyService.formatAmount(Math.abs(netAmount), curr)}
                         </span>
                       </div>
                     );
@@ -534,7 +503,7 @@ export const PaymentManagementWidget: React.FC<PaymentManagementWidgetProps> = (
               <div>
                 <p className="text-sm text-muted-foreground">Amount</p>
                 <p className="font-medium">
-                  {optimizedCurrencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
+                  {currencyService.formatAmount(paymentSummary.totalPaid, paymentCurrency)}
                 </p>
               </div>
               <div>

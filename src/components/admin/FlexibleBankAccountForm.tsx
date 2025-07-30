@@ -24,6 +24,7 @@ interface BankAccountFormData {
   bank_name: string;
   is_active: boolean;
   is_fallback: boolean;
+  country_code?: string | null;
   destination_country: string | null;
   display_order: number;
   branch_name?: string;
@@ -35,6 +36,7 @@ interface BankAccountFormData {
   instructions?: string;
   custom_fields?: Record<string, unknown>;
   field_labels?: Record<string, string>;
+  currency_code?: string | null;
 }
 
 interface FlexibleBankAccountFormProps {
@@ -92,7 +94,16 @@ export const FlexibleBankAccountForm = ({
     if (editingAccount) {
       setIsActive(editingAccount.is_active ?? true);
       setIsFallback(editingAccount.is_fallback ?? false);
-      setSelectedCountry(editingAccount.destination_country || '');
+      
+      // Use destination_country if available, otherwise fall back to country_code
+      const countryToSelect = editingAccount.destination_country || editingAccount.country_code || '';
+      console.log('Setting country:', {
+        destination_country: editingAccount.destination_country,
+        country_code: editingAccount.country_code,
+        selected: countryToSelect
+      });
+      
+      setSelectedCountry(countryToSelect);
       setDisplayOrder(editingAccount.display_order || 0);
 
       // Load custom fields from the account
@@ -229,8 +240,11 @@ export const FlexibleBankAccountForm = ({
       bank_name: customFields.find((f) => f.id === 'bank_name')?.value || '',
       is_active: isActive,
       is_fallback: isFallback,
+      country_code: isFallback ? null : selectedCountry || null,
       destination_country: isFallback ? null : selectedCountry || null,
       display_order: displayOrder,
+      // Set currency_code based on selected country
+      currency_code: selectedCountry ? countries?.find(c => c.code === selectedCountry)?.currency || null : null,
     };
 
     // Handle legacy fields and custom fields

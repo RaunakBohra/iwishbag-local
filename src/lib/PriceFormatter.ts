@@ -3,7 +3,7 @@
  * Uses existing CurrencyService and currencyUtils for formatting
  */
 
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 // SIMPLIFIED: Use OptimizedCurrencyService directly instead of wrapper functions
 
 export interface PriceResult {
@@ -38,7 +38,7 @@ class PriceFormatter {
       // Determine target currency
       let targetCurrency = userPreferredCurrency;
       if (!targetCurrency && destinationCountry) {
-        targetCurrency = await optimizedCurrencyService.getCurrencyForCountry(destinationCountry);
+        targetCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
       }
       if (!targetCurrency) {
         targetCurrency = 'USD'; // Fallback
@@ -59,7 +59,7 @@ class PriceFormatter {
       }
 
       // Format using OptimizedCurrencyService
-      const formatted = optimizedCurrencyService.formatAmount(convertedAmount, targetCurrency);
+      const formatted = currencyService.formatAmount(convertedAmount, targetCurrency);
 
       return {
         formatted,
@@ -69,7 +69,7 @@ class PriceFormatter {
     } catch (error) {
       console.error('[PriceFormatter] formatPrice error:', error);
       // Fallback formatting using OptimizedCurrencyService
-      const symbol = optimizedCurrencyService.getCurrencySymbol('USD');
+      const symbol = currencyService.getCurrencySymbol('USD');
       return {
         formatted: `${symbol}${amount.toFixed(2)}`,
         currency: 'USD',
@@ -92,15 +92,15 @@ class PriceFormatter {
       // Get exchange rate if not provided
       let rate = exchangeRate;
       if (!rate) {
-        rate = await optimizedCurrencyService.getExchangeRate(originCountry, destinationCountry);
+        rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
       }
 
       // Get currencies for both countries
-      const originCurrency = await optimizedCurrencyService.getCurrencyForCountry(originCountry);
-      const destinationCurrency = await optimizedCurrencyService.getCurrencyForCountry(destinationCountry);
+      const originCurrency = await currencyService.getCurrencyForCountry(originCountry);
+      const destinationCurrency = await currencyService.getCurrencyForCountry(destinationCountry);
 
       // Format in origin currency (amount is already in origin currency)
-      const originSymbol = optimizedCurrencyService.getCurrencySymbol(originCurrency);
+      const originSymbol = currencyService.getCurrencySymbol(originCurrency);
       const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
       // Convert and format in destination currency
@@ -116,7 +116,7 @@ class PriceFormatter {
         } else {
           destinationAmount = Math.round(destinationAmount * 100) / 100;
         }
-        const destinationSymbol = optimizedCurrencyService.getCurrencySymbol(destinationCurrency);
+        const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
         destinationFormatted = `${destinationSymbol}${destinationAmount.toLocaleString()}`;
       }
 

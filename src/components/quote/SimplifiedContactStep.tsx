@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
 import { Checkbox } from '@/components/ui/checkbox';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+// import { TurnstileProtectedForm } from .* // Component removed
 
 export default function SimplifiedContactStep({
   contactInfo,
@@ -203,22 +203,20 @@ export default function SimplifiedContactStep({
               </div>
             )}
 
-            <TurnstileProtectedForm
-              onSubmit={(turnstileToken) =>
+            <Button
+              onClick={() =>
                 next({
                   email: user.email,
                   name: user.user_metadata?.full_name || user.user_metadata?.name || '',
                   insuranceOptedIn,
-                  turnstileToken,
                 })
               }
-              isSubmitting={isSubmitting}
-              submitButtonText={isSubmitting ? "Submitting Quote Request..." : "Submit Quote Request"}
-              submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm disabled:opacity-50"
-              action="quote_request"
-              className="w-full"
-              id="authenticated-quote-submit"
-            />
+              disabled={isSubmitting}
+              className="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm disabled:opacity-50"
+              type="button"
+            >
+              {isSubmitting ? "Submitting Quote Request..." : "Submit Quote Request"}
+            </Button>
           </div>
         </div>
 
@@ -497,16 +495,14 @@ export default function SimplifiedContactStep({
               </div>
             )}
 
-            <TurnstileProtectedForm
-              onSubmit={handleGuestSubmit}
-              isSubmitting={isSubmitting}
-              disabled={!guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)}
-              submitButtonText={isSubmitting ? "Submitting Quote Request..." : "Submit Quote Request"}
-              submitButtonClassName="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg"
-              action="quote_request"
-              className="w-full"
-              id="guest-quote-submit"
-            />
+            <Button
+              onClick={() => handleGuestSubmit()}
+              disabled={isSubmitting || !guestEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)}
+              className="w-full h-14 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium text-lg rounded-lg transition-all duration-200 shadow-sm disabled:opacity-50"
+              type="button"
+            >
+              {isSubmitting ? "Submitting Quote Request..." : "Submit Quote Request"}
+            </Button>
           </div>
         </div>
 

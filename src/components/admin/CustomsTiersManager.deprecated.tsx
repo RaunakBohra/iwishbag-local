@@ -1,31 +1,7 @@
 /**
  * ⚠️ DEPRECATED COMPONENT - DO NOT USE
  *
- * CustomsTiersManager has been replaced by the HSN-based tax system.
- *
- * Old functionality:
- * - Route-based customs tier management
- * - Weight and price-based customs rules
- * - VAT percentage overrides
- *
- * New HSN system provides:
- * - Per-item tax calculation using HSN codes
- * - More accurate product categorization
- * - Support for minimum valuation rules
- * - Admin overrides through centralized system
- *
- * Migration path:
- * 1. Export existing customs tiers data
- * 2. Map to HSN categories in new system
- * 3. Use HSN Admin Dashboard for tax management
- *
- * @deprecated Use HSNAdminDashboard and AdminOverridesManager instead
- * @see /src/components/admin/hsn/HSNAdminDashboard.tsx
- * @see /src/components/admin/hsn/AdminOverridesManager.tsx
- */
-
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+ * CustomsTiersManager has been replaced by the CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { AlertTriangle, ArrowRight, Database } from 'lucide-react';
 
@@ -39,15 +15,7 @@ export const CustomsTiersManager: React.FC = () => {
             <CardTitle className="text-yellow-800">Component Deprecated</CardTitle>
           </div>
           <CardDescription className="text-yellow-700">
-            This customs tiers management system has been replaced by the new HSN-based tax system.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-white border border-yellow-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-2">Why was this changed?</h4>
-            <ul className="text-sm text-gray-700 space-y-1">
-              <li>• Old system: Route-based tax rates (US→IN = 20%)</li>
-              <li>• New system: Product-specific rates (Electronics = 18%, Clothing = 12%)</li>
+            This customs tiers management system has been replaced by the new Clothing = 12%)</li>
               <li>• Better accuracy for multi-product orders</li>
               <li>• Support for government minimum valuation rules</li>
               <li>• Automatic product classification</li>

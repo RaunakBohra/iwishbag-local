@@ -11,82 +11,97 @@ export const useBankAccountSettings = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Check user role for admin access
-  const { data: userRole } = useQuery({
-    queryKey: ['user-role', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-
-      console.log('Checking user role for bank account settings:', user.id);
-
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error checking user role:', error);
-        return null;
-      }
-
-      console.log('User role for bank account settings:', data);
-      return data;
-    },
-    enabled: !!user?.id,
-  });
-
+  
   const { data: bankAccounts, isLoading: isLoadingBankAccounts } = useQuery({
     queryKey: ['bank-accounts'],
     queryFn: async () => {
       console.log('Fetching bank accounts...');
       console.log('Current user:', user?.id);
-      console.log('User role:', userRole?.role);
-
-      const { data, error } = await supabase
+      console.log('Is admin:', !!user); // All authenticated users have admin access
+      const { data, error, count } = await supabase
         .from('bank_account_details')
-        .select('*')
-        .order('created_at');
+        .select('*', { count: 'exact' })
+        .order('destination_country', { ascending: true })
+        .order('is_fallback', { ascending: false })
+        .order('bank_name', { ascending: true })
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('Error fetching bank accounts:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // If it's an RLS error, let's check the user's admin status
+        if (error.code === '42501' || error.message.includes('policy')) {
+          console.log('RLS policy violation - user may not have admin access');
+          console.log('Current admin status:', !!user);
+        }
         throw new Error(`Failed to fetch bank accounts: ${error.message}`);
       }
 
-      console.log('Bank accounts fetched:', data?.length || 0);
+      console.log('Bank accounts fetched:', data?.length || 0, 'Total count:', count);
       return data;
     },
-    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
+    enabled: !!user?.id // Only run when user is authenticated (simplified access)
   });
 
   const createOrUpdateMutation = useMutation({
     mutationFn: async (accountData: { data: BankAccountFormData; id?: string }) => {
       const { data, id } = accountData;
-      let error;
+      let error, result;
+      
       if (id) {
-        ({ error } = await supabase.from('bank_account_details').update(data).eq('id', id));
-      } else {
-        ({ error } = await supabase
+        // For updates, first check if the record exists
+        const { data: existingRecord, error: checkError } = await supabase
           .from('bank_account_details')
-          .insert(data as TablesInsert<'bank_account_details'>));
+          .select('id')
+          .eq('id', id)
+          .single();
+          
+        if (checkError || !existingRecord) {
+          throw new Error(`Bank account with ID ${id} not found`);
+        }
+        
+        // Perform the update with select to avoid 404
+        ({ data: result, error } = await supabase
+          .from('bank_account_details')
+          .update(data)
+          .eq('id', id)
+          .select()
+          .single());
+      } else {
+        ({ data: result, error } = await supabase
+          .from('bank_account_details')
+          .insert(data as TablesInsert<'bank_account_details'>)
+          .select()
+          .single());
       }
-      if (error) throw new Error(error.message);
+      
+      if (error) {
+        console.error('Bank account mutation error:', error);
+        throw new Error(error.message);
+      }
+      
+      return result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['bankAccounts'] }); // Also invalidate the query used in EnhancedBankTransferDetails
       toast({
-        title: `Bank account ${variables.id ? 'updated' : 'created'} successfully`,
+        title: `Bank account ${variables.id ? 'updated' : 'created'} successfully`
       });
     },
     onError: (error: Error, variables) => {
       toast({
         title: `Error ${variables.id ? 'updating' : 'creating'} bank account`,
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   const deleteMutation = useMutation({
@@ -103,9 +118,9 @@ export const useBankAccountSettings = () => {
       toast({
         title: 'Error deleting bank account',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   return {
@@ -113,6 +128,6 @@ export const useBankAccountSettings = () => {
     isLoadingBankAccounts,
     createOrUpdateBankAccount: createOrUpdateMutation.mutate,
     deleteBankAccount: deleteMutation.mutate,
-    isProcessing: createOrUpdateMutation.isPending || deleteMutation.isPending,
+    isProcessing: createOrUpdateMutation.isPending || deleteMutation.isPending
   };
 };

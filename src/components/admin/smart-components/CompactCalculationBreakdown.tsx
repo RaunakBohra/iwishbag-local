@@ -58,18 +58,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   const exchangeRate = currencyDisplay.exchangeRate;
   const totalCost = quote.final_total_usd || 0;
 
-  // Check if HSN calculation was used
-  const isHSNCalculation = quote.calculation_data?.hsn_calculation?.method === 'per_item_hsn';
-  const hsnCalculationData = quote.calculation_data?.hsn_calculation;
-  const hasHSNItems = quote.items?.some((item) => item.hsn_code) || false;
-
-  // Calculate percentages for insights
-  const getPercentage = (amount: number) => ((amount / totalCost) * 100).toFixed(1);
-
-  // Get selected shipping option details
-  const selectedShippingOption = shippingOptions.find(
-    (opt) => opt.id === quote.operational_data?.shipping?.selected_option,
-  );
+  // Check if );
 
   // Helper functions for shipping breakdown calculations
   const getTotalWeight = () => {
@@ -115,8 +104,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
     final_total: totalCost,
     taxes: breakdown.taxes,
     customs: breakdown.customs,
-    isHSNCalculation,
-    hsnCalculationData,
+    ishsnCalculationData,
   });
 
   // 🔍 [DEBUG] Enhanced logging for quote bbfc6b7f-c630-41be-a688-ab3bb7087520
@@ -160,66 +148,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
   // Compact header view
   const CompactHeader = () => (
     <div className="p-4">
-      {/* Header Row */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <Calculator className="w-4 h-4 text-gray-600" />
-          <span className="font-medium text-gray-900 text-sm">Cost Breakdown</span>
-          {isCalculating && (
-            <Badge variant="secondary" className="text-xs animate-pulse">
-              Calculating...
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center space-x-1">
-          <span className="text-lg font-bold text-blue-600">
-            {currencyDisplay.formatSingleAmount(totalCost, 'origin')}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="h-6 w-6 p-0"
-          >
-            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </Button>
-        </div>
-      </div>
-
-      {/* Compact Cost Grid */}
-      <div
-        className={`grid gap-2 text-xs ${keyComponents.length <= 2 ? 'grid-cols-2' : keyComponents.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}
-      >
-        {keyComponents.map((component, index) => (
-          <div key={index} className="text-center">
-            <div className={`font-semibold ${component.color}`}>
-              {currencyDisplay.formatSingleAmount(component.amount, 'origin')}
-            </div>
-            <div className="text-gray-500 text-xs">{component.label}</div>
-            <div className="text-gray-400 text-xs">
-              {currencyDisplay.formatSingleAmount(component.amount, 'destination')}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Expandable detail tabs
-  const ExpandedDetails = () => (
-    <div className="border-t border-gray-100">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full h-8 text-xs grid-cols-2">
-          <TabsTrigger value="breakdown" className="text-xs">
-            Breakdown
-          </TabsTrigger>
-          <TabsTrigger value="insights" className="text-xs">
-            Insights
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="breakdown" className="p-4 pt-3 space-y-3">
-          {/* HSN Calculation Indicator */}
+      {}
           {isHSNCalculation && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
               <div className="flex items-center space-x-2">
@@ -235,7 +164,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             </div>
           )}
 
-          {/* Warning if HSN items exist but calculation didn't use HSN */}
+          {}
           {hasHSNItems &&
             !isHSNCalculation &&
             quote.calculation_method_preference !== 'route_based' &&
@@ -253,59 +182,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             )}
 
-          {/* Enhanced Valuation Method Indicator */}
-          {quote.valuation_method_preference && (
-            <div
-              className={`rounded-lg p-3 mb-3 ${
-                quote.valuation_method_preference === 'minimum_valuation'
-                  ? 'bg-amber-50 border border-amber-200'
-                  : quote.valuation_method_preference === 'higher_of_both'
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-blue-50 border border-blue-200'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Calculator
-                  className={`w-4 h-4 ${
-                    quote.valuation_method_preference === 'minimum_valuation'
-                      ? 'text-amber-600'
-                      : quote.valuation_method_preference === 'higher_of_both'
-                        ? 'text-green-600'
-                        : 'text-blue-600'
-                  }`}
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    quote.valuation_method_preference === 'minimum_valuation'
-                      ? 'text-amber-800'
-                      : quote.valuation_method_preference === 'higher_of_both'
-                        ? 'text-green-800'
-                        : 'text-blue-800'
-                  }`}
-                >
-                  {quote.valuation_method_preference === 'minimum_valuation'
-                    ? 'Minimum Valuation Method'
-                    : quote.valuation_method_preference === 'higher_of_both'
-                      ? 'Auto Selection Method'
-                      : 'Product Value Method'}
-                </span>
-              </div>
-              <div
-                className={`text-xs mt-1 ${
-                  quote.valuation_method_preference === 'minimum_valuation'
-                    ? 'text-amber-700'
-                    : quote.valuation_method_preference === 'higher_of_both'
-                      ? 'text-green-700'
-                      : 'text-blue-700'
-                }`}
-              >
-                {quote.valuation_method_preference === 'minimum_valuation'
-                  ? 'Using minimum valuation from HSN database for customs calculation'
-                  : quote.valuation_method_preference === 'higher_of_both'
-                    ? 'Using higher of minimum valuation vs actual product cost'
-                    : 'Using actual product cost for customs calculation basis'}
-                
-                {/* Show calculation results if available */}
+          {}
                 {quote.calculation_data?.valuation_applied && (
                   <div className="mt-2 pt-2 border-t border-current/20">
                     <div className="flex justify-between items-center text-xs">
@@ -347,112 +224,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
             </div>
           )}
 
-          {/* Detailed Breakdown */}
-          <div className="space-y-3">
-            {/* Items Total */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="w-4 h-4 text-blue-600" />
-                <span className="text-gray-700">Items Total</span>
-                <Badge variant="outline" className="text-xs h-4 px-1">
-                  {quote.items?.length || 0} items
-                </Badge>
-              </div>
-              <div className="text-right">
-                <div className="font-medium">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.items_total || 0), 'origin')}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(
-                    Number(breakdown.items_total || 0),
-                    'destination',
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Shipping - Enhanced with Detailed Breakdown */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <ExternalLink className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-700">International Shipping</span>
-                  {selectedShippingOption?.carrier && (
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {selectedShippingOption.carrier}
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(Number(breakdown.shipping || 0), 'origin')}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.shipping || 0),
-                      'destination',
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Shipping Calculation Breakdown - FIXED: Show actual data */}
-            </div>
-
-            {/* Customs & Duties */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center space-x-2">
-                <Info className="w-4 h-4 text-purple-600" />
-                <span className="text-gray-700">Customs & Duties</span>
-                {isHSNCalculation ? (
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Badge
-                        variant="outline"
-                        className="text-xs h-4 px-1 text-purple-600 border-purple-300"
-                      >
-                        <Tags className="w-3 h-3 mr-1" />
-                        HSN
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs space-y-1">
-                        <p>Calculated using HSN codes</p>
-                        {hsnCalculationData && (
-                          <>
-                            <p>{hsnCalculationData.total_items} items with HSN</p>
-                            <p>
-                              Total:{' '}
-                              {currencyDisplay.formatSingleAmount(
-                                hsnCalculationData.total_hsn_customs,
-                                'origin',
-                              )}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : quote.operational_data?.customs?.smart_tier ? (
-                  <Badge variant="outline" className="text-xs h-4 px-1">
-                    Smart
-                  </Badge>
-                ) : null}
-              </div>
-              <div className="text-right">
-                <div className="font-medium">
-                  {currencyDisplay.formatSingleAmount(Number(breakdown.customs || 0), 'origin')}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {currencyDisplay.formatSingleAmount(
-                    Number(breakdown.customs || 0),
-                    'destination',
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Sales Tax (Local/Origin) */}
+          {}
             {(breakdown.taxes || quote.calculation_data?.sales_tax_price) && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
@@ -482,37 +254,7 @@ export const CompactCalculationBreakdown: React.FC<CompactCalculationBreakdownPr
               </div>
             )}
 
-            {/* Destination Tax (VAT/GST) */}
-            {breakdown.destination_tax && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <Calculator className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-700">Destination Tax</span>
-                  <Badge
-                    variant="outline"
-                    className="text-xs h-4 px-1 text-green-600 border-green-300"
-                  >
-                    VAT/GST
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.destination_tax),
-                      'origin',
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {currencyDisplay.formatSingleAmount(
-                      Number(breakdown.destination_tax),
-                      'destination',
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Legacy Combined Taxes (for HSN calculations) */}
+            {}
             {isHSNCalculation && hsnCalculationData && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">

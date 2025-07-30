@@ -24,7 +24,7 @@ import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { supabase } from '@/integrations/supabase/client';
 import { useCartStore } from '@/stores/cartStore';
 import { useQueryClient } from '@tanstack/react-query';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 interface PayPalSuccessData {
   token: string; // PayPal order ID
@@ -93,9 +93,10 @@ const PaypalSuccess: React.FC = () => {
 
           // Try to find from guest checkout session
           const { data: sessions } = await supabase
-            .from('guest_checkout_sessions')
+            .from('checkout_sessions')
             .select('*')
-            .ilike('checkout_data->>paypal_order_id', token);
+            .eq('is_guest', true)
+            .ilike('metadata->>paypal_order_id', token);
 
           const session = sessions?.[0];
           const checkoutData = session?.checkout_data as CheckoutData;
@@ -546,7 +547,7 @@ const PaypalSuccess: React.FC = () => {
                         <div>
                           <span className="text-gray-600">Amount Paid:</span>
                           <p className="font-semibold text-lg text-green-600">
-                            {optimizedCurrencyService.formatAmount(paymentData.amount, paymentData.currency)}
+                            {currencyService.formatAmount(paymentData.amount, paymentData.currency)}
                           </p>
                         </div>
                         <div>

@@ -148,11 +148,6 @@ export function SearchAndFilterPanel({
 
   // Enhanced search handler with Sentry monitoring
   const handleSearchWithMonitoring = () => {
-    const transaction = Sentry.startTransaction({
-      name: 'Advanced Search Operation',
-      op: 'search.filter.execute',
-    });
-
     Sentry.withScope((scope) => {
       scope.setTag('component', 'SearchAndFilterPanel');
       scope.setContext('search_params', {
@@ -164,13 +159,9 @@ export function SearchAndFilterPanel({
 
       try {
         onSearch();
-        transaction.setStatus('ok');
       } catch (error) {
         scope.setLevel('error');
         Sentry.captureException(error);
-        transaction.setStatus('internal_error');
-      } finally {
-        transaction.finish();
       }
     });
   };

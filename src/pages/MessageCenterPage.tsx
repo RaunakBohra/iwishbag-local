@@ -8,7 +8,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,7 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle,
-  Info,
+  Info
 } from 'lucide-react';
 import { cn } from '@/lib/design-system';
 
@@ -107,7 +106,7 @@ const BusinessHoursDisplay: React.FC<BusinessHoursProps> = ({ isCompact = false 
                 hour: 'numeric',
                 minute: '2-digit',
                 hour12: true,
-                weekday: 'short',
+                weekday: 'short'
               })}{' '}
               IST
             </span>
@@ -258,32 +257,30 @@ const getTicketStatusIcon = (status: string) => {
 // Main MessageCenterPage Component
 export const MessageCenterPage: React.FC = () => {
   const { user } = useAuth();
-  const { data: hasAdminRole } = useAdminRole();
-  const [activeTab, setActiveTab] = useState('messages');
+    const [activeTab, setActiveTab] = useState('messages');
 
   // Get notification count for tab badge
   const { data: unreadNotifications } = useUnreadNotifications();
   const unreadCount = unreadNotifications?.length || 0;
 
   // Get message count for tab badge
-  const { data: unreadMessagesCount } = useQuery({
-    queryKey: ['unreadMessagesCount', user?.id, hasAdminRole],
+  const { data: unreadMessagesCount = 0 } = useQuery({
+    queryKey: ['unreadMessagesCount', user?.id],
     queryFn: async () => {
       if (!user) return 0;
 
-      let query = supabase
+      // All authenticated users can see all unread messages
+      const { count, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
         .neq('sender_id', user.id);
 
-      if (hasAdminRole) {
-        query = query.is('recipient_id', null);
-      } else {
-        query = query.eq('recipient_id', user.id);
+      if (error) {
+        console.error('Error fetching unread messages count:', error);
+        return 0;
       }
 
-      const { count } = await query;
       return count || 0;
     },
     enabled: !!user,

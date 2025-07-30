@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,10 @@ import {
 } from '@/components/ui/select';
 import { Loader2, MapPin, X } from 'lucide-react';
 import { useAllCountries } from '@/hooks/useAllCountries';
+import { InternationalAddressValidator } from '@/services/InternationalAddressValidator';
+import { StateProvinceService } from '@/services/StateProvinceService';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { isValidPhone } from '@/lib/phoneUtils';
 
 interface AddressFormData {
   address_line1: string;
@@ -46,6 +50,8 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   isLoading = false,
 }) => {
   const { data: countries } = useAllCountries();
+  const [fieldLabels, setFieldLabels] = useState({ state: 'State/Province', postal: 'Postal Code' });
+  const [stateProvinces, setStateProvinces] = useState(StateProvinceService.getStatesForCountry(initialData?.country || '') || null);
   const [formData, setFormData] = useState<AddressFormData>(
     initialData || {
       address_line1: '',
@@ -62,6 +68,17 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Update field labels and states when country changes
+  useEffect(() => {
+    if (formData.country) {
+      const labels = InternationalAddressValidator.getFieldLabels(formData.country);
+      setFieldLabels(labels);
+      
+      const states = StateProvinceService.getStatesForCountry(formData.country);
+      setStateProvinces(states);
+    }
+  }, [formData.country]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -80,9 +97,20 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     }
     if (!formData.postal_code?.trim()) {
       newErrors.postal_code = 'Postal code is required';
+    } else if (formData.country) {
+      const postalValidation = InternationalAddressValidator.validatePostalCode(
+        formData.postal_code,
+        formData.country
+      );
+      if (!postalValidation.isValid) {
+        newErrors.postal_code = postalValidation.error || 'Invalid postal code format';
+      }
     }
     if (!formData.country?.trim()) {
       newErrors.country = 'Country is required';
+    }
+    if (formData.phone && !isValidPhone(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number with country code';
     }
 
     setErrors(newErrors);
@@ -142,13 +170,15 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
                   Phone Number
                 </Label>
-                <Input
-                  id="phone"
+                <PhoneInput
                   value={formData.phone || ''}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+1 234 567 8900"
-                  className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                  onChange={(phone) => handleInputChange('phone', phone)}
+                  placeholder="Enter phone number"
+                  defaultCountry={formData.country?.toLowerCase() || 'us'}
+                  disabled={isLoading}
+                  error={!!errors.phone}
                 />
+                {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
               </div>
             </div>
           </div>
@@ -201,15 +231,35 @@ export const AddressModal: React.FC<AddressModalProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="state" className="text-sm font-medium text-gray-700">
-                  State/Province <span className="text-red-500">*</span>
+                  {fieldLabels.state} <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="state"
-                  value={formData.state_province_region}
-                  onChange={(e) => handleInputChange('state_province_region', e.target.value)}
-                  placeholder="NY"
-                  className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
-                />
+                {stateProvinces ? (
+                  <Select
+                    value={formData.state_province_region}
+                    onValueChange={(value) => handleInputChange('state_province_region', value)}
+                  >
+                    <SelectTrigger
+                      className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                    >
+                      <SelectValue placeholder={`Select ${fieldLabels.state.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stateProvinces.map((state) => (
+                        <SelectItem key={state.code} value={state.code}>
+                          {state.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="state"
+                    value={formData.state_province_region}
+                    onChange={(e) => handleInputChange('state_province_region', e.target.value)}
+                    placeholder={formData.country === 'GB' ? 'e.g., Greater London' : 'e.g., NY'}
+                    className={`${errors.state_province_region ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                  />
+                )}
                 {errors.state_province_region && (
                   <p className="text-sm text-red-600">{errors.state_province_region}</p>
                 )}
@@ -219,14 +269,22 @@ export const AddressModal: React.FC<AddressModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="postal_code" className="text-sm font-medium text-gray-700">
-                  Postal Code <span className="text-red-500">*</span>
+                  {fieldLabels.postal} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="postal_code"
                   value={formData.postal_code}
                   onChange={(e) => handleInputChange('postal_code', e.target.value)}
-                  placeholder="10001"
+                  placeholder={formData.country ? InternationalAddressValidator.getPostalCodeExample(formData.country) : '10001'}
                   className={`${errors.postal_code ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
+                  onBlur={(e) => {
+                    if (formData.country && e.target.value) {
+                      const formatted = InternationalAddressValidator.formatPostalCode(e.target.value, formData.country);
+                      if (formatted !== e.target.value) {
+                        handleInputChange('postal_code', formatted);
+                      }
+                    }
+                  }}
                 />
                 {errors.postal_code && <p className="text-sm text-red-600">{errors.postal_code}</p>}
               </div>

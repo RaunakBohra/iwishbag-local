@@ -46,7 +46,7 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
       if (!user?.id) return [];
 
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .eq('destination_country', shippingCountry)
@@ -54,7 +54,7 @@ export const SelectAddressDialog: React.FC<SelectAddressDialogProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Tables<'user_addresses'>[];
+      return data as Tables<'delivery_addresses'>[];
     },
     enabled: isOpen && !!user?.id,
   });

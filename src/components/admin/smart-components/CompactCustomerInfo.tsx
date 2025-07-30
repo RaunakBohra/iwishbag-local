@@ -80,16 +80,16 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const shippingAddress = quote.customer_data?.shipping_address || {};
   const isAnonymous = quote.is_anonymous;
 
-  // Fetch user's saved addresses from user_addresses table
+  // Fetch user's saved addresses from delivery_addresses table
   const { data: savedAddresses, isLoading: addressesLoading } = useQuery({
-    queryKey: ['user_addresses', quote.user_id],
+    queryKey: ['delivery_addresses', quote.user_id],
     queryFn: async () => {
       if (!quote.user_id) {
         return [];
       }
 
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', quote.user_id)
         .order('is_default', { ascending: false })
@@ -170,7 +170,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const addAddressMutation = useMutation({
     mutationFn: async (addressData: any) => {
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .insert({
           user_id: quote.user_id,
           recipient_name: addressData.recipient_name,
@@ -190,7 +190,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', quote.user_id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', quote.user_id] });
       toast({
         title: 'Address Added',
         description: 'Customer address has been added successfully.',
@@ -210,7 +210,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
   const updateAddressMutation = useMutation({
     mutationFn: async (addressData: any) => {
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .update({
           recipient_name: addressData.recipient_name,
           address_line1: addressData.address_line1,
@@ -230,7 +230,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', quote.user_id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', quote.user_id] });
       toast({
         title: 'Address Updated',
         description: 'Customer address has been updated successfully.',
@@ -249,12 +249,12 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
 
   const deleteAddressMutation = useMutation({
     mutationFn: async (addressId: string) => {
-      const { error } = await supabase.from('user_addresses').delete().eq('id', addressId);
+      const { error } = await supabase.from('delivery_addresses').delete().eq('id', addressId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', quote.user_id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', quote.user_id] });
       toast({
         title: 'Address Deleted',
         description: 'Customer address has been deleted successfully.',

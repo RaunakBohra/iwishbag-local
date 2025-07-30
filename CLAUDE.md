@@ -79,7 +79,7 @@ SELECT get_hsn_with_currency_conversion('6204', 'NP')->'currency_conversion' as 
 SELECT COUNT(*) as hsn_search_records FROM hsn_search_optimized;
 
 -- Test package forwarding system
-SELECT COUNT(*) as customer_addresses_count FROM customer_addresses;
+SELECT COUNT(*) as warehouse_suite_addresses_count FROM warehouse_suite_addresses;
 SELECT COUNT(*) as received_packages_count FROM received_packages;
 
 -- Test search functionality
@@ -186,6 +186,20 @@ pending → sent → approved → paid → ordered → shipped → completed
 **Use**: `customerDisplayUtils.ts` for ALL customer displays
 - Handles: registered, guest, admin-created, OAuth users
 - Standard pattern: `getCustomerDisplayData(quote, customerProfile)`
+
+### Address Management System
+**Two distinct address types**:
+1. **`warehouse_suite_addresses`** - Virtual US warehouse addresses
+   - One per customer
+   - Suite numbers (e.g., IWB10001)
+   - Used for package receiving
+   - Foreign key: `received_packages.warehouse_suite_address_id`
+
+2. **`delivery_addresses`** - Customer delivery addresses
+   - Multiple per customer
+   - Final destination addresses
+   - Used for shipping quotes & orders
+   - Can set default address
 
 ## Development Commands
 ```bash

@@ -43,9 +43,7 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
       borderColor: 'border-orange-200',
     },
     hsn: {
-      label: 'HSN',
-      description: 'Tax rates from HSN classification codes',
-      icon: <Tag className="w-4 h-4" />,
+      label: 'description: 'Tax rates from icon: <Tag className="w-4 h-4" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200',
@@ -62,7 +60,7 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
 
   const selectedInfo = methodInfo[currentMethod];
 
-  // Count items with HSN codes
+  
   const itemsWithHSN = quote.items?.filter((item) => item.hsn_code)?.length || 0;
   const totalItems = quote.items?.length || 0;
   const hsnCoverage = totalItems > 0 ? Math.round((itemsWithHSN / totalItems) * 100) : 0;
@@ -113,18 +111,7 @@ export const QuoteTaxSettings: React.FC<QuoteTaxSettingsProps> = ({
           </div>
         </div>
 
-        {/* Method Description */}
-        <div
-          className={`flex items-start space-x-2 p-2 rounded ${selectedInfo.bgColor} border ${selectedInfo.borderColor}`}
-        >
-          <div className={selectedInfo.color}>{selectedInfo.icon}</div>
-          <div className="flex-1">
-            <div className={`text-sm font-medium ${selectedInfo.color}`}>{selectedInfo.label}</div>
-            <div className="text-xs text-gray-600 mt-0.5">{selectedInfo.description}</div>
-          </div>
-        </div>
-
-        {/* HSN Coverage Alert */}
+        {}
         {currentMethod === 'hsn' && itemsWithHSN < totalItems && (
           <Alert className="border-amber-200 bg-amber-50">
             <Info className="h-3 w-3" />

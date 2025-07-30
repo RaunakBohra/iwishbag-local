@@ -1,16 +1,4 @@
-/**
- * UNIFIED TAX FALLBACK SERVICE
- *
- * Intelligently merges shipping route data with country settings to provide
- * unified tax calculation fallback mechanisms for the 2-tier tax system.
- *
- * Features:
- * - Route-specific tax rates with country-level fallbacks
- * - Intelligent data source prioritization
- * - Caching with 10-minute refresh for performance
- * - Comprehensive error handling and logging
- * - Support for HSN-specific and legacy tax calculations
- */
+
 
 import { supabase } from '@/integrations/supabase/client';
 
@@ -314,11 +302,7 @@ class UnifiedTaxFallbackService {
   }
 
   /**
-   * Compare HSN vs Legacy calculation data for a route
-   */
-  async getCalculationMethodComparison(
-    originCountry: string,
-    destinationCountry: string,
+   * Compare destinationCountry: string,
   ): Promise<{
     unified_data: UnifiedTaxData;
     hsn_available: boolean;
@@ -327,7 +311,7 @@ class UnifiedTaxFallbackService {
   }> {
     const unifiedData = await this.getUnifiedTaxData(originCountry, destinationCountry);
 
-    // Check if HSN data is available for destination country
+    
     const { data: hsnData } = await supabase.from('hsn_master').select('hsn_code').limit(1);
 
     const hsnAvailable = Boolean(hsnData && hsnData.length > 0);

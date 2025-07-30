@@ -17,7 +17,7 @@ interface Customer {
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
-  user_addresses: {
+  delivery_addresses: {
     id: string;
     address_line1: string;
     address_line2: string | null;

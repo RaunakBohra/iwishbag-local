@@ -170,7 +170,6 @@ export class VersionedSupabaseClient {
   isFeatureSupported(feature: string, version: string): boolean {
     const featureVersions: Record<string, string> = {
       'mfa': 'v1.1',
-      'audit_logs': 'v1.1',
       'rate_limiting': 'v1',
       'advanced_search': 'v1',
       'bulk_operations': 'v1.1',

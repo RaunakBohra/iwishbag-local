@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { AlertTriangle, CheckCircle, Info, Calculator } from 'lucide-react';
 
 interface DualCurrencyDisplayProps {
@@ -36,10 +36,10 @@ export function DualCurrencyDisplay({
     destinationCountry: string,
     exchangeRate?: number,
   ) => {
-    const originCurrency = optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
-    const destinationCurrency = optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
+    const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
 
-    const originSymbol = optimizedCurrencyService.getCurrencySymbol(originCurrency);
+    const originSymbol = currencyService.getCurrencySymbol(originCurrency);
     const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
     if (exchangeRate && exchangeRate !== 1) {
@@ -50,7 +50,7 @@ export function DualCurrencyDisplay({
       } else {
         convertedAmount = Math.round(convertedAmount * 100) / 100;
       }
-      const destinationSymbol = optimizedCurrencyService.getCurrencySymbol(destinationCurrency);
+      const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
       const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
 
       return {
@@ -137,12 +137,12 @@ export function DualCurrencyDisplay({
         {exchangeRate && exchangeRate !== 1 && (
           <div>
             Rate: 1{' '}
-            {optimizedCurrencyService.getCurrencySymbol(
-              optimizedCurrencyService.getCurrencyForCountrySync(originCountry),
+            {currencyService.getCurrencySymbol(
+              currencyService.getCurrencyForCountrySync(originCountry),
             )}{' '}
             = {exchangeRate}{' '}
-            {optimizedCurrencyService.getCurrencySymbol(
-              optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry),
+            {currencyService.getCurrencySymbol(
+              currencyService.getCurrencyForCountrySync(destinationCountry),
             )}
           </div>
         )}
@@ -226,10 +226,10 @@ export function SimpleDualCurrency({
     destinationCountry: string,
     exchangeRate?: number,
   ) => {
-    const originCurrency = optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
-    const destinationCurrency = optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
+    const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
 
-    const originSymbol = optimizedCurrencyService.getCurrencySymbol(originCurrency);
+    const originSymbol = currencyService.getCurrencySymbol(originCurrency);
     const originFormatted = `${originSymbol}${amount.toLocaleString()}`;
 
     if (exchangeRate && exchangeRate !== 1) {
@@ -240,7 +240,7 @@ export function SimpleDualCurrency({
       } else {
         convertedAmount = Math.round(convertedAmount * 100) / 100;
       }
-      const destinationSymbol = optimizedCurrencyService.getCurrencySymbol(destinationCurrency);
+      const destinationSymbol = currencyService.getCurrencySymbol(destinationCurrency);
       const destinationFormatted = `${destinationSymbol}${convertedAmount.toLocaleString()}`;
 
       return `${originFormatted}/${destinationFormatted}`;
@@ -267,8 +267,8 @@ export function CurrencyInputLabel({
   required = false,
   className = '',
 }: CurrencyInputLabelProps) {
-  const symbol = optimizedCurrencyService.getCurrencySymbol(
-    optimizedCurrencyService.getCurrencyForCountrySync(countryCode),
+  const symbol = currencyService.getCurrencySymbol(
+    currencyService.getCurrencyForCountrySync(countryCode),
   );
 
   return (

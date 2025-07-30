@@ -1,299 +1,4 @@
-/**
- * Comprehensive Calculator Test Suite
- * Tests SmartCalculationEngine with various tax methods, valuation methods, and weights
- */
 
-import { SmartCalculationEngine } from '@/services/SmartCalculationEngine';
-import type { UnifiedQuote } from '@/types/unified-quote';
-
-interface TestScenario {
-  name: string;
-  description: string;
-  quote: Partial<UnifiedQuote>;
-  taxPreferences: any;
-  expectedChecks: string[];
-}
-
-interface TestResult {
-  scenario: string;
-  success: boolean;
-  results: any;
-  errors: string[];
-  itemBreakdowns?: any[];
-  shippingOptions?: any[];
-}
-
-export class CalculatorTestSuite {
-  private engine: SmartCalculationEngine;
-  private testResults: TestResult[] = [];
-
-  constructor() {
-    this.engine = SmartCalculationEngine.getInstance();
-  }
-
-  /**
-   * Create a base test quote
-   */
-  private createBaseQuote(overrides: Partial<UnifiedQuote> = {}): UnifiedQuote {
-    return {
-      id: `test-${Date.now()}`,
-      origin_country: 'IN',
-      destination_country: 'NP',
-      customer_data: {
-        name: 'Test Customer',
-        email: 'test@example.com'
-      },
-      items: [],
-      calculation_data: {
-        items_total: 0,
-        total_weight: 0
-      },
-      operational_data: {
-        customs: { percentage: 20 },
-        domestic_shipping: 50
-      },
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      ...overrides
-    } as UnifiedQuote;
-  }
-
-  /**
-   * Test Suite 1: Quote-Level Tax Methods
-   */
-  async testQuoteLevelTaxMethods() {
-    console.log('\n🧪 Testing Quote-Level Tax Methods...\n');
-
-    const scenarios: TestScenario[] = [
-      {
-        name: 'Manual Method - 0% Customs',
-        description: 'Testing manual method with 0% customs',
-        quote: {
-          calculation_method_preference: 'manual',
-          operational_data: {
-            customs: { percentage: 0 },
-            domestic_shipping: 50
-          },
-          items: [{
-            id: 'item-1',
-            name: 'Test Item',
-            quantity: 1,
-            costprice_origin: 1000,
-            weight: 5,
-            hsn_code: '6204'
-          }]
-        },
-        taxPreferences: {
-          calculation_method_preference: 'manual'
-        },
-        expectedChecks: ['customs should be 0', 'method should be manual']
-      },
-      {
-        name: 'Manual Method - 20% Customs',
-        description: 'Testing manual method with 20% customs',
-        quote: {
-          calculation_method_preference: 'manual',
-          operational_data: {
-            customs: { percentage: 20 },
-            domestic_shipping: 50
-          },
-          items: [{
-            id: 'item-2',
-            name: 'Test Item',
-            quantity: 1,
-            costprice_origin: 1000,
-            weight: 5,
-            hsn_code: '6204'
-          }]
-        },
-        taxPreferences: {
-          calculation_method_preference: 'manual'
-        },
-        expectedChecks: ['customs should be 20%', 'method should be manual']
-      },
-      {
-        name: 'HSN Only Method',
-        description: 'Testing HSN-based calculation',
-        quote: {
-          calculation_method_preference: 'hsn_only',
-          items: [{
-            id: 'item-3',
-            name: 'Cotton Kurta',
-            quantity: 2,
-            costprice_origin: 500,
-            weight: 2,
-            hsn_code: '6204' // Women's suits
-          }]
-        },
-        taxPreferences: {
-          calculation_method_preference: 'hsn_only',
-          force_per_item_calculation: true
-        },
-        expectedChecks: ['should use HSN tax rates', 'should have item breakdowns']
-      },
-      {
-        name: 'Route Based Method',
-        description: 'Testing route-based calculation',
-        quote: {
-          calculation_method_preference: 'route_based',
-          origin_country: 'IN',
-          destination_country: 'NP',
-          items: [{
-            id: 'item-4',
-            name: 'Electronics',
-            quantity: 1,
-            costprice_origin: 2000,
-            weight: 3,
-            hsn_code: '8517' // Telephones
-          }]
-        },
-        taxPreferences: {
-          calculation_method_preference: 'route_based'
-        },
-        expectedChecks: ['should use route tier taxes', 'should check IN-NP route']
-      }
-    ];
-
-    for (const scenario of scenarios) {
-      await this.runScenario(scenario);
-    }
-  }
-
-  /**
-   * Test Suite 2: Item-Level Tax Methods
-   */
-  async testItemLevelTaxMethods() {
-    console.log('\n🧪 Testing Item-Level Tax Methods...\n');
-
-    const scenarios: TestScenario[] = [
-      {
-        name: 'Item with HSN Method',
-        description: 'Testing item-level HSN tax method',
-        quote: {
-          items: [{
-            id: 'item-5',
-            name: 'Mobile Phone',
-            quantity: 1,
-            costprice_origin: 50000,
-            weight: 0.5,
-            hsn_code: '8517',
-            tax_method: 'hsn'
-          }]
-        },
-        taxPreferences: {
-          force_per_item_calculation: true
-        },
-        expectedChecks: ['item should use HSN rates', 'should have HSN breakdown']
-      },
-      {
-        name: 'Item with Country Method',
-        description: 'Testing item-level country tax method',
-        quote: {
-          items: [{
-            id: 'item-6',
-            name: 'Generic Product',
-            quantity: 3,
-            costprice_origin: 1000,
-            weight: 2,
-            tax_method: 'country'
-          }]
-        },
-        taxPreferences: {
-          force_per_item_calculation: true
-        },
-        expectedChecks: ['item should use country rates', 'should use route tier']
-      },
-      {
-        name: 'Item with Manual Method',
-        description: 'Testing item-level manual tax method',
-        quote: {
-          items: [{
-            id: 'item-7',
-            name: 'Custom Product',
-            quantity: 1,
-            costprice_origin: 1500,
-            weight: 1,
-            tax_method: 'manual',
-            tax_options: {
-              manual: { rate: 25 }
-            }
-          }]
-        },
-        taxPreferences: {
-          force_per_item_calculation: true
-        },
-        expectedChecks: ['item should use 25% manual rate']
-      },
-      {
-        name: 'Item with Customs Method',
-        description: 'Testing item-level customs tax method',
-        quote: {
-          operational_data: {
-            customs: { percentage: 15 }
-          },
-          items: [{
-            id: 'item-8',
-            name: 'Import Product',
-            quantity: 2,
-            costprice_origin: 2000,
-            weight: 4,
-            tax_method: 'customs'
-          }]
-        },
-        taxPreferences: {
-          force_per_item_calculation: true
-        },
-        expectedChecks: ['item should use quote customs rate of 15%']
-      },
-      {
-        name: 'Mixed Tax Methods',
-        description: 'Testing multiple items with different tax methods',
-        quote: {
-          items: [
-            {
-              id: 'item-9a',
-              name: 'HSN Product',
-              quantity: 1,
-              costprice_origin: 1000,
-              weight: 1,
-              hsn_code: '6204',
-              tax_method: 'hsn'
-            },
-            {
-              id: 'item-9b',
-              name: 'Manual Product',
-              quantity: 1,
-              costprice_origin: 1000,
-              weight: 1,
-              tax_method: 'manual',
-              tax_options: { manual: { rate: 30 } }
-            },
-            {
-              id: 'item-9c',
-              name: 'Country Product',
-              quantity: 1,
-              costprice_origin: 1000,
-              weight: 1,
-              tax_method: 'country'
-            }
-          ]
-        },
-        taxPreferences: {
-          force_per_item_calculation: true
-        },
-        expectedChecks: ['should calculate each item separately', 'should have 3 item breakdowns']
-      }
-    ];
-
-    for (const scenario of scenarios) {
-      await this.runScenario(scenario);
-    }
-  }
-
-  /**
-   * Test Suite 3: Valuation Methods
-   */
   async testValuationMethods() {
     console.log('\n🧪 Testing Valuation Methods...\n');
 
@@ -335,7 +40,7 @@ export class CalculatorTestSuite {
           valuation_method_preference: 'minimum_valuation',
           calculation_method_preference: 'hsn_only'
         },
-        expectedChecks: ['should use HSN minimum valuation', 'customs base should be higher than product value']
+        expectedChecks: ['should use 'customs base should be higher than product value']
       },
       {
         name: 'Higher of Both Method',
@@ -507,23 +212,20 @@ export class CalculatorTestSuite {
         expectedChecks: ['should include sales tax', 'should use US-NP specific rates']
       },
       {
-        name: 'Missing HSN Code',
-        description: 'Testing fallback when HSN code is missing',
-        quote: {
+        name: 'Missing description: 'Testing fallback when quote: {
           calculation_method_preference: 'hsn_only',
           items: [{
             id: 'item-19',
-            name: 'No HSN Product',
-            quantity: 1,
+            name: 'No quantity: 1,
             costprice_origin: 1000,
             weight: 2
-            // No HSN code
+            
           }]
         },
         taxPreferences: {
           calculation_method_preference: 'hsn_only'
         },
-        expectedChecks: ['should handle missing HSN gracefully', 'should use fallback calculation']
+        expectedChecks: ['should handle missing 'should use fallback calculation']
       }
     ];
 

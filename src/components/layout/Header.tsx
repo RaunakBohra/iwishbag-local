@@ -15,7 +15,6 @@ import {
   HelpCircle,
   Search,
   Command,
-  Truck,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -24,14 +23,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { useCart } from '@/hooks/useCart';
 import { useSidebar } from '@/hooks/use-sidebar';
@@ -48,34 +46,31 @@ const Header = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { openPalette, getShortcutDisplay } = useCommandPalette();
 
-  const { data: hasAdminRole } = useAdminRole();
-  const { itemCount: cartItemCount } = useCart();
+    const { itemCount: cartItemCount } = useCart();
 
   // Default homepage settings
   const homePageSettings = {
     website_logo_url:
       'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
-    company_name: 'iwishBag',
+    company_name: 'iwishBag'
   };
 
   // Check if we're in admin area
-  const isAdminArea = location.pathname.startsWith('/admin');
+  const isInAdminArea = location.pathname.startsWith('/admin');
 
-  const { data: unreadMessagesCount } = useQuery({
-    queryKey: ['unreadMessagesCount', user?.id, hasAdminRole],
+  // Get unread messages count for authenticated users
+  const { data: unreadMessagesCount = 0 } = useQuery({
+    queryKey: ['unreadMessagesCount', user?.id],
     queryFn: async () => {
       if (!user) return 0;
-      let query = supabase
+      
+      // All authenticated users can see all unread messages
+      const { count, error } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('is_read', false)
         .neq('sender_id', user.id);
-      if (hasAdminRole) {
-        query = query.is('recipient_id', null);
-      } else {
-        query = query.eq('recipient_id', user.id);
-      }
-      const { count, error } = await query;
+      
       if (error) {
         console.error('Error fetching unread messages count:', error);
         return 0;
@@ -83,7 +78,7 @@ const Header = () => {
       return count || 0;
     },
     enabled: !!user,
-    refetchInterval: 60000,
+    refetchInterval: 60000
   });
 
   const { data: _approvedQuotesCount } = useQuery({
@@ -103,7 +98,7 @@ const Header = () => {
       return count || 0;
     },
     enabled: !!user,
-    refetchInterval: 60000,
+    refetchInterval: 60000
   });
 
   const handleSignOut = async () => {
@@ -162,12 +157,12 @@ const Header = () => {
         {/* Left Section - Logo and Navigation */}
         <div className="flex items-center space-x-4 md:space-x-6 lg:space-x-8 min-w-0 flex-1">
           {/* Mobile menu toggle for admin area */}
-          {isAdminArea && (
+          {isInAdminArea && (
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden hover:bg-gray-50 flex-shrink-0 h-9 w-9 transition-colors"
               onClick={toggleSidebar}
+              className="flex-shrink-0 h-9 w-9 md:hidden"
             >
               <Menu className="h-4 w-4" />
               <span className="sr-only">Toggle menu</span>
@@ -190,9 +185,8 @@ const Header = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          {!isAdminArea && (
-            <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
-              {/* Always show Track Order link */}
+          {!isInAdminArea && (
+            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
               <Button
                 variant={location.pathname.startsWith('/track') ? 'default' : 'ghost'}
                 size="sm"
@@ -247,8 +241,8 @@ const Header = () => {
           )}
 
           {/* Admin Navigation */}
-          {user && isAdminArea && (
-            <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
+          {user && isInAdminArea && (
+            <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
               <Button
                 variant={location.pathname.includes('/admin/quotes') ? 'default' : 'ghost'}
                 size="sm"
@@ -299,12 +293,7 @@ const Header = () => {
           </Button>
 
           {/* Admin Search - only show in admin area */}
-          {isAdminArea && (
-            <div className="hidden sm:block">
-              <AdminSearch />
-            </div>
-          )}
-
+          {isInAdminArea && <AdminSearch />}
           {user && !isAnonymous ? (
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
               {/* Desktop View - Show all actions */}
@@ -490,19 +479,6 @@ const Header = () => {
                           variant="outline"
                           className="w-full justify-start"
                           onClick={() => {
-                            navigate('/dashboard/package-forwarding');
-                            setIsSheetOpen(false);
-                          }}
-                        >
-                          <Truck className="mr-3 h-4 w-4" />
-                          <div className="flex flex-col items-start">
-                            <span className="font-medium">Package Forwarding</span>
-                          </div>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start"
-                          onClick={() => {
                             navigate('/support/my-tickets');
                             setIsSheetOpen(false);
                           }}
@@ -513,7 +489,7 @@ const Header = () => {
                           </div>
                         </Button>
                         {/* Admin Section */}
-                        {hasAdminRole && (
+                        {user && (
                           <>
                             <div className="border-t border-gray-200 my-3" />
                             <div className="mb-1 text-xs font-semibold text-muted-foreground tracking-wide uppercase">
@@ -628,18 +604,6 @@ const Header = () => {
                       asChild
                       className="cursor-pointer rounded-md hover:bg-gray-50"
                     >
-                      <Link to="/dashboard/package-forwarding" className="flex items-center w-full">
-                        <Truck className="mr-3 h-4 w-4" />
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">Package Forwarding</span>
-                          <span className="text-xs text-gray-500">US warehouse & shipping</span>
-                        </div>
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      asChild
-                      className="cursor-pointer rounded-md hover:bg-gray-50"
-                    >
                       <Link to="/profile" className="flex items-center w-full">
                         <Settings className="mr-3 h-4 w-4" />
                         <div className="flex flex-col">
@@ -686,7 +650,7 @@ const Header = () => {
                         </div>
                       </Link>
                     </DropdownMenuItem>
-                    {hasAdminRole && (
+                    {user && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -697,7 +661,7 @@ const Header = () => {
                             <Building className="mr-3 h-4 w-4" />
                             <div className="flex flex-col">
                               <span className="font-medium text-gray-900">Admin Dashboard</span>
-                              <span className="text-xs text-gray-500">Manage the platform</span>
+                              <span className="text-xs text-gray-500">Administrative tools</span>
                             </div>
                           </Link>
                         </DropdownMenuItem>

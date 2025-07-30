@@ -25,7 +25,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 // Removed unused cn import
 import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+// import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm'; // Component removed
 // Removed unused useEmailNotifications import
 
 const signInSchema = z.object({
@@ -356,15 +356,12 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   return (
     <div className="w-full max-w-md mx-auto">
       <Form {...signInForm}>
-        <TurnstileProtectedForm
-          onSubmit={(turnstileToken) => {
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
             const values = signInForm.getValues();
-            handleSignIn(values, turnstileToken);
+            handleSignIn(values);
           }}
-          isSubmitting={loading}
-          submitButtonText={loading ? "Signing In..." : "Sign In"}
-          submitButtonClassName="w-full h-10 sm:h-11 lg:h-12 text-sm sm:text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
-          action="sign_in"
           className="space-y-5 pt-4"
           id="sign-in-form"
         >
@@ -472,7 +469,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
               Sign Up
             </button>
           </div>
-        </TurnstileProtectedForm>
+        </form>
       </Form>
 
       {/* Sign Up Modal */}
@@ -490,7 +487,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
             </DialogHeader>
           </div>
           <Form {...signUpForm}>
-            <TurnstileProtectedForm
+            <form
               onSubmit={(turnstileToken) => {
                 const values = signUpForm.getValues();
                 handleSignUp(values, turnstileToken);
@@ -651,7 +648,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                 )}
               />
               {/* Submit button is now handled by TurnstileProtectedForm */}
-            </TurnstileProtectedForm>
+            </form>
           </Form>
         </DialogContent>
       </Dialog>
@@ -709,7 +706,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
             </div>
           ) : (
             <Form {...forgotForm}>
-              <TurnstileProtectedForm
+              <form
                 onSubmit={(turnstileToken) => {
                   const values = forgotForm.getValues();
                   handleForgotPassword(values, turnstileToken);
@@ -741,7 +738,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                   )}
                 />
                 {/* Submit button is now handled by TurnstileProtectedForm */}
-              </TurnstileProtectedForm>
+              </form>
             </Form>
           )}
         </DialogContent>

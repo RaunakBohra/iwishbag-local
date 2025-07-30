@@ -1,110 +1,4 @@
-/**
- * Cloudflare Worker API Service
- * 
- * Handles communication with edge API endpoints
- * Provides type-safe interfaces for Worker APIs
- */
 
-import { logger } from '@/lib/logger';
-
-// Base Worker URL (can be customized per environment)
-const WORKER_BASE_URL = import.meta.env.VITE_WORKER_API_URL || 
-  'https://api.iwishbag.workers.dev';
-
-interface CurrencyConversionRequest {
-  amount: number;
-  from: string;
-  to: string;
-}
-
-interface CurrencyConversionResponse {
-  amount: number;
-  from: string;
-  to: string;
-  result: number;
-  rate: number;
-  timestamp: string;
-  cached?: boolean;
-}
-
-interface ExchangeRatesResponse {
-  base: string;
-  rates: Record<string, number>;
-  timestamp: string;
-}
-
-interface QuoteCalculationRequest {
-  origin_country: string;
-  destination_country: string;
-  items: Array<{
-    category: string;
-    price_usd: number;
-    weight_kg: number;
-    quantity: number;
-  }>;
-  shipping_method?: string;
-}
-
-interface QuoteCalculationResponse {
-  items_total: number;
-  shipping: number;
-  customs: number;
-  gst: number;
-  total: number;
-  currency: string;
-  calculated_at: string;
-  cached?: boolean;
-}
-
-interface HSNLookupResponse {
-  hsn_code: string;
-  description: string;
-  category: string;
-  customs_rate: number;
-  gst_rate: number;
-}
-
-interface ProductClassificationRequest {
-  product: string;
-  origin?: string;
-  destination?: string;
-}
-
-interface ProductClassificationResponse {
-  product: string;
-  classification: {
-    hsn_code: string | null;
-    category: string | null;
-    customs_rate: number | null;
-    gst_rate: number | null;
-  };
-  ai_powered: boolean;
-}
-
-interface PopularProduct {
-  id: string;
-  name: string;
-  category: string;
-  popularity_score: number;
-  search_count: number;
-  purchase_count: number;
-}
-
-export class CloudflareWorkerService {
-  private static instance: CloudflareWorkerService;
-  
-  private constructor() {}
-  
-  static getInstance(): CloudflareWorkerService {
-    if (!CloudflareWorkerService.instance) {
-      CloudflareWorkerService.instance = new CloudflareWorkerService();
-    }
-    return CloudflareWorkerService.instance;
-  }
-  
-  /**
-   * Make a request to the Worker API
-   */
   private async request<T>(
     endpoint: string,
     options?: RequestInit
@@ -131,43 +25,7 @@ export class CloudflareWorkerService {
     }
   }
   
-  /**
-   * Convert currency amounts
-   */
-  async convertCurrency(
-    amount: number,
-    from: string,
-    to: string
-  ): Promise<CurrencyConversionResponse> {
-    return this.request<CurrencyConversionResponse>('/api/currency/convert', {
-      method: 'POST',
-      body: JSON.stringify({ amount, from, to }),
-    });
-  }
   
-  /**
-   * Get exchange rates
-   */
-  async getExchangeRates(currency?: string): Promise<ExchangeRatesResponse> {
-    const params = currency ? `?currency=${currency}` : '';
-    return this.request<ExchangeRatesResponse>(`/api/currency/rates${params}`);
-  }
-  
-  /**
-   * Calculate quote with edge caching
-   */
-  async calculateQuote(
-    quoteData: QuoteCalculationRequest
-  ): Promise<QuoteCalculationResponse> {
-    return this.request<QuoteCalculationResponse>('/api/quote/calculate', {
-      method: 'POST',
-      body: JSON.stringify(quoteData),
-    });
-  }
-  
-  /**
-   * Lookup HSN code
-   */
   async lookupHSN(code: string): Promise<HSNLookupResponse | null> {
     try {
       return await this.request<HSNLookupResponse>(
@@ -178,9 +36,7 @@ export class CloudflareWorkerService {
     }
   }
   
-  /**
-   * Search HSN codes
-   */
+  
   async searchHSN(query: string): Promise<{
     search: string;
     results: HSNLookupResponse[];

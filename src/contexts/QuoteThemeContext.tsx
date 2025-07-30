@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import {
   customerTheme,
   adminTheme,
   colorUtils,
   cssVariables,
   type CustomerTheme,
-  type AdminTheme,
+  type AdminTheme
 } from '@/styles/colors/quote-themes';
 
 // Cultural region detection based on user location or preferences
@@ -50,11 +49,10 @@ export const QuoteThemeProvider: React.FC<QuoteThemeProviderProps> = ({
   children,
   culturalRegion = 'international',
   accessibilityLevel = 'aa',
-  themeOverride = null,
+  themeOverride = null
 }) => {
   const { user } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
-  const [manualOverride, setManualOverride] = React.useState<UserType | null>(themeOverride);
+    const [manualOverride, setManualOverride] = React.useState<UserType | null>(themeOverride);
 
   // Determine user type for theming
   const userType: UserType = useMemo(() => {
@@ -63,11 +61,10 @@ export const QuoteThemeProvider: React.FC<QuoteThemeProviderProps> = ({
     if (themeOverride) return themeOverride;
 
     // Determine based on authentication and role
-    if (isAdminLoading) return 'guest'; // Default while loading
-    if (isAdmin) return 'admin';
-    if (user) return 'customer';
-    return 'guest';
-  }, [user, isAdmin, isAdminLoading, manualOverride, themeOverride]);
+    if (!user) return 'guest';
+    // All authenticated users are treated as admins (simplified access control)
+    return 'admin';
+  }, [user, manualOverride, themeOverride]);
 
   // Select appropriate theme
   const theme = useMemo(() => {
@@ -143,7 +140,7 @@ export const QuoteThemeProvider: React.FC<QuoteThemeProviderProps> = ({
     getCulturalColors,
     getAccessibleColors,
     cssVars,
-    setThemeOverride: setManualOverride,
+    setThemeOverride: setManualOverride
   };
 
   return <QuoteThemeContext.Provider value={contextValue}>{children}</QuoteThemeContext.Provider>;
@@ -210,7 +207,7 @@ export const useQuoteColors = () => {
     getAccessibleColors,
 
     // Full theme object
-    theme: colors,
+    theme: colors
   };
 };
 
@@ -231,6 +228,6 @@ export const useConversionColors = () => {
 
     // Context information
     isAdmin: userType === 'admin',
-    isCustomer: userType === 'customer' || userType === 'guest',
+    isCustomer: userType === 'customer' || userType === 'guest'
   };
 };

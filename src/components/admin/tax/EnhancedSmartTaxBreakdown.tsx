@@ -102,8 +102,7 @@ export const EnhancedSmartTaxBreakdown: React.FC<EnhancedSmartTaxBreakdownProps>
   // Calculation method display
   const calculationMethod = quote.calculation_method_preference || 'route_based';
   const methodLabels = {
-    hsn_only: 'HSN Classification',
-    route_based: 'Shipping Route',
+    hsn_only: 'route_based: 'Shipping Route',
     manual: 'Manual Entry'
   };
 

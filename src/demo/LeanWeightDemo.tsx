@@ -45,9 +45,7 @@ export const LeanWeightDemo: React.FC = () => {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
 
-  // Sample HSN codes for demo
-  const sampleHSNCodes = [
-    { code: '851762', name: 'Mobile phones' },
+  // Sample name: 'Mobile phones' },
     { code: '847130', name: 'Laptops' },
     { code: '851770', name: 'Phone accessories' },
     { code: '620442', name: 'Women\'s dresses' },
@@ -119,122 +117,7 @@ export const LeanWeightDemo: React.FC = () => {
         </CardHeader>
       </Card>
 
-      {/* Items Entry */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quote Items</CardTitle>
-          <CardDescription>
-            Add items to see how the weight prediction works with different sources
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {items.map((item, index) => (
-            <div key={item.id} className="p-4 border rounded-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">Item {index + 1}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeItem(item.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  Remove
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Product Name</Label>
-                  <Input
-                    value={item.product_name}
-                    onChange={(e) => updateItem(item.id, 'product_name', e.target.value)}
-                    placeholder="e.g., iPhone 15 Pro Max"
-                  />
-                </div>
-
-                <div>
-                  <Label>HSN Code</Label>
-                  <Select
-                    value={item.hsn_code}
-                    onValueChange={(value) => updateItem(item.id, 'hsn_code', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select HSN code" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sampleHSNCodes.map(hsn => (
-                        <SelectItem key={hsn.code} value={hsn.code}>
-                          {hsn.code} - {hsn.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Product URL (Optional)</Label>
-                  <Input
-                    value={item.product_url}
-                    onChange={(e) => updateItem(item.id, 'product_url', e.target.value)}
-                    placeholder="https://amazon.com/..."
-                  />
-                </div>
-
-                <div>
-                  <SmartDualWeightField
-                    value={item.weight}
-                    onChange={(weight) => updateItem(item.id, 'weight', weight)}
-                    productName={item.product_name}
-                    hsnCode={item.hsn_code}
-                    productUrl={item.product_url}
-                    onSourceSelected={(source) => handleWeightSourceSelected(item.id, source)}
-                    showDebug={true}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Price (USD)</Label>
-                    <Input
-                      type="number"
-                      value={item.price}
-                      onChange={(e) => updateItem(item.id, 'price', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <Label>Quantity</Label>
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                      min="1"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {item.selectedWeightSource && (
-                <Alert className="mt-2">
-                  <Info className="w-4 h-4" />
-                  <AlertDescription>
-                    Weight source: <Badge variant="outline">{item.selectedWeightSource.toUpperCase()}</Badge>
-                    {item.selectedWeightSource === 'hsn' && ' - Using official HSN database weight'}
-                    {item.selectedWeightSource === 'ml' && ' - Using ML prediction based on product name'}
-                    {item.selectedWeightSource === 'manual' && ' - Using manually entered weight'}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          ))}
-
-          <Button onClick={addItem} variant="outline" className="w-full">
-            + Add Another Item
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Summary */}
+      {}
       <Card>
         <CardHeader>
           <CardTitle>Weight Summary</CardTitle>

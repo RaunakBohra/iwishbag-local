@@ -10,7 +10,7 @@ import { Shield, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnifiedQuote, ShippingOption, RouteInsuranceOptions } from '@/types/unified-quote';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 interface InsuranceToggleProps {
   quote: UnifiedQuote;
@@ -52,7 +52,7 @@ export const InsuranceToggle: React.FC<InsuranceToggleProps> = ({
   };
 
   const insuranceCost = calculateInsuranceCost();
-  const currencySymbol = optimizedCurrencyService.getCurrencySymbol(quote.currency);
+  const currencySymbol = currencyService.getCurrencySymbol(quote.currency);
 
   // Get insurance description
   const getInsuranceDescription = (): string => {

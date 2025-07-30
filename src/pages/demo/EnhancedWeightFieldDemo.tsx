@@ -81,80 +81,7 @@ export default function EnhancedWeightFieldDemo() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3">
-            <Scale className="h-8 w-8 text-teal-600" />
-            <h1 className="text-3xl font-bold text-gray-900">Enhanced Weight Field Demo</h1>
-          </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Click on any weight field to see both manual input and smart suggestions simultaneously
-          </p>
-        </div>
-
-        {/* Feature Highlights */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-teal-600" />
-              Enhanced Features
-            </CardTitle>
-            <CardDescription>
-              New weight field combines manual input with smart suggestions in a unified interface
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="font-semibold text-gray-900">✨ What's New:</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• Manual input box always visible when editing</li>
-                  <li>• Smart suggestions shown simultaneously (no popover)</li>
-                  <li>• One-click selection from AI predictions</li>
-                  <li>• Clear Save/Cancel buttons for manual entry</li>
-                </ul>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="font-semibold text-gray-900">🎯 User Experience:</h4>
-                <ul className="space-y-1 text-sm text-gray-600">
-                  <li>• No need to toggle between input and dropdown</li>
-                  <li>• Both options available simultaneously</li>
-                  <li>• Visual feedback for confidence levels</li>
-                  <li>• Source tracking (HSN, ML, Manual)</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Interactive Demo */}
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-            <Package className="h-6 w-6 text-teal-600" />
-            Interactive Product Weight Examples
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {products.map((product) => (
-              <Card key={product.id}>
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <CardDescription>{product.description}</CardDescription>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      HSN: {product.hsnCode}
-                    </Badge>
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-xs ${getSourceColor(sourcesSelected[product.id])}`}
-                    >
-                      {getSourceLabel(sourcesSelected[product.id])}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Enhanced Weight Field */}
+        {}
                   <SmartDualWeightField
                     value={productWeights[product.id]}
                     onChange={handleWeightChange(product.id)}
@@ -208,24 +135,7 @@ export default function EnhancedWeightFieldDemo() {
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                    HSN Database - Historical data patterns
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                    ML Prediction - AI-powered estimates
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded"></div>
-                    Smart Hybrid - Best of both sources
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-semibold text-blue-900 mb-2">💡 Pro Tip:</h4>
-              <p className="text-blue-800 text-sm">
-                When editing, you'll see both the manual input AND all smart suggestions at the same time. 
+                    you'll see both the manual input AND all smart suggestions at the same time. 
                 No need to switch between modes - choose the method that works best for each situation!
               </p>
             </div>

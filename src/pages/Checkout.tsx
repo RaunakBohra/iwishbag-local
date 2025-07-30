@@ -42,7 +42,7 @@ import { useCart } from '@/hooks/useCart';
 import { CartItem } from '@/stores/cartStore';
 import { usePaymentGateways } from '@/hooks/usePaymentGateways';
 import { useAllCountries } from '@/hooks/useAllCountries';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { useLocationDetection } from '@/hooks/useLocationDetection';
 import { PaymentMethodSelector } from '@/components/payment/PaymentMethodSelector';
 import { StripePaymentForm } from '@/components/payment/StripePaymentForm';
@@ -284,7 +284,7 @@ export default function Checkout() {
   const { data: availableCurrencies } = useQuery({
     queryKey: ['available-currencies-service'],
     queryFn: async () => {
-      const currencies = await optimizedCurrencyService.getAllCurrencies();
+      const currencies = await currencyService.getAllCurrencies();
       return currencies.map((currency) => ({
         code: currency.code,
         name: currency.name,
@@ -451,7 +451,7 @@ export default function Checkout() {
 
       const countryCode =
         selectedCartItems[0].destinationCountryCode || selectedCartItems[0].countryCode || 'US';
-      return await optimizedCurrencyService.getCurrencyForCountry(countryCode);
+      return await currencyService.getCurrencyForCountry(countryCode);
     },
     enabled: isGuestCheckout && !!guestQuote && selectedCartItems.length > 0,
   });
@@ -635,13 +635,13 @@ export default function Checkout() {
 
   // Queries
   const { data: addresses, isLoading: addressesLoading } = useQuery({
-    queryKey: ['user_addresses', user?.id, shippingCountry],
+    queryKey: ['delivery_addresses', user?.id, shippingCountry],
     queryFn: async () => {
       if (!user || !shippingCountry) return [];
 
       // Try filtering by destination_country first, fallback to country field
       let { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .eq('destination_country', shippingCountry)
@@ -651,7 +651,7 @@ export default function Checkout() {
       // If no addresses found and destination_country exists, try fallback to country field
       if ((!data || data.length === 0) && !error) {
         const fallbackResult = await supabase
-          .from('user_addresses')
+          .from('delivery_addresses')
           .select('*')
           .eq('user_id', user.id)
           .eq('country', shippingCountry)
@@ -743,7 +743,7 @@ export default function Checkout() {
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .insert({
           user_id: user.id,
           ...addressData,
@@ -757,7 +757,7 @@ export default function Checkout() {
       return data;
     },
     onSuccess: (newAddress) => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
       setSelectedAddress(newAddress.id);
       setShowAddressModal(false);
       setAddressFormData({

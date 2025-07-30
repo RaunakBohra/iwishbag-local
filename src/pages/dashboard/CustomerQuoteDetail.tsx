@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { smartCalculationEngine } from '@/services/SmartCalculationEngine';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
 import type { Tables } from '@/integrations/supabase/types';
 import type { UnifiedQuote } from '@/types/unified-quote';
@@ -40,7 +40,6 @@ import {
 import { ModernQuoteLayout } from '@/components/customer/ModernQuoteLayout';
 import { ModernItemsDisplay } from '@/components/customer/ModernItemsDisplay';
 import { QuoteActivityTimeline } from '@/components/customer/QuoteActivityTimeline';
-import { EnhancedSmartTaxBreakdown } from '@/components/admin/tax/EnhancedSmartTaxBreakdown';
 import { DiscountDisplay } from '@/components/dashboard/DiscountDisplay';
 import { MembershipDashboard } from '@/components/dashboard/MembershipDashboard';
 import { MembershipService } from '@/services/MembershipService';
@@ -137,10 +136,10 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
       // Get destination currency
       let destinationCurrency = null;
       try {
-        const currencyCode = await optimizedCurrencyService.getCurrencyForCountry(quote.destination_country);
+        const currencyCode = await currencyService.getCurrencyForCountry(quote.destination_country);
         destinationCurrency = {
           code: currencyCode,
-          symbol: optimizedCurrencyService.getCurrencySymbol(currencyCode),
+          symbol: currencyService.getCurrencySymbol(currencyCode),
           rate: 1
         };
       } catch (error) {
@@ -594,17 +593,7 @@ const CustomerQuoteDetail: React.FC<CustomerQuoteDetailProps> = () => {
         </TabsContent>
 
         <TabsContent value="breakdown" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="lg:col-span-1">
-              <EnhancedSmartTaxBreakdown
-                quote={transformedQuote}
-                showEducation={true}
-                compact={false}
-                title="Price Breakdown"
-                className="h-full"
-              />
-            </div>
-            
+          <div className="grid gap-6 lg:grid-cols-1">
             {/* Shipping Options */}
             {transformedQuote.shipping_options && transformedQuote.shipping_options.length > 0 && (
               <Card className="lg:col-span-1">

@@ -167,8 +167,6 @@ serve(async (req) => {
     console.log('📝 Adding database columns...');
 
     const migrations = [
-      // Add preferred_payment_gateway to profiles
-      `ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_payment_gateway TEXT`,
 
       // Add gateway columns to country_settings
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY['bank_transfer']`,

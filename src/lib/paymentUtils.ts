@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 export interface PaymentSummary {
   finalTotal: number; // Local currency amount (for display)
@@ -37,25 +37,20 @@ export async function calculatePaymentSummary(
 ): Promise<PaymentSummary> {
   try {
     // Get current exchange rate for calculations
-    const currencyInfo = await optimizedCurrencyService.getAllCurrencies();
+    const currencyInfo = await currencyService.getAllCurrencies();
     const targetCurrency = currencyInfo.find(c => c.code === currency);
     const exchangeRate = targetCurrency?.rate_from_usd || 1;
 
-    // Fetch payment ledger with USD equivalents
+    // Fetch payment transactions from consolidated table
     const { data: paymentLedger, error } = await supabase
-      .from('payment_ledger')
+      .from('payment_transactions')
       .select('*')
       .eq('quote_id', quoteId)
+      .eq('status', 'completed')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching payment ledger:', error);
-      // Fallback to payment_transactions
-      const { data: transactions } = await supabase
-        .from('payment_transactions')
-        .select('amount, usd_equivalent, local_currency, exchange_rate_at_payment')
-        .eq('quote_id', quoteId)
-        .eq('status', 'completed');
+      console.error('Error fetching payment transactions:', error);
 
       const totals = transactions?.reduce(
         (acc, tx) => {
@@ -279,7 +274,7 @@ export async function recordPaymentWithUsdEquivalent(
 ): Promise<{ success: boolean; usdEquivalent?: number; error?: string }> {
   try {
     // Get exchange rate for USD equivalent
-    const currencyInfo = await optimizedCurrencyService.getAllCurrencies();
+    const currencyInfo = await currencyService.getAllCurrencies();
     const targetCurrency = currencyInfo.find(c => c.code === currency);
     const exchangeRate = targetCurrency?.rate_from_usd || 1;
     const usdEquivalent = amount / exchangeRate;
@@ -303,23 +298,7 @@ export async function recordPaymentWithUsdEquivalent(
       return { success: false, error: transactionError.message };
     }
 
-    // Also record in payment_ledger for consistency
-    const { error: ledgerError } = await supabase.from('payment_ledger').insert({
-      quote_id: quoteId,
-      amount: amount.toString(),
-      currency,
-      usd_equivalent: usdEquivalent,
-      exchange_rate_at_payment: exchangeRate,
-      transaction_type: 'customer_payment',
-      payment_method: paymentMethod,
-      transaction_id: transactionId,
-      status: 'completed',
-      created_at: new Date().toISOString(),
-    });
-
-    if (ledgerError) {
-      console.warn('Error recording payment ledger (non-critical):', ledgerError);
-    }
+    // No need for separate ledger entry as payment_ledger is consolidated into payment_transactions
 
     return { success: true, usdEquivalent };
   } catch (error) {

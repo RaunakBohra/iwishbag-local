@@ -1,5 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedConfigService } from './UnifiedConfigurationService';
+import { logger } from '@/lib/logger';
+
+// Edge API URL - can be configured via environment variable
+const EDGE_API_URL = import.meta.env.VITE_EDGE_API_URL || 'https://iwishbag-edge-api.rnkbohra.workers.dev';
 
 export interface Currency {
   code: string;
@@ -27,13 +31,25 @@ export interface CountrySettings {
 
 class CurrencyService {
   private static instance: CurrencyService;
+  
+  // Multi-tier caching system
+  private memoryCache: Map<string, { data: any; expires: number }> = new Map();
   private currencyCache: Map<string, Currency> = new Map();
   private allCurrenciesCache: Currency[] | null = null;
   private countryCurrencyMapCache: Map<string, string> = new Map();
   private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  
+  // Cache durations
+  private readonly MEMORY_TTL = 5 * 60 * 1000; // 5 minutes (fastest access)
+  private readonly STORAGE_TTL = 30 * 60 * 1000; // 30 minutes (localStorage)
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (legacy compatibility)
 
-  private constructor() {}
+  private constructor() {
+    // Clean up expired localStorage entries on startup
+    this.cleanupExpiredStorage();
+    // Initialize cache warmup
+    this.scheduleEssentialDataPreload();
+  }
 
   static getInstance(): CurrencyService {
     if (!CurrencyService.instance) {
@@ -56,66 +72,251 @@ class CurrencyService {
     this.currencyCache.clear();
     this.allCurrenciesCache = null;
     this.countryCurrencyMapCache.clear();
+    this.memoryCache.clear();
     this.cacheTimestamp = 0;
+    
+    // Clear localStorage cache
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('iwishbag_currency_')) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to remove ${key} from localStorage:`, error);
+      }
+    });
+    
+    console.log('[CurrencyService] All caches cleared');
   }
 
   /**
-   * Get all unique currencies from unified configuration system
+   * Unified 3-tier caching system: Memory → D1 Edge → localStorage → Database
+   */
+  private async getCachedData<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttl: number = this.STORAGE_TTL,
+    d1Endpoint?: string
+  ): Promise<T> {
+    // Tier 1: Memory cache (instant access)
+    const memoryCached = this.memoryCache.get(key);
+    if (memoryCached && Date.now() < memoryCached.expires) {
+      console.log(`[CurrencyService] Memory cache hit: ${key}`);
+      return memoryCached.data;
+    }
+
+    // Tier 2: D1 Edge cache (global, <10ms)
+    if (d1Endpoint) {
+      try {
+        const response = await fetch(`${EDGE_API_URL}${d1Endpoint}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`[CurrencyService] D1 edge cache hit: ${key}`);
+          
+          // Cache in memory
+          this.memoryCache.set(key, {
+            data,
+            expires: Date.now() + this.MEMORY_TTL
+          });
+          
+          // Also cache in localStorage
+          this.cacheToLocalStorage(key, data, ttl);
+          
+          return data;
+        }
+      } catch (error) {
+        logger?.warn('D1 edge cache error, falling back', { error, key });
+      }
+    }
+
+    // Tier 3: localStorage cache (very fast)
+    try {
+      const storageKey = `iwishbag_currency_${key}`;
+      const storedData = localStorage.getItem(storageKey);
+      
+      if (storedData) {
+        const parsed = JSON.parse(storedData);
+        if (Date.now() < parsed.expires) {
+          console.log(`[CurrencyService] Storage cache hit: ${key}`);
+          
+          // Promote to memory cache
+          this.memoryCache.set(key, {
+            data: parsed.data,
+            expires: Date.now() + this.MEMORY_TTL
+          });
+          
+          return parsed.data;
+        }
+      }
+    } catch (error) {
+      console.warn(`[CurrencyService] Storage cache error for ${key}:`, error);
+    }
+
+    // Tier 4: Database/API call
+    console.log(`[CurrencyService] Fetching from database: ${key}`);
+    const data = await fetcher();
+    
+    // Cache in both tiers
+    this.memoryCache.set(key, {
+      data,
+      expires: Date.now() + this.MEMORY_TTL
+    });
+
+    this.cacheToLocalStorage(key, data, ttl);
+
+    return data;
+  }
+
+  /**
+   * Cache data to localStorage with error handling
+   */
+  private cacheToLocalStorage(key: string, data: any, ttl: number): void {
+    try {
+      const storageKey = `iwishbag_currency_${key}`;
+      localStorage.setItem(storageKey, JSON.stringify({
+        data,
+        expires: Date.now() + ttl,
+        cached_at: Date.now(),
+        source: 'database'
+      }));
+    } catch (error) {
+      console.warn(`[CurrencyService] Failed to cache in localStorage:`, error);
+    }
+  }
+
+  /**
+   * Clean up expired localStorage entries
+   */
+  private cleanupExpiredStorage(): void {
+    const now = Date.now();
+    const keysToRemove: string[] = [];
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('iwishbag_currency_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key) || '{}');
+          if (data.expires && now > data.expires) {
+            keysToRemove.push(key);
+          }
+        } catch (error) {
+          // Invalid data, remove it
+          keysToRemove.push(key);
+        }
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to cleanup ${key}:`, error);
+      }
+    });
+    
+    if (keysToRemove.length > 0) {
+      console.log(`[CurrencyService] Cleaned up ${keysToRemove.length} expired cache entries`);
+    }
+  }
+
+  /**
+   * Get all unique currencies from country_settings table with enhanced caching
    */
   async getAllCurrencies(): Promise<Currency[]> {
-    if (this.allCurrenciesCache && this.isCacheValid()) {
-      return this.allCurrenciesCache;
+    // Temporarily clear cache in development to ensure fresh data
+    if (import.meta.env.DEV) {
+      console.log('[CurrencyService] Development mode: clearing cache for fresh data');
+      this.clearCache();
     }
+    
+    return this.getCachedData(
+      'all_currencies',
+      async () => {
+        try {
+          console.log('[CurrencyService] Fetching currencies from country_settings table...');
+          
+          // Query country_settings table directly (same as useAllCountries)
+          const { data: countries, error } = await supabase
+            .from('country_settings')
+            .select('*')
+            .order('name');
 
-    try {
-      // Get all countries from unified configuration
-      const allCountries = await unifiedConfigService.getAllCountries();
+          if (error) {
+            console.error('[CurrencyService] Database error:', error);
+            throw new Error(error.message);
+          }
 
-      if (!allCountries || Object.keys(allCountries).length === 0) {
-        console.warn('No countries found in unified config, using fallback currencies');
-        return this.getFallbackCurrencies();
-      }
+          if (!countries || countries.length === 0) {
+            console.warn('No countries found in country_settings, using fallback currencies');
+            return this.getFallbackCurrencies();
+          }
 
-      // Group by currency and get the most complete data for each
-      const currencyMap = new Map<string, Currency>();
+          console.log(`[CurrencyService] Found ${countries.length} countries`);
 
-      Object.values(allCountries).forEach((countryConfig) => {
-        if (!countryConfig.currency) return;
+          // Group by currency and get the most complete data for each
+          const currencyMap = new Map<string, Currency>();
 
-        const existing = currencyMap.get(countryConfig.currency);
-        const currency: Currency = {
-          code: countryConfig.currency,
-          name: countryConfig.name || this.getCurrencyNameSync(countryConfig.currency),
-          symbol: countryConfig.symbol || this.getCurrencySymbolSync(countryConfig.currency),
-          decimal_places: this.getCurrencyDecimalPlacesSync(countryConfig.currency),
-          min_payment_amount: countryConfig.minimum_payment_amount ?? undefined,
-          thousand_separator: ',',
-          decimal_separator: '.',
-          is_active: true,
-        };
+          countries.forEach((country) => {
+            if (!country.currency) return;
 
-        // Keep the one with more complete data (prefer non-null values)
-        if (!existing || (countryConfig.minimum_payment_amount && !existing.min_payment_amount)) {
-          currencyMap.set(countryConfig.currency, currency);
+            const existing = currencyMap.get(country.currency);
+            const currency: Currency = {
+              code: country.currency,
+              name: this.getCurrencyNameSync(country.currency),
+              symbol: this.getCurrencySymbolSync(country.currency),
+              decimal_places: this.getCurrencyDecimalPlacesSync(country.currency),
+              min_payment_amount: country.minimum_payment_amount ?? undefined,
+              thousand_separator: ',',
+              decimal_separator: '.',
+              is_active: true,
+            };
+
+            // Keep the one with more complete data (prefer non-null values)
+            if (!existing || (country.minimum_payment_amount && !existing.min_payment_amount)) {
+              currencyMap.set(country.currency, currency);
+            }
+          });
+
+          const currencies = Array.from(currencyMap.values());
+          console.log(`[CurrencyService] Processed ${currencies.length} unique currencies`);
+
+          // Update legacy caches for backward compatibility
+          this.allCurrenciesCache = currencies;
+          this.cacheTimestamp = Date.now();
+
+          // Update individual currency cache
+          currencies.forEach((currency) => {
+            this.currencyCache.set(currency.code, currency);
+          });
+
+          return currencies;
+        } catch (error) {
+          console.error('Error in getAllCurrencies:', error);
+          return this.getFallbackCurrencies();
         }
-      });
-
-      const currencies = Array.from(currencyMap.values());
-
-      // Cache the results
-      this.allCurrenciesCache = currencies;
-      this.cacheTimestamp = Date.now();
-
-      // Update individual currency cache
-      currencies.forEach((currency) => {
-        this.currencyCache.set(currency.code, currency);
-      });
-
-      return currencies;
-    } catch (error) {
-      console.error('Error in getAllCurrencies:', error);
-      return this.getFallbackCurrencies();
-    }
+      },
+      24 * 60 * 60 * 1000 // 24 hours - currencies don't change often
+      // '/api/countries' // D1 endpoint - temporarily disabled to force database query
+    ).then(result => {
+      // Handle D1 response format
+      if (result && 'countries' in result) {
+        // Convert country data to Currency format
+        return result.countries.map(country => ({
+          code: country.currency,
+          name: country.currency,
+          symbol: country.symbol,
+          decimal_places: this.getCurrencyDecimalPlacesSync(country.currency),
+          is_active: true,
+        }));
+      }
+      return result;
+    });
   }
 
   /**
@@ -166,11 +367,26 @@ class CurrencyService {
   }
 
   /**
-   * Get currency for a specific country
+   * Get currency for a specific country with enhanced caching
    */
   async getCurrencyForCountry(countryCode: string): Promise<string> {
-    const map = await this.getCountryCurrencyMap();
-    return map.get(countryCode) || 'USD';
+    const cacheKey = `country_currency_${countryCode}`;
+    
+    return this.getCachedData(
+      cacheKey,
+      async () => {
+        const map = await this.getCountryCurrencyMap();
+        return map.get(countryCode) || 'USD';
+      },
+      24 * 60 * 60 * 1000, // 24 hours
+      `/api/countries/${countryCode}` // D1 endpoint
+    ).then(result => {
+      // Handle D1 response format
+      if (result && typeof result === 'object' && 'country' in result && result.country) {
+        return result.country.currency || 'USD';
+      }
+      return result;
+    });
   }
 
   /**
@@ -621,102 +837,123 @@ class CurrencyService {
   }
 
   /**
-   * Get exchange rate using 2-tier system: Shipping Routes → Country Settings → Error
-   * This replaces the old complex fallback system with a simple, business-focused approach
+   * Get exchange rate with enhanced 3-tier caching: Memory → D1 Edge → localStorage → Database
+   * Uses 2-tier system: Shipping Routes → Country Settings → Error
    *
    * @param originCountry - Origin country code (e.g. 'US', 'IN')
    * @param destinationCountry - Destination country code (e.g. 'IN', 'NP')
    * @returns Promise<number> - Exchange rate or throws error
    */
   async getExchangeRate(originCountry: string, destinationCountry: string): Promise<number> {
-    console.log(`[CurrencyService] getExchangeRate called: ${originCountry}→${destinationCountry}`);
+    const cacheKey = `rate_${originCountry}_${destinationCountry}`;
+    console.log(`[CurrencyService] getExchangeRate called: ${originCountry}→${destinationCountry}, cacheKey: ${cacheKey}`);
     
-    // Same currency = 1.0
+    // Same currency = 1.0 (no caching needed)
     if (originCountry === destinationCountry) {
       console.log(`[CurrencyService] Same country, returning 1.0`);
       return 1.0;
     }
 
-    try {
-      // Tier 1: Check shipping routes for direct exchange rates (highest priority)
-      console.log(`[CurrencyService] Checking shipping routes for ${originCountry}→${destinationCountry}`);
-      const { data: shippingRoute, error: routeError } = await supabase
-        .from('shipping_routes')
-        .select('exchange_rate')
-        .eq('origin_country', originCountry)
-        .eq('destination_country', destinationCountry)
-        .not('exchange_rate', 'is', null)
-        .single();
+    // Try to get from D1 edge cache first
+    const d1Endpoint = `/api/currency/rates?from=${originCountry}&to=${destinationCountry}`;
+    
+    // Use enhanced caching for exchange rates
+    return this.getCachedData(
+      cacheKey,
+      async () => {
+        console.log(`[CurrencyService] Cache miss, fetching exchange rate from database`);
+        
+        try {
+          // Tier 1: Check shipping routes for direct exchange rates (highest priority)
+          console.log(`[CurrencyService] Checking shipping routes for ${originCountry}→${destinationCountry}`);
+          const { data: shippingRoute, error: routeError } = await supabase
+            .from('shipping_routes')
+            .select('exchange_rate')
+            .eq('origin_country', originCountry)
+            .eq('destination_country', destinationCountry)
+            .not('exchange_rate', 'is', null)
+            .single();
 
-      console.log(`[CurrencyService] Shipping route query result:`, { data: shippingRoute, error: routeError });
+          console.log(`[CurrencyService] Shipping route query result:`, { data: shippingRoute, error: routeError });
 
-      if (!routeError && shippingRoute?.exchange_rate) {
-        console.log(
-          `[CurrencyService] ✅ Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
-        );
-        return shippingRoute.exchange_rate;
-      } else {
-        console.log(`[CurrencyService] ❌ No shipping route found, falling back to country settings`);
-      }
+          if (!routeError && shippingRoute?.exchange_rate) {
+            console.log(
+              `[CurrencyService] ✅ Using shipping route rate: ${originCountry}→${destinationCountry} = ${shippingRoute.exchange_rate}`,
+            );
+            return shippingRoute.exchange_rate;
+          } else {
+            console.log(`[CurrencyService] ❌ No shipping route found, falling back to country settings`);
+          }
 
-      // Tier 2: Fallback to unified configuration USD-based conversion
-      const [originConfig, destConfig] = await Promise.all([
-        unifiedConfigService.getCountryConfig(originCountry),
-        unifiedConfigService.getCountryConfig(destinationCountry),
-      ]);
+          // Tier 2: Fallback to unified configuration USD-based conversion
+          const [originConfig, destConfig] = await Promise.all([
+            unifiedConfigService.getCountryConfig(originCountry),
+            unifiedConfigService.getCountryConfig(destinationCountry),
+          ]);
 
-      if (!originConfig || !destConfig) {
-        console.warn(
-          `[CurrencyService] Missing country config for ${originCountry} or ${destinationCountry}, using fallback rate`,
-        );
-        // Fallback to default exchange rate (1.0 for same currency, or common rates)
-        if (originCountry === destinationCountry) {
-          return 1.0;
+          if (!originConfig || !destConfig) {
+            console.warn(
+              `[CurrencyService] Missing country config for ${originCountry} or ${destinationCountry}, using fallback rate`,
+            );
+            // Fallback to default exchange rate (1.0 for same currency, or common rates)
+            if (originCountry === destinationCountry) {
+              return 1.0;
+            }
+            // Common fallback rates for missing configurations
+            const fallbackRates: Record<string, number> = {
+              DE_NP: 134.5, // EUR to NPR approximate
+              NP_DE: 0.0074, // NPR to EUR approximate
+              IN_NP: 1.6, // INR to NPR approximate
+              NP_IN: 0.625, // NPR to INR approximate
+              US_NP: 134.5, // USD to NPR approximate
+              NP_US: 0.0074, // NPR to USD approximate
+            };
+            const fallbackKey = `${originCountry}_${destinationCountry}`;
+            const fallbackRate = fallbackRates[fallbackKey] || 1.0;
+            console.warn(
+              `[CurrencyService] Using fallback rate ${originCountry}→${destinationCountry}: ${fallbackRate}`,
+            );
+            return fallbackRate;
+          }
+
+          const originRate = originConfig.rate_from_usd;
+          const destRate = destConfig.rate_from_usd;
+
+          if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
+            throw new Error(
+              `Invalid exchange rates: ${originCountry}=${originRate}, ${destinationCountry}=${destRate}`,
+            );
+          }
+
+          // Calculate cross rate via USD: destination_rate / origin_rate
+          const crossRate = destRate / originRate;
+          console.log(
+            `[CurrencyService] Using USD cross-rate: ${originCountry}→${destinationCountry} = ${crossRate} (${destRate}/${originRate})`,
+          );
+
+          return crossRate;
+        } catch (error) {
+          console.error(
+            `[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`,
+            error,
+          );
+          throw new Error(`Exchange rate unavailable for ${originCountry} to ${destinationCountry}`);
         }
-        // Common fallback rates for missing configurations
-        const fallbackRates: Record<string, number> = {
-          DE_NP: 134.5, // EUR to NPR approximate
-          NP_DE: 0.0074, // NPR to EUR approximate
-          IN_NP: 1.6, // INR to NPR approximate
-          NP_IN: 0.625, // NPR to INR approximate
-          US_NP: 134.5, // USD to NPR approximate
-          NP_US: 0.0074, // NPR to USD approximate
-        };
-        const fallbackKey = `${originCountry}_${destinationCountry}`;
-        const fallbackRate = fallbackRates[fallbackKey] || 1.0;
-        console.warn(
-          `[CurrencyService] Using fallback rate ${originCountry}→${destinationCountry}: ${fallbackRate}`,
-        );
-        return fallbackRate;
+      },
+      6 * 60 * 60 * 1000, // 6 hours - exchange rates are relatively stable
+      d1Endpoint
+    ).then(result => {
+      console.log(`[CurrencyService] Final result for ${originCountry}→${destinationCountry}:`, result);
+      // Handle D1 response format
+      if (typeof result === 'object' && result && 'rate' in result) {
+        return result.rate;
       }
-
-      const originRate = originConfig.rate_from_usd;
-      const destRate = destConfig.rate_from_usd;
-
-      if (!originRate || !destRate || originRate <= 0 || destRate <= 0) {
-        throw new Error(
-          `Invalid exchange rates: ${originCountry}=${originRate}, ${destinationCountry}=${destRate}`,
-        );
-      }
-
-      // Calculate cross rate via USD: destination_rate / origin_rate
-      const crossRate = destRate / originRate;
-      console.log(
-        `[CurrencyService] Using USD cross-rate: ${originCountry}→${destinationCountry} = ${crossRate} (${destRate}/${originRate})`,
-      );
-
-      return crossRate;
-    } catch (error) {
-      console.error(
-        `[CurrencyService] Failed to get exchange rate ${originCountry}→${destinationCountry}:`,
-        error,
-      );
-      throw new Error(`Exchange rate unavailable for ${originCountry} to ${destinationCountry}`);
-    }
+      return result;
+    });
   }
 
   /**
-   * Get exchange rate for currency conversion (simplified interface)
+   * Get exchange rate for currency conversion (simplified interface) with enhanced caching
    * @param fromCurrency - Source currency code (e.g. 'USD', 'INR')
    * @param toCurrency - Target currency code (e.g. 'INR', 'NPR')
    * @returns Promise<number> - Exchange rate or throws error
@@ -726,23 +963,31 @@ class CurrencyService {
       return 1.0;
     }
 
-    try {
-      // Get countries for these currencies
-      const fromCountry = await this.getCountryForCurrency(fromCurrency);
-      const toCountry = await this.getCountryForCurrency(toCurrency);
+    const cacheKey = `currency_${fromCurrency}_${toCurrency}`;
+    
+    return this.getCachedData(
+      cacheKey,
+      async () => {
+        try {
+          // Get countries for these currencies
+          const fromCountry = await this.getCountryForCurrency(fromCurrency);
+          const toCountry = await this.getCountryForCurrency(toCurrency);
 
-      if (!fromCountry || !toCountry) {
-        throw new Error(`Cannot find countries for currencies: ${fromCurrency}, ${toCurrency}`);
-      }
+          if (!fromCountry || !toCountry) {
+            throw new Error(`Cannot find countries for currencies: ${fromCurrency}, ${toCurrency}`);
+          }
 
-      return await this.getExchangeRate(fromCountry, toCountry);
-    } catch (error) {
-      console.error(
-        `[CurrencyService] Currency exchange rate failed ${fromCurrency}→${toCurrency}:`,
-        error,
-      );
-      throw new Error(`Exchange rate unavailable for ${fromCurrency} to ${toCurrency}`);
-    }
+          return await this.getExchangeRate(fromCountry, toCountry);
+        } catch (error) {
+          console.error(
+            `[CurrencyService] Currency exchange rate failed ${fromCurrency}→${toCurrency}:`,
+            error,
+          );
+          throw new Error(`Exchange rate unavailable for ${fromCurrency} to ${toCurrency}`);
+        }
+      },
+      6 * 60 * 60 * 1000 // 6 hours
+    );
   }
 
   /**
@@ -769,6 +1014,116 @@ class CurrencyService {
   getCurrencyByCountry(countryCode: string): string {
     return this.getCurrencyForCountrySync(countryCode);
   }
+
+  // ============================================================================
+  // PERFORMANCE ENHANCEMENT METHODS
+  // ============================================================================
+
+  /**
+   * Schedule essential data preload for faster app startup
+   */
+  private scheduleEssentialDataPreload(): void {
+    // Preload after a short delay to not block initial app rendering
+    setTimeout(() => {
+      this.preloadEssentials().catch(error => {
+        console.warn('[CurrencyService] Essential data preload failed:', error);
+      });
+    }, 2000);
+  }
+
+  /**
+   * Preload essential currency data for instant app startup
+   */
+  async preloadEssentials(): Promise<void> {
+    const essentials = [
+      () => this.getAllCurrencies(),
+      () => this.getCurrencyForCountry('US'),
+      () => this.getCurrencyForCountry('IN'), 
+      () => this.getCurrencyForCountry('NP'),
+      () => this.getExchangeRate('US', 'IN'),
+      () => this.getExchangeRate('US', 'NP')
+    ];
+
+    await Promise.allSettled(essentials.map(fn => fn()));
+    console.log('[CurrencyService] Essential data preloaded');
+  }
+
+  /**
+   * Warm up cache with common currency pairs
+   */
+  async warmUpCache(): Promise<void> {
+    console.log('[CurrencyService] Warming up cache...');
+    
+    const commonPairs = [
+      // USD pairs (most common)
+      ['US', 'IN'], ['US', 'NP'], ['US', 'GB'], ['US', 'AU'], ['US', 'CA'],
+      // Regional pairs
+      ['IN', 'NP'], ['DE', 'GB'], ['AU', 'NZ'], ['CA', 'US'],
+      // Reverse pairs
+      ['IN', 'US'], ['NP', 'US'], ['GB', 'US'], ['AU', 'US'], ['CA', 'US']
+    ];
+
+    // Load all pairs concurrently but with small delay to avoid overwhelming
+    for (let i = 0; i < commonPairs.length; i++) {
+      const [origin, dest] = commonPairs[i];
+      try {
+        await this.getExchangeRate(origin, dest);
+        if (i < commonPairs.length - 1) {
+          // Small delay to avoid overwhelming the API
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      } catch (error) {
+        console.warn(`[CurrencyService] Failed to warm ${origin}→${dest}:`, error);
+      }
+    }
+
+    console.log('[CurrencyService] Cache warmup completed');
+  }
+
+  /**
+   * Get cache statistics for monitoring
+   */
+  getCacheStats(): {
+    memoryCacheSize: number;
+    storageCacheSize: number;
+    hitRate: string;
+  } {
+    let storageCacheSize = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('iwishbag_currency_')) {
+        storageCacheSize++;
+      }
+    }
+
+    return {
+      memoryCacheSize: this.memoryCache.size,
+      storageCacheSize,
+      hitRate: 'Available after testing'
+    };
+  }
+
+  /**
+   * Batch update exchange rates (for scheduled updates)
+   */
+  async batchUpdateExchangeRates(rates: Record<string, number>): Promise<void> {
+    console.log(`[CurrencyService] Batch updating ${Object.keys(rates).length} rates`);
+    
+    Object.entries(rates).forEach(([pair, rate]) => {
+      const cacheKey = `rate_${pair}`;
+      
+      // Update memory cache
+      this.memoryCache.set(cacheKey, {
+        data: rate,
+        expires: Date.now() + this.MEMORY_TTL
+      });
+      
+      // Update localStorage cache
+      this.cacheToLocalStorage(cacheKey, rate, 6 * 60 * 60 * 1000);
+    });
+
+    console.log(`[CurrencyService] Batch updated ${Object.keys(rates).length} rates`);
+  }
 }
 
 // Export singleton instance
@@ -794,3 +1149,44 @@ export const convertAmount = (amount: number, fromCurrency: string, toCurrency: 
   currencyService.convertAmount(amount, fromCurrency, toCurrency);
 export const getCurrencyByCountry = (countryCode: string) =>
   currencyService.getCurrencyByCountry(countryCode);
+
+// Export performance enhancement functions
+export const warmUpCurrencyCache = () => currencyService.warmUpCache();
+export const getCurrencyCacheStats = () => currencyService.getCacheStats();
+export const clearCurrencyCache = () => currencyService.clearCache();
+export const preloadEssentialCurrencyData = () => currencyService.preloadEssentials();
+export const batchUpdateExchangeRates = (rates: Record<string, number>) => 
+  currencyService.batchUpdateExchangeRates(rates);
+
+// Performance test function (migrated from OptimizedCurrencyService)
+export async function testCurrencyPerformance() {
+  console.log('[CurrencyService] Performance test starting...');
+  
+  const testPairs = [
+    ['US', 'IN'], ['US', 'NP'], ['IN', 'NP'], ['GB', 'US'], ['AU', 'US']
+  ];
+  const iterations = 3;
+  
+  // Test performance with caching
+  console.log('Testing enhanced CurrencyService...');
+  const times: number[] = [];
+  
+  for (const [origin, dest] of testPairs) {
+    for (let i = 0; i < iterations; i++) {
+      const start = performance.now();
+      await currencyService.getExchangeRate(origin, dest);
+      times.push(performance.now() - start);
+    }
+  }
+  
+  const avgTime = times.reduce((a, b) => a + b) / times.length;
+  
+  console.log('[CurrencyService] Performance test results:');
+  console.log(`Enhanced service: ${avgTime.toFixed(2)}ms avg`);
+  console.log(`Cache stats:`, currencyService.getCacheStats());
+  
+  return {
+    avgTime: avgTime.toFixed(2),
+    cacheStats: currencyService.getCacheStats()
+  };
+}

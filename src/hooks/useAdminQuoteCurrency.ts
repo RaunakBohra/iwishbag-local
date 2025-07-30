@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useState, useEffect } from 'react';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 // SIMPLIFIED: Use CurrencyService directly instead of utility functions
 import type { UnifiedQuote } from '@/types/unified-quote';
 
@@ -51,8 +51,8 @@ export const useAdminQuoteCurrency = (
     console.log(`[useAdminQuoteCurrency] fetchLiveExchangeRate called:`, {
       originCountry,
       destinationCountry,
-      originCurrency: optimizedCurrencyService.getCurrencyForCountrySync(originCountry),
-      destinationCurrency: optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry),
+      originCurrency: currencyService.getCurrencyForCountrySync(originCountry),
+      destinationCurrency: currencyService.getCurrencyForCountrySync(destinationCountry),
       areSameCountries: originCountry === destinationCountry
     });
     
@@ -76,7 +76,7 @@ export const useAdminQuoteCurrency = (
         // Ignore cache clear errors
       }
       
-      const rate = await optimizedCurrencyService.getExchangeRate(originCountry, destinationCountry);
+      const rate = await currencyService.getExchangeRate(originCountry, destinationCountry);
       
       setLiveExchangeRate(rate);
       setExchangeRateTimestamp(new Date().toISOString());
@@ -87,7 +87,7 @@ export const useAdminQuoteCurrency = (
       
       console.log(`[useAdminQuoteCurrency] Live exchange rate fetched: ${originCountry}→${destinationCountry} = ${rate}`, {
         rate,
-        source: 'optimizedCurrencyService',
+        source: 'currencyService',
         timestamp: new Date().toISOString(),
         originCountry,
         destinationCountry
@@ -131,25 +131,25 @@ export const useAdminQuoteCurrency = (
     }
 
     // Get currencies for countries (sync versions for consistency)
-    const originCurrency = optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
-    const destinationCurrency = optimizedCurrencyService.getCurrencyForCountrySync(destinationCountry);
+    const originCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+    const destinationCurrency = currencyService.getCurrencyForCountrySync(destinationCountry);
 
     // Use live exchange rate if available, otherwise fall back to cached
     const exchangeRate = liveExchangeRate !== null ? liveExchangeRate : cachedExchangeRate;
 
     // Get currency symbols
-    const originSymbol = optimizedCurrencyService.getCurrencySymbolSync(originCurrency);
-    const destinationSymbol = optimizedCurrencyService.getCurrencySymbolSync(destinationCurrency);
+    const originSymbol = currencyService.getCurrencySymbolSync(originCurrency);
+    const destinationSymbol = currencyService.getCurrencySymbolSync(destinationCurrency);
 
     // Format dual amount function with CurrencyService for consistent symbols
     const formatDualAmount = (amount: number) => {
       // Format in origin currency using OptimizedCurrencyService
-      const originFormatted = optimizedCurrencyService.formatAmount(amount, originCurrency);
+      const originFormatted = currencyService.formatAmount(amount, originCurrency);
 
       // Convert and format in destination currency if different
       if (exchangeRate && exchangeRate !== 1) {
         const convertedAmount = amount * exchangeRate;
-        const destinationFormatted = optimizedCurrencyService.formatAmount(
+        const destinationFormatted = currencyService.formatAmount(
           convertedAmount,
           destinationCurrency,
         );
@@ -175,10 +175,10 @@ export const useAdminQuoteCurrency = (
       currency: 'origin' | 'destination' = 'destination',
     ) => {
       if (currency === 'origin') {
-        return optimizedCurrencyService.formatAmount(amount, originCurrency);
+        return currencyService.formatAmount(amount, originCurrency);
       } else {
         const convertedAmount = exchangeRate !== 1 ? amount * exchangeRate : amount;
-        return optimizedCurrencyService.formatAmount(convertedAmount, destinationCurrency);
+        return currencyService.formatAmount(convertedAmount, destinationCurrency);
       }
     };
 

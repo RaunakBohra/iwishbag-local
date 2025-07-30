@@ -29,7 +29,7 @@ export interface CheckoutAddressForm {
   is_default: boolean;
 }
 
-export type UserAddress = Tables<'user_addresses'>;
+export type DeliveryAddress = Tables<'delivery_addresses'>;
 
 // Country name to code mapping for normalization
 export const COUNTRY_NAME_TO_CODE: { [key: string]: string } = {
@@ -163,12 +163,12 @@ export function checkoutFormToQuoteAddress(formData: CheckoutAddressForm): Quote
 }
 
 /**
- * Creates a mock UserAddress object for guest checkout display
+ * Creates a mock DeliveryAddress object for guest checkout display
  */
 export function createGuestAddress(
   formData: CheckoutAddressForm,
   email: string,
-): Omit<UserAddress, 'id' | 'user_id' | 'created_at' | 'updated_at'> {
+): Omit<DeliveryAddress, 'id' | 'user_id' | 'created_at' | 'updated_at'> {
   return {
     recipient_name: formData.recipient_name || '',
     address_line1: formData.address_line1,
@@ -227,9 +227,9 @@ export function extractQuoteShippingAddress(shippingAddress: unknown): QuoteShip
 // Conversion functions to/from UnifiedAddress
 
 /**
- * Converts UserAddress (from database) to UnifiedAddress
+ * Converts DeliveryAddress (from database) to UnifiedAddress
  */
-export function userAddressToUnified(address: UserAddress): UnifiedAddress {
+export function userAddressToUnified(address: DeliveryAddress): UnifiedAddress {
   return {
     fullName: address.recipient_name,
     phone: address.phone || undefined,
@@ -244,12 +244,12 @@ export function userAddressToUnified(address: UserAddress): UnifiedAddress {
 }
 
 /**
- * Converts UnifiedAddress to UserAddress format (for saving)
+ * Converts UnifiedAddress to DeliveryAddress format (for saving)
  */
-export function unifiedToUserAddress(
+export function unifiedToDeliveryAddress(
   address: UnifiedAddress,
   userId: string,
-): Omit<Tables<'user_addresses'>, 'id' | 'created_at' | 'updated_at'> {
+): Omit<Tables<'delivery_addresses'>, 'id' | 'created_at' | 'updated_at'> {
   return {
     user_id: userId,
     recipient_name: address.fullName,

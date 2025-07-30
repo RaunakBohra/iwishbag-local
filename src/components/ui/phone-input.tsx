@@ -1,7 +1,8 @@
-import React, { forwardRef } from 'react';
-import { PhoneInput as ReactPhoneInput } from 'react-international-phone';
+import React, { forwardRef, useRef, useImperativeHandle, useEffect } from 'react';
+import { PhoneInput as ReactPhoneInput, PhoneInputRefType } from 'react-international-phone';
 import { cn } from '@/lib/utils';
 import 'react-international-phone/style.css';
+import '@/styles/phone-input-override.css';
 
 interface PhoneInputProps {
   value?: string;
@@ -13,7 +14,11 @@ interface PhoneInputProps {
   error?: boolean;
 }
 
-const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
+export interface PhoneInputRef {
+  setCountry: (countryCode: string) => void;
+}
+
+const PhoneInput = forwardRef<PhoneInputRef, PhoneInputProps>(
   (
     {
       value = '',
@@ -27,41 +32,59 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     },
     ref,
   ) => {
+    const phoneInputRef = useRef<PhoneInputRefType>(null);
+    
+    // Expose setCountry method through ref
+    useImperativeHandle(ref, () => ({
+      setCountry: (countryCode: string) => {
+        const safeCountry = getSafeCountryCode(countryCode);
+        phoneInputRef.current?.setCountry(safeCountry);
+      },
+    }));
+    
+    // Update country when defaultCountry prop changes
+    useEffect(() => {
+      if (defaultCountry && phoneInputRef.current) {
+        const safeCountry = getSafeCountryCode(defaultCountry);
+        // Small delay to ensure the phone input is fully rendered
+        setTimeout(() => {
+          phoneInputRef.current?.setCountry(safeCountry);
+        }, 0);
+      }
+    }, [defaultCountry]);
+    
     // Validate and fallback for unsupported countries
+    const getSafeCountryCode = (country: string): string => {
+      if (!country) return 'us';
+      
+      // react-international-phone expects lowercase ISO codes
+      const countryLower = country.toLowerCase();
+      
+      // Map any non-standard country codes to their ISO equivalents
+      const countryMappings: Record<string, string> = {
+        'uk': 'gb', // United Kingdom
+        'korea': 'kr', // South Korea
+        'uae': 'ae', // United Arab Emirates
+        'usa': 'us', // United States
+      };
+      
+      // Return the mapped code or the lowercase original
+      const finalCode = countryMappings[countryLower] || countryLower;
+      
+      // Log for debugging
+      if (finalCode !== 'us' && finalCode !== 'in' && finalCode !== 'gb') {
+        console.log(`PhoneInput: Setting country to ${finalCode} (original: ${country})`);
+      }
+      
+      return finalCode;
+    };
+    
     const safeDefaultCountry = React.useMemo(() => {
-      const supportedCountries = [
-        'us',
-        'in',
-        'au',
-        'gb',
-        'jp',
-        'ca',
-        'de',
-        'fr',
-        'it',
-        'es',
-        'cn',
-        'br',
-        'mx',
-      ];
-      const country = defaultCountry.toLowerCase();
-
-      if (supportedCountries.includes(country)) {
-        return country;
-      }
-
-      // Special handling for Nepal - use India as fallback since Nepal is not widely supported
-      // Users can still manually select Nepal from the dropdown if needed
-      if (country === 'np' || country === 'nepal') {
-        return 'in'; // Use India as fallback for Nepal (+977 similar to +91 format)
-      }
-
-      // Default fallback
-      return 'us';
+      return getSafeCountryCode(defaultCountry);
     }, [defaultCountry]);
     return (
       <ReactPhoneInput
-        inputRef={ref}
+        ref={phoneInputRef}
         value={value || ''}
         onChange={(phone) => onChange?.(phone)}
         defaultCountry={safeDefaultCountry}
@@ -79,30 +102,7 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         )}
         inputProps={{
           ...props,
-          className: 'react-international-phone-input',
         }}
-        countrySelectorStyleProps={{
-          className: 'react-international-phone-country-selector',
-        }}
-        dialCodePreviewStyleProps={{
-          className: 'text-muted-foreground',
-        }}
-        style={
-          {
-            '--react-international-phone-country-selector-background-color':
-              'hsl(var(--background))',
-            '--react-international-phone-country-selector-background-color-hover':
-              'hsl(var(--accent))',
-            '--react-international-phone-text-color': 'hsl(var(--foreground))',
-            '--react-international-phone-border-color': 'hsl(var(--border))',
-            '--react-international-phone-border-color-hover': 'hsl(var(--ring))',
-            '--react-international-phone-dropdown-item-background-color': 'hsl(var(--popover))',
-            '--react-international-phone-dropdown-item-background-color-hover':
-              'hsl(var(--accent))',
-            '--react-international-phone-flag-display': 'inline-block', // Show flags
-            '--react-international-phone-dropdown-z-index': '9999',
-          } as React.CSSProperties
-        }
       />
     );
   },

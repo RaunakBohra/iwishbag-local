@@ -7,7 +7,6 @@
 // =============================================
 
 import { useState, useEffect, useCallback } from 'react';
-import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
 
 interface UseCommandPaletteOptions {
   enableShortcut?: boolean;
@@ -23,14 +22,6 @@ export const useCommandPalette = (options: UseCommandPaletteOptions = {}) => {
   // Open the command palette
   const openPalette = useCallback(() => {
     setIsOpen(true);
-
-    // Track command palette open event
-    userActivityService.trackActivity(ACTIVITY_TYPES.BUTTON_CLICK, {
-      element_id: 'command_palette',
-      element_type: 'keyboard_shortcut',
-      element_text: 'Open Command Palette',
-      action: 'open',
-    });
   }, []);
 
   // Close the command palette

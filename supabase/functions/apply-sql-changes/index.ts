@@ -71,8 +71,6 @@ serve(async (req) => {
         test_mode = EXCLUDED.test_mode,
         updated_at = now()`,
 
-      // Add customer preference column to profiles
-      `ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS preferred_payment_gateway TEXT`,
 
       // Add gateway configuration columns to country_settings
       `ALTER TABLE public.country_settings ADD COLUMN IF NOT EXISTS available_gateways TEXT[] DEFAULT ARRAY['bank_transfer']`,

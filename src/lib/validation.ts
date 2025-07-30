@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 // Common validation patterns
 const emailSchema = z.string().email('Please enter a valid email address');
@@ -222,7 +222,7 @@ export const validatePhone = (phone: string, countryCode?: string): boolean => {
 // Amount validation for payments
 export const validatePaymentAmount = (amount: number, currency: string): boolean => {
   // Use OptimizedCurrencyService for minimum payment amounts
-  const minimum = optimizedCurrencyService.getMinimumPaymentAmountSync(currency);
+  const minimum = currencyService.getMinimumPaymentAmountSync(currency);
   return amount >= minimum && amount <= 1000000; // Max 1M in any currency
 };
 

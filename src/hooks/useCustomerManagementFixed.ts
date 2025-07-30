@@ -13,7 +13,7 @@ interface CustomerProfile {
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
-  user_addresses: Array<{
+  delivery_addresses: Array<{
     id: string;
     address_line1: string;
     address_line2: string | null;
@@ -51,7 +51,7 @@ export const useCustomerManagementFixed = () => {
             cod_enabled, 
             internal_notes, 
             created_at,
-            user_addresses(
+            delivery_addresses(
               id, 
               address_line1, 
               address_line2, 

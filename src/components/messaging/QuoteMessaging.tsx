@@ -12,11 +12,10 @@ import {
   X,
   Loader2,
   ChevronDown,
-  ChevronUp,
+  ChevronUp
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -35,8 +34,7 @@ interface QuoteMessagingProps {
 
 export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) => {
   const { user } = useAuth();
-  const { data: isAdmin } = useAdminRole();
-  const { toast } = useToast();
+    const { toast } = useToast();
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -55,7 +53,7 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
       if (error) throw error;
       return data;
     },
-    enabled: !!quoteId,
+    enabled: !!quoteId
   });
 
   const sendMessageMutation = useMutation({
@@ -74,7 +72,7 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
             maxWidthOrHeight: 2048,
             useWebWorker: true,
             fileType: file.type as 'image/jpeg' | 'image/png' | 'image/webp',
-            initialQuality: 0.85,
+            initialQuality: 0.85
           };
 
           try {
@@ -113,7 +111,7 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
           subject: `Message for Quote #${quoteId.substring(0, 8)}`,
           content,
           attachment_url: attachmentUrl,
-          attachment_file_name: attachmentFileName,
+          attachment_file_name: attachmentFileName
         })
         .select()
         .single();
@@ -131,9 +129,9 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
       toast({
         title: 'Error sending message',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -148,7 +146,7 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
         toast({
           title: 'File is too large',
           description: 'Please select a file smaller than 10MB.',
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
@@ -206,13 +204,12 @@ export const QuoteMessaging = ({ quoteId, quoteUserId }: QuoteMessagingProps) =>
                       <MessageItem
                         message={message}
                         currentUserId={user?.id}
-                        isAdmin={isAdmin}
-                        onVerificationUpdate={() => {
+                                                onVerificationUpdate={() => {
                           queryClient.invalidateQueries({
-                            queryKey: ['messages', quoteId],
+                            queryKey: ['messages', quoteId]
                           });
                           queryClient.invalidateQueries({
-                            queryKey: ['payment-proof-info', quoteId],
+                            queryKey: ['payment-proof-info', quoteId]
                           });
                         }}
                       />

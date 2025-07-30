@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, MoreVertical, MapPin, Phone, CheckCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AddressForm } from './AddressForm';
+import { AddressFormCompact } from './AddressFormCompact';
 import { Tables } from '@/integrations/supabase/types';
 import {
   DropdownMenu,
@@ -34,7 +34,7 @@ const AddressCard = ({
   onEdit,
   onDelete,
 }: {
-  address: Tables<'user_addresses'>;
+  address: Tables<'delivery_addresses'>;
   onEdit: () => void;
   onDelete: () => void;
 }) => (
@@ -105,17 +105,17 @@ export function AddressList() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState<Tables<'user_addresses'> | undefined>(
+  const [selectedAddress, setSelectedAddress] = useState<Tables<'delivery_addresses'> | undefined>(
     undefined,
   );
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
 
   const { data: addresses, isLoading } = useQuery({
-    queryKey: ['user_addresses', user?.id],
+    queryKey: ['delivery_addresses', user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .order('is_default', { ascending: false })
@@ -129,11 +129,11 @@ export function AddressList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (addressId: string) => {
-      const { error } = await supabase.from('user_addresses').delete().eq('id', addressId);
+      const { error } = await supabase.from('delivery_addresses').delete().eq('id', addressId);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
       toast({ title: 'Address deleted' });
       setSelectedAddress(undefined);
     },
@@ -151,12 +151,12 @@ export function AddressList() {
     setDialogOpen(true);
   };
 
-  const handleEdit = (address: Tables<'user_addresses'>) => {
+  const handleEdit = (address: Tables<'delivery_addresses'>) => {
     setSelectedAddress(address);
     setDialogOpen(true);
   };
 
-  const handleDelete = (address: Tables<'user_addresses'>) => {
+  const handleDelete = (address: Tables<'delivery_addresses'>) => {
     setSelectedAddress(address);
     setDeleteAlertOpen(true);
   };
@@ -226,7 +226,7 @@ export function AddressList() {
               {selectedAddress ? 'Edit Address' : 'Add New Address'}
             </DialogTitle>
           </DialogHeader>
-          <AddressForm address={selectedAddress} onSuccess={() => setDialogOpen(false)} />
+          <AddressFormCompact address={selectedAddress} onSuccess={() => setDialogOpen(false)} />
         </DialogContent>
       </Dialog>
 

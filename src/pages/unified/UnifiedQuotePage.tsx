@@ -19,7 +19,7 @@ import {
   User,
   Package,
   MapPin,
-  Calendar,
+  Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -34,7 +34,6 @@ import { QuoteThemeProvider, useQuoteTheme } from '@/contexts/QuoteThemeContext'
 
 // Hooks
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { useColorVariantTesting } from '@/hooks/useColorVariantTesting';
 
 // Services
@@ -103,7 +102,7 @@ const useDeviceDetection = () => {
     installPrompt: installPrompt ? promptInstall : null,
     isMobile: deviceType === 'mobile',
     isTablet: deviceType === 'tablet',
-    isDesktop: deviceType === 'desktop',
+    isDesktop: deviceType === 'desktop'
   };
 };
 
@@ -112,7 +111,7 @@ const usePagePerformance = (pageName: string) => {
   const [metrics, setMetrics] = useState({
     loadTime: 0,
     renderTime: 0,
-    interactionTime: 0,
+    interactionTime: 0
   });
 
   useEffect(() => {
@@ -127,14 +126,14 @@ const usePagePerformance = (pageName: string) => {
           const navEntry = entry as PerformanceNavigationTiming;
           setMetrics((prev) => ({
             ...prev,
-            loadTime: navEntry.loadEventEnd - navEntry.navigationStart,
+            loadTime: navEntry.loadEventEnd - navEntry.navigationStart
           }));
         }
 
         if (entry.entryType === 'measure' && entry.name === 'component-render') {
           setMetrics((prev) => ({
             ...prev,
-            renderTime: entry.duration,
+            renderTime: entry.duration
           }));
         }
       });
@@ -152,7 +151,7 @@ const usePagePerformance = (pageName: string) => {
 
       setMetrics((prev) => ({
         ...prev,
-        renderTime,
+        renderTime
       }));
     }, 0);
 
@@ -162,7 +161,7 @@ const usePagePerformance = (pageName: string) => {
         page_name: pageName,
         load_time: metrics.loadTime,
         render_time: metrics.renderTime,
-        device_type: window.innerWidth < 768 ? 'mobile' : 'desktop',
+        device_type: window.innerWidth < 768 ? 'mobile' : 'desktop'
       });
     }
 
@@ -181,8 +180,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
   const { quoteId } = useParams<{ quoteId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: isAdmin } = useAdminRole();
-  const { trackConversion } = useColorVariantTesting();
+    const { trackConversion } = useColorVariantTesting();
   const { colors } = useQuoteTheme();
 
   // Device and performance detection
@@ -196,17 +194,17 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
 
   // Determine view mode
   const viewMode = useMemo(() => {
-    if (isAdmin) return 'admin';
-    if (user) return 'customer';
-    return 'guest';
-  }, [isAdmin, user]);
+    if (!user) return 'customer';
+    // All authenticated users are treated as admins (simplified access)
+    return 'admin';
+  }, [user]);
 
   // Fetch quote data
   const {
     data: quote,
     isLoading,
     error,
-    refetch,
+    refetch
   } = useQuery({
     queryKey: ['quote', quoteId],
     queryFn: async () => {
@@ -227,7 +225,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
       if (error) throw error;
       return data as UnifiedQuote;
     },
-    enabled: !!quoteId && mode !== 'create',
+    enabled: !!quoteId && mode !== 'create'
   });
 
   // Quote action mutation
@@ -235,7 +233,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
     mutationFn: async ({
       action,
       quote: quoteData,
-      optimistic,
+      optimistic
     }: {
       action: string;
       quote: UnifiedQuote;
@@ -291,7 +289,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
     onError: (error) => {
       console.error('Quote action failed:', error);
       toast.error('Action failed. Please try again.');
-    },
+    }
   });
 
   // Form submission handler
@@ -308,13 +306,13 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
                 info: {
                   name: formData.customerName,
                   email: formData.customerEmail,
-                  phone: formData.customerPhone,
-                },
+                  phone: formData.customerPhone
+                }
               },
               destination_country: formData.destinationCountry,
               shipping_address: { formatted: formData.shippingAddress },
               notes: formData.specialInstructions,
-              status: 'pending',
+              status: 'pending'
             })
             .select()
             .single();
@@ -328,7 +326,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
               name: formData.productName,
               product_url: formData.productUrl,
               quantity: formData.quantity,
-              price: formData.estimatedPrice,
+              price: formData.estimatedPrice
             });
 
             if (itemError) throw itemError;
@@ -343,7 +341,7 @@ const UnifiedQuotePageContent: React.FC<UnifiedQuotePageProps> = ({ mode = 'view
             .update({
               notes: formData.specialInstructions,
               admin_notes: formData.adminNotes,
-              priority: formData.priority,
+              priority: formData.priority
             })
             .eq('id', quoteId);
 

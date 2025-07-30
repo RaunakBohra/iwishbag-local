@@ -470,14 +470,7 @@ EXCEPTION
     RAISE NOTICE 'Error creating storage policies: %', SQLERRM;
 END $$;
 
--- Insert customs categories (required for quote calculations)
-INSERT INTO public.customs_categories (name, duty_percent)
-VALUES
-('Electronics', 5.00),
-('Clothing', 10.00),
-('Cosmetics', 15.00),
-('Accessories', 20.00)
-ON CONFLICT (name) DO NOTHING;
+-- Customs categories removed - HSN system provides better customs duty rates
 
 
 -- Insert test shipping routes
@@ -584,11 +577,6 @@ BEGIN
   END IF;
   
   -- Check for critical tables with data
-  PERFORM 1 FROM customs_categories LIMIT 1;
-  IF NOT FOUND THEN
-    RAISE NOTICE 'WARNING: customs_categories table is empty - quote calculations may fail!';
-  END IF;
-  
   PERFORM 1 FROM country_settings LIMIT 1;
   IF NOT FOUND THEN
     RAISE NOTICE 'WARNING: country_settings table is empty - shipping calculations may fail!';
@@ -767,25 +755,25 @@ BEGIN
     RAISE NOTICE '✅ Added breakdown column to quotes table';
   END IF;
   
-  -- Fix user_addresses table missing columns
+  -- Fix delivery_addresses table missing columns
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' 
-    AND table_name = 'user_addresses' 
+    AND table_name = 'delivery_addresses' 
     AND column_name = 'phone'
   ) THEN
-    ALTER TABLE public.user_addresses ADD COLUMN phone TEXT;
-    RAISE NOTICE '✅ Added phone column to user_addresses table';
+    ALTER TABLE public.delivery_addresses ADD COLUMN phone TEXT;
+    RAISE NOTICE '✅ Added phone column to delivery_addresses table';
   END IF;
   
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_schema = 'public' 
-    AND table_name = 'user_addresses' 
+    AND table_name = 'delivery_addresses' 
     AND column_name = 'recipient_name'
   ) THEN
-    ALTER TABLE public.user_addresses ADD COLUMN recipient_name TEXT;
-    RAISE NOTICE '✅ Added recipient_name column to user_addresses table';
+    ALTER TABLE public.delivery_addresses ADD COLUMN recipient_name TEXT;
+    RAISE NOTICE '✅ Added recipient_name column to delivery_addresses table';
   END IF;
   
   -- Fix profiles table missing email column

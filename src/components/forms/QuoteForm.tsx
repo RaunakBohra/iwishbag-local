@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+// import { TurnstileProtectedForm } from .* // Component removed
 
 const QuoteForm = () => {
   const { form, fields, append, remove, onSubmit, loading, countryCode, user } = useQuoteForm();
@@ -35,11 +35,11 @@ const QuoteForm = () => {
 
   // Fetch user's saved addresses
   const { data: userAddresses, isLoading: addressesLoading } = useQuery({
-    queryKey: ['user_addresses', user?.id],
+    queryKey: ['delivery_addresses', user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .order('is_default', { ascending: false })
@@ -89,10 +89,10 @@ const QuoteForm = () => {
     setShowAddressDialog(false);
   };
 
-  const handleAddressFormSuccess = (newAddress?: Tables<'user_addresses'>) => {
+  const handleAddressFormSuccess = (newAddress?: Tables<'delivery_addresses'>) => {
     setShowAddressDialog(false);
     // Invalidate and refetch addresses
-    queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
     // Auto-select the new address if one was created
     if (newAddress) {
       setSelectedAddressId(newAddress.id);

@@ -5,7 +5,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { CheckCircle, AlertTriangle, RefreshCw, Database, Settings, TestTube } from 'lucide-react';
 
 interface StatusConfig {
@@ -53,7 +52,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     showsInQuotesList: true,
     showsInOrdersList: false,
     canBePaid: false,
-    isDefaultQuoteStatus: true,
+    isDefaultQuoteStatus: true
   },
   {
     id: 'sent',
@@ -73,7 +72,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false,
+    canBePaid: false
   },
   {
     id: 'approved',
@@ -93,7 +92,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     showsInQuotesList: true,
     showsInOrdersList: false,
     canBePaid: true,
-    allowCartActions: true,
+    allowCartActions: true
   },
   {
     id: 'rejected',
@@ -112,7 +111,7 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false,
+    canBePaid: false
   },
   {
     id: 'expired',
@@ -131,8 +130,8 @@ const defaultQuoteStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: false,
-    canBePaid: false,
-  },
+    canBePaid: false
+  }
 ];
 
 const defaultOrderStatuses: StatusConfig[] = [
@@ -156,7 +155,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     canBePaid: false,
     countsAsOrder: true,
     customerMessage: 'Order placed - Please complete payment',
-    customerActionText: 'Pay Now',
+    customerActionText: 'Pay Now'
   },
   {
     id: 'processing',
@@ -175,7 +174,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: true,
     showsInQuotesList: false,
     showsInOrdersList: true,
-    canBePaid: false,
+    canBePaid: false
   },
   {
     id: 'paid',
@@ -195,7 +194,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: false,
     showsInOrdersList: true,
     canBePaid: false,
-    countsAsOrder: true,
+    countsAsOrder: true
   },
   {
     id: 'ordered',
@@ -214,7 +213,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: false,
     showsInOrdersList: true,
-    canBePaid: false,
+    canBePaid: false
   },
   {
     id: 'shipped',
@@ -234,7 +233,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: false,
     showsInOrdersList: true,
     canBePaid: false,
-    countsAsOrder: true,
+    countsAsOrder: true
   },
   {
     id: 'completed',
@@ -255,7 +254,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInOrdersList: true,
     canBePaid: false,
     countsAsOrder: true,
-    isSuccessful: true,
+    isSuccessful: true
   },
   {
     id: 'cancelled',
@@ -274,14 +273,13 @@ const defaultOrderStatuses: StatusConfig[] = [
     requiresAction: false,
     showsInQuotesList: true,
     showsInOrdersList: true,
-    canBePaid: false,
-  },
+    canBePaid: false
+  }
 ];
 
 export const StatusConfigInitializer: React.FC = () => {
   const { user } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
-  const { toast } = useToast();
+    const { toast } = useToast();
   const [isInitializing, setIsInitializing] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [isCreatingTestData, setIsCreatingTestData] = useState(false);
@@ -295,12 +293,7 @@ export const StatusConfigInitializer: React.FC = () => {
   } | null>(null);
 
   const initializeConfigurations = async () => {
-    if (!isAdmin) {
-      toast({
-        title: 'Access Denied',
-        description: 'You need admin privileges to initialize status configurations',
-        variant: 'destructive',
-      });
+    if (!user) {
       return;
     }
 
@@ -312,10 +305,10 @@ export const StatusConfigInitializer: React.FC = () => {
           setting_key: 'quote_statuses',
           setting_value: JSON.stringify(defaultQuoteStatuses),
           description: 'Quote status configurations',
-          updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
-          onConflict: 'setting_key',
+          onConflict: 'setting_key'
         },
       );
 
@@ -327,10 +320,10 @@ export const StatusConfigInitializer: React.FC = () => {
           setting_key: 'order_statuses',
           setting_value: JSON.stringify(defaultOrderStatuses),
           description: 'Order status configurations',
-          updated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
-          onConflict: 'setting_key',
+          onConflict: 'setting_key'
         },
       );
 
@@ -338,7 +331,7 @@ export const StatusConfigInitializer: React.FC = () => {
 
       toast({
         title: 'Success',
-        description: 'Status configurations initialized successfully',
+        description: 'Status configurations initialized successfully'
       });
 
       // Run diagnostics after initialization
@@ -349,7 +342,7 @@ export const StatusConfigInitializer: React.FC = () => {
       toast({
         title: 'Initialization Failed',
         description: errorMessage || 'Failed to initialize status configurations',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsInitializing(false);
@@ -413,7 +406,7 @@ export const StatusConfigInitializer: React.FC = () => {
         ).length,
         paymentPendingQuotes: paymentPendingQuotes.length,
         paymentPendingInQuotesList,
-        paymentPendingInOrdersList,
+        paymentPendingInOrdersList
       });
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -421,7 +414,7 @@ export const StatusConfigInitializer: React.FC = () => {
       toast({
         title: 'Diagnostics Failed',
         description: errorMessage || 'Failed to run diagnostics',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsChecking(false);
@@ -429,12 +422,7 @@ export const StatusConfigInitializer: React.FC = () => {
   };
 
   const createTestData = async () => {
-    if (!isAdmin) {
-      toast({
-        title: 'Access Denied',
-        description: 'You need admin privileges to create test data',
-        variant: 'destructive',
-      });
+    if (!user) {
       return;
     }
 
@@ -446,29 +434,29 @@ export const StatusConfigInitializer: React.FC = () => {
           product_name: 'Test Product - Pending Quote',
           status: 'pending',
           final_total_usd: 100.0,
-          destination_country: 'US',
+          destination_country: 'US'
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Approved Quote',
           status: 'approved',
           final_total_usd: 150.0,
-          destination_country: 'US',
+          destination_country: 'US'
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Payment Pending Order',
           status: 'payment_pending',
           final_total_usd: 200.0,
-          destination_country: 'US',
+          destination_country: 'US'
         },
         {
           user_id: user?.id,
           product_name: 'Test Product - Paid Order',
           status: 'paid',
           final_total_usd: 250.0,
-          destination_country: 'US',
-        },
+          destination_country: 'US'
+        }
       ];
 
       const { data: createdQuotes, error } = await supabase
@@ -480,7 +468,7 @@ export const StatusConfigInitializer: React.FC = () => {
 
       toast({
         title: 'Success',
-        description: `Created ${createdQuotes?.length || 0} test quotes`,
+        description: `Created ${createdQuotes?.length || 0} test quotes`
       });
 
       // Run diagnostics after creating test data
@@ -491,33 +479,18 @@ export const StatusConfigInitializer: React.FC = () => {
       toast({
         title: 'Test Data Creation Failed',
         description: errorMessage || 'Failed to create test data',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     } finally {
       setIsCreatingTestData(false);
     }
   };
 
-  if (isAdminLoading) {
-    return <div className="p-4">Loading...</div>;
-  }
-
   if (!user) {
     return (
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>You need to be logged in to use this tool.</AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          You need admin privileges to use this status configuration tool.
-        </AlertDescription>
       </Alert>
     );
   }

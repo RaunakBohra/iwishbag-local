@@ -3,8 +3,7 @@ import { RefreshCw, Zap, Database, Globe, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Progress } from '../ui/progress';
-import { optimizedCurrencyService, testOptimizedCurrencyPerformance } from '../../services/OptimizedCurrencyService';
-import { currencyService } from '../../services/CurrencyService';
+import { currencyService, testCurrencyPerformance } from '../../services/CurrencyService';
 
 export function KVCacheDemo() {
   const [loading, setLoading] = useState(false);
@@ -28,7 +27,7 @@ export function KVCacheDemo() {
   }, []);
 
   const loadCacheStats = () => {
-    const stats = optimizedCurrencyService.getCacheStats();
+    const stats = currencyService.getCacheStats();
     setCacheStats(stats);
   };
 
@@ -42,7 +41,7 @@ export function KVCacheDemo() {
       setTestProgress(50);
       
       // Use the built-in performance test
-      const testResults = await testOptimizedCurrencyPerformance();
+      const testResults = await testCurrencyPerformance();
       setTestProgress(100);
       
       setResults({
@@ -71,7 +70,7 @@ export function KVCacheDemo() {
       
       for (const pair of currencyPairs) {
         const start = performance.now();
-        const rate = await optimizedCurrencyService.getExchangeRate(pair.from, pair.to);
+        const rate = await currencyService.getExchangeRate(pair.from, pair.to);
         const time = performance.now() - start;
         
         rates[`${pair.from}_${pair.to}`] = {
@@ -93,7 +92,7 @@ export function KVCacheDemo() {
   const warmUpCache = async () => {
     setLoading(true);
     try {
-      await optimizedCurrencyService.warmUpCache();
+      await currencyService.warmUpCache();
       console.log('🔥 Cache warmed up successfully');
       loadCacheStats();
     } catch (error) {
@@ -106,7 +105,7 @@ export function KVCacheDemo() {
   const clearCache = async () => {
     setLoading(true);
     try {
-      await optimizedCurrencyService.clearCache();
+      await currencyService.clearCache();
       setExchangeRates({});
       setResults(null);
       console.log('🧹 Cache cleared');
@@ -272,7 +271,7 @@ export function KVCacheDemo() {
           <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
 {`// Replace your currency service calls:
 // OLD: await currencyService.getExchangeRate('US', 'IN');
-// NEW: await optimizedCurrencyService.getExchangeRate('US', 'IN');
+// NEW: await currencyService.getExchangeRate('US', 'IN');
 
 // Result: 5-20x faster response times with browser-optimized caching! 🚀`}
           </pre>

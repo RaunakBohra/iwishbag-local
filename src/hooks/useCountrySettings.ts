@@ -14,44 +14,26 @@ export const useCountrySettings = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-
+  
   // Debug logging for state changes
   useEffect(() => {
     console.log('useCountrySettings state changed:', {
       isCreating,
-      editingCountry: editingCountry?.code,
+      editingCountry: editingCountry?.code
     });
   }, [isCreating, editingCountry]);
-
-  // Check user role for admin access
-  const { data: userRole } = useQuery({
-    queryKey: ['user-role', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error checking user role:', error);
-        return null;
-      }
-
-      return data;
-    },
-    enabled: !!user?.id,
-  });
 
   const {
     data: countries,
     isLoading,
-    error: queryError,
+    error: queryError
   } = useQuery({
     queryKey: ['country-settings'],
     queryFn: async () => {
+      console.log('Fetching country settings...');
+      console.log('Current user:', user?.id);
+      console.log('Is admin:', !!user);
+      
       const { data, error } = await supabase.from('country_settings').select('*').order('name');
 
       if (error) {
@@ -59,11 +41,13 @@ export const useCountrySettings = () => {
         throw new Error(`Failed to fetch country settings: ${error.message}`);
       }
 
+      console.log('Country settings fetched:', data?.length || 0);
       return data;
     },
     retry: 3,
     retryDelay: 1000,
-    enabled: !!user?.id && !!userRole, // Only run when user and user role are loaded
+    // Since country_settings has public read access, we can fetch immediately
+    enabled: true
   });
 
   const createMutation = useMutation({
@@ -86,7 +70,7 @@ export const useCountrySettings = () => {
       setEditingCountry(null);
       toast({
         title: 'Success',
-        description: 'Country setting created successfully',
+        description: 'Country setting created successfully'
       });
     },
     onError: (error) => {
@@ -94,9 +78,9 @@ export const useCountrySettings = () => {
       toast({
         title: 'Error creating country setting',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   const updateMutation = useMutation({
@@ -121,7 +105,7 @@ export const useCountrySettings = () => {
       setEditingCountry(null);
       toast({
         title: 'Success',
-        description: 'Country setting updated successfully',
+        description: 'Country setting updated successfully'
       });
     },
     onError: (error) => {
@@ -129,9 +113,9 @@ export const useCountrySettings = () => {
       toast({
         title: 'Error updating country setting',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   const deleteMutation = useMutation({
@@ -147,7 +131,7 @@ export const useCountrySettings = () => {
       queryClient.invalidateQueries({ queryKey: ['country-settings'] });
       toast({
         title: 'Success',
-        description: 'Country setting deleted successfully',
+        description: 'Country setting deleted successfully'
       });
     },
     onError: (error) => {
@@ -155,9 +139,49 @@ export const useCountrySettings = () => {
       toast({
         title: 'Error deleting country setting',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
+    }
+  });
+
+  const deleteCountryWithConfirmation = (code: string) => {
+    const country = countries?.find(c => c.code === code);
+    const countryName = country?.display_name || country?.name || code;
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${countryName}?\n\nThis action cannot be undone and will remove all settings for this country.`
+    );
+    
+    if (confirmed) {
+      deleteMutation.mutate(code);
+    }
+  };
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ countryCodes, updates }: { countryCodes: string[], updates: Partial<CountrySetting> }) => {
+      console.log('Bulk updating countries:', countryCodes, 'with updates:', updates);
+      
+      const { data, error } = await supabase
+        .from('country_settings')
+        .update(updates)
+        .in('code', countryCodes)
+        .select();
+
+      if (error) {
+        console.error('Error bulk updating country settings:', error);
+        throw new Error(error.message);
+      }
+
+      return { data, countryCodes, updates };
     },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['country-settings'] });
+      // Don't show toast here - let the component handle it for better UX control
+    },
+    onError: (error) => {
+      console.error('Bulk update mutation error:', error);
+      // Don't show toast here - let the component handle it for better UX control
+    }
   });
 
   const handleAddNewClick = () => {
@@ -198,10 +222,12 @@ export const useCountrySettings = () => {
     isCreating: isCreating,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
+    isBulkUpdating: bulkUpdateMutation.isPending,
     handleAddNewClick,
     handleEditClick,
     handleCancelClick,
     handleSubmit,
-    deleteCountry: deleteMutation.mutate,
+    deleteCountry: deleteCountryWithConfirmation,
+    bulkUpdateCountries: bulkUpdateMutation.mutate
   };
 };

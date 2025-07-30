@@ -4,28 +4,16 @@ import {
   FileText,
   Globe,
   Settings,
-  Package,
-  FileCog,
   Landmark,
   UserCheck,
   LayoutDashboard,
-  BookText,
   ChevronDown,
   Route,
-  Receipt,
   Edit,
-  Brain,
   Ticket,
   MessageSquare,
   Zap,
-  UserCog,
   Calculator,
-  Shield,
-  Lock,
-  TrendingUp,
-  Activity,
-  Book,
-  Warehouse,
   RotateCcw,
   Users,
   Tag,
@@ -49,37 +37,32 @@ import React from 'react';
 // Group menu items by category
 const menuGroups = [
   {
-    title: 'Overview',
+    title: 'Dashboard',
     items: [
       {
-        title: 'Dashboard',
+        title: 'Overview',
         url: '/admin',
         icon: LayoutDashboard,
       },
     ],
   },
   {
-    title: 'Management',
+    title: 'Quotes',
     items: [
       {
-        title: 'Quote Management',
+        title: 'All Quotes',
         url: '/admin/quotes',
         icon: FileText,
       },
+    ],
+  },
+  {
+    title: 'Customer Service',
+    items: [
       {
-        title: 'Order Management',
-        url: '/admin/orders',
-        icon: Package,
-      },
-      {
-        title: 'Customer Management',
+        title: 'Customers',
         url: '/admin/customers',
         icon: UserCheck,
-      },
-      {
-        title: 'User & Role Management',
-        url: '/admin/users',
-        icon: UserCog,
       },
       {
         title: 'Messages',
@@ -91,60 +74,50 @@ const menuGroups = [
         url: '/admin/support-tickets',
         icon: Ticket,
       },
+    ],
+  },
+  {
+    title: 'Fulfillment',
+    items: [
+      {
+        title: 'Returns',
+        url: '/admin/returns',
+        icon: RotateCcw,
+      },
       {
         title: 'Auto Assignment',
         url: '/admin/auto-assignment',
         icon: Zap,
       },
+    ],
+  },
+  {
+    title: 'Marketing & Sales',
+    items: [
       {
-        title: 'Payment Proofs',
-        url: '/admin/payment-proofs',
-        icon: Receipt,
+        title: 'Discounts',
+        url: '/admin/discounts',
+        icon: Tag,
       },
       {
-        title: 'Blog Management',
-        url: '/admin/blog',
-        icon: Edit,
-      },
-      {
-        title: 'Warehouse Management',
-        url: '/admin/warehouse',
-        icon: Warehouse,
-      },
-      {
-        title: 'Return Management',
-        url: '/admin/returns',
-        icon: RotateCcw,
-      },
-      {
-        title: 'Membership Management',
+        title: 'Memberships',
         url: '/admin/memberships',
         icon: Users,
       },
       {
-        title: 'Discount Management',
-        url: '/admin/discounts',
-        icon: Tag,
+        title: 'Blog',
+        url: '/admin/blog',
+        icon: Edit,
       },
     ],
   },
   {
-    title: 'Settings',
+    title: 'Configuration',
     items: [
       {
-        title: 'Email Templates',
-        url: '/admin/email-templates',
-        icon: BookText,
-      },
-      {
-        title: 'Quote Templates',
-        url: '/admin/templates',
-        icon: FileCog,
-      },
-      {
-        title: 'Status Management',
-        url: '/admin/status-management',
-        icon: Settings,
+        title: 'Countries',
+        url: '/admin/countries',
+        icon: Globe,
       },
       {
         title: 'Shipping Routes',
@@ -152,18 +125,8 @@ const menuGroups = [
         icon: Route,
       },
       {
-        title: 'Country Settings',
-        url: '/admin/countries',
-        icon: Globe,
-      },
-      {
-        title: 'HSN Management',
-        url: '/admin/hsn-management',
-        icon: Calculator,
-      },
-      {
-        title: 'Customs Categories',
-        url: '/admin/customs',
+        title: 'Status Workflow',
+        url: '/admin/status-management',
         icon: Settings,
       },
       {
@@ -171,36 +134,12 @@ const menuGroups = [
         url: '/admin/bank-accounts',
         icon: Landmark,
       },
-      {
-        title: 'ML Weight Estimator',
-        url: '/admin/ml/weight-estimator',
-        icon: Brain,
-      },
-      {
-        title: 'Audit Logs',
-        url: '/admin/audit-logs',
-        icon: Shield,
-      },
-      {
-        title: 'Security Settings',
-        url: '/admin/security',
-        icon: Lock,
-      },
-      {
-        title: 'API Analytics',
-        url: '/admin/api-analytics',
-        icon: TrendingUp,
-      },
-      {
-        title: 'Performance Monitor',
-        url: '/admin/performance',
-        icon: Activity,
-      },
-      {
-        title: 'API Documentation',
-        url: '/admin/api-documentation',
-        icon: Book,
-      },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      // User Management and Email Templates removed
     ],
   },
 ];
@@ -208,7 +147,7 @@ const menuGroups = [
 export const AdminSidebar = () => {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const [openGroups, setOpenGroups] = useState<string[]>(['Overview']); // Keep Overview open by default
+  const [openGroups, setOpenGroups] = useState<string[]>(['Dashboard', 'Quotes']); // Keep Dashboard and Quotes open by default
 
   const toggleGroup = (groupTitle: string) => {
     setOpenGroups((prev) =>

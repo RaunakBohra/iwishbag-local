@@ -46,11 +46,7 @@ const InlineStripeDemo = () => {
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Ultra-compact inline weight & HSN selectors integrated into product edit forms. Based on
-            your exact specifications: input+arrow for weight, HSN badge or search button.
-          </p>
-        </div>
-
-        {/* Live Form Example */}
+            your exact specifications: input+arrow for weight}
         <Card className="mb-8 shadow-lg">
           <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
             <CardTitle className="flex items-center gap-2">
@@ -82,7 +78,7 @@ const InlineStripeDemo = () => {
                 </div>
               </div>
 
-              {/* Inline Weight & HSN Selectors */}
+              {}
               <div>
                 <Label className="mb-2">Weight & HSN Classification</Label>
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -112,40 +108,7 @@ const InlineStripeDemo = () => {
           </CardContent>
         </Card>
 
-        {/* Side by Side Comparison */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Product Card 1 */}
-          <Card className="border border-gray-200 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Smartphone className="w-5 h-5 text-blue-600" />
-                iPhone 15 Pro
-                <Badge variant="info" className="ml-auto">
-                  ₹2,222.00
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <InlineStripeSelectors
-                  weight={weight1}
-                  weightSuggestions={weightSuggestions1}
-                  onWeightChange={(weight, source) => setWeight1(weight)}
-                  currentHSN={hsn1}
-                  hsnSuggestions={[]}
-                  onHSNSelect={(hsn) => setHsn1(hsn)}
-                  onHSNRemove={() => setHsn1(undefined)}
-                />
-              </div>
-
-              <div className="flex items-center gap-2 text-sm text-green-600">
-                <ArrowRight className="w-4 h-4" />
-                <span>All weight & HSN data in one compact line!</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Product Card 2 */}
+        {}
           <Card className="border border-gray-200 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -187,25 +150,7 @@ const InlineStripeDemo = () => {
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">🎯 Ultra Compact</h4>
                 <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Single line for weight & HSN</li>
-                  <li>• Minimal form space usage</li>
-                  <li>• No layout shifting</li>
-                  <li>• Mobile responsive</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">⚡ Your Exact Specs</h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Input + arrow for weight</li>
-                  <li>• HSN number or search button</li>
-                  <li>• AI & HSN suggestions</li>
-                  <li>• Confidence indicators</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">✨ Stripe Quality</h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Clean, minimal design</li>
+                  <li>• Single line for weight & minimal design</li>
                   <li>• Subtle interactions</li>
                   <li>• Professional appearance</li>
                   <li>• Progressive disclosure</li>

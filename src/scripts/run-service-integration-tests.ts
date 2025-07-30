@@ -24,9 +24,9 @@ const runServiceIntegrationTests = async () => {
   try {
     // Check if services are available in global scope or can be imported
     const servicesAvailable = {
-      integratedPackageForwardingService: typeof window.integratedPackageForwardingService !== 'undefined',
-      smartCalculationEngineExtension: typeof window.smartCalculationEngineExtension !== 'undefined',
-      integratedPaymentService: typeof window.integratedPaymentService !== 'undefined',
+      smartCalculationEngine: typeof window.smartCalculationEngine !== 'undefined',
+      notificationService: typeof window.notificationService !== 'undefined',
+      currencyService: typeof window.currencyService !== 'undefined',
     };
     
     console.log('Services availability:', servicesAvailable);
@@ -36,13 +36,13 @@ const runServiceIntegrationTests = async () => {
       
       // Try to load services dynamically
       try {
-        const { integratedPackageForwardingService } = await import('/src/services/IntegratedPackageForwardingService.ts');
-        const { smartCalculationEnginePackageForwardingExtension } = await import('/src/services/SmartCalculationEnginePackageForwardingExtension.ts');
-        const { integratedPaymentService } = await import('/src/services/IntegratedPaymentService.ts');
+        const { smartCalculationEngine } = await import('/src/services/SmartCalculationEngine.ts');
+        const { notificationService } = await import('/src/services/NotificationService.ts');
+        const { currencyService } = await import('/src/services/CurrencyService.ts');
         
-        window.integratedPackageForwardingService = integratedPackageForwardingService;
-        window.smartCalculationEngineExtension = smartCalculationEnginePackageForwardingExtension;
-        window.integratedPaymentService = integratedPaymentService;
+        window.smartCalculationEngine = smartCalculationEngine;
+        window.notificationService = notificationService;
+        window.currencyService = currencyService;
         
         console.log('✅ Services loaded dynamically');
         results.push({ test: 'Service Availability', status: 'PASS', message: 'Services loaded dynamically' });
@@ -60,15 +60,15 @@ const runServiceIntegrationTests = async () => {
     results.push({ test: 'Service Availability', status: 'FAIL', message: error.message });
   }
   
-  // Test 2: IntegratedPackageForwardingService methods
-  console.log('\n📋 TEST 2: IntegratedPackageForwardingService Methods');
+  // Test 2: SmartCalculationEngine methods
+  console.log('\n📋 TEST 2: SmartCalculationEngine Methods');
   try {
-    const service = window.integratedPackageForwardingService;
+    const service = window.smartCalculationEngine;
     const requiredMethods = [
-      'getIntegratedCustomerProfile',
-      'assignIntegratedVirtualAddress', 
-      'getCustomerPackagesIntegrated',
-      'createIntegratedQuote'
+      'calculateUnifiedQuote',
+      'optimizeCalculation', 
+      'getCalculationContext',
+      'validateQuoteData'
     ];
     
     const methodTests = requiredMethods.map(method => ({
@@ -81,49 +81,54 @@ const runServiceIntegrationTests = async () => {
     if (missingMethods.length > 0) {
       console.log('❌ Missing methods:', missingMethods.map(m => m.method));
       results.push({ 
-        test: 'IntegratedPackageForwardingService Methods', 
+        test: 'SmartCalculationEngine Methods', 
         status: 'FAIL', 
         message: `Missing methods: ${missingMethods.map(m => m.method).join(', ')}` 
       });
     } else {
       console.log('✅ All required methods found');
       results.push({ 
-        test: 'IntegratedPackageForwardingService Methods', 
+        test: 'SmartCalculationEngine Methods', 
         status: 'PASS', 
         message: 'All required methods available' 
       });
     }
   } catch (error) {
     console.log('❌ Method check failed:', error);
-    results.push({ test: 'IntegratedPackageForwardingService Methods', status: 'FAIL', message: error.message });
+    results.push({ test: 'SmartCalculationEngine Methods', status: 'FAIL', message: error.message });
   }
   
-  // Test 3: SmartCalculationEngine Extension
-  console.log('\n📋 TEST 3: SmartCalculationEngine Extension');
+  // Test 3: NotificationService
+  console.log('\n📋 TEST 3: NotificationService');
   try {
-    const extension = window.smartCalculationEngineExtension;
-    const requiredMethods = ['calculateEnhancedWithPackageForwarding'];
+    const service = window.notificationService;
+    const requiredMethods = ['create', 'getNotifications', 'markAsRead'];
     
-    const methodExists = typeof extension.calculateEnhancedWithPackageForwarding === 'function';
+    const methodTests = requiredMethods.map(method => ({
+      method,
+      exists: typeof service[method] === 'function'
+    }));
     
-    if (!methodExists) {
-      console.log('❌ Missing calculateEnhancedWithPackageForwarding method');
+    const missingMethods = methodTests.filter(test => !test.exists);
+    
+    if (missingMethods.length > 0) {
+      console.log('❌ Missing methods:', missingMethods.map(m => m.method));
       results.push({ 
-        test: 'SmartCalculationEngine Extension', 
+        test: 'NotificationService', 
         status: 'FAIL', 
-        message: 'Missing calculateEnhancedWithPackageForwarding method' 
+        message: `Missing methods: ${missingMethods.map(m => m.method).join(', ')}` 
       });
     } else {
-      console.log('✅ SmartCalculationEngine extension method found');
+      console.log('✅ NotificationService methods found');
       results.push({ 
-        test: 'SmartCalculationEngine Extension', 
+        test: 'NotificationService', 
         status: 'PASS', 
-        message: 'Extension method available' 
+        message: 'All methods available' 
       });
     }
   } catch (error) {
-    console.log('❌ Extension check failed:', error);
-    results.push({ test: 'SmartCalculationEngine Extension', status: 'FAIL', message: error.message });
+    console.log('❌ NotificationService check failed:', error);
+    results.push({ test: 'NotificationService', status: 'FAIL', message: error.message });
   }
   
   // Test 4: Database Connection via Supabase
@@ -150,32 +155,28 @@ const runServiceIntegrationTests = async () => {
     results.push({ test: 'Database Connection', status: 'FAIL', message: error.message });
   }
   
-  // Test 5: Package Forwarding Database Functions
-  console.log('\n📋 TEST 5: Package Forwarding Database Functions');
+  // Test 5: Core Database Functions
+  console.log('\n📋 TEST 5: Core Database Functions');
   try {
     const { supabase } = await import('/src/integrations/supabase/client.ts');
     
-    // Test if our custom functions exist by trying to call them with minimal data
+    // Test if our core RPC functions exist
     const functionTests = [];
     
-    // Test get_or_create_customer_preferences function
+    // Test is_admin function
     try {
-      const testUserId = '00000000-0000-0000-0000-000000000000'; // Use a test UUID
-      const { data, error } = await supabase.rpc('get_or_create_customer_preferences', {
-        p_user_id: testUserId
-      });
+      const { data, error } = await supabase.rpc('is_admin');
       
-      // Function exists if we get a result or a specific error (not "function does not exist")
       const functionExists = !error || !error.message.includes('function') || !error.message.includes('does not exist');
       
       functionTests.push({
-        function: 'get_or_create_customer_preferences',
+        function: 'is_admin',
         exists: functionExists,
         error: error?.message || null
       });
     } catch (err) {
       functionTests.push({
-        function: 'get_or_create_customer_preferences',
+        function: 'is_admin',
         exists: false,
         error: err.message
       });
@@ -197,27 +198,48 @@ const runServiceIntegrationTests = async () => {
     results.push({ test: 'Database Functions', status: 'FAIL', message: error.message });
   }
   
-  // Test 6: Integration with Customer Profile System
-  console.log('\n📋 TEST 6: Customer Profile Integration');
+  // Test 6: Core Tables Access
+  console.log('\n📋 TEST 6: Core Tables Access');
   try {
     const { supabase } = await import('/src/integrations/supabase/client.ts');
     
-    // Check if customer_preferences table exists and is accessible
-    const { data, error } = await supabase
-      .from('customer_preferences')
-      .select('count')
-      .limit(1);
+    // Check if core tables exist and are accessible
+    const tables = ['quotes', 'profiles', 'country_settings'];
+    const tableTests = [];
     
-    if (error && error.message.includes('relation') && error.message.includes('does not exist')) {
-      console.log('❌ customer_preferences table not found');
-      results.push({ test: 'Customer Profile Integration', status: 'FAIL', message: 'customer_preferences table missing' });
+    for (const table of tables) {
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select('count')
+          .limit(1);
+        
+        tableTests.push({
+          table,
+          accessible: !error || !error.message.includes('relation'),
+          error: error?.message || null
+        });
+      } catch (err) {
+        tableTests.push({
+          table,
+          accessible: false,
+          error: err.message
+        });
+      }
+    }
+    
+    const allTablesAccessible = tableTests.every(test => test.accessible);
+    
+    if (allTablesAccessible) {
+      console.log('✅ Core tables accessible');
+      results.push({ test: 'Core Tables Access', status: 'PASS', message: 'All core tables accessible' });
     } else {
-      console.log('✅ Customer profile integration tables exist');
-      results.push({ test: 'Customer Profile Integration', status: 'PASS', message: 'Integration tables available' });
+      console.log('❌ Some core tables not accessible');
+      results.push({ test: 'Core Tables Access', status: 'FAIL', message: 'Some tables inaccessible' });
     }
   } catch (error) {
-    console.log('❌ Customer profile integration test failed:', error);
-    results.push({ test: 'Customer Profile Integration', status: 'FAIL', message: error.message });
+    console.log('❌ Core tables test failed:', error);
+    results.push({ test: 'Core Tables Access', status: 'FAIL', message: error.message });
   }
   
   // Test Summary

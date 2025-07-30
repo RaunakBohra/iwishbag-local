@@ -157,7 +157,7 @@ export async function syncHSNTaxRatesToD1() {
   try {
     console.log('🔄 Syncing HSN tax rates to D1...');
     
-    // Fetch HSN data
+    
     const { data: hsnData } = await supabase
       .from('hsn_tax_rates')
       .select('*');
@@ -169,7 +169,7 @@ export async function syncHSNTaxRatesToD1() {
     
     return hsnData;
   } catch (error) {
-    console.error('❌ HSN sync failed:', error);
+    console.error('❌ error);
     throw error;
   }
 }
@@ -182,8 +182,7 @@ export async function syncAllToD1() {
     syncCountriesToD1(),
     syncExchangeRatesToD1(),
     syncPopularProductsToD1(),
-    syncHSNTaxRatesToD1(),
-  ]);
+    sync]);
 
   const summary = {
     countries: results[0].status === 'fulfilled' ? '✅' : '❌',

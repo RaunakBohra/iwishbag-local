@@ -49,28 +49,7 @@ export const TaxBreakdownEducation: React.FC<TaxBreakdownEducationProps> = ({
         </p>
 
         <div className="space-y-4">
-          {/* Customs Duties */}
-          <div className="bg-white/80 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center">
-                <Plane className="h-4 w-4 text-green-600 mr-2" />
-                <h4 className="font-medium text-green-900">Customs Duties</h4>
-              </div>
-              <Badge variant="outline" className="text-green-700 border-green-300">
-                Import Tax
-              </Badge>
-            </div>
-            <p className="text-green-700 text-sm mb-2">
-              Charged by {destinationInfo.name} customs when your package enters the country.
-            </p>
-            <ul className="text-green-600 text-xs space-y-1">
-              <li>• Applied to the higher of: actual item price or minimum HSN valuation</li>
-              <li>• Rate varies by product category (typically 5-40%)</li>
-              <li>• Collected by customs authorities</li>
-            </ul>
-          </div>
-
-          {/* Local Taxes */}
+          {}
           <div className="bg-white/80 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center">

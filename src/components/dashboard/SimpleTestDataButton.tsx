@@ -25,7 +25,7 @@ export const SimpleTestDataButton: React.FC = () => {
     try {
       // First check if user has a virtual address
       const { data: address } = await supabase
-        .from('customer_addresses')
+        .from('warehouse_suite_addresses')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
@@ -42,7 +42,7 @@ export const SimpleTestDataButton: React.FC = () => {
 
       // Create ONE simple test package with only required fields
       const testPackage = {
-        customer_address_id: address.id,
+        warehouse_suite_address_id: address.id,
         weight_kg: 1.5,
         dimensions: { length: 30, width: 20, height: 10, unit: 'cm' }
       };

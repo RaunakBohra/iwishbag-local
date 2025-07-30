@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Truck, Clock, DollarSign } from 'lucide-react';
 import { useDeliveryIntegration } from '@/hooks/useDeliveryIntegration';
 import { formatCurrency } from '@/utils/format';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 interface DeliveryProviderSelectorProps {
   quote: any;
@@ -82,7 +82,7 @@ export const DeliveryProviderSelector: React.FC<DeliveryProviderSelectorProps> =
     );
   }
 
-  const currency = optimizedCurrencyService.getCurrency(quote.destination_country);
+  const currency = currencyService.getCurrency(quote.destination_country);
 
   return (
     <div className="space-y-4">

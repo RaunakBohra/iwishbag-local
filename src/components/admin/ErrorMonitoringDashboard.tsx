@@ -489,7 +489,6 @@ function getMockErrorMetrics(timeRange: string): ErrorMetrics {
       PaymentProcessor: 25,
       ShippingCalculator: 22,
       CurrencyService: 20,
-      HSNSearchService: 18,
       CustomerPortal: 15,
       AdminDashboard: 12,
     },

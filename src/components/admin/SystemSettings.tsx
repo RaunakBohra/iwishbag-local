@@ -16,7 +16,7 @@ export const SystemSettings = () => {
     updateSetting,
     getBooleanSetting,
     _getNumericSetting,
-    getSetting,
+    getSetting
   } = useSystemSettings();
 
   const [exchangeRateMarkup, setExchangeRateMarkup] = useState<string>('');
@@ -192,3 +192,5 @@ export const SystemSettings = () => {
     </div>
   );
 };
+
+export default SystemSettings;

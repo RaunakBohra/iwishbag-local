@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 import { normalizeCountryCode } from '@/lib/addressUtils';
 import { COMMON_QUERIES } from '@/lib/queryColumns';
-import { trackCartOperation } from '@/lib/performanceTracker';
 
 export interface CartItem {
   id: string;
@@ -237,24 +236,13 @@ export const useCartStore = create<CartStore>()(
             const itemIds = state.items.map((item) => item.id);
             if (itemIds.length === 0) return;
 
-            // Track performance of cart sync operation
-            await trackCartOperation(
-              'sync',
-              async () => {
-                // Single query updates all cart items at once - 90% performance improvement
-                const { error } = await supabase
-                  .from('quotes')
-                  .update({ in_cart: true })
-                  .in('id', itemIds);
+            // Single query updates all cart items at once - 90% performance improvement
+            const { error } = await supabase
+              .from('quotes')
+              .update({ in_cart: true })
+              .in('id', itemIds);
 
-                if (error) throw error;
-                return { success: true };
-              },
-              {
-                itemCount: itemIds.length,
-                userId: state.userId,
-              },
-            );
+            if (error) throw error;
 
             logger.info('Cart synced successfully', {
               itemCount: itemIds.length,

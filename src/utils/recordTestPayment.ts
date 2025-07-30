@@ -10,20 +10,22 @@ export async function recordTestPayUPayment(quoteId: string, amount: number) {
       throw new Error('Not authenticated');
     }
 
-    // Create payment ledger entry
+    // Create payment transaction entry (using consolidated table)
     const { data, error } = await supabase
-      .from('payment_ledger')
+      .from('payment_transactions')
       .insert({
         quote_id: quoteId,
+        user_id: userData.user.id,
         payment_type: 'customer_payment',
         payment_method: 'payu',
         amount: amount,
         currency: 'USD',
         status: 'completed',
-        payment_date: new Date().toISOString(),
         reference_number: `TEST-PAYU-${Date.now()}`,
         notes: 'Test PayU payment for refund testing',
         created_by: userData.user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();

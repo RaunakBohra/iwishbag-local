@@ -65,7 +65,7 @@ export const CompactCustomerListItem = ({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const customerName = customer.full_name || 'Unnamed Customer';
-  const primaryAddress = customer.user_addresses?.[0];
+  const primaryAddress = customer.delivery_addresses?.[0];
   const addressText = primaryAddress
     ? `${primaryAddress.city}, ${primaryAddress.country}`
     : 'No address';
@@ -360,9 +360,9 @@ export const CompactCustomerListItem = ({
             {/* Addresses */}
             <div>
               <BodySmall className="text-gray-500 font-medium mb-2">Addresses</BodySmall>
-              {customer.user_addresses && customer.user_addresses.length > 0 ? (
+              {customer.delivery_addresses && customer.delivery_addresses.length > 0 ? (
                 <div className="space-y-2">
-                  {customer.user_addresses.map((address, index) => (
+                  {customer.delivery_addresses.map((address, index) => (
                     <div key={index} className="p-2 bg-gray-50 rounded text-sm">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-500" />

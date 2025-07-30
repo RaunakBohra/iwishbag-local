@@ -26,11 +26,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Enhanced mock data with HSN minimum valuations
-const mockItemsWithValuation = [
-  { 
-    id: '1', 
-    name: 'iPhone 15 Pro', 
+// Enhanced mock data with name: 'iPhone 15 Pro', 
     price: 800, 
     quantity: 1, 
     hsn_code: '8517',

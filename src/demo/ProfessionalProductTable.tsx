@@ -109,18 +109,7 @@ const ProfessionalProductTable = () => {
   const EnhancedLinearLayout = () => (
     <div className="w-full">
       <div className="border rounded-lg overflow-hidden">
-        {/* Header */}
-        <div className="bg-gray-50 px-6 py-3 border-b">
-          <div className="grid grid-cols-12 gap-4 text-xs font-medium text-gray-600 uppercase tracking-wider">
-            <div className="col-span-4">Product</div>
-            <div className="col-span-2 text-right">Price</div>
-            <div className="col-span-2 text-right">Weight</div>
-            <div className="col-span-2">HSN</div>
-            <div className="col-span-2 text-right">Actions</div>
-          </div>
-        </div>
-        
-        {/* Product Rows */}
+        {}
         <div className="divide-y">
           {products.map((product) => {
             const isExpanded = expandedRows.includes(product.id);
@@ -128,123 +117,12 @@ const ProfessionalProductTable = () => {
             
             return (
               <div key={product.id} className="hover:bg-gray-50 transition-colors">
-                {/* Main Row */}
-                <div className="px-6 py-4">
-                  <div className="grid grid-cols-12 gap-4 items-center">
-                    {/* Product Info */}
-                    <div className="col-span-4">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => toggleRowExpansion(product.id)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
-                        >
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-gray-500" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
-                          )}
-                        </button>
-                        <div>
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500 truncate">
-                            {new URL(product.url).hostname}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Price */}
-                    <div className="col-span-2 text-right">
-                      <div className="text-sm">
-                        ${product.price.toLocaleString()} × {product.quantity}
-                      </div>
-                      <div className="text-sm font-medium text-gray-900">
-                        = ${(product.price * product.quantity).toLocaleString()}
-                      </div>
-                    </div>
-                    
-                    {/* Weight */}
-                    <div className="col-span-2 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="text-sm">{product.weight} kg</span>
-                        {hasVolumetric && (
-                          <span className="text-xs text-orange-600 font-medium">
-                            * volumetric applies
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* HSN */}
+                {}
                     <div className="col-span-2">
                       <div className="text-sm font-mono">{product.hsnCode}</div>
                     </div>
                     
-                    {/* Actions */}
-                    <div className="col-span-2 flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Expanded Details */}
-                {isExpanded && (
-                  <div className="px-6 pb-4 bg-gray-50/50 border-t">
-                    <div className="pl-12 grid grid-cols-3 gap-6">
-                      {/* Weight Analysis */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-medium text-gray-600 uppercase tracking-wider">
-                          Weight Analysis
-                        </h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Actual Weight:</span>
-                            <span className="font-medium">{product.weight} kg</span>
-                          </div>
-                          {product.volumetricWeight && (
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-600">Volumetric Weight:</span>
-                              <span className={cn(
-                                "font-medium",
-                                hasVolumetric ? "text-orange-600" : "text-gray-900"
-                              )}>
-                                {product.volumetricWeight.toFixed(2)} kg
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Weight Source:</span>
-                            <Select defaultValue={product.weightSource} size="sm">
-                              <SelectTrigger className="w-24 h-7 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="manual">Manual</SelectItem>
-                                <SelectItem value="hsn">HSN</SelectItem>
-                                <SelectItem value="ml">ML</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          {hasVolumetric && (
-                            <div className="mt-2 p-2 bg-orange-50 rounded text-xs text-orange-800">
-                              <div className="flex items-start gap-1">
-                                <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                <span>Using volumetric weight for shipping calculation</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Dimensions */}
+                    {}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -321,45 +199,7 @@ const ProfessionalProductTable = () => {
                         </div>
                       </div>
                       
-                      {/* Tax Configuration */}
-                      <div className="space-y-3">
-                        <h4 className="text-xs font-medium text-gray-600 uppercase tracking-wider">
-                          Tax Configuration
-                        </h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Tax Method:</span>
-                            <Select defaultValue={product.taxMethod}>
-                              <SelectTrigger className="w-24 h-7 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="hsn">HSN</SelectItem>
-                                <SelectItem value="manual">Manual</SelectItem>
-                                <SelectItem value="ai">AI</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Customs Rate:</span>
-                            <span className="font-medium">20%</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Valuation:</span>
-                            <span className="font-medium capitalize">{product.valuationMethod}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      
-      {/* Sample Breakdown Sidebar Mockup */}
+                      {}
       <div className="mt-6 p-4 border rounded-lg bg-gray-50">
         <h3 className="text-sm font-medium text-gray-700 mb-2">Sample Breakdown (Your Existing Sidebar)</h3>
         <div className="space-y-1 text-sm">
@@ -454,67 +294,7 @@ const ProfessionalProductTable = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {/* Financial Section */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="h-4 w-4 text-gray-500" />
-                <span className="text-xs font-medium text-gray-600 uppercase">Financial</span>
-              </div>
-              <div className="text-sm">
-                ${product.price.toLocaleString()} × {product.quantity} = 
-                <span className="font-medium ml-1">${(product.price * product.quantity).toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Physical Section */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Scale className="h-4 w-4 text-gray-500" />
-                <span className="text-xs font-medium text-gray-600 uppercase">Physical</span>
-              </div>
-              <div className="text-sm space-y-1">
-                <div>
-                  {product.weight} kg 
-                  {product.volumetricWeight && product.volumetricWeight > product.weight ? (
-                    <span className="text-orange-600 ml-1">→ {product.volumetricWeight.toFixed(1)} kg</span>
-                  ) : (
-                    <span className="text-gray-500 ml-1">[{product.weightSource}]</span>
-                  )}
-                </div>
-                {product.dimensions ? (
-                  <div className="text-xs text-gray-600">
-                    {product.dimensions.length}×{product.dimensions.width}×{product.dimensions.height} {product.dimensions.unit}
-                  </div>
-                ) : (
-                  <div className="text-xs text-gray-400">No dimensions</div>
-                )}
-              </div>
-            </div>
-
-            {/* Compliance Section */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-gray-500" />
-                <span className="text-xs font-medium text-gray-600 uppercase">Compliance</span>
-              </div>
-              <div className="text-sm space-y-1">
-                <div>HSN: {product.hsnCode}</div>
-                <div>Method: <span className="capitalize">{product.taxMethod}</span></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-
-  // Layout 3: Contextual Workspace
-  const ContextualWorkspaceLayout = () => {
-    const selected = selectedProduct !== null ? products.find(p => p.id === selectedProduct) : null;
-
-    return (
-      <div className="flex gap-4 h-[600px]">
-        {/* Main Product List */}
+            {}
         <div className="flex-1 border rounded-lg overflow-hidden">
           <div className="bg-gray-50 px-4 py-3 border-b">
             <div className="text-sm font-medium text-gray-700">Main Product List</div>
@@ -551,47 +331,7 @@ const ProfessionalProductTable = () => {
           </div>
         </div>
 
-        {/* Inspector Panel */}
-        <div className="w-96 border rounded-lg overflow-hidden">
-          <div className="bg-gray-50 px-4 py-3 border-b">
-            <div className="text-sm font-medium text-gray-700">Inspector Panel</div>
-          </div>
-          {selected ? (
-            <div className="p-4 space-y-4">
-              <div>
-                <h3 className="font-medium text-lg mb-2">{selected.name}</h3>
-                <p className="text-sm text-gray-600">{selected.url}</p>
-              </div>
-
-              {/* Weight & Shipping Section */}
-              <div className="border rounded-lg p-4">
-                <h4 className="font-medium text-sm mb-3 uppercase text-gray-600">Weight & Shipping</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm text-gray-600">Actual Weight</label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input value={selected.weight} className="w-24" />
-                      <span className="text-sm text-gray-600">kg</span>
-                      <Select defaultValue={selected.weightSource}>
-                        <SelectTrigger className="w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="hsn">HSN</SelectItem>
-                          <SelectItem value="ml">ML</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Dimensions
-                  </Button>
-                </div>
-              </div>
-
-              {/* Tax & Compliance Section */}
+        {}
               <div className="border rounded-lg p-4">
                 <h4 className="font-medium text-sm mb-3 uppercase text-gray-600">Tax & Compliance</h4>
                 <div className="space-y-3">

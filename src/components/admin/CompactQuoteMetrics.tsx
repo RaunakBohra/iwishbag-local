@@ -1,4 +1,3 @@
-import { Tables } from '@/integrations/supabase/types';
 import { formatCurrencyCompact, formatChangePercentage } from '@/lib/adminCurrencyUtils';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -14,13 +13,18 @@ import {
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-type QuoteWithItems = Tables<'quotes'> & {
-  quote_items: Tables<'quote_items'>[];
-  profiles?: { preferred_display_currency?: string } | null;
-};
+interface MetricsData {
+  total: number;
+  pending: number;
+  sent: number;
+  approved: number;
+  paid: number;
+  completed: number;
+  totalValue: number;
+}
 
 interface CompactQuoteMetricsProps {
-  quotes: QuoteWithItems[];
+  metrics: MetricsData;
   isLoading?: boolean;
 }
 
@@ -61,7 +65,7 @@ const CompactMetric = ({ label, value, change, changeType, icon }: CompactMetric
   </div>
 );
 
-export const CompactQuoteMetrics = ({ quotes, isLoading }: CompactQuoteMetricsProps) => {
+export const CompactQuoteMetrics = ({ metrics, isLoading }: CompactQuoteMetricsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (isLoading) {
@@ -83,19 +87,19 @@ export const CompactQuoteMetrics = ({ quotes, isLoading }: CompactQuoteMetricsPr
     );
   }
 
-  // Calculate metrics
-  const totalQuotes = quotes.length;
-  const totalRevenue = quotes.reduce((sum, quote) => sum + (quote.final_total_usd || 0), 0);
+  // Extract metrics
+  const totalQuotes = metrics.total;
+  const totalRevenue = metrics.totalValue;
   const averageValue = totalQuotes > 0 ? totalRevenue / totalQuotes : 0;
-
-  // Status counts
-  const pendingQuotes = quotes.filter((q) => q.status === 'pending').length;
-  const approvedQuotes = quotes.filter((q) => q.status === 'approved').length;
-  const paidQuotes = quotes.filter((q) =>
-    ['paid', 'ordered', 'shipped', 'completed'].includes(q.status),
-  ).length;
-  const rejectedQuotes = quotes.filter((q) => ['rejected', 'cancelled'].includes(q.status)).length;
-  const highPriorityQuotes = quotes.filter((q) => q.priority === 'high').length;
+  const pendingQuotes = metrics.pending;
+  const approvedQuotes = metrics.approved;
+  const paidQuotes = metrics.paid;
+  const completedQuotes = metrics.completed;
+  const sentQuotes = metrics.sent;
+  
+  // Calculate additional metrics
+  const rejectedQuotes = 0; // Not provided in metrics, default to 0
+  const highPriorityQuotes = 0; // Not provided in metrics, default to 0
 
   // Calculate conversion rate
   const conversionRate = totalQuotes > 0 ? (paidQuotes / totalQuotes) * 100 : 0;
@@ -151,9 +155,10 @@ export const CompactQuoteMetrics = ({ quotes, isLoading }: CompactQuoteMetricsPr
 
   const secondaryMetrics = [
     { label: 'Pending', value: pendingQuotes.toString(), status: 'pending' },
+    { label: 'Sent', value: sentQuotes.toString(), status: 'sent' },
     { label: 'Approved', value: approvedQuotes.toString(), status: 'approved' },
     { label: 'Paid', value: paidQuotes.toString(), status: 'paid' },
-    { label: 'Rejected', value: rejectedQuotes.toString(), status: 'rejected' },
+    { label: 'Completed', value: completedQuotes.toString(), status: 'completed' },
     { label: 'Avg Value', value: formatCurrencyCompact(averageValue), status: 'neutral' },
   ];
 
@@ -161,10 +166,14 @@ export const CompactQuoteMetrics = ({ quotes, isLoading }: CompactQuoteMetricsPr
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
+      case 'sent':
+        return 'bg-indigo-100 text-indigo-800';
       case 'approved':
         return 'bg-blue-100 text-blue-800';
       case 'paid':
         return 'bg-green-100 text-green-800';
+      case 'completed':
+        return 'bg-emerald-100 text-emerald-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
       default:

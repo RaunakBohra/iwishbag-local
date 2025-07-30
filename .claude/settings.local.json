@@ -209,7 +209,15 @@
       "mcp__redis__set",
       "mcp__redis__set",
       "mcp__memory__add_observations",
-      "Bash(docker volume:*)"
+      "Bash(docker volume:*)",
+      "Bash(./cleanup-admin-quote.sh:*)",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNQuoteIntegrationService.ts )",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNDataMigrationService.ts )",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNTaxService.ts )",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/EnhancedHSNSearchService.ts )",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNTaxIntegrationService.ts )",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/__tests__/HSNQuoteIntegrationService.test.ts )",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNDataValidationService.ts)"
     ],
     "deny": []
   }

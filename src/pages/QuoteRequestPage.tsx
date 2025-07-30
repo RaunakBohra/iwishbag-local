@@ -39,17 +39,22 @@ import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield } from 'lucid
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCountryUtils } from '@/lib/countryUtils';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
-import { userActivityService, ACTIVITY_TYPES } from '@/services/UserActivityService';
-import { notificationService } from '@/services/NotificationService';
-import { NOTIFICATION_TYPES } from '@/types/NotificationTypes';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
+import { currencyService } from '@/services/CurrencyService';
+import { ConditionalSkeleton } from '@/components/ui/skeleton-loader';
+import { Skeleton } from '@/components/ui/skeleton';
+// import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm'; // Component removed
 
 const steps = ['Product Info', 'Contact & Submit'];
 
 export default function QuoteRequestPage() {
   const { user, convertAnonymousToRegistered } = useAuth();
   const { countries } = useCountryUtils();
+  const { data: allCountries, isLoading: countriesLoading } = useAllCountries();
+  const { data: purchaseCountries, isLoading: purchaseLoading } = usePurchaseCountries();
+  const { data: shippingCountries, isLoading: shippingLoading } = useShippingCountries();
   const [currentStep, setCurrentStep] = useState(1);
   const [quoteType, setQuoteType] = useState('separate');
   const [sessionId] = useState(() => crypto.randomUUID()); // Generate unique sessionId for this quote
@@ -63,12 +68,12 @@ export default function QuoteRequestPage() {
       price: '',
       weight: '',
       country: '',
-      notes: '',
-    },
+      notes: ''
+    }
   ]);
   const [contactInfo, setContactInfo] = useState({
     name: '',
-    email: '',
+    email: ''
   });
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,15 +87,6 @@ export default function QuoteRequestPage() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signupError, setSignupError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
-
-  // Track quote creation start on component mount
-  useEffect(() => {
-    userActivityService.trackActivity(ACTIVITY_TYPES.QUOTE_CREATE_START, {
-      page_url: window.location.href,
-      user_type: user ? 'registered' : 'anonymous',
-      step: 'product_info',
-    });
-  }, []);
 
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
@@ -134,6 +130,8 @@ export default function QuoteRequestPage() {
             setDestinationCountry={setDestinationCountry}
             next={nextStep}
             sessionId={sessionId}
+            purchaseCountries={purchaseCountries}
+            shippingCountries={shippingCountries}
           />
         );
       case 2:
@@ -165,7 +163,7 @@ export default function QuoteRequestPage() {
       console.log('handleSubmit called with:', {
         submissionData,
         userEmail: user?.email,
-        contactEmail: contactInfo.email,
+        contactEmail: contactInfo.email
       });
 
       // Determine email to use - prioritize passed data, then user email, then contactInfo
@@ -184,7 +182,7 @@ export default function QuoteRequestPage() {
         fullName: submissionData?.name || contactInfo.name,
         country: destinationCountry, // Store country code for logic and DB
         destination_country: destinationCountry, // Add destination_country for calculation compatibility
-        email: emailToUse,
+        email: emailToUse
       };
 
       if (quoteType === 'combined') {
@@ -196,7 +194,7 @@ export default function QuoteRequestPage() {
           options: product.notes || '',
           imageUrl: product.file ? product.url : '',
           price: product.price,
-          weight: product.weight,
+          weight: product.weight
         }));
 
         // CRITICAL FIX: Ensure origin_country is properly captured
@@ -220,7 +218,7 @@ export default function QuoteRequestPage() {
         // ✅ FIX: Get the correct currency for the origin country
         let originCurrency = 'USD';
         try {
-          originCurrency = await optimizedCurrencyService.getCurrencyForCountry(originCountry);
+          originCurrency = await currencyService.getCurrencyForCountry(originCountry);
         } catch (error) {
           console.error('Error getting currency for origin country:', error);
           // Fallback to USD if currency service fails
@@ -247,15 +245,15 @@ export default function QuoteRequestPage() {
               options: product.notes || null,
               quantity: product.quantity || 1,
               costprice_origin: product.price || 0,
-              weight_kg: product.weight || 1,
+              weight_kg: product.weight || 1
             })),
             customer_data: {
               info: {
-                email: emailToUse,
+                email: emailToUse
               },
               shipping_address: shippingAddressData,
               preferences: {
-                insurance_opted_in: submissionData?.insuranceOptedIn || false,
+                insurance_opted_in: submissionData?.insuranceOptedIn || false
               },
               sessionId: sessionId, // Store session ID for linking uploaded files
             },
@@ -268,7 +266,7 @@ export default function QuoteRequestPage() {
             final_total_usd: products.reduce(
               (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
               0,
-            ),
+            )
           })
           .select('id')
           .single();
@@ -290,7 +288,7 @@ export default function QuoteRequestPage() {
           options: item.options,
           image_url: item.imageUrl,
           item_price: item.price && !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0,
-          item_weight: item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0,
+          item_weight: item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0
         }));
 
         const { error: itemsError } = await supabase.from('quote_items').insert(quoteItemsToInsert);
@@ -310,7 +308,7 @@ export default function QuoteRequestPage() {
               if (fileName) {
                 await supabase.rpc('mark_file_as_used', {
                   p_file_path: fileName,
-                  p_quote_id: quote.id,
+                  p_quote_id: quote.id
                 });
               }
             }
@@ -342,7 +340,7 @@ export default function QuoteRequestPage() {
           // ✅ FIX: Get the correct currency for each product's origin country
           let productOriginCurrency = 'USD';
           try {
-            productOriginCurrency = await optimizedCurrencyService.getCurrencyForCountry(product.country);
+            productOriginCurrency = await currencyService.getCurrencyForCountry(product.country);
           } catch (error) {
             console.error('Error getting currency for product origin country:', error);
             // Fallback to USD if currency service fails
@@ -370,23 +368,23 @@ export default function QuoteRequestPage() {
                   options: product.notes || null,
                   quantity: product.quantity || 1,
                   costprice_origin: product.price || 0,
-                  weight_kg: product.weight || 0,
-                },
+                  weight_kg: product.weight || 0
+                }
               ],
               customer_data: {
                 info: {
-                  email: emailToUse,
+                  email: emailToUse
                 },
                 shipping_address: shippingAddressData,
                 preferences: {
-                  insurance_opted_in: submissionData?.insuranceOptedIn || false,
+                  insurance_opted_in: submissionData?.insuranceOptedIn || false
                 },
                 sessionId: sessionId, // Store session ID for linking uploaded files
               },
               // ✅ FIX: Prices are now in origin currency, store original values
               // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
               costprice_total_usd: (product.price || 0) * (product.quantity || 1),
-              final_total_usd: (product.price || 0) * (product.quantity || 1),
+              final_total_usd: (product.price || 0) * (product.quantity || 1)
             })
             .select('id')
             .single();
@@ -406,7 +404,7 @@ export default function QuoteRequestPage() {
               if (fileName) {
                 await supabase.rpc('mark_file_as_used', {
                   p_file_path: fileName,
-                  p_quote_id: quote.id,
+                  p_quote_id: quote.id
                 });
               }
             }
@@ -441,7 +439,7 @@ export default function QuoteRequestPage() {
           let destinationCurrency = 'USD';
           if (destCountry) {
             try {
-              destinationCurrency = await optimizedCurrencyService.getCurrencyForCountry(destCountry);
+              destinationCurrency = await currencyService.getCurrencyForCountry(destCountry);
             } catch (error) {
               console.error('Error getting currency for country:', error);
               // Fall back to USD if there's an error
@@ -470,37 +468,6 @@ export default function QuoteRequestPage() {
         }
       }
 
-      // Track successful quote submission
-      await userActivityService.trackActivity(ACTIVITY_TYPES.QUOTE_CREATE_COMPLETE, {
-        quote_type: quoteType,
-        products_count: products.length,
-        destination_country: destinationCountry,
-        total_value: products.reduce((sum, p) => sum + (p.price || 0) * (p.quantity || 1), 0),
-        user_type: user ? 'registered' : 'anonymous',
-        email_provided: !!emailToUse,
-      });
-
-      // Create notification for quote submission (for registered users)
-      if (user?.id && !user.is_anonymous) {
-        try {
-          await notificationService.createNotification(
-            user.id,
-            NOTIFICATION_TYPES.QUOTE_PENDING_REVIEW,
-            `Your quote request for ${products.length} item${products.length > 1 ? 's' : ''} has been submitted successfully. We'll review it and send you a detailed quote within 24-48 hours.`,
-            {
-              action_url: '/dashboard/quotes',
-              action_label: 'View Quotes',
-              title: 'Quote Request Submitted',
-              subtitle: `${products.length} item${products.length > 1 ? 's' : ''} • ${destinationCountry}`,
-              product_count: products.length,
-              destination_country: destinationCountry,
-            },
-          );
-        } catch (error) {
-          console.error('Error creating quote submission notification:', error);
-        }
-      }
-
       setQuoteSubmitted(true);
       setSubmittedEmail(emailToUse || '');
       setIsSubmitting(false);
@@ -514,21 +481,90 @@ export default function QuoteRequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Only show header on step 1 (product info) */}
-        {!quoteSubmitted && currentStep === 1 && (
-          <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-              Request a Quote
-            </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
-              Get accurate shipping costs for your international purchases
-            </p>
-          </div>
-        )}
+    <ConditionalSkeleton
+      conditions={[
+        { data: allCountries, isLoading: countriesLoading },
+        { data: purchaseCountries, isLoading: purchaseLoading },
+        { data: shippingCountries, isLoading: shippingLoading }
+      ]}
+      minimumLoadTime={300}
+      skeleton={
+        <div className="min-h-screen bg-gray-50">
+          <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            {/* Header skeleton */}
+            <div className="text-center mb-8">
+              <Skeleton className="h-10 w-64 mx-auto mb-3" />
+              <Skeleton className="h-6 w-96 mx-auto" />
+            </div>
 
-        {quoteSubmitted ? (
+            {/* Progress bar skeleton */}
+            <div className="mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <Skeleton className="h-0.5 flex-1 mx-4" />
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Form skeleton */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="space-y-6">
+                {/* Quote type skeleton */}
+                <div>
+                  <Skeleton className="h-6 w-32 mb-4" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Skeleton className="h-24" />
+                    <Skeleton className="h-24" />
+                  </div>
+                </div>
+
+                {/* Product form skeleton */}
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-40 mb-4" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Skeleton className="h-10" />
+                    <Skeleton className="h-10" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Skeleton className="h-10" />
+                    <Skeleton className="h-10" />
+                  </div>
+                  <Skeleton className="h-20" />
+                </div>
+
+                {/* Button skeleton */}
+                <div className="flex justify-end">
+                  <Skeleton className="h-12 w-32" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          {/* Only show header on step 1 (product info) */}
+          {!quoteSubmitted && currentStep === 1 && (
+            <div className="text-center mb-8">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                Request a Quote
+              </h1>
+              <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto">
+                Get accurate shipping costs for your international purchases
+              </p>
+            </div>
+          )}
+
+          {quoteSubmitted ? (
           <div className="max-w-2xl mx-auto">
             {/* Single Unified Success Card */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
@@ -691,8 +727,8 @@ export default function QuoteRequestPage() {
                             price: '',
                             weight: '',
                             country: '',
-      notes: '',
-                          },
+      notes: ''
+                          }
                         ]);
                         setContactInfo({ name: '', email: '' });
                         setDestinationCountry('');
@@ -767,5 +803,6 @@ export default function QuoteRequestPage() {
         )}
       </div>
     </div>
+    </ConditionalSkeleton>
   );
 }

@@ -26,16 +26,10 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
   const { id, shareToken } = useParams<{ id?: string; shareToken?: string }>();
   const { getStatusConfig } = useStatusManagement();
   const { toast } = useToast();
-  const [showHSNEducation, setShowHSNEducation] = useState(false);
-
-  // Determine the quote ID and whether we're using a share token
-  const quoteId = shareToken || id;
+  
   const isSharedQuote = Boolean(shareToken);
+  const quoteId = isSharedQuote ? shareToken : id;
 
-  // Initialize quote state hook for operations (only if we have a valid quote ID)
-  const quoteStateHook = useQuoteState(quoteId || '');
-
-  // Fetch quote data
   const {
     data: quote,
     isLoading,
@@ -45,37 +39,24 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
     queryFn: async () => {
       if (!quoteId) throw new Error('No quote ID provided');
 
-      // For shared quotes, use a different endpoint that doesn't require auth
-      if (isSharedQuote) {
-        const { data, error } = await supabase
-          .from('quotes')
-          .select('*')
-          .eq('share_token', quoteId)
-          .single();
-        if (error) throw error;
-        return data;
-      } else {
-        const { data, error } = await supabase
-          .from('quotes')
-          .select('*')
-          .eq('id', quoteId)
-          .single();
-        if (error) throw error;
-        return data;
-      }
+      let query = supabase
+        .from('quotes')
+        .select('*')
+        .eq(isSharedQuote ? 'share_token' : 'id', quoteId)
+        .single();
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as UnifiedQuote;
     },
     enabled: Boolean(quoteId),
   });
 
-  // Calculate if quote has HSN data
-  const hasHSNData = useMemo(() => {
+  // Simplified check for item data
+  const hasItemData = useMemo(() => {
     if (!quote?.items) return false;
     const items = Array.isArray(quote.items) ? quote.items : [];
-    return items.some((item: any) => {
-      const hasHSN = item.hsn_code && item.hsn_code.trim() !== '';
-      const hasCategory = item.category && item.category.trim() !== '';
-      return hasHSN || hasCategory;
-    });
+    return items.length > 0;
   }, [quote?.items]);
 
   // Get status configuration
@@ -95,167 +76,76 @@ const QuoteDetailUnified: React.FC<QuoteDetailUnifiedProps> = ({ isShareToken = 
   if (error || !quote) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow-lg text-center">
-          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Quote Not Found</h1>
-          <p className="text-gray-600 mb-6">
-            The quote you're looking for doesn't exist or you don't have permission to view it.
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Quote Not Found</h2>
+          <p className="text-gray-600 mb-4">
+            {error ? 'Failed to load quote details.' : 'The requested quote could not be found.'}
           </p>
-          <Button
-            onClick={() => navigate(isShareToken ? '/' : '/dashboard')}
-            className="inline-flex items-center"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Go Back
+          <Button onClick={() => navigate('/dashboard')} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
           </Button>
         </div>
       </div>
     );
   }
 
-  const handleApprove = async (quoteId: string) => {
-    try {
-      await quoteStateHook.approveQuote();
-      toast({
-        title: 'Quote Approved',
-        description: 'Your quote has been approved successfully.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to approve quote. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleReject = async (reason: string) => {
-    try {
-      await quoteStateHook.rejectQuote(reason);
-      toast({
-        title: 'Quote Rejected',
-        description: 'Your quote has been rejected.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to reject quote. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleAddToCart = async (quoteId: string) => {
-    try {
-      await quoteStateHook.addToCart();
-      toast({
-        title: 'Added to Cart',
-        description: 'Quote has been added to your cart.',
-      });
-      navigate('/cart');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to add quote to cart. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
-                size="sm"
-                onClick={() => navigate(isShareToken ? '/' : '/dashboard')}
+                onClick={() => navigate('/dashboard')}
                 className="flex items-center"
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
               </Button>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">Quote #{quote.display_id}</h1>
-                <p className="text-sm text-gray-500">
-                  {statusConfig?.label || quote.status} • {quote.destination_country}
-                </p>
+                <h1 className="text-2xl font-bold text-gray-900">Quote Details</h1>
+                <span className="text-xs text-gray-500">
+                  Items: {quote?.items?.length || 0}
+                </span>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              {hasHSNData && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowHSNEducation(!showHSNEducation)}
-                  className="flex items-center"
-                >
-                  <BookOpen className="mr-2 h-4 w-4" />
-                  {showHSNEducation ? 'Hide' : 'Learn About'} HSN
-                </Button>
-              )}
-              {/* Debug info - remove in production */}
-              <span className="text-xs text-gray-500">
-                HSN Data: {hasHSNData ? 'Yes' : 'No'} | Items: {quote?.items?.length || 0}
-              </span>
-            </div>
+            {statusConfig && (
+              <Badge
+                variant={statusConfig.variant as any}
+                className={statusConfig.className}
+              >
+                {statusConfig.label}
+              </Badge>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* HSN Education Section - Always show if HSN data exists */}
-        {hasHSNData && (
-          <div className="space-y-4">
-            {!showHSNEducation && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Info className="h-5 w-5 text-blue-600 mr-2" />
-                    <span className="text-sm font-medium text-blue-900">
-                      This quote uses HSN classification for accurate tax calculation
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowHSNEducation(true)}
-                    className="text-blue-600 border-blue-300 hover:bg-blue-100"
-                  >
-                    Learn More
-                  </Button>
-                </div>
-              </div>
-            )}
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Quote Summary */}
+          <div className="space-y-6">
+            <QuoteSummary quote={quote} />
+          </div>
 
-            {showHSNEducation && (
-              <div className="space-y-4">
-                <TaxBreakdownEducation
-                  originCountry={quote.origin_country}
-                  destinationCountry={quote.destination_country}
-                />
-              </div>
-            )}
+          {/* Quote Breakdown */}
+          <div className="space-y-6">
+            <QuoteBreakdown quote={quote} />
+          </div>
+        </div>
+
+        {/* Educational Content */}
+        {hasItemData && (
+          <div className="mt-8">
+            <TaxBreakdownEducation 
+              route={`${quote.origin_country}-${quote.destination_country}`}
+              items={quote.items || []}
+            />
           </div>
         )}
-
-        {/* Quote Breakdown */}
-        <QuoteBreakdown
-          quote={quote as any}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onCalculate={() => {}}
-          onRecalculate={() => {}}
-          onSave={() => {}}
-          onCancel={() => {}}
-          isProcessing={false}
-          onAddToCart={handleAddToCart}
-          addToCartText="Add to Cart"
-        />
       </div>
     </div>
   );

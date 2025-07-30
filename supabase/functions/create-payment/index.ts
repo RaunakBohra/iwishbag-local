@@ -337,10 +337,11 @@ serve(async (req) => {
           // Check authenticated user session if provided
           if (userId && authSessionToken) {
             const { data: authSession, error: authError } = await supabaseAdmin
-              .from('authenticated_checkout_sessions')
+              .from('checkout_sessions')
               .select('id, user_id, quote_ids, status')
               .eq('session_token', authSessionToken)
               .eq('status', 'active')
+              .eq('is_guest', false)
               .eq('user_id', userId)
               .single();
 
@@ -354,10 +355,11 @@ serve(async (req) => {
           if (!userId && guestSessionToken) {
             // Validate guest session token
             const { data: guestSession, error: guestError } = await supabaseAdmin
-              .from('guest_checkout_sessions')
-              .select('id, quote_id, status')
+              .from('checkout_sessions')
+              .select('id, quote_ids, status')
               .eq('session_token', guestSessionToken)
               .eq('status', 'active')
+              .eq('is_guest', true)
               .single();
 
             if (guestError || !guestSession) {

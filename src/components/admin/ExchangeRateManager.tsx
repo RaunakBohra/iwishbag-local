@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '../ui/use-toast';
 import { supabase } from '../../integrations/supabase/client';
 import { useAllCountries } from '../../hooks/useAllCountries';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 import { RefreshCw, TrendingUp, Globe, ArrowRightLeft, Settings, CheckCircle } from 'lucide-react';
 import {
   Dialog,
@@ -254,7 +254,7 @@ export function ExchangeRateManager() {
 
   const testExchangeRate = async (originCountry: string, destinationCountry: string) => {
     try {
-      const result = await optimizedCurrencyService.getExchangeRate(originCountry, destinationCountry);
+      const result = await currencyService.getExchangeRate(originCountry, destinationCountry);
 
       const confidence =
         result.confidence === 'high'
@@ -345,8 +345,8 @@ export function ExchangeRateManager() {
                         {countries.map((country) => (
                           <SelectItem key={country.code} value={country.code}>
                             {country.name} (
-                            {optimizedCurrencyService.getCurrencySymbol(
-                              optimizedCurrencyService.getCurrencyForCountrySync(country.code),
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(country.code),
                             )}
                             )
                           </SelectItem>
@@ -372,8 +372,8 @@ export function ExchangeRateManager() {
                         {countries.map((country) => (
                           <SelectItem key={country.code} value={country.code}>
                             {country.name} (
-                            {optimizedCurrencyService.getCurrencySymbol(
-                              optimizedCurrencyService.getCurrencyForCountrySync(country.code),
+                            {currencyService.getCurrencySymbol(
+                              currencyService.getCurrencyForCountrySync(country.code),
                             )}
                             )
                           </SelectItem>
@@ -400,12 +400,12 @@ export function ExchangeRateManager() {
                   {newRate.origin_country && newRate.destination_country && (
                     <div className="text-xs text-gray-500 mt-1">
                       1{' '}
-                      {optimizedCurrencyService.getCurrencySymbol(
-                        optimizedCurrencyService.getCurrencyForCountrySync(newRate.origin_country),
+                      {currencyService.getCurrencySymbol(
+                        currencyService.getCurrencyForCountrySync(newRate.origin_country),
                       )}{' '}
                       = {newRate.exchange_rate}{' '}
-                      {optimizedCurrencyService.getCurrencySymbol(
-                        optimizedCurrencyService.getCurrencyForCountrySync(newRate.destination_country),
+                      {currencyService.getCurrencySymbol(
+                        currencyService.getCurrencyForCountrySync(newRate.destination_country),
                       )}
                     </div>
                   )}
@@ -425,8 +425,8 @@ export function ExchangeRateManager() {
       <div className="grid gap-4">
         {rates.map((rate) => {
           const status = getRateStatus(rate);
-          const originCurrency = optimizedCurrencyService.getCurrencyForCountrySync(rate.origin_country);
-          const destinationCurrency = optimizedCurrencyService.getCurrencyForCountrySync(
+          const originCurrency = currencyService.getCurrencyForCountrySync(rate.origin_country);
+          const destinationCurrency = currencyService.getCurrencyForCountrySync(
             rate.destination_country,
           );
 
@@ -476,12 +476,12 @@ export function ExchangeRateManager() {
                     <div className="text-right">
                       <div className="font-mono text-lg font-semibold">
                         1{' '}
-                        {optimizedCurrencyService.getCurrencySymbol(
-                          optimizedCurrencyService.getCurrencyForCountrySync(rate.origin_country),
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(rate.origin_country),
                         )}{' '}
                         = {rate.exchange_rate}{' '}
-                        {optimizedCurrencyService.getCurrencySymbol(
-                          optimizedCurrencyService.getCurrencyForCountrySync(rate.destination_country),
+                        {currencyService.getCurrencySymbol(
+                          currencyService.getCurrencyForCountrySync(rate.destination_country),
                         )}
                       </div>
                       <div className="text-sm text-gray-500">Rate: {rate.exchange_rate}</div>

@@ -4,7 +4,7 @@
 // Follows user-friendly rounding patterns for better customer experience
 // ============================================================================
 
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 /**
  * Customer-friendly rounding rules by currency
@@ -104,7 +104,7 @@ export function applyCustomerFriendlyRounding(
  */
 export function formatAmountWithCustomerRounding(amount: number, currencyCode: string): string {
   const rounded = applyCustomerFriendlyRounding(amount, currencyCode);
-  return optimizedCurrencyService.formatAmount(rounded.roundedAmount, currencyCode);
+  return currencyService.formatAmount(rounded.roundedAmount, currencyCode);
 }
 
 /**
@@ -120,9 +120,9 @@ export function getRoundingExplanation(amount: number, currencyCode: string): st
     return null;
   }
 
-  const symbol = optimizedCurrencyService.getCurrencySymbol(currencyCode);
+  const symbol = currencyService.getCurrencySymbol(currencyCode);
   const savings = Math.abs(rounded.savingsAmount);
-  const formattedSavings = optimizedCurrencyService.formatAmount(savings, currencyCode);
+  const formattedSavings = currencyService.formatAmount(savings, currencyCode);
 
   if (rounded.savingsAmount > 0) {
     return `${rounded.roundingDescription} - You save ${formattedSavings}`;

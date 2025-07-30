@@ -76,7 +76,7 @@ interface CustomerProfileData {
   internal_notes: string | null;
   created_at: string;
   updated_at: string;
-  user_addresses: Array<{
+  delivery_addresses: Array<{
     id: string;
     full_name: string;
     phone: string;
@@ -142,7 +142,7 @@ export const CustomerProfile: React.FC = () => {
         .select(
           `
           *,
-          user_addresses (*)
+          delivery_addresses (*)
         `,
         )
         .eq('id', customerId)
@@ -336,7 +336,7 @@ export const CustomerProfile: React.FC = () => {
   }
 
   const primaryAddress =
-    customer.user_addresses?.find((addr) => addr.is_primary) || customer.user_addresses?.[0];
+    customer.delivery_addresses?.find((addr) => addr.is_primary) || customer.delivery_addresses?.[0];
 
   // Button handlers
   const handleEditCustomer = () => {
@@ -416,7 +416,7 @@ export const CustomerProfile: React.FC = () => {
         internal_notes: customer.internal_notes,
         created_at: customer.created_at,
         updated_at: customer.updated_at,
-        user_addresses: customer.user_addresses,
+        delivery_addresses: customer.delivery_addresses,
       }
     : null;
 

@@ -411,39 +411,39 @@ export const RefundManagementModal: React.FC<RefundManagementModalProps> = ({
         }
       }
 
-      // Create refund record in payment_ledger for manual refunds (non-gateway refunds)
+      // Create refund record in payment_transactions for manual refunds (non-gateway refunds)
       // Note: PayU refunds are recorded by the Edge Function, not here
       const refundReference = `REF-${Date.now()}`;
 
-      // Try to use payment_ledger if it exists
+      // Create refund transaction in consolidated payment_transactions table
       const _ledgerRecordCreated = false;
       try {
-        const { data: refundRecord, error: ledgerError } = await supabase
-          .from('payment_ledger')
+        const { data: refundRecord, error: refundError } = await supabase
+          .from('payment_transactions')
           .insert({
             quote_id: quote.id,
-            payment_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
-            payment_method:
-              refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
             amount: -amount, // Negative for refunds
             currency: quote.currency,
             status: 'completed',
-            payment_date: new Date().toISOString(),
+            payment_method: refundMethod === 'original' ? breakdown[0]?.method || 'manual' : refundMethod,
+            payment_type: refundType === 'credit_note' ? 'credit_note' : 'refund',
             reference_number: refundReference,
             notes: `${reason} - ${internalNotes}`.trim(),
             created_by: userData.user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           })
           .select()
           .single();
 
-        if (!ledgerError) {
+        if (!refundError) {
           const _ledgerRecordCreated = true;
-          console.log('Payment ledger entry created:', refundRecord.id);
+          console.log('Refund transaction created:', refundRecord.id);
         } else {
-          console.error('Payment ledger error:', ledgerError);
+          console.error('Refund transaction error:', refundError);
         }
       } catch (err) {
-        console.warn('Could not create payment_ledger entry, will track refund differently:', err);
+        console.warn('Could not create refund transaction entry:', err);
       }
 
       // Skip financial transactions as table doesn't exist

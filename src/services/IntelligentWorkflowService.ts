@@ -12,8 +12,6 @@ import * as Sentry from '@sentry/react';
 import { masterServiceOrchestrator, type ServiceOperation } from '@/services/MasterServiceOrchestrator';
 import { unifiedUserContextService, type UnifiedUserProfile } from '@/services/UnifiedUserContextService';
 import { enhancedSupportService } from '@/services/EnhancedSupportService';
-import { notificationService } from '@/services/NotificationService';
-import { userActivityService } from '@/services/UserActivityService';
 
 // ============================================================================
 // WORKFLOW AUTOMATION TYPES
@@ -120,25 +118,25 @@ class IntelligentWorkflowService {
         trigger: 'quote_created',
         conditions: [
           { field: 'total_amount_usd', operator: 'less_than', value: 100, type: 'quote' },
-          { field: 'customer_segment', operator: 'equals', value: 'vip', type: 'user' },
+          { field: 'customer_segment', operator: 'equals', value: 'vip', type: 'user' }
         ],
         actions: [
           {
             action: 'approve_quote',
-            parameters: { auto_approved: true, reason: 'VIP customer - small amount' },
+            parameters: { auto_approved: true, reason: 'VIP customer - small amount' }
           },
           {
             action: 'send_notification',
             parameters: {
               type: 'quote_auto_approved',
-              message: 'Your quote has been automatically approved! Proceed to payment.',
-            },
-          },
+              message: 'Your quote has been automatically approved! Proceed to payment.'
+            }
+          }
         ],
         priority: 1,
         is_active: true,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
 
       // Package Automation
@@ -149,25 +147,25 @@ class IntelligentWorkflowService {
         trigger: 'package_received',
         conditions: [
           { field: 'packages_in_warehouse', operator: 'greater_than', value: 2, type: 'user' },
-          { field: 'auto_consolidation_enabled', operator: 'equals', value: true, type: 'user' },
+          { field: 'auto_consolidation_enabled', operator: 'equals', value: true, type: 'user' }
         ],
         actions: [
           {
             action: 'consolidate_packages',
-            parameters: { auto_consolidation: true },
+            parameters: { auto_consolidation: true }
           },
           {
             action: 'send_notification',
             parameters: {
               type: 'auto_consolidation_started',
-              message: 'Your packages are being automatically consolidated for shipping.',
-            },
-          },
+              message: 'Your packages are being automatically consolidated for shipping.'
+            }
+          }
         ],
         priority: 2,
         is_active: true,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
 
       // Storage Fee Automation
@@ -177,25 +175,25 @@ class IntelligentWorkflowService {
         description: 'Alert customers when storage fees are accumulating',
         trigger: 'storage_threshold_reached',
         conditions: [
-          { field: 'days_in_storage', operator: 'greater_than', value: 7, type: 'package' },
+          { field: 'days_in_storage', operator: 'greater_than', value: 7, type: 'package' }
         ],
         actions: [
           {
             action: 'calculate_fees',
-            parameters: { fee_type: 'storage' },
+            parameters: { fee_type: 'storage' }
           },
           {
             action: 'send_notification',
             parameters: {
               type: 'storage_fee_alert',
-              message: 'Your packages have been in storage for over 7 days. Storage fees may apply.',
-            },
-          },
+              message: 'Your packages have been in storage for over 7 days. Storage fees may apply.'
+            }
+          }
         ],
         priority: 3,
         is_active: true,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
 
       // Support Automation
@@ -205,18 +203,18 @@ class IntelligentWorkflowService {
         description: 'Automatically assign support tickets based on category and priority',
         trigger: 'support_ticket_created',
         conditions: [
-          { field: 'category', operator: 'in', value: ['package_issue', 'quote_inquiry'], type: 'custom' },
+          { field: 'category', operator: 'in', value: ['package_issue', 'quote_inquiry'], type: 'custom' }
         ],
         actions: [
           {
             action: 'assign_support_ticket',
-            parameters: { assignment_strategy: 'category_specialist' },
-          },
+            parameters: { assignment_strategy: 'category_specialist' }
+          }
         ],
         priority: 1,
         is_active: true,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       },
 
       // Customer Retention
@@ -227,26 +225,26 @@ class IntelligentWorkflowService {
         trigger: 'user_inactive',
         conditions: [
           { field: 'days_since_last_login', operator: 'greater_than', value: 30, type: 'user' },
-          { field: 'total_orders', operator: 'greater_than', value: 0, type: 'user' },
+          { field: 'total_orders', operator: 'greater_than', value: 0, type: 'user' }
         ],
         actions: [
           {
             action: 'offer_discount',
-            parameters: { discount_percentage: 10, validity_days: 14 },
+            parameters: { discount_percentage: 10, validity_days: 14 }
           },
           {
             action: 'send_notification',
             parameters: {
               type: 'welcome_back_offer',
-              message: 'We miss you! Here\'s a 10% discount on your next order.',
-            },
-          },
+              message: 'We miss you! Here\'s a 10% discount on your next order.'
+            }
+          }
         ],
         priority: 4,
         is_active: true,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
+        updated_at: new Date().toISOString()
+      }
     ];
 
     // Group rules by trigger
@@ -264,7 +262,7 @@ class IntelligentWorkflowService {
 
     logger.info('Initialized workflow automation with default rules', {
       total_rules: defaultRules.length,
-      triggers: Array.from(this.workflowRules.keys()),
+      triggers: Array.from(this.workflowRules.keys())
     });
   }
 
@@ -411,7 +409,7 @@ class IntelligentWorkflowService {
       actions_executed: 0,
       actions_failed: 0,
       status: 'pending',
-      started_at: new Date().toISOString(),
+      started_at: new Date().toISOString()
     };
 
     this.executionQueue.push(execution);
@@ -420,7 +418,7 @@ class IntelligentWorkflowService {
       execution_id: execution.id,
       rule_name: rule.name,
       trigger: rule.trigger,
-      actions_count: rule.actions.length,
+      actions_count: rule.actions.length
     });
   }
 
@@ -493,7 +491,7 @@ class IntelligentWorkflowService {
           logger.error('Workflow action failed', {
             execution_id: execution.id,
             action: actionConfig.action,
-            error: error.message,
+            error: error.message
           });
         }
       }
@@ -505,7 +503,7 @@ class IntelligentWorkflowService {
         execution_id: execution.id,
         rule_name: rule.name,
         actions_executed: execution.actions_executed,
-        actions_failed: execution.actions_failed,
+        actions_failed: execution.actions_failed
       });
 
     } catch (error) {
@@ -529,8 +527,7 @@ class IntelligentWorkflowService {
 
     switch (action) {
       case 'send_notification':
-        await this.executeSendNotification(parameters, userContext);
-        break;
+        await this.executeSend        break;
 
       case 'approve_quote':
         await this.executeApproveQuote(parameters, triggerData);
@@ -561,19 +558,8 @@ class IntelligentWorkflowService {
   // ACTION IMPLEMENTATIONS
   // ============================================================================
 
-  private async executeSendNotification(
-    parameters: any,
-    userContext: UnifiedUserProfile | null
-  ): Promise<void> {
-    if (!userContext) return;
-
-    await notificationService.createNotification(
-      userContext.id,
-      parameters.type,
-      parameters.message,
-      parameters.data || {}
-    );
-  }
+  private async executeSend
+    await notificationService.create  }
 
   private async executeApproveQuote(parameters: any, triggerData: any): Promise<void> {
     await masterServiceOrchestrator.executeOperation({
@@ -585,10 +571,10 @@ class IntelligentWorkflowService {
         metadata: {
           status: 'approved',
           auto_approved: parameters.auto_approved,
-          approval_reason: parameters.reason,
-        },
+          approval_reason: parameters.reason
+        }
       },
-      priority: 'high',
+      priority: 'high'
     });
   }
 
@@ -606,10 +592,10 @@ class IntelligentWorkflowService {
         user_id: userContext.id,
         metadata: {
           action: 'consolidate',
-          auto_consolidation: parameters.auto_consolidation,
-        },
+          auto_consolidation: parameters.auto_consolidation
+        }
       },
-      priority: 'medium',
+      priority: 'medium'
     });
   }
 
@@ -625,10 +611,10 @@ class IntelligentWorkflowService {
       context: {
         package_id: triggerData.id,
         metadata: {
-          fee_type: parameters.fee_type,
-        },
+          fee_type: parameters.fee_type
+        }
       },
-      priority: 'low',
+      priority: 'low'
     });
   }
 
@@ -643,10 +629,10 @@ class IntelligentWorkflowService {
       context: {
         ticket_id: triggerData.id,
         metadata: {
-          assignment_strategy: parameters.assignment_strategy,
-        },
+          assignment_strategy: parameters.assignment_strategy
+        }
       },
-      priority: 'high',
+      priority: 'high'
     });
   }
 
@@ -662,7 +648,7 @@ class IntelligentWorkflowService {
       discount_percentage: parameters.discount_percentage,
       valid_until: new Date(Date.now() + parameters.validity_days * 24 * 60 * 60 * 1000).toISOString(),
       offer_type: 'automated_retention',
-      is_used: false,
+      is_used: false
     });
   }
 
@@ -690,7 +676,7 @@ class IntelligentWorkflowService {
     const transaction = typeof Sentry?.startTransaction === 'function'
       ? Sentry.startTransaction({
           name: `IntelligentWorkflowService.${operation}`,
-          op: 'workflow_operation',
+          op: 'workflow_operation'
         })
       : null;
 
@@ -698,16 +684,16 @@ class IntelligentWorkflowService {
       Sentry.captureException(error, {
         tags: {
           service: 'IntelligentWorkflowService',
-          operation,
+          operation
         },
-        extra: context,
+        extra: context
       });
       transaction.finish();
     }
 
     logger.error(`IntelligentWorkflowService.${operation} failed`, {
       error: error.message,
-      context,
+      context
     });
   }
 
@@ -723,7 +709,7 @@ class IntelligentWorkflowService {
       ...rule,
       id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
     if (!this.workflowRules.has(rule.trigger)) {
@@ -736,7 +722,7 @@ class IntelligentWorkflowService {
     logger.info('Added custom workflow rule', {
       rule_id: fullRule.id,
       rule_name: fullRule.name,
-      trigger: fullRule.trigger,
+      trigger: fullRule.trigger
     });
 
     return fullRule.id;
@@ -780,7 +766,7 @@ class IntelligentWorkflowService {
     logger.info('Toggled workflow rule', {
       rule_id: ruleId,
       rule_name: rule.name,
-      is_active: isActive,
+      is_active: isActive
     });
 
     return true;
@@ -801,5 +787,5 @@ export type {
   WorkflowActionConfig,
   WorkflowExecution,
   WorkflowTrigger,
-  WorkflowAction,
+  WorkflowAction
 };

@@ -22,12 +22,12 @@ export function useAddressManagement(options: UseAddressManagementOptions = {}) 
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['user_addresses', user?.id, options.countryFilter],
+    queryKey: ['delivery_addresses', user?.id, options.countryFilter],
     queryFn: async () => {
       if (!user) return [];
       
       let query = supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id)
         .order('is_default', { ascending: false })
@@ -54,19 +54,19 @@ export function useAddressManagement(options: UseAddressManagementOptions = {}) 
 
   // Create address mutation
   const createAddressMutation = useMutation({
-    mutationFn: async (addressData: Omit<Tables<'user_addresses'>, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+    mutationFn: async (addressData: Omit<Tables<'delivery_addresses'>, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
       if (!user) throw new Error('User not authenticated');
 
       // If setting as default, unset other defaults
       if (addressData.is_default) {
         await supabase
-          .from('user_addresses')
+          .from('delivery_addresses')
           .update({ is_default: false })
           .eq('user_id', user.id);
       }
 
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .insert({
           ...addressData,
           user_id: user.id,
@@ -78,7 +78,7 @@ export function useAddressManagement(options: UseAddressManagementOptions = {}) 
       return data;
     },
     onSuccess: (newAddress) => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
       toast({
         title: 'Address added',
         description: 'Your new address has been saved.',
@@ -99,20 +99,20 @@ export function useAddressManagement(options: UseAddressManagementOptions = {}) 
     mutationFn: async ({ 
       id, 
       ...addressData 
-    }: Partial<Tables<'user_addresses'>> & { id: string }) => {
+    }: Partial<Tables<'delivery_addresses'>> & { id: string }) => {
       if (!user) throw new Error('User not authenticated');
 
       // If setting as default, unset other defaults
       if (addressData.is_default) {
         await supabase
-          .from('user_addresses')
+          .from('delivery_addresses')
           .update({ is_default: false })
           .eq('user_id', user.id)
           .neq('id', id);
       }
 
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .update(addressData)
         .eq('id', id)
         .select()
@@ -122,7 +122,7 @@ export function useAddressManagement(options: UseAddressManagementOptions = {}) 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
       toast({
         title: 'Address updated',
         description: 'Your address has been updated.',
@@ -141,14 +141,14 @@ export function useAddressManagement(options: UseAddressManagementOptions = {}) 
   const deleteAddressMutation = useMutation({
     mutationFn: async (addressId: string) => {
       const { error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .delete()
         .eq('id', addressId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_addresses', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery_addresses', user?.id] });
       toast({
         title: 'Address deleted',
         description: 'Your address has been removed.',

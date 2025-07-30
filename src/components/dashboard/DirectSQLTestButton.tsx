@@ -25,7 +25,7 @@ export const DirectSQLTestButton: React.FC = () => {
     try {
       // First check if user has a virtual address
       const { data: address } = await supabase
-        .from('customer_addresses')
+        .from('warehouse_suite_addresses')
         .select('id')
         .eq('user_id', user.id)
         .eq('status', 'active')
@@ -44,7 +44,7 @@ export const DirectSQLTestButton: React.FC = () => {
       const { data, error } = await supabase.rpc('sql', {
         query: `
           INSERT INTO received_packages (
-            customer_address_id,
+            warehouse_suite_address_id,
             tracking_number,
             carrier,
             sender_name,

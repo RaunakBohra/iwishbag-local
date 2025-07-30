@@ -189,9 +189,9 @@ class UnifiedConfigurationService {
       if (category === 'country') {
         let query = supabase.from('country_settings').select('*');
         
-        // If a specific key is provided, filter by country_code
+        // If a specific key is provided, filter by code
         if (key) {
-          query = query.eq('country_code', key);
+          query = query.eq('code', key);
         }
         
         const { data, error } = await query;
@@ -212,11 +212,11 @@ class UnifiedConfigurationService {
             result = {
               name: country.name,
               currency: country.currency,
-              symbol: country.symbol,
+              symbol: '$', // Default symbol - will be overridden by CurrencyService
               rate_from_usd: country.rate_from_usd,
               minimum_payment_amount: country.minimum_payment_amount,
-              customs_percent: country.customs_percent || 0,
-              vat_percent: country.vat_percent || 0,
+              customs_percent: (country.sales_tax || 0) + (country.vat || 0),
+              vat_percent: country.vat || 0,
               payment_gateway_fixed_fee: country.payment_gateway_fixed_fee || 0.30,
               payment_gateway_percent_fee: country.payment_gateway_percent_fee || 2.9,
               supported_gateways: ['stripe', 'payu'],
@@ -227,14 +227,14 @@ class UnifiedConfigurationService {
           // All countries
           const countries: Record<string, CountryConfig> = {};
           data?.forEach(country => {
-            countries[country.country_code] = {
+            countries[country.code] = {
               name: country.name,
               currency: country.currency,
-              symbol: country.symbol,
+              symbol: '$', // Default symbol - will be overridden by CurrencyService
               rate_from_usd: country.rate_from_usd,
               minimum_payment_amount: country.minimum_payment_amount,
-              customs_percent: country.customs_percent || 0,
-              vat_percent: country.vat_percent || 0,
+              customs_percent: (country.sales_tax || 0) + (country.vat || 0),
+              vat_percent: country.vat || 0,
               payment_gateway_fixed_fee: country.payment_gateway_fixed_fee || 0.30,
               payment_gateway_percent_fee: country.payment_gateway_percent_fee || 2.9,
               supported_gateways: ['stripe', 'payu'],

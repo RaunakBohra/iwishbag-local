@@ -18,9 +18,9 @@ export type Database = {
       graphql: {
         Args: {
           variables?: Json
-          operationName?: string
-          query?: string
           extensions?: Json
+          query?: string
+          operationName?: string
         }
         Returns: Json
       }
@@ -73,51 +73,6 @@ export type Database = {
           scope?: string
           scope_identifier?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      authenticated_checkout_sessions: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          id: string
-          payment_amount: number
-          payment_currency: string
-          payment_method: string
-          quote_ids: string[]
-          session_token: string
-          status: string
-          temporary_shipping_address: Json | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          payment_amount: number
-          payment_currency: string
-          payment_method: string
-          quote_ids: string[]
-          session_token: string
-          status?: string
-          temporary_shipping_address?: Json | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          payment_amount?: number
-          payment_currency?: string
-          payment_method?: string
-          quote_ids?: string[]
-          session_token?: string
-          status?: string
-          temporary_shipping_address?: Json | null
-          updated_at?: string | null
-          user_id?: string
         }
         Relationships: []
       }
@@ -198,68 +153,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "country_settings"
             referencedColumns: ["code"]
-          },
-        ]
-      }
-      bank_statement_imports: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          error_log: Json | null
-          failed_rows: number | null
-          file_format: string | null
-          file_name: string
-          file_url: string | null
-          id: string
-          imported_at: string
-          imported_by: string
-          processed_rows: number | null
-          reconciliation_id: string | null
-          status: string | null
-          successful_rows: number | null
-          total_rows: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          error_log?: Json | null
-          failed_rows?: number | null
-          file_format?: string | null
-          file_name: string
-          file_url?: string | null
-          id?: string
-          imported_at?: string
-          imported_by: string
-          processed_rows?: number | null
-          reconciliation_id?: string | null
-          status?: string | null
-          successful_rows?: number | null
-          total_rows?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          error_log?: Json | null
-          failed_rows?: number | null
-          file_format?: string | null
-          file_name?: string
-          file_url?: string | null
-          id?: string
-          imported_at?: string
-          imported_by?: string
-          processed_rows?: number | null
-          reconciliation_id?: string | null
-          status?: string | null
-          successful_rows?: number | null
-          total_rows?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bank_statement_imports_reconciliation_id_fkey"
-            columns: ["reconciliation_id"]
-            isOneToOne: false
-            referencedRelation: "payment_reconciliation"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -502,46 +395,62 @@ export type Database = {
         }
         Relationships: []
       }
-      chart_of_accounts: {
+      checkout_sessions: {
         Row: {
-          account_type: string
-          code: string
-          created_at: string
-          description: string | null
-          is_active: boolean | null
-          name: string
-          parent_code: string | null
-          updated_at: string
+          created_at: string | null
+          expires_at: string
+          guest_email: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          is_guest: boolean | null
+          payment_amount: number
+          payment_currency: string
+          payment_method: string
+          quote_ids: string[]
+          session_token: string
+          status: string
+          temporary_shipping_address: Json | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          account_type: string
-          code: string
-          created_at?: string
-          description?: string | null
-          is_active?: boolean | null
-          name: string
-          parent_code?: string | null
-          updated_at?: string
+          created_at?: string | null
+          expires_at: string
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          is_guest?: boolean | null
+          payment_amount: number
+          payment_currency: string
+          payment_method: string
+          quote_ids: string[]
+          session_token: string
+          status?: string
+          temporary_shipping_address?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          account_type?: string
-          code?: string
-          created_at?: string
-          description?: string | null
-          is_active?: boolean | null
-          name?: string
-          parent_code?: string | null
-          updated_at?: string
+          created_at?: string | null
+          expires_at?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          is_guest?: boolean | null
+          payment_amount?: number
+          payment_currency?: string
+          payment_method?: string
+          quote_ids?: string[]
+          session_token?: string
+          status?: string
+          temporary_shipping_address?: Json | null
+          updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "chart_of_accounts_parent_code_fkey"
-            columns: ["parent_code"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["code"]
-          },
-        ]
+        Relationships: []
       }
       consolidation_groups: {
         Row: {
@@ -552,12 +461,16 @@ export type Database = {
           consolidation_date: string | null
           consolidation_fee_usd: number | null
           created_at: string | null
+          delivered_date: string | null
           group_name: string | null
           id: string
           original_package_ids: string[] | null
           package_count: number | null
           quote_id: string | null
           service_fee_usd: number | null
+          shipped_date: string | null
+          shipping_carrier: string | null
+          shipping_tracking_number: string | null
           status: string | null
           storage_fees_usd: number | null
           updated_at: string | null
@@ -571,12 +484,16 @@ export type Database = {
           consolidation_date?: string | null
           consolidation_fee_usd?: number | null
           created_at?: string | null
+          delivered_date?: string | null
           group_name?: string | null
           id?: string
           original_package_ids?: string[] | null
           package_count?: number | null
           quote_id?: string | null
           service_fee_usd?: number | null
+          shipped_date?: string | null
+          shipping_carrier?: string | null
+          shipping_tracking_number?: string | null
           status?: string | null
           storage_fees_usd?: number | null
           updated_at?: string | null
@@ -590,12 +507,16 @@ export type Database = {
           consolidation_date?: string | null
           consolidation_fee_usd?: number | null
           created_at?: string | null
+          delivered_date?: string | null
           group_name?: string | null
           id?: string
           original_package_ids?: string[] | null
           package_count?: number | null
           quote_id?: string | null
           service_fee_usd?: number | null
+          shipped_date?: string | null
+          shipping_carrier?: string | null
+          shipping_tracking_number?: string | null
           status?: string | null
           storage_fees_usd?: number | null
           updated_at?: string | null
@@ -660,20 +581,33 @@ export type Database = {
         Row: {
           additional_shipping: number | null
           additional_weight: number | null
+          address_format: Json | null
+          auto_tax_calculation: boolean | null
           available_gateways: string[] | null
           code: string
+          continent: string | null
           created_at: string
           currency: string
+          date_format: string | null
           decimal_places: number | null
           decimal_separator: string | null
           default_gateway: string | null
+          default_language: string | null
+          display_name: string | null
+          flag_emoji: string | null
           gateway_config: Json | null
+          is_active: boolean | null
+          languages: string[] | null
           min_shipping: number | null
           minimum_payment_amount: number | null
           name: string
           payment_gateway: string | null
           payment_gateway_fixed_fee: number | null
           payment_gateway_percent_fee: number | null
+          phone_code: string | null
+          popular_payment_methods: string[] | null
+          postal_code_example: string | null
+          postal_code_regex: string | null
           priority_thresholds: Json | null
           purchase_allowed: boolean | null
           rate_from_usd: number
@@ -682,6 +616,7 @@ export type Database = {
           symbol_position: string | null
           symbol_space: boolean | null
           thousand_separator: string | null
+          timezone: string | null
           updated_at: string
           vat: number | null
           volumetric_divisor: number | null
@@ -690,20 +625,33 @@ export type Database = {
         Insert: {
           additional_shipping?: number | null
           additional_weight?: number | null
+          address_format?: Json | null
+          auto_tax_calculation?: boolean | null
           available_gateways?: string[] | null
           code: string
+          continent?: string | null
           created_at?: string
           currency: string
+          date_format?: string | null
           decimal_places?: number | null
           decimal_separator?: string | null
           default_gateway?: string | null
+          default_language?: string | null
+          display_name?: string | null
+          flag_emoji?: string | null
           gateway_config?: Json | null
+          is_active?: boolean | null
+          languages?: string[] | null
           min_shipping?: number | null
           minimum_payment_amount?: number | null
           name: string
           payment_gateway?: string | null
           payment_gateway_fixed_fee?: number | null
           payment_gateway_percent_fee?: number | null
+          phone_code?: string | null
+          popular_payment_methods?: string[] | null
+          postal_code_example?: string | null
+          postal_code_regex?: string | null
           priority_thresholds?: Json | null
           purchase_allowed?: boolean | null
           rate_from_usd: number
@@ -712,6 +660,7 @@ export type Database = {
           symbol_position?: string | null
           symbol_space?: boolean | null
           thousand_separator?: string | null
+          timezone?: string | null
           updated_at?: string
           vat?: number | null
           volumetric_divisor?: number | null
@@ -720,20 +669,33 @@ export type Database = {
         Update: {
           additional_shipping?: number | null
           additional_weight?: number | null
+          address_format?: Json | null
+          auto_tax_calculation?: boolean | null
           available_gateways?: string[] | null
           code?: string
+          continent?: string | null
           created_at?: string
           currency?: string
+          date_format?: string | null
           decimal_places?: number | null
           decimal_separator?: string | null
           default_gateway?: string | null
+          default_language?: string | null
+          display_name?: string | null
+          flag_emoji?: string | null
           gateway_config?: Json | null
+          is_active?: boolean | null
+          languages?: string[] | null
           min_shipping?: number | null
           minimum_payment_amount?: number | null
           name?: string
           payment_gateway?: string | null
           payment_gateway_fixed_fee?: number | null
           payment_gateway_percent_fee?: number | null
+          phone_code?: string | null
+          popular_payment_methods?: string[] | null
+          postal_code_example?: string | null
+          postal_code_regex?: string | null
           priority_thresholds?: Json | null
           purchase_allowed?: boolean | null
           rate_from_usd?: number
@@ -742,6 +704,7 @@ export type Database = {
           symbol_position?: string | null
           symbol_space?: boolean | null
           thousand_separator?: string | null
+          timezone?: string | null
           updated_at?: string
           vat?: number | null
           volumetric_divisor?: number | null
@@ -749,302 +712,97 @@ export type Database = {
         }
         Relationships: []
       }
-      credit_note_applications: {
+      customer_discount_usage: {
         Row: {
-          applied_amount: number
-          applied_at: string
-          applied_by: string
-          base_amount: number
-          created_at: string
-          credit_note_id: string
-          currency: string
-          exchange_rate: number | null
-          financial_transaction_id: string | null
-          id: string
-          notes: string | null
-          payment_ledger_id: string | null
-          quote_id: string
-          reversal_reason: string | null
-          reversed_at: string | null
-          reversed_by: string | null
-          status: string | null
-        }
-        Insert: {
-          applied_amount: number
-          applied_at?: string
-          applied_by: string
-          base_amount: number
-          created_at?: string
-          credit_note_id: string
-          currency: string
-          exchange_rate?: number | null
-          financial_transaction_id?: string | null
-          id?: string
-          notes?: string | null
-          payment_ledger_id?: string | null
-          quote_id: string
-          reversal_reason?: string | null
-          reversed_at?: string | null
-          reversed_by?: string | null
-          status?: string | null
-        }
-        Update: {
-          applied_amount?: number
-          applied_at?: string
-          applied_by?: string
-          base_amount?: number
-          created_at?: string
-          credit_note_id?: string
-          currency?: string
-          exchange_rate?: number | null
-          financial_transaction_id?: string | null
-          id?: string
-          notes?: string | null
-          payment_ledger_id?: string | null
-          quote_id?: string
-          reversal_reason?: string | null
-          reversed_at?: string | null
-          reversed_by?: string | null
-          status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "credit_note_applications_credit_note_id_fkey"
-            columns: ["credit_note_id"]
-            isOneToOne: false
-            referencedRelation: "credit_notes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "credit_note_applications_financial_transaction_id_fkey"
-            columns: ["financial_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "financial_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "credit_note_applications_payment_ledger_id_fkey"
-            columns: ["payment_ledger_id"]
-            isOneToOne: false
-            referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "credit_note_applications_reversed_by_fkey"
-            columns: ["reversed_by"]
-            isOneToOne: false
-            referencedRelation: "credit_note_applications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      credit_note_history: {
-        Row: {
-          action: string
-          amount_change: number | null
-          credit_note_id: string
-          description: string | null
-          id: string
-          metadata: Json | null
-          new_status: string | null
-          performed_at: string
-          performed_by: string
-          previous_status: string | null
-        }
-        Insert: {
-          action: string
-          amount_change?: number | null
-          credit_note_id: string
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          new_status?: string | null
-          performed_at?: string
-          performed_by: string
-          previous_status?: string | null
-        }
-        Update: {
-          action?: string
-          amount_change?: number | null
-          credit_note_id?: string
-          description?: string | null
-          id?: string
-          metadata?: Json | null
-          new_status?: string | null
-          performed_at?: string
-          performed_by?: string
-          previous_status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "credit_note_history_credit_note_id_fkey"
-            columns: ["credit_note_id"]
-            isOneToOne: false
-            referencedRelation: "credit_notes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      credit_notes: {
-        Row: {
-          allowed_categories: string[] | null
-          allowed_countries: string[] | null
-          amount: number
-          amount_available: number | null
-          amount_used: number | null
-          approved_at: string | null
-          approved_by: string | null
-          base_amount: number
-          cancellation_reason: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
-          created_at: string
-          currency: string
           customer_id: string
-          description: string | null
-          exchange_rate: number | null
+          discount_amount: number | null
+          discount_code_id: string
           id: string
-          internal_notes: string | null
-          issued_at: string
-          issued_by: string
-          metadata: Json | null
-          minimum_order_value: number | null
-          note_number: string
-          note_type: string
           quote_id: string | null
-          reason: string
-          refund_request_id: string | null
-          status: string | null
-          updated_at: string
-          valid_from: string | null
-          valid_until: string | null
+          used_at: string | null
         }
         Insert: {
-          allowed_categories?: string[] | null
-          allowed_countries?: string[] | null
-          amount: number
-          amount_available?: number | null
-          amount_used?: number | null
-          approved_at?: string | null
-          approved_by?: string | null
-          base_amount: number
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
-          created_at?: string
-          currency: string
           customer_id: string
-          description?: string | null
-          exchange_rate?: number | null
+          discount_amount?: number | null
+          discount_code_id: string
           id?: string
-          internal_notes?: string | null
-          issued_at?: string
-          issued_by: string
-          metadata?: Json | null
-          minimum_order_value?: number | null
-          note_number: string
-          note_type: string
           quote_id?: string | null
-          reason: string
-          refund_request_id?: string | null
-          status?: string | null
-          updated_at?: string
-          valid_from?: string | null
-          valid_until?: string | null
+          used_at?: string | null
         }
         Update: {
-          allowed_categories?: string[] | null
-          allowed_countries?: string[] | null
-          amount?: number
-          amount_available?: number | null
-          amount_used?: number | null
-          approved_at?: string | null
-          approved_by?: string | null
-          base_amount?: number
-          cancellation_reason?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
-          created_at?: string
-          currency?: string
           customer_id?: string
-          description?: string | null
-          exchange_rate?: number | null
+          discount_amount?: number | null
+          discount_code_id?: string
           id?: string
-          internal_notes?: string | null
-          issued_at?: string
-          issued_by?: string
-          metadata?: Json | null
-          minimum_order_value?: number | null
-          note_number?: string
-          note_type?: string
           quote_id?: string | null
-          reason?: string
-          refund_request_id?: string | null
-          status?: string | null
-          updated_at?: string
-          valid_from?: string | null
-          valid_until?: string | null
+          used_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "credit_notes_refund_request_id_fkey"
-            columns: ["refund_request_id"]
+            foreignKeyName: "customer_discount_usage_discount_code_id_fkey"
+            columns: ["discount_code_id"]
             isOneToOne: false
-            referencedRelation: "refund_requests"
+            referencedRelation: "discount_codes"
             referencedColumns: ["id"]
           },
         ]
       }
-      customer_addresses: {
+      customer_memberships: {
         Row: {
-          address_type: string | null
-          assigned_date: string | null
+          auto_renew: boolean | null
           created_at: string | null
-          full_address: string
+          customer_id: string
+          expires_at: string
           id: string
-          profile_id: string | null
-          status: string | null
-          suite_number: string
+          last_payment_id: string | null
+          metadata: Json | null
+          payment_method: string | null
+          plan_id: string
+          started_at: string
+          status: string
           updated_at: string | null
-          user_id: string | null
         }
         Insert: {
-          address_type?: string | null
-          assigned_date?: string | null
+          auto_renew?: boolean | null
           created_at?: string | null
-          full_address: string
+          customer_id: string
+          expires_at: string
           id?: string
-          profile_id?: string | null
-          status?: string | null
-          suite_number: string
+          last_payment_id?: string | null
+          metadata?: Json | null
+          payment_method?: string | null
+          plan_id: string
+          started_at?: string
+          status?: string
           updated_at?: string | null
-          user_id?: string | null
         }
         Update: {
-          address_type?: string | null
-          assigned_date?: string | null
+          auto_renew?: boolean | null
           created_at?: string | null
-          full_address?: string
+          customer_id?: string
+          expires_at?: string
           id?: string
-          profile_id?: string | null
-          status?: string | null
-          suite_number?: string
+          last_payment_id?: string | null
+          metadata?: Json | null
+          payment_method?: string | null
+          plan_id?: string
+          started_at?: string
+          status?: string
           updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "customer_addresses_profile_id_fkey"
-            columns: ["profile_id"]
+            foreignKeyName: "customer_memberships_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "customer_addresses_profile_id_fkey"
-            columns: ["profile_id"]
+            foreignKeyName: "customer_memberships_plan_id_fkey"
+            columns: ["plan_id"]
             isOneToOne: false
-            referencedRelation: "profiles_with_phone"
+            referencedRelation: "membership_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -1091,38 +849,7 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "customer_preferences_profile_id_fkey"
-            columns: ["profile_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      customs_categories: {
-        Row: {
-          created_at: string
-          duty_percent: number
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          duty_percent?: number
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          duty_percent?: number
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       customs_rules: {
         Row: {
@@ -1166,63 +893,465 @@ export type Database = {
         }
         Relationships: []
       }
-      email_queue: {
+      delivery_addresses: {
         Row: {
-          attempts: number | null
-          created_at: string | null
-          error_message: string | null
-          html_content: string
+          address_label: string | null
+          address_line1: string
+          address_line2: string | null
+          address_type: string | null
+          city: string
+          company_name: string | null
+          country: string | null
+          created_at: string
+          destination_country: string | null
           id: string
-          last_attempt_at: string | null
-          max_attempts: number | null
-          recipient_email: string
-          related_entity_id: string | null
-          related_entity_type: string | null
-          scheduled_for: string | null
-          sent_at: string | null
-          status: string | null
-          subject: string
-          template_id: string | null
-          text_content: string | null
+          is_default: boolean | null
+          phone: string | null
+          postal_code: string
+          recipient_name: string | null
+          save_to_profile: string | null
+          state_province_region: string
+          updated_at: string
+          user_id: string
+          validated_at: string | null
+          validation_status: string | null
+        }
+        Insert: {
+          address_label?: string | null
+          address_line1: string
+          address_line2?: string | null
+          address_type?: string | null
+          city: string
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          destination_country?: string | null
+          id?: string
+          is_default?: boolean | null
+          phone?: string | null
+          postal_code: string
+          recipient_name?: string | null
+          save_to_profile?: string | null
+          state_province_region: string
+          updated_at?: string
+          user_id: string
+          validated_at?: string | null
+          validation_status?: string | null
+        }
+        Update: {
+          address_label?: string | null
+          address_line1?: string
+          address_line2?: string | null
+          address_type?: string | null
+          city?: string
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          destination_country?: string | null
+          id?: string
+          is_default?: boolean | null
+          phone?: string | null
+          postal_code?: string
+          recipient_name?: string | null
+          save_to_profile?: string | null
+          state_province_region?: string
+          updated_at?: string
+          user_id?: string
+          validated_at?: string | null
+          validation_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_addresses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_orders: {
+        Row: {
+          actual_delivery: string | null
+          cod_amount: number | null
+          created_at: string | null
+          currency: string | null
+          delivery_charge: number | null
+          estimated_delivery: string | null
+          events: Json | null
+          from_address: Json
+          id: string
+          insurance_amount: number | null
+          proof: Json | null
+          provider_code: string
+          provider_order_id: string | null
+          provider_response: Json | null
+          quote_id: string
+          shipment_data: Json
+          status: string
+          to_address: Json
+          total_charge: number | null
+          tracking_number: string | null
           updated_at: string | null
         }
         Insert: {
-          attempts?: number | null
+          actual_delivery?: string | null
+          cod_amount?: number | null
           created_at?: string | null
-          error_message?: string | null
-          html_content: string
+          currency?: string | null
+          delivery_charge?: number | null
+          estimated_delivery?: string | null
+          events?: Json | null
+          from_address: Json
           id?: string
-          last_attempt_at?: string | null
-          max_attempts?: number | null
-          recipient_email: string
-          related_entity_id?: string | null
-          related_entity_type?: string | null
-          scheduled_for?: string | null
-          sent_at?: string | null
-          status?: string | null
-          subject: string
-          template_id?: string | null
-          text_content?: string | null
+          insurance_amount?: number | null
+          proof?: Json | null
+          provider_code: string
+          provider_order_id?: string | null
+          provider_response?: Json | null
+          quote_id: string
+          shipment_data: Json
+          status?: string
+          to_address: Json
+          total_charge?: number | null
+          tracking_number?: string | null
           updated_at?: string | null
         }
         Update: {
-          attempts?: number | null
+          actual_delivery?: string | null
+          cod_amount?: number | null
           created_at?: string | null
-          error_message?: string | null
-          html_content?: string
+          currency?: string | null
+          delivery_charge?: number | null
+          estimated_delivery?: string | null
+          events?: Json | null
+          from_address?: Json
           id?: string
-          last_attempt_at?: string | null
-          max_attempts?: number | null
-          recipient_email?: string
-          related_entity_id?: string | null
-          related_entity_type?: string | null
-          scheduled_for?: string | null
-          sent_at?: string | null
-          status?: string | null
-          subject?: string
-          template_id?: string | null
-          text_content?: string | null
+          insurance_amount?: number | null
+          proof?: Json | null
+          provider_code?: string
+          provider_order_id?: string | null
+          provider_response?: Json | null
+          quote_id?: string
+          shipment_data?: Json
+          status?: string
+          to_address?: Json
+          total_charge?: number | null
+          tracking_number?: string | null
           updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_orders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_provider_configs: {
+        Row: {
+          capabilities: Json
+          code: string
+          country_overrides: Json | null
+          created_at: string | null
+          credentials: Json
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          provider_type: string
+          settings: Json
+          supported_countries: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          capabilities?: Json
+          code: string
+          country_overrides?: Json | null
+          created_at?: string | null
+          credentials?: Json
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          provider_type: string
+          settings?: Json
+          supported_countries?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          capabilities?: Json
+          code?: string
+          country_overrides?: Json | null
+          created_at?: string | null
+          credentials?: Json
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          provider_type?: string
+          settings?: Json
+          supported_countries?: string[]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      delivery_webhooks: {
+        Row: {
+          created_at: string | null
+          error: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          processed_at: string | null
+          provider_code: string
+          webhook_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          provider_code: string
+          webhook_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          processed_at?: string | null
+          provider_code?: string
+          webhook_id?: string | null
+        }
+        Relationships: []
+      }
+      discount_campaigns: {
+        Row: {
+          auto_apply: boolean | null
+          campaign_type: string | null
+          created_at: string | null
+          description: string | null
+          discount_type_id: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          start_date: string
+          target_audience: Json | null
+          target_segments: Json | null
+          trigger_rules: Json | null
+          updated_at: string | null
+          usage_count: number | null
+          usage_limit: number | null
+        }
+        Insert: {
+          auto_apply?: boolean | null
+          campaign_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          discount_type_id?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          start_date: string
+          target_audience?: Json | null
+          target_segments?: Json | null
+          trigger_rules?: Json | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Update: {
+          auto_apply?: boolean | null
+          campaign_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          discount_type_id?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          start_date?: string
+          target_audience?: Json | null
+          target_segments?: Json | null
+          trigger_rules?: Json | null
+          updated_at?: string | null
+          usage_count?: number | null
+          usage_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_campaigns_discount_type_id_fkey"
+            columns: ["discount_type_id"]
+            isOneToOne: false
+            referencedRelation: "discount_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_codes: {
+        Row: {
+          campaign_id: string | null
+          code: string
+          created_at: string | null
+          discount_type_id: string | null
+          id: string
+          is_active: boolean | null
+          priority: number | null
+          usage_count: number | null
+          usage_limit: number | null
+          usage_per_customer: number | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          code: string
+          created_at?: string | null
+          discount_type_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          usage_count?: number | null
+          usage_limit?: number | null
+          usage_per_customer?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          code?: string
+          created_at?: string | null
+          discount_type_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          usage_count?: number | null
+          usage_limit?: number | null
+          usage_per_customer?: number | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_codes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "discount_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_codes_discount_type_id_fkey"
+            columns: ["discount_type_id"]
+            isOneToOne: false
+            referencedRelation: "discount_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discount_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      discount_stacking_rules: {
+        Row: {
+          allowed_combinations: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          max_discounts: number | null
+          name: string
+          priority: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_combinations?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_discounts?: number | null
+          name: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_combinations?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_discounts?: number | null
+          name?: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      discount_types: {
+        Row: {
+          code: string
+          conditions: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          type: string
+          value: number
+        }
+        Insert: {
+          code: string
+          conditions?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          type: string
+          value: number
+        }
+        Update: {
+          code?: string
+          conditions?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          value?: number
         }
         Relationships: []
       }
@@ -1252,145 +1381,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      email_templates: {
-        Row: {
-          auto_send: boolean | null
-          category: string | null
-          created_at: string
-          html_content: string
-          id: string
-          is_active: boolean | null
-          name: string
-          subject: string
-          template_type: string
-          trigger_conditions: Json | null
-          updated_at: string
-          variables: Json | null
-        }
-        Insert: {
-          auto_send?: boolean | null
-          category?: string | null
-          created_at?: string
-          html_content: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-          subject: string
-          template_type: string
-          trigger_conditions?: Json | null
-          updated_at?: string
-          variables?: Json | null
-        }
-        Update: {
-          auto_send?: boolean | null
-          category?: string | null
-          created_at?: string
-          html_content?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          subject?: string
-          template_type?: string
-          trigger_conditions?: Json | null
-          updated_at?: string
-          variables?: Json | null
-        }
-        Relationships: []
-      }
-      financial_transactions: {
-        Row: {
-          amount: number
-          approved_at: string | null
-          approved_by: string | null
-          created_at: string
-          created_by: string
-          credit_account: string
-          currency: string
-          debit_account: string
-          description: string
-          id: string
-          metadata: Json | null
-          notes: string | null
-          posted_at: string | null
-          reference_id: string
-          reference_type: string
-          reversal_reason: string | null
-          reversed_by: string | null
-          status: string | null
-          transaction_date: string
-          transaction_type: string
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string
-          created_by: string
-          credit_account: string
-          currency: string
-          debit_account: string
-          description: string
-          id?: string
-          metadata?: Json | null
-          notes?: string | null
-          posted_at?: string | null
-          reference_id: string
-          reference_type: string
-          reversal_reason?: string | null
-          reversed_by?: string | null
-          status?: string | null
-          transaction_date?: string
-          transaction_type: string
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string
-          created_by?: string
-          credit_account?: string
-          currency?: string
-          debit_account?: string
-          description?: string
-          id?: string
-          metadata?: Json | null
-          notes?: string | null
-          posted_at?: string | null
-          reference_id?: string
-          reference_type?: string
-          reversal_reason?: string | null
-          reversed_by?: string | null
-          status?: string | null
-          transaction_date?: string
-          transaction_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "financial_transactions_credit_account_fkey"
-            columns: ["credit_account"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "financial_transactions_debit_account_fkey"
-            columns: ["debit_account"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["code"]
-          },
-          {
-            foreignKeyName: "financial_transactions_reversed_by_fkey"
-            columns: ["reversed_by"]
-            isOneToOne: false
-            referencedRelation: "financial_transactions"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       gateway_refunds: {
         Row: {
@@ -1478,162 +1468,6 @@ export type Database = {
           },
         ]
       }
-      global_tax_method_preferences: {
-        Row: {
-          admin_id: string | null
-          created_at: string
-          default_calculation_method: string
-          default_valuation_method: string
-          fallback_chain: Json | null
-          id: string
-          is_active: boolean | null
-          preference_scope: string
-          scope_identifier: string | null
-          updated_at: string
-        }
-        Insert: {
-          admin_id?: string | null
-          created_at?: string
-          default_calculation_method?: string
-          default_valuation_method?: string
-          fallback_chain?: Json | null
-          id?: string
-          is_active?: boolean | null
-          preference_scope: string
-          scope_identifier?: string | null
-          updated_at?: string
-        }
-        Update: {
-          admin_id?: string | null
-          created_at?: string
-          default_calculation_method?: string
-          default_valuation_method?: string
-          fallback_chain?: Json | null
-          id?: string
-          is_active?: boolean | null
-          preference_scope?: string
-          scope_identifier?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "global_tax_method_preferences_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "global_tax_method_preferences_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guest_checkout_sessions: {
-        Row: {
-          created_at: string | null
-          expires_at: string
-          guest_email: string
-          guest_name: string
-          guest_phone: string | null
-          id: string
-          payment_amount: number
-          payment_currency: string
-          payment_method: string
-          quote_id: string
-          session_token: string
-          shipping_address: Json
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at: string
-          guest_email: string
-          guest_name: string
-          guest_phone?: string | null
-          id?: string
-          payment_amount: number
-          payment_currency: string
-          payment_method: string
-          quote_id: string
-          session_token: string
-          shipping_address: Json
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string
-          guest_email?: string
-          guest_name?: string
-          guest_phone?: string | null
-          id?: string
-          payment_amount?: number
-          payment_currency?: string
-          payment_method?: string
-          quote_id?: string
-          session_token?: string
-          shipping_address?: Json
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      hsn_master: {
-        Row: {
-          category: string
-          classification_data: Json | null
-          created_at: string
-          description: string
-          hsn_code: string
-          id: string
-          is_active: boolean | null
-          keywords: string[] | null
-          minimum_valuation_usd: number | null
-          requires_currency_conversion: boolean | null
-          subcategory: string | null
-          tax_data: Json | null
-          updated_at: string
-          weight_data: Json | null
-        }
-        Insert: {
-          category: string
-          classification_data?: Json | null
-          created_at?: string
-          description: string
-          hsn_code: string
-          id?: string
-          is_active?: boolean | null
-          keywords?: string[] | null
-          minimum_valuation_usd?: number | null
-          requires_currency_conversion?: boolean | null
-          subcategory?: string | null
-          tax_data?: Json | null
-          updated_at?: string
-          weight_data?: Json | null
-        }
-        Update: {
-          category?: string
-          classification_data?: Json | null
-          created_at?: string
-          description?: string
-          hsn_code?: string
-          id?: string
-          is_active?: boolean | null
-          keywords?: string[] | null
-          minimum_valuation_usd?: number | null
-          requires_currency_conversion?: boolean | null
-          subcategory?: string | null
-          tax_data?: Json | null
-          updated_at?: string
-          weight_data?: Json | null
-        }
-        Relationships: []
-      }
       manual_analysis_tasks: {
         Row: {
           assigned_to: string | null
@@ -1664,6 +1498,133 @@ export type Database = {
           quote_id?: string | null
           status?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      market_countries: {
+        Row: {
+          country_code: string
+          created_at: string
+          display_order: number | null
+          is_primary_in_market: boolean | null
+          market_id: string
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          display_order?: number | null
+          is_primary_in_market?: boolean | null
+          market_id: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          display_order?: number | null
+          is_primary_in_market?: boolean | null
+          market_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_countries_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "country_settings"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "market_countries_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "market_country_summary"
+            referencedColumns: ["market_id"]
+          },
+          {
+            foreignKeyName: "market_countries_market_id_fkey"
+            columns: ["market_id"]
+            isOneToOne: false
+            referencedRelation: "markets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      markets: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_primary: boolean | null
+          name: string
+          settings: Json | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          name: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          name?: string
+          settings?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      membership_plans: {
+        Row: {
+          benefits: Json
+          created_at: string | null
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean | null
+          name: string
+          pricing: Json
+          slug: string
+          updated_at: string | null
+          warehouse_benefits: Json | null
+        }
+        Insert: {
+          benefits?: Json
+          created_at?: string | null
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          pricing?: Json
+          slug: string
+          updated_at?: string | null
+          warehouse_benefits?: Json | null
+        }
+        Update: {
+          benefits?: Json
+          created_at?: string | null
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          pricing?: Json
+          slug?: string
+          updated_at?: string | null
+          warehouse_benefits?: Json | null
         }
         Relationships: []
       }
@@ -1758,13 +1719,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "messages_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "messages_reply_to_message_id_fkey"
             columns: ["reply_to_message_id"]
             isOneToOne: false
@@ -1779,396 +1733,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "messages_verified_by_fkey"
             columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mfa_activity_log: {
-        Row: {
-          activity_type: string
-          created_at: string
-          id: number
-          ip_address: unknown | null
-          metadata: Json | null
-          success: boolean | null
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          activity_type: string
-          created_at?: string
-          id?: number
-          ip_address?: unknown | null
-          metadata?: Json | null
-          success?: boolean | null
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          activity_type?: string
-          created_at?: string
-          id?: number
-          ip_address?: unknown | null
-          metadata?: Json | null
-          success?: boolean | null
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      mfa_configurations: {
-        Row: {
-          backup_codes: string | null
-          backup_codes_generated_at: string | null
-          backup_codes_used: number[] | null
-          created_at: string
-          failed_attempts: number | null
-          id: string
-          last_used_at: string | null
-          last_used_ip: unknown | null
-          locked_until: string | null
-          totp_enabled: boolean | null
-          totp_secret: string
-          totp_verified: boolean | null
-          updated_at: string
-          user_id: string
-          verified_at: string | null
-        }
-        Insert: {
-          backup_codes?: string | null
-          backup_codes_generated_at?: string | null
-          backup_codes_used?: number[] | null
-          created_at?: string
-          failed_attempts?: number | null
-          id?: string
-          last_used_at?: string | null
-          last_used_ip?: unknown | null
-          locked_until?: string | null
-          totp_enabled?: boolean | null
-          totp_secret: string
-          totp_verified?: boolean | null
-          updated_at?: string
-          user_id: string
-          verified_at?: string | null
-        }
-        Update: {
-          backup_codes?: string | null
-          backup_codes_generated_at?: string | null
-          backup_codes_used?: number[] | null
-          created_at?: string
-          failed_attempts?: number | null
-          id?: string
-          last_used_at?: string | null
-          last_used_ip?: unknown | null
-          locked_until?: string | null
-          totp_enabled?: boolean | null
-          totp_secret?: string
-          totp_verified?: boolean | null
-          updated_at?: string
-          user_id?: string
-          verified_at?: string | null
-        }
-        Relationships: []
-      }
-      mfa_sessions: {
-        Row: {
-          expires_at: string
-          id: string
-          ip_address: unknown | null
-          session_token: string
-          user_agent: string | null
-          user_id: string
-          verified_at: string
-        }
-        Insert: {
-          expires_at?: string
-          id?: string
-          ip_address?: unknown | null
-          session_token: string
-          user_agent?: string | null
-          user_id: string
-          verified_at?: string
-        }
-        Update: {
-          expires_at?: string
-          id?: string
-          ip_address?: unknown | null
-          session_token?: string
-          user_agent?: string | null
-          user_id?: string
-          verified_at?: string
-        }
-        Relationships: []
-      }
-      ml_category_weights: {
-        Row: {
-          avg_weight: number
-          category: string
-          id: string
-          last_updated: string | null
-          max_weight: number
-          min_weight: number
-          sample_count: number | null
-        }
-        Insert: {
-          avg_weight: number
-          category: string
-          id?: string
-          last_updated?: string | null
-          max_weight: number
-          min_weight: number
-          sample_count?: number | null
-        }
-        Update: {
-          avg_weight?: number
-          category?: string
-          id?: string
-          last_updated?: string | null
-          max_weight?: number
-          min_weight?: number
-          sample_count?: number | null
-        }
-        Relationships: []
-      }
-      ml_product_weights: {
-        Row: {
-          accuracy_score: number | null
-          brand: string | null
-          category: string | null
-          confidence: number
-          created_at: string | null
-          created_by: string | null
-          id: string
-          learned_from_url: string | null
-          normalized_name: string
-          product_name: string
-          training_count: number | null
-          updated_at: string | null
-          weight_kg: number
-        }
-        Insert: {
-          accuracy_score?: number | null
-          brand?: string | null
-          category?: string | null
-          confidence: number
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          learned_from_url?: string | null
-          normalized_name: string
-          product_name: string
-          training_count?: number | null
-          updated_at?: string | null
-          weight_kg: number
-        }
-        Update: {
-          accuracy_score?: number | null
-          brand?: string | null
-          category?: string | null
-          confidence?: number
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          learned_from_url?: string | null
-          normalized_name?: string
-          product_name?: string
-          training_count?: number | null
-          updated_at?: string | null
-          weight_kg?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ml_product_weights_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ml_product_weights_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ml_training_history: {
-        Row: {
-          accuracy: number
-          actual_weight: number
-          brand: string | null
-          category: string | null
-          confidence: number
-          estimated_weight: number
-          id: string
-          product_name: string
-          trained_at: string | null
-          trained_by: string | null
-          url: string | null
-          user_confirmed: boolean | null
-        }
-        Insert: {
-          accuracy: number
-          actual_weight: number
-          brand?: string | null
-          category?: string | null
-          confidence: number
-          estimated_weight: number
-          id?: string
-          product_name: string
-          trained_at?: string | null
-          trained_by?: string | null
-          url?: string | null
-          user_confirmed?: boolean | null
-        }
-        Update: {
-          accuracy?: number
-          actual_weight?: number
-          brand?: string | null
-          category?: string | null
-          confidence?: number
-          estimated_weight?: number
-          id?: string
-          product_name?: string
-          trained_at?: string | null
-          trained_by?: string | null
-          url?: string | null
-          user_confirmed?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ml_training_history_trained_by_fkey"
-            columns: ["trained_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ml_training_history_trained_by_fkey"
-            columns: ["trained_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          allow_dismiss: boolean | null
-          created_at: string | null
-          data: Json | null
-          dismissed_at: string | null
-          expires_at: string | null
-          id: string
-          is_dismissed: boolean | null
-          is_read: boolean | null
-          message: string
-          priority: string
-          read_at: string | null
-          requires_action: boolean | null
-          type: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          allow_dismiss?: boolean | null
-          created_at?: string | null
-          data?: Json | null
-          dismissed_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_dismissed?: boolean | null
-          is_read?: boolean | null
-          message: string
-          priority?: string
-          read_at?: string | null
-          requires_action?: boolean | null
-          type: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          allow_dismiss?: boolean | null
-          created_at?: string | null
-          data?: Json | null
-          dismissed_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_dismissed?: boolean | null
-          is_read?: boolean | null
-          message?: string
-          priority?: string
-          read_at?: string | null
-          requires_action?: boolean | null
-          type?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      oauth_tokens: {
-        Row: {
-          access_token: string
-          client_id: string
-          created_at: string
-          expires_at: string
-          expires_in: number
-          gateway_code: string
-          id: string
-          is_active: boolean | null
-          scope: string
-          token_type: string | null
-        }
-        Insert: {
-          access_token: string
-          client_id: string
-          created_at?: string
-          expires_at: string
-          expires_in: number
-          gateway_code: string
-          id?: string
-          is_active?: boolean | null
-          scope: string
-          token_type?: string | null
-        }
-        Update: {
-          access_token?: string
-          client_id?: string
-          created_at?: string
-          expires_at?: string
-          expires_in?: number
-          gateway_code?: string
-          id?: string
-          is_active?: boolean | null
-          scope?: string
-          token_type?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "oauth_tokens_gateway_code_fkey"
-            columns: ["gateway_code"]
-            isOneToOne: false
-            referencedRelation: "payment_gateways"
-            referencedColumns: ["code"]
           },
         ]
       }
@@ -2220,114 +1789,6 @@ export type Database = {
             referencedRelation: "consolidation_groups"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "package_events_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "received_packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      package_notifications: {
-        Row: {
-          created_at: string | null
-          data: Json | null
-          delivery_method: string[] | null
-          id: string
-          is_read: boolean | null
-          message: string
-          notification_type: string
-          package_id: string | null
-          sent_at: string | null
-          title: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          data?: Json | null
-          delivery_method?: string[] | null
-          id?: string
-          is_read?: boolean | null
-          message: string
-          notification_type: string
-          package_id?: string | null
-          sent_at?: string | null
-          title: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          data?: Json | null
-          delivery_method?: string[] | null
-          id?: string
-          is_read?: boolean | null
-          message?: string
-          notification_type?: string
-          package_id?: string | null
-          sent_at?: string | null
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "package_notifications_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "received_packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      package_photos: {
-        Row: {
-          caption: string | null
-          consolidation_group_id: string | null
-          created_at: string | null
-          dimensions: Json | null
-          file_size_bytes: number | null
-          id: string
-          package_id: string | null
-          photo_type: string
-          photo_url: string
-        }
-        Insert: {
-          caption?: string | null
-          consolidation_group_id?: string | null
-          created_at?: string | null
-          dimensions?: Json | null
-          file_size_bytes?: number | null
-          id?: string
-          package_id?: string | null
-          photo_type: string
-          photo_url: string
-        }
-        Update: {
-          caption?: string | null
-          consolidation_group_id?: string | null
-          created_at?: string | null
-          dimensions?: Json | null
-          file_size_bytes?: number | null
-          id?: string
-          package_id?: string | null
-          photo_type?: string
-          photo_url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "package_photos_consolidation_group_id_fkey"
-            columns: ["consolidation_group_id"]
-            isOneToOne: false
-            referencedRelation: "consolidation_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "package_photos_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "received_packages"
-            referencedColumns: ["id"]
-          },
         ]
       }
       payment_adjustments: {
@@ -2340,7 +1801,6 @@ export type Database = {
           approved_by: string | null
           created_at: string
           currency: string
-          financial_transaction_id: string | null
           id: string
           notes: string | null
           original_amount: number
@@ -2360,7 +1820,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           currency: string
-          financial_transaction_id?: string | null
           id?: string
           notes?: string | null
           original_amount: number
@@ -2380,7 +1839,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           currency?: string
-          financial_transaction_id?: string | null
           id?: string
           notes?: string | null
           original_amount?: number
@@ -2390,117 +1848,6 @@ export type Database = {
           requested_by?: string
           status?: string | null
           updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_adjustments_financial_transaction_id_fkey"
-            columns: ["financial_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "financial_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_adjustments_payment_ledger_id_fkey"
-            columns: ["payment_ledger_id"]
-            isOneToOne: false
-            referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_alert_thresholds: {
-        Row: {
-          comparison_operator: string
-          created_at: string | null
-          critical_threshold: number
-          description: string | null
-          enabled: boolean
-          id: string
-          metric_name: string
-          updated_at: string | null
-          warning_threshold: number
-        }
-        Insert: {
-          comparison_operator?: string
-          created_at?: string | null
-          critical_threshold: number
-          description?: string | null
-          enabled?: boolean
-          id?: string
-          metric_name: string
-          updated_at?: string | null
-          warning_threshold: number
-        }
-        Update: {
-          comparison_operator?: string
-          created_at?: string | null
-          critical_threshold?: number
-          description?: string | null
-          enabled?: boolean
-          id?: string
-          metric_name?: string
-          updated_at?: string | null
-          warning_threshold?: number
-        }
-        Relationships: []
-      }
-      payment_error_logs: {
-        Row: {
-          amount: number | null
-          context: Json | null
-          created_at: string | null
-          currency: string | null
-          error_code: string
-          error_message: string
-          gateway: string
-          id: string
-          recovery_options: Json | null
-          retry_delay: number | null
-          severity: string
-          should_retry: boolean
-          transaction_id: string | null
-          updated_at: string | null
-          user_action: string | null
-          user_id: string | null
-          user_message: string
-        }
-        Insert: {
-          amount?: number | null
-          context?: Json | null
-          created_at?: string | null
-          currency?: string | null
-          error_code: string
-          error_message: string
-          gateway: string
-          id?: string
-          recovery_options?: Json | null
-          retry_delay?: number | null
-          severity?: string
-          should_retry?: boolean
-          transaction_id?: string | null
-          updated_at?: string | null
-          user_action?: string | null
-          user_id?: string | null
-          user_message: string
-        }
-        Update: {
-          amount?: number | null
-          context?: Json | null
-          created_at?: string | null
-          currency?: string | null
-          error_code?: string
-          error_message?: string
-          gateway?: string
-          id?: string
-          recovery_options?: Json | null
-          retry_delay?: number | null
-          severity?: string
-          should_retry?: boolean
-          transaction_id?: string | null
-          updated_at?: string | null
-          user_action?: string | null
-          user_id?: string | null
-          user_message?: string
         }
         Relationships: []
       }
@@ -2591,334 +1938,33 @@ export type Database = {
         }
         Relationships: []
       }
-      payment_ledger: {
+      payment_method_discounts: {
         Row: {
-          amount: number
-          bank_reference: string | null
-          created_at: string
-          created_by: string
-          currency: string
-          customer_reference: string | null
-          financial_transaction_id: string | null
-          gateway_code: string | null
-          gateway_response: Json | null
-          gateway_transaction_id: string | null
-          id: string
-          metadata: Json | null
-          notes: string | null
-          parent_payment_id: string | null
-          payment_date: string
-          payment_method: string
-          payment_proof_message_id: string | null
-          payment_transaction_id: string | null
-          payment_type: string
-          quote_id: string
-          reference_number: string | null
-          status: string | null
-          updated_at: string
-          verified_at: string | null
-          verified_by: string | null
-        }
-        Insert: {
-          amount: number
-          bank_reference?: string | null
-          created_at?: string
-          created_by: string
-          currency: string
-          customer_reference?: string | null
-          financial_transaction_id?: string | null
-          gateway_code?: string | null
-          gateway_response?: Json | null
-          gateway_transaction_id?: string | null
-          id?: string
-          metadata?: Json | null
-          notes?: string | null
-          parent_payment_id?: string | null
-          payment_date?: string
-          payment_method: string
-          payment_proof_message_id?: string | null
-          payment_transaction_id?: string | null
-          payment_type: string
-          quote_id: string
-          reference_number?: string | null
-          status?: string | null
-          updated_at?: string
-          verified_at?: string | null
-          verified_by?: string | null
-        }
-        Update: {
-          amount?: number
-          bank_reference?: string | null
-          created_at?: string
-          created_by?: string
-          currency?: string
-          customer_reference?: string | null
-          financial_transaction_id?: string | null
-          gateway_code?: string | null
-          gateway_response?: Json | null
-          gateway_transaction_id?: string | null
-          id?: string
-          metadata?: Json | null
-          notes?: string | null
-          parent_payment_id?: string | null
-          payment_date?: string
-          payment_method?: string
-          payment_proof_message_id?: string | null
-          payment_transaction_id?: string | null
-          payment_type?: string
-          quote_id?: string
-          reference_number?: string | null
-          status?: string | null
-          updated_at?: string
-          verified_at?: string | null
-          verified_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_ledger_financial_transaction_id_fkey"
-            columns: ["financial_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "financial_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_ledger_parent_payment_id_fkey"
-            columns: ["parent_payment_id"]
-            isOneToOne: false
-            referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_ledger_payment_proof_message_id_fkey"
-            columns: ["payment_proof_message_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_ledger_payment_transaction_id_fkey"
-            columns: ["payment_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "payment_transactions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_links: {
-        Row: {
-          amount: number
-          api_version: string | null
+          conditions: Json | null
           created_at: string | null
-          created_by: string | null
-          currency: string
-          current_uses: number | null
-          customer_email: string | null
-          customer_name: string | null
-          customer_phone: string | null
-          expires_at: string | null
-          gateway: string | null
-          gateway_link_id: string | null
-          gateway_request: Json | null
-          gateway_response: Json | null
+          discount_percentage: number
           id: string
-          is_public: boolean | null
-          link_code: string
-          max_uses: number | null
-          original_amount: number | null
-          original_currency: string | null
-          payment_url: string | null
-          quote_id: string | null
-          status: string
-          title: string
-          updated_at: string | null
-          user_id: string | null
+          is_active: boolean | null
+          is_stackable: boolean | null
+          payment_method: string
         }
         Insert: {
-          amount: number
-          api_version?: string | null
+          conditions?: Json | null
           created_at?: string | null
-          created_by?: string | null
-          currency?: string
-          current_uses?: number | null
-          customer_email?: string | null
-          customer_name?: string | null
-          customer_phone?: string | null
-          expires_at?: string | null
-          gateway?: string | null
-          gateway_link_id?: string | null
-          gateway_request?: Json | null
-          gateway_response?: Json | null
+          discount_percentage: number
           id?: string
-          is_public?: boolean | null
-          link_code?: string
-          max_uses?: number | null
-          original_amount?: number | null
-          original_currency?: string | null
-          payment_url?: string | null
-          quote_id?: string | null
-          status?: string
-          title: string
-          updated_at?: string | null
-          user_id?: string | null
+          is_active?: boolean | null
+          is_stackable?: boolean | null
+          payment_method: string
         }
         Update: {
-          amount?: number
-          api_version?: string | null
+          conditions?: Json | null
           created_at?: string | null
-          created_by?: string | null
-          currency?: string
-          current_uses?: number | null
-          customer_email?: string | null
-          customer_name?: string | null
-          customer_phone?: string | null
-          expires_at?: string | null
-          gateway?: string | null
-          gateway_link_id?: string | null
-          gateway_request?: Json | null
-          gateway_response?: Json | null
+          discount_percentage?: number
           id?: string
-          is_public?: boolean | null
-          link_code?: string
-          max_uses?: number | null
-          original_amount?: number | null
-          original_currency?: string | null
-          payment_url?: string | null
-          quote_id?: string | null
-          status?: string
-          title?: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_links_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      payment_reconciliation: {
-        Row: {
-          closing_difference: number | null
-          completed_at: string | null
-          created_at: string
-          gateway_code: string | null
-          id: string
-          matched_count: number | null
-          metadata: Json | null
-          notes: string | null
-          opening_difference: number | null
-          payment_method: string
-          reconciled_by: string
-          reconciliation_date: string
-          started_at: string
-          statement_closing_balance: number | null
-          statement_end_date: string | null
-          statement_file_name: string | null
-          statement_file_url: string | null
-          statement_opening_balance: number | null
-          statement_reference: string | null
-          statement_start_date: string | null
-          statement_total_credits: number | null
-          statement_total_debits: number | null
-          status: string | null
-          system_closing_balance: number | null
-          system_opening_balance: number | null
-          system_total_credits: number | null
-          system_total_debits: number | null
-          total_matched_amount: number | null
-          unmatched_statement_count: number | null
-          unmatched_system_count: number | null
-          updated_at: string
-        }
-        Insert: {
-          closing_difference?: number | null
-          completed_at?: string | null
-          created_at?: string
-          gateway_code?: string | null
-          id?: string
-          matched_count?: number | null
-          metadata?: Json | null
-          notes?: string | null
-          opening_difference?: number | null
-          payment_method: string
-          reconciled_by: string
-          reconciliation_date: string
-          started_at?: string
-          statement_closing_balance?: number | null
-          statement_end_date?: string | null
-          statement_file_name?: string | null
-          statement_file_url?: string | null
-          statement_opening_balance?: number | null
-          statement_reference?: string | null
-          statement_start_date?: string | null
-          statement_total_credits?: number | null
-          statement_total_debits?: number | null
-          status?: string | null
-          system_closing_balance?: number | null
-          system_opening_balance?: number | null
-          system_total_credits?: number | null
-          system_total_debits?: number | null
-          total_matched_amount?: number | null
-          unmatched_statement_count?: number | null
-          unmatched_system_count?: number | null
-          updated_at?: string
-        }
-        Update: {
-          closing_difference?: number | null
-          completed_at?: string | null
-          created_at?: string
-          gateway_code?: string | null
-          id?: string
-          matched_count?: number | null
-          metadata?: Json | null
-          notes?: string | null
-          opening_difference?: number | null
+          is_active?: boolean | null
+          is_stackable?: boolean | null
           payment_method?: string
-          reconciled_by?: string
-          reconciliation_date?: string
-          started_at?: string
-          statement_closing_balance?: number | null
-          statement_end_date?: string | null
-          statement_file_name?: string | null
-          statement_file_url?: string | null
-          statement_opening_balance?: number | null
-          statement_reference?: string | null
-          statement_start_date?: string | null
-          statement_total_credits?: number | null
-          statement_total_debits?: number | null
-          status?: string | null
-          system_closing_balance?: number | null
-          system_opening_balance?: number | null
-          system_total_credits?: number | null
-          system_total_debits?: number | null
-          total_matched_amount?: number | null
-          unmatched_statement_count?: number | null
-          unmatched_system_count?: number | null
-          updated_at?: string
         }
         Relationships: []
       }
@@ -2949,65 +1995,136 @@ export type Database = {
       payment_transactions: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
+          bank_reference: string | null
           created_at: string | null
+          created_by: string | null
+          credit_account: string | null
           currency: string | null
+          customer_reference: string | null
+          debit_account: string | null
+          gateway_code: string | null
           gateway_response: Json | null
+          gateway_transaction_id: string | null
           id: string
           is_fully_refunded: boolean | null
           last_refund_at: string | null
+          metadata: Json | null
+          notes: string | null
+          parent_payment_id: string | null
           payment_method: string | null
+          payment_proof_message_id: string | null
+          payment_type: string | null
           paypal_capture_id: string | null
           paypal_order_id: string | null
           paypal_payer_email: string | null
           paypal_payer_id: string | null
+          posted_at: string | null
           quote_id: string | null
+          reference_number: string | null
           refund_count: number | null
+          reversal_reason: string | null
+          reversed_by: string | null
           status: string | null
           total_refunded: number | null
+          transaction_type: string | null
           updated_at: string | null
           user_id: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_reference?: string | null
           created_at?: string | null
+          created_by?: string | null
+          credit_account?: string | null
           currency?: string | null
+          customer_reference?: string | null
+          debit_account?: string | null
+          gateway_code?: string | null
           gateway_response?: Json | null
+          gateway_transaction_id?: string | null
           id?: string
           is_fully_refunded?: boolean | null
           last_refund_at?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          parent_payment_id?: string | null
           payment_method?: string | null
+          payment_proof_message_id?: string | null
+          payment_type?: string | null
           paypal_capture_id?: string | null
           paypal_order_id?: string | null
           paypal_payer_email?: string | null
           paypal_payer_id?: string | null
+          posted_at?: string | null
           quote_id?: string | null
+          reference_number?: string | null
           refund_count?: number | null
+          reversal_reason?: string | null
+          reversed_by?: string | null
           status?: string | null
           total_refunded?: number | null
+          transaction_type?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          bank_reference?: string | null
           created_at?: string | null
+          created_by?: string | null
+          credit_account?: string | null
           currency?: string | null
+          customer_reference?: string | null
+          debit_account?: string | null
+          gateway_code?: string | null
           gateway_response?: Json | null
+          gateway_transaction_id?: string | null
           id?: string
           is_fully_refunded?: boolean | null
           last_refund_at?: string | null
+          metadata?: Json | null
+          notes?: string | null
+          parent_payment_id?: string | null
           payment_method?: string | null
+          payment_proof_message_id?: string | null
+          payment_type?: string | null
           paypal_capture_id?: string | null
           paypal_order_id?: string | null
           paypal_payer_email?: string | null
           paypal_payer_id?: string | null
+          posted_at?: string | null
           quote_id?: string | null
+          reference_number?: string | null
           refund_count?: number | null
+          reversal_reason?: string | null
+          reversed_by?: string | null
           status?: string | null
           total_refunded?: number | null
+          transaction_type?: string | null
           updated_at?: string | null
           user_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_parent_payment_id_fkey"
+            columns: ["parent_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payment_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_verification_logs: {
         Row: {
@@ -3072,120 +2189,6 @@ export type Database = {
         }
         Relationships: []
       }
-      paypal_refunds: {
-        Row: {
-          admin_notes: string | null
-          completed_at: string | null
-          created_at: string
-          currency: string
-          customer_note: string | null
-          error_details: Json | null
-          id: string
-          original_amount: number
-          original_transaction_id: string
-          payment_transaction_id: string | null
-          paypal_response: Json | null
-          paypal_status: string | null
-          processed_by: string | null
-          quote_id: string | null
-          reason_code: string | null
-          reason_description: string | null
-          refund_amount: number
-          refund_date: string | null
-          refund_id: string
-          refund_type: string
-          status: string
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          admin_notes?: string | null
-          completed_at?: string | null
-          created_at?: string
-          currency: string
-          customer_note?: string | null
-          error_details?: Json | null
-          id?: string
-          original_amount: number
-          original_transaction_id: string
-          payment_transaction_id?: string | null
-          paypal_response?: Json | null
-          paypal_status?: string | null
-          processed_by?: string | null
-          quote_id?: string | null
-          reason_code?: string | null
-          reason_description?: string | null
-          refund_amount: number
-          refund_date?: string | null
-          refund_id: string
-          refund_type?: string
-          status?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          admin_notes?: string | null
-          completed_at?: string | null
-          created_at?: string
-          currency?: string
-          customer_note?: string | null
-          error_details?: Json | null
-          id?: string
-          original_amount?: number
-          original_transaction_id?: string
-          payment_transaction_id?: string | null
-          paypal_response?: Json | null
-          paypal_status?: string | null
-          processed_by?: string | null
-          quote_id?: string | null
-          reason_code?: string | null
-          reason_description?: string | null
-          refund_amount?: number
-          refund_date?: string | null
-          refund_id?: string
-          refund_type?: string
-          status?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "paypal_refunds_payment_transaction_id_fkey"
-            columns: ["payment_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "payment_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "paypal_refunds_processed_by_fkey"
-            columns: ["processed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "paypal_refunds_processed_by_fkey"
-            columns: ["processed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "paypal_refunds_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "paypal_refunds_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       paypal_webhook_events: {
         Row: {
           created_at: string
@@ -3231,6 +2234,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pickup_time_slots: {
+        Row: {
+          created_at: string | null
+          end_time: string
+          id: string
+          is_active: boolean | null
+          slot_name: string
+          start_time: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          slot_name: string
+          start_time: string
+        }
+        Update: {
+          created_at?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          slot_name?: string
+          start_time?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3242,7 +2272,6 @@ export type Database = {
           id: string
           internal_notes: string | null
           preferred_display_currency: string | null
-          preferred_payment_gateway: string | null
           referral_code: string | null
           total_orders: number | null
           total_spent: number | null
@@ -3259,7 +2288,6 @@ export type Database = {
           id: string
           internal_notes?: string | null
           preferred_display_currency?: string | null
-          preferred_payment_gateway?: string | null
           referral_code?: string | null
           total_orders?: number | null
           total_spent?: number | null
@@ -3275,7 +2303,6 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           preferred_display_currency?: string | null
-          preferred_payment_gateway?: string | null
           referral_code?: string | null
           total_orders?: number | null
           total_spent?: number | null
@@ -3320,13 +2347,6 @@ export type Database = {
             columns: ["changed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quote_address_history_changed_by_fkey"
-            columns: ["changed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
             referencedColumns: ["id"]
           },
         ]
@@ -3380,13 +2400,6 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quote_documents_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
             referencedColumns: ["id"]
           },
         ]
@@ -3515,6 +2528,11 @@ export type Database = {
           created_at: string
           currency: string
           customer_data: Json | null
+          delivery_actual_date: string | null
+          delivery_estimated_date: string | null
+          delivery_provider: string | null
+          delivery_provider_order_id: string | null
+          delivery_tracking_number: string | null
           destination_country: string
           display_id: string | null
           email_verified: boolean | null
@@ -3531,6 +2549,9 @@ export type Database = {
           items: Json
           iwish_tracking_id: string | null
           last_viewed_at: string | null
+          ncm_delivery_instruction: string | null
+          ncm_from_branch: string | null
+          ncm_to_branch: string | null
           operational_data: Json | null
           optimization_score: number | null
           origin_country: string
@@ -3563,6 +2584,11 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_data?: Json | null
+          delivery_actual_date?: string | null
+          delivery_estimated_date?: string | null
+          delivery_provider?: string | null
+          delivery_provider_order_id?: string | null
+          delivery_tracking_number?: string | null
           destination_country: string
           display_id?: string | null
           email_verified?: boolean | null
@@ -3579,6 +2605,9 @@ export type Database = {
           items?: Json
           iwish_tracking_id?: string | null
           last_viewed_at?: string | null
+          ncm_delivery_instruction?: string | null
+          ncm_from_branch?: string | null
+          ncm_to_branch?: string | null
           operational_data?: Json | null
           optimization_score?: number | null
           origin_country?: string
@@ -3610,6 +2639,11 @@ export type Database = {
           created_at?: string
           currency?: string
           customer_data?: Json | null
+          delivery_actual_date?: string | null
+          delivery_estimated_date?: string | null
+          delivery_provider?: string | null
+          delivery_provider_order_id?: string | null
+          delivery_tracking_number?: string | null
           destination_country?: string
           display_id?: string | null
           email_verified?: boolean | null
@@ -3626,6 +2660,9 @@ export type Database = {
           items?: Json
           iwish_tracking_id?: string | null
           last_viewed_at?: string | null
+          ncm_delivery_instruction?: string | null
+          ncm_from_branch?: string | null
+          ncm_to_branch?: string | null
           operational_data?: Json | null
           optimization_score?: number | null
           origin_country?: string
@@ -3661,115 +2698,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      received_packages: {
-        Row: {
-          carrier: string | null
-          condition_notes: string | null
-          consolidation_group_id: string | null
-          contents_list: Json | null
-          created_at: string | null
-          customer_address_id: string
-          declared_value_usd: number | null
-          dimensional_weight_kg: number | null
-          dimensions: Json
-          id: string
-          last_scanned_at: string | null
-          package_description: string | null
-          photos: Json | null
-          quote_id: string | null
-          received_by_staff_id: string | null
-          received_date: string | null
-          sender_address: Json | null
-          sender_name: string | null
-          sender_store: string | null
-          status: string | null
-          storage_fee_exempt_until: string | null
-          storage_location: string | null
-          storage_start_date: string | null
-          tracking_number: string | null
-          updated_at: string | null
-          weight_kg: number
-        }
-        Insert: {
-          carrier?: string | null
-          condition_notes?: string | null
-          consolidation_group_id?: string | null
-          contents_list?: Json | null
-          created_at?: string | null
-          customer_address_id: string
-          declared_value_usd?: number | null
-          dimensional_weight_kg?: number | null
-          dimensions: Json
-          id?: string
-          last_scanned_at?: string | null
-          package_description?: string | null
-          photos?: Json | null
-          quote_id?: string | null
-          received_by_staff_id?: string | null
-          received_date?: string | null
-          sender_address?: Json | null
-          sender_name?: string | null
-          sender_store?: string | null
-          status?: string | null
-          storage_fee_exempt_until?: string | null
-          storage_location?: string | null
-          storage_start_date?: string | null
-          tracking_number?: string | null
-          updated_at?: string | null
-          weight_kg: number
-        }
-        Update: {
-          carrier?: string | null
-          condition_notes?: string | null
-          consolidation_group_id?: string | null
-          contents_list?: Json | null
-          created_at?: string | null
-          customer_address_id?: string
-          declared_value_usd?: number | null
-          dimensional_weight_kg?: number | null
-          dimensions?: Json
-          id?: string
-          last_scanned_at?: string | null
-          package_description?: string | null
-          photos?: Json | null
-          quote_id?: string | null
-          received_by_staff_id?: string | null
-          received_date?: string | null
-          sender_address?: Json | null
-          sender_name?: string | null
-          sender_store?: string | null
-          status?: string | null
-          storage_fee_exempt_until?: string | null
-          storage_location?: string | null
-          storage_start_date?: string | null
-          tracking_number?: string | null
-          updated_at?: string | null
-          weight_kg?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "received_packages_customer_address_id_fkey"
-            columns: ["customer_address_id"]
-            isOneToOne: false
-            referencedRelation: "customer_addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "received_packages_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -3850,22 +2778,7 @@ export type Database = {
           system_reference?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "reconciliation_items_payment_ledger_id_fkey"
-            columns: ["payment_ledger_id"]
-            isOneToOne: false
-            referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reconciliation_items_reconciliation_id_fkey"
-            columns: ["reconciliation_id"]
-            isOneToOne: false
-            referencedRelation: "payment_reconciliation"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       reconciliation_rules: {
         Row: {
@@ -3937,7 +2850,6 @@ export type Database = {
           created_at: string
           currency: string
           exchange_rate: number | null
-          financial_transaction_id: string | null
           gateway_code: string | null
           gateway_refund_id: string | null
           gateway_response: Json | null
@@ -3956,7 +2868,6 @@ export type Database = {
           created_at?: string
           currency: string
           exchange_rate?: number | null
-          financial_transaction_id?: string | null
           gateway_code?: string | null
           gateway_refund_id?: string | null
           gateway_response?: Json | null
@@ -3975,7 +2886,6 @@ export type Database = {
           created_at?: string
           currency?: string
           exchange_rate?: number | null
-          financial_transaction_id?: string | null
           gateway_code?: string | null
           gateway_refund_id?: string | null
           gateway_response?: Json | null
@@ -3989,27 +2899,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "refund_items_financial_transaction_id_fkey"
-            columns: ["financial_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "financial_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "refund_items_payment_ledger_id_fkey"
-            columns: ["payment_ledger_id"]
-            isOneToOne: false
-            referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "refund_items_refund_payment_id_fkey"
-            columns: ["refund_payment_id"]
-            isOneToOne: false
-            referencedRelation: "payment_ledger"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "refund_items_refund_request_id_fkey"
             columns: ["refund_request_id"]
@@ -4029,7 +2918,7 @@ export type Database = {
           id: string
           internal_notes: string | null
           metadata: Json | null
-          payment_ledger_id: string | null
+          payment_transaction_id: string | null
           processed_at: string | null
           processed_by: string | null
           quote_id: string
@@ -4054,7 +2943,7 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           metadata?: Json | null
-          payment_ledger_id?: string | null
+          payment_transaction_id?: string | null
           processed_at?: string | null
           processed_by?: string | null
           quote_id: string
@@ -4079,7 +2968,7 @@ export type Database = {
           id?: string
           internal_notes?: string | null
           metadata?: Json | null
-          payment_ledger_id?: string | null
+          payment_transaction_id?: string | null
           processed_at?: string | null
           processed_by?: string | null
           quote_id?: string
@@ -4097,10 +2986,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "refund_requests_payment_ledger_id_fkey"
-            columns: ["payment_ledger_id"]
+            foreignKeyName: "refund_requests_payment_transaction_id_fkey"
+            columns: ["payment_transaction_id"]
             isOneToOne: false
-            referencedRelation: "payment_ledger"
+            referencedRelation: "payment_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -4238,26 +3127,20 @@ export type Database = {
           active: boolean | null
           api_configuration: Json | null
           base_shipping_cost: number
-          carriers: Json | null
           cost_per_kg: number
           cost_percentage: number | null
           created_at: string | null
           customs_clearance_days: number | null
-          customs_percentage: number | null
           delivery_options: Json | null
           destination_country: string
           exchange_rate: number | null
           id: number
           is_active: boolean | null
-          max_weight: number | null
           origin_country: string
           processing_days: number | null
-          requires_documentation: boolean | null
-          restricted_items: string[] | null
           shipping_per_kg: number | null
           tax_configuration: Json | null
           updated_at: string | null
-          vat_percentage: number | null
           weight_configuration: Json | null
           weight_tiers: Json | null
           weight_unit: string
@@ -4266,26 +3149,20 @@ export type Database = {
           active?: boolean | null
           api_configuration?: Json | null
           base_shipping_cost: number
-          carriers?: Json | null
           cost_per_kg: number
           cost_percentage?: number | null
           created_at?: string | null
           customs_clearance_days?: number | null
-          customs_percentage?: number | null
           delivery_options?: Json | null
           destination_country: string
           exchange_rate?: number | null
           id?: number
           is_active?: boolean | null
-          max_weight?: number | null
           origin_country: string
           processing_days?: number | null
-          requires_documentation?: boolean | null
-          restricted_items?: string[] | null
           shipping_per_kg?: number | null
           tax_configuration?: Json | null
           updated_at?: string | null
-          vat_percentage?: number | null
           weight_configuration?: Json | null
           weight_tiers?: Json | null
           weight_unit?: string
@@ -4294,26 +3171,20 @@ export type Database = {
           active?: boolean | null
           api_configuration?: Json | null
           base_shipping_cost?: number
-          carriers?: Json | null
           cost_per_kg?: number
           cost_percentage?: number | null
           created_at?: string | null
           customs_clearance_days?: number | null
-          customs_percentage?: number | null
           delivery_options?: Json | null
           destination_country?: string
           exchange_rate?: number | null
           id?: number
           is_active?: boolean | null
-          max_weight?: number | null
           origin_country?: string
           processing_days?: number | null
-          requires_documentation?: boolean | null
-          restricted_items?: string[] | null
           shipping_per_kg?: number | null
           tax_configuration?: Json | null
           updated_at?: string | null
-          vat_percentage?: number | null
           weight_configuration?: Json | null
           weight_tiers?: Json | null
           weight_unit?: string
@@ -4352,75 +3223,6 @@ export type Database = {
           trigger?: string
         }
         Relationships: []
-      }
-      storage_fees: {
-        Row: {
-          created_at: string | null
-          daily_rate_usd: number | null
-          days_stored: number | null
-          end_date: string | null
-          fee_type: string | null
-          id: string
-          is_paid: boolean | null
-          notes: string | null
-          package_id: string | null
-          payment_date: string | null
-          quote_id: string | null
-          start_date: string
-          total_fee_usd: number | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          daily_rate_usd?: number | null
-          days_stored?: number | null
-          end_date?: string | null
-          fee_type?: string | null
-          id?: string
-          is_paid?: boolean | null
-          notes?: string | null
-          package_id?: string | null
-          payment_date?: string | null
-          quote_id?: string | null
-          start_date: string
-          total_fee_usd?: number | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          daily_rate_usd?: number | null
-          days_stored?: number | null
-          end_date?: string | null
-          fee_type?: string | null
-          id?: string
-          is_paid?: boolean | null
-          notes?: string | null
-          package_id?: string | null
-          payment_date?: string | null
-          quote_id?: string | null
-          start_date?: string
-          total_fee_usd?: number | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "storage_fees_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "received_packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "storage_fees_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       support_interactions: {
         Row: {
@@ -4557,27 +3359,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tax_backup_20250128: {
-        Row: {
-          backup_timestamp: string | null
-          code: string | null
-          sales_tax: number | null
-          vat: number | null
-        }
-        Insert: {
-          backup_timestamp?: string | null
-          code?: string | null
-          sales_tax?: number | null
-          vat?: number | null
-        }
-        Update: {
-          backup_timestamp?: string | null
-          code?: string | null
-          sales_tax?: number | null
-          vat?: number | null
-        }
-        Relationships: []
-      }
       tax_calculation_audit_log: {
         Row: {
           admin_id: string | null
@@ -4633,13 +3414,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "tax_calculation_audit_log_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "tax_calculation_audit_log_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
@@ -4678,219 +3452,6 @@ export type Database = {
           is_active?: boolean | null
           updated_at?: string
           version?: number | null
-        }
-        Relationships: []
-      }
-      user_activity_analytics: {
-        Row: {
-          activity_data: Json
-          activity_type: string
-          created_at: string | null
-          id: string
-          referrer: string | null
-          session_id: string
-          updated_at: string | null
-          user_agent: string | null
-          user_id: string
-        }
-        Insert: {
-          activity_data?: Json
-          activity_type: string
-          created_at?: string | null
-          id?: string
-          referrer?: string | null
-          session_id: string
-          updated_at?: string | null
-          user_agent?: string | null
-          user_id: string
-        }
-        Update: {
-          activity_data?: Json
-          activity_type?: string
-          created_at?: string | null
-          id?: string
-          referrer?: string | null
-          session_id?: string
-          updated_at?: string | null
-          user_agent?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_addresses: {
-        Row: {
-          address_line1: string
-          address_line2: string | null
-          city: string
-          country: string | null
-          created_at: string
-          destination_country: string | null
-          id: string
-          is_default: boolean | null
-          phone: string | null
-          postal_code: string
-          recipient_name: string | null
-          save_to_profile: string | null
-          state_province_region: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          address_line1: string
-          address_line2?: string | null
-          city: string
-          country?: string | null
-          created_at?: string
-          destination_country?: string | null
-          id?: string
-          is_default?: boolean | null
-          phone?: string | null
-          postal_code: string
-          recipient_name?: string | null
-          save_to_profile?: string | null
-          state_province_region: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          address_line1?: string
-          address_line2?: string | null
-          city?: string
-          country?: string | null
-          created_at?: string
-          destination_country?: string | null
-          id?: string
-          is_default?: boolean | null
-          phone?: string | null
-          postal_code?: string
-          recipient_name?: string | null
-          save_to_profile?: string | null
-          state_province_region?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_addresses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_addresses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_oauth_data: {
-        Row: {
-          created_at: string
-          id: string
-          oauth_data: Json
-          provider: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          oauth_data: Json
-          provider: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          oauth_data?: Json
-          provider?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_roles: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          granted_by: string | null
-          id: string
-          is_active: boolean | null
-          role: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          granted_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          role?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          granted_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          role?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      warehouse_locations: {
-        Row: {
-          created_at: string | null
-          current_packages: number | null
-          id: string
-          is_active: boolean | null
-          location_code: string
-          maintenance_notes: string | null
-          max_dimensions: Json | null
-          max_packages: number | null
-          max_weight_kg: number | null
-          shelf_number: number | null
-          slot_number: number | null
-          updated_at: string | null
-          zone: string
-        }
-        Insert: {
-          created_at?: string | null
-          current_packages?: number | null
-          id?: string
-          is_active?: boolean | null
-          location_code: string
-          maintenance_notes?: string | null
-          max_dimensions?: Json | null
-          max_packages?: number | null
-          max_weight_kg?: number | null
-          shelf_number?: number | null
-          slot_number?: number | null
-          updated_at?: string | null
-          zone: string
-        }
-        Update: {
-          created_at?: string | null
-          current_packages?: number | null
-          id?: string
-          is_active?: boolean | null
-          location_code?: string
-          maintenance_notes?: string | null
-          max_dimensions?: Json | null
-          max_packages?: number | null
-          max_weight_kg?: number | null
-          shelf_number?: number | null
-          slot_number?: number | null
-          updated_at?: string | null
-          zone?: string
         }
         Relationships: []
       }
@@ -4988,38 +3549,15 @@ export type Database = {
       }
     }
     Views: {
-      hsn_search_optimized: {
+      market_country_summary: {
         Row: {
-          category: string | null
-          color: string | null
-          common_brands: string | null
-          description: string | null
-          display_name: string | null
-          hsn_code: string | null
-          icon: string | null
-          keywords: string[] | null
-          keywords_text: string | null
-          minimum_valuation_usd: number | null
-          requires_currency_conversion: boolean | null
-          search_priority: string | null
-          search_vector: unknown | null
-          subcategory: string | null
-          tax_data: Json | null
-          weight_data: Json | null
-        }
-        Relationships: []
-      }
-      payment_error_analytics: {
-        Row: {
-          affected_users: number | null
-          avg_failed_amount: number | null
-          currencies: string[] | null
-          error_code: string | null
-          error_count: number | null
-          error_date: string | null
-          failed_transactions: number | null
-          gateway: string | null
-          severity: string | null
+          active_country_count: number | null
+          country_count: number | null
+          is_primary_market: boolean | null
+          market_code: string | null
+          market_id: string | null
+          market_name: string | null
+          primary_country: string | null
         }
         Relationships: []
       }
@@ -5032,122 +3570,6 @@ export type Database = {
           check_time: string | null
           overall_health: string | null
           total_alerts: number | null
-        }
-        Relationships: []
-      }
-      payment_links_summary: {
-        Row: {
-          amount: number | null
-          created_at: string | null
-          created_by: string | null
-          currency: string | null
-          current_uses: number | null
-          effective_status: string | null
-          expires_at: string | null
-          gateway: string | null
-          id: string | null
-          link_code: string | null
-          max_uses: number | null
-          quote_id: string | null
-          status: string | null
-          title: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount?: number | null
-          created_at?: string | null
-          created_by?: string | null
-          currency?: string | null
-          current_uses?: number | null
-          effective_status?: never
-          expires_at?: string | null
-          gateway?: string | null
-          id?: string | null
-          link_code?: string | null
-          max_uses?: number | null
-          quote_id?: string | null
-          status?: string | null
-          title?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number | null
-          created_at?: string | null
-          created_by?: string | null
-          currency?: string | null
-          current_uses?: number | null
-          effective_status?: never
-          expires_at?: string | null
-          gateway?: string | null
-          id?: string | null
-          link_code?: string | null
-          max_uses?: number | null
-          quote_id?: string | null
-          status?: string | null
-          title?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_links_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payment_links_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles_with_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      paypal_refund_summary: {
-        Row: {
-          avg_refund_amount: number | null
-          completed_refunds: number | null
-          failed_refunds: number | null
-          full_refunds: number | null
-          partial_refunds: number | null
-          refund_count: number | null
-          refund_date: string | null
-          total_refunded: number | null
-        }
-        Relationships: []
-      }
-      profiles_with_phone: {
-        Row: {
-          avatar_url: string | null
-          cod_enabled: boolean | null
-          country: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string | null
-          internal_notes: string | null
-          phone: string | null
-          preferred_display_currency: string | null
-          preferred_payment_gateway: string | null
-          referral_code: string | null
-          total_orders: number | null
-          total_spent: number | null
-          updated_at: string | null
         }
         Relationships: []
       }
@@ -5308,41 +3730,45 @@ export type Database = {
       }
     }
     Functions: {
+      _ltree_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      _ltree_gist_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
       add_storage_fees_to_quote: {
-        Args: { p_user_id: string; p_quote_id: string }
+        Args: { p_quote_id: string; p_user_id: string }
         Returns: number
       }
       add_support_interaction: {
         Args: {
-          p_user_id: string
-          p_support_id: string
           p_is_internal?: boolean
           p_interaction_type: string
           p_content: Json
+          p_support_id: string
+          p_user_id: string
         }
         Returns: string
       }
       analyze_tax_method_performance: {
         Args: {
+          p_destination_country: string
           p_origin_country: string
           p_time_range_days?: number
-          p_destination_country: string
         }
         Returns: Json
       }
-      apply_credit_note: {
-        Args: {
-          p_amount?: number
-          p_quote_id: string
-          p_credit_note_id: string
-        }
-        Returns: Json
+      apply_market_settings: {
+        Args: { p_market_code: string; p_settings: Json }
+        Returns: number
       }
       approve_refund_request: {
         Args: {
           p_approved_amount?: number
-          p_refund_request_id: string
           p_notes?: string
+          p_refund_request_id: string
         }
         Returns: Json
       }
@@ -5350,18 +3776,78 @@ export type Database = {
         Args: { p_reconciliation_id: string }
         Returns: Json
       }
+      bulk_update_countries_by_market: {
+        Args: { p_updates: Json; p_market_id: string }
+        Returns: number
+      }
       bulk_update_tax_methods: {
         Args: {
           p_change_reason?: string
-          p_quote_ids: string[]
-          p_admin_id: string
           p_calculation_method: string
+          p_admin_id: string
+          p_quote_ids: string[]
         }
         Returns: Json
       }
+      calculate_and_create_storage_fees: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          total_fees_amount: number
+          new_fees_count: number
+        }[]
+      }
+      calculate_applicable_discounts: {
+        Args: {
+          p_quote_total: number
+          p_customer_id: string
+          p_country_code: string
+          p_payment_method: string
+          p_handling_fee: number
+        }
+        Returns: {
+          discount_id: string
+          applicable_amount: number
+          value: number
+          discount_amount: number
+          priority: number
+          discount_type: string
+          discount_code: string
+        }[]
+      }
+      calculate_membership_discount: {
+        Args: { p_customer_id: string; p_amount: number }
+        Returns: {
+          membership_name: string
+          has_discount: boolean
+          discount_percentage: number
+          discount_amount: number
+        }[]
+      }
       calculate_storage_fees: {
-        Args: { end_date?: string; package_id: string }
-        Returns: number
+        Args:
+          | { end_date?: string; package_id: string }
+          | {
+              p_storage_days: number
+              p_customer_id: string
+              p_package_id: string
+            }
+        Returns: {
+          free_days_used: number
+          final_fee: number
+          base_fee: number
+          discount_percentage: number
+        }[]
+      }
+      check_customer_membership: {
+        Args: { p_customer_id: string }
+        Returns: {
+          membership_tier_id: string
+          has_membership: boolean
+          membership_tier_name: string
+          discount_percentage: number
+          benefits: Json
+        }[]
       }
       cleanup_expired_authenticated_checkout_sessions: {
         Args: Record<PropertyKey, never>
@@ -5370,22 +3856,6 @@ export type Database = {
       cleanup_expired_guest_sessions: {
         Args: Record<PropertyKey, never>
         Returns: number
-      }
-      cleanup_expired_mfa_sessions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_notifications: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_oauth_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_activity_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
       cleanup_old_payment_error_logs: {
         Args: Record<PropertyKey, never>
@@ -5399,12 +3869,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      cleanup_old_webhook_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       complete_reconciliation: {
         Args: { p_reconciliation_id: string; p_notes?: string }
+        Returns: Json
+      }
+      complete_supplier_pickup: {
+        Args: { p_return_id: string; p_notes?: string }
         Returns: Json
       }
       confirm_backup_codes_saved: {
@@ -5413,15 +3883,23 @@ export type Database = {
       }
       confirm_payment_from_proof: {
         Args: {
-          p_quote_id: string
-          p_amount_paid: number
           p_payment_status: string
+          p_amount_paid: number
+          p_quote_id: string
         }
         Returns: Json
       }
       convert_minimum_valuation_usd_to_origin: {
-        Args: { usd_amount: number; origin_country: string }
+        Args: { origin_country: string; usd_amount: number }
         Returns: Json
+      }
+      copy_country_settings: {
+        Args: {
+          p_from_country: string
+          p_to_country: string
+          p_fields?: string[]
+        }
+        Returns: boolean
       }
       create_consolidation_quote: {
         Args: {
@@ -5434,67 +3912,63 @@ export type Database = {
       create_credit_note: {
         Args: {
           p_valid_days?: number
-          p_customer_id: string
-          p_amount: number
-          p_currency: string
-          p_reason: string
-          p_description?: string
-          p_quote_id?: string
-          p_refund_request_id?: string
           p_minimum_order_value?: number
+          p_refund_request_id?: string
+          p_quote_id?: string
+          p_description?: string
+          p_reason: string
+          p_currency: string
+          p_amount: number
+          p_customer_id: string
           p_auto_approve?: boolean
         }
         Returns: Json
       }
-      create_mfa_session_after_setup: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       create_package_forwarding_quote: {
         Args: {
-          p_destination_country: string
           p_customer_data?: Json
           p_package_id: string
+          p_destination_country: string
         }
         Returns: string
       }
       create_payment_with_ledger_entry: {
         Args: {
-          p_user_id?: string
+          p_reference_number?: string
           p_quote_id: string
           p_amount: number
           p_currency: string
           p_payment_method: string
           p_payment_type?: string
-          p_reference_number?: string
           p_gateway_code?: string
           p_gateway_transaction_id?: string
           p_notes?: string
+          p_user_id?: string
           p_message_id?: string
         }
         Returns: Json
       }
       create_refund_request: {
         Args: {
-          p_reason_code: string
-          p_quote_id: string
-          p_amount: number
           p_refund_type: string
+          p_amount: number
           p_currency: string
+          p_quote_id: string
+          p_reason_code: string
+          p_reason_description: string
+          p_customer_notes?: string
           p_internal_notes?: string
           p_refund_method?: string
           p_payment_ids?: string[]
-          p_reason_description: string
-          p_customer_notes?: string
         }
-        Returns: Json
-      }
-      disable_mfa: {
-        Args: Record<PropertyKey, never>
         Returns: Json
       }
       encode_base32: {
         Args: { data: string }
+        Returns: string
+      }
+      ensure_profile_exists: {
+        Args: { user_id: string }
         Returns: string
       }
       ensure_user_profile: {
@@ -5513,29 +3987,34 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      extend_storage_exemption: {
+        Args: {
+          p_reason: string
+          p_package_id: string
+          p_additional_days: number
+          p_admin_id: string
+        }
+        Returns: string
+      }
       extract_oauth_user_info: {
         Args: { user_metadata: Json }
         Returns: Json
       }
       force_update_payment: {
         Args: {
-          payment_method?: string
+          payment_currency?: string
           p_quote_id: string
           new_amount_paid: number
           new_payment_status: string
+          payment_method?: string
           reference_number?: string
           notes?: string
-          payment_currency?: string
         }
         Returns: Json
       }
       generate_backup_codes: {
         Args: { p_count?: number }
         Returns: string[]
-      }
-      generate_credit_note_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
       }
       generate_iwish_tracking_id: {
         Args: Record<PropertyKey, never>
@@ -5560,20 +4039,28 @@ export type Database = {
       get_active_payment_link_for_quote: {
         Args: { quote_uuid: string }
         Returns: {
+          status: string
           id: string
           payment_url: string
-          link_code: string
-          expires_at: string
           api_version: string
-          status: string
+          expires_at: string
+          link_code: string
+        }[]
+      }
+      get_admin_activity_summary: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          count: number
+          recent_timestamp: string
+          action: string
         }[]
       }
       get_all_user_emails: {
         Args: Record<PropertyKey, never>
         Returns: {
-          email: string
           source: string
           user_id: string
+          email: string
           full_name: string
         }[]
       }
@@ -5581,17 +4068,17 @@ export type Database = {
         Args: { p_customer_id?: string; p_min_amount?: number }
         Returns: {
           valid_until: string
-          credit_note_id: string
-          note_number: string
-          amount: number
-          currency: string
-          amount_available: number
           reason: string
+          amount_available: number
+          currency: string
+          amount: number
+          note_number: string
+          credit_note_id: string
           minimum_order_value: number
         }[]
       }
       get_bank_account_for_order: {
-        Args: { p_country_code: string; p_destination_country?: string }
+        Args: { p_destination_country?: string; p_country_code: string }
         Returns: {
           account_name: string
           account_number: string
@@ -5620,20 +4107,34 @@ export type Database = {
         Args: { payment_currency: string }
         Returns: string
       }
-      get_currency_conversion_metrics: {
-        Args: { start_date?: string; end_date?: string }
+      get_country_market: {
+        Args: { p_country_code: string }
         Returns: {
-          currency_pair: string
-          conversion_count: number
-          average_variance: number
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          is_primary: boolean | null
+          name: string
+          settings: Json | null
+          updated_at: string
+        }
+      }
+      get_currency_conversion_metrics: {
+        Args: { end_date?: string; start_date?: string }
+        Returns: {
           max_variance: number
           accuracy_score: number
+          average_variance: number
+          conversion_count: number
+          currency_pair: string
         }[]
       }
       get_currency_mismatches: {
         Args: { end_date?: string; start_date?: string }
         Returns: {
-          quote_id: string
           order_display_id: string
           quote_currency: string
           payment_currency: string
@@ -5642,28 +4143,51 @@ export type Database = {
           created_at: string
           payment_method: string
           gateway_transaction_id: string
+          quote_id: string
         }[]
       }
       get_currency_statistics: {
         Args: { start_date?: string; end_date?: string }
         Returns: {
           payment_count: number
+          currency: string
+          total_payments: number
+          total_refunds: number
+          net_amount: number
+          refund_count: number
           average_payment: number
           last_payment_date: string
           unique_customers: number
-          net_amount: number
-          total_refunds: number
-          total_payments: number
-          currency: string
-          refund_count: number
+        }[]
+      }
+      get_customer_membership: {
+        Args: { p_customer_id: string }
+        Returns: {
+          benefits: Json
+          expires_at: string
+          status: string
+          discount_percentage: number
+          tier_slug: string
+          tier_name: string
+          tier_id: string
+          membership_id: string
+        }[]
+      }
+      get_discount_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          conversion_rate: number
+          total_discounts_used: number
+          total_savings: number
+          active_campaigns: number
         }[]
       }
       get_effective_tax_method: {
         Args: { quote_id_param: string }
         Returns: {
           source: string
-          calculation_method: string
           valuation_method: string
+          calculation_method: string
           confidence: number
         }[]
       }
@@ -5671,20 +4195,33 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           age_minutes: number
-          last_updated: string
-          is_stale: boolean
           is_fallback: boolean
+          is_stale: boolean
+          last_updated: string
           current_rate: number
           currency: string
         }[]
       }
-      get_hsn_with_currency_conversion: {
-        Args: { hsn_code_param: string; origin_country_param?: string }
-        Returns: Json
+      get_market_countries: {
+        Args: { p_market_id: string }
+        Returns: {
+          display_order: number
+          country_code: string
+          country_name: string
+          currency: string
+          is_primary_in_market: boolean
+        }[]
       }
-      get_mfa_status: {
+      get_membership_stats: {
         Args: Record<PropertyKey, never>
-        Returns: Json
+        Returns: {
+          revenue_this_month: number
+          expired_members: number
+          total_members: number
+          active_members: number
+          average_lifetime_value: number
+          churn_rate: number
+        }[]
       }
       get_optimal_storage_location: {
         Args: { suite_number: string }
@@ -5707,22 +4244,34 @@ export type Database = {
       get_orders_with_payment_proofs: {
         Args: { status_filter?: string; limit_count?: number }
         Returns: {
-          payment_method: string
-          customer_email: string
-          customer_id: string
-          message_id: string
           verification_status: string
           admin_notes: string
           amount_paid: number
           attachment_file_name: string
           attachment_url: string
-          order_display_id: string
-          order_id: string
           submitted_at: string
+          verified_at: string
+          order_id: string
+          order_display_id: string
           final_total: number
           final_currency: string
-          verified_at: string
           payment_status: string
+          payment_method: string
+          customer_email: string
+          customer_id: string
+          message_id: string
+        }[]
+      }
+      get_packages_approaching_fees: {
+        Args: { p_warning_days?: number }
+        Returns: {
+          estimated_daily_fee: number
+          user_id: string
+          days_until_fees: number
+          days_in_storage: number
+          package_id: string
+          tracking_number: string
+          sender_name: string
         }[]
       }
       get_payment_history: {
@@ -5733,7 +4282,7 @@ export type Database = {
           p_end_date?: string
         }
         Returns: {
-          status: string
+          base_amount: number
           payment_id: string
           quote_id: string
           order_display_id: string
@@ -5743,9 +4292,9 @@ export type Database = {
           gateway_name: string
           amount: number
           currency: string
-          base_amount: number
           running_balance: number
           reference_number: string
+          status: string
           notes: string
           created_by_name: string
         }[]
@@ -5754,34 +4303,39 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_payment_stats_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_popular_posts: {
         Args: { limit_count?: number }
         Returns: {
-          excerpt: string
-          featured_image_url: string
-          published_at: string
-          reading_time_minutes: number
           category_name: string
-          views_count: number
+          featured_image_url: string
+          excerpt: string
           slug: string
           title: string
           id: string
+          reading_time_minutes: number
+          published_at: string
+          views_count: number
         }[]
       }
       get_quote_items: {
         Args: { quote_row: Database["public"]["Tables"]["quotes"]["Row"] }
         Returns: {
           price_usd: number
-          id: string
-          name: string
-          quantity: number
-          weight_kg: number
           weight_confidence: number
+          weight_kg: number
+          id: string
+          quantity: number
+          name: string
         }[]
       }
       get_quote_message_thread: {
         Args: { p_quote_id: string }
         Returns: {
+          is_internal: boolean
           id: string
           sender_id: string
           sender_name: string
@@ -5797,33 +4351,32 @@ export type Database = {
           created_at: string
           verification_status: string
           admin_notes: string
-          is_internal: boolean
         }[]
       }
       get_related_posts: {
-        Args: { post_slug: string; limit_count?: number }
+        Args: { limit_count?: number; post_slug: string }
         Returns: {
-          published_at: string
+          views_count: number
           id: string
           title: string
           slug: string
           excerpt: string
           featured_image_url: string
+          published_at: string
           reading_time_minutes: number
           category_name: string
-          views_count: number
         }[]
       }
       get_shipping_cost: {
         Args: {
+          p_origin_country: string
           p_destination_country: string
           p_weight: number
           p_price?: number
-          p_origin_country: string
         }
         Returns: {
-          cost: number
           carrier: string
+          cost: number
           delivery_days: string
           method: string
         }[]
@@ -5833,24 +4386,24 @@ export type Database = {
         Returns: Json
       }
       get_suspicious_payment_amounts: {
-        Args: { tolerance?: number; start_date?: string; end_date?: string }
+        Args: { start_date?: string; end_date?: string; tolerance?: number }
         Returns: {
-          created_at: string
-          suspicion_level: string
+          amount_difference: number
           quote_id: string
           order_display_id: string
           quote_amount: number
           quote_currency: string
           payment_amount: number
           payment_currency: string
-          amount_difference: number
+          created_at: string
+          suspicion_level: string
         }[]
       }
       get_tax_method_recommendations: {
         Args: {
-          p_destination_country: string
           p_analysis_days?: number
           p_origin_country: string
+          p_destination_country: string
         }
         Returns: Json
       }
@@ -5861,27 +4414,14 @@ export type Database = {
       get_transaction_refund_eligibility: {
         Args: { transaction_id: string }
         Returns: {
+          refundable_amount: number
           can_refund: boolean
           reason: string
-          refundable_amount: number
         }[]
       }
       get_unread_message_count: {
         Args: { p_quote_id?: string; p_user_id?: string }
         Returns: number
-      }
-      get_unread_notification_count: {
-        Args: { target_user_id: string }
-        Returns: number
-      }
-      get_user_activity_summary: {
-        Args: { target_user_id: string }
-        Returns: {
-          activity_type: string
-          common_data: Json
-          latest_activity: string
-          activity_count: number
-        }[]
       }
       get_user_bank_accounts: {
         Args: { user_id: string }
@@ -5909,19 +4449,30 @@ export type Database = {
           upi_qr_string: string | null
         }[]
       }
-      get_user_permissions_new: {
-        Args: { user_uuid: string }
+      get_user_default_address: {
+        Args: { p_user_id: string }
         Returns: {
-          permission: string
-        }[]
-      }
-      get_user_roles_new: {
-        Args: { user_uuid: string }
-        Returns: {
-          granted_at: string
-          role: string
-          granted_by: string
-        }[]
+          address_label: string | null
+          address_line1: string
+          address_line2: string | null
+          address_type: string | null
+          city: string
+          company_name: string | null
+          country: string | null
+          created_at: string
+          destination_country: string | null
+          id: string
+          is_default: boolean | null
+          phone: string | null
+          postal_code: string
+          recipient_name: string | null
+          save_to_profile: string | null
+          state_province_region: string
+          updated_at: string
+          user_id: string
+          validated_at: string | null
+          validation_status: string | null
+        }
       }
       handle_mfa_failure: {
         Args: { p_user_id: string }
@@ -5932,10 +4483,15 @@ export type Database = {
         Returns: boolean
       }
       has_role: {
-        Args:
-          | { _role: Database["public"]["Enums"]["app_role"]; _user_id: string }
-          | { role_name: string }
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
         Returns: boolean
+      }
+      hash_ltree: {
+        Args: { "": unknown }
+        Returns: number
       }
       increment_post_views: {
         Args: { post_slug: string }
@@ -5953,74 +4509,154 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      lca: {
+        Args: { "": unknown[] }
+        Returns: unknown
+      }
       lock_address_after_payment: {
         Args: { quote_uuid: string }
         Returns: boolean
       }
       log_share_action: {
         Args: {
-          p_user_id: string
-          p_details?: Json
           p_user_agent?: string
-          p_ip_address?: unknown
           p_quote_id: string
+          p_user_id: string
           p_action: string
+          p_ip_address?: unknown
+          p_details?: Json
         }
         Returns: string
       }
       log_tax_method_change: {
         Args: {
-          p_valuation_method: string
-          p_change_reason?: string
-          p_admin_id: string
           p_quote_id: string
+          p_valuation_method: string
           p_calculation_method: string
+          p_admin_id: string
           p_change_details?: Json
+          p_change_reason?: string
         }
         Returns: string
       }
-      mark_all_notifications_read: {
-        Args: { target_user_id: string }
-        Returns: number
+      lquery_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      lquery_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      lquery_recv: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      lquery_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      ltree_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_gist_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_gist_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      ltree_gist_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_recv: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltree_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      ltree2text: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      ltxtq_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltxtq_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltxtq_recv: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ltxtq_send: {
+        Args: { "": unknown }
+        Returns: string
       }
       mark_messages_as_read: {
         Args: { p_message_ids: string[] }
+        Returns: number
+      }
+      nlevel: {
+        Args: { "": unknown }
         Returns: number
       }
       post_financial_transaction: {
         Args: { p_transaction_id: string; p_user_id: string }
         Returns: Json
       }
+      process_campaign_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_payment_webhook_atomic: {
         Args: {
+          p_guest_session_token?: string
+          p_payment_data: Json
           p_quote_ids: string[]
           p_payment_status: string
-          p_payment_data: Json
-          p_guest_session_token?: string
-          p_guest_session_data?: Json
           p_create_order?: boolean
+          p_guest_session_data?: Json
         }
         Returns: {
-          guest_session_updated: boolean
-          success: boolean
-          payment_transaction_id: string
-          payment_ledger_entry_id: string
           quotes_updated: boolean
+          guest_session_updated: boolean
           order_id: string
           error_message: string
+          payment_ledger_entry_id: string
+          payment_transaction_id: string
+          success: boolean
         }[]
       }
       process_refund_atomic: {
         Args: {
-          p_gateway_response: Json
-          p_refund_data: Json
-          p_refund_amount: number
           p_quote_id: string
+          p_refund_amount: number
+          p_refund_data: Json
+          p_gateway_response: Json
           p_processed_by: string
         }
         Returns: {
-          success: boolean
           refund_id: string
+          success: boolean
           payment_transaction_updated: boolean
           quote_updated: boolean
           ledger_entry_id: string
@@ -6029,10 +4665,10 @@ export type Database = {
       }
       process_refund_item: {
         Args: {
-          p_refund_item_id: string
+          p_status?: string
           p_gateway_refund_id: string
           p_gateway_response?: Json
-          p_status?: string
+          p_refund_item_id: string
         }
         Returns: Json
       }
@@ -6047,6 +4683,11 @@ export type Database = {
           created_at: string
           currency: string
           customer_data: Json | null
+          delivery_actual_date: string | null
+          delivery_estimated_date: string | null
+          delivery_provider: string | null
+          delivery_provider_order_id: string | null
+          delivery_tracking_number: string | null
           destination_country: string
           display_id: string | null
           email_verified: boolean | null
@@ -6063,6 +4704,9 @@ export type Database = {
           items: Json
           iwish_tracking_id: string | null
           last_viewed_at: string | null
+          ncm_delivery_instruction: string | null
+          ncm_from_branch: string | null
+          ncm_to_branch: string | null
           operational_data: Json | null
           optimization_score: number | null
           origin_country: string
@@ -6098,7 +4742,6 @@ export type Database = {
           id: string
           internal_notes: string | null
           preferred_display_currency: string | null
-          preferred_payment_gateway: string | null
           referral_code: string | null
           total_orders: number | null
           total_spent: number | null
@@ -6107,32 +4750,28 @@ export type Database = {
       }
       record_payment_with_ledger_and_triggers: {
         Args: {
-          p_currency: string
-          p_quote_id: string
-          p_amount: number
           p_payment_method: string
-          p_transaction_reference: string
-          p_notes?: string
           p_recorded_by?: string
+          p_notes?: string
+          p_currency: string
+          p_amount: number
+          p_transaction_reference: string
           p_payment_date?: string
+          p_quote_id: string
         }
         Returns: Json
       }
       record_paypal_payment_to_ledger: {
         Args: {
-          p_order_id: string
-          p_currency: string
-          p_amount: number
-          p_capture_id?: string
           p_payer_email?: string
+          p_capture_id?: string
           p_quote_id: string
           p_transaction_id: string
+          p_amount: number
+          p_currency: string
+          p_order_id: string
         }
         Returns: Json
-      }
-      refresh_hsn_search_cache: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
       regenerate_backup_codes: {
         Args: Record<PropertyKey, never>
@@ -6143,47 +4782,87 @@ export type Database = {
         Returns: boolean
       }
       reverse_financial_transaction: {
-        Args: { p_transaction_id: string; p_reason: string; p_user_id: string }
+        Args: { p_user_id: string; p_transaction_id: string; p_reason: string }
         Returns: Json
       }
       rollback_tax_standardization_20250128: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      setup_mfa: {
-        Args: Record<PropertyKey, never>
+      schedule_supplier_pickup: {
+        Args: {
+          p_contact_name: string
+          p_contact_phone: string
+          p_supplier_name?: string
+          p_instructions?: string
+          p_pickup_address: Json
+          p_pickup_time_slot: string
+          p_pickup_date: string
+          p_return_id: string
+        }
         Returns: Json
+      }
+      select_delivery_provider: {
+        Args: {
+          p_from_country: string
+          p_to_country: string
+          p_weight: number
+          p_requires_cod?: boolean
+          p_preferred_provider?: string
+        }
+        Returns: {
+          provider_name: string
+          priority: number
+          provider_code: string
+        }[]
       }
       start_reconciliation_session: {
         Args: {
-          p_payment_method: string
-          p_statement_start_date?: string
-          p_statement_date?: string
-          p_gateway_code?: string
           p_statement_end_date?: string
+          p_payment_method: string
+          p_gateway_code?: string
+          p_statement_date?: string
+          p_statement_start_date?: string
         }
         Returns: Json
       }
       test_payment_update_direct: {
         Args: {
-          quote_id: string
           new_amount_paid: number
+          quote_id: string
           new_payment_status: string
         }
         Returns: Json
+      }
+      test_storage_fee_access: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          can_read_fees: boolean
+          can_call_extend: boolean
+          can_call_waive: boolean
+          current_user_role: string
+        }[]
+      }
+      text2ltree: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      update_customer_segments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       update_location_capacity: {
         Args: { capacity_change: number; location_code: string }
         Returns: undefined
       }
       update_quote_view_tracking: {
-        Args: { p_quote_id: string; p_duration_seconds?: number }
+        Args: { p_duration_seconds?: number; p_quote_id: string }
         Returns: undefined
       }
       update_support_ticket_status: {
         Args: {
-          p_user_id: string
           p_new_status: string
+          p_user_id: string
           p_reason?: string
           p_support_id: string
         }
@@ -6193,15 +4872,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           severity: string
-          quote_id: string
           issue: string
+          quote_id: string
         }[]
       }
       verify_mfa_login: {
-        Args: { p_is_backup_code?: boolean; p_code: string }
+        Args: { p_code: string; p_is_backup_code?: boolean }
         Returns: {
-          session_token: string
           verified: boolean
+          session_token: string
         }[]
       }
       verify_mfa_setup: {
@@ -6213,7 +4892,7 @@ export type Database = {
         Returns: string
       }
       verify_totp_code: {
-        Args: { p_code: string; p_window?: number; p_user_id: string }
+        Args: { p_code: string; p_user_id: string; p_window?: number }
         Returns: boolean
       }
       verify_totp_code_dev: {
@@ -6223,6 +4902,10 @@ export type Database = {
       verify_totp_setup: {
         Args: { p_code: string }
         Returns: Json
+      }
+      waive_storage_fees: {
+        Args: { p_admin_id: string; p_reason: string; p_package_id: string }
+        Returns: number
       }
     }
     Enums: {

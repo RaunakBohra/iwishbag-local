@@ -14,7 +14,7 @@ export interface QuoteItem {
   costprice_origin: number; // Cost price in origin country currency (INR, NPR, etc.)
   weight: number; // Weight in kg
 
-  // HSN Classification Fields
+  
   hsn_code?: string;
   category?: string;
 
@@ -91,8 +91,8 @@ export interface CalculationData {
     method: string;
     valuation_method: string;
   };
-  // HSN calculation metadata
-  hsn_calculation?: any; // For HSN tax calculations
+  
+  hsn_calculation?: any; 
   // Valuation tracking
   valuation_applied?: any; // For valuation method tracking
   // Additional fields from SmartCalculationEngine
@@ -363,7 +363,7 @@ export interface QuoteItemInput {
   costprice_origin: number; // Cost price in origin country currency
   weight_kg: number;
 
-  // HSN Classification Fields (optional for input)
+  
   hsn_code?: string;
   category?: string;
 

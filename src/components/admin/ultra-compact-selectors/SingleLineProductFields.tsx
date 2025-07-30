@@ -29,13 +29,7 @@ interface SingleLineProductFieldsProps {
   quantity: number;
   price: number;
   weight: number;
-  currentHSN?: HSNData;
-  currency?: string;
-  weightSuggestions?: WeightSuggestion[];
-  hsnSuggestions?: HSNSuggestion[];
-  onQuantityChange: (quantity: number) => void;
-  onPriceChange: (price: number) => void;
-  onWeightChange: (weight: number, source: 'hsn' | 'ai' | 'manual') => void;
+  currentsource: 'hsn' | 'ai' | 'manual') => void;
   onHSNSelect: (hsn: HSNData) => void;
   onHSNRemove?: () => void;
   className?: string;
@@ -46,28 +40,19 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
   quantity,
   price,
   weight,
-  currentHSN,
-  currency = 'USD',
+  currentcurrency = 'USD',
   weightSuggestions = [],
   hsnSuggestions = [],
   onQuantityChange,
   onPriceChange,
   onWeightChange,
-  onHSNSelect,
-  onHSNRemove,
-  className,
+  ononclassName,
   disabled = false,
 }) => {
   const [isWeightOpen, setIsWeightOpen] = useState(false);
-  const [isHSNOpen, setIsHSNOpen] = useState(false);
-  const [isHSNDetailsOpen, setIsHSNDetailsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [issetIssetIssetSearchQuery] = useState('');
 
-  // Mock HSN search results
-  const mockHSNResults = [
-    {
-      code: '8517',
-      description: 'Telephone sets, mobile phones',
+  // Mock description: 'Telephone sets, mobile phones',
       category: 'Electronics',
       tax_rate: 18,
       duty_rate: 10,
@@ -105,110 +90,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
 
   return (
     <div className={cn('flex items-center gap-3 flex-wrap', className)}>
-      {/* Quantity */}
-      <div className="flex items-center gap-1.5">
-        <Package className="w-3.5 h-3.5 text-gray-500" />
-        <span className="text-sm text-gray-600">Qty</span>
-        <Input
-          value={quantity}
-          onChange={(e) => onQuantityChange(parseInt(e.target.value) || 1)}
-          className="w-16 h-8 text-sm px-2"
-          type="number"
-          min="1"
-          disabled={disabled}
-        />
-      </div>
-
-      <div className="h-5 w-px bg-gray-300" />
-
-      {/* Price */}
-      <div className="flex items-center gap-1.5">
-        <DollarSign className="w-3.5 h-3.5 text-gray-500" />
-        <span className="text-sm text-gray-600">Price</span>
-        <Input
-          value={price}
-          onChange={(e) => onPriceChange(parseFloat(e.target.value) || 0)}
-          className="w-24 h-8 text-sm px-2"
-          type="number"
-          step="0.01"
-          min="0"
-          disabled={disabled}
-        />
-        <span className="text-xs text-gray-500">{currency}</span>
-      </div>
-
-      <div className="h-5 w-px bg-gray-300" />
-
-      {/* Weight with suggestions */}
-      <div className="flex items-center gap-1.5">
-        <Scale className="w-3.5 h-3.5 text-gray-500" />
-        <span className="text-sm text-gray-600">Weight</span>
-        <div className="relative flex items-center">
-          <Input
-            value={weight}
-            onChange={(e) => onWeightChange(parseFloat(e.target.value) || 0, 'manual')}
-            className="w-20 h-8 text-sm pr-8"
-            type="number"
-            step="0.1"
-            min="0"
-            disabled={disabled}
-          />
-          <span className="absolute right-8 text-xs text-gray-500">kg</span>
-
-          {weightSuggestions.length > 0 && (
-            <Popover open={isWeightOpen} onOpenChange={setIsWeightOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 h-8 w-8 p-0 hover:bg-gray-50"
-                  disabled={disabled}
-                >
-                  <ChevronDown className="w-3 h-3 text-gray-500" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="start">
-                <div className="space-y-1">
-                  <div className="text-xs font-medium text-gray-900 px-2 py-1">
-                    Weight Suggestions
-                  </div>
-                  {weightSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleWeightSelect(suggestion)}
-                      className="w-full flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{suggestion.value}kg</span>
-                        <span className="text-xs text-gray-500 uppercase">{suggestion.source}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div
-                          className={cn(
-                            'w-1.5 h-1.5 rounded-full',
-                            suggestion.confidence >= 0.8
-                              ? 'bg-green-500'
-                              : suggestion.confidence >= 0.6
-                                ? 'bg-yellow-500'
-                                : 'bg-red-500',
-                          )}
-                        />
-                        <span className="text-xs font-medium text-gray-600">
-                          {Math.round(suggestion.confidence * 100)}%
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
-      </div>
-
-      <div className="h-5 w-px bg-gray-300" />
-
-      {/* HSN with details */}
+      {}
       <div className="flex items-center gap-1.5">
         <Tag className="w-3.5 h-3.5 text-gray-500" />
         <span className="text-sm text-gray-600">HSN</span>
@@ -304,7 +186,7 @@ export const SingleLineProductFields: React.FC<SingleLineProductFieldsProps> = (
                 </div>
 
                 <div className="space-y-1 max-h-60 overflow-y-auto">
-                  {mockHSNResults.map((hsn, index) => (
+                  {mockindex) => (
                     <button
                       key={index}
                       onClick={() => handleHSNSelect(hsn)}

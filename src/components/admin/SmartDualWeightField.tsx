@@ -75,9 +75,7 @@ export const SmartDualWeightField: React.FC<SmartDualWeightFieldProps> = ({
         // Get alternative predictions
         const alts: WeightPrediction[] = [];
         
-        // Try HSN-only prediction if we have HSN code
-        if (hsnCode && prediction.source !== 'hsn') {
-          const hsnPrediction = await leanWeightService.predictWeight('', hsnCode);
+        // Try hsnCode);
           if (hsnPrediction.weight !== prediction.weight) {
             alts.push(hsnPrediction);
           }
@@ -184,10 +182,7 @@ export const SmartDualWeightField: React.FC<SmartDualWeightFieldProps> = ({
 
   const showClearButton = value > 0;
 
-  // If editing, show HSN-style dropdown
-  if (isEditing || isOpen) {
-    return (
-      <div className={cn('space-y-2', className)}>
+  // If editing, show className)}>
         {label && (
           <label className="text-sm font-medium text-gray-700">
             {label}
@@ -229,80 +224,7 @@ export const SmartDualWeightField: React.FC<SmartDualWeightFieldProps> = ({
                 autoFocus
               />
 
-              {/* Right side icons */}
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 z-10">
-                <span className="text-xs text-gray-500">kg</span>
-                {showClearButton && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 hover:bg-gray-100 hover:text-gray-700 bg-gray-50 border border-gray-200"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setInputValue('');
-                      onChange(0);
-                      onSourceSelected?.('manual');
-                    }}
-                    title="Clear weight"
-                  >
-                    <X className="h-3 w-3 text-gray-600" />
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-gray-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setIsOpen(!isOpen);
-                    if (!isOpen) {
-                      inputRef.current?.focus();
-                    }
-                  }}
-                >
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
-                </Button>
-              </div>
-            </div>
-          </PopoverTrigger>
-
-          <PopoverContent
-            className="w-80 p-0 border border-gray-200 shadow-lg rounded-lg bg-white"
-            align="center"
-            sideOffset={4}
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            onCloseAutoFocus={(e) => e.preventDefault()}
-          >
-            <Command className="rounded-lg">
-              <CommandList className="max-h-48 overflow-y-auto">
-                {/* All Weight Options in Single Row */}
-                {(primarySuggestion || alternatives.length > 0) && (
-                  <div className="p-3">
-                    <div className="flex flex-wrap gap-2">
-                      {/* Primary Suggestion */}
-                      {primarySuggestion && (
-                        <button
-                          onClick={() => handleWeightSelect(primarySuggestion.weight, primarySuggestion.source as any)}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
-                        >
-                          {getSourceIcon(primarySuggestion.source)}
-                          <span className="font-medium text-sm text-gray-900">
-                            {primarySuggestion.source === 'hsn' ? 'HSN' : primarySuggestion.source === 'ml' ? 'ML' : 'Hybrid'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {Math.round(primarySuggestion.confidence * 100)}%
-                          </span>
-                          <span className="font-bold text-sm text-blue-600">
-                            {primarySuggestion.weight}kg
-                          </span>
-                        </button>
-                      )}
-                      
-                      {/* Alternative Suggestions */}
+              {}
                       {alternatives.map((alt, index) => (
                         <button
                           key={`alt-${alt.source}-${index}`}

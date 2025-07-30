@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
 
 interface SystemSetting {
   id: string;
@@ -19,12 +18,12 @@ export const useSystemSettings = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
-
+  
   const { data: settings, isLoading } = useQuery({
     queryKey: ['system-settings'],
     queryFn: async () => {
-      if (!isAdmin) throw new Error('Not authorized');
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
@@ -35,7 +34,7 @@ export const useSystemSettings = () => {
       }
       return data as SystemSetting[];
     },
-    enabled: !!user?.id && !!isAdmin && !isAdminLoading,
+    enabled: !!user?.id && !!true
   });
 
   const updateSettingMutation = useMutation({
@@ -55,12 +54,12 @@ export const useSystemSettings = () => {
       toast({
         title: 'Error updating setting',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
     },
     onSettled: () => {
       setIsUpdating(false);
-    },
+    }
   });
 
   const updateSetting = async (settingKey: string, value: string) => {
@@ -89,6 +88,6 @@ export const useSystemSettings = () => {
     updateSetting,
     getSetting,
     getBooleanSetting,
-    getNumericSetting,
+    getNumericSetting
   };
 };

@@ -1,6 +1,5 @@
 // ============================================================================
-// TAX CALCULATION SIDEBAR - Comprehensive Tax Transparency and HSN Visibility
-// Features: HSN classification status, calculation method transparency, quick actions
+// TAX CALCULATION SIDEBAR - Comprehensive Tax Transparency and calculation method transparency, quick actions
 // Replaces scattered tax info with consolidated always-visible panel
 // ============================================================================
 
@@ -87,10 +86,10 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
       setError(null);
 
       try {
-        // First enhance quote with HSN data
+        
         const enhanced = await unifiedDataEngine.enhanceQuoteWithHSNData(quote);
 
-        // Only calculate taxes for items with HSN codes
+        
         const itemsWithHSN = enhanced.items.filter((item) => item.hsn_code);
 
         if (itemsWithHSN.length === 0) {
@@ -110,9 +109,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
         };
 
         // Convert items to calculator format
-        const calculatorItems = itemsWithHSN.map((item) => ({
-          id: item.id,
-          name: item.name,
+        const calculatorItems = itemsWithname: item.name,
           price_origin_currency: item.costprice_origin,
           weight: item.weight,
           hsn_code: item.hsn_code,
@@ -140,7 +137,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     const itemsWithHSN = quote.items?.filter((item) => item.hsn_code)?.length || 0;
     const itemsWithoutHSN = totalItems - itemsWithHSN;
 
-    // HSN Classification Status
+    
     const classificationProgress = totalItems > 0 ? (itemsWithHSN / totalItems) * 100 : 0;
 
     // Tax Calculation Method Analysis
@@ -149,7 +146,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
       calculationMethod === 'hsn_based' || (calculationMethod === 'auto' && itemsWithHSN > 0);
 
     console.log(
-      `📊 [TaxAnalytics] Current method: ${calculationMethod}, Quote ID: ${quote.id}, Items: ${totalItems}, HSN: ${itemsWithHSN}`,
+      `📊 [TaxAnalytics] Current method: ${calculationMethod}, Quote ID: ${quote.id}, Items: ${totalItems}}`,
     );
 
     // Tax Breakdown Analysis
@@ -174,12 +171,9 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
     return {
       totalItems,
-      itemsWithHSN,
-      itemsWithoutHSN,
-      classificationProgress,
+      itemsWithitemsWithoutclassificationProgress,
       calculationMethod,
-      isUsingHSNMethod,
-      totalCustoms,
+      isUsingtotalCustoms,
       totalLocalTaxes,
       totalTaxes: totalCustoms + totalLocalTaxes,
       minValuationItems,
@@ -194,12 +188,11 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
 
   // Get calculation method status
   const getCalculationMethodStatus = () => {
-    const { calculationMethod, isUsingHSNMethod, hsnSourcedTaxes, fallbackTaxes } = taxAnalytics;
+    const { calculationMethod, isUsinghsnSourcedTaxes, fallbackTaxes } = taxAnalytics;
 
     if (calculationMethod === 'hsn_based') {
       return {
-        method: 'HSN-Based',
-        status: hsnSourcedTaxes > 0 ? 'active' : 'insufficient_data',
+        method: 'status: hsnSourcedTaxes > 0 ? 'active' : 'insufficient_data',
         description: `Using HSN master data for ${hsnSourcedTaxes} items`,
         icon: Tags,
         color: 'text-green-600',
@@ -219,13 +212,9 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
     } else {
       return {
         method: 'Auto (Hybrid)',
-        status: isUsingHSNMethod ? 'partial' : 'fallback',
-        description: `HSN: ${hsnSourcedTaxes} items, Country: ${fallbackTaxes} items`,
+        status: isUsingdescription: `HSN: ${hsnSourcedTaxes} items, Country: ${fallbackTaxes} items`,
         icon: Calculator,
-        color: isUsingHSNMethod ? 'text-purple-600' : 'text-amber-600',
-        bgColor: isUsingHSNMethod ? 'bg-purple-50' : 'bg-amber-50',
-        borderColor: isUsingHSNMethod ? 'border-purple-200' : 'border-amber-200',
-      };
+        color: isUsingbgColor: isUsingborderColor: isUsing};
     }
   };
 
@@ -276,23 +265,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
   if (editMode) {
     return (
       <div className={`space-y-4 ${className}`}>
-        {/* Primary Tax Method Selector - Always Visible */}
-        <Card className="border-indigo-200 bg-indigo-50/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-base">
-              <Settings className="w-4 h-4 mr-2 text-indigo-600" />
-              Tax Calculation Method
-              {(isLoading || isChangingMethod) && (
-                <RefreshCw className="w-3 h-3 ml-2 animate-spin" />
-              )}
-              {isChangingMethod && <span className="ml-2 text-xs text-blue-600">Updating...</span>}
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="pt-0 space-y-4">
-            {/* Method Selection Cards */}
-            <div className="space-y-3">
-              {/* HSN-Based Method */}
+        {}
               <button
                 type="button"
                 className={`w-full p-3 rounded-lg border transition-all text-left ${
@@ -303,7 +276,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                       : 'border-gray-200 hover:border-green-300 hover:bg-green-50/50 cursor-pointer'
                 }`}
                 onClick={(e) => {
-                  console.log('🚫 [Button] HSN-Based clicked, preventing default behavior');
+                  console.log('🚫 [Button] preventing default behavior');
                   e.preventDefault();
                   e.stopPropagation();
                   e.stopImmediatePropagation();
@@ -313,8 +286,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                     return false;
                   }
                   if (!isChangingMethod) {
-                    console.log('✅ [Button] HSN-Based calling handleTaxMethodChange');
-                    handleTaxMethodChange('hsn_based', e);
+                    console.log('✅ [Button] e);
                   } else {
                     console.log('⏳ [Button] HSN-Based blocked - method change in progress');
                   }
@@ -359,151 +331,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                 </div>
               </button>
 
-              {/* Country Settings Method */}
-              <button
-                type="button"
-                className={`w-full p-3 rounded-lg border transition-all text-left ${
-                  isChangingMethod
-                    ? 'cursor-not-allowed opacity-50 border-gray-200'
-                    : taxAnalytics.calculationMethod === 'country_settings'
-                      ? 'border-blue-300 bg-blue-50 ring-2 ring-blue-200 cursor-pointer'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 cursor-pointer'
-                }`}
-                onClick={(e) => {
-                  console.log('🚫 [Button] Country Settings clicked, preventing default behavior');
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                  // Prevent any form submission
-                  if (e.currentTarget.form) {
-                    console.log('🚫 [Button] Preventing form submission');
-                    return false;
-                  }
-                  if (!isChangingMethod) {
-                    console.log('✅ [Button] Country Settings calling handleTaxMethodChange');
-                    handleTaxMethodChange('country_settings', e);
-                  } else {
-                    console.log('⏳ [Button] Country Settings blocked - method change in progress');
-                  }
-                  return false; // Explicitly prevent form submission
-                }}
-                disabled={isChangingMethod}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        taxAnalytics.calculationMethod === 'country_settings'
-                          ? 'border-blue-600 bg-blue-600'
-                          : 'border-gray-300'
-                      }`}
-                    >
-                      {taxAnalytics.calculationMethod === 'country_settings' && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <Globe className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium text-gray-900">Country Settings</span>
-                      </div>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Uses {taxAnalytics.destinationCountry} default tax rates for all items
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-blue-700">All items</div>
-                    <div className="text-xs text-gray-500">uniform</div>
-                  </div>
-                </div>
-              </button>
-
-              {/* Auto/Smart Method */}
-              <button
-                type="button"
-                className={`w-full p-3 rounded-lg border transition-all text-left ${
-                  isChangingMethod
-                    ? 'cursor-not-allowed opacity-50 border-gray-200'
-                    : taxAnalytics.calculationMethod === 'auto'
-                      ? 'border-purple-300 bg-purple-50 ring-2 ring-purple-200 cursor-pointer'
-                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 cursor-pointer'
-                }`}
-                onClick={(e) => {
-                  console.log('🚫 [Button] Auto/Smart clicked, preventing default behavior');
-                  e.preventDefault();
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                  // Prevent any form submission
-                  if (e.currentTarget.form) {
-                    console.log('🚫 [Button] Preventing form submission');
-                    return false;
-                  }
-                  if (!isChangingMethod) {
-                    console.log('✅ [Button] Auto/Smart calling handleTaxMethodChange');
-                    handleTaxMethodChange('auto', e);
-                  } else {
-                    console.log('⏳ [Button] Auto/Smart blocked - method change in progress');
-                  }
-                  return false; // Explicitly prevent form submission
-                }}
-                disabled={isChangingMethod}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        taxAnalytics.calculationMethod === 'auto'
-                          ? 'border-purple-600 bg-purple-600'
-                          : 'border-gray-300'
-                      }`}
-                    >
-                      {taxAnalytics.calculationMethod === 'auto' && (
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <Calculator className="w-4 h-4 text-purple-600" />
-                        <span className="font-medium text-gray-900">Auto/Smart</span>
-                        <Badge variant="secondary" className="text-xs">
-                          Default
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Best method per item: HSN when available, country defaults otherwise
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-purple-700">Mixed</div>
-                    <div className="text-xs text-gray-500">intelligent</div>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            {/* Current Status & Quick Actions */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium">{methodStatus.method} Active</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onRecalculate}
-                  disabled={isLoading || isCalculating}
-                  className="text-xs h-7"
-                >
-                  <RefreshCw className="w-3 h-3 mr-1" />
-                  Recalculate
-                </Button>
-              </div>
-            </div>
-
-            {/* HSN Classification Progress */}
+              {}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-gray-600">HSN Classification Progress</span>
@@ -530,23 +358,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               </div>
             </div>
 
-            {/* Tax Impact Summary */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-                <div className="text-lg font-semibold text-red-700">
-                  {currencyDisplay.formatSingleAmount(taxAnalytics.totalCustoms, 'origin')}
-                </div>
-                <div className="text-xs text-red-600">Customs Duty</div>
-              </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-lg font-semibold text-blue-700">
-                  {currencyDisplay.formatSingleAmount(taxAnalytics.totalLocalTaxes, 'origin')}
-                </div>
-                <div className="text-xs text-blue-600">{taxAnalytics.primaryTaxType}</div>
-              </div>
-            </div>
-
-            {/* Warning for Missing HSN Classifications */}
+            {}
             {taxAnalytics.itemsWithoutHSN > 0 && (
               <Alert className="border-amber-200 bg-amber-50">
                 <AlertTriangle className="h-4 w-4" />
@@ -564,81 +376,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
               </Alert>
             )}
 
-            {/* Advanced Controls Toggle */}
-            {isExpanded && (
-              <div className="border-t border-gray-200 pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDetailedView(!showDetailedView)}
-                  className="w-full text-xs justify-between"
-                >
-                  <span>Advanced Controls</span>
-                  {showDetailedView ? (
-                    <ChevronUp className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  )}
-                </Button>
-
-                {showDetailedView && (
-                  <div className="mt-3 space-y-3">
-                    <div className="text-xs text-gray-600">
-                      Advanced per-item controls and bulk operations will be available here.
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // View Mode Interface (existing implementation)
-  return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Main Tax Status Card */}
-      <Card className="border-indigo-200 bg-indigo-50/30">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center text-base">
-              <Calculator className="w-4 h-4 mr-2 text-indigo-600" />
-              Tax Calculation
-              {isLoading && <RefreshCw className="w-3 h-3 ml-2 animate-spin" />}
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="h-6 w-6 p-0"
-            >
-              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="pt-0">
-          {/* Calculation Method Status */}
-          <div
-            className={`p-3 rounded-lg border ${methodStatus.borderColor} ${methodStatus.bgColor}`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <methodStatus.icon className={`w-4 h-4 ${methodStatus.color}`} />
-                <span className={`font-medium text-sm ${methodStatus.color}`}>
-                  {methodStatus.method}
-                </span>
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {methodStatus.status}
-              </Badge>
-            </div>
-            <p className="text-xs text-gray-600">{methodStatus.description}</p>
-          </div>
-
-          {/* HSN Classification Progress */}
+            {}
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">HSN Classification</span>
@@ -657,23 +395,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             </div>
           </div>
 
-          {/* Tax Totals Summary */}
-          <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-            <div className="text-center p-2 bg-red-50 rounded border border-red-200">
-              <div className="font-semibold text-red-700">
-                {currencyDisplay.formatSingleAmount(taxAnalytics.totalCustoms, 'origin')}
-              </div>
-              <div className="text-red-600">Customs</div>
-            </div>
-            <div className="text-center p-2 bg-blue-50 rounded border border-blue-200">
-              <div className="font-semibold text-blue-700">
-                {currencyDisplay.formatSingleAmount(taxAnalytics.totalLocalTaxes, 'origin')}
-              </div>
-              <div className="text-blue-600">{taxAnalytics.primaryTaxType}</div>
-            </div>
-          </div>
-
-          {/* Warning for Missing HSN Classifications */}
+          {}
           {taxAnalytics.itemsWithoutHSN > 0 && (
             <Alert className="mt-4 border-amber-200 bg-amber-50">
               <AlertTriangle className="h-4 w-4" />
@@ -684,45 +406,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
             </Alert>
           )}
 
-          {/* Expanded Details */}
-          {isExpanded && (
-            <div className="mt-4">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 h-8">
-                  <TabsTrigger value="overview" className="text-xs">
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="items" className="text-xs">
-                    Items
-                  </TabsTrigger>
-                  <TabsTrigger value="methods" className="text-xs">
-                    Methods
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="mt-3 space-y-3">
-                  {/* Tax Source Breakdown */}
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                      Tax Data Sources
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 bg-green-50 border border-green-200 rounded text-center">
-                        <div className="text-sm font-semibold text-green-700">
-                          {taxAnalytics.hsnSourcedTaxes}
-                        </div>
-                        <div className="text-xs text-green-600">HSN Master</div>
-                      </div>
-                      <div className="p-2 bg-blue-50 border border-blue-200 rounded text-center">
-                        <div className="text-sm font-semibold text-blue-700">
-                          {taxAnalytics.fallbackTaxes}
-                        </div>
-                        <div className="text-xs text-blue-600">Country Default</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Calculation Quality Indicators */}
+          {}
                   <div className="space-y-2">
                     <h4 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
                       Calculation Quality
@@ -791,57 +475,7 @@ export const TaxCalculationSidebar: React.FC<TaxCalculationSidebarProps> = ({
                 </TabsContent>
 
                 <TabsContent value="methods" className="mt-3 space-y-3">
-                  {/* Current Method Display */}
-                  <div className="p-3 bg-gray-50 rounded border">
-                    <div className="text-xs font-medium text-gray-700 mb-2">Active Method</div>
-                    <div className="flex items-center space-x-2">
-                      <methodStatus.icon className={`w-4 h-4 ${methodStatus.color}`} />
-                      <span className="font-medium">{methodStatus.method}</span>
-                    </div>
-                  </div>
-
-                  {/* Method Options */}
-                  <div className="space-y-2">
-                    <div className="text-xs font-medium text-gray-700">Available Methods</div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between p-2 border rounded text-xs">
-                        <div className="flex items-center space-x-2">
-                          <Tags className="w-3 h-3 text-green-600" />
-                          <span>HSN-Based</span>
-                        </div>
-                        <Badge
-                          variant={
-                            taxAnalytics.calculationMethod === 'hsn_based' ? 'default' : 'outline'
-                          }
-                          className="text-xs"
-                        >
-                          {taxAnalytics.hsnSourcedTaxes} items
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-2 border rounded text-xs">
-                        <div className="flex items-center space-x-2">
-                          <Globe className="w-3 h-3 text-blue-600" />
-                          <span>Country Default</span>
-                        </div>
-                        <Badge
-                          variant={
-                            taxAnalytics.calculationMethod === 'country_settings'
-                              ? 'default'
-                              : 'outline'
-                          }
-                          className="text-xs"
-                        >
-                          All items
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-
-          {/* Quick Actions */}
+                  {}
           <div className="mt-4 pt-3 border-t border-indigo-200 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {taxAnalytics.itemsWithoutHSN > 0 && (

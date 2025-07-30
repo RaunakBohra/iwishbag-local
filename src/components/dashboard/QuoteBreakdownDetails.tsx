@@ -63,9 +63,7 @@ export const QuoteBreakdownDetails: React.FC<QuoteBreakdownDetailsProps> = ({
     const taxBreakdown = [];
     const hsn_breakdown = quote.calculation_data?.hsn_breakdown || [];
 
-    // Aggregate tax data from HSN breakdown for detailed display
-    let totalGST = 0,
-      totalVAT = 0,
+    // Aggregate tax data from totalVAT = 0,
       totalStateTax = 0,
       totalLocalTax = 0;
     let totalPST = 0,

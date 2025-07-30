@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/integrations/supabase/types';
 
 type OrderDetail = Tables<'quotes'> & {
-  shipping_address: Tables<'user_addresses'> | null;
+  shipping_address: Tables<'delivery_addresses'> | null;
 };
 
 export const useCustomerOrderDetail = (orderId: string | undefined) => {
@@ -46,7 +46,7 @@ export const useCustomerOrderDetail = (orderId: string | undefined) => {
 
       // Fetch any shipping address for the user (prefer default, but show any if no default exists)
       const { data: addressData } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', quoteData.user_id)
         .order('is_default', { ascending: false })

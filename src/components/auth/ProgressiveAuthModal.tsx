@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail } from 'lucide-react';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+// import { TurnstileProtectedForm } from .* // Component removed
 
 // Step 1: Email collection
 const emailSchema = z.object({

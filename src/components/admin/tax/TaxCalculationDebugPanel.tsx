@@ -24,7 +24,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { UnifiedQuote } from '@/types/unified-quote';
 import { supabase } from '@/integrations/supabase/client';
-import { hsnTaxService } from '@/services/HSNTaxService';
 import { routeTierTaxService } from '@/services/RouteTierTaxService';
 
 interface TaxCalculationDebugPanelProps {
@@ -100,16 +99,13 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         
         setLiveRouteRates(routeRates);
         
-        // Fetch HSN rates for items with HSN codes
-        const hsnData: Record<string, any> = {};
+        // Fetch any> = {};
         
         if (quote.items) {
           for (const item of quote.items) {
             if (item.hsn_code) {
               try {
-                const hsnRates = await hsnTaxService.getHSNTaxRates(
-                  item.hsn_code,
-                  quote.destination_country
+                const hsnRates = await hsnTaxService.getquote.destination_country
                 );
                 if (hsnRates) {
                   hsnData[item.hsn_code] = hsnRates;
@@ -461,7 +457,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           name: 'Weight Rate',
           value: shippingBreakdown.rate,
           source: shippingBreakdown.weightTier !== 'N/A' && shippingBreakdown.weightTier !== 'Unknown' 
-            ? `Tier ${shippingBreakdown.weightTier} @ ${currencySymbol}${shippingBreakdown.rate.toFixed(2)}/kg` 
+            ? `Tier ${shippingBreakdown.weightTier} @ ${currencySymbol}${(typeof shippingBreakdown.rate === 'string' ? parseFloat(shippingBreakdown.rate) : shippingBreakdown.rate).toFixed(2)}/kg` 
             : shippingBreakdown.note || 'Route per-kg rate',
           rate: shippingBreakdown.rate,
         },
@@ -697,48 +693,31 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           rate: 0,
         });
         
-        // 3. HSN Method Analysis
-        inputs.push({
-          name: '📊 HSN METHOD',
-          value: 0,
-          source: '─── HSN Classification Analysis ───',
-          rate: 0,
+        // 3. value: 0,
+          source: '─── rate: 0,
         });
         
-        // Check if HSN data is available
-        const hasHsnData = quote.items?.some(item => item.hsn_code) || false;
-        const storedHsnRate = hasHsnData ? (taxRates.customs || 0) : 0;
-        
-        // Get live HSN rate (average if multiple items)
-        let liveHsnRate = 0;
-        if (hasHsnData && Object.keys(liveHsnRates).length > 0) {
-          const rates = Object.values(liveHsnRates).map((r: any) => r.customs || 0);
-          liveHsnRate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+        // Check if b) => a + b, 0) / rates.length : 0;
         }
         
         const hsnRate = liveHsnRate || storedHsnRate; // Prefer live data
         const hsnResult = actualCustomsBase * (hsnRate / 100);
         
         inputs.push({
-          name: `├─ HSN Available`,
-          value: hasHsnData ? 1 : 0,
-          source: hasHsnData ? `${quote.items?.filter(i => i.hsn_code).length}/${quote.items?.length || 0} items have HSN codes` : 'No HSN codes found',
-          rate: 0,
+          name: `├─ value: hasHsnData ? 1 : 0,
+          source: hasHsnData ? `${quote.items?.filter(i => i.hsn_code).length}/${quote.items?.length || 0} items have rate: 0,
         });
         
         inputs.push({
-          name: `├─ HSN Rate (Stored)`,
-          value: storedHsnRate,
+          name: `├─ value: storedHsnRate,
           source: storedHsnRate > 0 ? 'From calculation_data' : 'No stored data',
           rate: storedHsnRate,
         });
         
         if (hasHsnData) {
           inputs.push({
-            name: `├─ HSN Rate (Live)`,
-            value: liveHsnRate,
-            source: isLoadingLiveData ? '⏳ Loading...' : liveHsnRate > 0 ? '🟢 LIVE from HSN service' : '⚪ No live data',
-            rate: liveHsnRate,
+            name: `├─ value: liveHsnRate,
+            source: isLoadingLiveData ? '⏳ Loading...' : liveHsnRate > 0 ? '🟢 LIVE from rate: liveHsnRate,
           });
           
           if (liveHsnRate > 0 && storedHsnRate !== liveHsnRate) {
@@ -752,8 +731,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         }
         
         inputs.push({
-          name: `├─ HSN Calculation`,
-          value: hsnResult,
+          name: `├─ value: hsnResult,
           source: `$${actualCustomsBase.toFixed(2)} × ${hsnRate}% = $${hsnResult.toFixed(2)}`,
           rate: 0,
         });
@@ -831,16 +809,20 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             manual_items_found: manualItemsCount,
             items_with_methods: quote.items.map(item => ({
               id: item.id,
-              name: item.product_name,
+              name: item.product_name || item.name,
               tax_method: item.tax_method,
               tax_options: item.tax_options,
-              // Check if manual rate might be stored elsewhere
-              operational_data: item.operational_data,
-              customs_rate: item.customs_rate,
-              manual_rate: item.manual_rate,
-              tax_rate: item.tax_rate,
-              // Check all properties
-              all_props: Object.keys(item).filter(key => key.includes('tax') || key.includes('manual') || key.includes('rate'))
+              tax_options_stringified: JSON.stringify(item.tax_options),
+              has_manual_in_tax_options: !!item.tax_options?.manual,
+              manual_rate_value: item.tax_options?.manual?.rate,
+              // Debug: Check if tax_options is a string that needs parsing
+              tax_options_type: typeof item.tax_options,
+              raw_item_subset: {
+                tax_method: item.tax_method,
+                tax_options: item.tax_options,
+                customs_amount: item.customs_amount,
+                customs_value: item.customs_value
+              }
             }))
           });
           
@@ -850,19 +832,36 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             let totalValue = 0;
             manualItems.forEach(item => {
               const itemValue = (item.costprice_origin || item.price) * (item.quantity || 1);
-              // Manual rate is stored in tax_options.manual.rate OR calculated from customs_amount/customs_value
-              const itemRate = item.tax_options?.manual?.rate || 
-                (item.customs_amount && item.customs_value ? 
-                  (item.customs_amount / item.customs_value) * 100 : 0);
+              
+              // Handle case where tax_options might be a string
+              let taxOptions = item.tax_options;
+              if (typeof taxOptions === 'string') {
+                try {
+                  taxOptions = JSON.parse(taxOptions);
+                  console.log('[DEBUG PANEL] Parsed tax_options from string:', taxOptions);
+                } catch (e) {
+                  console.error('[DEBUG PANEL] Failed to parse tax_options:', e);
+                  taxOptions = null;
+                }
+              }
+              
+              // Manual rate is ONLY stored in tax_options.manual.rate (no fallback calculations)
+              // Ensure rate is a number (it might come as string from DB)
+              const itemRate = typeof taxOptions?.manual?.rate === 'string' 
+                ? parseFloat(taxOptions.manual.rate) || 0
+                : typeof taxOptions?.manual?.rate === 'number'
+                ? taxOptions.manual.rate
+                : 0;
               console.log('[DEBUG PANEL] Manual item rate:', {
                 item_name: item.product_name || item.name,
                 item_value: itemValue,
                 manual_rate: itemRate,
-                tax_options_rate: item.tax_options?.manual?.rate,
-                customs_calculation: item.customs_amount && item.customs_value ? 
-                  `${item.customs_amount}/${item.customs_value} = ${(item.customs_amount / item.customs_value) * 100}%` : 'N/A',
-                using: item.tax_options?.manual?.rate ? 'tax_options' : 'customs calculation',
-                full_item: item
+                raw_tax_options: item.tax_options,
+                raw_tax_options_type: typeof item.tax_options,
+                parsed_tax_options: taxOptions,
+                parsed_manual: taxOptions?.manual,
+                parsed_manual_rate: taxOptions?.manual?.rate,
+                source: 'tax_options.manual.rate only'
               });
               weightedSum += itemRate * itemValue;
               totalValue += itemValue;
@@ -886,7 +885,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         inputs.push({
           name: `├─ Customs Calculation`,
           value: manualResult,
-          source: `CIF $${actualCustomsBase.toFixed(2)} × ${manualRate.toFixed(1)}% = $${manualResult.toFixed(2)}`,
+          source: `CIF $${actualCustomsBase.toFixed(2)} × ${(typeof manualRate === 'string' ? parseFloat(manualRate) : manualRate).toFixed(1)}% = $${manualResult.toFixed(2)}`,
           rate: 0,
         });
         
@@ -920,7 +919,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         });
         
         const methods = [
-          { name: 'HSN', result: hsnResult, available: hasHsnData, isLive: liveHsnRate > 0 },
+          { name: 'result: hsnResult, available: hasHsnData, isLive: liveHsnRate > 0 },
           { name: 'Route', result: routeResult, available: hasLiveRouteData || hasStoredRouteData, isLive: hasLiveRouteData },
           { name: 'Manual', result: manualResult + manualDestTaxAmount, available: manualRate > 0, isLive: false }
         ];
@@ -975,8 +974,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         const productValue = breakdown.items_total || 0;
         const minimumValuation = hasMinimumValuationData 
           ? recalculatedTotal 
-          : productValue * 1.2; // Estimated if no HSN data
-        const higherOfBoth = Math.max(productValue, minimumValuation);
+          : productValue * 1.2; // Estimated if no minimumValuation);
         
         // Show which valuation is active
         const valuationInUse = activeValuation === 'minimum_valuation' 
@@ -1038,13 +1036,8 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           });
         }
         
-        // Show HSN minimum valuation details if available
-        if (hasMinimumValuationData && hsnCalculationData) {
-          inputs.push({
-            name: `├─ HSN Details`,
-            value: hsnCalculationData.items_with_minimum_valuation,
-            source: `${hsnCalculationData.items_with_minimum_valuation} items have HSN minimum valuations`,
-            rate: 0,
+        // Show value: hsnCalculationData.items_with_minimum_valuation,
+            source: `${hsnCalculationData.items_with_minimum_valuation} items have rate: 0,
           });
         }
         
@@ -1092,7 +1085,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
           inputs.push({
             name: `├─ ${statusIcon} ${methodName}`,
             value: data.amount,
-            source: `${data.rate.toFixed(1)}% × $${data.base.toFixed(2)} = $${data.amount.toFixed(2)} | ${data.source}`,
+            source: `${(typeof data.rate === 'string' ? parseFloat(data.rate) : data.rate).toFixed(1)}% × $${data.base.toFixed(2)} = $${data.amount.toFixed(2)} | ${data.source}`,
             rate: data.rate,
           });
         });
@@ -1215,8 +1208,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
             inputs.push({
               name: '├─ Likely Cause',
               value: 0,
-              source: 'Missing HSN codes or route data for items',
-              rate: 0,
+              source: 'Missing rate: 0,
             });
           } else if (actualCustoms === 0 && expectedFromMatrix > 0) {
             inputs.push({
@@ -1276,7 +1268,7 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
         ? `Current: PER-ITEM methods (${itemMethods.join(', ')})`
         : `Current: ${quoteLevelMethod.toUpperCase()} method`,
       result: breakdown.customs || 0,
-      notes: `Comprehensive analysis of all 4 customs calculation methods (HSN, Country/Route, Manual, Customs) for ${quote.origin_country}→${quote.destination_country} route. Item-level methods override quote-level preferences when set.`,
+      notes: `Comprehensive analysis of all 4 customs calculation methods (Country/Route, Manual, Customs) for ${quote.origin_country}→${quote.destination_country} route. Item-level methods override quote-level preferences when set.`,
     },
 
     sales_tax: {
@@ -1426,7 +1418,10 @@ export const TaxCalculationDebugPanel: React.FC<TaxCalculationDebugPanelProps> =
                         <span className={`${isItemBreakdown ? 'text-gray-500' : 'text-gray-600'}`}>{input.name}:</span>
                         {input.rate !== undefined && (
                           <Badge variant="secondary" className="text-xs">
-                            {input.rate >= 1 ? `${input.rate.toFixed(1)}%` : `${(input.rate * 100).toFixed(1)}%`}
+                            {(() => {
+                              const rate = typeof input.rate === 'string' ? parseFloat(input.rate) : input.rate;
+                              return rate >= 1 ? `${rate.toFixed(1)}%` : `${(rate * 100).toFixed(1)}%`;
+                            })()}
                         </Badge>
                       )}
                     </div>

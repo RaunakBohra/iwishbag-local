@@ -1,6 +1,6 @@
 // ============================================================================
 // TAX CALCULATION DEBUGGER - Debug component for comparing tax methods
-// Shows step-by-step calculation values for Manual, HSN, and Country methods
+// Shows step-by-step calculation values for Manual, and Country methods
 // ============================================================================
 
 import React, { useState } from 'react';
@@ -46,24 +46,15 @@ export const TaxCalculationDebugger: React.FC<TaxCalculationDebuggerProps> = ({
   const manualCustomsRate = operationalData.customs?.percentage || 10;
   const smartTierRate = operationalData.customs?.smart_tier?.percentage || 10;
   
-  // HSN data if available
-  const hsnCalculation = quote.calculation_data?.hsn_calculation;
-
-  // Method-specific calculations
-  const calculations = {
-    manual: {
-      method: 'Manual Input',
-      customsRate: manualCustomsRate,
+  // customsRate: manualCustomsRate,
       customsAmount: cifTotal * (manualCustomsRate / 100),
       taxBasis: 'CIF Value',
       description: 'Uses customs rate from admin input box'
     },
     hsn_only: {
-      method: 'HSN Classification',
-      customsAmount: hsnCalculation?.total_hsn_customs || 0,
+      method: 'customsAmount: hsnCalculation?.total_hsn_customs || 0,
       localTaxes: hsnCalculation?.total_hsn_local_taxes || 0,
-      taxBasis: 'Per-item HSN codes',
-      description: 'Uses HSN-specific rates for each item'
+      taxBasis: 'Per-item description: 'Uses HSN-specific rates for each item'
     },
     route_based: {
       method: 'Route Tier',
@@ -124,134 +115,14 @@ export const TaxCalculationDebugger: React.FC<TaxCalculationDebuggerProps> = ({
         </CardHeader>
 
         <CardContent className="text-xs space-y-3">
-          {/* Input Values Section */}
-          <div className="bg-gray-50 p-2 rounded">
-            <div className="font-medium text-gray-900 mb-1">📝 Form Input Values</div>
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              <div>Items Total: <span className="font-mono">{currencyDisplay.formatSingleAmount(itemsTotal, 'origin')}</span></div>
-              <div>Total Weight: <span className="font-mono">{totalWeight.toFixed(2)} kg</span></div>
-              <div>Shipping: <span className="font-mono">{currencyDisplay.formatSingleAmount(shippingCost, 'origin')}</span></div>
-              <div>Insurance: <span className="font-mono">{currencyDisplay.formatSingleAmount(insuranceAmount, 'origin')}</span></div>
-              <div>Handling: <span className="font-mono">{currencyDisplay.formatSingleAmount(handlingCharge, 'origin')}</span></div>
-              <div>Domestic: <span className="font-mono">{currencyDisplay.formatSingleAmount(domesticShipping, 'origin')}</span></div>
-            </div>
-          </div>
-
-          {/* CIF Calculation */}
-          <div className="bg-blue-50 p-2 rounded">
-            <div className="font-medium text-blue-900 mb-1">🚢 CIF Calculation</div>
-            <div className="text-xs space-y-1">
-              <div>Items + Shipping + Insurance + Handling</div>
-              <div className="font-mono">
-                {currencyDisplay.formatSingleAmount(itemsTotal, 'origin')} + {currencyDisplay.formatSingleAmount(shippingCost, 'origin')} + {currencyDisplay.formatSingleAmount(insuranceAmount, 'origin')} + {currencyDisplay.formatSingleAmount(handlingCharge, 'origin')}
-              </div>
-              <div className="font-bold text-blue-700">
-                CIF Total: {currencyDisplay.formatSingleAmount(cifTotal, 'origin')}
-              </div>
-            </div>
-          </div>
-
-          {/* Current Method */}
-          <div className="bg-green-50 p-2 rounded">
-            <div className="flex items-center justify-between mb-1">
-              <div className="font-medium text-green-900">✅ Current Method</div>
-              <Badge variant="outline" className="text-xs">
-                {currentMethod.replace('_', ' ').toUpperCase()}
-              </Badge>
-            </div>
-            <div className="text-xs">
-              <div>Final Total: <span className="font-bold">{currencyDisplay.formatSingleAmount(quote.final_total_usd || 0, 'origin')}</span></div>
-              <div>Customs: <span className="font-mono">{currencyDisplay.formatSingleAmount(breakdown.customs || 0, 'origin')}</span></div>
-              <div>Taxes: <span className="font-mono">{currencyDisplay.formatSingleAmount(breakdown.taxes || 0, 'origin')}</span></div>
-            </div>
-          </div>
-
-          {/* Method Comparison */}
-          <Tabs defaultValue="manual" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-6 text-xs">
-              <TabsTrigger value="manual" className="text-xs">Manual</TabsTrigger>
-              <TabsTrigger value="hsn" className="text-xs">HSN</TabsTrigger>
-              <TabsTrigger value="country" className="text-xs">Country</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="manual" className="mt-2 space-y-2">
-              <div className="bg-orange-50 p-2 rounded">
-                <div className="font-medium text-orange-900 mb-1">🔧 Manual Method</div>
-                <div className="text-xs space-y-1">
-                  <div>Source: Admin input box</div>
-                  <div>Customs Rate: <span className="font-mono">{calculations.manual.customsRate}%</span></div>
-                  <div>CIF Basis: <span className="font-mono">{currencyDisplay.formatSingleAmount(cifTotal, 'origin')}</span></div>
-                  <div>Customs Amount: <span className="font-mono">{currencyDisplay.formatSingleAmount(calculations.manual.customsAmount, 'origin')}</span></div>
-                  <div className="text-xs text-orange-700 mt-1">{calculations.manual.description}</div>
-                </div>
-                {onMethodChange && (
-                  <Button
-                    size="sm"
-                    variant={currentMethod === 'manual' ? 'default' : 'outline'}
-                    onClick={() => onMethodChange('manual')}
-                    className="w-full mt-2 h-6 text-xs"
-                  >
-                    {currentMethod === 'manual' ? 'Active' : 'Switch to Manual'}
-                  </Button>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="hsn" className="mt-2 space-y-2">
-              <div className="bg-purple-50 p-2 rounded">
-                <div className="font-medium text-purple-900 mb-1">🏷️ HSN Method</div>
-                <div className="text-xs space-y-1">
-                  <div>Source: HSN classification codes</div>
-                  <div>Items with HSN: <span className="font-mono">{quote.items?.filter(item => item.hsn_code).length || 0}</span></div>
-                  <div>Customs Total: <span className="font-mono">{currencyDisplay.formatSingleAmount(calculations.hsn_only.customsAmount, 'origin')}</span></div>
-                  <div>Local Taxes: <span className="font-mono">{currencyDisplay.formatSingleAmount(calculations.hsn_only.localTaxes, 'origin')}</span></div>
-                  <div className="text-xs text-purple-700 mt-1">{calculations.hsn_only.description}</div>
-                </div>
-                {onMethodChange && (
-                  <Button
-                    size="sm"
-                    variant={currentMethod === 'hsn_only' ? 'default' : 'outline'}
-                    onClick={() => onMethodChange('hsn_only')}
-                    className="w-full mt-2 h-6 text-xs"
-                  >
-                    {currentMethod === 'hsn_only' ? 'Active' : 'Switch to HSN'}
-                  </Button>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="country" className="mt-2 space-y-2">
-              <div className="bg-green-50 p-2 rounded">
-                <div className="font-medium text-green-900 mb-1">🌍 Country Method</div>
-                <div className="text-xs space-y-1">
-                  <div>Source: Country tier system</div>
-                  <div>Tier Rate: <span className="font-mono">{calculations.route_based.customsRate}%</span></div>
-                  <div>CIF Basis: <span className="font-mono">{currencyDisplay.formatSingleAmount(cifTotal, 'origin')}</span></div>
-                  <div>Customs Amount: <span className="font-mono">{currencyDisplay.formatSingleAmount(calculations.route_based.customsAmount, 'origin')}</span></div>
-                  <div className="text-xs text-green-700 mt-1">{calculations.route_based.description}</div>
-                </div>
-                {onMethodChange && (
-                  <Button
-                    size="sm"
-                    variant={currentMethod === 'route_based' ? 'default' : 'outline'}
-                    onClick={() => onMethodChange('route_based')}
-                    className="w-full mt-2 h-6 text-xs"
-                  >
-                    {currentMethod === 'route_based' ? 'Active' : 'Switch to Route'}
-                  </Button>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          {/* Tax Breakdown Verification */}
+          {}
           <div className="bg-gray-50 p-2 rounded">
             <div className="font-medium text-gray-900 mb-1">📊 Tax Breakdown Verification</div>
             <div className="text-xs space-y-1">
               <div>Customs: <span className="font-mono">{currencyDisplay.formatSingleAmount(breakdown.customs || 0, 'origin')}</span></div>
               <div>Sales Tax: <span className="font-mono">{currencyDisplay.formatSingleAmount(breakdown.taxes || quote.calculation_data?.sales_tax_price || 0, 'origin')}</span></div>
               <div>Destination Tax: <span className="font-mono">{currencyDisplay.formatSingleAmount(breakdown.destination_tax || 0, 'origin')}</span></div>
-              <div>HSN Local Taxes: <span className="font-mono">{currencyDisplay.formatSingleAmount(hsnCalculation?.total_hsn_local_taxes || 0, 'origin')}</span></div>
+              <div>'origin')}</span></div>
             </div>
           </div>
 

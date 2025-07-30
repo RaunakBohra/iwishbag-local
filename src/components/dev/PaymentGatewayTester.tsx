@@ -24,7 +24,6 @@ export const PaymentGatewayTester = () => {
       default_gateway: string | null;
       available_gateways: string[] | null;
     }>;
-    profileColumnExists?: boolean;
     paymentTest?: {
       availableMethods: string[];
       recommendedMethod: string | null;
@@ -86,18 +85,6 @@ export const PaymentGatewayTester = () => {
       results.countryConfigs = [];
     }
 
-    // Test 3: Check profile column
-    try {
-      const { data: _profile } = await supabase
-        .from('profiles')
-        .select('preferred_payment_gateway')
-        .limit(1)
-        .single();
-
-      results.profileColumnExists = true;
-    } catch {
-      results.profileColumnExists = false;
-    }
 
     // Test 4: Test payment creation (dry run)
     results.paymentTest = {
@@ -217,10 +204,6 @@ export const PaymentGatewayTester = () => {
                   {getStatusIcon(testResults.paypalExists)}
                 </div>
 
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <span className="text-sm">Profile Column Exists</span>
-                  {getStatusIcon(testResults.profileColumnExists)}
-                </div>
 
                 <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <span className="text-sm">Countries Configured</span>

@@ -78,7 +78,7 @@ export const CustomerQuickFilters = ({
     new_this_week: customers?.filter((c) => new Date(c.created_at) >= weekAgo)?.length || 0,
     new_this_month: customers?.filter((c) => new Date(c.created_at) >= monthAgo)?.length || 0,
     with_addresses:
-      customers?.filter((c) => c.user_addresses && c.user_addresses.length > 0)?.length || 0,
+      customers?.filter((c) => c.delivery_addresses && c.delivery_addresses.length > 0)?.length || 0,
     recent_activity: customers?.filter((c) => new Date(c.created_at) >= weekAgo)?.length || 0, // This would need real activity data
   };
 

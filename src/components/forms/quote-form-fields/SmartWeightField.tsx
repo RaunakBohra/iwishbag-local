@@ -1,6 +1,6 @@
 // ============================================================================
-// SMART WEIGHT FIELD - ML-Powered Weight Input with Auto-Suggestions
-// Features: Real-time ML estimation, HSN weight data, dual suggestions
+
+// Features: Real-time ML estimation, dual suggestions
 // ============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -22,7 +22,6 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { smartWeightEstimator } from '@/services/SmartWeightEstimator';
-import { hsnWeightService, type HSNWeightData } from '@/services/HSNWeightService';
 import { DualWeightSuggestions } from '@/components/admin/smart-weight-field/DualWeightSuggestions';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -51,10 +50,8 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
 }) => {
   const { toast } = useToast();
   const [mlEstimation, setMlEstimation] = useState<EstimationResult | null>(null);
-  const [hsnWeight, setHsnWeight] = useState<HSNWeightData | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [isLoadingHSN, setIsLoadingHSN] = useState(false);
-  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [hsnWeight, setHsnWeight] = useState<setIsEstimating] = useState(false);
+  const [isLoadingsetIsLoadingsetShowSuggestion] = useState(false);
   const [hasUserInput, setHasUserInput] = useState(false);
   const [selectedSource, setSelectedSource] = useState<'hsn' | 'ml' | 'manual' | null>(null);
 
@@ -74,7 +71,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
     name: `items.${index}.weight`,
   });
 
-  // Fetch HSN weight when HSN code changes
+  
   useEffect(() => {
     const fetchHSNWeight = async () => {
       if (!hsnCode) {
@@ -90,7 +87,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
           console.log(`📊 [Weight] HSN weight found for ${hsnCode}:`, weight);
         }
       } catch (error) {
-        console.error('Error fetching HSN weight:', error);
+        console.error('Error fetching error);
         setHsnWeight(null);
       } finally {
         setIsLoadingHSN(false);
@@ -210,7 +207,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
     currentWeight &&
     weightDifference > 0.1 && // Significant difference
     parseFloat(currentWeight) > 0 &&
-    selectedSource !== 'hsn'; // Don't show if HSN was selected
+    selectedSource !== 'hsn'; 
 
   return (
     <FormField
@@ -250,34 +247,7 @@ export const SmartWeightField: React.FC<SmartWeightFieldProps> = ({
                 className="text-right"
               />
 
-              {/* Dual Weight Suggestions */}
-              {!hasUserInput && (hsnWeight || mlEstimation) && (
-                <DualWeightSuggestions
-                  hsnWeight={
-                    hsnWeight
-                      ? {
-                          ...hsnWeight,
-                          source: 'hsn' as const,
-                        }
-                      : undefined
-                  }
-                  mlWeight={
-                    mlEstimation
-                      ? {
-                          estimated: mlEstimation.estimated_weight,
-                          confidence: mlEstimation.confidence,
-                          reasoning: mlEstimation.reasoning,
-                          source: 'ml' as const,
-                        }
-                      : undefined
-                  }
-                  currentWeight={currentWeight ? parseFloat(currentWeight) : undefined}
-                  onSelectWeight={handleSelectWeight}
-                  isLoading={isEstimating || isLoadingHSN}
-                />
-              )}
-
-              {/* Learning Prompt */}
+              {}
               {showLearningPrompt && (
                 <Card className="border-green-200 bg-green-50">
                   <CardContent className="p-3">

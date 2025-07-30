@@ -32,7 +32,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/design-system';
 import { Link } from 'react-router-dom';
-import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm';
+// import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm'; // Component removed
 import { ContactTicketForm } from '@/components/support/ContactTicketForm';
 import { businessHoursService } from '@/config/businessHours';
 
@@ -286,20 +286,7 @@ const Contact = () => {
                         <DialogTitle>Send us a message</DialogTitle>
                       </DialogHeader>
                       <div className="mt-4">
-                        <TurnstileProtectedForm
-                          onSubmit={handleSubmit}
-                          isSubmitting={isSubmitting}
-                          submitButtonText="Send Message"
-                          submitButtonClassName="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-medium group"
-                          disabled={
-                            !formData.name ||
-                            !formData.email ||
-                            !formData.subject ||
-                            !formData.message
-                          }
-                          action="contact_form"
-                          className="space-y-4"
-                        >
+                        <form onSubmit={handleSubmit} className="space-y-4">
                           <div className="grid md:grid-cols-2 gap-4">
                             <div>
                               <Label
@@ -376,7 +363,20 @@ const Contact = () => {
                               className="border-gray-200 focus:border-teal-500 focus:ring-teal-500 resize-none"
                             />
                           </div>
-                        </TurnstileProtectedForm>
+                          <Button
+                            type="submit"
+                            disabled={
+                              isSubmitting ||
+                              !formData.name ||
+                              !formData.email ||
+                              !formData.subject ||
+                              !formData.message
+                            }
+                            className="w-full h-10 bg-teal-600 hover:bg-teal-700 text-white font-medium group"
+                          >
+                            {isSubmitting ? 'Sending...' : 'Send Message'}
+                          </Button>
+                        </form>
                       </div>
                     </DialogContent>
                   </Dialog>

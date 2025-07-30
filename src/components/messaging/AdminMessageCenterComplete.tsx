@@ -177,8 +177,8 @@ export const AdminMessageCenterComplete = () => {
           : 'New';
 
     // Get location from first address
-    const location = customer.user_addresses?.[0]
-      ? `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}`
+    const location = customer.delivery_addresses?.[0]
+      ? `${customer.delivery_addresses[0].city}, ${customer.delivery_addresses[0].country}`
       : 'Location not set';
 
     return {

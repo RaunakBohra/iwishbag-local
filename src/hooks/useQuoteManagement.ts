@@ -7,11 +7,9 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useNavigate } from 'react-router-dom';
 import { useStatusManagement } from '@/hooks/useStatusManagement';
 import { COMMON_QUERIES } from '@/lib/queryColumns';
-import { trackAdminQuery } from '@/lib/performanceTracker';
 import type { SearchFilters } from '@/components/admin/SearchAndFilterPanel';
 import * as Sentry from '@sentry/react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminRole } from '@/hooks/useAdminRole';
 
 type QuoteWithItems = Tables<'quotes'> & {
   profiles?: {
@@ -31,7 +29,7 @@ interface UseQuoteManagementProps {
 export const useQuoteManagement = ({
   filters,
   page = 0,
-  pageSize = 25,
+  pageSize = 25
 }: UseQuoteManagementProps) => {
   // Internal state management
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -44,28 +42,25 @@ export const useQuoteManagement = ({
   const { toast } = useToast();
   const { getStatusesForQuotesList, getStatusConfig, quoteStatuses } = useStatusManagement();
   const { user, session } = useAuth();
-  const { data: isAdmin, isLoading: isAdminLoading } = useAdminRole();
-
+  
   const isAuthenticated = !!user && !!session && !user.is_anonymous;
 
   // Enhanced debug logging for query enablement
   console.log('🔍 [useQuoteManagement] Query Enablement Debug:', {
     isAuthenticated,
-    isAdmin,
-    isAdminLoading,
-    user: user ? { id: user.id, email: user.email, isAnonymous: user.is_anonymous } : null,
+            user: user ? { id: user.id, email: user.email, isAnonymous: user.is_anonymous } : null,
     session: session ? { userId: session.user?.id, hasAccessToken: !!session.access_token } : null,
     filters: {
       searchText: filters.searchText,
       statuses: filters.statuses,
       countries: filters.countries,
       statusesLength: filters.statuses?.length || 0,
-      countriesLength: filters.countries?.length || 0,
+      countriesLength: filters.countries?.length || 0
     },
-    queryWillRun: isAuthenticated && !!isAdmin && !isAdminLoading,
+    queryWillRun: isAuthenticated && !!true,
     searchTerm,
     page,
-    pageSize,
+    pageSize
   });
 
   // INVESTIGATION: Test if query key arrays are causing the issue
@@ -77,8 +72,8 @@ export const useQuoteManagement = ({
         statuses: filters.statuses || [],
         countries: filters.countries || [],
         page,
-        pageSize,
-      },
+        pageSize
+      }
     ],
     queryFn: async () => {
       console.log('🚀 [useQuoteManagement] Main query function STARTED - NO SENTRY');
@@ -95,19 +90,13 @@ export const useQuoteManagement = ({
           hasSession: !!session,
           sessionUserId: session?.user?.id,
           accessToken: session?.access_token ? 'present' : 'missing',
-          isAuthenticated,
-          isAdmin,
-        });
+          isAuthenticated
+                  });
 
         // Validate authentication for admin operations
         if (!isAuthenticated) {
           console.warn('⚠️ No authenticated user for admin quote management');
           throw new Error('Authentication required for admin operations');
-        }
-
-        if (!isAdmin) {
-          console.warn('⚠️ Non-admin user attempting admin operations');
-          throw new Error('Admin role required for quote management');
         }
 
         // INVESTIGATION: Test exact same query as working test query
@@ -147,7 +136,7 @@ export const useQuoteManagement = ({
           hasError: !!error,
           errorMessage: error?.message,
           dataCount: data?.length || 0,
-          data: data || [],
+          data: data || []
         });
 
         if (error) {
@@ -160,12 +149,12 @@ export const useQuoteManagement = ({
           ...quote,
           email: quote.customer_data?.info?.email || null,
           customer_name: quote.customer_data?.info?.name || null,
-          product_name: quote.items?.[0]?.name || null,
+          product_name: quote.items?.[0]?.name || null
         }));
 
         console.log('🔍 [useQuoteManagement] Transformation Debug:', {
           originalCount: data?.length || 0,
-          transformedCount: transformedData.length,
+          transformedCount: transformedData.length
         });
 
         const result = transformedData;
@@ -180,7 +169,7 @@ export const useQuoteManagement = ({
         throw error;
       }
     },
-    enabled: isAuthenticated && !!isAdmin && !isAdminLoading,
+    enabled: isAuthenticated && !!true,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for performance
     gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
   });
@@ -190,7 +179,7 @@ export const useQuoteManagement = ({
       // Sentry monitoring for status update operations
       const updateTransaction = Sentry.startTransaction({
         name: 'Bulk Quote Status Update',
-        op: 'db.mutation.status_update',
+        op: 'db.mutation.status_update'
       });
 
       return Sentry.withScope(async (scope) => {
@@ -199,7 +188,7 @@ export const useQuoteManagement = ({
         scope.setContext('update_parameters', {
           quoteIds: ids,
           newStatus: status,
-          quoteCount: ids.length,
+          quoteCount: ids.length
         });
 
         try {
@@ -213,7 +202,7 @@ export const useQuoteManagement = ({
             scope.setContext('status_config', {
               isSuccessful: statusConfig.isSuccessful,
               countsAsOrder: statusConfig.countsAsOrder,
-              requiresPaymentProcessing: true,
+              requiresPaymentProcessing: true
             });
 
             for (const quoteId of ids) {
@@ -228,7 +217,7 @@ export const useQuoteManagement = ({
                 Sentry.addBreadcrumb({
                   message: 'Failed to fetch quote for update',
                   level: 'warning',
-                  data: { quoteId, error: fetchError.message },
+                  data: { quoteId, error: fetchError.message }
                 });
                 console.error(`Failed to fetch quote ${quoteId}: ${fetchError.message}`);
                 continue;
@@ -264,7 +253,7 @@ export const useQuoteManagement = ({
                 );
                 scope.setLevel('error');
                 Sentry.captureException(updateError, {
-                  tags: { quoteId, operation: 'individual_quote_update' },
+                  tags: { quoteId, operation: 'individual_quote_update' }
                 });
                 throw updateError;
               }
@@ -280,7 +269,7 @@ export const useQuoteManagement = ({
             const bulkError = new Error(error.message);
             scope.setLevel('error');
             Sentry.captureException(bulkError, {
-              tags: { operation: 'bulk_quote_update' },
+              tags: { operation: 'bulk_quote_update' }
             });
             throw bulkError;
           }
@@ -291,7 +280,7 @@ export const useQuoteManagement = ({
           scope.setContext('error_details', {
             errorMessage: error instanceof Error ? error.message : 'Unknown error',
             quoteIds: ids,
-            targetStatus: status,
+            targetStatus: status
           });
 
           updateTransaction.setStatus('internal_error');
@@ -310,19 +299,19 @@ export const useQuoteManagement = ({
       toast({
         title: 'Error updating quotes',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
     },
     onSettled: () => {
       setActiveStatusUpdate(null);
-    },
+    }
   });
 
   const updateMultipleQuotesRejectionMutation = useMutation({
     mutationFn: async ({
       ids,
       reasonId,
-      details,
+      details
     }: {
       ids: string[];
       reasonId: string;
@@ -340,7 +329,7 @@ export const useQuoteManagement = ({
           status: rejectedStatus,
           rejection_reason_id: reasonId,
           rejection_details: details,
-          rejected_at: new Date().toISOString(),
+          rejected_at: new Date().toISOString()
         })
         .in('id', ids);
       if (error) throw new Error(error.message);
@@ -355,9 +344,9 @@ export const useQuoteManagement = ({
       toast({
         title: 'Error rejecting quotes',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   const deleteQuotesMutation = useMutation({
@@ -374,9 +363,9 @@ export const useQuoteManagement = ({
       toast({
         title: 'Error deleting quotes',
         description: error.message,
-        variant: 'destructive',
+        variant: 'destructive'
       });
-    },
+    }
   });
 
   const handleToggleSelectQuote = (id: string, selected?: boolean) => {
@@ -416,7 +405,7 @@ export const useQuoteManagement = ({
 
     updateMultipleQuotesStatusMutation.mutate({
       ids: selectedQuoteIds,
-      status: approvedStatus,
+      status: approvedStatus
     });
   };
 
@@ -427,7 +416,7 @@ export const useQuoteManagement = ({
       toast({
         title: 'No quotes selected',
         description: 'Please select quotes to export',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
@@ -445,7 +434,7 @@ export const useQuoteManagement = ({
         'Total',
         'Created',
         'Customer',
-        'Internal ID',
+        'Internal ID'
       ].join(','),
       ...selectedQuotes.map((quote) =>
         [
@@ -457,9 +446,9 @@ export const useQuoteManagement = ({
           quote.final_total_usd || '',
           new Date(quote.created_at).toLocaleDateString(),
           (quote.customer_name || '').replace(/,/g, ';'),
-          quote.id,
+          quote.id
         ].join(','),
-      ),
+      )
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -472,7 +461,7 @@ export const useQuoteManagement = ({
 
     toast({
       title: 'Export completed',
-      description: `${selectedQuotes.length} quotes exported successfully`,
+      description: `${selectedQuotes.length} quotes exported successfully`
     });
   };
 
@@ -486,7 +475,7 @@ export const useQuoteManagement = ({
 
     toast({
       title: 'Bulk Email',
-      description: `Ready to send email to ${emailAddresses.length} customers. Email modal integration needed.`,
+      description: `Ready to send email to ${emailAddresses.length} customers. Email modal integration needed.`
     });
 
     // TODO: Open bulk email modal with selectedQuoteIds
@@ -498,7 +487,7 @@ export const useQuoteManagement = ({
 
     toast({
       title: 'Bulk Duplicate',
-      description: `Feature coming soon. Would duplicate ${selectedQuoteIds.length} quotes.`,
+      description: `Feature coming soon. Would duplicate ${selectedQuoteIds.length} quotes.`
     });
 
     // TODO: Implement bulk duplication logic
@@ -510,7 +499,7 @@ export const useQuoteManagement = ({
 
     toast({
       title: 'Bulk Priority Change',
-      description: `Feature coming soon. Would update priority for ${selectedQuoteIds.length} quotes.`,
+      description: `Feature coming soon. Would update priority for ${selectedQuoteIds.length} quotes.`
     });
 
     // TODO: Implement priority change modal/logic
@@ -549,7 +538,7 @@ export const useQuoteManagement = ({
     updateMultipleQuotesRejectionMutation.mutate({
       ids: selectedQuoteIds,
       reasonId,
-      details,
+      details
     });
   };
 
@@ -569,9 +558,9 @@ export const useQuoteManagement = ({
           quote.item_price || '',
           quote.final_total_usd || '',
           new Date(quote.created_at).toLocaleDateString(),
-          quote.id,
+          quote.id
         ].join(','),
-      ),
+      )
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -599,8 +588,7 @@ export const useQuoteManagement = ({
 
   return {
     quotes: quotes || [],
-    quotesLoading: quotesLoading || isAdminLoading,
-    isRejectDialogOpen,
+    quotesLoading: quotesLoading ||     isRejectDialogOpen,
     setRejectDialogOpen: setIsRejectDialogOpen,
     selectedQuoteIds,
     handleToggleSelectQuote,
@@ -614,6 +602,6 @@ export const useQuoteManagement = ({
     updateMultipleQuotesRejectionIsPending: isRejecting,
     activeStatusUpdate,
     handleDeleteQuotes,
-    isDeletingQuotes,
+    isDeletingQuotes
   };
 };

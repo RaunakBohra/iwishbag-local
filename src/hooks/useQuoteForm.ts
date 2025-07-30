@@ -11,11 +11,11 @@ export const useQuoteForm = () => {
   const { data: countries } = usePurchaseCountries();
 
   const { data: addresses } = useQuery({
-    queryKey: ['user_addresses', user?.id],
+    queryKey: ['delivery_addresses', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
-        .from('user_addresses')
+        .from('delivery_addresses')
         .select('*')
         .eq('user_id', user.id);
       if (error) throw new Error(error.message);

@@ -39,6 +39,7 @@ import { InlineFileUploadZone } from '@/components/ui/InlineFileUploadZone';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 import {
   Upload,
   X,
@@ -51,7 +52,6 @@ import {
   MapPin,
   ArrowRight,
   Loader2,
-  RefreshCw,
   Trash2,
   File,
   FileImage,
@@ -63,20 +63,19 @@ import {
   ChevronUp,
   Shield,
   Lock,
-  HelpCircle,
+  HelpCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
 import { locationDetectionService } from '@/services/LocationDetectionService';
 import { R2StorageService } from '@/services/R2StorageService';
 import { urlAnalysisService } from '@/services/UrlAnalysisService';
-import { productDataFetchService } from '@/services/ProductDataFetchService';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog';
 
 function isValidUrl(url) {
@@ -108,10 +107,16 @@ export default function ProductInfoStep({
   setDestinationCountry,
   next,
   sessionId,
+  purchaseCountries: propsPurchaseCountries,
+  shippingCountries: propsShippingCountries
 }) {
   const { user } = useAuth();
-  const { data: countries, isLoading, error: countryError } = usePurchaseCountries();
-  const { data: shippingCountries, isLoading: shippingCountriesLoading } = useShippingCountries();
+  // Use props if provided, otherwise fetch
+  const { data: fetchedCountries, isLoading, error: countryError } = usePurchaseCountries();
+  const { data: fetchedShippingCountries, isLoading: shippingCountriesLoading } = useShippingCountries();
+  
+  const countries = propsPurchaseCountries || fetchedCountries;
+  const shippingCountries = propsShippingCountries || fetchedShippingCountries;
   const [errors, setErrors] = useState({});
   const [countryValidationError, setCountryValidationError] = useState('');
   const [destinationCountryError, setDestinationCountryError] = useState('');
@@ -119,8 +124,6 @@ export default function ProductInfoStep({
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState({}); // Track expanded state for notes per product
   const [urlMismatchNotifications, setUrlMismatchNotifications] = useState({}); // Track URL country mismatches
-  const [autoFillLoading, setAutoFillLoading] = useState({}); // Track auto-fill loading state per product
-  const [autoFillStatus, setAutoFillStatus] = useState({}); // Track auto-fill success/error messages
   
   // Location detection debug state
   const [locationDebug, setLocationDebug] = useState({
@@ -133,17 +136,17 @@ export default function ProductInfoStep({
     timestamp: null
   });
 
-  // Smart IP-based country detection with user choice fallback
+  // IP-based location detection only
   useEffect(() => {
     if (!destinationCountry && Array.isArray(shippingCountries)) {
       setLocationDebug(prev => ({ ...prev, isDetecting: true, timestamp: new Date().toISOString() }));
       
-      // Get detailed location data for debug info
-      Promise.all([
-        locationDetectionService.detectLocation(),
-        locationDetectionService.getSmartCountry()
-      ])
-        .then(([locationData, detectedCountry]) => {
+      // Get location data from IP
+      locationDetectionService.detectLocation()
+        .then((locationData) => {
+          // Extract country code from location data
+          const detectedCountry = locationData.countryCode;
+          
           // Validate detected country exists in our supported shipping destinations
           const countryExists = shippingCountries.find(c => c.code === detectedCountry);
           
@@ -189,7 +192,7 @@ export default function ProductInfoStep({
           // Don't set any default - let user choose
         });
     }
-  }, [destinationCountry, shippingCountries, setDestinationCountry]);
+  }, [destinationCountry, shippingCountries, setDestinationCountry, userProfile]);
 
   // Auto-sync countries for both combined and separate quotes (initial sync)
   useEffect(() => {
@@ -198,7 +201,7 @@ export default function ProductInfoStep({
       if (firstCountry) {
         const updatedProducts = products.map((product, index) => ({
           ...product,
-          country: index === 0 ? product.country : firstCountry,
+          country: index === 0 ? product.country : firstCountry
         }));
         setProducts(updatedProducts);
       }
@@ -219,7 +222,7 @@ export default function ProductInfoStep({
       price: '',
       weight: '',
       country: products[0]?.country || '', // Auto-sync for both quote types
-      notes: '',
+      notes: ''
     };
     setProducts([...products, newProduct]);
   };
@@ -297,20 +300,14 @@ export default function ProductInfoStep({
     }
   };
 
-  const handleUrlChange = async (productIndex, url) => {
+  const handleUrlChange = (productIndex, url) => {
     updateProduct(productIndex, 'url', url);
     
     if (!url) {
-      // Clear any notifications when URL is cleared
       setUrlMismatchNotifications(prev => {
         const newNotifications = { ...prev };
         delete newNotifications[productIndex];
         return newNotifications;
-      });
-      setAutoFillStatus(prev => {
-        const newStatus = { ...prev };
-        delete newStatus[productIndex];
-        return newStatus;
       });
       return;
     }
@@ -318,97 +315,6 @@ export default function ProductInfoStep({
     // Only proceed if valid URL
     if (!isValidUrl(url)) {
       return;
-    }
-    
-    // Start auto-fill process
-    setAutoFillLoading(prev => ({ ...prev, [productIndex]: true }));
-    setAutoFillStatus(prev => {
-      const newStatus = { ...prev };
-      delete newStatus[productIndex];
-      return newStatus;
-    });
-    
-    try {
-      // Fetch product data
-      const result = await productDataFetchService.fetchProductData(url);
-      
-      if (result.success && result.data) {
-        const productData = result.data;
-        
-        // Auto-fill the fields using callback to get latest state
-        setProducts(currentProducts => {
-          const newProducts = [...currentProducts];
-          const currentProduct = newProducts[productIndex];
-          
-          // Update title if empty
-          if (productData.title && !currentProduct.title) {
-            newProducts[productIndex] = { ...currentProduct, title: productData.title };
-          }
-          
-          // Update price if empty
-          if (productData.price && !currentProduct.price) {
-            newProducts[productIndex] = { ...newProducts[productIndex], price: productData.price.toString() };
-          }
-          
-          // Update weight if empty
-          const weightInKg = productData.weight || productData.weight_value;
-          if (weightInKg && typeof weightInKg === 'number' && !currentProduct.weight) {
-            newProducts[productIndex] = { ...newProducts[productIndex], weight: weightInKg.toFixed(2) };
-          }
-          
-          return newProducts;
-        });
-        
-        // Set success status
-        const filledFields = [];
-        if (productData.title) filledFields.push('title');
-        if (productData.price) filledFields.push('price');
-        if (productData.weight) filledFields.push('weight');
-        
-        if (filledFields.length > 0) {
-          setAutoFillStatus(prev => ({
-            ...prev,
-            [productIndex]: {
-              type: 'success',
-              message: `Auto-filled: ${filledFields.join(', ')}`,
-              source: result.source
-            }
-          }));
-          
-          // Clear success message after 3 seconds
-          setTimeout(() => {
-            setAutoFillStatus(prev => {
-              const newStatus = { ...prev };
-              delete newStatus[productIndex];
-              return newStatus;
-            });
-          }, 3000);
-        }
-      } else if (result.source === 'mock') {
-        // Don't show error for mock data, just silently continue
-      } else {
-        // Show error status
-        setAutoFillStatus(prev => ({
-          ...prev,
-          [productIndex]: {
-            type: 'error',
-            message: 'Could not fetch product details',
-            source: result.source
-          }
-        }));
-      }
-    } catch (error) {
-      console.error('Auto-fill error:', error);
-      setAutoFillStatus(prev => ({
-        ...prev,
-        [productIndex]: {
-          type: 'error',
-          message: 'Failed to auto-fill product details',
-          source: 'error'
-        }
-      }));
-    } finally {
-      setAutoFillLoading(prev => ({ ...prev, [productIndex]: false }));
     }
     
     // Analyze URL
@@ -429,7 +335,6 @@ export default function ProductInfoStep({
         // Auto-correct country
         updateProduct(productIndex, 'country', analysis.suggestedCountry);
         
-        // Set notification
         const countryName = countries?.find(c => c.code === analysis.suggestedCountry)?.name || analysis.suggestedCountry;
         const notification = {
           type: 'warning',
@@ -442,7 +347,7 @@ export default function ProductInfoStep({
           [productIndex]: notification
         }));
         
-        // Auto-clear notification after 5 seconds
+        // Clear notification after 5 seconds
         setTimeout(() => {
           setUrlMismatchNotifications(prev => {
             const newNotifications = { ...prev };
@@ -460,9 +365,6 @@ export default function ProductInfoStep({
       }
     }
   };
-
-
-
 
   const validate = () => {
     const newErrors = {};
@@ -523,7 +425,7 @@ export default function ProductInfoStep({
         message:
           'All products must be from the same country for combined shipping and better rates.',
         icon: Info,
-        color: 'blue',
+        color: 'blue'
       };
     }
     return null; // No message for separate quotes
@@ -534,12 +436,12 @@ export default function ProductInfoStep({
       return {
         disabled: true,
         className: 'w-full border rounded p-2 bg-gray-100 text-gray-500 cursor-not-allowed',
-        title: "Auto-synced to first product's country",
+        title: "Auto-synced to first product's country"
       };
     }
     return {
       className:
-        'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500',
+        'w-full border border-gray-200 rounded p-2 focus:ring-2 focus:ring-teal-500 focus:border-teal-500'
     };
   };
 
@@ -852,12 +754,6 @@ export default function ProductInfoStep({
                 <div className="flex-1 w-[82%]">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                     Product URL {!product.url && !product.files?.length && '*'}
-                    {autoFillLoading[index] && (
-                      <span className="ml-2 text-xs text-blue-600 font-normal">
-                        <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
-                        Fetching details...
-                      </span>
-                    )}
                   </label>
                   <div className="relative">
                     <input
@@ -868,16 +764,9 @@ export default function ProductInfoStep({
                       aria-required={!product.files?.length}
                       aria-invalid={!!errors[`url-${index}`]}
                       aria-describedby={errors[`url-${index}`] ? `url-error-${index}` : undefined}
-                      className={`w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
-                        autoFillLoading[index] ? 'pr-10' : ''
-                      }`}
+                      className="w-full h-[40px] sm:h-[48px] border border-gray-200 rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                       placeholder="Paste product URL (Amazon, eBay, etc.) or upload files below"
                     />
-                    {autoFillLoading[index] && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      </div>
-                    )}
                   </div>
                   {errors[`url-${index}`] && (
                     <p id={`url-error-${index}`} className="text-red-500 text-xs mt-1" role="alert">
@@ -887,7 +776,7 @@ export default function ProductInfoStep({
                   {urlMismatchNotifications[index] && (
                     <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg animate-fade-in">
                       <div className="flex items-start gap-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
                         <div className="text-xs">
                           <p className="text-yellow-800 font-medium">
                             {urlMismatchNotifications[index].message}
@@ -895,33 +784,6 @@ export default function ProductInfoStep({
                           {urlMismatchNotifications[index].alternativeDomain && (
                             <p className="text-yellow-700 mt-1">
                               Tip: Use {urlMismatchNotifications[index].alternativeDomain} for local shopping
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {autoFillStatus[index] && (
-                    <div className={`mt-2 p-2 rounded-lg animate-fade-in ${
-                      autoFillStatus[index].type === 'success' 
-                        ? 'bg-green-50 border border-green-200' 
-                        : 'bg-red-50 border border-red-200'
-                    }`}>
-                      <div className="flex items-start gap-2">
-                        {autoFillStatus[index].type === 'success' ? (
-                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        )}
-                        <div className="text-xs">
-                          <p className={`font-medium ${
-                            autoFillStatus[index].type === 'success' ? 'text-green-800' : 'text-red-800'
-                          }`}>
-                            {autoFillStatus[index].message}
-                          </p>
-                          {autoFillStatus[index].source === 'mock' && (
-                            <p className="text-gray-600 mt-0.5 text-xs">
-                              Using sample data
                             </p>
                           )}
                         </div>

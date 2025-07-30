@@ -52,59 +52,51 @@ export const ModernItemsDisplay: React.FC<ModernItemsDisplayProps> = ({
           >
             <CardContent className="p-0">
               <div className="flex flex-col lg:flex-row">
-                {/* Product Image */}
-                <div className="relative w-full lg:w-48 h-48 bg-gray-100 flex-shrink-0">
-                  {item.image_url ? (
-                    <img
-                      src={item.image_url}
-                      alt={item.product_name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/200?text=No+Image';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="h-12 w-12 text-gray-400" />
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2">
-                    <Badge variant="secondary" className="bg-white/90 backdrop-blur-sm">
-                      Qty: {item.quantity}
-                    </Badge>
-                  </div>
+                {/* Image placeholder */}
+                <div className="lg:w-48 h-48 lg:h-auto bg-gray-100 flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-gray-400" />
                 </div>
 
-                {/* Product Details */}
+                {/* Content */}
                 <div className="flex-1 p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                    {/* Product Info */}
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                        {item.product_name}
-                      </h3>
-                      
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-                        {item.seller && (
-                          <div className="flex items-center gap-1">
-                            <ShoppingBag className="h-4 w-4" />
-                            <span>{item.seller}</span>
-                          </div>
-                        )}
-                        {item.weight > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Weight className="h-4 w-4" />
-                            <span>{formatWeight(item.weight)}</span>
-                          </div>
-                        )}
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                          <ShoppingBag className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
+                            {item.product_name}
+                          </h3>
+                          {item.description && (
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Specs Row */}
+                      <div className="flex flex-wrap gap-4 mb-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Weight className="h-4 w-4" />
+                          <span>{formatWeight(item.weight)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Package className="h-4 w-4" />
+                          <span>Qty: {item.quantity}</span>
+                        </div>
                         {item.category && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Tag className="h-4 w-4" />
-                            <span>{item.category}</span>
+                            <span className="capitalize">{item.category}</span>
                           </div>
                         )}
                       </div>
 
-                      {/* HSN and Tax Info */}
+                      {/* Badges Row */}
                       <div className="flex flex-wrap gap-2">
                         {item.hsn_code && (
                           <Tooltip>

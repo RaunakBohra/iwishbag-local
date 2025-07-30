@@ -29,7 +29,7 @@ interface CustomerProfile {
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
-  user_addresses: Array<{
+  delivery_addresses: Array<{
     id: string;
     address_line1: string;
     address_line2: string | null;
@@ -219,8 +219,8 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
-                {customer.user_addresses?.[0]
-                  ? `${customer.user_addresses[0].city}, ${customer.user_addresses[0].country}`
+                {customer.delivery_addresses?.[0]
+                  ? `${customer.delivery_addresses[0].city}, ${customer.delivery_addresses[0].country}`
                   : 'No address'}
               </span>
             </div>

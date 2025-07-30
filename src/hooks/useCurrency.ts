@@ -3,21 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { unifiedConfigService } from '@/services/UnifiedConfigurationService';
 
 /**
- * Simplified unified currency hook
- * Replaces all previous currency hooks with a single, simple interface
- *
+ * Simplified currency hook with minimal fallbacks
+ * 
  * @param currencyCode - The 3-letter currency code (e.g., 'USD', 'INR', 'NPR')
- * @param originCountry - Optional origin country for exchange rate calculation
- * @param destinationCountry - Optional destination country for exchange rate calculation
  */
-export function useCurrency(
-  currencyCode: string = 'USD',
-  originCountry?: string,
-  destinationCountry?: string,
-) {
+export function useCurrency(currencyCode: string = 'USD') {
   // Get all countries with their configurations
   const { data: countries } = useQuery({
-    queryKey: ['countries', 'all'],
+    queryKey: ['unified_config_service', 'all_countries'],
     queryFn: () => unifiedConfigService.getAllCountries(),
     staleTime: 30 * 60 * 1000, // 30 minutes - country data is stable
   });
@@ -28,13 +21,13 @@ export function useCurrency(
     return Object.entries(countries).find(([_, config]) => config.currency === currencyCode)?.[1];
   }, [countries, currencyCode]);
 
-  // Get exchange rate using unified config system
+  // Simple exchange rate - no complex fallbacks
   const exchangeRate = useMemo(() => {
-    if (!currencyCode || currencyCode === 'USD') return 1;
+    if (currencyCode === 'USD') return 1;
     return countryWithCurrency?.rate_from_usd || 1;
   }, [currencyCode, countryWithCurrency]);
 
-  // Get currency symbol
+  // Simple currency symbol - fallback to USD symbol
   const symbol = useMemo(() => {
     return countryWithCurrency?.symbol || '$';
   }, [countryWithCurrency]);
@@ -76,47 +69,21 @@ export function useCurrency(
     exchangeRate,
     formatAmount,
     formatNumber,
-    // Helper function to get country currency
-    getCountryCurrency: (countryCode: string) => {
-      if (!countries) return 'USD';
-      return countries[countryCode]?.currency || 'USD';
-    },
-    // Helper function to check if currency is supported
-    isSupported: () => {
-      return !!countryWithCurrency;
-    },
-    // Helper function for business-critical operations requiring exact exchange rates
-    getExactExchangeRate: useCallback(async (originCountry: string, destinationCountry: string) => {
-      try {
-        const rate = await unifiedConfigService.convertCurrency(
-          1,
-          originCountry,
-          destinationCountry,
-        );
-        return rate;
-      } catch (error) {
-        console.error('Failed to get exact exchange rate:', error);
-        throw error;
-      }
-    }, []),
+    // Simple helper - no complex fallbacks
+    isSupported: () => !!countryWithCurrency,
   };
 }
 
 /**
- * Specialized hook for quote display
- * Handles the business logic for displaying quotes in customer's preferred currency
+ * Simplified hook for quote display
+ * Uses quote's stored currency and exchange rate
  */
 export function useQuoteCurrency(quote?: {
-  origin_country?: string;
-  destination_country?: string;
   destination_currency?: string;
   exchange_rate?: number;
 }) {
   const destinationCurrency = quote?.destination_currency || 'USD';
-  const originCountry = quote?.origin_country;
-  const destinationCountry = quote?.destination_country;
-
-  const currency = useCurrency(destinationCurrency, originCountry, destinationCountry);
+  const currency = useCurrency(destinationCurrency);
 
   // Use the quote's stored exchange rate if available, otherwise use calculated rate
   const finalExchangeRate = quote?.exchange_rate || currency.exchangeRate;
@@ -147,15 +114,11 @@ export function useQuoteCurrency(quote?: {
 }
 
 /**
- * Hook for dual currency display (admin views)
+ * Simplified hook for dual currency display (admin views)
  * Shows both USD and local currency
  */
-export function useDualCurrency(
-  currencyCode: string = 'USD',
-  originCountry?: string,
-  destinationCountry?: string,
-) {
-  const localCurrency = useCurrency(currencyCode, originCountry, destinationCountry);
+export function useDualCurrency(currencyCode: string = 'USD') {
+  const localCurrency = useCurrency(currencyCode);
   const usdCurrency = useCurrency('USD');
 
   const formatDualAmount = useMemo(() => {

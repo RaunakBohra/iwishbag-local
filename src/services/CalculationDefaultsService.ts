@@ -5,7 +5,7 @@
 // ============================================================================
 
 import type { UnifiedQuote, ShippingOption } from '@/types/unified-quote';
-import { optimizedCurrencyService } from '@/services/OptimizedCurrencyService';
+import { currencyService } from '@/services/CurrencyService';
 
 interface HandlingChargeConfig {
   base_fee: number;
@@ -156,8 +156,8 @@ export class CalculationDefaultsService {
     originCountry: string = 'US',
   ): string {
     // Get currency symbol for origin country (amounts are calculated in origin currency)
-    const countryCurrency = optimizedCurrencyService.getCurrencyForCountrySync(originCountry);
-    const currencySymbol = optimizedCurrencyService.getCurrencySymbol(countryCurrency);
+    const countryCurrency = currencyService.getCurrencyForCountrySync(originCountry);
+    const currencySymbol = currencyService.getCurrencySymbol(countryCurrency);
 
     if (!selectedOption) return `Default ${type}: ${currencySymbol}${amount.toFixed(2)}`;
 

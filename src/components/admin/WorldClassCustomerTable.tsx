@@ -271,7 +271,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         else fieldValue = 'inactive';
         break;
       case 'location':
-        fieldValue = customer.user_addresses[0]?.country || '';
+        fieldValue = customer.delivery_addresses[0]?.country || '';
         break;
       case 'joinDate':
         const daysSinceJoin = Math.ceil(
@@ -340,7 +340,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         !searchQuery ||
         customer.full_name?.toLowerCase().includes(searchLower) ||
         customer.email.toLowerCase().includes(searchLower) ||
-        customer.user_addresses.some(
+        customer.delivery_addresses.some(
           (addr) =>
             addr.city?.toLowerCase().includes(searchLower) ||
             addr.country?.toLowerCase().includes(searchLower),
@@ -368,8 +368,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
           bValue = b.email;
           break;
         case 'location':
-          aValue = a.user_addresses[0]?.country || '';
-          bValue = b.user_addresses[0]?.country || '';
+          aValue = a.delivery_addresses[0]?.country || '';
+          bValue = b.delivery_addresses[0]?.country || '';
           break;
         case 'joinDate':
           aValue = new Date(a.created_at).getTime();
@@ -645,7 +645,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               const healthIndicator = getHealthIndicator(healthScore);
               const status = getCustomerStatus(customer);
               const isSelected = selectedCustomers.includes(customer.id);
-              const primaryAddress = customer.user_addresses?.[0];
+              const primaryAddress = customer.delivery_addresses?.[0];
 
               return (
                 <TableRow

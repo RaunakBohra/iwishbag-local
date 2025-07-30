@@ -10,8 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
 import * as Sentry from '@sentry/react';
 import { unifiedUserContextService, type UnifiedUserProfile } from '@/services/UnifiedUserContextService';
-import { notificationService } from '@/services/NotificationService';
-import { userActivityService } from '@/services/UserActivityService';
 
 // ============================================================================
 // ENHANCED SUPPORT TYPES
@@ -164,7 +162,7 @@ class EnhancedSupportService {
           subject,
           description,
           context: ticketContext,
-          tags: this.generateTags(category, userContext, ticketContext),
+          tags: this.generateTags(category, userContext, ticketContext)
         })
         .select()
         .single();
@@ -178,23 +176,8 @@ class EnhancedSupportService {
       );
 
       // Notify user
-      await notificationService.createNotification(
-        userId,
-        'support_ticket_created',
-        `Your support ticket "${subject}" has been created and will be reviewed soon.`,
-        {
-          ticket_id: ticket.id,
-          action_url: `/support/tickets/${ticket.id}`,
-          action_label: 'View Ticket',
-        }
-      );
-
-      // Track activity
-      await userActivityService.trackActivity('support:request', {
-        ticket_id: ticket.id,
-        category,
-        priority,
-      });
+      await notificationService.create
+      // Activity tracking removed
 
       // Auto-assign if applicable
       await this.attemptAutoAssignment(ticket);
@@ -204,7 +187,7 @@ class EnhancedSupportService {
         user_id: userId,
         category,
         priority,
-        context_summary: this.getContextSummary(ticketContext),
+        context_summary: this.getContextSummary(ticketContext)
       });
 
       return ticket;
@@ -226,7 +209,7 @@ class EnhancedSupportService {
       const [quoteData, packageData, orderData] = await Promise.all([
         relatedEntityIds.quote_id ? this.getQuoteContext(relatedEntityIds.quote_id) : null,
         relatedEntityIds.package_id ? this.getPackageContext(relatedEntityIds.package_id) : null,
-        relatedEntityIds.order_id ? this.getOrderContext(relatedEntityIds.order_id) : null,
+        relatedEntityIds.order_id ? this.getOrderContext(relatedEntityIds.order_id) : null
       ]);
 
       // Find related tickets
@@ -263,7 +246,7 @@ class EnhancedSupportService {
 
         // Previous interactions
         related_tickets: relatedTickets?.map(t => t.id) || [],
-        escalation_history: [],
+        escalation_history: []
       };
     } catch (error) {
       logger.error('Failed to build ticket context', { error, userContext: userContext.id });
@@ -274,7 +257,7 @@ class EnhancedSupportService {
         last_order_date: userContext.customer_data.last_order_date,
         affected_services: [],
         related_tickets: [],
-        escalation_history: [],
+        escalation_history: []
       };
     }
   }
@@ -396,7 +379,7 @@ class EnhancedSupportService {
           sender_type: senderType,
           message,
           attachments,
-          is_internal: isInternal,
+          is_internal: isInternal
         })
         .select()
         .single();
@@ -440,7 +423,7 @@ class EnhancedSupportService {
     try {
       const updates: any = {
         status,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       if (status === 'resolved' && agentId) {
@@ -490,7 +473,7 @@ class EnhancedSupportService {
           .update({
             assigned_agent_id: selectedAgent.id,
             assigned_at: new Date().toISOString(),
-            status: 'in_progress',
+            status: 'in_progress'
           })
           .eq('id', ticket.id);
 
@@ -524,31 +507,11 @@ class EnhancedSupportService {
 
       // Notify customer if agent replied
       if (senderType === 'agent') {
-        await notificationService.createNotification(
-          ticket.user_id,
-          'support_reply',
-          `New reply on your support ticket: "${ticket.subject}"`,
-          {
-            ticket_id: ticketId,
-            action_url: `/support/tickets/${ticketId}`,
-            action_label: 'View Reply',
-          }
-        );
-      }
+        await notificationService.create      }
 
       // Notify agent if customer replied
       if (senderType === 'customer' && ticket.assigned_agent_id) {
-        await notificationService.createNotification(
-          ticket.assigned_agent_id,
-          'support_customer_reply',
-          `Customer replied to ticket: "${ticket.subject}"`,
-          {
-            ticket_id: ticketId,
-            action_url: `/admin/support/tickets/${ticketId}`,
-            action_label: 'View Ticket',
-          }
-        );
-      }
+        await notificationService.create      }
     } catch (error) {
       logger.error('Failed to notify ticket update', { ticketId, error });
     }
@@ -562,7 +525,7 @@ class EnhancedSupportService {
     const screen = window.screen;
     const viewport = {
       width: window.innerWidth,
-      height: window.innerHeight,
+      height: window.innerHeight
     };
     
     return `Screen: ${screen.width}x${screen.height}, Viewport: ${viewport.width}x${viewport.height}`;
@@ -583,7 +546,7 @@ class EnhancedSupportService {
     const transaction = typeof Sentry?.startTransaction === 'function'
       ? Sentry.startTransaction({
           name: `EnhancedSupportService.${operation}`,
-          op: 'support_operation',
+          op: 'support_operation'
         })
       : null;
 
@@ -591,16 +554,16 @@ class EnhancedSupportService {
       Sentry.captureException(error, {
         tags: {
           service: 'EnhancedSupportService',
-          operation,
+          operation
         },
-        extra: context,
+        extra: context
       });
       transaction.finish();
     }
 
     logger.error(`EnhancedSupportService.${operation} failed`, {
       error: error.message,
-      context,
+      context
     });
   }
 
@@ -692,51 +655,51 @@ class EnhancedSupportService {
           message: "Thank you for your quote inquiry. I've reviewed your request and will provide you with detailed information about the pricing and timeline.",
           suggested_actions: ['Review quote details', 'Check shipping options', 'Verify items list'],
           requires_escalation: false,
-          estimated_resolution_time: '2-4 hours',
+          estimated_resolution_time: '2-4 hours'
         },
         package_issue: {
           message: "I understand your concern about your package. Let me check the current status and tracking information to provide you with an update.",
           suggested_actions: ['Check package status', 'Verify tracking info', 'Contact warehouse'],
           requires_escalation: false,
-          estimated_resolution_time: '1-2 hours',
+          estimated_resolution_time: '1-2 hours'
         },
         payment_problem: {
           message: "I apologize for the payment issue you're experiencing. Let me review your transaction and work on resolving this immediately.",
           suggested_actions: ['Check payment status', 'Verify billing info', 'Process refund if needed'],
           requires_escalation: ticket.context.lifetime_value > 5000,
-          estimated_resolution_time: '30 minutes - 2 hours',
+          estimated_resolution_time: '30 minutes - 2 hours'
         },
         // Add other categories...
         shipping_question: {
           message: "I'll help you with your shipping question. Let me check the available options and provide recommendations based on your needs.",
           suggested_actions: ['Review shipping options', 'Calculate costs', 'Check delivery times'],
           requires_escalation: false,
-          estimated_resolution_time: '1-3 hours',
+          estimated_resolution_time: '1-3 hours'
         },
         account_access: {
           message: "I'll help you regain access to your account. For security purposes, I'll need to verify your identity first.",
           suggested_actions: ['Verify identity', 'Reset password', 'Check account status'],
           requires_escalation: false,
-          estimated_resolution_time: '15-30 minutes',
+          estimated_resolution_time: '15-30 minutes'
         },
         technical_issue: {
           message: "Thank you for reporting this technical issue. I'll investigate the problem and provide you with a solution or workaround.",
           suggested_actions: ['Check system status', 'Review error logs', 'Test functionality'],
           requires_escalation: false,
-          estimated_resolution_time: '1-4 hours',
+          estimated_resolution_time: '1-4 hours'
         },
         billing_dispute: {
           message: "I understand your billing concern and will review your account charges carefully to resolve this matter.",
           suggested_actions: ['Review billing history', 'Check transaction details', 'Process adjustments'],
           requires_escalation: true,
-          estimated_resolution_time: '2-24 hours',
+          estimated_resolution_time: '2-24 hours'
         },
         general_inquiry: {
           message: "Thank you for contacting us. I'm here to help with any questions you may have about our services.",
           suggested_actions: ['Provide information', 'Direct to resources', 'Follow up if needed'],
           requires_escalation: false,
-          estimated_resolution_time: '30 minutes - 2 hours',
-        },
+          estimated_resolution_time: '30 minutes - 2 hours'
+        }
       };
 
       return suggestions[ticket.category];
@@ -763,5 +726,5 @@ export type {
   SupportTicketStatus,
   SupportTicketCategory,
   AgentResponse,
-  EscalationEvent,
+  EscalationEvent
 };
