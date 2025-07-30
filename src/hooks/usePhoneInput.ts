@@ -45,8 +45,19 @@ export function usePhoneInput({
     
     const validation = validatePhoneForCountry(digits, country);
     setIsValid(validation.isValid);
-    setError(validation.error || '');
     
+    // Only show error if user has touched the field and stopped typing
+    // or if the error is important (too long, format error)
+    const shouldShowError = isTouched && validation.error && (
+      validation.error.includes('too long') ||
+      validation.error.includes('format') ||
+      validation.error.includes('match') ||
+      validation.error.includes('valid phone number')
+    );
+    
+    setError(shouldShowError ? validation.error : '');
+    
+    // Always report the full validation state to parent
     onValidationChange?.(validation.isValid, validation.error);
   }, [isTouched, onValidationChange]);
   

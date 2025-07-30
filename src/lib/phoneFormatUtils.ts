@@ -240,7 +240,84 @@ export function createCompletePhoneNumber(countryCode: string, digits: string): 
 }
 
 /**
- * Validate phone number for specific country
+ * Get expected phone number length for country
+ */
+function getExpectedPhoneLength(countryCode: string): { min: number; max: number } {
+  // Country-specific phone number lengths (national number without country code)
+  const lengths: Record<string, { min: number; max: number }> = {
+    US: { min: 10, max: 10 },
+    CA: { min: 10, max: 10 },
+    GB: { min: 10, max: 11 },
+    IN: { min: 10, max: 10 },
+    AU: { min: 9, max: 9 },
+    NZ: { min: 8, max: 9 },
+    DE: { min: 10, max: 12 },
+    FR: { min: 10, max: 10 },
+    IT: { min: 10, max: 11 },
+    ES: { min: 9, max: 9 },
+    JP: { min: 10, max: 11 },
+    CN: { min: 11, max: 11 },
+    KR: { min: 10, max: 11 },
+    SG: { min: 8, max: 8 },
+    MY: { min: 9, max: 10 },
+    TH: { min: 9, max: 9 },
+    ID: { min: 10, max: 12 },
+    PH: { min: 10, max: 10 },
+    VN: { min: 9, max: 10 },
+    BD: { min: 10, max: 10 },
+    LK: { min: 9, max: 9 },
+    PK: { min: 10, max: 11 },
+    AE: { min: 9, max: 9 },
+    SA: { min: 9, max: 9 },
+    BR: { min: 10, max: 11 },
+    MX: { min: 10, max: 10 },
+    AR: { min: 10, max: 10 },
+    CL: { min: 9, max: 9 },
+    CO: { min: 10, max: 10 },
+    PE: { min: 9, max: 9 },
+    ZA: { min: 9, max: 9 },
+    NG: { min: 10, max: 11 },
+    EG: { min: 10, max: 11 },
+    KE: { min: 9, max: 9 },
+    IL: { min: 9, max: 9 },
+    TR: { min: 10, max: 10 },
+    RU: { min: 10, max: 10 },
+    UA: { min: 9, max: 9 },
+    PL: { min: 9, max: 9 },
+    NL: { min: 9, max: 9 },
+    BE: { min: 9, max: 9 },
+    CH: { min: 9, max: 9 },
+    AT: { min: 10, max: 11 },
+    SE: { min: 9, max: 9 },
+    NO: { min: 8, max: 8 },
+    DK: { min: 8, max: 8 },
+    FI: { min: 9, max: 10 },
+    PT: { min: 9, max: 9 },
+    GR: { min: 10, max: 10 },
+    CZ: { min: 9, max: 9 },
+    HU: { min: 9, max: 9 },
+    RO: { min: 9, max: 9 },
+    BG: { min: 8, max: 9 },
+    HR: { min: 8, max: 9 },
+    RS: { min: 8, max: 9 },
+    SK: { min: 9, max: 9 },
+    SI: { min: 8, max: 8 },
+    LT: { min: 8, max: 8 },
+    LV: { min: 8, max: 8 },
+    EE: { min: 7, max: 8 },
+    IS: { min: 7, max: 7 },
+    IE: { min: 9, max: 9 },
+    LU: { min: 9, max: 9 },
+    MT: { min: 8, max: 8 },
+    CY: { min: 8, max: 8 },
+    NP: { min: 10, max: 10 }, // Nepal: 10 digits
+  };
+  
+  return lengths[countryCode] || { min: 7, max: 15 }; // Default fallback
+}
+
+/**
+ * Validate phone number for specific country with progressive validation
  */
 export function validatePhoneForCountry(digits: string, countryCode: string): {
   isValid: boolean;
@@ -250,6 +327,32 @@ export function validatePhoneForCountry(digits: string, countryCode: string): {
     return { isValid: false, error: 'Phone number is required' };
   }
   
+  const expectedLength = getExpectedPhoneLength(countryCode);
+  const currentLength = digits.length;
+  
+  // Progressive validation based on length
+  if (currentLength < expectedLength.min) {
+    // Number is too short - don't show error until user stops typing
+    if (currentLength < 3) {
+      return { isValid: false }; // No error for very short numbers
+    }
+    
+    // Show helpful message for partially entered numbers
+    const remaining = expectedLength.min - currentLength;
+    return { 
+      isValid: false, 
+      error: `Enter ${remaining} more digit${remaining === 1 ? '' : 's'} for ${countryCode}` 
+    };
+  }
+  
+  if (currentLength > expectedLength.max) {
+    return { 
+      isValid: false, 
+      error: `Phone number is too long for ${countryCode}` 
+    };
+  }
+  
+  // Use libphonenumber for final validation
   try {
     const fullNumber = createCompletePhoneNumber(countryCode, digits);
     const parsed = parsePhoneNumber(fullNumber);
@@ -259,10 +362,16 @@ export function validatePhoneForCountry(digits: string, countryCode: string): {
     }
     
     if (!parsed.isValid()) {
-      return { 
-        isValid: false, 
-        error: `Please enter a valid phone number for ${countryCode}` 
-      };
+      // Check if it's just incomplete vs actually invalid
+      if (currentLength === expectedLength.min || currentLength === expectedLength.max) {
+        return { 
+          isValid: false, 
+          error: `Please enter a valid phone number for ${countryCode}` 
+        };
+      } else {
+        // Still being typed, don't show harsh error
+        return { isValid: false };
+      }
     }
     
     if (parsed.country !== countryCode) {
@@ -274,6 +383,11 @@ export function validatePhoneForCountry(digits: string, countryCode: string): {
     
     return { isValid: true };
   } catch (error) {
+    // If libphonenumber fails but length is correct, might still be valid
+    if (currentLength >= expectedLength.min && currentLength <= expectedLength.max) {
+      return { isValid: false }; // Don't show error, might still be typing
+    }
+    
     return { 
       isValid: false, 
       error: 'Invalid phone number format' 

@@ -48,6 +48,7 @@ export const useCustomerManagementFixed = () => {
         const { data: profiles, error: profilesError } = await supabase.from('profiles').select(`
             id, 
             full_name, 
+            avatar_url,
             cod_enabled, 
             internal_notes, 
             created_at,
@@ -137,7 +138,7 @@ export const useCustomerManagementFixed = () => {
               authUser?.email ||
               `${profile.full_name?.toLowerCase().replace(/\s+/g, '.') || 'customer'}@example.com`,
             role: authUser?.role || 'customer',
-            avatar_url: authUser?.avatar_url,
+            avatar_url: profile.avatar_url || authUser?.avatar_url,
             phone: authUser?.phone,
             last_sign_in_at: authUser?.last_sign_in_at,
             quote_count: quoteCount,

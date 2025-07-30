@@ -751,6 +751,8 @@ export const CustomerProfile: React.FC = () => {
                         src={getCustomerAvatarUrl()!}
                         alt={customerDisplayData?.name || customer.email}
                         className="object-cover"
+                        crossOrigin="anonymous"
+                        referrerPolicy="no-referrer"
                       />
                     )}
                     <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">

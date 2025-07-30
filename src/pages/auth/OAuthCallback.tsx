@@ -74,6 +74,22 @@ const OAuthCallback = () => {
             created_at: user.created_at,
           });
 
+          // Ensure profile is synced with OAuth data including avatar_url
+          try {
+            const { error: syncError } = await supabase.rpc('ensure_user_profile_with_oauth', {
+              _user_id: user.id,
+              _user_metadata: user.user_metadata || {}
+            });
+
+            if (syncError) {
+              console.warn('🔄 [OAuthCallback] Profile sync error:', syncError);
+            } else {
+              console.log('✅ [OAuthCallback] Profile synced successfully with OAuth data');
+            }
+          } catch (syncError) {
+            console.warn('🔄 [OAuthCallback] Profile sync failed:', syncError);
+          }
+
           // Provide provider-specific welcome messages
           if (provider === 'google') {
             if (user.phone) {

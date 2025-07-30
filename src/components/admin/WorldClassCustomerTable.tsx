@@ -666,6 +666,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                             src={getCustomerAvatarUrl(customer)!}
                             alt={getAdminCustomerDisplayData(customer).name}
                             className="object-cover"
+                            crossOrigin="anonymous"
+                            referrerPolicy="no-referrer"
                           />
                         )}
                         <AvatarFallback className="bg-gray-100 text-gray-600 text-xs font-medium">
