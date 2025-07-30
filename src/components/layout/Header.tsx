@@ -35,12 +35,14 @@ import { useSidebar } from '@/hooks/use-sidebar';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
 import { cn } from '@/lib/design-system';
+import { useToast } from '@/hooks/use-toast';
 
 const Header = () => {
   const { user, signOut, isAnonymous } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
+  const { toast } = useToast();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const { itemCount: cartItemCount } = useCart();
@@ -100,8 +102,31 @@ const Header = () => {
   });
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+      
+      // Show success message
+      toast({
+        title: 'Signed out successfully',
+        description: 'You have been logged out. Come back soon!',
+        duration: 4000,
+      });
+      
+      // Navigate to home with sign-out message
+      navigate('/', { 
+        state: { 
+          message: 'You have been signed out successfully. Sign in again to continue shopping.' 
+        } 
+      });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: 'Sign out failed',
+        description: 'There was an issue signing you out. Please try again.',
+        variant: 'destructive',
+        duration: 5000,
+      });
+    }
   };
 
   const getDisplayName = () => {

@@ -406,23 +406,9 @@ class UnifiedSupportEngine {
 
       let query = supabase
         .from('support_system')
-        .select(
-          `
-          *,
-          quote:quotes(
-            id,
-            display_id,
-            destination_country,
-            status,
-            final_total_usd,
-            iwish_tracking_id,
-            tracking_status,
-            estimated_delivery_date,
-            items,
-            customer_data
-          )
-        `,
-        )
+        .select(`
+          *
+        `)
         .eq('system_type', 'ticket')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -434,31 +420,22 @@ class UnifiedSupportEngine {
 
       // Apply status filter
       if (filters.status && filters.status.length > 0) {
-        const statusConditions = filters.status
-          .map((status) => `ticket_data->>'status' = '${status}'`)
-          .join(' OR ');
-        query = query.or(statusConditions);
+        query = query.in('ticket_data->>status', filters.status);
       }
 
       // Apply priority filter
       if (filters.priority && filters.priority.length > 0) {
-        const priorityConditions = filters.priority
-          .map((priority) => `ticket_data->>'priority' = '${priority}'`)
-          .join(' OR ');
-        query = query.or(priorityConditions);
+        query = query.in('ticket_data->>priority', filters.priority);
       }
 
       // Apply category filter
       if (filters.category && filters.category.length > 0) {
-        const categoryConditions = filters.category
-          .map((category) => `ticket_data->>'category' = '${category}'`)
-          .join(' OR ');
-        query = query.or(categoryConditions);
+        query = query.in('ticket_data->>category', filters.category);
       }
 
       // Apply assigned_to filter
       if (filters.assigned_to) {
-        query = query.eq('ticket_data->assigned_to', filters.assigned_to);
+        query = query.eq('ticket_data->>assigned_to', filters.assigned_to);
       }
 
       // Apply date range filter
@@ -472,6 +449,7 @@ class UnifiedSupportEngine {
 
       if (error) {
         console.error('❌ Error fetching tickets:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         return [];
       }
 

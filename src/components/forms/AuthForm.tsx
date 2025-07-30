@@ -24,7 +24,9 @@ import {
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 // Removed unused cn import
-import { Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Mail, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
+import { useAllCountries } from '@/hooks/useAllCountries';
 // import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm'; // Component removed
 // Removed unused useEmailNotifications import
 
@@ -36,9 +38,11 @@ const signInSchema = z.object({
 const signUpSchema = z.object({
   name: z.string().min(1, { message: 'Name is required.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  phone: z.string().min(8, {
-    message: 'Please enter a valid phone number (minimum 8 digits).',
-  }),
+  phone: z.string()
+    .min(1, { message: 'Phone number is required.' })
+    .regex(/^\+[1-9]\d{6,14}$/, { 
+      message: 'Please enter a valid phone number with country code.' 
+    }),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
@@ -79,6 +83,7 @@ interface AuthFormProps {
 const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { data: countries = [] } = useAllCountries();
   const [showSignUp, setShowSignUp] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
@@ -222,16 +227,35 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
     setLoading(true);
 
     try {
-      // Sign up user with Supabase (email confirmation disabled)
+      // Sign up user with Supabase
+      console.log('🔵 Signing up user with data:', {
+        email: values.email,
+        phone: values.phone,
+        name: values.name,
+      });
+      
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
-        phone: values.phone, // Save phone directly to auth.users.phone
+        phone: values.phone, // Now in E.164 format from WorldClassPhoneInput
         options: {
-          data: { name: values.name },
+          data: { 
+            name: values.name,
+            full_name: values.name, // Also save as full_name for compatibility
+            phone: values.phone, // Also backup in metadata
+          },
           emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
+      
+      console.log('🔵 Signup response:', { data, error });
+      
+      if (data?.user) {
+        console.log('✅ User created successfully');
+        console.log('🔍 User metadata:', data.user.user_metadata);
+        console.log('🔍 User phone:', data.user.phone);
+        console.log('🔍 User email:', data.user.email);
+      }
 
       if (error) {
         console.error('Sign up error details:', {
@@ -248,85 +272,16 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
         return;
       }
 
-      // In local development, send welcome email manually (since confirmations are disabled)
-      // In production, Supabase handles this automatically
-      const isLocal =
-        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-      if (isLocal && data.user) {
-        console.log('🔵 Sending welcome email for local development...');
-
-        try {
-          const { error: emailError } = await supabase.functions.invoke('send-email', {
-            body: {
-              to: values.email,
-              subject: 'Welcome to iWishBag!',
-              html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to iWishBag!</h1>
-                    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Shop The World, Delivered To You</p>
-                  </div>
-                  
-                  <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    <h2 style="color: #333; margin-bottom: 20px;">Hi ${values.name}! 🎉</h2>
-                    
-                    <p style="color: #666; line-height: 1.6; margin-bottom: 25px;">
-                      Thank you for joining iWishBag! Your account has been created and you can start shopping immediately.
-                    </p>
-                    
-                    <div style="text-align: center; margin: 30px 0;">
-                      <a href="${window.location.origin}/dashboard" 
-                         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: 600;">
-                        Start Shopping
-                      </a>
-                    </div>
-                    
-                    <div style="background: #f8fafc; padding: 20px; border-radius: 6px; margin: 20px 0;">
-                      <h3 style="margin-top: 0; color: #333;">🌟 What you can do with iWishBag:</h3>
-                      <ul style="color: #666; padding-left: 20px;">
-                        <li>Shop from Amazon, eBay, Flipkart, Alibaba and more</li>
-                        <li>Get instant shipping quotes to India & Nepal</li>
-                        <li>Track your orders in real-time</li>
-                        <li>Secure international payment processing</li>
-                      </ul>
-                    </div>
-                    
-                    <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
-                      Welcome to iWishBag - Happy Shopping!
-                    </p>
-                  </div>
-                </div>
-              `,
-              from: 'iWishBag <noreply@whyteclub.com>',
-            },
-          });
-
-          if (emailError) {
-            console.error('Welcome email sending error:', emailError);
-          } else {
-            console.log('✅ Welcome email sent successfully');
-          }
-        } catch (err) {
-          console.error('Welcome email error:', err);
-        }
-
-        toast({
-          title: 'Welcome to iWishBag!',
-          description:
-            'Your account has been created successfully! Check your email for a welcome message.',
-          variant: 'default',
-          duration: 8000,
-        });
-      } else {
-        toast({
-          title: 'Welcome to iWishBag!',
-          description:
-            "Please check your email to confirm your account. You'll be able to sign in after email verification.",
-          variant: 'default',
-          duration: 8000,
-        });
-      }
+      // Supabase will automatically send confirmation email using our template
+      // Both in local development and production
+      console.log('📧 Confirmation email will be sent by Supabase automatically');
+      
+      toast({
+        title: 'Welcome to iWishBag!',
+        description: 'Please check your email to confirm your account and start shopping!',
+        variant: 'default',
+        duration: 8000,
+      });
 
       setShowSignUp(false);
     } catch (err) {
@@ -528,19 +483,49 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
           <FormField
             control={signInForm.control}
             name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs sm:text-sm lg:text-base">Email</FormLabel>
-                <FormControl>
-                  <Input
-                    type="email"
-                    {...field}
-                    className="h-10 sm:h-11 lg:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field, fieldState }) => {
+              const email = field.value || '';
+              const isValidEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+              const isTouched = fieldState.isTouched;
+              const hasError = fieldState.error;
+              
+              const showSuccess = isTouched && isValidEmail && !hasError;
+              const showError = isTouched && (hasError || (email && !isValidEmail));
+              
+              return (
+                <FormItem>
+                  <FormLabel className="text-xs sm:text-sm lg:text-base">Email</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type="email"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          console.log('📧 Sign-in email changed:', e.target.value);
+                        }}
+                        className={`h-10 sm:h-11 lg:h-12 px-3 sm:px-4 pr-10 text-sm sm:text-base rounded-lg transition-all duration-200 bg-white text-gray-900 placeholder:text-gray-500 ${
+                          showError 
+                            ? 'border-red-300 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500' 
+                            : showSuccess 
+                              ? 'border-green-300 ring-1 ring-green-200 focus:border-green-500 focus:ring-green-500'
+                              : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1'
+                        }`}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {showSuccess && (
+                          <Check className="h-4 w-4 text-green-500" />
+                        )}
+                        {showError && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
           <FormField
             control={signInForm.control}
@@ -673,35 +658,103 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
               <FormField
                 control={signUpForm.control}
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field, fieldState }) => {
+                  const name = field.value || '';
+                  const isValidName = name && name.trim().length >= 1;
+                  const isTouched = fieldState.isTouched;
+                  const hasError = fieldState.error;
+                  
+                  const showSuccess = isTouched && isValidName && !hasError;
+                  const showError = isTouched && (hasError || (name && !isValidName));
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              console.log('👤 Name changed:', e.target.value);
+                              console.log('👤 Name validation:', {
+                                isValid: e.target.value.trim().length >= 1,
+                                value: e.target.value
+                              });
+                            }}
+                            className={`h-11 px-4 pr-10 rounded-lg transition-all duration-200 bg-white text-gray-900 placeholder:text-gray-500 ${
+                              showError 
+                                ? 'border-red-300 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500' 
+                                : showSuccess 
+                                  ? 'border-green-300 ring-1 ring-green-200 focus:border-green-500 focus:ring-green-500'
+                                  : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1'
+                            }`}
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {showSuccess && (
+                              <Check className="h-4 w-4 text-green-500" />
+                            )}
+                            {showError && (
+                              <AlertCircle className="h-4 w-4 text-red-500" />
+                            )}
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={signUpForm.control}
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        {...field}
-                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field, fieldState }) => {
+                  const email = field.value || '';
+                  const isValidEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                  const isTouched = fieldState.isTouched;
+                  const hasError = fieldState.error;
+                  
+                  const showSuccess = isTouched && isValidEmail && !hasError;
+                  const showError = isTouched && (hasError || (email && !isValidEmail));
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="email"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              console.log('📧 Email changed:', e.target.value);
+                              console.log('📧 Email validation:', {
+                                isValid: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.target.value),
+                                value: e.target.value
+                              });
+                            }}
+                            className={`h-11 px-4 pr-10 rounded-lg transition-all duration-200 bg-white text-gray-900 placeholder:text-gray-500 ${
+                              showError 
+                                ? 'border-red-300 ring-1 ring-red-200 focus:border-red-500 focus:ring-red-500' 
+                                : showSuccess 
+                                  ? 'border-green-300 ring-1 ring-green-200 focus:border-green-500 focus:ring-green-500'
+                                  : 'border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1'
+                            }`}
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {showSuccess && (
+                              <Check className="h-4 w-4 text-green-500" />
+                            )}
+                            {showError && (
+                              <AlertCircle className="h-4 w-4 text-red-500" />
+                            )}
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={signUpForm.control}
@@ -710,10 +763,19 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
-                        {...field}
-                        className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                      <WorldClassPhoneInput
+                        countries={countries}
+                        value={field.value}
+                        onChange={(value) => {
+                          console.log('📱 Phone number changed:', value);
+                          field.onChange(value);
+                        }}
+                        onValidationChange={(isValid, error) => {
+                          console.log('📱 Phone validation:', { isValid, error });
+                        }}
+                        initialCountry="US"
+                        required
+                        className="w-full"
                       />
                     </FormControl>
                     <FormMessage />

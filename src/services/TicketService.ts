@@ -365,9 +365,58 @@ class TicketService {
         return [];
       }
 
-      // Transform to legacy format (simplified - would need additional queries for full details)
-      const tickets = supportRecords.map((record) =>
-        this.transformToLegacyTicketWithDetails(record),
+      // Transform to legacy format with user profiles and quotes
+      const tickets = await Promise.all(
+        supportRecords.map(async (record) => {
+          const baseTicket = this.transformToLegacyTicketWithDetails(record);
+          
+          // Fetch user profile separately
+          if (record.user_id) {
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, full_name, email')
+                .eq('id', record.user_id)
+                .single();
+              
+              if (profile) {
+                baseTicket.user_profile = profile;
+              }
+            } catch (error) {
+              console.warn('Failed to fetch user profile for ticket:', record.id);
+            }
+          }
+          
+          // Fetch quote separately if it exists
+          if (record.quote_id) {
+            try {
+              const { data: quote } = await supabase
+                .from('quotes')
+                .select(`
+                  id,
+                  display_id,
+                  destination_country,
+                  status,
+                  final_total_usd,
+                  iwish_tracking_id,
+                  tracking_status,
+                  estimated_delivery_date,
+                  items,
+                  customer_data
+                `)
+                .eq('id', record.quote_id)
+                .single();
+              
+              if (quote) {
+                baseTicket.quote = quote;
+              }
+            } catch (error) {
+              console.warn('Failed to fetch quote for ticket:', record.id);
+            }
+          }
+          
+          return baseTicket;
+        })
       );
 
       // Apply sorting if specified (simple implementation)

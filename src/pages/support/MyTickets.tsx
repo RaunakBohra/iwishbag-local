@@ -18,10 +18,7 @@ import {
   Inbox,
   Archive,
   AlertTriangle,
-  Zap,
-  Star,
-  Eye,
-  MoreHorizontal
+  Zap
 } from 'lucide-react';
 import { TicketDetailView } from '@/components/support/TicketDetailView';
 import { Button } from '@/components/ui/button';
@@ -187,26 +184,6 @@ const TicketCard = ({
   );
 };
 
-const QuickStatsCard = ({ icon: Icon, label, value, color }: {
-  icon: any;
-  label: string;
-  value: number;
-  color: string;
-}) => (
-  <Card className="overflow-hidden">
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{label}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
-        </div>
-        <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", color)}>
-          <Icon className="h-6 w-6" />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 const TicketSkeletons = () => (
   <div className="space-y-4">
@@ -301,13 +278,6 @@ export default function MyTicketsPage() {
     return true;
   });
 
-  // Stats
-  const stats = {
-    total: tickets.length,
-    active: tickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').length,
-    resolved: tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length,
-    urgent: tickets.filter(t => t.priority === 'urgent' && t.status !== 'resolved' && t.status !== 'closed').length,
-  };
 
   // If a ticket is selected, show the detail view
   if (selectedTicketId) {
@@ -411,35 +381,6 @@ export default function MyTicketsPage() {
           </CardContent>
         </Card>
 
-        {/* Enhanced Quick Stats */}
-        {tickets.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <QuickStatsCard
-              icon={Ticket}
-              label="Total Tickets"
-              value={stats.total}
-              color="bg-blue-100 text-blue-600"
-            />
-            <QuickStatsCard
-              icon={AlertCircle}
-              label="Active"
-              value={stats.active}
-              color="bg-orange-100 text-orange-600"
-            />
-            <QuickStatsCard
-              icon={CheckCircle}
-              label="Resolved"
-              value={stats.resolved}
-              color="bg-green-100 text-green-600"
-            />
-            <QuickStatsCard
-              icon={Zap}
-              label="Urgent"
-              value={stats.urgent}
-              color="bg-red-100 text-red-600"
-            />
-          </div>
-        )}
 
         {/* Enhanced Search and Filters */}
         <Card className="mb-8 shadow-sm">

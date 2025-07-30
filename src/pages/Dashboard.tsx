@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Package,
   ShoppingCart,
@@ -27,6 +27,7 @@ import { AnimatedSection } from '@/components/shared/AnimatedSection';
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { H1, H2, BodySmall, StatNumber, StatLabel } from '@/components/ui/typography';
 import { cn } from '@/lib/design-system';
 
@@ -37,6 +38,8 @@ const Dashboard = () => {
   const { trends, isLoading: trendsLoading } = useDashboardTrends();
   const { shouldShowOnboarding, isNewUser } = useUserOnboarding();
   const [showOnboarding, setShowOnboarding] = useState(shouldShowOnboarding);
+  const location = useLocation();
+  const message = location.state?.message;
 
   // Metrics
   const activeQuotes =
@@ -170,6 +173,13 @@ const Dashboard = () => {
             onDismiss={() => setShowOnboarding(false)}
             showDismiss={true}
           />
+        )}
+
+        {/* Sign-out Success Message */}
+        {message && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <AlertDescription className="text-blue-800">{message}</AlertDescription>
+          </Alert>
         )}
 
         {/* Welcome Header - Enhanced for returning users */}
