@@ -135,7 +135,12 @@ export const TicketDetailView = ({ ticketId, onBack }: TicketDetailViewProps) =>
 
   // Helper function to get status description
   const getStatusDescription = (status: TicketStatus) => {
-    return TICKET_STATUS_DESCRIPTIONS[status] || 'Unknown status';
+    const descriptions = TICKET_STATUS_DESCRIPTIONS[status];
+    if (!descriptions) return 'Unknown status';
+    
+    // Return appropriate description based on user type
+    // All authenticated users see admin descriptions (simplified access)
+    return user ? descriptions.admin : descriptions.customer;
   };
 
   // Helper function to get status label based on user type

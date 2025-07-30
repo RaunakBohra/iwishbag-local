@@ -73,9 +73,10 @@ const newPasswordSchema = z.object({
 
 interface AuthFormProps {
   onLogin?: (email: string, password: string) => Promise<void>;
+  onPasswordResetModeChange?: (allow: boolean) => void;
 }
 
-const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
+const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
@@ -87,6 +88,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   const [resetEmail, setResetEmail] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [verifiedOtp, setVerifiedOtp] = useState('');
+  const [inPasswordResetFlow, setInPasswordResetFlow] = useState(false);
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -357,13 +359,27 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           variant: 'destructive',
         });
       } else {
-        // OTP is valid, user is now logged in, but we want to show password form
-        // So we store the verified state and continue to password step
+        console.log('✅ OTP verified successfully');
+        // OTP is valid, user is now logged in with a session
+        // Store the verified state and continue to password step
+        // DON'T sign out - we need the session for password update
         setVerifiedOtp(values.otp);
         setOtpVerified(true);
+        setInPasswordResetFlow(true);
         
-        // Sign out the user so they stay in the reset flow
-        await supabase.auth.signOut();
+        // Tell Auth page to allow password reset (don't redirect)
+        onPasswordResetModeChange?.(true);
+        
+        // Clear the password form to prevent OTP from showing in password field
+        passwordForm.reset({ newPassword: '' });
+        
+        // Force clear with setTimeout to ensure it happens after state update
+        setTimeout(() => {
+          passwordForm.setValue('newPassword', '');
+          passwordForm.clearErrors('newPassword');
+        }, 50);
+        
+        console.log('🔄 State updated: otpVerified =', true);
         
         toast({
           title: 'Code verified!',
@@ -402,15 +418,20 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
       } else {
         toast({
           title: 'Password reset successful!',
-          description: 'You can now login with your new password.',
+          description: 'You are now logged in with your new password.',
           duration: 6000,
         });
         
-        // Reset all forms and close modal
+        // Reset all forms and close modal - user stays logged in
         setShowForgot(false);
         setResetEmailSent(false);
         setShowOtpForm(false);
         setOtpVerified(false);
+        setInPasswordResetFlow(false);
+        
+        // Tell Auth page password reset is complete (allow redirect now)
+        onPasswordResetModeChange?.(false);
+        
         forgotForm.reset();
         otpForm.reset();
         passwordForm.reset();
@@ -821,21 +842,52 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
       <Dialog
         open={showForgot}
         onOpenChange={(open) => {
-          setShowForgot(open);
-          if (!open) {
-            setResetEmailSent(false);
-            setShowOtpForm(false);
-            setOtpVerified(false);
-            setResetEmail('');
-            setVerifiedOtp('');
-            forgotForm.reset();
-            otpForm.reset();
-            passwordForm.reset();
-          }
+          // Only allow closing if open is false (X button clicked)
+          // Don't allow closing by clicking outside
+          if (!open) return;
         }}
+        modal={true}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-lg">
           <DialogHeader className="space-y-3 pb-6">
+            <button
+              onClick={() => {
+                setShowForgot(false);
+                setResetEmailSent(false);
+                setShowOtpForm(false);
+                setOtpVerified(false);
+                setResetEmail('');
+                setVerifiedOtp('');
+                setInPasswordResetFlow(false);
+                
+                // Tell Auth page password reset is cancelled (allow redirect)
+                onPasswordResetModeChange?.(false);
+                
+                forgotForm.reset();
+                otpForm.reset();
+                passwordForm.reset();
+              }}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              <span className="sr-only">Close</span>
+            </button>
             <DialogTitle className="text-gray-900 text-xl font-semibold text-center">
               {otpVerified ? 'Create new password' : showOtpForm ? 'Enter verification code' : resetEmailSent ? 'Check your email' : 'Reset your password'}
             </DialogTitle>
@@ -853,7 +905,8 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           {showOtpForm ? (
             otpVerified ? (
               // Password Reset Form
-              <Form {...passwordForm}>
+              console.log('🔹 Rendering password form') ||
+              <Form {...passwordForm} key="password-form">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -871,9 +924,10 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                         <FormControl>
                           <div className="relative">
                             <Input
-                              type={showPassword ? 'text' : 'password'}
                               {...field}
+                              type={showPassword ? 'text' : 'password'}
                               placeholder="Enter new password"
+                              autoComplete="new-password"
                               autoFocus
                               className="h-11 px-4 pr-10 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                               disabled={forgotLoading}
@@ -930,6 +984,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
               </Form>
             ) : (
               // OTP Verification Form
+              console.log('🔸 Rendering OTP form') ||
               <Form {...otpForm}>
                 <form
                   onSubmit={(e) => {
@@ -947,9 +1002,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                         <FormLabel>Verification Code</FormLabel>
                         <FormControl>
                           <Input
-                            name="otp"
-                            value={field.value || ''}
-                            key={`otp-input-${Date.now()}`}
+                            {...field}
                             type="text"
                             maxLength={6}
                             placeholder="000000"
@@ -960,13 +1013,9 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                             className="h-14 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-2 bg-white text-gray-900 placeholder:text-gray-400 text-center text-2xl font-mono tracking-[0.5em] font-semibold"
                             disabled={forgotLoading}
                             onChange={(e) => {
-                              // Only allow numbers and clear any existing value first
+                              // Only allow numbers
                               const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                               field.onChange(value);
-                            }}
-                            onFocus={(e) => {
-                              // Clear the field when focused
-                              e.target.select();
                             }}
                           />
                         </FormControl>

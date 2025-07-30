@@ -2,7 +2,7 @@ import AuthForm from '@/components/forms/AuthForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { PageTitle, Body } from '@/components/ui/typography';
 
@@ -10,15 +10,18 @@ const Auth = () => {
   const { session, isAnonymous } = useAuth();
   const location = useLocation();
   const message = location.state?.message;
+  const [allowPasswordReset, setAllowPasswordReset] = useState(false);
 
   // If user is already authenticated, redirect to home
+  // But don't redirect if they're in password reset flow
   useEffect(() => {
     if (session && !isAnonymous) {
       console.log('✅ [Auth Page] User already authenticated, redirecting...');
     }
   }, [session, isAnonymous]);
 
-  if (session && !isAnonymous) {
+  // Don't redirect if user just completed OTP verification and needs to set password
+  if (session && !isAnonymous && !allowPasswordReset) {
     return <Navigate to="/" replace />;
   }
 
@@ -74,7 +77,7 @@ const Auth = () => {
               </div>
 
               {/* Auth Form */}
-              <AuthForm />
+              <AuthForm onPasswordResetModeChange={setAllowPasswordReset} />
             </div>
 
             {/* Footer */}
