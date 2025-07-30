@@ -212,16 +212,16 @@ export function WorldClassPhoneInput({
         </div>
       )}
       
-      {/* Error Message */}
-      {showError && errorMessage && (
+      {/* Error Message - only show if external error is provided */}
+      {showError && errorMessage && externalError && (
         <div className="mt-1 flex items-center gap-1 text-sm text-red-600">
           <AlertCircle className="h-3 w-3" />
           <span>{errorMessage}</span>
         </div>
       )}
       
-      {/* Success Message */}
-      {showSuccess && (
+      {/* Success Message - only show if no external error handling */}
+      {showSuccess && !externalError && (
         <div className="mt-1 flex items-center gap-1 text-sm text-green-600">
           <Check className="h-3 w-3" />
           <span>Valid {currentCountry?.name} phone number</span>

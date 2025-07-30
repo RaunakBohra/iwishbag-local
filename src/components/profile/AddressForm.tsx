@@ -76,7 +76,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   
   // Custom validation states for real-time feedback
   const [phoneError, setPhoneError] = useState<string>('');
-  const [postalError, setPostalError] = useState<string>('');
 
 
   const { data: allCountries, isLoading: countriesLoading } = useQuery({
@@ -185,14 +184,11 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
 
   // Clear custom errors when country changes
   useEffect(() => {
-    setPostalError('');
-    
     // Re-validate existing values with new country
     const currentPostal = form.getValues('postal_code');
     
     if (currentPostal) {
       const postalErr = validatePostalCode(currentPostal);
-      setPostalError(postalErr);
       if (postalErr) {
         form.setError('postal_code', { message: postalErr });
       } else {
@@ -333,7 +329,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     let hasCustomErrors = false;
     if (postalError) {
       form.setError('postal_code', { message: postalError });
-      setPostalError(postalError);
       hasCustomErrors = true;
     }
     
@@ -627,7 +622,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                         
                         // Real-time validation
                         const error = validatePostalCode(e.target.value);
-                        setPostalError(error);
                         if (error) {
                           form.setError('postal_code', { message: error });
                         } else {
@@ -642,7 +636,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                             field.onChange(formatted);
                             // Re-validate after formatting
                             const error = validatePostalCode(formatted);
-                            setPostalError(error);
                             if (error) {
                               form.setError('postal_code', { message: error });
                             } else {
@@ -681,7 +674,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     }}
                     initialCountry={selectedCountry}
                     className="w-full"
-                    error={phoneError}
+                    // Don't pass error prop to avoid duplicate display
                   />
                 </FormControl>
                 <FormMessage />
@@ -722,8 +715,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             disabled={
               addressMutation.isPending || 
               Object.keys(form.formState.errors).length > 0 ||
-              phoneError !== '' ||
-              postalError !== ''
+              phoneError !== ''
             }
             className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-3 text-base rounded-lg shadow-sm border border-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >

@@ -136,12 +136,6 @@ const menuGroups = [
       },
     ],
   },
-  {
-    title: 'System',
-    items: [
-      // User Management and Email Templates removed
-    ],
-  },
 ];
 
 export const AdminSidebar = () => {
