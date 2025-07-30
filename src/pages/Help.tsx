@@ -501,6 +501,9 @@ const Help = () => {
               <Clock className="h-4 w-4" />
               <span>Support Hours: Monday - Friday, 10:00 AM - 5:00 PM IST</span>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Need help outside business hours? Browse our FAQ above or create a ticket for a response within 24-48 hours.
+            </p>
           </div>
         </div>
       </div>

@@ -356,7 +356,9 @@ export default function MyTicketsPage() {
                 "text-sm",
                 isCurrentlyBusinessHours ? "text-green-700" : "text-amber-700"
               )}>
-                {businessHoursService.getAutoResponseMessage()}
+                {isCurrentlyBusinessHours 
+                  ? "We typically respond to new tickets within 2-4 hours during business hours"
+                  : "We'll respond to new tickets by the next business day"}
               </p>
             </div>
           </div>
@@ -474,9 +476,12 @@ export default function MyTicketsPage() {
 
         {/* New Ticket Dialog */}
         <Dialog open={showNewTicketForm} onOpenChange={setShowNewTicketForm}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="create-ticket-description">
             <DialogHeader>
               <DialogTitle>Create Support Ticket</DialogTitle>
+              <p id="create-ticket-description" className="text-sm text-gray-600 mt-2">
+                Describe your issue and we'll get back to you within 24-48 hours
+              </p>
             </DialogHeader>
             <NewTicketForm
               onSuccess={handleTicketCreated}

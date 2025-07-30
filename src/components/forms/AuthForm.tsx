@@ -112,6 +112,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   const otpForm = useForm<z.infer<typeof otpVerifySchema>>({
     resolver: zodResolver(otpVerifySchema),
     defaultValues: { otp: '' },
+    mode: 'onChange',
   });
 
   const passwordForm = useForm<z.infer<typeof newPasswordSchema>>({
@@ -356,9 +357,14 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           variant: 'destructive',
         });
       } else {
-        // OTP is valid, proceed to password step
+        // OTP is valid, user is now logged in, but we want to show password form
+        // So we store the verified state and continue to password step
         setVerifiedOtp(values.otp);
         setOtpVerified(true);
+        
+        // Sign out the user so they stay in the reset flow
+        await supabase.auth.signOut();
+        
         toast({
           title: 'Code verified!',
           description: 'Now create your new password.',
@@ -461,10 +467,12 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
         setResetEmailSent(true);
         setResetEmail(values.email);
         // Reset forms before showing
-        otpForm.reset({ otp: '' });
-        passwordForm.reset({ newPassword: '' });
-        setOtpVerified(false);
-        setShowOtpForm(true);
+        setTimeout(() => {
+          otpForm.reset({ otp: '' });
+          passwordForm.reset({ newPassword: '' });
+          setOtpVerified(false);
+          setShowOtpForm(true);
+        }, 100);
         toast({
           title: 'Password reset email sent!',
           description:
@@ -939,21 +947,26 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                         <FormLabel>Verification Code</FormLabel>
                         <FormControl>
                           <Input
-                            {...field}
-                            key="otp-input"
+                            name="otp"
+                            value={field.value || ''}
+                            key={`otp-input-${Date.now()}`}
                             type="text"
                             maxLength={6}
                             placeholder="000000"
                             pattern="[0-9]{6}"
                             inputMode="numeric"
-                            autoComplete="one-time-code"
+                            autoComplete="off"
                             autoFocus
                             className="h-14 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-2 bg-white text-gray-900 placeholder:text-gray-400 text-center text-2xl font-mono tracking-[0.5em] font-semibold"
                             disabled={forgotLoading}
                             onChange={(e) => {
-                              // Only allow numbers
-                              const value = e.target.value.replace(/\D/g, '');
+                              // Only allow numbers and clear any existing value first
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                               field.onChange(value);
+                            }}
+                            onFocus={(e) => {
+                              // Clear the field when focused
+                              e.target.select();
                             }}
                           />
                         </FormControl>
