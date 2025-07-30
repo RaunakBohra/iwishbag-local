@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Your Email - iWishBag</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f7fafc; color: #1a202c;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f7fafc;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
+          
+          <!-- Header with gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #fb923c 100%); padding: 24px 30px; text-align: center;">
+              <!-- Logo -->
+              <img src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" alt="iWishBag" width="140" height="47" style="display: block; margin: 0 auto 12px; height: auto;">
+              
+              <!-- Title -->
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 600; line-height: 1.2;">
+                Welcome to iWishBag! 🎉
+              </h1>
+              <p style="margin: 6px 0 0; color: rgba(255, 255, 255, 0.95); font-size: 14px;">
+                Please confirm your email address
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Body content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <!-- Greeting -->
+              <p style="margin: 0 0 24px; font-size: 18px; color: #1a202c; font-weight: 600;">
+                Hi {{ .Email }}! 👋
+              </p>
+              
+              <p style="margin: 0 0 24px; font-size: 16px; color: #4a5568; line-height: 1.6;">
+                Thanks for signing up with iWishBag! We're excited to have you on board. To get started, please confirm your email address by clicking the button below:
+              </p>
+              
+              <!-- CTA Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 32px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);">
+                      Confirm Email Address
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- What's next section -->
+              <div style="background-color: #f0fdfa; border-radius: 8px; padding: 24px; margin: 0 0 24px; border: 1px solid #5eead4;">
+                <h2 style="margin: 0 0 16px; font-size: 18px; color: #0f766e; font-weight: 600;">
+                  🚀 What happens next?
+                </h2>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #134e4a; line-height: 1.8;">
+                  <li><strong>Shop globally:</strong> Access products from Amazon, eBay, Flipkart & more</li>
+                  <li><strong>Get instant quotes:</strong> See shipping costs to India & Nepal upfront</li>
+                  <li><strong>Track everything:</strong> Real-time updates on your orders</li>
+                  <li><strong>Save money:</strong> Consolidated shipping for multiple items</li>
+                </ul>
+              </div>
+              
+              <!-- Alternative link -->
+              <p style="margin: 0 0 24px; font-size: 14px; color: #64748b; line-height: 1.6;">
+                If the button above doesn't work, you can also copy and paste this link into your browser:
+              </p>
+              
+              <div style="background-color: #f8fafc; border-radius: 6px; padding: 12px; margin: 0 0 24px; word-break: break-all; font-family: 'Courier New', monospace; font-size: 12px; color: #475569; border: 1px solid #e2e8f0;">
+                {{ .ConfirmationURL }}
+              </div>
+              
+              <!-- Welcome benefits -->
+              <h3 style="margin: 0 0 16px; font-size: 16px; color: #1a202c; font-weight: 600;">
+                🎁 As a new member, you get:
+              </h3>
+              
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 24px;">
+                <tr>
+                  <td style="padding: 0 0 12px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td width="40" valign="top">
+                          <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #ddd6fe 0%, #e0e7ff 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 32px; text-align: center;">
+                            ✨
+                          </div>
+                        </td>
+                        <td style="padding-left: 12px;">
+                          <p style="margin: 0; font-size: 14px; color: #1a202c; font-weight: 600;">Free Quote Estimates</p>
+                          <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Get shipping quotes instantly, no commitment needed</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 0 12px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td width="40" valign="top">
+                          <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #fed7aa 0%, #fde68a 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 32px; text-align: center;">
+                            📦
+                          </div>
+                        </td>
+                        <td style="padding-left: 12px;">
+                          <p style="margin: 0; font-size: 14px; color: #1a202c; font-weight: 600;">Package Consolidation</p>
+                          <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Combine multiple orders to save on shipping</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td width="40" valign="top">
+                          <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #bfdbfe 0%, #ddd6fe 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 32px; text-align: center;">
+                            🛡️
+                          </div>
+                        </td>
+                        <td style="padding-left: 12px;">
+                          <p style="margin: 0; font-size: 14px; color: #1a202c; font-weight: 600;">Secure Payments</p>
+                          <p style="margin: 2px 0 0; font-size: 13px; color: #64748b;">Multiple payment options with buyer protection</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Security notice -->
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 0 0 24px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 13px; color: #64748b; line-height: 1.5;">
+                  <strong>Note:</strong> This confirmation link will expire in 24 hours. If you didn't create an account with iWishBag, please ignore this email.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <!-- Quick links -->
+              <p style="margin: 0 0 16px; font-size: 14px; color: #1a202c; font-weight: 600;">
+                Need help getting started?
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://iwishbag.com/how-it-works" style="display: inline-block; background-color: #ffffff; color: #14b8a6; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid #14b8a6;">
+                      How It Works
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://iwishbag.com/faq" style="display: inline-block; background-color: #ffffff; color: #14b8a6; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid #14b8a6;">
+                      FAQs
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://iwishbag.com/contact" style="display: inline-block; background-color: #ffffff; color: #14b8a6; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid #14b8a6;">
+                      Contact Us
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Social links -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 20px;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://facebook.com/iwishbag" style="text-decoration: none;">
+                      <img src="https://img.icons8.com/color/48/facebook-new.png" alt="Facebook" width="32" height="32" style="display: block;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://twitter.com/iwishbag" style="text-decoration: none;">
+                      <img src="https://img.icons8.com/color/48/twitter--v1.png" alt="Twitter" width="32" height="32" style="display: block;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://instagram.com/iwishbag" style="text-decoration: none;">
+                      <img src="https://img.icons8.com/fluency/48/instagram-new.png" alt="Instagram" width="32" height="32" style="display: block;">
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Company info -->
+              <p style="margin: 0 0 8px; font-size: 16px; color: #1a202c; font-weight: 600;">
+                iWishBag
+              </p>
+              <p style="margin: 0 0 16px; font-size: 13px; color: #64748b; line-height: 1.5;">
+                Shop The World, Delivered To You
+              </p>
+              
+              <!-- Links -->
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                <a href="https://iwishbag.com/privacy" style="color: #64748b; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+                •
+                <a href="https://iwishbag.com/terms" style="color: #64748b; text-decoration: none; margin: 0 8px;">Terms of Service</a>
+              </p>
+              
+              <p style="margin: 16px 0 0; font-size: 11px; color: #94a3b8;">
+                © 2024 iWishBag. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

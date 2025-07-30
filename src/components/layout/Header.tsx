@@ -200,6 +200,21 @@ const Header = () => {
                 Track Order
               </Button>
 
+              <Button
+                variant={location.pathname === '/help' ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'h-9 px-4 text-sm font-medium transition-all duration-200',
+                  location.pathname === '/help'
+                    ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100',
+                )}
+                onClick={() => navigate('/help')}
+              >
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help
+              </Button>
+
               {/* Show Get Quote for authenticated users */}
               {user && (
                 <Button

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Your Password - iWishBag</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f7fafc; color: #1a202c;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f7fafc;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
+          
+          <!-- Header with gradient -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #fb923c 100%); padding: 24px 30px; text-align: center;">
+              <!-- Logo -->
+              <img src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" alt="iWishBag" width="140" height="47" style="display: block; margin: 0 auto 12px; height: auto;">
+              
+              <!-- Title -->
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 600; line-height: 1.2;">
+                Password Reset Request
+              </h1>
+              <p style="margin: 6px 0 0; color: rgba(255, 255, 255, 0.95); font-size: 14px;">
+                We received a request to reset your password
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Body content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <!-- Greeting -->
+              <p style="margin: 0 0 24px; font-size: 16px; color: #4a5568; line-height: 1.6;">
+                Hi there! 👋
+              </p>
+              
+              <p style="margin: 0 0 32px; font-size: 16px; color: #4a5568; line-height: 1.6;">
+                You requested to reset your password for your iWishBag account. Use the verification code below to complete the process:
+              </p>
+              
+              <!-- OTP Code Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 32px;">
+                <tr>
+                  <td align="center">
+                    <div style="background: linear-gradient(135deg, #f0fdfa 0%, #e0f2fe 100%); border: 2px solid #14b8a6; border-radius: 12px; padding: 30px; text-align: center; max-width: 280px; margin: 0 auto;">
+                      <p style="margin: 0 0 12px; font-size: 14px; color: #0f766e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                        Your Verification Code
+                      </p>
+                      <p style="margin: 0; font-size: 36px; font-weight: 700; color: #0d9488; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                        {{ .Token }}
+                      </p>
+                      <p style="margin: 12px 0 0; font-size: 13px; color: #64748b;">
+                        Valid for 15 minutes
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Alternative link option -->
+              <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 0 0 24px; border: 1px solid #e2e8f0;">
+                <p style="margin: 0 0 12px; font-size: 14px; color: #64748b;">
+                  <strong style="color: #475569;">Can't see the code?</strong> You can also reset your password by clicking the button below:
+                </p>
+                
+                <!-- CTA Button -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                  <tr>
+                    <td align="center" style="padding: 16px 0 0;">
+                      <a href="{{ .ConfirmationURL }}" style="display: inline-block; background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3); transition: all 0.3s ease;">
+                        Reset My Password
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              
+              <!-- Security notice -->
+              <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; margin: 0 0 24px; border: 1px solid #fcd34d;">
+                <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
+                  <strong>🔒 Security Notice:</strong> If you didn't request this password reset, please ignore this email. Your password won't be changed unless you enter the code above.
+                </p>
+              </div>
+              
+              <!-- Additional info -->
+              <p style="margin: 0 0 16px; font-size: 14px; color: #64748b; line-height: 1.6;">
+                <strong>Having trouble?</strong><br>
+                If you're experiencing issues, you can:
+              </p>
+              
+              <ul style="margin: 0 0 24px; padding-left: 20px; font-size: 14px; color: #64748b; line-height: 1.8;">
+                <li>Request a new code after 15 minutes</li>
+                <li>Contact our support team at <a href="mailto:support@iwishbag.com" style="color: #14b8a6; text-decoration: none;">support@iwishbag.com</a></li>
+                <li>Check your spam folder if you don't see our emails</li>
+              </ul>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <!-- Social links -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 20px;">
+                <tr>
+                  <td style="padding: 0 8px;">
+                    <a href="https://facebook.com/iwishbag" style="text-decoration: none;">
+                      <img src="https://img.icons8.com/color/48/facebook-new.png" alt="Facebook" width="32" height="32" style="display: block;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://twitter.com/iwishbag" style="text-decoration: none;">
+                      <img src="https://img.icons8.com/color/48/twitter--v1.png" alt="Twitter" width="32" height="32" style="display: block;">
+                    </a>
+                  </td>
+                  <td style="padding: 0 8px;">
+                    <a href="https://instagram.com/iwishbag" style="text-decoration: none;">
+                      <img src="https://img.icons8.com/fluency/48/instagram-new.png" alt="Instagram" width="32" height="32" style="display: block;">
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- Company info -->
+              <p style="margin: 0 0 8px; font-size: 16px; color: #1a202c; font-weight: 600;">
+                iWishBag
+              </p>
+              <p style="margin: 0 0 16px; font-size: 13px; color: #64748b; line-height: 1.5;">
+                Shop The World, Delivered To You<br>
+                Making international shopping simple and affordable
+              </p>
+              
+              <!-- Links -->
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                <a href="https://iwishbag.com/privacy" style="color: #64748b; text-decoration: none; margin: 0 8px;">Privacy Policy</a>
+                •
+                <a href="https://iwishbag.com/terms" style="color: #64748b; text-decoration: none; margin: 0 8px;">Terms of Service</a>
+                •
+                <a href="https://iwishbag.com/help" style="color: #64748b; text-decoration: none; margin: 0 8px;">Help Center</a>
+              </p>
+              
+              <p style="margin: 16px 0 0; font-size: 11px; color: #94a3b8;">
+                © 2024 iWishBag. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

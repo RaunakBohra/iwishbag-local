@@ -67,7 +67,7 @@ export default function ResetPassword() {
     });
 
     // Fallback: Check URL parameters for tokens (backward compatibility)
-    const accessToken = searchParams.get('access_token');
+    const accessToken = searchParams.get('access_token') || searchParams.get('token');
     const type = searchParams.get('type');
 
     if (accessToken && type === 'recovery') {

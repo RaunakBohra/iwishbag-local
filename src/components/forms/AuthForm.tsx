@@ -57,6 +57,20 @@ const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
+const otpVerifySchema = z.object({
+  otp: z.string().length(6, { message: 'Please enter a 6-digit code' }),
+});
+
+const newPasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+});
+
 interface AuthFormProps {
   onLogin?: (email: string, password: string) => Promise<void>;
 }
@@ -69,6 +83,10 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showOtpForm, setShowOtpForm] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [verifiedOtp, setVerifiedOtp] = useState('');
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
@@ -89,6 +107,16 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
   const forgotForm = useForm<z.infer<typeof forgotPasswordSchema>>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
+  });
+
+  const otpForm = useForm<z.infer<typeof otpVerifySchema>>({
+    resolver: zodResolver(otpVerifySchema),
+    defaultValues: { otp: '' },
+  });
+
+  const passwordForm = useForm<z.infer<typeof newPasswordSchema>>({
+    resolver: zodResolver(newPasswordSchema),
+    defaultValues: { newPassword: '' },
   });
 
   const getPasswordStrength = (password: string) => {
@@ -310,6 +338,91 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
     }
   };
 
+  const handleOtpVerification = async (values: z.infer<typeof otpVerifySchema>) => {
+    setForgotLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: resetEmail,
+        token: values.otp,
+        type: 'recovery',
+      });
+
+      if (error) {
+        console.error('OTP verification error:', error);
+        toast({
+          title: 'Invalid code',
+          description: 'Please check the code and try again.',
+          variant: 'destructive',
+        });
+      } else {
+        // OTP is valid, proceed to password step
+        setVerifiedOtp(values.otp);
+        setOtpVerified(true);
+        toast({
+          title: 'Code verified!',
+          description: 'Now create your new password.',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (values: z.infer<typeof newPasswordSchema>) => {
+    setForgotLoading(true);
+    
+    try {
+      // Update the password (session already established from OTP verification)
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: values.newPassword,
+      });
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        toast({
+          title: 'Error',
+          description: updateError.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Password reset successful!',
+          description: 'You can now login with your new password.',
+          duration: 6000,
+        });
+        
+        // Reset all forms and close modal
+        setShowForgot(false);
+        setResetEmailSent(false);
+        setShowOtpForm(false);
+        setOtpVerified(false);
+        forgotForm.reset();
+        otpForm.reset();
+        passwordForm.reset();
+        setResetEmail('');
+        setVerifiedOtp('');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const handleForgotPassword = async (values: z.infer<typeof forgotPasswordSchema>, turnstileToken?: string) => {
     setForgotLoading(true);
     setResetEmailSent(false);
@@ -346,19 +459,18 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
         });
       } else {
         setResetEmailSent(true);
+        setResetEmail(values.email);
+        // Reset forms before showing
+        otpForm.reset({ otp: '' });
+        passwordForm.reset({ newPassword: '' });
+        setOtpVerified(false);
+        setShowOtpForm(true);
         toast({
           title: 'Password reset email sent!',
           description:
-            'Please check your inbox for a secure reset link from iWishBag. The link will expire in 24 hours.',
+            'Please check your inbox for a 6-digit code from iWishBag.',
           duration: 6000,
         });
-
-        // Keep the modal open to show success message
-        setTimeout(() => {
-          setShowForgot(false);
-          setResetEmailSent(false);
-          forgotForm.reset();
-        }, 5000);
       }
     } catch (error) {
       console.error('Password reset error:', error);
@@ -423,7 +535,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-11 text-base bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -681,7 +793,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 text-base bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
@@ -704,23 +816,202 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           setShowForgot(open);
           if (!open) {
             setResetEmailSent(false);
+            setShowOtpForm(false);
+            setOtpVerified(false);
+            setResetEmail('');
+            setVerifiedOtp('');
             forgotForm.reset();
+            otpForm.reset();
+            passwordForm.reset();
           }
         }}
       >
         <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-lg">
           <DialogHeader className="space-y-3 pb-6">
             <DialogTitle className="text-gray-900 text-xl font-semibold text-center">
-              {resetEmailSent ? 'Check your email' : 'Reset your password'}
+              {otpVerified ? 'Create new password' : showOtpForm ? 'Enter verification code' : resetEmailSent ? 'Check your email' : 'Reset your password'}
             </DialogTitle>
             <DialogDescription className="text-gray-600 text-center text-sm">
-              {resetEmailSent
+              {otpVerified
+                ? 'Choose a strong password for your account'
+                : showOtpForm
+                ? `We sent a 6-digit code to ${resetEmail}`
+                : resetEmailSent
                 ? 'We sent a password reset link to your email address.'
                 : "Enter your email address and we'll send you a reset link."}
             </DialogDescription>
           </DialogHeader>
 
-          {resetEmailSent ? (
+          {showOtpForm ? (
+            otpVerified ? (
+              // Password Reset Form
+              <Form {...passwordForm}>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const values = passwordForm.getValues();
+                    handlePasswordReset(values);
+                  }}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={passwordForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              {...field}
+                              placeholder="Enter new password"
+                              autoFocus
+                              className="h-11 px-4 pr-10 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
+                              disabled={forgotLoading}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Must be at least 8 characters with upper/lowercase, numbers, and symbols
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full h-11 text-base bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Resetting Password...
+                      </>
+                    ) : (
+                      'Reset Password'
+                    )}
+                  </Button>
+                  
+                  <div className="flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpVerified(false);
+                        passwordForm.reset();
+                      }}
+                      className="text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      ← Back to code
+                    </button>
+                  </div>
+                </form>
+              </Form>
+            ) : (
+              // OTP Verification Form
+              <Form {...otpForm}>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const values = otpForm.getValues();
+                    handleOtpVerification(values);
+                  }}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={otpForm.control}
+                    name="otp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Verification Code</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            key="otp-input"
+                            type="text"
+                            maxLength={6}
+                            placeholder="000000"
+                            pattern="[0-9]{6}"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            autoFocus
+                            className="h-14 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-2 bg-white text-gray-900 placeholder:text-gray-400 text-center text-2xl font-mono tracking-[0.5em] font-semibold"
+                            disabled={forgotLoading}
+                            onChange={(e) => {
+                              // Only allow numbers
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOtpForm(false);
+                      setResetEmailSent(false);
+                      otpForm.reset();
+                      toast({
+                        title: 'Request a new code',
+                        description: 'Please enter your email again to receive a new verification code.',
+                      });
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-800 underline"
+                  >
+                    Didn't receive code? Request new one
+                  </button>
+                </div>
+                
+                  <Button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full h-11 text-base bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      'Verify Code'
+                    )}
+                  </Button>
+                
+                <div className="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowOtpForm(false);
+                      setResetEmailSent(false);
+                      otpForm.reset();
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    ← Back to email
+                  </button>
+                </div>
+              </form>
+            </Form>
+            )
+          ) : resetEmailSent ? (
             <div className="space-y-6">
               <div className="text-center">
                 <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -782,7 +1073,7 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                 <Button
                   type="submit"
                   disabled={forgotLoading}
-                  className="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full h-11 text-base bg-gradient-to-r from-teal-400 to-cyan-400 hover:from-teal-500 hover:to-cyan-500 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {forgotLoading ? (
                     <>
