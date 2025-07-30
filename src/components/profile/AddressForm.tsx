@@ -212,9 +212,14 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   useEffect(() => {
     if (!address && countries && countries.length > 0) {
       console.log('[AddressForm] Auto-detecting country for new address...');
-      autoDetectCountry();
+      // Small delay to ensure component is fully mounted
+      const timeoutId = setTimeout(() => {
+        autoDetectCountry();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [countries]);
+  }, [countries, address]); // Added address to deps to prevent re-running
 
 
   // Handle clicking outside country dropdown
@@ -235,12 +240,19 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const autoDetectCountry = async () => {
     try {
       setIsAutoDetecting(true);
-      const location = await ipLocationService.detectCountry();
+      console.log('[AddressForm] Starting country detection...');
+      
+      // Force refresh on first load to ensure fresh detection
+      const isFirstDetection = !ipLocationService.getCachedLocation();
+      const location = await ipLocationService.detectCountry(isFirstDetection);
+      
+      console.log('[AddressForm] Detected location:', location);
       
       if (location.countryCode && location.countryCode !== selectedCountry) {
         const countryExists = countries?.some(c => c.code === location.countryCode);
         
         if (countryExists) {
+          console.log('[AddressForm] Setting country to:', location.countryCode);
           setSelectedCountry(location.countryCode);
           form.setValue('destination_country', location.countryCode);
           
@@ -251,10 +263,12 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               duration: 3000,
             });
           }
+        } else {
+          console.log('[AddressForm] Country not in allowed list:', location.countryCode);
         }
       }
     } catch (error) {
-      console.error('Failed to auto-detect country:', error);
+      console.error('[AddressForm] Failed to auto-detect country:', error);
     } finally {
       setIsAutoDetecting(false);
     }
