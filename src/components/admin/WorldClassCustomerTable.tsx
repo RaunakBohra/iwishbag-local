@@ -70,6 +70,7 @@ import { Customer, CustomerAnalytics } from './CustomerTable';
 import { CustomerCodToggle } from './CustomerCodToggle';
 import { AdvancedCustomerFilters, FilterCondition } from './AdvancedCustomerFilters';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAdminCustomerDisplayData, getCustomerInitials as getInitials } from '@/lib/customerDisplayUtils';
 
 interface WorldClassCustomerTableProps {
   customers: Customer[];
@@ -142,13 +143,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   const getCustomerInitials = (customer: Customer) => {
-    const name = customer.full_name || customer.email || 'User';
-    return name
-      .split(' ')
-      .map((word) => word.charAt(0))
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
+    const displayData = getAdminCustomerDisplayData(customer);
+    return getInitials(displayData.name);
   };
 
   const formatDate = (dateString: string) => {
@@ -260,7 +256,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
     // Get field value
     switch (field) {
       case 'name':
-        fieldValue = customer.full_name || '';
+        fieldValue = getAdminCustomerDisplayData(customer).name;
         break;
       case 'email':
         fieldValue = customer.email;
@@ -338,7 +334,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
         !searchQuery ||
-        customer.full_name?.toLowerCase().includes(searchLower) ||
+        getAdminCustomerDisplayData(customer).name.toLowerCase().includes(searchLower) ||
         customer.email.toLowerCase().includes(searchLower) ||
         customer.delivery_addresses.some(
           (addr) =>
@@ -668,7 +664,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                         {getCustomerAvatarUrl(customer) && (
                           <AvatarImage
                             src={getCustomerAvatarUrl(customer)!}
-                            alt={customer.full_name || customer.email}
+                            alt={getAdminCustomerDisplayData(customer).name}
                             className="object-cover"
                           />
                         )}
@@ -681,7 +677,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
                           onClick={() => navigate(`/admin/customers/${customer.id}`)}
                         >
-                          {customer.full_name || 'Unnamed Customer'}
+                          {getAdminCustomerDisplayData(customer).name}
                         </div>
                         <div className="text-sm text-gray-600">{customer.email}</div>
                       </div>

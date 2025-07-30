@@ -6,7 +6,8 @@ import {
   validatePhoneForCountry,
   parsePhoneInput,
   getPhonePlaceholder,
-  isPhoneComplete
+  isPhoneComplete,
+  sanitizePhoneDigits
 } from '@/lib/phoneFormatUtils';
 
 interface UsePhoneInputProps {
@@ -23,8 +24,8 @@ export function usePhoneInput({
   onValidationChange
 }: UsePhoneInputProps = {}) {
   
-  // Parse initial value if provided
-  const parsedInitial = parsePhoneInput(initialValue);
+  // Parse initial value if provided, with country context
+  const parsedInitial = parsePhoneInput(initialValue, initialCountry);
   const initialDigits = parsedInitial.digits || '';
   const detectedCountry = parsedInitial.countryCode || initialCountry;
   
@@ -56,7 +57,10 @@ export function usePhoneInput({
   
   // Handle phone digits change
   const handlePhoneChange = useCallback((value: string) => {
-    const digits = extractPhoneDigits(value);
+    let digits = extractPhoneDigits(value);
+    // Sanitize to prevent country code leakage
+    digits = sanitizePhoneDigits(digits, countryCode);
+    
     setPhoneDigits(digits);
     setIsTouched(true);
     
@@ -123,11 +127,14 @@ export function usePhoneInput({
     
     // Set external value (useful for form integration)
     setValue: (value: string, country?: string) => {
-      const parsed = parsePhoneInput(value);
+      // Use the provided country or current country for parsing context
+      const parsingCountry = country || countryCode;
+      const parsed = parsePhoneInput(value, parsingCountry);
+      
       setPhoneDigits(parsed.digits);
       if (country) {
         setCountryCode(country);
-      } else if (parsed.countryCode) {
+      } else if (parsed.countryCode && parsed.countryCode !== countryCode) {
         setCountryCode(parsed.countryCode);
       }
       setIsTouched(true);

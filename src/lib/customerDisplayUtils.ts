@@ -201,3 +201,77 @@ export function shouldShowEmailSeparately(
   // Show email separately if display name is a real name
   return displayName !== email;
 }
+
+// ============================================================================
+// ADMIN CUSTOMER MANAGEMENT UTILITIES
+// For use with profile data directly (admin customer management pages)
+// ============================================================================
+
+interface AdminCustomerProfile {
+  id: string;
+  full_name: string | null;
+  email?: string;
+  phone?: string;
+  created_at: string;
+  [key: string]: any;
+}
+
+export interface AdminCustomerDisplayData {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  type: 'registered' | 'incomplete';
+  isIncomplete: boolean;
+}
+
+/**
+ * Gets customer display data for admin pages using profile data
+ */
+export function getAdminCustomerDisplayData(
+  profile: AdminCustomerProfile
+): AdminCustomerDisplayData {
+  // Determine customer name
+  let name = 'Unknown Customer';
+  
+  if (profile.full_name?.trim()) {
+    name = profile.full_name.trim();
+  } else if (profile.email) {
+    // Use email prefix as name if no full name
+    const emailPrefix = profile.email.split('@')[0];
+    name = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+  }
+
+  // Determine if customer profile is incomplete
+  const isIncomplete = !profile.full_name?.trim() || !profile.email;
+  
+  return {
+    name,
+    email: profile.email || null,
+    phone: profile.phone || null,
+    type: isIncomplete ? 'incomplete' : 'registered',
+    isIncomplete,
+  };
+}
+
+/**
+ * Gets customer display name for admin contexts
+ */
+export function getAdminCustomerDisplayName(profile: AdminCustomerProfile): string {
+  return getAdminCustomerDisplayData(profile).name;
+}
+
+/**
+ * Gets customer initials for avatar display
+ */
+export function getCustomerInitials(displayName: string): string {
+  if (!displayName || displayName === 'Unknown Customer' || displayName === 'Guest Customer') {
+    return 'UC';
+  }
+  
+  const words = displayName.trim().split(' ');
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  
+  return displayName.substring(0, 2).toUpperCase();
+}

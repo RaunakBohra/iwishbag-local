@@ -65,6 +65,7 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { H1, H2, H3, Body, BodySmall } from '@/components/ui/typography';
+import { getAdminCustomerDisplayData, getCustomerInitials as getInitials } from '@/lib/customerDisplayUtils';
 
 interface CustomerProfileData {
   id: string;
@@ -243,6 +244,12 @@ export const CustomerProfile: React.FC = () => {
     };
   }, [customer, orders]);
 
+  // Customer display data using utility function
+  const customerDisplayData = useMemo(() => {
+    if (!customer) return null;
+    return getAdminCustomerDisplayData(customer);
+  }, [customer]);
+
   // Customer status and health indicators
   const getCustomerStatus = () => {
     if (!customer) return { label: 'Unknown', color: 'bg-gray-100 text-gray-800', icon: User };
@@ -289,13 +296,8 @@ export const CustomerProfile: React.FC = () => {
   };
 
   const getCustomerInitials = () => {
-    const name = customer?.full_name || customer?.email || 'User';
-    return name
-      .split(' ')
-      .map((word) => word.charAt(0))
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
+    if (!customerDisplayData) return 'U';
+    return getInitials(customerDisplayData.name);
   };
 
   if (customerLoading) {
@@ -376,7 +378,7 @@ export const CustomerProfile: React.FC = () => {
       'data:text/csv;charset=utf-8,' +
       'Field,Value\\n' +
       `Customer ID,${customer.id}\\n` +
-      `Name,"${customer.full_name || 'N/A'}"\\n` +
+      `Name,"${customerDisplayData?.name || 'N/A'}"\\n` +
       `Email,"${customer.email}"\\n` +
       `Phone,"${customer.phone || 'N/A'}"\\n` +
       `COD Enabled,${customer.cod_enabled ? 'Yes' : 'No'}\\n` +
@@ -409,7 +411,7 @@ export const CustomerProfile: React.FC = () => {
     ? {
         id: customer.id,
         email: customer.email,
-        full_name: customer.full_name,
+        full_name: customerDisplayData?.name || null,
         phone: customer.phone,
         avatar_url: customer.avatar_url,
         cod_enabled: customer.cod_enabled,
@@ -436,7 +438,7 @@ export const CustomerProfile: React.FC = () => {
               Back to Customers
             </Button>
             <div>
-              <H1 className="text-gray-900">{customer.full_name || 'Unnamed Customer'}</H1>
+              <H1 className="text-gray-900">{customerDisplayData?.name || 'Unknown Customer'}</H1>
               <div className="flex items-center space-x-3 mt-1">
                 <Badge variant="outline" className={cn('text-xs', status.color)}>
                   <status.icon className="h-3 w-3 mr-1" />
@@ -747,7 +749,7 @@ export const CustomerProfile: React.FC = () => {
                     {getCustomerAvatarUrl() && (
                       <AvatarImage
                         src={getCustomerAvatarUrl()!}
-                        alt={customer.full_name || customer.email}
+                        alt={customerDisplayData?.name || customer.email}
                         className="object-cover"
                       />
                     )}
@@ -757,7 +759,7 @@ export const CustomerProfile: React.FC = () => {
                   </Avatar>
                   <div>
                     <Body className="font-medium text-gray-900">
-                      {customer.full_name || 'No name provided'}
+                      {customerDisplayData?.name || 'No name provided'}
                     </Body>
                     <BodySmall className="text-gray-600">{customer.email}</BodySmall>
                   </div>

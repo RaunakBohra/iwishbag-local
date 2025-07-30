@@ -93,6 +93,30 @@ export function extractPhoneDigits(phone: string): string {
 }
 
 /**
+ * Check if digits contain a country code and remove it
+ */
+export function sanitizePhoneDigits(digits: string, countryCode: string): string {
+  if (!digits || !countryCode) return digits;
+  
+  try {
+    const callingCode = getCountryCallingCode(countryCode as CountryCode).toString();
+    
+    // If digits start with the country calling code, remove it
+    if (digits.startsWith(callingCode)) {
+      const withoutCountryCode = digits.substring(callingCode.length);
+      // Only return if the remaining digits look reasonable (not too short)
+      if (withoutCountryCode.length >= 7) { // Most countries have at least 7 digit national numbers
+        return withoutCountryCode;
+      }
+    }
+  } catch {
+    // Ignore errors and return original digits
+  }
+  
+  return digits;
+}
+
+/**
  * Format phone number for display (without country code)
  */
 export function formatPhoneNumber(digits: string, countryCode: string): string {
@@ -134,26 +158,70 @@ export function formatPhoneNumber(digits: string, countryCode: string): string {
 /**
  * Parse phone number and extract country and digits
  */
-export function parsePhoneInput(phoneInput: string): {
+export function parsePhoneInput(phoneInput: string, knownCountry?: string): {
   countryCode: string | null;
   digits: string;
   isValid: boolean;
 } {
-  const digits = extractPhoneDigits(phoneInput);
-  
+  if (!phoneInput) {
+    return {
+      countryCode: knownCountry || null,
+      digits: '',
+      isValid: false
+    };
+  }
+
   try {
+    // First try to parse with libphonenumber-js
     const parsed = parsePhoneNumber(phoneInput);
-    if (parsed) {
+    if (parsed && parsed.country) {
       return {
-        countryCode: parsed.country || null,
+        countryCode: parsed.country,
         digits: parsed.nationalNumber,
         isValid: parsed.isValid()
       };
     }
   } catch {
-    // Fall through to basic parsing
+    // Fall through to manual parsing
+  }
+
+  // If we have a known country, try parsing with that context
+  if (knownCountry) {
+    try {
+      const parsed = parsePhoneNumber(phoneInput, knownCountry as CountryCode);
+      if (parsed) {
+        return {
+          countryCode: knownCountry,
+          digits: parsed.nationalNumber,
+          isValid: parsed.isValid()
+        };
+      }
+    } catch {
+      // Fall through to digit extraction
+    }
+
+    // Manual extraction: remove the known country's dial code
+    const dialCode = getDialCode(knownCountry);
+    let cleanInput = phoneInput;
+    
+    // Remove dial code if present at the start
+    if (cleanInput.startsWith(dialCode)) {
+      cleanInput = cleanInput.substring(dialCode.length).trim();
+    }
+    
+    let digits = extractPhoneDigits(cleanInput);
+    // Sanitize to ensure no country code leaked in
+    digits = sanitizePhoneDigits(digits, knownCountry);
+    
+    return {
+      countryCode: knownCountry,
+      digits,
+      isValid: false
+    };
   }
   
+  // Fallback: extract all digits but don't assume country
+  const digits = extractPhoneDigits(phoneInput);
   return {
     countryCode: null,
     digits,

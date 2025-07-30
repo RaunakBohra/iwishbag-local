@@ -48,6 +48,7 @@ export function WorldClassPhoneInput({
     error: validationError,
     isTouched,
     placeholder: defaultPlaceholder,
+    completePhoneNumber,
     handlePhoneChange,
     handleCountryChange,
     handleBlur,
@@ -61,10 +62,10 @@ export function WorldClassPhoneInput({
   
   // Update internal state when external value changes
   useEffect(() => {
-    if (value !== formattedValue) {
+    if (value !== formattedValue && value !== completePhoneNumber) {
       setValue(value, countryCode);
     }
-  }, [value]);
+  }, [value, formattedValue, completePhoneNumber, setValue, countryCode]);
   
   // Handle clicking outside dropdown
   useEffect(() => {
