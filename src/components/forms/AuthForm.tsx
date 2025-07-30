@@ -400,7 +400,22 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
               </FormItem>
             )}
           />
-          {/* Submit button is now handled by TurnstileProtectedForm */}
+          
+          {/* Sign In Button */}
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
+          </Button>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -488,14 +503,11 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           </div>
           <Form {...signUpForm}>
             <form
-              onSubmit={(turnstileToken) => {
+              onSubmit={(e) => {
+                e.preventDefault();
                 const values = signUpForm.getValues();
-                handleSignUp(values, turnstileToken);
+                handleSignUp(values);
               }}
-              isSubmitting={loading}
-              submitButtonText={loading ? "Creating Account..." : "Create Account"}
-              submitButtonClassName="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
-              action="sign_up"
               className="space-y-5"
               id="sign-up-form"
             >
@@ -647,7 +659,22 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                   </FormItem>
                 )}
               />
-              {/* Submit button is now handled by TurnstileProtectedForm */}
+              
+              {/* Sign Up Button */}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
             </form>
           </Form>
         </DialogContent>
@@ -707,14 +734,11 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
           ) : (
             <Form {...forgotForm}>
               <form
-                onSubmit={(turnstileToken) => {
+                onSubmit={(e) => {
+                  e.preventDefault();
                   const values = forgotForm.getValues();
-                  handleForgotPassword(values, turnstileToken);
+                  handleForgotPassword(values);
                 }}
-                isSubmitting={forgotLoading}
-                submitButtonText={forgotLoading ? "Sending Reset Link..." : "Send Reset Link"}
-                submitButtonClassName="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg"
-                action="password_reset"
                 className="space-y-4"
                 id="forgot-password-form"
               >
@@ -737,7 +761,22 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                     </FormItem>
                   )}
                 />
-                {/* Submit button is now handled by TurnstileProtectedForm */}
+                
+                {/* Forgot Password Button */}
+                <Button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full h-11 text-base bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-medium rounded-lg transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {forgotLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Reset Link...
+                    </>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </Button>
               </form>
             </Form>
           )}

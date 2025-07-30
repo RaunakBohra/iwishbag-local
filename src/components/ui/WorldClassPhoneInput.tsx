@@ -69,12 +69,16 @@ export function WorldClassPhoneInput({
     }
   }, [value, formattedValue, completePhoneNumber, setValue, countryCode]);
   
-  // Update country code when parent country changes
+  // Track the last synced country to avoid constant updates
+  const [lastSyncedCountry, setLastSyncedCountry] = useState(currentCountry);
+  
+  // Update country code only when parent country actually changes
   useEffect(() => {
-    if (currentCountry && currentCountry !== countryCode) {
+    if (currentCountry && currentCountry !== lastSyncedCountry) {
       handleCountryChange(currentCountry);
+      setLastSyncedCountry(currentCountry);
     }
-  }, [currentCountry, countryCode, handleCountryChange]);
+  }, [currentCountry, lastSyncedCountry, handleCountryChange]);
   
   // Handle clicking outside dropdown
   useEffect(() => {
@@ -230,13 +234,6 @@ export function WorldClassPhoneInput({
         </div>
       )}
       
-      {/* Success Message - only show if no external error handling */}
-      {showSuccess && !externalError && (
-        <div className="mt-1 flex items-center gap-1 text-sm text-green-600">
-          <Check className="h-3 w-3" />
-          <span>Valid {currentCountryInfo?.name} phone number</span>
-        </div>
-      )}
     </div>
   );
 }

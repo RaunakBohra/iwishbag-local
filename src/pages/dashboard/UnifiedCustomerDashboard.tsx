@@ -38,7 +38,7 @@ import { unifiedUserContextService, type UnifiedUserProfile } from '@/services/U
 import { masterServiceOrchestrator } from '@/services/MasterServiceOrchestrator';
 import { currencyService } from '@/services/CurrencyService';
 import { ShippingCalculator } from '@/components/dashboard/ShippingCalculator';
-import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
+// import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
 import { MembershipDashboard } from '@/components/dashboard/MembershipDashboard';
 
 // ============================================================================
@@ -133,7 +133,7 @@ export default function UnifiedCustomerDashboard() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <NotificationCenter userId={userContext.id} />
+          {/* <NotificationCenter userId={userContext.id} /> */}
           <Button variant="outline" size="sm">
             <Settings className="h-4 w-4 mr-2" />
             Settings

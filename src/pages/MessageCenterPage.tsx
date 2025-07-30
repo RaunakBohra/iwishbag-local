@@ -29,12 +29,12 @@ import { cn } from '@/lib/design-system';
 
 // Import existing components
 import { MessageCenter } from '@/components/messaging/MessageCenter';
-import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
+// import { NotificationCenter } from '@/components/dashboard/NotificationCenter';
 import { QuickReplies } from '@/components/messaging/QuickReplies';
 
 // Import hooks
 import { useUserTickets } from '@/hooks/useTickets';
-import { useUnreadNotifications } from '@/hooks/useNotifications';
+// import { useUnreadNotifications } from '@/hooks/useNotifications';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -260,8 +260,8 @@ export const MessageCenterPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('messages');
 
   // Get notification count for tab badge
-  const { data: unreadNotifications } = useUnreadNotifications();
-  const unreadCount = unreadNotifications?.length || 0;
+  // const { data: unreadNotifications } = useUnreadNotifications();
+  const unreadCount = 0; // Temporarily set to 0 since notifications are disabled
 
   // Get message count for tab badge
   const { data: unreadMessagesCount = 0 } = useQuery({
@@ -383,7 +383,10 @@ export const MessageCenterPage: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <NotificationCenter />
+                  {/* <NotificationCenter /> */}
+                  <div className="text-center py-8 text-gray-500">
+                    Notifications are temporarily disabled
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
