@@ -15,6 +15,7 @@ interface WorldClassPhoneInputProps {
   onChange?: (value: string) => void;
   onValidationChange?: (isValid: boolean, error?: string) => void;
   initialCountry?: string;
+  currentCountry?: string; // React to country changes from parent
   disabled?: boolean;
   required?: boolean;
   className?: string;
@@ -28,6 +29,7 @@ export function WorldClassPhoneInput({
   onChange,
   onValidationChange,
   initialCountry = 'US',
+  currentCountry,
   disabled = false,
   required = false,
   className = '',
@@ -67,6 +69,13 @@ export function WorldClassPhoneInput({
     }
   }, [value, formattedValue, completePhoneNumber, setValue, countryCode]);
   
+  // Update country code when parent country changes
+  useEffect(() => {
+    if (currentCountry && currentCountry !== countryCode) {
+      handleCountryChange(currentCountry);
+    }
+  }, [currentCountry, countryCode, handleCountryChange]);
+  
   // Handle clicking outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -90,7 +99,7 @@ export function WorldClassPhoneInput({
   );
   
   // Get current country info
-  const currentCountry = countries.find(c => c.code === countryCode);
+  const currentCountryInfo = countries.find(c => c.code === countryCode);
   const dialCode = getDialCode(countryCode);
   
   // Determine error state
@@ -225,7 +234,7 @@ export function WorldClassPhoneInput({
       {showSuccess && !externalError && (
         <div className="mt-1 flex items-center gap-1 text-sm text-green-600">
           <Check className="h-3 w-3" />
-          <span>Valid {currentCountry?.name} phone number</span>
+          <span>Valid {currentCountryInfo?.name} phone number</span>
         </div>
       )}
     </div>

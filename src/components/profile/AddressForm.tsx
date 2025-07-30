@@ -568,6 +568,9 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">
                     {fieldLabels.state}
+                    {['US', 'IN', 'NP'].includes(selectedCountry) && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
                   </FormLabel>
                   {stateProvinces ? (
                     <Select
@@ -673,6 +676,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       }
                     }}
                     initialCountry={selectedCountry}
+                    currentCountry={selectedCountry} // Add this to react to country changes
                     className="w-full"
                     // Don't pass error prop to avoid duplicate display
                   />
