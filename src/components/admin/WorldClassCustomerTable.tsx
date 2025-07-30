@@ -139,10 +139,6 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   const getCustomerAvatarUrl = (customer: Customer) => {
-    // Temporary debug logging
-    if (customer.avatar_url) {
-      console.log('✅ Customer has avatar:', customer.email, customer.avatar_url);
-    }
     return customer.avatar_url;
   };
 

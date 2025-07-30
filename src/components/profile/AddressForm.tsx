@@ -148,7 +148,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           city: address.city,
           state_province_region: address.state_province_region || '',
           postal_code: address.postal_code || '',
-          destination_country: address.destination_country || address.country_code || address.country || 'US',
+          destination_country: address.destination_country || 'US',
           phone: address.phone || '',
           is_default: address.is_default,
         }
