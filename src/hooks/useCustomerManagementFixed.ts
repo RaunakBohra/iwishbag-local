@@ -18,7 +18,7 @@ interface CustomerProfile {
     address_line1: string;
     address_line2: string | null;
     city: string;
-    country: string;
+    destination_country: string;
     postal_code: string;
     is_default: boolean;
   }>;
@@ -57,7 +57,7 @@ export const useCustomerManagementFixed = () => {
               address_line1, 
               address_line2, 
               city, 
-              country, 
+              destination_country, 
               postal_code, 
               is_default
             )

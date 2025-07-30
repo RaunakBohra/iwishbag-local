@@ -267,7 +267,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         else fieldValue = 'inactive';
         break;
       case 'location':
-        fieldValue = customer.delivery_addresses[0]?.country || '';
+        fieldValue = customer.delivery_addresses[0]?.destination_country || '';
         break;
       case 'joinDate':
         const daysSinceJoin = Math.ceil(
@@ -339,7 +339,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         customer.delivery_addresses.some(
           (addr) =>
             addr.city?.toLowerCase().includes(searchLower) ||
-            addr.country?.toLowerCase().includes(searchLower),
+            addr.destination_country?.toLowerCase().includes(searchLower),
         );
 
       // Advanced filter conditions
@@ -364,8 +364,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
           bValue = b.email;
           break;
         case 'location':
-          aValue = a.delivery_addresses[0]?.country || '';
-          bValue = b.delivery_addresses[0]?.country || '';
+          aValue = a.delivery_addresses[0]?.destination_country || '';
+          bValue = b.delivery_addresses[0]?.destination_country || '';
           break;
         case 'joinDate':
           aValue = new Date(a.created_at).getTime();
@@ -689,7 +689,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                       <MapPin className="w-4 h-4" />
                       <span>
                         {primaryAddress
-                          ? `${primaryAddress.city}, ${primaryAddress.country}`
+                          ? `${primaryAddress.city}, ${primaryAddress.destination_country}`
                           : 'No address'}
                       </span>
                     </div>

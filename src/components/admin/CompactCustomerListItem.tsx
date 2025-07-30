@@ -67,7 +67,7 @@ export const CompactCustomerListItem = ({
   const customerName = customer.full_name || 'Unnamed Customer';
   const primaryAddress = customer.delivery_addresses?.[0];
   const addressText = primaryAddress
-    ? `${primaryAddress.city}, ${primaryAddress.country}`
+    ? `${primaryAddress.city}, ${primaryAddress.destination_country}`
     : 'No address';
 
   const formatDate = (dateString: string) => {
@@ -369,7 +369,7 @@ export const CompactCustomerListItem = ({
                         <span>
                           {address.address_line1}
                           {address.address_line2 && `, ${address.address_line2}`}, {address.city},{' '}
-                          {address.country}
+                          {address.destination_country}
                         </span>
                         {address.is_default && (
                           <Badge variant="outline" className="text-xs">

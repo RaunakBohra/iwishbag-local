@@ -231,7 +231,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
                 <p className="text-sm text-gray-600">
                   {primaryAddress.city}, {primaryAddress.state} {primaryAddress.postal_code}
                 </p>
-                <p className="text-sm text-gray-600">{primaryAddress.country}</p>
+                <p className="text-sm text-gray-600">{primaryAddress.destination_country}</p>
                 <p className="text-xs text-gray-500 mt-2">
                   Address management is handled in the customer's profile page
                 </p>

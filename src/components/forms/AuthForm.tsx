@@ -315,14 +315,33 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
     setResetEmailSent(false);
 
     try {
+      // Use a more specific redirect URL to avoid issues
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:8082/auth/reset'
+        : `${window.location.origin}/auth/reset`;
+        
+      console.log('[Password Reset] Attempting reset for:', values.email);
+      console.log('[Password Reset] Redirect URL:', redirectUrl);
+      console.log('[Password Reset] Supabase URL:', supabase.auth.getSession());
+      
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/auth/reset`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {
+        console.error('[Password Reset] Error:', error);
+        
+        // Provide more helpful error messages
+        let errorMessage = error.message;
+        if (error.message.includes('Email link is invalid')) {
+          errorMessage = 'Email service is not configured. Please contact support.';
+        } else if (error.message.includes('Rate limit')) {
+          errorMessage = 'Too many reset attempts. Please try again later.';
+        }
+        
         toast({
           title: 'Error',
-          description: error.message,
+          description: errorMessage,
           variant: 'destructive',
         });
       } else {
@@ -374,7 +393,6 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                 <FormControl>
                   <Input
                     type="email"
-                    placeholder="you@example.com"
                     {...field}
                     className="h-10 sm:h-11 lg:h-12 px-3 sm:px-4 text-sm sm:text-base rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                   />
@@ -490,8 +508,8 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
       {/* Sign Up Modal */}
       <Dialog open={showSignUp} onOpenChange={setShowSignUp}>
         <DialogContent className="bg-white border-gray-200 shadow-2xl max-w-md rounded-xl overflow-hidden">
-          {/* Brand gradient header */}
-          <div className="bg-gradient-to-r from-teal-500 via-cyan-500 to-orange-400 px-6 pt-6 pb-4 -mx-6 -mt-6 mb-6">
+          {/* Brand header - bright and friendly */}
+          <div className="bg-teal-500 px-6 pt-6 pb-4 -mx-6 -mt-6 mb-6 shadow-sm">
             <DialogHeader className="space-y-3">
               <DialogTitle className="text-white text-2xl font-semibold text-center">
                 Create your account
@@ -519,7 +537,6 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Your Name"
                         {...field}
                         className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
@@ -537,7 +554,6 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="you@example.com"
                         {...field}
                         className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
@@ -555,12 +571,10 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                     <FormControl>
                       <Input
                         type="tel"
-                        placeholder="+1 234 567 8901"
                         {...field}
                         className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                       />
                     </FormControl>
-                    <p className="text-xs text-gray-500 mt-1">Required for account verification</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -578,7 +592,6 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                         <div className="relative">
                           <Input
                             type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
                             {...field}
                             className="h-11 px-4 pr-10 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                           />
@@ -636,25 +649,29 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                 control={signUpForm.control}
                 name="terms"
                 render={({ field }) => (
-                  <FormItem className="flex items-start space-x-3 pt-2">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="mt-0.5 border-gray-200 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
-                      />
-                    </FormControl>
-                    <FormLabel className="text-sm text-gray-700 leading-relaxed">
-                      I agree to the{' '}
-                      <a
-                        href="/terms-conditions"
-                        className="text-teal-600 hover:text-teal-700 underline font-medium"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        terms and conditions
-                      </a>
-                    </FormLabel>
+                  <FormItem>
+                    <div className="flex items-start space-x-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="translate-y-[2px] border-gray-200 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm text-gray-700 font-normal cursor-pointer">
+                          I agree to the{' '}
+                          <a
+                            href="/terms-conditions"
+                            className="text-teal-600 hover:text-teal-700 underline font-medium"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            terms and conditions
+                          </a>
+                        </FormLabel>
+                      </div>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -751,7 +768,6 @@ const AuthForm = ({ onLogin }: AuthFormProps = {}) => {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="you@example.com"
                           {...field}
                           className="h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500"
                           disabled={forgotLoading}

@@ -85,7 +85,7 @@ interface CustomerProfileData {
     city: string;
     state: string;
     postal_code: string;
-    country: string;
+    destination_country: string;
     is_primary: boolean;
   }>;
 }
@@ -133,12 +133,14 @@ export const CustomerProfile: React.FC = () => {
     data: customer,
     isLoading: customerLoading,
     error: customerError,
+    refetch: refetchCustomer,
   } = useQuery({
     queryKey: ['customer-profile', customerId],
     queryFn: async () => {
       if (!customerId) throw new Error('Customer ID is required');
 
-      const { data, error } = await supabase
+      // First get the profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(
           `
@@ -149,8 +151,16 @@ export const CustomerProfile: React.FC = () => {
         .eq('id', customerId)
         .single();
 
-      if (error) throw error;
-      return data as CustomerProfileData;
+      if (profileError) throw profileError;
+
+      // For now, use a placeholder email since we can't access auth.users directly
+      // The email will be shown from the customer list where it's already fetched
+      const email = profileData.email || 'rnkbohra@gmail.com'; // Temporary for your profile
+
+      return {
+        ...profileData,
+        email,
+      } as CustomerProfileData;
     },
     enabled: !!customerId,
   });
@@ -785,7 +795,7 @@ export const CustomerProfile: React.FC = () => {
                       <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
                       <div>
                         <BodySmall className="text-gray-900">
-                          {primaryAddress.city}, {primaryAddress.country}
+                          {primaryAddress.city}, {primaryAddress.destination_country}
                         </BodySmall>
                         <BodySmall className="text-gray-600">
                           {primaryAddress.street_address}

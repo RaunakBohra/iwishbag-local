@@ -220,7 +220,7 @@ export const CustomerActivityTimeline = ({ customerId }: CustomerActivityTimelin
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
                 {customer.delivery_addresses?.[0]
-                  ? `${customer.delivery_addresses[0].city}, ${customer.delivery_addresses[0].country}`
+                  ? `${customer.delivery_addresses[0].city}, ${customer.delivery_addresses[0].destination_country}`
                   : 'No address'}
               </span>
             </div>

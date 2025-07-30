@@ -66,7 +66,7 @@ export default function QuoteRequestPage() {
       imageUrl: '', // Separate field for uploaded image URL
       quantity: 1,
       price: '',
-      weight: '',
+      weight: '1',
       country: '',
       notes: ''
     }

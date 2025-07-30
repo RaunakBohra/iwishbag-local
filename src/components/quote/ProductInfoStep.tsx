@@ -40,6 +40,7 @@ import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { useCountrySettings } from '@/hooks/useCountrySettings';
 import {
   Upload,
   X,
@@ -67,7 +68,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ShippingRouteDisplay } from '@/components/shared/ShippingRouteDisplay';
-import { locationDetectionService } from '@/services/LocationDetectionService';
+import { ipLocationService } from '@/services/IPLocationService';
 import { R2StorageService } from '@/services/R2StorageService';
 import { urlAnalysisService } from '@/services/UrlAnalysisService';
 import { ProgressiveAuthModal } from '@/components/auth/ProgressiveAuthModal';
@@ -113,6 +114,7 @@ export default function ProductInfoStep({
   const { user } = useAuth();
   // Use props if provided, otherwise fetch
   const { data: fetchedCountries, isLoading, error: countryError } = usePurchaseCountries();
+  const { countries: countrySettings } = useCountrySettings();
   const { data: fetchedShippingCountries, isLoading: shippingCountriesLoading } = useShippingCountries();
   
   const countries = propsPurchaseCountries || fetchedCountries;
@@ -126,7 +128,15 @@ export default function ProductInfoStep({
   const [urlMismatchNotifications, setUrlMismatchNotifications] = useState({}); // Track URL country mismatches
   
   // Location detection debug state
-  const [locationDebug, setLocationDebug] = useState({
+  const [locationDebug, setLocationDebug] = useState<{
+    isDetecting: boolean;
+    detectionMethod: string | null;
+    detectedCountry: string | null;
+    detectedLocation: any | null;
+    isSupported: boolean | null;
+    error: string | null;
+    timestamp: string | null;
+  }>({
     isDetecting: false,
     detectionMethod: null, // 'ip', 'timezone', 'manual'
     detectedCountry: null,
@@ -136,24 +146,42 @@ export default function ProductInfoStep({
     timestamp: null
   });
 
+  // Helper function to get weight unit for a country
+  const getWeightUnit = (countryCode) => {
+    if (!countryCode || !countrySettings) return 'kg'; // Default to kg
+    const country = countrySettings.find(c => c.code === countryCode);
+    return country?.weight_unit || 'kg';
+  };
+
+  // Debug log initial product state
+  useEffect(() => {
+    console.log('🔍 Initial products state:', products.map((p, i) => ({
+      index: i,
+      country: p.country || 'empty',
+      title: p.title || 'no title'
+    })));
+  }, []);
+
   // IP-based location detection only
   useEffect(() => {
     if (!destinationCountry && Array.isArray(shippingCountries)) {
       setLocationDebug(prev => ({ ...prev, isDetecting: true, timestamp: new Date().toISOString() }));
       
       // Get location data from IP
-      locationDetectionService.detectLocation()
+      console.log('🌍 Starting IP-based country detection...');
+      ipLocationService.detectCountry()
         .then((locationData) => {
+          console.log('📍 IP detection response:', locationData);
           // Extract country code from location data
           const detectedCountry = locationData.countryCode;
           
           // Validate detected country exists in our supported shipping destinations
           const countryExists = shippingCountries.find(c => c.code === detectedCountry);
           
-          // Determine detection method
+          // Determine detection method based on the source
           let detectionMethod = 'manual';
           if (locationData) {
-            detectionMethod = locationData.city ? 'ip' : 'timezone';
+            detectionMethod = locationData.source === 'ipapi' ? 'ip' : locationData.source;
           }
           
           const debugInfo = {
@@ -192,7 +220,7 @@ export default function ProductInfoStep({
           // Don't set any default - let user choose
         });
     }
-  }, [destinationCountry, shippingCountries, setDestinationCountry, userProfile]);
+  }, [destinationCountry, shippingCountries, setDestinationCountry]);
 
   // Auto-sync countries for both combined and separate quotes (initial sync)
   useEffect(() => {
@@ -244,6 +272,11 @@ export default function ProductInfoStep({
   const updateProduct = (index, field, value) => {
     const newProducts = [...products];
     newProducts[index] = { ...newProducts[index], [field]: value };
+
+    // Debug log for country changes
+    if (field === 'country') {
+      console.log(`🌍 Country updated for product ${index + 1}:`, value || 'empty (showing "Select country")');
+    }
 
     // Auto-sync countries for both quote types when first product changes
     if (field === 'country' && index === 0) {
@@ -705,7 +738,8 @@ export default function ProductInfoStep({
                   </label>
                   <div className="relative">
                     <select
-                      value={product.country}
+                      name={`product-country-${index}-${sessionId}`}
+                      value={product.country || ''}
                       onChange={(e) => updateProduct(index, 'country', e.target.value)}
                       className={`w-full h-[40px] sm:h-[48px] border rounded-lg p-2 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors ${
                         quoteType === 'combined' && index > 0
@@ -713,8 +747,9 @@ export default function ProductInfoStep({
                           : 'border-gray-200 bg-white'
                       } ${isLoading ? 'pr-8' : ''}`}
                       disabled={quoteType === 'combined' && index > 0 || isLoading}
+                      autoComplete="off"
                     >
-                      <option value="">Select</option>
+                      <option value="">Select country</option>
                       {isLoading ? (
                         <option>Loading countries...</option>
                       ) : countryError ? (
@@ -859,7 +894,7 @@ export default function ProductInfoStep({
                   {/* Weight - ~35% on mobile, ~25% on desktop */}
                   <div className="flex-1 w-[35%] sm:w-[25%] min-w-[80px] sm:min-w-[100px]">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
-                      Weight (kg)
+                      Weight ({getWeightUnit(product.country)})
                     </label>
                     <input
                       type="number"
@@ -991,7 +1026,7 @@ export default function ProductInfoStep({
                       <span className="font-medium">{product.title || `Product ${index + 1}`}:</span>
                       <span>{fromCountry} → {toCountry}</span>
                       {product.weight && (
-                        <span className="text-blue-600">({product.weight}kg)</span>
+                        <span className="text-blue-600">({product.weight}{getWeightUnit(product.country)})</span>
                       )}
                     </div>
                   );

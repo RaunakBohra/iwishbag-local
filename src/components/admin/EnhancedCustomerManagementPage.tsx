@@ -98,7 +98,7 @@ export const EnhancedCustomerManagementPage = () => {
             : customer.cod_enabled
               ? 'Active'
               : 'Inactive';
-          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.delivery_addresses[0]?.city || 'N/A'}, ${customer.delivery_addresses[0]?.country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
+          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.delivery_addresses[0]?.city || 'N/A'}, ${customer.delivery_addresses[0]?.destination_country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
         })
         .join('\n');
 
@@ -148,7 +148,7 @@ export const EnhancedCustomerManagementPage = () => {
             : customer.cod_enabled
               ? 'Active'
               : 'Inactive';
-          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.delivery_addresses[0]?.city || 'N/A'}, ${customer.delivery_addresses[0]?.country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
+          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.delivery_addresses[0]?.city || 'N/A'}, ${customer.delivery_addresses[0]?.destination_country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
         })
         .join('\n');
 

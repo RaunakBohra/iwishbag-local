@@ -107,7 +107,7 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:8080"
+site_url = "http://localhost:8082"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["http://192.168.1.85:8080", "http://localhost:8081", "http://localhost:8080/auth/confirm", "http://localhost:8080/auth/reset", "https://whyteclub.com/auth/confirm", "https://whyteclub.com/auth/reset", "http://localhost:8083/auth/callback", "http://localhost:8082/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
@@ -171,12 +171,20 @@ otp_expiry = 3600
 # Use simple SMTP configuration for local development
 [auth.email.smtp]
 enabled = true
-host = "smtp.gmail.com"
-port = 587
-user = "env(GOOGLE_WORKSPACE_EMAIL)"
-pass = "env(GOOGLE_APP_PASSWORD)"
-admin_email = "env(GOOGLE_WORKSPACE_EMAIL)"
+# Use local Mailpit (named as inbucket for compatibility)
+host = "inbucket"
+port = 1025
+user = "supabase"
+pass = "supabase"
+admin_email = "noreply@iwishbag.com"
 sender_name = "iWishBag"
+
+# For production with Resend, uncomment these:
+# host = "smtp.resend.com"
+# port = 587
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "onboarding@resend.dev"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

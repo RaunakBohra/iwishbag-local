@@ -705,7 +705,11 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <WorldClassPhoneInput
                     countries={countries || []}
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(newPhoneValue) => {
+                      console.log('[Phone Change] New value:', newPhoneValue);
+                      console.log('[Phone Change] Address country remains:', selectedCountry);
+                      field.onChange(newPhoneValue);
+                    }}
                     onValidationChange={(isValid, error) => {
                       setPhoneError(error || '');
                       if (error) {

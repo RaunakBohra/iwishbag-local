@@ -322,7 +322,7 @@ export const CompactCustomerInfo: React.FC<CompactCustomerInfoProps> = ({
       address.city,
       address.state,
       address.postal,
-      address.country,
+      address.destination_country,
     ].filter(Boolean);
 
     return parts.join(', ');

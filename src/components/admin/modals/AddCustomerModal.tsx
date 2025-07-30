@@ -109,7 +109,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onOpen
         address_line1: data.addressLine1,
         address_line2: data.addressLine2 || null,
         city: data.city,
-        country: data.country,
+        destination_country: data.country,
         postal_code: data.postalCode,
         is_default: true,
       });
