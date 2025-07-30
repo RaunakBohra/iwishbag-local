@@ -211,6 +211,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   // Auto-detect country on component mount (only for new addresses)
   useEffect(() => {
     if (!address && countries && countries.length > 0) {
+      console.log('[AddressForm] Auto-detecting country for new address...');
       autoDetectCountry();
     }
   }, [countries]);
@@ -365,7 +366,23 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             name="destination_country"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm text-gray-600">Country/Region</FormLabel>
+                <FormLabel className="text-sm text-gray-600">
+                  Country/Region
+                  {/* Dev button to test IP detection */}
+                  {!address && process.env.NODE_ENV === 'development' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        console.log('[AddressForm] Manually triggering IP detection...');
+                        ipLocationService.clearCache();
+                        autoDetectCountry();
+                      }}
+                      className="ml-2 text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      (Detect)
+                    </button>
+                  )}
+                </FormLabel>
                 <div className="relative">
                   <FormControl>
                     <div 

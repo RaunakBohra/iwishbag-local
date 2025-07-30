@@ -138,7 +138,7 @@ export const useCustomerManagementFixed = () => {
               authUser?.email ||
               `${profile.full_name?.toLowerCase().replace(/\s+/g, '.') || 'customer'}@example.com`,
             role: authUser?.role || 'customer',
-            avatar_url: profile.avatar_url || authUser?.avatar_url,
+            avatar_url: authUser?.avatar_url || profile.avatar_url,
             phone: authUser?.phone,
             last_sign_in_at: authUser?.last_sign_in_at,
             quote_count: quoteCount,

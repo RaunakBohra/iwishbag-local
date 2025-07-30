@@ -49,23 +49,37 @@ serve(async (req) => {
       throw authUsersError;
     }
 
-    // Create a map of user IDs to emails
-    const emailMap = new Map();
+    // Create a map of user IDs to user data including metadata
+    const userDataMap = new Map();
     authUsers.users.forEach((authUser) => {
-      emailMap.set(authUser.id, authUser.email);
+      userDataMap.set(authUser.id, {
+        email: authUser.email,
+        role: authUser.role,
+        phone: authUser.phone,
+        avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture,
+        user_metadata: authUser.user_metadata,
+        last_sign_in_at: authUser.last_sign_in_at,
+      });
     });
 
     // Combine the data
     const usersWithEmails =
-      profiles?.map((profile) => ({
-        id: profile.id,
-        email: emailMap.get(profile.id) || 'No email found',
-        full_name: profile.full_name,
-        cod_enabled: profile.cod_enabled,
-        internal_notes: profile.internal_notes,
-        created_at: profile.created_at,
-        user_addresses: profile.user_addresses || [],
-      })) || [];
+      profiles?.map((profile) => {
+        const authUser = userDataMap.get(profile.id);
+        return {
+          id: profile.id,
+          email: authUser?.email || 'No email found',
+          full_name: profile.full_name,
+          cod_enabled: profile.cod_enabled,
+          internal_notes: profile.internal_notes,
+          created_at: profile.created_at,
+          user_addresses: profile.user_addresses || [],
+          role: authUser?.role || 'customer',
+          phone: authUser?.phone,
+          avatar_url: authUser?.avatar_url,
+          last_sign_in_at: authUser?.last_sign_in_at,
+        };
+      }) || [];
 
     return new Response(JSON.stringify({ data: usersWithEmails }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

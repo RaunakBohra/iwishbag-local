@@ -746,15 +746,13 @@ export const CustomerProfile: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
-                    {getCustomerAvatarUrl() && (
-                      <AvatarImage
-                        src={getCustomerAvatarUrl()!}
-                        alt={customerDisplayData?.name || customer.email}
-                        className="object-cover"
-                        crossOrigin="anonymous"
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
+                    <AvatarImage
+                      src={getCustomerAvatarUrl() || undefined}
+                      alt={customerDisplayData?.name || customer.email}
+                      className="object-cover"
+                      crossOrigin="anonymous"
+                      referrerPolicy="no-referrer"
+                    />
                     <AvatarFallback className="bg-blue-100 text-blue-700 font-medium">
                       {getCustomerInitials()}
                     </AvatarFallback>

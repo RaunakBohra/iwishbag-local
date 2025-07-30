@@ -32,9 +32,10 @@ class IPLocationService {
   /**
    * Detect user's country from IP address
    */
-  async detectCountry(): Promise<IPLocationData> {
-    // Return cached location if available
-    if (this.cachedLocation) {
+  async detectCountry(forceRefresh: boolean = false): Promise<IPLocationData> {
+    // Return cached location if available and not forcing refresh
+    if (this.cachedLocation && !forceRefresh) {
+      console.log('[IPLocationService] Returning cached location:', this.cachedLocation);
       return this.cachedLocation;
     }
 
@@ -97,8 +98,8 @@ class IPLocationService {
    */
   private async getIPAPILocation(): Promise<IPLocationData | null> {
     try {
-      // Using ip-api.com - free for non-commercial use
-      const response = await fetch('https://ip-api.com/json/?fields=status,country,countryCode', {
+      // Using ipapi.co - free tier available, HTTPS supported
+      const response = await fetch('https://ipapi.co/json/', {
         signal: AbortSignal.timeout(3000) // 3 second timeout
       });
 
@@ -108,10 +109,12 @@ class IPLocationService {
 
       const data = await response.json();
       
-      if (data.status === 'success' && data.countryCode) {
+      console.log('[IPLocationService] IP API response:', data);
+      
+      if (data.country_code) {
         return {
-          countryCode: data.countryCode,
-          countryName: data.country,
+          countryCode: data.country_code,
+          countryName: data.country_name,
           confidence: 'medium',
           source: 'ipapi'
         };

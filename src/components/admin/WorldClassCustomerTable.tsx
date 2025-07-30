@@ -139,6 +139,10 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   const getCustomerAvatarUrl = (customer: Customer) => {
+    // Temporary debug logging
+    if (customer.avatar_url) {
+      console.log('✅ Customer has avatar:', customer.email, customer.avatar_url);
+    }
     return customer.avatar_url;
   };
 
@@ -661,15 +665,13 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                   <TableCell className="px-6">
                     <div className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
-                        {getCustomerAvatarUrl(customer) && (
-                          <AvatarImage
-                            src={getCustomerAvatarUrl(customer)!}
-                            alt={getAdminCustomerDisplayData(customer).name}
-                            className="object-cover"
-                            crossOrigin="anonymous"
-                            referrerPolicy="no-referrer"
-                          />
-                        )}
+                        <AvatarImage
+                          src={getCustomerAvatarUrl(customer) || undefined}
+                          alt={getAdminCustomerDisplayData(customer).name}
+                          className="object-cover"
+                          crossOrigin="anonymous"
+                          referrerPolicy="no-referrer"
+                        />
                         <AvatarFallback className="bg-gray-100 text-gray-600 text-xs font-medium">
                           {getCustomerInitials(customer)}
                         </AvatarFallback>
