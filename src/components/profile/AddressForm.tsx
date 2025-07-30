@@ -25,9 +25,11 @@ import { InternationalAddressValidator } from '@/services/InternationalAddressVa
 import { StateProvinceService } from '@/services/StateProvinceService';
 import { isValidPhone, isValidPhoneForCountry } from '@/lib/phoneUtils';
 import { ipLocationService } from '@/services/IPLocationService';
-import { Info, Search, ChevronDown } from 'lucide-react';
+import { Info, Search, ChevronDown, ChevronUp, Truck } from 'lucide-react';
 import { FlagIcon } from '@/components/ui/FlagIcon';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Textarea } from '@/components/ui/textarea';
 
 const addressSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -40,6 +42,7 @@ const addressSchema = z.object({
   postal_code: z.string().optional(),
   destination_country: z.string().min(1, 'Country is required'),
   phone: z.string().min(1, 'Phone number is required'),
+  delivery_instructions: z.string().optional(),
   is_default: z.boolean().default(false),
 });
 
@@ -54,6 +57,7 @@ type AddressFormValues = {
   postal_code?: string;
   destination_country: string;
   phone: string;
+  delivery_instructions?: string;
   is_default: boolean;
 };
 
@@ -73,6 +77,9 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearchQuery, setCountrySearchQuery] = useState('');
   const countryDropdownRef = useRef<HTMLDivElement>(null);
+  const [showDeliveryInstructions, setShowDeliveryInstructions] = useState(
+    !!(address?.delivery_instructions && address.delivery_instructions.trim())
+  );
   
   // Custom validation states for real-time feedback
   const [phoneError, setPhoneError] = useState<string>('');
@@ -150,6 +157,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           postal_code: address.postal_code || '',
           destination_country: address.destination_country || 'US',
           phone: address.phone || '',
+          delivery_instructions: address.delivery_instructions || '',
           is_default: address.is_default,
         }
       : {
@@ -163,6 +171,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           postal_code: '',
           destination_country: 'US',
           phone: '',
+          delivery_instructions: '',
           is_default: false,
         },
   });
@@ -291,6 +300,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         postal_code: values.postal_code || null,
         destination_country: values.destination_country,
         phone: values.phone,
+        delivery_instructions: values.delivery_instructions || null,
         is_default: values.is_default,
       };
 
@@ -517,7 +527,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             />
           </div>
           
-          {/* Company */}
+          {/* Company field hidden - uncomment to show
           <FormField
             control={form.control}
             name="company_name"
@@ -535,6 +545,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               </FormItem>
             )}
           />
+          */}
           
           {/* Address */}
           <FormField
@@ -599,9 +610,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">
                     {fieldLabels.state}
-                    {['US', 'IN', 'NP'].includes(selectedCountry) && (
-                      <span className="text-red-500 ml-1">*</span>
-                    )}
                   </FormLabel>
                   {stateProvinces ? (
                     <Select
@@ -643,7 +651,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">
-                    {fieldLabels.postal} (optional)
+                    {fieldLabels.postal}
                   </FormLabel>
                   <FormControl>
                     <Input
@@ -717,6 +725,53 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             )}
           />
           
+          {/* Delivery Instructions - Collapsible */}
+          <Collapsible open={showDeliveryInstructions} onOpenChange={setShowDeliveryInstructions}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full justify-between p-3 h-auto font-normal hover:bg-gray-50 border border-gray-200 rounded-lg"
+              >
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Truck className="h-4 w-4" />
+                  Add delivery instructions
+                </div>
+                {showDeliveryInstructions ? (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <FormField
+                control={form.control}
+                name="delivery_instructions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">
+                      Delivery instructions (optional)
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="e.g., Leave package at back door, Ring doorbell twice, etc."
+                        className="min-h-[80px] bg-white border-gray-300 rounded text-base resize-none"
+                        rows={3}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-gray-500 mt-1">
+                      These instructions will be visible to the delivery person
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+          
           {/* Default Address Checkbox */}
           <FormField
             control={form.control}
@@ -733,11 +788,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   </FormControl>
                   <div className="flex-1">
                     <FormLabel className="text-sm font-medium text-gray-700 cursor-pointer">
-                      Set as default shipping address
+                      Set Default Address
                     </FormLabel>
-                    <p className="text-xs text-gray-500 mt-1">
-                      This address will be automatically selected for future orders
-                    </p>
                   </div>
                 </div>
               </FormItem>
@@ -752,7 +804,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               Object.keys(form.formState.errors).length > 0 ||
               phoneError !== ''
             }
-            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-3 text-base rounded-lg shadow-sm border border-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-semibold py-3.5 px-6 text-base rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
           >
             {addressMutation.isPending ? 'Saving...' : address ? 'Update address' : 'Save address'}
           </Button>
