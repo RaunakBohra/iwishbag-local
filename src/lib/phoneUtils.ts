@@ -14,6 +14,27 @@ export function isValidPhone(phone: string): boolean {
 }
 
 /**
+ * Validates a phone number for a specific country
+ */
+export function isValidPhoneForCountry(phone: string, country: CountryCode): boolean {
+  if (!phone || phone.length < 3) return false;
+
+  try {
+    // First check if it's a valid phone number globally
+    if (!isValidPhoneNumber(phone)) return false;
+    
+    // Then check if it matches the specific country
+    const phoneNumber = parsePhoneNumber(phone, country);
+    if (!phoneNumber) return false;
+    
+    // Verify the parsed number's country matches the expected country
+    return phoneNumber.country === country;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Formats a phone number for display
  */
 export function formatPhoneNumber(phone: string, country?: CountryCode): string {

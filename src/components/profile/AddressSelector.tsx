@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Plus, MapPin, CheckCircle } from 'lucide-react';
-import { AddressFormCompact } from './AddressFormCompact';
+import { AddressForm } from './AddressForm';
 import { Tables } from '@/integrations/supabase/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -86,7 +86,7 @@ export function AddressSelector({
             <DialogHeader>
               <DialogTitle>Add New Address</DialogTitle>
             </DialogHeader>
-            <AddressFormCompact onSuccess={handleAddressAdded} />
+            <AddressForm onSuccess={handleAddressAdded} />
           </DialogContent>
         </Dialog>
       </div>
@@ -162,7 +162,7 @@ export function AddressSelector({
           <DialogHeader>
             <DialogTitle>Add New Address</DialogTitle>
           </DialogHeader>
-          <AddressFormCompact onSuccess={handleAddressAdded} />
+          <AddressForm onSuccess={handleAddressAdded} />
         </DialogContent>
       </Dialog>
     </div>

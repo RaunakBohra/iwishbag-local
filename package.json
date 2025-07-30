@@ -90,6 +90,7 @@
     "dotenv": "^16.6.1",
     "embla-carousel-react": "^8.3.0",
     "express": "^5.1.0",
+    "flag-icons": "^7.5.0",
     "framer-motion": "^12.23.7",
     "input-otp": "^1.2.4",
     "libphonenumber-js": "^1.12.10",

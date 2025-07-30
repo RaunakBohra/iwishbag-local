@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, MoreVertical, MapPin, Phone, CheckCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AddressFormCompact } from './AddressFormCompact';
+import { AddressForm } from './AddressForm';
 import { Tables } from '@/integrations/supabase/types';
 import {
   DropdownMenu,
@@ -226,7 +226,7 @@ export function AddressList() {
               {selectedAddress ? 'Edit Address' : 'Add New Address'}
             </DialogTitle>
           </DialogHeader>
-          <AddressFormCompact address={selectedAddress} onSuccess={() => setDialogOpen(false)} />
+          <AddressForm address={selectedAddress} onSuccess={() => setDialogOpen(false)} />
         </DialogContent>
       </Dialog>
 

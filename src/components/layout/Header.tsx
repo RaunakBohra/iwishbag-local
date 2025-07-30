@@ -14,7 +14,6 @@ import {
   Settings,
   HelpCircle,
   Search,
-  Command,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -36,7 +35,6 @@ import { useSidebar } from '@/hooks/use-sidebar';
 import { AdminSearch } from '@/components/admin/AdminSearch';
 import { useState } from 'react';
 import { cn } from '@/lib/design-system';
-import { useCommandPalette } from '@/hooks/useCommandPalette';
 
 const Header = () => {
   const { user, signOut, isAnonymous } = useAuth();
@@ -44,7 +42,6 @@ const Header = () => {
   const location = useLocation();
   const { toggleSidebar } = useSidebar();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const { openPalette, getShortcutDisplay } = useCommandPalette();
 
     const { itemCount: cartItemCount } = useCart();
 
@@ -57,6 +54,7 @@ const Header = () => {
 
   // Check if we're in admin area
   const isInAdminArea = location.pathname.startsWith('/admin');
+  const isInBlogArea = location.pathname.startsWith('/blog');
 
   // Get unread messages count for authenticated users
   const { data: unreadMessagesCount = 0 } = useQuery({
@@ -152,8 +150,8 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <div className="container flex h-16 items-center justify-between max-w-6xl px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 shadow-sm">
+      <div className="container flex h-16 items-center justify-between max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Left Section - Logo and Navigation */}
         <div className="flex items-center space-x-4 md:space-x-6 lg:space-x-8 min-w-0 flex-1">
           {/* Mobile menu toggle for admin area */}
@@ -191,10 +189,10 @@ const Header = () => {
                 variant={location.pathname.startsWith('/track') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                  'h-9 px-4 text-sm font-medium transition-all duration-200',
                   location.pathname.startsWith('/track')
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
-                    : 'text-gray-700 hover:bg-gray-50',
+                    ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-sm'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100',
                 )}
                 onClick={() => navigate('/track')}
               >
@@ -208,10 +206,10 @@ const Header = () => {
                   variant={location.pathname === '/quote' ? 'default' : 'ghost'}
                   size="sm"
                   className={cn(
-                    'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                    'h-9 px-4 text-sm font-medium transition-all duration-200',
                     location.pathname === '/quote'
-                      ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
-                      : 'text-gray-700 hover:bg-gray-50',
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100',
                   )}
                   onClick={() => navigate('/quote')}
                 >
@@ -226,10 +224,10 @@ const Header = () => {
                   variant={location.pathname === '/support/my-tickets' ? 'default' : 'ghost'}
                   size="sm"
                   className={cn(
-                    'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                    'h-9 px-4 text-sm font-medium transition-all duration-200',
                     location.pathname === '/support/my-tickets'
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
-                      : 'text-gray-700 hover:bg-gray-50',
+                      ? 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100',
                   )}
                   onClick={() => navigate('/support/my-tickets')}
                 >
@@ -247,10 +245,10 @@ const Header = () => {
                 variant={location.pathname.includes('/admin/quotes') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                  'h-9 px-4 text-sm font-medium transition-all duration-200',
                   location.pathname.includes('/admin/quotes')
-                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
-                    : 'text-gray-700 hover:bg-gray-50',
+                    ? 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100',
                 )}
                 onClick={() => navigate('/admin/quotes')}
               >
@@ -261,10 +259,10 @@ const Header = () => {
                 variant={location.pathname.includes('/admin/orders') ? 'default' : 'ghost'}
                 size="sm"
                 className={cn(
-                  'h-8 sm:h-9 lg:h-10 px-3 sm:px-4 text-xs sm:text-sm lg:text-base font-medium transition-colors',
+                  'h-9 px-4 text-sm font-medium transition-all duration-200',
                   location.pathname.includes('/admin/orders')
-                    ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600'
-                    : 'text-gray-700 hover:bg-gray-50',
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100',
                 )}
                 onClick={() => navigate('/admin/orders')}
               >
@@ -277,23 +275,10 @@ const Header = () => {
 
         {/* Right Section - Actions and User Menu */}
         <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4 min-w-0">
-          {/* Command Palette Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden sm:flex items-center space-x-2 h-8 px-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors border border-gray-200"
-            onClick={openPalette}
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden md:inline">Search</span>
-            <div className="hidden lg:flex items-center space-x-0.5 ml-1 text-xs text-gray-400">
-              <Command className="h-3 w-3" />
-              <span>K</span>
-            </div>
-          </Button>
 
           {/* Admin Search - only show in admin area */}
           {isInAdminArea && <AdminSearch />}
+          
           {user && !isAnonymous ? (
             <div className="flex items-center space-x-2 md:space-x-3 lg:space-x-4">
               {/* Desktop View - Show all actions */}

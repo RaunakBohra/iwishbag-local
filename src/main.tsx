@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import * as Sentry from '@sentry/react';
 import App from './App.tsx';
 import './index.css';
+import './styles/amazon-address-form.css';
 import { validateEnv } from './config/env';
 import { logger } from '@/utils/logger';
 
