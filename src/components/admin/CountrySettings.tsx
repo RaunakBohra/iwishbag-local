@@ -428,7 +428,7 @@ export const CountrySettings = () => {
                             <div className="flex items-center gap-4 flex-1">
                               <Checkbox
                                 checked={isAllSelected}
-                                indeterminate={isSomeSelected}
+                                indeterminate={isSomeSelected || undefined}
                                 onCheckedChange={handleSelectAll}
                                 aria-label="Select all countries"
                               />
@@ -482,7 +482,7 @@ export const CountrySettings = () => {
                                   </Button>
                                   <Checkbox
                                     checked={stats.allSelected}
-                                    indeterminate={stats.someSelected}
+                                    indeterminate={stats.someSelected || undefined}
                                     onCheckedChange={(checked) => handleSelectAllInContinent(continent.countries, checked as boolean)}
                                     aria-label={`Select all countries in ${continent.name}`}
                                   />

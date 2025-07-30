@@ -1,0 +1,136 @@
+import { useState, useCallback, useEffect } from 'react';
+import { 
+  extractPhoneDigits, 
+  formatPhoneNumber, 
+  createCompletePhoneNumber, 
+  validatePhoneForCountry,
+  parsePhoneInput,
+  getPhonePlaceholder,
+  isPhoneComplete
+} from '@/lib/phoneFormatUtils';
+
+interface UsePhoneInputProps {
+  initialCountry?: string;
+  initialValue?: string;
+  onChange?: (value: string) => void;
+  onValidationChange?: (isValid: boolean, error?: string) => void;
+}
+
+export function usePhoneInput({
+  initialCountry = 'US',
+  initialValue = '',
+  onChange,
+  onValidationChange
+}: UsePhoneInputProps = {}) {
+  
+  // Parse initial value if provided
+  const parsedInitial = parsePhoneInput(initialValue);
+  const initialDigits = parsedInitial.digits || '';
+  const detectedCountry = parsedInitial.countryCode || initialCountry;
+  
+  const [countryCode, setCountryCode] = useState<string>(detectedCountry);
+  const [phoneDigits, setPhoneDigits] = useState<string>(initialDigits);
+  const [isValid, setIsValid] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [isTouched, setIsTouched] = useState<boolean>(false);
+  
+  // Validate phone number
+  const validatePhone = useCallback((digits: string, country: string) => {
+    if (!digits && !isTouched) {
+      setIsValid(false);
+      setError('');
+      return;
+    }
+    
+    const validation = validatePhoneForCountry(digits, country);
+    setIsValid(validation.isValid);
+    setError(validation.error || '');
+    
+    onValidationChange?.(validation.isValid, validation.error);
+  }, [isTouched, onValidationChange]);
+  
+  // Update validation when digits or country changes
+  useEffect(() => {
+    validatePhone(phoneDigits, countryCode);
+  }, [phoneDigits, countryCode, validatePhone]);
+  
+  // Handle phone digits change
+  const handlePhoneChange = useCallback((value: string) => {
+    const digits = extractPhoneDigits(value);
+    setPhoneDigits(digits);
+    setIsTouched(true);
+    
+    // Create complete phone number and notify parent
+    const completeNumber = createCompletePhoneNumber(countryCode, digits);
+    onChange?.(completeNumber);
+  }, [countryCode, onChange]);
+  
+  // Handle country change
+  const handleCountryChange = useCallback((newCountry: string) => {
+    setCountryCode(newCountry);
+    
+    // Preserve existing digits with new country
+    if (phoneDigits) {
+      const completeNumber = createCompletePhoneNumber(newCountry, phoneDigits);
+      onChange?.(completeNumber);
+    }
+  }, [phoneDigits, onChange]);
+  
+  // Handle blur event
+  const handleBlur = useCallback(() => {
+    setIsTouched(true);
+    validatePhone(phoneDigits, countryCode);
+  }, [phoneDigits, countryCode, validatePhone]);
+  
+  // Get formatted display value
+  const formattedValue = formatPhoneNumber(phoneDigits, countryCode);
+  
+  // Get placeholder
+  const placeholder = getPhonePlaceholder(countryCode);
+  
+  // Check if input is complete
+  const isComplete = isPhoneComplete(phoneDigits, countryCode);
+  
+  // Get complete phone number
+  const completePhoneNumber = createCompletePhoneNumber(countryCode, phoneDigits);
+  
+  return {
+    // State
+    countryCode,
+    phoneDigits,
+    formattedValue,
+    isValid,
+    isComplete,
+    error,
+    isTouched,
+    placeholder,
+    completePhoneNumber,
+    
+    // Actions
+    setCountryCode: handleCountryChange,
+    setPhoneDigits: setPhoneDigits,
+    handlePhoneChange,
+    handleCountryChange,
+    handleBlur,
+    
+    // Utilities
+    reset: () => {
+      setPhoneDigits('');
+      setIsTouched(false);
+      setError('');
+      setIsValid(false);
+    },
+    
+    // Set external value (useful for form integration)
+    setValue: (value: string, country?: string) => {
+      const parsed = parsePhoneInput(value);
+      setPhoneDigits(parsed.digits);
+      if (country) {
+        setCountryCode(country);
+      } else if (parsed.countryCode) {
+        setCountryCode(parsed.countryCode);
+      }
+      setIsTouched(true);
+    }
+  };
+}

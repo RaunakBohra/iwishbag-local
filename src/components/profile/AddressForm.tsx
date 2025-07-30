@@ -23,11 +23,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { InternationalAddressValidator } from '@/services/InternationalAddressValidator';
 import { StateProvinceService } from '@/services/StateProvinceService';
-import { PhoneInput, PhoneInputRef } from '@/components/ui/phone-input';
 import { isValidPhone, isValidPhoneForCountry } from '@/lib/phoneUtils';
 import { ipLocationService } from '@/services/IPLocationService';
 import { Info, Search, ChevronDown } from 'lucide-react';
 import { FlagIcon } from '@/components/ui/FlagIcon';
+import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 
 const addressSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -66,15 +66,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const phoneInputRef = useRef<PhoneInputRef>(null);
   const [selectedCountry, setSelectedCountry] = useState(address?.destination_country || 'US');
-  const [phoneCountry, setPhoneCountry] = useState(address?.destination_country || 'US');
   const [fieldLabels, setFieldLabels] = useState({ state: 'State', postal: 'ZIP Code' });
   const [stateProvinces, setStateProvinces] = useState(StateProvinceService.getStatesForCountry(selectedCountry) || null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
-  const [showPhoneDropdown, setShowPhoneDropdown] = useState(false);
-  const [phoneSearchQuery, setPhoneSearchQuery] = useState('');
-  const phoneDropdownRef = useRef<HTMLDivElement>(null);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearchQuery, setCountrySearchQuery] = useState('');
   const countryDropdownRef = useRef<HTMLDivElement>(null);
@@ -83,23 +78,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const [phoneError, setPhoneError] = useState<string>('');
   const [postalError, setPostalError] = useState<string>('');
 
-  // Get dial code for country - moved before useMemo
-  const getDialCode = (countryCode: string): string => {
-    const dialCodes: Record<string, string> = {
-      US: '+1', IN: '+91', NP: '+977', GB: '+44', CA: '+1', AU: '+61',
-      NZ: '+64', DE: '+49', FR: '+33', IT: '+39', ES: '+34', JP: '+81',
-      CN: '+86', KR: '+82', SG: '+65', MY: '+60', TH: '+66', ID: '+62',
-      PH: '+63', VN: '+84', BD: '+880', LK: '+94', PK: '+92', AE: '+971',
-      SA: '+966', BR: '+55', MX: '+52', AR: '+54', CL: '+56', CO: '+57',
-      PE: '+51', ZA: '+27', NG: '+234', EG: '+20', KE: '+254', IL: '+972',
-      TR: '+90', RU: '+7', UA: '+380', PL: '+48', NL: '+31', BE: '+32',
-      CH: '+41', AT: '+43', SE: '+46', NO: '+47', DK: '+45', FI: '+358',
-      PT: '+351', GR: '+30', CZ: '+420', HU: '+36', RO: '+40', BG: '+359',
-      HR: '+385', RS: '+381', SK: '+421', SI: '+386', LT: '+370', LV: '+371',
-      EE: '+372', IS: '+354', IE: '+353', LU: '+352', MT: '+356', CY: '+357',
-    };
-    return dialCodes[countryCode] || '+1';
-  };
 
   const { data: allCountries, isLoading: countriesLoading } = useQuery({
     queryKey: ['country-configurations'],
@@ -130,17 +108,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     return allCountries.filter((c) => c.shipping_allowed);
   }, [allCountries]);
 
-  // Filter countries for phone dropdown based on search
-  const filteredPhoneCountries = useMemo(() => {
-    if (!countries || !phoneSearchQuery) return countries;
-    
-    const query = phoneSearchQuery.toLowerCase();
-    return countries.filter(country => 
-      country.name.toLowerCase().includes(query) ||
-      country.code.toLowerCase().includes(query) ||
-      getDialCode(country.code).includes(query)
-    );
-  }, [countries, phoneSearchQuery]);
 
   // Filter countries for country dropdown based on search
   const filteredCountries = useMemo(() => {
@@ -202,19 +169,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   });
 
   // Custom validation functions
-  const validatePhone = (phone: string): string => {
-    if (!phone) return 'Phone number is required';
-    
-    if (selectedCountry && selectedCountry.length === 2) {
-      if (!isValidPhoneForCountry(phone, selectedCountry.toUpperCase() as any)) {
-        return `Please enter a valid ${countries?.find(c => c.code === selectedCountry)?.name || selectedCountry} phone number`;
-      }
-    } else if (!isValidPhone(phone)) {
-      return 'Please enter a valid phone number';
-    }
-    
-    return '';
-  };
 
   const validatePostalCode = (postalCode: string): string => {
     if (!postalCode) return ''; // Optional field
@@ -231,22 +185,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
 
   // Clear custom errors when country changes
   useEffect(() => {
-    setPhoneError('');
     setPostalError('');
     
     // Re-validate existing values with new country
-    const currentPhone = form.getValues('phone');
     const currentPostal = form.getValues('postal_code');
-    
-    if (currentPhone) {
-      const phoneErr = validatePhone(currentPhone);
-      setPhoneError(phoneErr);
-      if (phoneErr) {
-        form.setError('phone', { message: phoneErr });
-      } else {
-        form.clearErrors('phone');
-      }
-    }
     
     if (currentPostal) {
       const postalErr = validatePostalCode(currentPostal);
@@ -267,9 +209,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
       
       const states = StateProvinceService.getStatesForCountry(selectedCountry);
       setStateProvinces(states);
-      
-      // Update phone country when address country changes
-      setPhoneCountry(selectedCountry);
     }
   }, [selectedCountry]);
 
@@ -280,20 +219,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     }
   }, [countries]);
 
-  // Handle clicking outside phone dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (phoneDropdownRef.current && !phoneDropdownRef.current.contains(event.target as Node)) {
-        setShowPhoneDropdown(false);
-        setPhoneSearchQuery('');
-      }
-    };
-
-    if (showPhoneDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showPhoneDropdown]);
 
   // Handle clicking outside country dropdown
   useEffect(() => {
@@ -320,7 +245,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         
         if (countryExists) {
           setSelectedCountry(location.countryCode);
-          setPhoneCountry(location.countryCode);
           form.setValue('destination_country', location.countryCode);
           
           if (location.confidence === 'high' || location.confidence === 'medium') {
@@ -403,24 +327,21 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     const formErrors = Object.keys(form.formState.errors).length > 0;
     
     // Perform final custom validation before submission
-    const phoneError = validatePhone(data.phone);
     const postalError = validatePostalCode(data.postal_code || '');
     
     // Set custom errors if they exist
     let hasCustomErrors = false;
-    if (phoneError) {
-      form.setError('phone', { message: phoneError });
-      setPhoneError(phoneError);
-      hasCustomErrors = true;
-    }
     if (postalError) {
       form.setError('postal_code', { message: postalError });
       setPostalError(postalError);
       hasCustomErrors = true;
     }
     
-    // Check if there are any validation errors (form errors or custom errors)
-    if (formErrors || hasCustomErrors) {
+    // Check for phone validation error from WorldClassPhoneInput
+    const hasPhoneError = phoneError !== '';
+    
+    // Check if there are any validation errors (form errors, custom errors, or phone errors)
+    if (formErrors || hasCustomErrors || hasPhoneError) {
       // Trigger validation to show all errors
       await form.trigger();
       
@@ -745,98 +666,24 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-sm text-gray-600">Phone</FormLabel>
-                <div className="relative">
-                  <FormControl>
-                    <div className="flex items-center gap-2 h-11 bg-white border border-gray-300 rounded px-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPhoneDropdown(!showPhoneDropdown);
-                          if (!showPhoneDropdown) {
-                            setPhoneSearchQuery(''); // Clear search when opening
-                          }
-                        }}
-                        className="flex items-center gap-2 text-gray-700 hover:bg-gray-50 -mx-2 px-2 py-1 rounded"
-                      >
-                        <FlagIcon countryCode={phoneCountry} size="sm" />
-                        <span className="text-base font-medium">{getDialCode(phoneCountry)}</span>
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
-                      </button>
-                      <input
-                        type="tel"
-                        value={field.value.replace(getDialCode(phoneCountry), '').trim()}
-                        onChange={(e) => {
-                          const dialCode = getDialCode(phoneCountry);
-                          const phoneNumber = e.target.value.replace(/\D/g, '');
-                          const fullPhone = `${dialCode} ${phoneNumber}`;
-                          field.onChange(fullPhone);
-                          
-                          // Real-time validation
-                          if (phoneNumber) {
-                            const error = validatePhone(fullPhone);
-                            setPhoneError(error);
-                            if (error) {
-                              form.setError('phone', { message: error });
-                            } else {
-                              form.clearErrors('phone');
-                            }
-                          }
-                        }}
-                        className="flex-1 outline-none text-base"
-                        placeholder="Enter phone number"
-                      />
-                    </div>
-                  </FormControl>
-                  {showPhoneDropdown && (
-                    <div 
-                      ref={phoneDropdownRef}
-                      className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50"
-                    >
-                      {/* Search input */}
-                      <div className="sticky top-0 bg-white border-b border-gray-200 p-2">
-                        <input
-                          type="text"
-                          value={phoneSearchQuery}
-                          onChange={(e) => setPhoneSearchQuery(e.target.value)}
-                          placeholder="Search country or dial code..."
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          autoFocus
-                        />
-                      </div>
-                      
-                      {/* Countries list */}
-                      <div className="max-h-80 overflow-y-auto">
-                        {filteredPhoneCountries?.length === 0 ? (
-                          <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                            No countries found
-                          </div>
-                        ) : (
-                          filteredPhoneCountries?.map((country) => (
-                        <button
-                          key={country.code}
-                          type="button"
-                          onClick={() => {
-                            setPhoneCountry(country.code);
-                            setShowPhoneDropdown(false);
-                            setPhoneSearchQuery(''); // Clear search
-                            // Update the phone number with new dial code
-                            const currentPhone = form.getValues('phone');
-                            const oldDialCode = getDialCode(phoneCountry);
-                            const newDialCode = getDialCode(country.code);
-                            const phoneNumber = currentPhone.replace(oldDialCode, '').trim();
-                            form.setValue('phone', `${newDialCode} ${phoneNumber}`);
-                          }}
-                          className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between"
-                        >
-                            <span className="text-sm">{country.name}({getDialCode(country.code)})</span>
-                            {country.code === phoneCountry && '✓'}
-                          </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <FormControl>
+                  <WorldClassPhoneInput
+                    countries={countries || []}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onValidationChange={(isValid, error) => {
+                      setPhoneError(error || '');
+                      if (error) {
+                        form.setError('phone', { message: error });
+                      } else {
+                        form.clearErrors('phone');
+                      }
+                    }}
+                    initialCountry={selectedCountry}
+                    className="w-full"
+                    error={phoneError}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

@@ -33,6 +33,35 @@ export interface HSNMasterRecord {
 }
 
 class UnifiedDataEngine {
+  private static instance: UnifiedDataEngine;
+  private cache: Map<string, any> = new Map();
+  private currencyService = CurrencyConversionService.getInstance();
+
+  private constructor() {}
+
+  static getInstance(): UnifiedDataEngine {
+    if (!UnifiedDataEngine.instance) {
+      UnifiedDataEngine.instance = new UnifiedDataEngine();
+    }
+    return UnifiedDataEngine.instance;
+  }
+
+  private getCached(key: string): any {
+    const entry = this.cache.get(key);
+    if (entry && entry.expires > Date.now()) {
+      return entry.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  private setCache(key: string, data: any, ttl: number = 300000): void {
+    this.cache.set(key, {
+      data,
+      expires: Date.now() + ttl
+    });
+  }
+
   private async generateSmartSuggestions(items: any[]): Promise<SmartSuggestion[]> {
     const suggestions: SmartSuggestion[] = [];
 
@@ -286,6 +315,140 @@ class UnifiedDataEngine {
     }
 
     keysToDelete.forEach((key) => this.cache.delete(key));
+  }
+
+  // Core CRUD methods for quotes
+  async getQuote(quoteId: string): Promise<UnifiedQuote | null> {
+    const cacheKey = `quote_${quoteId}`;
+    const cached = this.getCached(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('id', quoteId)
+        .single();
+
+      if (error || !data) return null;
+
+      // Transform database row to UnifiedQuote
+      const quote: UnifiedQuote = {
+        id: data.id,
+        display_id: data.display_id || '',
+        user_id: data.user_id,
+        status: data.status,
+        origin_country: data.origin_country,
+        destination_country: data.destination_country,
+        items: (data.items as QuoteItem[]) || [],
+        calculation_data: (data.calculation_data as CalculationData) || {},
+        customer_data: (data.customer_data as CustomerData) || {},
+        operational_data: (data.operational_data as OperationalData) || {},
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+
+      this.setCache(cacheKey, quote);
+      return quote;
+    } catch (error) {
+      console.error('Failed to get quote:', error);
+      return null;
+    }
+  }
+
+  async updateQuote(quoteId: string, updates: Partial<UnifiedQuote>): Promise<boolean> {
+    try {
+      // Transform UnifiedQuote updates to database format
+      const dbUpdates: any = {};
+      
+      if (updates.user_id !== undefined) dbUpdates.user_id = updates.user_id;
+      if (updates.display_id !== undefined) dbUpdates.display_id = updates.display_id;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.origin_country !== undefined) dbUpdates.origin_country = updates.origin_country;
+      if (updates.destination_country !== undefined) dbUpdates.destination_country = updates.destination_country;
+      if (updates.items !== undefined) dbUpdates.items = updates.items;
+      if (updates.calculation_data !== undefined) dbUpdates.calculation_data = updates.calculation_data;
+      if (updates.customer_data !== undefined) dbUpdates.customer_data = updates.customer_data;
+      if (updates.operational_data !== undefined) dbUpdates.operational_data = updates.operational_data;
+      
+      dbUpdates.updated_at = new Date().toISOString();
+
+      const { error } = await supabase
+        .from('quotes')
+        .update(dbUpdates)
+        .eq('id', quoteId);
+
+      if (error) {
+        console.error('Failed to update quote:', error);
+        return false;
+      }
+
+      // Clear cache for this quote
+      this.cache.delete(`quote_${quoteId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to update quote:', error);
+      return false;
+    }
+  }
+
+  async addItem(quoteId: string, item: QuoteItem): Promise<boolean> {
+    try {
+      const quote = await this.getQuote(quoteId);
+      if (!quote) return false;
+
+      const newItems = [...quote.items, { ...item, id: crypto.randomUUID() }];
+      
+      return await this.updateQuote(quoteId, { items: newItems });
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      return false;
+    }
+  }
+
+  async updateItem(quoteId: string, itemId: string, updates: Partial<QuoteItem>): Promise<boolean> {
+    try {
+      const quote = await this.getQuote(quoteId);
+      if (!quote) return false;
+
+      const itemIndex = quote.items.findIndex(item => item.id === itemId);
+      if (itemIndex === -1) return false;
+
+      const newItems = [...quote.items];
+      newItems[itemIndex] = { ...newItems[itemIndex], ...updates };
+
+      return await this.updateQuote(quoteId, { items: newItems });
+    } catch (error) {
+      console.error('Failed to update item:', error);
+      return false;
+    }
+  }
+
+  async removeItem(quoteId: string, itemId: string): Promise<boolean> {
+    try {
+      const quote = await this.getQuote(quoteId);
+      if (!quote) return false;
+
+      const newItems = quote.items.filter(item => item.id !== itemId);
+      
+      return await this.updateQuote(quoteId, { items: newItems });
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      return false;
+    }
+  }
+
+  private getOverrideActionDescription(override: any): string {
+    switch (override.action) {
+      case 'assign':
+        return `Assigned HSN ${override.new_hsn_code}`;
+      case 'change':
+        return `Changed HSN from ${override.old_hsn_code} to ${override.new_hsn_code}`;
+      case 'clear':
+        return `Cleared HSN ${override.old_hsn_code}`;
+      default:
+        return 'Unknown action';
+    }
   }
 }
 

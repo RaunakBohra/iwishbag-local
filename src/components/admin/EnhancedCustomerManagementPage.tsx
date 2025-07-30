@@ -279,3 +279,5 @@ export const EnhancedCustomerManagementPage = () => {
     </div>
   );
 };
+
+export default EnhancedCustomerManagementPage;
