@@ -332,17 +332,8 @@ export function validatePhoneForCountry(digits: string, countryCode: string): {
   
   // Progressive validation based on length
   if (currentLength < expectedLength.min) {
-    // Number is too short - don't show error until user stops typing
-    if (currentLength < 3) {
-      return { isValid: false }; // No error for very short numbers
-    }
-    
-    // Show helpful message for partially entered numbers
-    const remaining = expectedLength.min - currentLength;
-    return { 
-      isValid: false, 
-      error: `Enter ${remaining} more digit${remaining === 1 ? '' : 's'} for ${countryCode}` 
-    };
+    // Number is too short - don't show error while typing
+    return { isValid: false }; // Clean, no distracting messages
   }
   
   if (currentLength > expectedLength.max) {
