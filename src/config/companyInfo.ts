@@ -28,6 +28,7 @@ export interface CompanyInfo extends CompanyAddress {
   foundedYear: string;
   websiteUrl: string;
   logoUrl: string;
+  globalTagline?: string;
   socialMedia: {
     twitter?: string;
     facebook?: string;
@@ -62,6 +63,7 @@ export const companyInfoByCountry: Record<string, CompanyInfo> = {
     taxId: '', // Add GST number if available
     jurisdiction: 'Haryana, India',
     tagline: 'Shop the world, delivered to your doorstep',
+    globalTagline: 'Singapore-registered, globally trusted',
     foundedYear: '2019',
     websiteUrl: 'https://www.iwishbag.com',
     logoUrl: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
@@ -95,6 +97,7 @@ export const companyInfoByCountry: Record<string, CompanyInfo> = {
     taxId: '', // Add PAN/VAT if available
     jurisdiction: 'Nepal',
     tagline: 'Shop the world, delivered to your doorstep',
+    globalTagline: 'Backed by Singapore headquarters',
     foundedYear: '2019',
     websiteUrl: 'https://www.iwishbag.com',
     logoUrl: 'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',

@@ -65,14 +65,20 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
     }
   }, [user]);
 
-  // Countdown timer for resend
+  // Listen for email change completion
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (resendCooldown > 0) {
-      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    if (currentStep === 'confirmation-sent' && user && newEmailAddress) {
+      // Check if the user's email has been updated
+      if (user.email === newEmailAddress) {
+        setCurrentStep('success');
+        toast({
+          title: 'Email Changed Successfully',
+          description: `Your email has been updated to ${newEmailAddress}.`,
+        });
+      }
     }
-    return () => clearTimeout(timer);
-  }, [resendCooldown]);
+  }, [user, currentStep, newEmailAddress]);
+
 
   // Create dynamic schema based on user type
   const emailChangeSchemaWithPassword = z.object({
@@ -141,12 +147,11 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
       // Store new email for later
       setNewEmailAddress(values.newEmail);
       
-      // Step 2: Initiate email change (sends OTPs to both emails)
+      // Step 2: Initiate email change (sends confirmation links to both emails)
       await initiateEmailChange(values.newEmail);
       
-      // Move to current email OTP verification step
-      setCurrentStep('current-email-otp');
-      setResendCooldown(60);
+      // Move to confirmation sent step
+      setCurrentStep('confirmation-sent');
 
     } catch (error: any) {
       toast({
@@ -174,7 +179,7 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
         user: user.email
       });
       
-      // This will send OTPs to both current and new email addresses
+      // This will send confirmation links to both current and new email addresses
       const { data, error } = await supabase.auth.updateUser({
         email: emailToChange,
       });
@@ -186,8 +191,8 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
       }
 
       toast({
-        title: 'Verification Codes Sent',
-        description: `We've sent verification codes to both ${currentEmail} and ${emailToChange}.`,
+        title: 'Confirmation Emails Sent',
+        description: `We've sent confirmation emails to verify this change.`,
       });
 
     } catch (error: any) {
@@ -196,166 +201,12 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
     }
   };
 
-  const handleOTPChange = (index: number, value: string) => {
-    // Only allow digits
-    if (value && !/^\d$/.test(value)) return;
-
-    const newOtpValues = [...otpValues];
-    newOtpValues[index] = value;
-    setOtpValues(newOtpValues);
-    setOtpError(''); // Clear error when user types
-
-    // Auto-advance to next input
-    if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-input-${index + 1}`);
-      nextInput?.focus();
-    }
-
-    // Auto-submit when all digits entered
-    if (value && index === 5) {
-      const fullOtp = newOtpValues.join('');
-      if (fullOtp.length === 6) {
-        if (currentStep === 'current-email-otp') {
-          handleCurrentEmailOTPSubmit(fullOtp);
-        } else if (currentStep === 'new-email-otp') {
-          handleNewEmailOTPSubmit(fullOtp);
-        }
-      }
-    }
-  };
-
-  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-input-${index - 1}`);
-      prevInput?.focus();
-    }
-  };
-
-  const handleOTPPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').slice(0, 6);
-    if (/^\d+$/.test(pastedData)) {
-      const newOtpValues = pastedData.split('').concat(new Array(6 - pastedData.length).fill(''));
-      setOtpValues(newOtpValues);
-      
-      // Focus last filled input or last input if all filled
-      const lastIndex = Math.min(pastedData.length - 1, 5);
-      const lastInput = document.getElementById(`otp-input-${lastIndex}`);
-      lastInput?.focus();
-      
-      // Auto-submit if 6 digits
-      if (pastedData.length === 6) {
-        if (currentStep === 'current-email-otp') {
-          handleCurrentEmailOTPSubmit(pastedData);
-        } else if (currentStep === 'new-email-otp') {
-          handleNewEmailOTPSubmit(pastedData);
-        }
-      }
-    }
-  };
-
-  const handleCurrentEmailOTPSubmit = async (otp: string) => {
-    if (!user || !newEmailAddress) return;
-
-    setIsLoading(true);
-    setOtpError('');
-
-    try {
-      // Verify OTP for current email
-      const { error } = await supabase.auth.verifyOtp({
-        token: otp,
-        type: 'email_change',
-        email: currentEmail
-      });
-
-      if (error) {
-        setOtpError(error.message || 'Invalid verification code. Please try again.');
-        return;
-      }
-
-      // Current email verified! Move to new email verification
-      setCurrentStep('new-email-otp');
-      setOtpValues(new Array(6).fill('')); // Reset OTP values
-      setOtpError('');
-      
-      toast({
-        title: 'Current Email Verified',
-        description: `Now enter the code sent to ${newEmailAddress}.`,
-      });
-
-    } catch (error: any) {
-      console.error('Current email OTP verification error:', error);
-      setOtpError('Failed to verify code. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleNewEmailOTPSubmit = async (otp: string) => {
-    if (!user || !newEmailAddress) return;
-
-    setIsLoading(true);
-    setOtpError('');
-
-    try {
-      // Verify OTP for new email
-      const { error } = await supabase.auth.verifyOtp({
-        token: otp,
-        type: 'email_change',
-        email: newEmailAddress
-      });
-
-      if (error) {
-        setOtpError(error.message || 'Invalid verification code. Please try again.');
-        return;
-      }
-
-      // Both emails verified! Email change complete
-      setCurrentStep('success');
-      
-      toast({
-        title: 'Email Changed Successfully',
-        description: `Your email has been updated to ${newEmailAddress}.`,
-      });
-
-    } catch (error: any) {
-      console.error('New email OTP verification error:', error);
-      setOtpError('Failed to verify code. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (!user || !newEmailAddress || resendCooldown > 0) return;
-
-    setIsLoading(true);
-    try {
-      await initiateEmailChange();
-      setResendCooldown(60);
-      toast({
-        title: 'Verification Codes Resent',
-        description: 'New codes have been sent to both email addresses.',
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to resend verification codes',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Reset all state when modal closes
   useEffect(() => {
     if (!open) {
       form.reset();
       setCurrentStep('email-input');
-      setOtpValues(new Array(6).fill(''));
-      setOtpError('');
-      setResendCooldown(0);
       setNewEmailAddress('');
       setVerifiedPassword('');
       setShowPassword(false);
@@ -368,15 +219,11 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
             <Mail className="h-6 w-6 text-teal-600" />
-            {currentStep === 'current-email-otp' ? 'Verify Current Email' : 
-             currentStep === 'new-email-otp' ? 'Verify New Email' :
-             'Change Email Address'}
+            {currentStep === 'confirmation-sent' ? 'Check Your Email' : 'Change Email Address'}
           </DialogTitle>
           <DialogDescription className="text-gray-600 mt-2">
-            {currentStep === 'current-email-otp' ? (
-              `Enter the 6-digit code we sent to ${currentEmail}`
-            ) : currentStep === 'new-email-otp' ? (
-              `Enter the 6-digit code we sent to ${newEmailAddress}`
+            {currentStep === 'confirmation-sent' ? (
+              `We've sent confirmation emails to verify your email change`
             ) : isOAuthUser ? (
               "Add an email address for password-based login alongside your social login."
             ) : (
@@ -408,76 +255,51 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
               </Button>
             </div>
           </div>
-        ) : currentStep === 'current-email-otp' || currentStep === 'new-email-otp' ? (
-          <div className="space-y-6 py-4">
-            <Alert className="border-teal-200 bg-teal-50">
-              <ShieldCheck className="h-4 w-4 text-teal-600" />
-              <AlertDescription className="text-teal-800">
-                <p className="font-medium">{currentStep === 'current-email-otp' ? 'Step 1 of 2' : 'Step 2 of 2'}</p>
-                <p className="text-sm">
-                  {currentStep === 'current-email-otp' 
-                    ? 'Verify access to your current email address' 
-                    : 'Verify access to your new email address'}
-                </p>
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-4">
-              <div className="flex justify-center gap-2">
-                {otpValues.map((value, index) => (
-                  <input
-                    key={index}
-                    id={`otp-input-${index}`}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={value}
-                    onChange={(e) => handleOTPChange(index, e.target.value)}
-                    onKeyDown={(e) => handleOTPKeyDown(index, e)}
-                    onPaste={index === 0 ? handleOTPPaste : undefined}
-                    className={`w-12 h-12 text-center text-lg font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
-                      otpError ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                    disabled={isLoading}
-                    autoFocus={index === 0}
-                  />
-                ))}
+        ) : currentStep === 'confirmation-sent' ? (
+          <div className="space-y-4 py-6">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                <Mail className="h-8 w-8 text-blue-600" />
               </div>
-              
-              {otpError && (
-                <p className="text-sm text-red-500 text-center">{otpError}</p>
-              )}
-              
-              <div className="text-center space-y-3">
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  disabled={resendCooldown > 0 || isLoading}
-                  className="text-sm text-teal-600 hover:text-teal-700 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  {resendCooldown > 0 ? (
-                    `Resend code in ${resendCooldown}s`
-                  ) : (
-                    'Resend verification codes'
-                  )}
-                </button>
-                
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep('email-input');
-                      setOtpValues(new Array(6).fill(''));
-                      setOtpError('');
-                    }}
-                    disabled={isLoading}
-                    className="text-sm text-gray-600 hover:text-gray-700 flex items-center gap-1 mx-auto"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to email change
-                  </button>
+            </div>
+            <div className="text-center space-y-4">
+              <h3 className="font-semibold text-lg">Confirmation Emails Sent!</h3>
+              <p className="text-gray-600">
+                We've sent confirmation emails to both addresses:
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                  <span className="text-gray-700">{currentEmail}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                  <span className="text-gray-700">{newEmailAddress}</span>
                 </div>
               </div>
+              
+              <Alert className="border-blue-200 bg-blue-50 text-left">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <p className="font-medium mb-1">Complete Your Email Change</p>
+                  <ol className="text-sm space-y-1 ml-4 list-decimal">
+                    <li>Check both email inboxes</li>
+                    <li>Click the confirmation link in <strong>both</strong> emails</li>
+                    <li>Your email will be updated after both confirmations</li>
+                  </ol>
+                </AlertDescription>
+              </Alert>
+
+              <div className="text-sm text-gray-600">
+                <p>Didn't receive the emails? Check your spam folder.</p>
+              </div>
+
+              <Button
+                onClick={() => onOpenChange(false)}
+                className="w-full"
+              >
+                Close
+              </Button>
             </div>
           </div>
         ) : (
@@ -596,9 +418,9 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
                   <AlertDescription className="text-orange-800 text-sm">
                     <p className="font-medium mb-1">Two-Step Verification Process</p>
                     <ol className="text-sm space-y-1 ml-4 list-decimal">
-                      <li>We'll send verification codes to both email addresses</li>
-                      <li>Enter the code from your current email first</li>
-                      <li>Then enter the code from your new email to complete the change</li>
+                      <li>We'll send confirmation links to both email addresses</li>
+                      <li>Click the link in both emails to verify the change</li>
+                      <li>Your email will be updated after both confirmations</li>
                     </ol>
                   </AlertDescription>
                 </Alert>

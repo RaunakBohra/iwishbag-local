@@ -393,7 +393,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         address_line2: values.address_line2 || null,
         city: values.city,
         state_province_region: values.state_province_region,
-        postal_code: values.postal_code || null,
+        postal_code: values.postal_code || '', // Always use empty string instead of null
         destination_country: values.destination_country,
         phone: values.phone,
         delivery_instructions: values.delivery_instructions || null,
@@ -646,6 +646,76 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           {/* Address - Adaptive for Nepal */}
           {isNepal ? (
             <>
+              {/* Nepal Address Hierarchy: Province → District → Municipality → Street/Ward → Landmark */}
+              
+              {/* Province and District Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="state_province_region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm text-gray-600">Province</FormLabel>
+                      <Select
+                        key={`province-${selectedCountry}`}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedProvince(value);
+                        }}
+                        value={field.value || ''}
+                        disabled={addressMutation.isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                            <SelectValue placeholder="Select province" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {stateProvinces?.map((state) => (
+                            <SelectItem key={state.code} value={state.code}>
+                              {state.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm text-gray-600">District</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(NepalAddressService.getDistrictName(value) || value);
+                          setSelectedDistrict(value);
+                        }}
+                        value={selectedDistrict}
+                        disabled={addressMutation.isPending || !selectedProvince}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                            <SelectValue placeholder={selectedProvince ? "Select district" : "Select province first"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {districts.map((district) => (
+                            <SelectItem key={district.code} value={district.code}>
+                              {district.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
               {/* Municipality dropdown (when available) */}
               {municipalities.length > 0 && (
                 <FormItem>
@@ -683,7 +753,9 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   name="address_line1"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm text-gray-600">Street Address</FormLabel>
+                      <FormLabel className="text-sm text-gray-600">
+                        {municipalities.length > 0 ? "Street/Area" : "Municipality/City"}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           value={municipalities.length > 0 ? area : selectedMunicipality}
@@ -699,7 +771,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                               field.onChange(currentWard ? `${municipality}, Ward ${currentWard}` : municipality);
                             }
                           }}
-                          placeholder={municipalities.length > 0 ? "e.g., Baneshwor, Shankhamul" : "Enter municipality name"}
+                          placeholder={municipalities.length > 0 ? "e.g., Baneshwor, Shankhamul" : "Enter municipality/city name"}
                           className="h-11 bg-white border-gray-300 rounded text-base"
                         />
                       </FormControl>
@@ -734,7 +806,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 </FormItem>
               </div>
               
-              {/* Landmark for Nepal */}
+              {/* Landmark */}
               <FormField
                 control={form.control}
                 name="address_line2"
@@ -747,6 +819,36 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                         value={field.value ?? ''}
                         placeholder="e.g., Near Everest Bank, opposite Civil Mall"
                         className="h-11 bg-white border-gray-300 rounded text-base"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Postal Code */}
+              <FormField
+                control={form.control}
+                name="postal_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">Postal Code (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="e.g., 44700"
+                        className="h-11 bg-white border-gray-300 rounded text-base"
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          // Real-time validation
+                          const error = validatePostalCode(e.target.value);
+                          if (error) {
+                            form.setError('postal_code', { message: error });
+                          } else {
+                            form.clearErrors('postal_code');
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -795,145 +897,118 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             </>
           )}
           
-          {/* City, State, and Postal Code Row */}
-          <div className="grid grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm text-gray-600">{fieldLabels.city}</FormLabel>
-                  {isNepal && districts.length > 0 ? (
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(NepalAddressService.getDistrictName(value) || value);
-                        setSelectedDistrict(value);
-                      }}
-                      value={selectedDistrict}
-                      disabled={addressMutation.isPending || !selectedProvince}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
-                          <SelectValue placeholder="Select district" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {districts.map((district) => (
-                          <SelectItem key={district.code} value={district.code}>
-                            {district.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
+          {/* City, State, and Postal Code Row - Only show for non-Nepal countries */}
+          {!isNepal && (
+            <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">{fieldLabels.city}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         className="h-11 bg-white border-gray-300 rounded text-base"
                       />
                     </FormControl>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="state_province_region"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm text-gray-600">
-                    {fieldLabels.state}
-                  </FormLabel>
-                  {stateProvinces ? (
-                    <Select
-                      key={`province-${selectedCountry}-${stateProvinces?.length}`}
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        if (isNepal) {
-                          setSelectedProvince(value);
-                        }
-                      }}
-                      value={field.value || ''}
-                      disabled={addressMutation.isPending}
-                    >
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="state_province_region"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">
+                      {fieldLabels.state}
+                    </FormLabel>
+                    {stateProvinces ? (
+                      <Select
+                        key={`province-${selectedCountry}-${stateProvinces?.length}`}
+                        onValueChange={field.onChange}
+                        value={field.value || ''}
+                        disabled={addressMutation.isPending}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                            <SelectValue placeholder={`Select ${fieldLabels.state.toLowerCase()}`} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {stateProvinces.map((state) => (
+                            <SelectItem key={state.code} value={state.code}>
+                              {state.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
                       <FormControl>
-                        <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
-                          <SelectValue placeholder={`Select ${fieldLabels.state.toLowerCase()}`} />
-                        </SelectTrigger>
+                        <Input
+                          placeholder={selectedCountry === 'GB' ? 'e.g., Greater London' : 'e.g., NY'}
+                          {...field}
+                          value={field.value || ''}
+                          className="h-11 bg-white border-gray-300 rounded text-base"
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {stateProvinces.map((state) => (
-                          <SelectItem key={state.code} value={state.code}>
-                            {state.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="postal_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">
+                      {fieldLabels.postal}
+                    </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={selectedCountry === 'GB' ? 'e.g., Greater London' : 'e.g., NY'}
+                        placeholder={selectedCountry ? InternationalAddressValidator.getPostalCodeExample(selectedCountry) : ''}
                         {...field}
                         value={field.value || ''}
                         className="h-11 bg-white border-gray-300 rounded text-base"
-                      />
-                    </FormControl>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="postal_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm text-gray-600">
-                    {fieldLabels.postal}
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={selectedCountry ? InternationalAddressValidator.getPostalCodeExample(selectedCountry) : ''}
-                      {...field}
-                      value={field.value || ''}
-                      className="h-11 bg-white border-gray-300 rounded text-base"
-                      onChange={(e) => {
-                        field.onChange(e.target.value);
-                        
-                        // Real-time validation
-                        const error = validatePostalCode(e.target.value);
-                        if (error) {
-                          form.setError('postal_code', { message: error });
-                        } else {
-                          form.clearErrors('postal_code');
-                        }
-                      }}
-                      onBlur={(e) => {
-                        field.onBlur();
-                        if (selectedCountry && e.target.value) {
-                          const formatted = InternationalAddressValidator.formatPostalCode(e.target.value, selectedCountry);
-                          if (formatted !== e.target.value) {
-                            field.onChange(formatted);
-                            // Re-validate after formatting
-                            const error = validatePostalCode(formatted);
-                            if (error) {
-                              form.setError('postal_code', { message: error });
-                            } else {
-                              form.clearErrors('postal_code');
+                        onChange={(e) => {
+                          field.onChange(e.target.value);
+                          
+                          // Real-time validation
+                          const error = validatePostalCode(e.target.value);
+                          if (error) {
+                            form.setError('postal_code', { message: error });
+                          } else {
+                            form.clearErrors('postal_code');
+                          }
+                        }}
+                        onBlur={(e) => {
+                          field.onBlur();
+                          if (selectedCountry && e.target.value) {
+                            const formatted = InternationalAddressValidator.formatPostalCode(e.target.value, selectedCountry);
+                            if (formatted !== e.target.value) {
+                              field.onChange(formatted);
+                              // Re-validate after formatting
+                              const error = validatePostalCode(formatted);
+                              if (error) {
+                                form.setError('postal_code', { message: error });
+                              } else {
+                                form.clearErrors('postal_code');
+                              }
                             }
                           }
-                        }
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
           
           {/* Phone */}
           <FormField

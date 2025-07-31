@@ -120,6 +120,75 @@ const About = () => {
         </div>
       </section>
 
+      {/* Global Presence Section */}
+      <section className="py-20 bg-gradient-to-br from-teal-50 to-blue-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <H2 className="mb-6">Our Global Presence</H2>
+            <BodyLarge className="text-gray-600 mb-12 max-w-3xl mx-auto">
+              Headquartered in Singapore with dedicated operations across Asia, we combine 
+              international standards with local expertise to serve you better.
+            </BodyLarge>
+            
+            <div className="grid md:grid-cols-3 gap-8 mt-12">
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Globe className="w-6 h-6 text-blue-600" />
+                </div>
+                <H3 className="mb-2">Global Headquarters</H3>
+                <Body className="text-gray-600 mb-3">
+                  IWISHBAG PTE. LTD.<br />
+                  Singapore
+                </Body>
+                <p className="text-sm text-gray-500">
+                  International Operations
+                </p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🇮🇳</span>
+                </div>
+                <H3 className="mb-2">India Operations</H3>
+                <Body className="text-gray-600 mb-3">
+                  IWB Enterprises<br />
+                  Gurugram, Haryana
+                </Body>
+                <p className="text-sm text-gray-500">
+                  Local presence, global standards
+                </p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-xl shadow-sm">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🇳🇵</span>
+                </div>
+                <H3 className="mb-2">Nepal Operations</H3>
+                <Body className="text-gray-600 mb-3">
+                  iWishBag<br />
+                  Lalitpur
+                </Body>
+                <p className="text-sm text-gray-500">
+                  Serving Nepal with care
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-12 p-6 bg-white rounded-xl shadow-sm max-w-2xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <Globe className="w-5 h-5 text-teal-600" />
+                <H3 className="mb-0">Why Singapore?</H3>
+              </div>
+              <Body className="text-gray-600">
+                Singapore's robust regulatory framework, strategic location, and reputation for 
+                business excellence make it the ideal base for our international operations. 
+                This ensures transparency, reliability, and world-class service standards for all our customers.
+              </Body>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Team Section */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">

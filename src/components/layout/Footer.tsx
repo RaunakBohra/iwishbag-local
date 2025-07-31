@@ -189,13 +189,8 @@ const Footer = () => {
         {/* Copyright Section with Company Info */}
         <div className="border-t border-gray-200 mt-6 pt-4 text-center">
           <p className="text-xs md:text-sm text-gray-500">
-            © {new Date().getFullYear()} {companyInfo.companyName}. All rights reserved.
+            © {new Date().getFullYear()} {companyInfo.companyName}
           </p>
-          {registrationDetails && (
-            <p className="text-xs text-gray-400 mt-1">
-              {registrationDetails}
-            </p>
-          )}
           <p className="text-xs text-gray-400 mt-1">
             {companyInfo.address}
           </p>
