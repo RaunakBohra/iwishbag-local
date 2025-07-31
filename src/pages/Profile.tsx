@@ -54,6 +54,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { currencyService, type Currency } from '@/services/CurrencyService';
 import { H1, Body, BodySmall } from '@/components/ui/typography';
+import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
@@ -85,6 +86,7 @@ const Profile = () => {
   const [currencyLoading, setCurrencyLoading] = useState(true);
   const phoneCollection = usePhoneCollection();
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneError, setPhoneError] = useState<string>('');
 
   // Helper functions for user avatar
   const getUserAvatarUrl = () => {
@@ -162,8 +164,10 @@ const Profile = () => {
       if (!user) throw new Error('User not authenticated');
 
       // Update phone in auth.users table
+      // Ensure phone is in E.164 format (no spaces)
+      const e164Phone = values.phone.replace(/\s+/g, '');
       const { error: authError } = await supabase.auth.updateUser({
-        phone: values.phone,
+        phone: e164Phone,
       });
       if (authError) throw new Error(`Error updating phone: ${authError.message}`);
 
@@ -282,6 +286,15 @@ const Profile = () => {
   }, [profile, user, form, allCountries, availableCurrencies]);
 
   const onSubmit = (data: ProfileFormValues) => {
+    // Check if there's a phone validation error
+    if (phoneError) {
+      toast({
+        title: 'Please fix form errors',
+        description: 'Please enter a valid phone number.',
+        variant: 'destructive',
+      });
+      return;
+    }
     updateProfileMutation.mutate(data);
   };
 
@@ -516,14 +529,31 @@ const Profile = () => {
                           Phone Number
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="tel"
-                            placeholder="+1 234 567 8901"
-                            {...field}
-                            className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
-                          />
+                          <div className="[&_.text-green-500]:hidden [&_.border-green-300]:border-gray-300 [&_.ring-green-200]:ring-0 [&_.focus-within\\:border-blue-500]:focus-within:border-teal-500 [&_.focus-within\\:ring-blue-200]:focus-within:ring-teal-500/20">
+                            <WorldClassPhoneInput
+                              countries={allCountries || []}
+                              value={field.value}
+                              onChange={(newPhoneValue) => {
+                                field.onChange(newPhoneValue);
+                              }}
+                              onValidationChange={(isValid, error) => {
+                                setPhoneError(error || '');
+                                if (error) {
+                                  form.setError('phone', { message: error });
+                                } else {
+                                  form.clearErrors('phone');
+                                }
+                              }}
+                              initialCountry={profile?.country || 'US'}
+                              currentCountry={form.watch('country')}
+                              disabled={updateProfileMutation.isPending}
+                              required={true}
+                              error={form.formState.errors.phone?.message}
+                              placeholder="Enter phone number"
+                            />
+                          </div>
                         </FormControl>
-                        <FormMessage />
+                        {!phoneError && <FormMessage />}
                       </FormItem>
                     )}
                   />
@@ -740,9 +770,21 @@ const Profile = () => {
           // Refresh the user data to get the new phone number
           queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
         }}
-        title="Complete Your Profile"
-        description="Add your phone number to receive order updates and access all features."
-        skipOption={true}
+        title="Add Your Phone Number"
+        description="Complete your profile to unlock all features:"
+        benefits={[
+          "Real-time SMS updates for your orders",
+          "Direct coordination with delivery partners",
+          "Enhanced account security",
+          "Priority customer support",
+          "Exclusive deals and notifications"
+        ]}
+        showBenefits={true}
+        useGradientStyling={true}
+        skipOption={{
+          text: "Maybe Later",
+          subtext: "You can always add it from your profile settings"
+        }}
       />
     </div>
     </ConditionalSkeleton>

@@ -23,7 +23,18 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Phone, CheckCircle, ShieldCheck, Truck } from 'lucide-react';
+import { 
+  Loader2, 
+  Phone, 
+  CheckCircle, 
+  ShieldCheck, 
+  Truck,
+  Bell,
+  Package,
+  Lock,
+  MessageCircle,
+  Gift
+} from 'lucide-react';
 
 const phoneSchema = z.object({
   phone: z
@@ -48,7 +59,8 @@ interface PhoneCollectionModalProps {
   // Customization
   title?: string;
   description?: string;
-  skipOption?: boolean;
+  skipOption?: boolean | { text: string; subtext?: string };
+  benefits?: string[];
   // Feature flags
   showCountrySelection?: boolean;
   showBenefits?: boolean;
@@ -65,6 +77,7 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
   title = 'Add Your Phone Number',
   description = 'We need your phone number to complete this action and keep you updated on your orders.',
   skipOption = false,
+  benefits,
   showCountrySelection = false,
   showBenefits = false,
   useGradientStyling = true,
@@ -99,8 +112,10 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
     setIsLoading(true);
     try {
       // Update phone in auth.users
+      // Ensure phone is in E.164 format (no spaces)
+      const e164Phone = values.phone.replace(/\s+/g, '');
       const { error: authError } = await supabase.auth.updateUser({
-        phone: values.phone,
+        phone: e164Phone,
       });
 
       if (authError) {
@@ -199,18 +214,47 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
           </DialogHeader>
         )}
 
-        {showBenefits && (
+        {(showBenefits || benefits) && (
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 gap-3 p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-blue-700">
-                <Truck className="h-4 w-4" />
-                <span>Delivery updates and coordination</span>
+            {benefits ? (
+              <div className="space-y-3">
+                {benefits.map((benefit, index) => {
+                  // Map benefits to icons
+                  const getIcon = () => {
+                    if (benefit.toLowerCase().includes('sms') || benefit.toLowerCase().includes('updates')) {
+                      return <Bell className="h-4 w-4 text-teal-600 flex-shrink-0" />;
+                    } else if (benefit.toLowerCase().includes('delivery') || benefit.toLowerCase().includes('coordination')) {
+                      return <Package className="h-4 w-4 text-blue-600 flex-shrink-0" />;
+                    } else if (benefit.toLowerCase().includes('security') || benefit.toLowerCase().includes('2fa')) {
+                      return <Lock className="h-4 w-4 text-purple-600 flex-shrink-0" />;
+                    } else if (benefit.toLowerCase().includes('support') || benefit.toLowerCase().includes('whatsapp')) {
+                      return <MessageCircle className="h-4 w-4 text-green-600 flex-shrink-0" />;
+                    } else if (benefit.toLowerCase().includes('deals') || benefit.toLowerCase().includes('exclusive')) {
+                      return <Gift className="h-4 w-4 text-orange-600 flex-shrink-0" />;
+                    }
+                    return <CheckCircle className="h-4 w-4 text-gray-600 flex-shrink-0" />;
+                  };
+                  
+                  return (
+                    <div key={index} className="flex items-start gap-3 text-sm text-gray-700">
+                      {getIcon()}
+                      <span className="leading-relaxed">{benefit}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex items-center gap-2 text-sm text-blue-700">
-                <ShieldCheck className="h-4 w-4" />
-                <span>Order security and verification</span>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <Truck className="h-4 w-4" />
+                  <span>Delivery updates and coordination</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-blue-700">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Order security and verification</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -298,7 +342,7 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                         : 'flex-1'
                     }
                   >
-                    Skip for Now
+                    {typeof skipOption === 'object' ? skipOption.text : 'Skip for Now'}
                   </Button>
                 )}
                 <Button
@@ -329,6 +373,12 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                   )}
                 </Button>
               </div>
+              
+              {typeof skipOption === 'object' && skipOption.subtext && (
+                <p className="text-center text-xs text-gray-500 mt-4">
+                  {skipOption.subtext}
+                </p>
+              )}
             </form>
           </Form>
         </div>

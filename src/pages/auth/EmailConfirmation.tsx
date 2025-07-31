@@ -31,8 +31,10 @@ export default function EmailConfirmation() {
         // Check if user has phone in metadata but not in auth.users.phone
         if (session?.user?.user_metadata?.phone && !session?.user?.phone) {
           // Update the phone number in auth.users
+          // Ensure phone is in E.164 format (no spaces)
+          const e164Phone = session.user.user_metadata.phone.replace(/\s+/g, '');
           supabase.auth.updateUser({
-            phone: session.user.user_metadata.phone
+            phone: e164Phone
           }).then(({ error }) => {
             if (error) {
               console.warn('Failed to update phone number:', error);

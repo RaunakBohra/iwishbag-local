@@ -16,11 +16,21 @@ export const PhoneCollectionProvider: React.FC = () => {
       onClose={skipPhoneCollection}
       onComplete={markPhoneCollected}
       title="Complete Your Profile"
-      description="We need your phone number for order updates and delivery coordination."
+      description="Add your phone number to unlock these benefits:"
+      benefits={[
+        "Real-time SMS updates for your orders",
+        "Direct coordination with delivery partners",
+        "Enhanced account security (2FA coming soon)",
+        "Priority customer support via WhatsApp",
+        "Exclusive deals and early access notifications"
+      ]}
       showCountrySelection={true}
       showBenefits={true}
-      useGradientStyling={false}
-      skipOption={true}
+      useGradientStyling={true}
+      skipOption={{
+        text: "I'll add it later",
+        subtext: "You can always add your phone number from your profile settings"
+      }}
     />
   );
 };
