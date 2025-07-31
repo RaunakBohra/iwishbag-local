@@ -23,17 +23,28 @@ export default function EmailConfirmation() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session);
 
-      if (event === 'SIGNED_UP') {
+      if (event === 'SIGNED_UP' || (event === 'SIGNED_IN' && session?.user)) {
         setConfirmationStatus('success');
         setUserEmail(session?.user?.email || null);
         setIsLoading(false);
 
-        toast.success('Email confirmed successfully! Welcome to iWishBag!');
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        // User is already confirmed and signed in
-        setConfirmationStatus('success');
-        setUserEmail(session.user.email || null);
-        setIsLoading(false);
+        // Check if user has phone in metadata but not in auth.users.phone
+        if (session?.user?.user_metadata?.phone && !session?.user?.phone) {
+          // Update the phone number in auth.users
+          supabase.auth.updateUser({
+            phone: session.user.user_metadata.phone
+          }).then(({ error }) => {
+            if (error) {
+              console.warn('Failed to update phone number:', error);
+            } else {
+              console.log('✅ Phone number updated successfully');
+            }
+          });
+        }
+
+        if (event === 'SIGNED_UP') {
+          toast.success('Email confirmed successfully! Welcome to iWishBag!');
+        }
       }
     });
 

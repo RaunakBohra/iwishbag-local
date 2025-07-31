@@ -30,14 +30,16 @@ export const usePhoneCollection = () => {
         const hasSkippedBefore = localStorage.getItem(`phone-skipped-${user.id}`);
 
         // Also check if this is a recent OAuth user without phone
-        const isOAuthUser = authData.user?.app_metadata?.provider;
+        // Only consider OAuth users (not email provider)
+        const provider = authData.user?.app_metadata?.provider;
+        const isOAuthUser = provider && provider !== 'email';
         const createdRecently = authData.user?.created_at
           ? new Date(authData.user.created_at) > new Date(Date.now() - 10 * 60 * 1000) // 10 minutes ago
           : false;
 
         // Show phone collection if:
         // 1. No phone number AND
-        // 2. OAuth user created recently AND
+        // 2. OAuth user (Google/Facebook) created recently AND
         // 3. Haven't skipped before
         const shouldShowCollection =
           !hasPhone && createdRecently && isOAuthUser && !hasSkippedBefore;

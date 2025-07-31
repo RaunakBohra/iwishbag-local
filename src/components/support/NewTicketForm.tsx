@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, HelpCircle, Package, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { Loader2, HelpCircle, Package, MapPin, Calendar, DollarSign, Search } from 'lucide-react';
+import { QuoteSelectionModal } from '@/components/admin/modals/QuoteSelectionModal';
 import { useCreateCustomerTicket } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardState } from '@/hooks/useDashboardState';
@@ -70,8 +71,9 @@ interface NewTicketFormProps {
 export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTicketFormProps) => {
   const { user } = useAuth();
   const { mutate: createTicket, isPending: isCreating } = useCreateCustomerTicket();
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
-  // Get user's quotes and orders for dropdown selection
+  // Get user's quotes and orders for modal selection
   const { quotes, orders } = useDashboardState();
   const userQuotes = [...(quotes || []), ...(orders || [])].filter(
     (quote) => quote && quote.id && quote.destination_country,
@@ -83,7 +85,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
       subject: '',
       description: '',
       category: 'general',
-      quote_id: preSelectedQuoteId || 'none',
+      quote_id: preSelectedQuoteId || undefined,
     },
   });
 
@@ -91,9 +93,19 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
 
   // Find selected quote for context display
   const selectedQuote: QuoteWithTracking | null =
-    selectedQuoteId && selectedQuoteId !== 'none'
+    selectedQuoteId
       ? (userQuotes.find((quote) => quote.id === selectedQuoteId) as QuoteWithTracking)
       : null;
+
+  // Handle quote selection from modal
+  const handleQuoteSelect = (quote: any) => {
+    if (quote) {
+      form.setValue('quote_id', quote.id);
+    } else {
+      form.setValue('quote_id', undefined);
+    }
+    setShowQuoteModal(false);
+  };
 
   const onSubmit = async (values: NewTicketForm) => {
     if (!user) {
@@ -107,7 +119,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
         description: values.description,
         priority: values.priority || 'medium', // Default to medium for customer tickets
         category: values.category,
-        quote_id: values.quote_id && values.quote_id !== 'none' ? values.quote_id : undefined,
+        quote_id: values.quote_id,
       },
       {
         onSuccess: () => {
@@ -156,35 +168,51 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
               )}
             />
 
-            {/* Order Selection - Always shown if quotes exist */}
+            {/* Order Selection - Advanced Modal Selection */}
             {userQuotes.length > 0 && (
-              <FormField
-                control={form.control}
-                name="quote_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Related Order (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a quote/order if related" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No related order</SelectItem>
-                        {userQuotes.map((quote) => (
-                          <SelectItem key={quote.id} value={quote.id}>
-                            {(quote as QuoteWithTracking).iwish_tracking_id
-                              ? `${(quote as QuoteWithTracking).iwish_tracking_id} - ${quote.destination_country}`
-                              : `Quote ${quote.id.slice(0, 8)}... - ${quote.destination_country}`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">
+                  Related Order (Optional)
+                </label>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowQuoteModal(true)}
+                  className="w-full justify-start text-left h-auto p-4"
+                  disabled={isCreating}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <Search className="h-4 w-4 text-gray-400" />
+                    <div className="flex-1 min-w-0">
+                      {selectedQuote ? (
+                        <div className="space-y-1">
+                          <div className="font-medium text-gray-900">
+                            {selectedQuote.iwish_tracking_id || `Quote ${selectedQuote.id.slice(0, 8)}...`}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {selectedQuote.destination_country} • ${selectedQuote.final_total_usd?.toFixed(2) || 'N/A'}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-gray-500">
+                          Click to select a quote or order
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {userQuotes.length} available
+                    </div>
+                  </div>
+                </Button>
+                
+                {selectedQuote && (
+                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                    <Package className="h-3 w-3" />
+                    <span>Quote selected. Click above to change or clear selection.</span>
+                  </div>
                 )}
-              />
+              </div>
             )}
 
             {/* Order Context Display - Shows details of selected order */}
@@ -298,6 +326,21 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
             </div>
           </form>
         </Form>
+
+        {/* Quote Selection Modal */}
+        <QuoteSelectionModal
+          isOpen={showQuoteModal}
+          onClose={() => setShowQuoteModal(false)}
+          quotes={userQuotes}
+          selectedQuoteId={selectedQuoteId}
+          onSelectQuote={handleQuoteSelect}
+          title="Select Related Quote/Order"
+          description="Choose a quote or order that this support ticket is related to. This helps our team provide better assistance."
+          emptyMessage="You don't have any quotes or orders yet. Create a quote first to associate it with support tickets."
+          showClearOption={true}
+          viewMode="customer"
+          maxHeight={500}
+        />
       </CardContent>
     </Card>
   );

@@ -186,7 +186,8 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
         redirectTo: `${window.location.origin}/auth/callback`,
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
+          // Remove prompt: 'consent' to allow automatic sign-in for returning users
+          // Google will only show consent screen when necessary (first time, new permissions, etc.)
         },
       },
     });

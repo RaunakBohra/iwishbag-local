@@ -669,8 +669,23 @@ const Profile = () => {
               </CardContent>
             </Card>
 
-            {/* Save Button */}
-            <div className="flex justify-end pt-4">
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                onClick={() => {
+                  signOut();
+                  toast({
+                    title: 'Signed out successfully',
+                    description: 'You have been signed out of your account.',
+                  });
+                }}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+              
               <Button
                 type="submit"
                 disabled={updateProfileMutation.isPending || currencyLoading}
@@ -686,24 +701,6 @@ const Profile = () => {
             </div>
           </form>
         </Form>
-
-        {/* Sign Out Button */}
-        <div className="flex justify-end mt-8">
-          <Button
-            variant="outline"
-            className="border-red-300 text-red-600 hover:bg-red-50"
-            onClick={() => {
-              signOut();
-              toast({
-                title: 'Signed out successfully',
-                description: 'You have been signed out of your account.',
-              });
-            }}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
 
         {/* Phone Collection Banner for Facebook Users */}
         {phoneCollection.needsPhoneCollection && !user?.phone && (
