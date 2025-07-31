@@ -17,12 +17,16 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AnimatedSection } from '@/components/shared/AnimatedSection';
+import { useCountryDetection } from '@/hooks/useCountryDetection';
+import { getCompanyInfo } from '@/config/companyInfo';
 
 const PaypalFailure: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { countryCode } = useCountryDetection();
+  const companyInfo = getCompanyInfo(countryCode);
 
   useEffect(() => {
     // Extract PayPal cancel/error parameters
@@ -213,7 +217,7 @@ const PaypalFailure: React.FC = () => {
                 <AnimatedSection animation="fadeInUp" delay={600}>
                   <div className="text-center text-sm text-gray-500 pt-4 border-t">
                     <p>Need help? Contact our support team:</p>
-                    <p className="font-medium">support@iwishbag.com</p>
+                    <p className="font-medium">{companyInfo.contact.supportEmail}</p>
                     <p>Available Monday-Friday, 9 AM - 6 PM IST</p>
                   </div>
                 </AnimatedSection>

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Heart, Globe, Users } from 'lucide-react';
 import { H1, H2, H3, Body, BodyLarge, StatNumber, StatLabel } from '@/components/ui/typography';
 import { useCountryDetection } from '@/hooks/useCountryDetection';
-import { getCompanyInfo } from '@/config/companyInfo';
+import { getCompanyInfo, companyInfoByCountry } from '@/config/companyInfo';
 
 const About = () => {
   const { countryCode } = useCountryDetection();
@@ -137,8 +137,8 @@ const About = () => {
                 </div>
                 <H3 className="mb-2">Global Headquarters</H3>
                 <Body className="text-gray-600 mb-3">
-                  IWISHBAG PTE. LTD.<br />
-                  Singapore
+                  {companyInfoByCountry.GLOBAL.companyName}<br />
+                  {companyInfoByCountry.GLOBAL.addressLines.country}
                 </Body>
                 <p className="text-sm text-gray-500">
                   International Operations
@@ -147,12 +147,12 @@ const About = () => {
               
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🇮🇳</span>
+                  <Users className="w-6 h-6 text-orange-600" />
                 </div>
                 <H3 className="mb-2">India Operations</H3>
                 <Body className="text-gray-600 mb-3">
-                  IWB Enterprises<br />
-                  Gurugram, Haryana
+                  {companyInfoByCountry.IN.companyName}<br />
+                  {companyInfoByCountry.IN.addressLines.city}, {companyInfoByCountry.IN.addressLines.state}
                 </Body>
                 <p className="text-sm text-gray-500">
                   Local presence, global standards
@@ -161,12 +161,12 @@ const About = () => {
               
               <div className="bg-white p-6 rounded-xl shadow-sm">
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">🇳🇵</span>
+                  <Heart className="w-6 h-6 text-red-600" />
                 </div>
                 <H3 className="mb-2">Nepal Operations</H3>
                 <Body className="text-gray-600 mb-3">
-                  iWishBag<br />
-                  Lalitpur
+                  {companyInfoByCountry.NP.companyName}<br />
+                  {companyInfoByCountry.NP.addressLines.city}
                 </Body>
                 <p className="text-sm text-gray-500">
                   Serving Nepal with care

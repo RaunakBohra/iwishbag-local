@@ -90,14 +90,55 @@ export class InternationalAddressValidator {
     // Add more as needed
   };
 
+  // Countries where postal codes are optional (not commonly used or enforced)
+  private static POSTAL_CODE_OPTIONAL_COUNTRIES = [
+    'NP', // Nepal - postal codes exist but not commonly used
+    'AE', // UAE - no postal codes
+    'SA', // Saudi Arabia - optional in many areas
+    'OM', // Oman - not widely used
+    'BH', // Bahrain - optional
+    'QA', // Qatar - optional
+    'KW', // Kuwait - optional
+    'LB', // Lebanon - not always required
+    'JO', // Jordan - optional in rural areas
+    'IQ', // Iraq - not widely implemented
+    'AF', // Afghanistan - limited postal system
+    'BD', // Bangladesh - not always required
+    'MM', // Myanmar - limited system
+    'KH', // Cambodia - not widely used
+    'LA', // Laos - limited system
+    'MN', // Mongolia - optional outside cities
+    'BT', // Bhutan - optional
+    'MV', // Maldives - not required
+  ];
+
+  /**
+   * Check if postal code is required for a country
+   */
+  static isPostalCodeRequired(countryCode: string): boolean {
+    return !this.POSTAL_CODE_OPTIONAL_COUNTRIES.includes(countryCode.toUpperCase());
+  }
+
   /**
    * Validate postal code based on country
    */
   static validatePostalCode(postalCode: string, countryCode: string): ValidationResult {
-    if (!postalCode || !countryCode) {
-      return { isValid: false, error: 'Postal code and country are required' };
+    if (!countryCode) {
+      return { isValid: false, error: 'Country is required' };
     }
 
+    const isRequired = this.isPostalCodeRequired(countryCode);
+    
+    // If postal code is not provided
+    if (!postalCode || postalCode.trim() === '') {
+      if (isRequired) {
+        return { isValid: false, error: 'Postal code is required for this country' };
+      } else {
+        return { isValid: true }; // Optional for this country
+      }
+    }
+
+    // If postal code IS provided, validate the format regardless of whether it's required
     const pattern = this.POSTAL_CODE_PATTERNS[countryCode.toUpperCase()];
     
     // If no pattern exists for the country, accept any non-empty value
@@ -105,9 +146,12 @@ export class InternationalAddressValidator {
       return { isValid: postalCode.trim().length > 0 };
     }
 
-    // Special case for UAE (no postal codes)
+    // Special case for UAE (no postal codes) - if someone enters something, it's invalid
     if (countryCode.toUpperCase() === 'AE') {
-      return { isValid: true };
+      return { 
+        isValid: false, 
+        error: 'Postal codes are not used in UAE' 
+      };
     }
 
     const isValid = pattern.test(postalCode.trim());
@@ -115,7 +159,7 @@ export class InternationalAddressValidator {
     if (!isValid) {
       return { 
         isValid: false, 
-        error: `Invalid postal code format for ${countryCode}` 
+        error: `Invalid postal code format. Expected format: ${this.getPostalCodeExample(countryCode)}` 
       };
     }
 

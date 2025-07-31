@@ -40,7 +40,7 @@ const addressSchema = z.object({
   address_line2: z.string().optional().nullable(),
   city: z.string().min(1, 'City is required'),
   state_province_region: z.string().min(1, 'State/Province is required'),
-  postal_code: z.string().optional(),
+  postal_code: z.string().optional().nullable(), // Allow null for countries where postal codes are optional
   destination_country: z.string().min(1, 'Country is required'),
   phone: z.string().min(1, 'Phone number is required'),
   delivery_instructions: z.string().optional(),
@@ -55,7 +55,7 @@ type AddressFormValues = {
   address_line2?: string | null;
   city: string;
   state_province_region: string;
-  postal_code?: string;
+  postal_code?: string | null; // Optional and nullable
   destination_country: string;
   phone: string;
   delivery_instructions?: string;
@@ -191,13 +191,16 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
 
   // Custom validation functions
 
-  const validatePostalCode = (postalCode: string): string => {
-    if (!postalCode) return ''; // Optional field
-    
+  const validatePostalCode = (postalCode: string | null | undefined): string => {
     if (selectedCountry && selectedCountry.length === 2) {
-      const result = InternationalAddressValidator.validatePostalCode(postalCode, selectedCountry);
+      const result = InternationalAddressValidator.validatePostalCode(postalCode || '', selectedCountry);
       if (!result.isValid) {
-        return `Please enter a valid ${fieldLabels.postal.toLowerCase()} for ${countries?.find(c => c.code === selectedCountry)?.name || selectedCountry}`;
+        // Use the error from validator, but enhance it with country name if available
+        if (result.error?.includes('Invalid postal code format.')) {
+          const countryName = countries?.find(c => c.code === selectedCountry)?.name || selectedCountry;
+          return result.error.replace('Invalid postal code format.', `Invalid postal code format for ${countryName}.`);
+        }
+        return result.error || `Please enter a valid ${fieldLabels.postal.toLowerCase()} for ${countries?.find(c => c.code === selectedCountry)?.name || selectedCountry}`;
       }
     }
     
@@ -386,6 +389,16 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         finalAddress1 = `${values.address_line1}, ${area}`;
       }
       
+      // Handle postal code based on country requirements
+      let postalCodeValue: string | null;
+      if (values.postal_code && values.postal_code.trim() !== '') {
+        postalCodeValue = values.postal_code.trim();
+      } else {
+        // Use null for countries where postal codes are optional, empty string for others
+        const isOptional = !InternationalAddressValidator.isPostalCodeRequired(values.destination_country);
+        postalCodeValue = isOptional ? null : '';
+      }
+
       const payload = {
         recipient_name,
         company_name: values.company_name || null,
@@ -393,7 +406,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         address_line2: values.address_line2 || null,
         city: values.city,
         state_province_region: values.state_province_region,
-        postal_code: values.postal_code || '', // Always use empty string instead of null
+        postal_code: postalCodeValue,
         destination_country: values.destination_country,
         phone: values.phone,
         delivery_instructions: values.delivery_instructions || null,
@@ -832,7 +845,10 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 name="postal_code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm text-gray-600">Postal Code (Optional)</FormLabel>
+                    <FormLabel className="text-sm text-gray-600">
+                      {fieldLabels.postal}
+                      {!InternationalAddressValidator.isPostalCodeRequired(selectedCountry) && ' (Optional)'}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -967,6 +983,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <FormItem>
                     <FormLabel className="text-sm text-gray-600">
                       {fieldLabels.postal}
+                      {!InternationalAddressValidator.isPostalCodeRequired(selectedCountry) && ' (Optional)'}
                     </FormLabel>
                     <FormControl>
                       <Input
