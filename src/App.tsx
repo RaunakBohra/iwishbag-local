@@ -100,6 +100,7 @@ const DuplicateComponentsPreview = React.lazy(() => import('@/pages/admin/Duplic
 const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement'));
 const MembershipManagementPage = React.lazy(() => import('@/pages/admin/MembershipManagement'));
 const DiscountManagementPage = React.lazy(() => import('@/pages/admin/DiscountManagement'));
+const QuoteCalculatorV2 = React.lazy(() => import('@/pages/admin/QuoteCalculatorV2'));
 const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement'));
 const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDiscount'));
 
@@ -135,6 +136,14 @@ const router = createBrowserRouter([
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
                 <QuotesListPage />
+              </ErrorBoundary>
+            ),
+          },
+          {
+            path: 'quote-calculator-v2',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <QuoteCalculatorV2 />
               </ErrorBoundary>
             ),
           },
