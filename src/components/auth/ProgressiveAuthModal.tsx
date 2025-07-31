@@ -248,11 +248,15 @@ export const ProgressiveAuthModal: React.FC<ProgressiveAuthModalProps> = ({
     setLoading(true);
 
     try {
+      // Ensure phone is in E.164 format (no spaces)
+      const e164Phone = values.phone ? values.phone.replace(/\s+/g, '') : undefined;
+      
       const { error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
+        phone: e164Phone, // Add phone to auth.users in E.164 format
         options: {
-          data: { name: values.name, phone: values.phone },
+          data: { name: values.name, phone: e164Phone },
           emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });

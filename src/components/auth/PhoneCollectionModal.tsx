@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
+import { useAllCountries } from '@/hooks/useAllCountries';
 import {
   Dialog,
   DialogContent,
@@ -97,6 +99,8 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
   const { user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState<string>('');
+  const { data: allCountries } = useAllCountries();
 
   const form = useForm<PhoneFormValues>({
     resolver: zodResolver(phoneSchema),
@@ -109,11 +113,27 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
   const handleSubmit = async (values: PhoneFormValues) => {
     if (!user) return;
 
+    // Check if there's a phone validation error
+    if (phoneError) {
+      toast({
+        title: 'Please fix form errors',
+        description: 'Please enter a valid phone number.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Update phone in auth.users
       // Ensure phone is in E.164 format (no spaces)
       const e164Phone = values.phone.replace(/\s+/g, '');
+      console.log('[PhoneCollectionModal] Saving phone:', {
+        original: values.phone,
+        e164Format: e164Phone,
+        hasPlus: e164Phone.startsWith('+'),
+        length: e164Phone.length
+      });
       const { error: authError } = await supabase.auth.updateUser({
         phone: e164Phone,
       });
@@ -271,63 +291,37 @@ export const PhoneCollectionModal: React.FC<PhoneCollectionModalProps> = ({
                         useGradientStyling ? 'text-sm font-medium text-gray-700' : undefined
                       }
                     >
-                      Phone Number {!showCountrySelection && '*'}
+                      Phone Number
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder={showCountrySelection ? '+1 (555) 123-4567' : '+1 234 567 8901'}
-                        {...field}
-                        className={
-                          useGradientStyling
-                            ? 'h-11 px-4 rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500 focus:ring-1 bg-white text-gray-900 placeholder:text-gray-500'
-                            : undefined
-                        }
-                        disabled={isLoading}
-                      />
+                      <div className="[&_.text-green-500]:hidden [&_.border-green-300]:border-gray-300 [&_.ring-green-200]:ring-0 [&_.focus-within\\:border-blue-500]:focus-within:border-teal-500 [&_.focus-within\\:ring-blue-200]:focus-within:ring-teal-500/20">
+                        <WorldClassPhoneInput
+                          countries={allCountries || []}
+                          value={field.value}
+                          onChange={(newPhoneValue) => {
+                            field.onChange(newPhoneValue);
+                          }}
+                          onValidationChange={(isValid, error) => {
+                            setPhoneError(error || '');
+                            if (error) {
+                              form.setError('phone', { message: error });
+                            } else {
+                              form.clearErrors('phone');
+                            }
+                          }}
+                          initialCountry={showCountrySelection && form.watch('country') ? form.watch('country') : 'US'}
+                          disabled={isLoading}
+                          required={true}
+                          error={form.formState.errors.phone?.message}
+                          placeholder="Enter phone number"
+                        />
+                      </div>
                     </FormControl>
-                    {showCountrySelection && (
-                      <FormDescription>
-                        Include country code for international numbers
-                      </FormDescription>
-                    )}
-                    <FormMessage />
+                    {!phoneError && <FormMessage />}
                   </FormItem>
                 )}
               />
 
-              {showCountrySelection && (
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Country (Optional)</FormLabel>
-                      <FormControl>
-                        <select
-                          {...field}
-                          disabled={isLoading}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="">Select your country</option>
-                          <option value="US">United States</option>
-                          <option value="IN">India</option>
-                          <option value="NP">Nepal</option>
-                          <option value="GB">United Kingdom</option>
-                          <option value="CA">Canada</option>
-                          <option value="AU">Australia</option>
-                          <option value="DE">Germany</option>
-                          <option value="FR">France</option>
-                          <option value="JP">Japan</option>
-                          <option value="SG">Singapore</option>
-                        </select>
-                      </FormControl>
-                      <FormDescription>Helps us set your preferred currency</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
 
               <div className="flex gap-3">
                 {skipOption && (

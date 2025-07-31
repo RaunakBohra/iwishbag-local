@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAllCountries } from '@/hooks/useAllCountries';
 import { usePhoneCollection } from '@/hooks/usePhoneCollection';
 import { PhoneCollectionModal } from '@/components/auth/PhoneCollectionModal';
+import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,6 +87,7 @@ const Profile = () => {
   const [currencyLoading, setCurrencyLoading] = useState(true);
   const phoneCollection = usePhoneCollection();
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [phoneError, setPhoneError] = useState<string>('');
 
   // Helper functions for user avatar
@@ -466,7 +468,7 @@ const Profile = () => {
             <span className="text-sm font-medium text-gray-700">Addresses</span>
           </Link>
           <button
-            onClick={() => toast({ title: 'Change Password', description: 'Password change functionality coming soon.' })}
+            onClick={() => setShowPasswordModal(true)}
             className="flex flex-col items-center gap-3 p-6 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
           >
             <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -785,6 +787,12 @@ const Profile = () => {
           text: "Maybe Later",
           subtext: "You can always add it from your profile settings"
         }}
+      />
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        open={showPasswordModal}
+        onOpenChange={setShowPasswordModal}
       />
     </div>
     </ConditionalSkeleton>

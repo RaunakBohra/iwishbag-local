@@ -235,15 +235,24 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
         name: values.name,
       });
       
+      // Ensure phone is in E.164 format (no spaces)
+      const e164Phone = values.phone ? values.phone.replace(/\s+/g, '') : undefined;
+      console.log('[AuthForm] Signup with phone:', {
+        original: values.phone,
+        e164Format: e164Phone,
+        hasPlus: e164Phone?.startsWith('+'),
+        length: e164Phone?.length
+      });
+      
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
-        phone: values.phone, // Now in E.164 format from WorldClassPhoneInput
+        phone: e164Phone, // Now in E.164 format without spaces
         options: {
           data: { 
             name: values.name,
             full_name: values.name, // Also save as full_name for compatibility
-            phone: values.phone, // Also backup in metadata
+            phone: e164Phone, // Also backup in metadata
           },
           emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
