@@ -116,7 +116,14 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Customs Rate:</span>
-                <p className="font-bold text-lg">{rates.customs_percentage}%</p>
+                <p className="font-bold text-lg">
+                  {rates.customs_percentage}%
+                  {rates.hsn_applied && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      HSN Applied
+                    </Badge>
+                  )}
+                </p>
               </div>
               <div>
                 <span className="text-gray-600">{taxInfo.local_tax_name}:</span>

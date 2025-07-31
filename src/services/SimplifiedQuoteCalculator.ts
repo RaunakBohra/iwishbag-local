@@ -6,6 +6,9 @@ interface CalculationInput {
     unit_price_usd: number;
     weight_kg?: number;
     discount_percentage?: number; // Item-level discount
+    // Optional HSN fields - safe additions
+    hsn_code?: string;
+    use_hsn_rates?: boolean; // Feature flag per item
   }>;
   origin_country: string;
   origin_state?: string; // For US sales tax
@@ -168,7 +171,45 @@ const DOMESTIC_DELIVERY_RATES: Record<string, { urban: number; rural: number }> 
   'DEFAULT': { urban: 10, rural: 20 }
 };
 
+// Simple HSN rates lookup (can be moved to database later)
+// Only activated when use_hsn_rates is true
+const HSN_CUSTOMS_RATES: Record<string, Record<string, number>> = {
+  // India specific HSN rates
+  'IN': {
+    '6109': 12,    // T-shirts (lower than default 20%)
+    '8517': 18,    // Mobile phones
+    '8471': 0,     // Laptops (exempted)
+    '6204': 12,    // Women's dresses
+    'DEFAULT': 20  // Fallback to country default
+  },
+  // Nepal specific HSN rates  
+  'NP': {
+    '6109': 10,    // T-shirts
+    '8517': 15,    // Mobile phones
+    '8471': 5,     // Laptops (lower rate)
+    '6204': 10,    // Women's dresses
+    'DEFAULT': 15  // Fallback to country default
+  }
+};
+
 class SimplifiedQuoteCalculator {
+  // Safe method to get customs rate - HSN only if explicitly enabled
+  private getCustomsRateForItem(item: any, destinationCountry: string, defaultRate: number): number {
+    // Only use HSN if explicitly enabled for this item
+    if (item.use_hsn_rates && item.hsn_code) {
+      const countryHsnRates = HSN_CUSTOMS_RATES[destinationCountry];
+      if (countryHsnRates) {
+        const hsnRate = countryHsnRates[item.hsn_code];
+        if (hsnRate !== undefined) {
+          console.log(`[HSN] Using HSN rate for ${item.hsn_code}: ${hsnRate}% (instead of default ${defaultRate}%)`);
+          return hsnRate;
+        }
+      }
+    }
+    // Fallback to default country rate
+    return defaultRate;
+  }
+
   async calculate(input: CalculationInput): Promise<CalculationResult> {
     console.log('[CALCULATOR V2] Starting calculation', input);
 
@@ -249,7 +290,27 @@ class SimplifiedQuoteCalculator {
     const cifValue = finalItemsSubtotal + originSalesTax + insuranceAmount + finalShippingCost;
 
     // Step 8: Calculate customs duty on CIF
-    const customsDuty = cifValue * (countryConfig.customs / 100);
+    // Check if any items use HSN rates
+    const itemsWithHSN = input.items.filter(item => item.use_hsn_rates && item.hsn_code);
+    let effectiveCustomsRate = countryConfig.customs;
+    
+    // If HSN is used, calculate weighted average customs rate (safe approach)
+    if (itemsWithHSN.length > 0) {
+      let totalValue = 0;
+      let weightedRateSum = 0;
+      
+      input.items.forEach(item => {
+        const itemValue = item.quantity * item.unit_price_usd;
+        const itemRate = this.getCustomsRateForItem(item, input.destination_country, countryConfig.customs);
+        totalValue += itemValue;
+        weightedRateSum += itemValue * itemRate;
+      });
+      
+      effectiveCustomsRate = totalValue > 0 ? weightedRateSum / totalValue : countryConfig.customs;
+      console.log(`[HSN] Using weighted average customs rate: ${effectiveCustomsRate.toFixed(2)}%`);
+    }
+    
+    const customsDuty = cifValue * (effectiveCustomsRate / 100);
 
     // Step 9: Calculate handling fee (on discounted items value)
     const handlingFeeType = input.handling_fee_type || 'both';
@@ -313,14 +374,17 @@ class SimplifiedQuoteCalculator {
       applied_rates: {
         exchange_rate: exchangeRate,
         origin_sales_tax_percentage: originSalesTaxRate,
-        customs_percentage: countryConfig.customs,
+        customs_percentage: effectiveCustomsRate, // Now shows HSN-adjusted rate if used
         local_tax_percentage: localTaxRate,
         insurance_percentage: insurancePercentage,
         shipping_rate_per_kg: shippingRatePerKg,
         handling_fee_fixed: handlingFeeFixed,
         handling_fee_percentage: handlingFeePercentage,
         payment_gateway_fee_percentage: gatewayFees.percentage,
-        payment_gateway_fee_fixed: gatewayFees.fixed
+        payment_gateway_fee_fixed: gatewayFees.fixed,
+        // Additional HSN info
+        hsn_applied: itemsWithHSN.length > 0,
+        hsn_items_count: itemsWithHSN.length
       },
       calculation_steps: {
         items_subtotal: this.round(itemsTotal),
@@ -422,6 +486,30 @@ class SimplifiedQuoteCalculator {
       { value: 'urban', label: 'Urban/City' },
       { value: 'rural', label: 'Rural/Remote' }
     ];
+  }
+
+  // Get HSN information (safe lookup - display only)
+  getHSNInfo(hsnCode: string, country: string) {
+    const countryRates = HSN_CUSTOMS_RATES[country];
+    if (!countryRates) return null;
+    
+    const rate = countryRates[hsnCode];
+    if (rate === undefined) return null;
+    
+    // Simple HSN descriptions (can be expanded)
+    const hsnDescriptions: Record<string, string> = {
+      '6109': 'T-shirts, singlets and other vests',
+      '8517': 'Mobile phones and communication devices',
+      '8471': 'Laptops and computing devices',
+      '6204': 'Women\'s dresses and clothing'
+    };
+    
+    return {
+      code: hsnCode,
+      description: hsnDescriptions[hsnCode] || 'Product',
+      customsRate: rate,
+      countryRate: COUNTRY_TAX_CONFIG[country as keyof typeof COUNTRY_TAX_CONFIG]?.customs || 10
+    };
   }
 }
 

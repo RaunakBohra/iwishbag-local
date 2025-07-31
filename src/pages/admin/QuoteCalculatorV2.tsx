@@ -37,6 +37,9 @@ interface QuoteItem {
   category?: string;
   notes?: string;
   discount_percentage?: number;
+  // Optional HSN fields - safe additions
+  hsn_code?: string;
+  use_hsn_rates?: boolean; // Feature flag per item
 }
 
 const QuoteCalculatorV2: React.FC = () => {
@@ -83,6 +86,9 @@ const QuoteCalculatorV2: React.FC = () => {
   // Calculation result
   const [calculationResult, setCalculationResult] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Feature toggles for safe implementation
+  const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false);
 
   // Update customer currency when destination changes
   useEffect(() => {
@@ -264,10 +270,25 @@ const QuoteCalculatorV2: React.FC = () => {
           <h1 className="text-3xl font-bold">Quote Calculator V2</h1>
           <p className="text-gray-500 mt-1">Simplified and transparent quote calculation</p>
         </div>
-        <Badge variant="secondary" className="text-lg px-4 py-2">
-          <Calculator className="w-4 h-4 mr-2" />
-          New Calculator
-        </Badge>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="advanced-mode"
+              checked={showAdvancedFeatures}
+              onCheckedChange={setShowAdvancedFeatures}
+            />
+            <Label htmlFor="advanced-mode" className="cursor-pointer">
+              Advanced Features
+              {showAdvancedFeatures && (
+                <Badge variant="secondary" className="ml-2">Beta</Badge>
+              )}
+            </Label>
+          </div>
+          <Badge variant="secondary" className="text-lg px-4 py-2">
+            <Calculator className="w-4 h-4 mr-2" />
+            New Calculator
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -557,6 +578,53 @@ const QuoteCalculatorV2: React.FC = () => {
                       />
                     </div>
                   </div>
+                  
+                  {/* Optional HSN fields - only show in advanced mode */}
+                  {showAdvancedFeatures && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-blue-50 rounded-lg">
+                      <div>
+                        <Label className="flex items-center gap-2">
+                          HSN Code 
+                          <Badge variant="secondary" className="text-xs">Optional</Badge>
+                        </Label>
+                        <Input
+                          value={item.hsn_code || ''}
+                          onChange={(e) => updateItem(item.id, 'hsn_code', e.target.value)}
+                          placeholder="e.g., 6109"
+                          className="font-mono"
+                        />
+                        {item.hsn_code && (() => {
+                          const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
+                          return hsnInfo ? (
+                            <div className="text-xs mt-1 space-y-1">
+                              <p className="text-blue-600">{hsnInfo.description}</p>
+                              <p className="text-green-600 font-medium">
+                                Customs: {hsnInfo.customsRate}% 
+                                {hsnInfo.customsRate < hsnInfo.countryRate && 
+                                  <span className="text-green-700"> (saves {hsnInfo.countryRate - hsnInfo.customsRate}%)</span>
+                                }
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500 mt-1">
+                              HSN not found - will use default rate
+                            </p>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex items-center space-x-2 pt-6">
+                        <Switch
+                          id={`hsn-${item.id}`}
+                          checked={item.use_hsn_rates || false}
+                          onCheckedChange={(checked) => updateItem(item.id, 'use_hsn_rates', checked)}
+                          disabled={!item.hsn_code}
+                        />
+                        <Label htmlFor={`hsn-${item.id}`} className="cursor-pointer">
+                          Use HSN-specific rates
+                        </Label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               
