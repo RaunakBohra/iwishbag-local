@@ -107,6 +107,7 @@ const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDi
 // const ToggleDesigns = React.lazy(() => import('@/demo/ToggleDesigns'));
 // const UrlAutoFillDemo = React.lazy(() => import('@/pages/demo/UrlAutoFillDemo'));
 // const WeightTabDemo = React.lazy(() => import('@/demo/WeightTabDemo'));
+const CompactPhoneInputDemo = React.lazy(() => import('@/demo/CompactPhoneInputDemo'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
@@ -296,6 +297,10 @@ const router = createBrowserRouter([
       {
         path: 'help',
         element: <Help />,
+      },
+      {
+        path: 'demo/compact-phone',
+        element: <CompactPhoneInputDemo />,
       },
       {
         path: 'cost-estimator',

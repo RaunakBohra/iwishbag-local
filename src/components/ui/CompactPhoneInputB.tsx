@@ -9,13 +9,13 @@ interface Country {
   name: string;
 }
 
-interface WorldClassPhoneInputProps {
+interface CompactPhoneInputBProps {
   countries: Country[];
   value?: string;
   onChange?: (value: string) => void;
   onValidationChange?: (isValid: boolean, error?: string) => void;
   initialCountry?: string;
-  currentCountry?: string; // React to country changes from parent
+  currentCountry?: string;
   disabled?: boolean;
   required?: boolean;
   className?: string;
@@ -23,7 +23,7 @@ interface WorldClassPhoneInputProps {
   placeholder?: string;
 }
 
-export function WorldClassPhoneInput({
+export function CompactPhoneInputB({
   countries,
   value = '',
   onChange,
@@ -35,7 +35,7 @@ export function WorldClassPhoneInput({
   className = '',
   error: externalError,
   placeholder: externalPlaceholder
-}: WorldClassPhoneInputProps) {
+}: CompactPhoneInputBProps) {
   
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [countrySearchQuery, setCountrySearchQuery] = useState('');
@@ -62,23 +62,14 @@ export function WorldClassPhoneInput({
     onValidationChange
   });
   
+  const dialCode = getDialCode(countryCode);
+  
   // Update internal state when external value changes
   useEffect(() => {
     if (value !== formattedValue && value !== completePhoneNumber) {
       setValue(value, countryCode);
     }
   }, [value, formattedValue, completePhoneNumber, setValue, countryCode]);
-  
-  // Track the last synced country to avoid constant updates
-  const [lastSyncedCountry, setLastSyncedCountry] = useState(currentCountry);
-  
-  // Update country code only when parent country actually changes
-  useEffect(() => {
-    if (currentCountry && currentCountry !== lastSyncedCountry) {
-      handleCountryChange(currentCountry);
-      setLastSyncedCountry(currentCountry);
-    }
-  }, [currentCountry, lastSyncedCountry, handleCountryChange]);
   
   // Handle clicking outside dropdown
   useEffect(() => {
@@ -102,21 +93,13 @@ export function WorldClassPhoneInput({
     getDialCode(country.code).includes(countrySearchQuery)
   );
   
-  // Get current country info
-  const currentCountryInfo = countries.find(c => c.code === countryCode);
-  const dialCode = getDialCode(countryCode);
-  
-  // Determine error state
-  const hasError = !!(externalError || (isTouched && validationError));
-  const errorMessage = externalError || validationError;
-  
   // Determine validation state
-  const showSuccess = isTouched && isValid && isComplete && !hasError;
-  const showError = isTouched && hasError;
+  const errorMessage = externalError || (isTouched && !isValid ? validationError : '');
+  const showError = Boolean(errorMessage);
+  const showSuccess = isTouched && isValid && isComplete && !showError;
   
   return (
     <div className={`relative ${className}`}>
-      {/* Main Input Container */}
       <div 
         className={`
           flex items-center h-11 bg-white border rounded-lg transition-all duration-200
@@ -143,7 +126,7 @@ export function WorldClassPhoneInput({
           <ChevronDown className="h-3 w-3 text-gray-400" />
         </button>
         
-        {/* Phone Number Input */}
+        {/* Phone Input */}
         <input
           ref={inputRef}
           type="tel"
@@ -175,7 +158,7 @@ export function WorldClassPhoneInput({
       {showCountryDropdown && (
         <div 
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden"
+          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-hidden min-w-[300px]"
         >
           {/* Search Input */}
           <div className="sticky top-0 bg-white border-b border-gray-200 p-2">
@@ -226,14 +209,13 @@ export function WorldClassPhoneInput({
         </div>
       )}
       
-      {/* Error Message - only show if external error is provided */}
+      {/* Error Message */}
       {showError && errorMessage && externalError && (
         <div className="mt-1 flex items-center gap-1 text-sm text-red-600">
           <AlertCircle className="h-3 w-3" />
           <span>{errorMessage}</span>
         </div>
       )}
-      
     </div>
   );
 }

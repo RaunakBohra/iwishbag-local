@@ -28,27 +28,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton, SkeletonForm, SkeletonText, SkeletonButton } from '@/components/ui/skeleton';
-import { ConditionalSkeleton, SkeletonLoader } from '@/components/ui/skeleton-loader';
+import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
+import { ConditionalSkeleton } from '@/components/ui/skeleton-loader';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Globe,
-  DollarSign,
   MapPin,
-  CheckCircle,
   AlertCircle,
   Shield,
-  Bell,
   Save,
-  Package,
   FileText,
   HelpCircle,
   Lock,
   LogOut,
   Settings,
   Calendar,
-  Target,
   Phone,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -56,6 +50,9 @@ import { format } from 'date-fns';
 import { currencyService, type Currency } from '@/services/CurrencyService';
 import { H1, Body, BodySmall } from '@/components/ui/typography';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
+import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
+import { getAvatarWithGravatarFallback } from '@/utils/gravatarUtils';
+import { ProfilePictureUpload } from '@/components/profile/ProfilePictureUpload';
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
@@ -103,17 +100,8 @@ const Profile = () => {
     if (user?.user_metadata?.picture) {
       return user.user_metadata.picture;
     }
-    return null;
-  };
-
-  const getUserInitials = () => {
-    const name = profile?.full_name || user?.email || 'User';
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    // For email users, try Gravatar
+    return getAvatarWithGravatarFallback(user?.email, null);
   };
 
   const {
@@ -136,6 +124,24 @@ const Profile = () => {
     },
     enabled: !!user,
   });
+
+  // Get customer display data using the utility
+  const customerData = customerDisplayUtils.getCustomerDisplayData(
+    {
+      user: user,
+      profiles: profile,
+      customer_data: {
+        name: user?.user_metadata?.name || user?.user_metadata?.full_name,
+        email: user?.email,
+        phone: user?.phone
+      }
+    },
+    profile
+  );
+
+  const getUserInitials = () => {
+    return customerData.initials;
+  };
 
   // Fetch user stats
   const { data: stats } = useQuery({
@@ -168,6 +174,12 @@ const Profile = () => {
       // Update phone in auth.users table
       // Ensure phone is in E.164 format (no spaces)
       const e164Phone = values.phone.replace(/\s+/g, '');
+      console.log('[Profile] Saving phone number:', {
+        original: values.phone,
+        e164Format: e164Phone,
+        hasPlus: e164Phone.startsWith('+'),
+        length: e164Phone.length
+      });
       const { error: authError } = await supabase.auth.updateUser({
         phone: e164Phone,
       });
@@ -302,32 +314,7 @@ const Profile = () => {
 
   // No auto-switching - user controls both country and currency independently
 
-  // Get country name by code
-  const getCountryName = (countryCode: string) => {
-    if (!allCountries || !Array.isArray(allCountries)) return countryCode;
-    const country = allCountries.find((c) => c.code === countryCode);
-    return country?.name || countryCode;
-  };
 
-  // Get currency name by code
-  const getCurrencyName = (currencyCode: string) => {
-    // Try to get from loaded currencies first
-    const currency = availableCurrencies.find((c) => c.code === currencyCode);
-    if (currency) {
-      return currency.name;
-    }
-
-    // Use CurrencyService fallback instead of hardcoded values
-    try {
-      return currencyService.getCurrencyName(currencyCode);
-    } catch (error) {
-      console.warn('Failed to get currency name from service:', error);
-      return currencyCode;
-    }
-  };
-
-  // Determine if we should show skeleton
-  const showSkeleton = isLoading || countriesLoading || currencyLoading || !allCountries || availableCurrencies.length === 0;
 
   if (error) {
     return (
@@ -405,18 +392,20 @@ const Profile = () => {
           <div className="max-w-4xl mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage
-                    src={getUserAvatarUrl() || undefined}
-                    alt={profile?.full_name || 'User'}
-                  />
-                  <AvatarFallback className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xl font-semibold">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
+                <ProfilePictureUpload
+                  userId={user?.id || ''}
+                  currentAvatarUrl={getUserAvatarUrl()}
+                  userName={customerData.displayName}
+                  userEmail={user?.email}
+                  initials={getUserInitials()}
+                  onUpdate={() => {
+                    // Refresh profile data
+                    queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+                  }}
+                />
                 <div>
                   <H1 className="text-2xl mb-1">
-                    {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                    {customerData.displayName}
                   </H1>
                   <BodySmall className="text-gray-600">{user?.email}</BodySmall>
                   {stats?.memberSince && (
@@ -533,12 +522,12 @@ const Profile = () => {
                         <FormControl>
                           <div className="[&_.text-green-500]:hidden [&_.border-green-300]:border-gray-300 [&_.ring-green-200]:ring-0 [&_.focus-within\\:border-blue-500]:focus-within:border-teal-500 [&_.focus-within\\:ring-blue-200]:focus-within:ring-teal-500/20">
                             <WorldClassPhoneInput
-                              countries={allCountries || []}
+                              countries={Array.isArray(allCountries) ? allCountries : []}
                               value={field.value}
                               onChange={(newPhoneValue) => {
                                 field.onChange(newPhoneValue);
                               }}
-                              onValidationChange={(isValid, error) => {
+                              onValidationChange={(_, error) => {
                                 setPhoneError(error || '');
                                 if (error) {
                                   form.setError('phone', { message: error });

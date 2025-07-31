@@ -19,6 +19,16 @@ interface Profile {
   full_name?: string | null;
   email?: string | null;
   phone?: string | null;
+  avatar_url?: string | null;
+  cod_enabled?: boolean | null;
+  country?: string | null;
+  created_at?: string;
+  internal_notes?: string | null;
+  preferred_display_currency?: string | null;
+  shipping_type?: string | null;
+  updated_at?: string;
+  verified_dealer?: boolean | null;
+  profiles_quotes?: any | null;
 }
 
 interface Quote {
