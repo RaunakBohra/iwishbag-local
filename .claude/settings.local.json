@@ -218,7 +218,8 @@
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNTaxIntegrationService.ts )",
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/__tests__/HSNQuoteIntegrationService.test.ts )",
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNDataValidationService.ts)",
-      "WebFetch(domain:blog.daraz.com.np)"
+      "WebFetch(domain:blog.daraz.com.np)",
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/scripts/check-otp.sh:*)"
     ],
     "deny": []
   }

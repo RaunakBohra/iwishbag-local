@@ -27,6 +27,8 @@ import { NepalAddressService } from '@/services/NepalAddressService';
 import { isValidPhone, isValidPhoneForCountry } from '@/lib/phoneUtils';
 import { ipLocationService } from '@/services/IPLocationService';
 import { Info, Search, ChevronDown, ChevronUp, Truck, Loader2 } from 'lucide-react';
+import { ValidatedInput, ValidationStatus } from '@/components/ui/ValidatedInput';
+import { ValidatedSelectTrigger } from '@/components/ui/ValidatedSelect';
 import { FlagIcon } from '@/components/ui/FlagIcon';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -94,6 +96,44 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   // Custom validation states for real-time feedback
   const [phoneError, setPhoneError] = useState<string>('');
   
+  // Validation states for real-time indicators
+  const [firstNameStatus, setFirstNameStatus] = useState<ValidationStatus>('idle');
+  const [lastNameStatus, setLastNameStatus] = useState<ValidationStatus>('idle');
+  const [countryStatus, setCountryStatus] = useState<ValidationStatus>(() => {
+    // Initialize with valid state if address already exists and has country
+    return address && address.destination_country ? 'valid' : 'idle';
+  });
+  const [addressStatus, setAddressStatus] = useState<ValidationStatus>(() => {
+    // Initialize with valid state if address already exists and has address
+    return address && address.address_line1 && address.address_line1.length >= 5 ? 'valid' : 'idle';
+  });
+  const [postalCodeStatus, setPostalCodeStatus] = useState<ValidationStatus>(() => {
+    // Initialize based on existing postal code validity
+    if (address && address.postal_code && address.destination_country) {
+      const result = InternationalAddressValidator.validatePostalCode(address.postal_code, address.destination_country);
+      return result.isValid ? 'valid' : 'invalid';
+    }
+    return 'idle';
+  });
+  const [cityStatus, setCityStatus] = useState<ValidationStatus>(() => {
+    // Initialize with valid state if address already exists and has city
+    return address && address.city && address.city.length >= 2 ? 'valid' : 'idle';
+  });
+  const [provinceStatus, setProvinceStatus] = useState<ValidationStatus>(() => {
+    // Initialize with valid state if address already exists and has state/province
+    return address && address.state_province_region ? 'valid' : 'idle';
+  });
+  const [districtStatus, setDistrictStatus] = useState<ValidationStatus>(() => {
+    // For Nepal, district is stored in city field
+    return address && selectedCountry === 'NP' && address.city ? 'valid' : 'idle';
+  });
+  const [municipalityStatus, setMunicipalityStatus] = useState<ValidationStatus>('idle');
+  const [wardStatus, setWardStatus] = useState<ValidationStatus>('idle');
+  const [landmarkStatus, setLandmarkStatus] = useState<ValidationStatus>(() => {
+    // Address line 2 is optional, so it's valid if empty or has content
+    return address && address.address_line2 && address.address_line2.length > 0 ? 'valid' : 'idle';
+  });
+  
   // Check if Nepal is selected
   const isNepal = selectedCountry === 'NP';
 
@@ -153,6 +193,47 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     }
     return { firstName: '', lastName: '' };
   }, [address]);
+
+  // Initialize validation states when editing existing address
+  useEffect(() => {
+    if (address) {
+      // Initialize first name status
+      if (parsedNames.firstName.length >= 2) {
+        setFirstNameStatus('valid');
+      }
+      
+      // Initialize last name status
+      if (parsedNames.lastName.length >= 2) {
+        setLastNameStatus('valid');
+      }
+      
+      // Initialize address status
+      if (address.address_line1 && address.address_line1.length >= 5) {
+        setAddressStatus('valid');
+      }
+      
+      // Initialize city status
+      if (address.city && address.city.length >= 2) {
+        setCityStatus('valid');
+      }
+      
+      // Initialize province status
+      if (address.state_province_region) {
+        setProvinceStatus('valid');
+      }
+      
+      // Initialize postal code status
+      if (address.postal_code && address.destination_country) {
+        const result = InternationalAddressValidator.validatePostalCode(address.postal_code, address.destination_country);
+        setPostalCodeStatus(result.isValid ? 'valid' : 'invalid');
+      }
+      
+      // Initialize landmark status (optional field)
+      if (address.address_line2 && address.address_line2.length > 0) {
+        setLandmarkStatus('valid');
+      }
+    }
+  }, [address, parsedNames]);
 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -253,6 +334,17 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
         setWardNumber('');
         setArea('');
       }
+      
+      // Reset validation states when country changes
+      setCountryStatus('valid'); // Country is valid once selected
+      setAddressStatus('idle');
+      setPostalCodeStatus('idle');
+      setCityStatus('idle');
+      setProvinceStatus('idle');
+      setDistrictStatus('idle');
+      setMunicipalityStatus('idle');
+      setWardStatus('idle');
+      setLandmarkStatus('idle');
     }
   }, [selectedCountry]);
   
@@ -612,6 +704,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                                 setSelectedCountry(country.code);
                                 setShowCountryDropdown(false);
                                 setCountrySearchQuery(''); // Clear search
+                                setCountryStatus('valid'); // Mark country as valid when selected
                               }}
                               className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-2 transition-colors"
                             >
@@ -641,9 +734,21 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">First name</FormLabel>
                   <FormControl>
-                    <Input
+                    <ValidatedInput
                       {...field}
-                      className="h-11 bg-white border-gray-300 rounded text-base"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        const value = e.target.value.trim();
+                        if (value.length === 0) {
+                          setFirstNameStatus('idle');
+                        } else if (value.length >= 2) {
+                          setFirstNameStatus('valid');
+                        } else {
+                          setFirstNameStatus('invalid');
+                        }
+                      }}
+                      validationStatus={firstNameStatus}
+                      validationError={form.formState.errors.first_name?.message}
                     />
                   </FormControl>
                   <FormMessage />
@@ -658,9 +763,21 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">Last name</FormLabel>
                   <FormControl>
-                    <Input
+                    <ValidatedInput
                       {...field}
-                      className="h-11 bg-white border-gray-300 rounded text-base"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        const value = e.target.value.trim();
+                        if (value.length === 0) {
+                          setLastNameStatus('idle');
+                        } else if (value.length >= 2) {
+                          setLastNameStatus('valid');
+                        } else {
+                          setLastNameStatus('invalid');
+                        }
+                      }}
+                      validationStatus={lastNameStatus}
+                      validationError={form.formState.errors.last_name?.message}
                     />
                   </FormControl>
                   <FormMessage />
@@ -707,14 +824,18 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedProvince(value);
+                          setProvinceStatus('valid'); // Mark province as valid when selected
                         }}
                         value={field.value || ''}
                         disabled={addressMutation.isPending}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                          <ValidatedSelectTrigger 
+                            validationStatus={provinceStatus}
+                            validationError={form.formState.errors.state_province_region?.message}
+                          >
                             <SelectValue placeholder="Select province" />
-                          </SelectTrigger>
+                          </ValidatedSelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {stateProvinces?.map((state) => (
@@ -739,12 +860,16 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                         onValueChange={(value) => {
                           field.onChange(NepalAddressService.getDistrictName(value) || value);
                           setSelectedDistrict(value);
+                          setDistrictStatus('valid'); // Mark district as valid when selected
                         }}
                         value={selectedDistrict}
                         disabled={addressMutation.isPending || !selectedProvince}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                          <ValidatedSelectTrigger 
+                            validationStatus={!selectedProvince ? 'idle' : districts.length === 0 ? 'validating' : districtStatus}
+                            validationError={form.formState.errors.city?.message}
+                          >
                             <SelectValue placeholder={
                               !selectedProvince 
                                 ? "Select province first" 
@@ -752,10 +877,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                                   ? "Loading districts..." 
                                   : "Select district"
                             } />
-                            {districts.length === 0 && selectedProvince && (
-                              <Loader2 className="h-4 w-4 animate-spin text-gray-400 ml-2" />
-                            )}
-                          </SelectTrigger>
+                          </ValidatedSelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {districts.map((district) => (
@@ -780,6 +902,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <Select
                       onValueChange={(value) => {
                         setSelectedMunicipality(value);
+                        setMunicipalityStatus('valid'); // Mark municipality as valid when selected
                         // Update address_line1 with municipality and ward
                         const currentWard = wardNumber || '';
                         form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
@@ -788,9 +911,11 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       disabled={addressMutation.isPending}
                     >
                       <FormControl>
-                        <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                        <ValidatedSelectTrigger 
+                          validationStatus={municipalityStatus}
+                        >
                           <SelectValue placeholder="Select municipality" />
-                        </SelectTrigger>
+                        </ValidatedSelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {municipalities.map((municipality) => (
@@ -803,18 +928,26 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   ) : (
                     /* Show manual input when no municipalities available */
                     <FormControl>
-                      <Input
+                      <ValidatedInput
                         value={selectedMunicipality}
                         onChange={(e) => {
                           const value = e.target.value;
                           setSelectedMunicipality(value);
+                          // Update validation status
+                          if (value.trim().length === 0) {
+                            setMunicipalityStatus('idle');
+                          } else if (value.trim().length >= 2) {
+                            setMunicipalityStatus('valid');
+                          } else {
+                            setMunicipalityStatus('invalid');
+                          }
                           // Update address_line1 with municipality and ward
                           const currentWard = wardNumber || '';
                           form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
                         }}
                         placeholder="Enter municipality/city name"
-                        className="h-11 bg-white border-gray-300 rounded text-base"
                         disabled={addressMutation.isPending}
+                        validationStatus={municipalityStatus}
                       />
                     </FormControl>
                   )}
@@ -854,7 +987,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">Ward Number</FormLabel>
                   <FormControl>
-                    <Input
+                    <ValidatedInput
                       type="number"
                       min="1"
                       max="32"
@@ -862,6 +995,17 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       onChange={(e) => {
                         const ward = e.target.value;
                         setWardNumber(ward);
+                        // Update validation status
+                        if (ward.trim().length === 0) {
+                          setWardStatus('idle');
+                        } else {
+                          const wardNum = parseInt(ward);
+                          if (wardNum >= 1 && wardNum <= 32) {
+                            setWardStatus('valid');
+                          } else {
+                            setWardStatus('invalid');
+                          }
+                        }
                         // Update address_line1 with municipality, area, and ward
                         const fullAddress = selectedMunicipality 
                           ? `${selectedMunicipality}${area ? ', ' + area : ''}${ward ? ', Ward ' + ward : ''}`
@@ -869,7 +1013,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                         form.setValue('address_line1', fullAddress);
                       }}
                       placeholder="e.g., 16"
-                      className="h-11 bg-white border-gray-300 rounded text-base"
+                      validationStatus={wardStatus}
                     />
                   </FormControl>
                 </FormItem>
@@ -883,11 +1027,22 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <FormItem>
                     <FormLabel className="text-sm text-gray-600">Landmark</FormLabel>
                     <FormControl>
-                      <Input
+                      <ValidatedInput
                         {...field}
                         value={field.value ?? ''}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const value = e.target.value.trim();
+                          // Landmark is optional, so it's valid when empty or when it has content
+                          if (value.length === 0) {
+                            setLandmarkStatus('idle');
+                          } else {
+                            setLandmarkStatus('valid');
+                          }
+                        }}
                         placeholder="e.g., Near Everest Bank, opposite Civil Mall"
-                        className="h-11 bg-white border-gray-300 rounded text-base"
+                        validationStatus={landmarkStatus}
+                        validationError={form.formState.errors.address_line2?.message}
                       />
                     </FormControl>
                     <FormMessage />
@@ -941,9 +1096,21 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <FormItem>
                     <FormLabel className="text-sm text-gray-600">{fieldLabels.address}</FormLabel>
                     <FormControl>
-                      <Input
+                      <ValidatedInput
                         {...field}
-                        className="h-11 bg-white border-gray-300 rounded text-base"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const value = e.target.value.trim();
+                          if (value.length === 0) {
+                            setAddressStatus('idle');
+                          } else if (value.length >= 5) {
+                            setAddressStatus('valid');
+                          } else {
+                            setAddressStatus('invalid');
+                          }
+                        }}
+                        validationStatus={addressStatus}
+                        validationError={form.formState.errors.address_line1?.message}
                       />
                     </FormControl>
                     <FormMessage />
@@ -959,10 +1126,21 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <FormItem>
                     <FormLabel className="text-sm text-gray-600">Address Line 2 (optional)</FormLabel>
                     <FormControl>
-                      <Input
+                      <ValidatedInput
                         {...field}
                         value={field.value ?? ''}
-                        className="h-11 bg-white border-gray-300 rounded text-base"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const value = e.target.value.trim();
+                          // Address line 2 is optional, so it's valid when empty or when it has content
+                          if (value.length === 0) {
+                            setLandmarkStatus('idle');
+                          } else {
+                            setLandmarkStatus('valid');
+                          }
+                        }}
+                        validationStatus={landmarkStatus}
+                        validationError={form.formState.errors.address_line2?.message}
                       />
                     </FormControl>
                     <FormMessage />
@@ -982,9 +1160,21 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   <FormItem>
                     <FormLabel className="text-sm text-gray-600">{fieldLabels.city}</FormLabel>
                     <FormControl>
-                      <Input
+                      <ValidatedInput
                         {...field}
-                        className="h-11 bg-white border-gray-300 rounded text-base"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          const value = e.target.value.trim();
+                          if (value.length === 0) {
+                            setCityStatus('idle');
+                          } else if (value.length >= 2) {
+                            setCityStatus('valid');
+                          } else {
+                            setCityStatus('invalid');
+                          }
+                        }}
+                        validationStatus={cityStatus}
+                        validationError={form.formState.errors.city?.message}
                       />
                     </FormControl>
                     <FormMessage />
@@ -1003,14 +1193,20 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     {stateProvinces ? (
                       <Select
                         key={`province-${selectedCountry}-${stateProvinces?.length}`}
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setProvinceStatus('valid'); // Mark province as valid when selected
+                        }}
                         value={field.value || ''}
                         disabled={addressMutation.isPending}
                       >
                         <FormControl>
-                          <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                          <ValidatedSelectTrigger 
+                            validationStatus={provinceStatus}
+                            validationError={form.formState.errors.state_province_region?.message}
+                          >
                             <SelectValue placeholder={`Select ${fieldLabels.state.toLowerCase()}`} />
-                          </SelectTrigger>
+                          </ValidatedSelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {stateProvinces.map((state) => (
@@ -1022,11 +1218,23 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       </Select>
                     ) : (
                       <FormControl>
-                        <Input
+                        <ValidatedInput
                           placeholder={selectedCountry === 'GB' ? 'e.g., Greater London' : 'e.g., NY'}
                           {...field}
                           value={field.value || ''}
-                          className="h-11 bg-white border-gray-300 rounded text-base"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            const value = e.target.value.trim();
+                            if (value.length === 0) {
+                              setProvinceStatus('idle');
+                            } else if (value.length >= 2) {
+                              setProvinceStatus('valid');
+                            } else {
+                              setProvinceStatus('invalid');
+                            }
+                          }}
+                          validationStatus={provinceStatus}
+                          validationError={form.formState.errors.state_province_region?.message}
                         />
                       </FormControl>
                     )}

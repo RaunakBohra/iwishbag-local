@@ -1,0 +1,595 @@
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { 
+  Phone, 
+  Eye, 
+  EyeOff, 
+  Loader2, 
+  ShieldCheck, 
+  AlertCircle,
+  CheckCircle,
+  Info,
+  ArrowLeft
+} from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
+
+interface ChangePhoneModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onPhoneChanged?: (newPhone: string) => void;
+}
+
+type ModalStep = 'phone-input' | 'otp-verification' | 'success';
+
+export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
+  open,
+  onOpenChange,
+  onPhoneChanged,
+}) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { data: allCountries, isLoading: countriesLoading } = useAllCountries();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [currentPhone, setCurrentPhone] = useState('');
+  const [currentStep, setCurrentStep] = useState<ModalStep>('phone-input');
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
+  const [verifiedPassword, setVerifiedPassword] = useState('');
+  
+  // OTP state for new phone verification
+  const [otpValues, setOtpValues] = useState<string[]>(new Array(6).fill(''));
+  const [otpError, setOtpError] = useState('');
+
+  // Check if user is OAuth user
+  useEffect(() => {
+    if (user) {
+      const provider = user.app_metadata?.provider;
+      setIsOAuthUser(provider && provider !== 'email');
+      setCurrentPhone(user.phone || '');
+    }
+  }, [user]);
+
+  // Create dynamic schema based on user type
+  const phoneChangeSchemaWithPassword = z.object({
+    currentPassword: z.string().min(1, 'Password is required'),
+    newPhone: z.string().min(8, 'Phone number must be at least 8 digits'),
+  }).refine((data) => data.newPhone !== currentPhone, {
+    message: "New phone must be different from current phone",
+    path: ['newPhone'],
+  });
+
+  const phoneChangeSchemaOAuth = z.object({
+    newPhone: z.string().min(8, 'Phone number must be at least 8 digits'),
+  }).refine((data) => data.newPhone !== currentPhone, {
+    message: "New phone must be different from current phone",
+    path: ['newPhone'],
+  });
+
+  // Use appropriate schema based on user type
+  const phoneChangeSchema = isOAuthUser ? phoneChangeSchemaOAuth : phoneChangeSchemaWithPassword;
+  
+  const form = useForm<any>({
+    resolver: zodResolver(phoneChangeSchema),
+    defaultValues: isOAuthUser 
+      ? {
+          newPhone: '',
+        }
+      : {
+          currentPassword: '',
+          newPhone: '',
+        },
+  });
+
+  const handlePhoneSubmit = async (values: any) => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      // Step 1: Verify current password (only for non-OAuth users)
+      if (!isOAuthUser) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email!,
+          password: values.currentPassword,
+        });
+
+        if (signInError) {
+          toast({
+            title: 'Error',
+            description: 'Current password is incorrect',
+            variant: 'destructive',
+          });
+          return;
+        }
+        setVerifiedPassword(values.currentPassword);
+      }
+
+      // Store new phone for later
+      setNewPhoneNumber(values.newPhone);
+      
+      // Step 2: Initiate phone change (sends SMS OTPs to both phones)
+      await initiatePhoneChange(values.newPhone);
+      
+      // Move to OTP verification step
+      setCurrentStep('otp-verification');
+
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to initiate phone change',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const initiatePhoneChange = async (newPhone?: string) => {
+    if (!user) return;
+    
+    const phoneToChange = newPhone || newPhoneNumber;
+    if (!phoneToChange) {
+      throw new Error('No phone number provided');
+    }
+
+    try {
+      console.log('Initiating phone change:', {
+        currentPhone,
+        newPhone: phoneToChange,
+        user: user.phone
+      });
+      
+      // Send SMS OTP via our custom SMS service
+      const { data, error } = await supabase.functions.invoke('auth-sms-hook', {
+        body: {
+          phone: phoneToChange,
+          type: 'phone_change',
+          user_id: user.id,
+        },
+      });
+
+      if (error) {
+        throw new Error(`Failed to send SMS: ${error.message}`);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to send SMS');
+      }
+
+      toast({
+        title: 'Verification Code Sent',
+        description: `We've sent a 6-digit code to ${phoneToChange} via ${data.provider}.`,
+      });
+
+    } catch (error: any) {
+      console.error('Phone change initiation error:', error);
+      throw error;
+    }
+  };
+
+  // Handle OTP input changes
+  const handleOTPChange = (index: number, value: string) => {
+    // Only allow digits
+    if (value && !/^\d$/.test(value)) return;
+
+    const newOtpValues = [...otpValues];
+    newOtpValues[index] = value;
+    setOtpValues(newOtpValues);
+    setOtpError(''); // Clear error when user types
+
+    // Auto-advance to next input
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-input-${index + 1}`);
+      nextInput?.focus();
+    }
+
+    // Auto-submit when all digits entered
+    if (value && index === 5) {
+      const fullOtp = newOtpValues.join('');
+      if (fullOtp.length === 6) {
+        handleOTPSubmit(fullOtp);
+      }
+    }
+  };
+
+  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-input-${index - 1}`);
+      prevInput?.focus();
+    }
+  };
+
+  const handleOTPPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').slice(0, 6);
+    if (/^\d+$/.test(pastedData)) {
+      const newOtpValues = pastedData.split('').concat(new Array(6 - pastedData.length).fill(''));
+      setOtpValues(newOtpValues);
+      
+      // Focus last filled input or last input if all filled
+      const lastIndex = Math.min(pastedData.length - 1, 5);
+      const lastInput = document.getElementById(`otp-input-${lastIndex}`);
+      lastInput?.focus();
+      
+      // Auto-submit if 6 digits
+      if (pastedData.length === 6) {
+        handleOTPSubmit(pastedData);
+      }
+    }
+  };
+
+  const handleOTPSubmit = async (otp: string) => {
+    if (!user || !newPhoneNumber) return;
+
+    setIsLoading(true);
+    setOtpError('');
+
+    try {
+      // Verify OTP via our custom verification service
+      const { data, error } = await supabase.functions.invoke('verify-sms-otp', {
+        body: {
+          phone: newPhoneNumber,
+          otp: otp,
+          type: 'phone_change',
+        },
+      });
+
+      if (error) {
+        setOtpError(error.message || 'Failed to verify code. Please try again.');
+        return;
+      }
+
+      if (!data.success) {
+        setOtpError(data.error || 'Invalid verification code. Please try again.');
+        return;
+      }
+
+      // OTP verified! Now update the phone number in Supabase Auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        phone: newPhoneNumber,
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Refresh the session to get updated user data
+      const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error('Error refreshing session:', refreshError);
+      }
+
+      // Phone change complete
+      setCurrentStep('success');
+      
+      toast({
+        title: 'Phone Changed Successfully',
+        description: `Your phone has been updated to ${newPhoneNumber}.`,
+      });
+
+      // Call the onPhoneChanged callback if provided
+      if (onPhoneChanged) {
+        onPhoneChanged(newPhoneNumber);
+      }
+
+      // Close modal after a short delay
+      setTimeout(() => {
+        onOpenChange(false);
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('OTP verification error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to verify code. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = () => {
+    const otp = otpValues.join('');
+
+    if (otp.length !== 6) {
+      setOtpError('Please enter the complete 6-digit code');
+      return;
+    }
+
+    handleOTPSubmit(otp);
+  };
+
+  // Reset all state when modal closes
+  useEffect(() => {
+    if (!open) {
+      form.reset();
+      setCurrentStep('phone-input');
+      setNewPhoneNumber('');
+      setVerifiedPassword('');
+      setShowPassword(false);
+      setOtpValues(new Array(6).fill(''));
+      setOtpError('');
+    }
+  }, [open, form]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
+            <Phone className="h-6 w-6 text-teal-600" />
+            {currentStep === 'otp-verification' ? 'Verify New Phone' : 'Change Phone Number'}
+          </DialogTitle>
+          <DialogDescription className="text-gray-600 mt-2">
+            {currentStep === 'otp-verification' ? (
+              `Enter the 6-digit code sent to your new phone number`
+            ) : isOAuthUser ? (
+              "Update your phone number for order notifications and security."
+            ) : (
+              "Update your phone number with secure verification."
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        {currentStep === 'success' ? (
+          <div className="space-y-4 py-6">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="font-semibold text-lg">Phone Changed Successfully!</h3>
+              <p className="text-gray-600">
+                Your phone has been updated to:
+              </p>
+              <p className="font-medium text-teal-600">{newPhoneNumber}</p>
+            </div>
+            <div className="pt-4">
+              <Button
+                onClick={() => onOpenChange(false)}
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        ) : currentStep === 'otp-verification' ? (
+          <div className="space-y-6 py-4">
+            <Alert className="border-teal-200 bg-teal-50">
+              <ShieldCheck className="h-4 w-4 text-teal-600" />
+              <AlertDescription className="text-teal-800">
+                <p className="font-medium">Verify New Phone Number</p>
+                <p className="text-sm">Enter the 6-digit code sent to your new phone number.</p>
+              </AlertDescription>
+            </Alert>
+
+            {/* New Phone OTP */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-teal-500 rounded-full" />
+                <label className="text-sm font-medium text-gray-700">
+                  New Phone: {newPhoneNumber}
+                </label>
+              </div>
+              <div className="flex justify-center gap-2">
+                {otpValues.map((value, index) => (
+                  <input
+                    key={index}
+                    id={`otp-input-${index}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={value}
+                    onChange={(e) => handleOTPChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOTPKeyDown(index, e)}
+                    onPaste={index === 0 ? handleOTPPaste : undefined}
+                    className={`w-10 h-10 text-center text-lg font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                      otpError ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    disabled={isLoading}
+                    autoFocus={index === 0}
+                  />
+                ))}
+              </div>
+              {otpError && (
+                <p className="text-sm text-red-500 text-center">{otpError}</p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                onClick={handleVerifyOTP}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Verify & Change Phone
+                  </>
+                )}
+              </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep('phone-input');
+                    setOtpValues(new Array(6).fill(''));
+                    setOtpError('');
+                  }}
+                  disabled={isLoading}
+                  className="text-sm text-gray-600 hover:text-gray-700 flex items-center gap-1 mx-auto"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to phone change
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {isOAuthUser && (
+              <Alert className="mb-4 border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800">
+                  <p className="font-medium mb-1">Social Login Account</p>
+                  <p className="text-sm">
+                    You signed up with {user?.app_metadata?.provider === 'google' ? 'Google' : 'Facebook'}.
+                    Your social login will continue to work normally.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handlePhoneSubmit)} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Current Phone</label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-700">{currentPhone || 'No phone number set'}</span>
+                    {isOAuthUser && (
+                      <span className="ml-auto text-xs bg-gray-200 px-2 py-1 rounded">
+                        {user?.app_metadata?.provider}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {!isOAuthUser && (
+                  <FormField
+                    control={form.control}
+                    name="currentPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Password</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="Enter your current password"
+                              className="pr-10"
+                              disabled={isLoading}
+                              {...field}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="newPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Phone Number</FormLabel>
+                      <FormControl>
+                        <WorldClassPhoneInput
+                          countries={Array.isArray(allCountries) ? allCountries : []}
+                          value={field.value}
+                          onChange={(newPhoneValue) => {
+                            field.onChange(newPhoneValue);
+                          }}
+                          disabled={isLoading}
+                          placeholder="Enter your new phone number"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Alert className="border-orange-200 bg-orange-50">
+                  <AlertCircle className="h-4 w-4 text-orange-600" />
+                  <AlertDescription className="text-orange-800 text-sm">
+                    <p className="font-medium mb-1">Phone Verification Process</p>
+                    <ol className="text-sm space-y-1 ml-4 list-decimal">
+                      <li>We'll send a 6-digit code to your new phone number</li>
+                      <li>Enter the code on the verification screen</li>
+                      <li>Your phone will be updated after the code is verified</li>
+                    </ol>
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isLoading}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Continue
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};

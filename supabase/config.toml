@@ -179,6 +179,14 @@ pass = "supabase"
 admin_email = "noreply@iwishbag.com"
 sender_name = "iWishBag"
 
+# For production with Amazon SES, uncomment these:
+# host = "email-smtp.us-east-1.amazonaws.com"
+# port = 587
+# user = "env(AWS_SES_SMTP_USERNAME)"
+# pass = "env(AWS_SES_SMTP_PASSWORD)"
+# admin_email = "noreply@iwishbag.com"
+# sender_name = "iWishBag"
+
 # For production with Resend, uncomment these:
 # host = "smtp.resend.com"
 # port = 587
@@ -344,6 +352,18 @@ AIRWALLEX_CLIENT_ID = "env(AIRWALLEX_CLIENT_ID)"
 
 # Email & Communication
 RESEND_API_KEY = "env(RESEND_API_KEY)"
+
+# SMS Providers Configuration
+TWILIO_ACCOUNT_SID = "ACc41090d56e404b1fd081c3d1b438766f"
+TWILIO_AUTH_TOKEN = "8ed6ae898c359a26ba1e97d3dbd9f9af"
+TWILIO_FROM_NUMBER = "+18777804236"
+MSG91_AUTH_KEY = "460963AgTvXkszpK688b31a4P1"
+MSG91_SENDER = "IWISH"
+SPARROW_SMS_TOKEN = "env(SPARROW_SMS_TOKEN)"
+SPARROW_SMS_SENDER = "env(SPARROW_SMS_SENDER)"
+
+# SMS Test Mode
+SMS_TEST_MODE = "true"
 
 # Product Analysis APIs
 SCRAPER_API_KEY = "env(SCRAPER_API_KEY)"

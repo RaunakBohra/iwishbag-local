@@ -11,6 +11,7 @@ import { usePhoneCollection } from '@/hooks/usePhoneCollection';
 import { PhoneCollectionModal } from '@/components/auth/PhoneCollectionModal';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
 import { ChangeEmailModal } from '@/components/auth/ChangeEmailModal';
+import { ChangePhoneModal } from '@/components/auth/ChangePhoneModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,6 +89,7 @@ const Profile = () => {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showChangePhoneModal, setShowChangePhoneModal] = useState(false);
   const [phoneError, setPhoneError] = useState<string>('');
   const [phoneCountry, setPhoneCountry] = useState<string | null>(null);
 
@@ -515,35 +517,52 @@ const Profile = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="full_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">
-                          Full Name
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Your full name"
-                            {...field}
-                            className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
+                {/* Full Name Field */}
+                <FormField
+                  control={form.control}
+                  name="full_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-gray-700">
+                        Full Name
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Your full name"
+                          {...field}
+                          className="border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Phone Number Field */}
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between mb-2">
                         <FormLabel className="text-sm font-medium text-gray-700">
                           Phone Number
                         </FormLabel>
-                        <FormControl>
+                        {user?.phone && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowChangePhoneModal(true)}
+                            className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 -mr-2"
+                          >
+                            <Phone className="h-4 w-4 mr-1" />
+                            Change
+                          </Button>
+                        )}
+                      </div>
+                      <FormControl>
+                        <div className="space-y-2">
                           <div className="[&_.text-green-500]:hidden [&_.border-green-300]:border-gray-300 [&_.ring-green-200]:ring-0 [&_.focus-within\\:border-blue-500]:focus-within:border-teal-500 [&_.focus-within\\:ring-blue-200]:focus-within:ring-teal-500/20">
                             <WorldClassPhoneInput
                               countries={Array.isArray(allCountries) ? allCountries : []}
@@ -567,44 +586,54 @@ const Profile = () => {
                               placeholder="Enter phone number"
                             />
                           </div>
-                        </FormControl>
-                        {!phoneError && <FormMessage />}
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                          <BodySmall className="text-gray-500">
+                            {user?.phone 
+                              ? 'Update your phone number with secure verification.'
+                              : 'Add your phone number for order updates and notifications.'
+                            }
+                          </BodySmall>
+                        </div>
+                      </FormControl>
+                      {!phoneError && <FormMessage />}
+                    </FormItem>
+                  )}
+                />
+
+                {/* Email Field */}
                 <FormField
                   control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
+                      <div className="flex items-center justify-between mb-2">
+                        <FormLabel className="text-sm font-medium text-gray-700">
+                          Email
+                        </FormLabel>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowEmailModal(true)}
+                          className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 -mr-2"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Change
+                        </Button>
+                      </div>
                       <FormControl>
                         <div className="space-y-2">
-                          <div className="relative flex items-center gap-2">
-                            <div className="flex-1 relative">
-                              <Input 
-                                {...field} 
-                                readOnly 
-                                className="pl-10 bg-gray-50 text-gray-700 cursor-default" 
-                              />
-                              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              {user?.app_metadata?.provider && user.app_metadata.provider !== 'email' && (
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-gray-200 px-2 py-1 rounded">
-                                  {user.app_metadata.provider}
-                                </span>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowEmailModal(true)}
-                              className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 border-teal-300"
-                            >
-                              <Mail className="h-4 w-4 mr-1" />
-                              Change
-                            </Button>
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              readOnly 
+                              className="pl-10 bg-gray-50 text-gray-700 cursor-default" 
+                            />
+                            <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            {user?.app_metadata?.provider && user.app_metadata.provider !== 'email' && (
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-gray-200 px-2 py-1 rounded">
+                                {user.app_metadata.provider}
+                              </span>
+                            )}
                           </div>
                           <BodySmall className="text-gray-500">
                             {user?.app_metadata?.provider && user.app_metadata.provider !== 'email' 
@@ -831,6 +860,25 @@ const Profile = () => {
       <ChangeEmailModal
         open={showEmailModal}
         onOpenChange={setShowEmailModal}
+      />
+
+      {/* Change Phone Modal */}
+      <ChangePhoneModal
+        open={showChangePhoneModal}
+        onOpenChange={setShowChangePhoneModal}
+        onPhoneChanged={(newPhone) => {
+          // Update the form with the new phone number
+          form.setValue('phone', newPhone);
+          
+          // Refresh the user data
+          queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+          
+          // Refresh auth session to get updated user object
+          supabase.auth.refreshSession();
+          
+          // Close the modal
+          setShowChangePhoneModal(false);
+        }}
       />
     </div>
     </ConditionalSkeleton>
