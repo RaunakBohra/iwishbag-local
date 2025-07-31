@@ -52,6 +52,7 @@ import { currencyService, type Currency } from '@/services/CurrencyService';
 import { H1, Body, BodySmall } from '@/components/ui/typography';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
+import { detectCountryFromNumber } from '@/lib/phoneFormatUtils';
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
@@ -85,6 +86,7 @@ const Profile = () => {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [phoneError, setPhoneError] = useState<string>('');
+  const [phoneCountry, setPhoneCountry] = useState<string | null>(null);
 
   // Helper functions for user avatar
   const getUserAvatarUrl = () => {
@@ -172,12 +174,6 @@ const Profile = () => {
       // Update phone in auth.users table
       // Ensure phone is in E.164 format (no spaces)
       const e164Phone = values.phone.replace(/\s+/g, '');
-      console.log('[Profile] Saving phone number:', {
-        original: values.phone,
-        e164Format: e164Phone,
-        hasPlus: e164Phone.startsWith('+'),
-        length: e164Phone.length
-      });
       const { error: authError } = await supabase.auth.updateUser({
         phone: e164Phone,
       });
@@ -216,9 +212,19 @@ const Profile = () => {
         if (error) throw new Error(`Error creating profile: ${error.message}`);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Update the cache with the new values immediately to prevent flicker
+      queryClient.setQueryData(['profile', user?.id], (oldData: any) => ({
+        ...oldData,
+        full_name: variables.full_name,
+        country: variables.country,
+        preferred_display_currency: variables.preferred_display_currency,
+      }));
+      
+      // Then invalidate to fetch fresh data from server
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['user-profile', user?.id] });
+      
       toast({
         title: 'Profile updated',
         description: 'Your profile has been successfully updated.',
@@ -243,6 +249,9 @@ const Profile = () => {
       preferred_display_currency: 'USD',
     },
   });
+  
+  // Track if initial data has been loaded to prevent multiple resets
+  const [isInitialDataLoaded, setIsInitialDataLoaded] = useState(false);
 
   // Load available currencies
   useEffect(() => {
@@ -261,10 +270,16 @@ const Profile = () => {
   }, []);
 
   useEffect(() => {
+    // Only reset form once when all initial data is loaded
+    if (isInitialDataLoaded) return;
+    
     // Wait for both countries and currencies to be loaded before resetting form
     if (!allCountries || allCountries.length === 0 || availableCurrencies.length === 0) {
       return;
     }
+    
+    // Also wait for profile query to settle (either with data or null)
+    if (isLoading) return;
 
     // Always get display name, even if no profile exists yet
     const displayName =
@@ -276,9 +291,16 @@ const Profile = () => {
 
     // Get phone from auth.users.phone instead of profiles.phone
     const userPhone = user?.phone || user?.user_metadata?.phone || '';
+    
+    // Detect country from phone number if available
+    if (userPhone && !phoneCountry) {
+      const detectedCountry = detectCountryFromNumber(userPhone);
+      if (detectedCountry) {
+        setPhoneCountry(detectedCountry);
+      }
+    }
 
     // Set form values whether profile exists or not
-    
     form.reset({
       full_name: displayName,
       email: user?.email || '',
@@ -286,9 +308,12 @@ const Profile = () => {
       country: profile?.country || 'US',
       preferred_display_currency: profile?.preferred_display_currency || 'USD',
     });
-  }, [profile, user, allCountries, availableCurrencies]); // Removed 'form' from dependencies to prevent infinite loop
+    
+    // Mark as loaded to prevent future resets
+    setIsInitialDataLoaded(true);
+  }, [profile, user, allCountries, availableCurrencies, isLoading, isInitialDataLoaded]); // Added isLoading and isInitialDataLoaded
 
-  const onSubmit = (data: ProfileFormValues) => {
+  const onSubmit = async (data: ProfileFormValues) => {
     // Check if there's a phone validation error
     if (phoneError) {
       toast({
@@ -298,7 +323,16 @@ const Profile = () => {
       });
       return;
     }
-    updateProfileMutation.mutate(data);
+    
+    // Optimistically update the form to prevent flicker
+    // The form will maintain the user's input values
+    try {
+      await updateProfileMutation.mutateAsync(data);
+      // Form values are already what the user submitted, no need to reset
+    } catch (error) {
+      // On error, the form keeps the attempted values so user can retry
+      console.error('Profile update error:', error);
+    }
   };
 
   // No auto-switching - user controls both country and currency independently
@@ -522,7 +556,8 @@ const Profile = () => {
                                   form.clearErrors('phone');
                                 }
                               }}
-                              initialCountry={profile?.country || 'US'}
+                              initialCountry={phoneCountry || profile?.country || 'US'}
+                              currentCountry={phoneCountry || undefined}
                               disabled={updateProfileMutation.isPending}
                               required={true}
                               error={form.formState.errors.phone?.message}

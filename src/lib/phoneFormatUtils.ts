@@ -86,6 +86,90 @@ export function getDialCode(countryCode: string): string {
 }
 
 /**
+ * Detect country code from a phone number without + prefix
+ * This helps identify the country when phone is stored without +
+ */
+export function detectCountryFromNumber(phoneNumber: string): string | null {
+  if (!phoneNumber) return null;
+  
+  // Remove any spaces or special characters
+  const digits = phoneNumber.replace(/[^0-9]/g, '');
+  
+  // Map of country code patterns to ISO country codes
+  // Ordered by specificity (longer codes first)
+  const countryPatterns: Array<{ pattern: RegExp; country: string; name: string }> = [
+    // 3-digit country codes
+    { pattern: /^880/, country: 'BD', name: 'Bangladesh' },
+    { pattern: /^977/, country: 'NP', name: 'Nepal' },
+    { pattern: /^971/, country: 'AE', name: 'UAE' },
+    { pattern: /^968/, country: 'OM', name: 'Oman' },
+    { pattern: /^966/, country: 'SA', name: 'Saudi Arabia' },
+    { pattern: /^965/, country: 'KW', name: 'Kuwait' },
+    { pattern: /^974/, country: 'QA', name: 'Qatar' },
+    { pattern: /^973/, country: 'BH', name: 'Bahrain' },
+    
+    // 2-digit country codes
+    { pattern: /^94/, country: 'LK', name: 'Sri Lanka' },
+    { pattern: /^92/, country: 'PK', name: 'Pakistan' },
+    { pattern: /^91/, country: 'IN', name: 'India' },
+    { pattern: /^86/, country: 'CN', name: 'China' },
+    { pattern: /^81/, country: 'JP', name: 'Japan' },
+    { pattern: /^65/, country: 'SG', name: 'Singapore' },
+    { pattern: /^63/, country: 'PH', name: 'Philippines' },
+    { pattern: /^62/, country: 'ID', name: 'Indonesia' },
+    { pattern: /^61/, country: 'AU', name: 'Australia' },
+    { pattern: /^60/, country: 'MY', name: 'Malaysia' },
+    { pattern: /^49/, country: 'DE', name: 'Germany' },
+    { pattern: /^44/, country: 'GB', name: 'UK' },
+    { pattern: /^33/, country: 'FR', name: 'France' },
+    
+    // 1-digit country codes
+    { pattern: /^1/, country: 'US', name: 'US/Canada' }, // US and Canada share +1
+  ];
+  
+  // Check each pattern
+  for (const { pattern, country } of countryPatterns) {
+    if (pattern.test(digits)) {
+      // Additional validation for specific countries
+      if (country === 'NP' && digits.length === 13 && digits.startsWith('977')) {
+        // Nepal: 977 + 10 digits
+        return country;
+      } else if (country === 'IN' && digits.length === 12 && digits.startsWith('91')) {
+        // India: 91 + 10 digits
+        return country;
+      } else if (country === 'US' && digits.length === 11 && digits.startsWith('1')) {
+        // US: 1 + 10 digits
+        return country;
+      } else if (country === 'US' && digits.length === 10) {
+        // US without country code: 10 digits
+        return country;
+      } else if (digits.length >= 10) {
+        // For other countries, just check if it has enough digits
+        return country;
+      }
+    }
+  }
+  
+  // Check for 10-digit numbers that might be US/India/Nepal without country code
+  if (digits.length === 10) {
+    // Nepal numbers often start with 98 or 97
+    if (digits.startsWith('98') || digits.startsWith('97')) {
+      return 'NP';
+    }
+    // India numbers start with 6-9
+    if (/^[6-9]/.test(digits)) {
+      return 'IN';
+    }
+    // US numbers don't start with 0 or 1
+    if (/^[2-9]/.test(digits)) {
+      return 'US';
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Extract just the digits from a phone number
  */
 export function extractPhoneDigits(phone: string): string {
@@ -183,6 +267,27 @@ export function parsePhoneInput(phoneInput: string, knownCountry?: string): {
     }
   } catch {
     // Fall through to manual parsing
+  }
+  
+  // If phone doesn't have + but looks like it has country code, try to detect
+  if (!phoneInput.startsWith('+')) {
+    const detectedCountry = detectCountryFromNumber(phoneInput);
+    if (detectedCountry) {
+      try {
+        // Try parsing with detected country
+        const phoneWithPlus = '+' + phoneInput.replace(/[^0-9]/g, '');
+        const parsed = parsePhoneNumber(phoneWithPlus);
+        if (parsed && parsed.isValid()) {
+          return {
+            countryCode: parsed.country || detectedCountry,
+            digits: parsed.nationalNumber,
+            isValid: true
+          };
+        }
+      } catch {
+        // Continue with manual extraction
+      }
+    }
   }
 
   // If we have a known country, try parsing with that context
