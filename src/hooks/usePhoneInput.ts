@@ -66,11 +66,92 @@ export function usePhoneInput({
     validatePhone(phoneDigits, countryCode);
   }, [phoneDigits, countryCode, validatePhone]);
   
+  // Get expected phone length for country (import this function from phoneFormatUtils)
+  const getExpectedPhoneLength = useCallback((countryCode: string): { min: number; max: number } => {
+    // Country-specific phone number lengths (national number without country code)
+    const lengths: Record<string, { min: number; max: number }> = {
+      US: { min: 10, max: 10 },
+      CA: { min: 10, max: 10 },
+      GB: { min: 10, max: 11 },
+      IN: { min: 10, max: 10 },
+      AU: { min: 9, max: 9 },
+      NZ: { min: 8, max: 9 },
+      DE: { min: 10, max: 12 },
+      FR: { min: 10, max: 10 },
+      IT: { min: 10, max: 11 },
+      ES: { min: 9, max: 9 },
+      JP: { min: 10, max: 11 },
+      CN: { min: 11, max: 11 },
+      KR: { min: 10, max: 11 },
+      SG: { min: 8, max: 8 },
+      MY: { min: 9, max: 10 },
+      TH: { min: 9, max: 9 },
+      ID: { min: 10, max: 12 },
+      PH: { min: 10, max: 10 },
+      VN: { min: 9, max: 10 },
+      BD: { min: 10, max: 10 },
+      LK: { min: 9, max: 9 },
+      PK: { min: 10, max: 11 },
+      AE: { min: 9, max: 9 },
+      SA: { min: 9, max: 9 },
+      BR: { min: 10, max: 11 },
+      MX: { min: 10, max: 10 },
+      AR: { min: 10, max: 10 },
+      CL: { min: 9, max: 9 },
+      CO: { min: 10, max: 10 },
+      PE: { min: 9, max: 9 },
+      ZA: { min: 9, max: 9 },
+      NG: { min: 10, max: 11 },
+      EG: { min: 10, max: 11 },
+      KE: { min: 9, max: 9 },
+      IL: { min: 9, max: 9 },
+      TR: { min: 10, max: 10 },
+      RU: { min: 10, max: 10 },
+      UA: { min: 9, max: 9 },
+      PL: { min: 9, max: 9 },
+      NL: { min: 9, max: 9 },
+      BE: { min: 9, max: 9 },
+      CH: { min: 9, max: 9 },
+      AT: { min: 10, max: 11 },
+      SE: { min: 9, max: 9 },
+      NO: { min: 8, max: 8 },
+      DK: { min: 8, max: 8 },
+      FI: { min: 9, max: 10 },
+      PT: { min: 9, max: 9 },
+      GR: { min: 10, max: 10 },
+      CZ: { min: 9, max: 9 },
+      HU: { min: 9, max: 9 },
+      RO: { min: 9, max: 9 },
+      BG: { min: 8, max: 9 },
+      HR: { min: 8, max: 9 },
+      RS: { min: 8, max: 9 },
+      SK: { min: 9, max: 9 },
+      SI: { min: 8, max: 8 },
+      LT: { min: 8, max: 8 },
+      LV: { min: 8, max: 8 },
+      EE: { min: 7, max: 8 },
+      IS: { min: 7, max: 7 },
+      IE: { min: 9, max: 9 },
+      LU: { min: 9, max: 9 },
+      MT: { min: 8, max: 8 },
+      CY: { min: 8, max: 8 },
+      NP: { min: 10, max: 10 }, // Nepal: 10 digits
+    };
+    
+    return lengths[countryCode] || { min: 7, max: 15 }; // Default fallback
+  }, []);
+
   // Handle phone digits change
   const handlePhoneChange = useCallback((value: string) => {
     let digits = extractPhoneDigits(value);
     // Sanitize to prevent country code leakage
     digits = sanitizePhoneDigits(digits, countryCode);
+    
+    // Enforce maximum length for the country
+    const expectedLength = getExpectedPhoneLength(countryCode);
+    if (digits.length > expectedLength.max) {
+      digits = digits.substring(0, expectedLength.max);
+    }
     
     setPhoneDigits(digits);
     setIsTouched(true);
@@ -78,18 +159,27 @@ export function usePhoneInput({
     // Create complete phone number and notify parent
     const completeNumber = createCompletePhoneNumber(countryCode, digits);
     onChange?.(completeNumber);
-  }, [countryCode, onChange]);
+  }, [countryCode, onChange, getExpectedPhoneLength]);
   
   // Handle country change
   const handleCountryChange = useCallback((newCountry: string) => {
     setCountryCode(newCountry);
     
-    // Preserve existing digits with new country
+    // Preserve existing digits with new country, but trim if too long
     if (phoneDigits) {
-      const completeNumber = createCompletePhoneNumber(newCountry, phoneDigits);
+      const expectedLength = getExpectedPhoneLength(newCountry);
+      let adjustedDigits = phoneDigits;
+      
+      // If current digits are too long for new country, trim them
+      if (phoneDigits.length > expectedLength.max) {
+        adjustedDigits = phoneDigits.substring(0, expectedLength.max);
+        setPhoneDigits(adjustedDigits);
+      }
+      
+      const completeNumber = createCompletePhoneNumber(newCountry, adjustedDigits);
       onChange?.(completeNumber);
     }
-  }, [phoneDigits, onChange]);
+  }, [phoneDigits, onChange, getExpectedPhoneLength]);
   
   // Handle blur event
   const handleBlur = useCallback(() => {

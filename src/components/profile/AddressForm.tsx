@@ -26,7 +26,7 @@ import { StateProvinceService } from '@/services/StateProvinceService';
 import { NepalAddressService } from '@/services/NepalAddressService';
 import { isValidPhone, isValidPhoneForCountry } from '@/lib/phoneUtils';
 import { ipLocationService } from '@/services/IPLocationService';
-import { Info, Search, ChevronDown, ChevronUp, Truck } from 'lucide-react';
+import { Info, Search, ChevronDown, ChevronUp, Truck, Loader2 } from 'lucide-react';
 import { FlagIcon } from '@/components/ui/FlagIcon';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -193,24 +193,18 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
 
   const validatePostalCode = (postalCode: string | null | undefined): string => {
     if (selectedCountry && selectedCountry.length === 2) {
-      console.log(`[Postal Validation] Country: ${selectedCountry}, Code: "${postalCode}"`);
       const result = InternationalAddressValidator.validatePostalCode(postalCode || '', selectedCountry);
-      console.log(`[Postal Validation] Result:`, result);
       
       if (!result.isValid) {
         // Use the error from validator, but enhance it with country name if available
         if (result.error?.includes('Invalid postal code format.')) {
           const countryName = countries?.find(c => c.code === selectedCountry)?.name || selectedCountry;
-          const enhancedError = result.error.replace('Invalid postal code format.', `Invalid postal code format for ${countryName}.`);
-          console.log(`[Postal Validation] Enhanced error: ${enhancedError}`);
-          return enhancedError;
+          return result.error.replace('Invalid postal code format.', `Invalid postal code format for ${countryName}.`);
         }
-        console.log(`[Postal Validation] Using original error: ${result.error}`);
         return result.error || `Please enter a valid ${fieldLabels.postal.toLowerCase()} for ${countries?.find(c => c.code === selectedCountry)?.name || selectedCountry}`;
       }
     }
     
-    console.log(`[Postal Validation] No error, returning empty string`);
     return '';
   };
 
@@ -496,7 +490,19 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   };
 
   return (
-    <div className="bg-gray-50 p-6 rounded-lg">
+    <div className="bg-gray-50 p-6 rounded-lg relative">
+      {/* Loading Overlay */}
+      {addressMutation.isPending && (
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-lg z-10 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+            <div className="text-sm font-medium text-gray-700">
+              {address ? 'Updating address...' : 'Saving address...'}
+            </div>
+          </div>
+        </div>
+      )}
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
@@ -508,8 +514,15 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               <FormItem>
                 <FormLabel className="text-sm text-gray-600">
                   Country/Region
+                  {/* Auto-detect loading indicator */}
+                  {isAutoDetecting && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-xs text-blue-600">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Detecting...
+                    </span>
+                  )}
                   {/* Dev button to test IP detection */}
-                  {!address && process.env.NODE_ENV === 'development' && (
+                  {!address && process.env.NODE_ENV === 'development' && !isAutoDetecting && (
                     <button
                       type="button"
                       onClick={() => {
@@ -525,30 +538,43 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 </FormLabel>
                 <div className="relative">
                   <FormControl>
-                    <div 
-                      onClick={() => {
-                        setShowCountryDropdown(!showCountryDropdown);
-                        if (!showCountryDropdown) {
-                          setCountrySearchQuery(''); // Clear search when opening
-                        }
-                      }}
-                      className="w-full h-11 bg-white border border-gray-300 rounded px-3 flex items-center justify-between cursor-pointer hover:border-gray-400"
-                    >
-                      <div className="flex items-center gap-2">
-                        {field.value && (
-                          <>
-                            <FlagIcon countryCode={field.value} size="sm" />
-                            <span className="text-base">
-                              {countries?.find(c => c.code === field.value)?.name || field.value}
-                            </span>
-                          </>
-                        )}
-                        {!field.value && (
-                          <span className="text-gray-500 text-base">Select a country</span>
-                        )}
+                    {countriesLoading ? (
+                      /* Loading skeleton for country selector */
+                      <div className="w-full h-11 bg-white border border-gray-300 rounded px-3 flex items-center justify-between animate-pulse">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-4 bg-gray-200 rounded"></div>
+                          <div className="h-4 bg-gray-200 rounded w-32"></div>
+                        </div>
+                        <div className="w-4 h-4 bg-gray-200 rounded"></div>
                       </div>
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    </div>
+                    ) : (
+                      <div 
+                        onClick={() => {
+                          setShowCountryDropdown(!showCountryDropdown);
+                          if (!showCountryDropdown) {
+                            setCountrySearchQuery(''); // Clear search when opening
+                          }
+                        }}
+                        className="w-full h-11 bg-white border border-gray-300 rounded px-3 flex items-center justify-between cursor-pointer hover:border-gray-400"
+                      >
+                        <div className="flex items-center gap-2">
+                          {field.value && countries && (
+                            <>
+                              <FlagIcon countryCode={field.value} size="sm" />
+                              <span className="text-base">
+                                {countries.find(c => c.code === field.value)?.name || field.value}
+                              </span>
+                            </>
+                          )}
+                          {(!field.value || !countries) && (
+                            <span className="text-gray-500 text-base">
+                              {countries ? 'Select a country' : 'Loading countries...'}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      </div>
+                    )}
                   </FormControl>
                   {showCountryDropdown && (
                     <div 
@@ -719,7 +745,16 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       >
                         <FormControl>
                           <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
-                            <SelectValue placeholder={selectedProvince ? "Select district" : "Select province first"} />
+                            <SelectValue placeholder={
+                              !selectedProvince 
+                                ? "Select province first" 
+                                : districts.length === 0 
+                                  ? "Loading districts..." 
+                                  : "Select district"
+                            } />
+                            {districts.length === 0 && selectedProvince && (
+                              <Loader2 className="h-4 w-4 animate-spin text-gray-400 ml-2" />
+                            )}
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -736,33 +771,53 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 />
               </div>
               
-              {/* Municipality dropdown (when available) */}
-              {municipalities.length > 0 && (
+              {/* Municipality dropdown (when available) OR Manual input when none */}
+              {selectedDistrict && (
                 <FormItem>
                   <FormLabel className="text-sm text-gray-600">Municipality/City</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      setSelectedMunicipality(value);
-                      // Update address_line1 with municipality and ward
-                      const currentWard = wardNumber || '';
-                      form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
-                    }}
-                    value={selectedMunicipality}
-                    disabled={addressMutation.isPending || !selectedDistrict}
-                  >
+                  {municipalities.length > 0 ? (
+                    /* Show dropdown when municipalities are available */
+                    <Select
+                      onValueChange={(value) => {
+                        setSelectedMunicipality(value);
+                        // Update address_line1 with municipality and ward
+                        const currentWard = wardNumber || '';
+                        form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
+                      }}
+                      value={selectedMunicipality}
+                      disabled={addressMutation.isPending}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                          <SelectValue placeholder="Select municipality" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {municipalities.map((municipality) => (
+                          <SelectItem key={municipality.name} value={municipality.name}>
+                            {municipality.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    /* Show manual input when no municipalities available */
                     <FormControl>
-                      <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
-                        <SelectValue placeholder="Select municipality" />
-                      </SelectTrigger>
+                      <Input
+                        value={selectedMunicipality}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSelectedMunicipality(value);
+                          // Update address_line1 with municipality and ward
+                          const currentWard = wardNumber || '';
+                          form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
+                        }}
+                        placeholder="Enter municipality/city name"
+                        className="h-11 bg-white border-gray-300 rounded text-base"
+                        disabled={addressMutation.isPending}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {municipalities.map((municipality) => (
-                        <SelectItem key={municipality.name} value={municipality.name}>
-                          {municipality.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  )}
                 </FormItem>
               )}
               
@@ -773,25 +828,20 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   name="address_line1"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-sm text-gray-600">
-                        {municipalities.length > 0 ? "Street/Area" : "Municipality/City"}
-                      </FormLabel>
+                      <FormLabel className="text-sm text-gray-600">Street/Area</FormLabel>
                       <FormControl>
                         <Input
-                          value={municipalities.length > 0 ? area : selectedMunicipality}
+                          value={area}
                           onChange={(e) => {
-                            if (municipalities.length > 0) {
-                              // If municipalities dropdown exists, this is for street/area
-                              setArea(e.target.value);
-                            } else {
-                              // If no dropdown, this is for municipality name
-                              const municipality = e.target.value;
-                              setSelectedMunicipality(municipality);
-                              const currentWard = wardNumber || '';
-                              field.onChange(currentWard ? `${municipality}, Ward ${currentWard}` : municipality);
-                            }
+                            setArea(e.target.value);
+                            // Update address_line1 with municipality and area
+                            const currentWard = wardNumber || '';
+                            const fullAddress = selectedMunicipality 
+                              ? `${selectedMunicipality}${e.target.value ? ', ' + e.target.value : ''}${currentWard ? ', Ward ' + currentWard : ''}`
+                              : e.target.value;
+                            field.onChange(fullAddress);
                           }}
-                          placeholder={municipalities.length > 0 ? "e.g., Baneshwor, Shankhamul" : "Enter municipality/city name"}
+                          placeholder="e.g., Baneshwor, Shankhamul"
                           className="h-11 bg-white border-gray-300 rounded text-base"
                         />
                       </FormControl>
@@ -812,12 +862,11 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                       onChange={(e) => {
                         const ward = e.target.value;
                         setWardNumber(ward);
-                        // Update address_line1 with municipality and ward
-                        if (selectedMunicipality && ward) {
-                          form.setValue('address_line1', `${selectedMunicipality}, Ward ${ward}`);
-                        } else if (selectedMunicipality) {
-                          form.setValue('address_line1', selectedMunicipality);
-                        }
+                        // Update address_line1 with municipality, area, and ward
+                        const fullAddress = selectedMunicipality 
+                          ? `${selectedMunicipality}${area ? ', ' + area : ''}${ward ? ', Ward ' + ward : ''}`
+                          : area;
+                        form.setValue('address_line1', fullAddress);
                       }}
                       placeholder="e.g., 16"
                       className="h-11 bg-white border-gray-300 rounded text-base"
@@ -866,7 +915,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                           field.onChange(value);
                           // Real-time validation
                           const error = validatePostalCode(value);
-                          console.log(`[Form Error Setting] Error for postal_code: "${error}"`);
                           if (error) {
                             form.setError('postal_code', { message: error });
                           } else {
@@ -1007,7 +1055,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                           
                           // Real-time validation
                           const error = validatePostalCode(value);
-                          console.log(`[Form Error Setting Non-Nepal] Error for postal_code: "${error}"`);
                           if (error) {
                             form.setError('postal_code', { message: error });
                           } else {
@@ -1153,11 +1200,24 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             disabled={
               addressMutation.isPending || 
               Object.keys(form.formState.errors).length > 0 ||
-              phoneError !== ''
+              phoneError !== '' ||
+              countriesLoading
             }
             className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-semibold py-3.5 px-6 text-base rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
           >
-            {addressMutation.isPending ? 'Saving...' : address ? 'Update address' : 'Save address'}
+            {addressMutation.isPending ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                {address ? 'Updating...' : 'Saving...'}
+              </div>
+            ) : countriesLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading...
+              </div>
+            ) : (
+              address ? 'Update address' : 'Save address'
+            )}
           </Button>
         </form>
       </Form>
