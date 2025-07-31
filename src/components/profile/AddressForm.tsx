@@ -193,17 +193,24 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
 
   const validatePostalCode = (postalCode: string | null | undefined): string => {
     if (selectedCountry && selectedCountry.length === 2) {
+      console.log(`[Postal Validation] Country: ${selectedCountry}, Code: "${postalCode}"`);
       const result = InternationalAddressValidator.validatePostalCode(postalCode || '', selectedCountry);
+      console.log(`[Postal Validation] Result:`, result);
+      
       if (!result.isValid) {
         // Use the error from validator, but enhance it with country name if available
         if (result.error?.includes('Invalid postal code format.')) {
           const countryName = countries?.find(c => c.code === selectedCountry)?.name || selectedCountry;
-          return result.error.replace('Invalid postal code format.', `Invalid postal code format for ${countryName}.`);
+          const enhancedError = result.error.replace('Invalid postal code format.', `Invalid postal code format for ${countryName}.`);
+          console.log(`[Postal Validation] Enhanced error: ${enhancedError}`);
+          return enhancedError;
         }
+        console.log(`[Postal Validation] Using original error: ${result.error}`);
         return result.error || `Please enter a valid ${fieldLabels.postal.toLowerCase()} for ${countries?.find(c => c.code === selectedCountry)?.name || selectedCountry}`;
       }
     }
     
+    console.log(`[Postal Validation] No error, returning empty string`);
     return '';
   };
 
@@ -851,20 +858,24 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     </FormLabel>
                     <FormControl>
                       <Input
-                        {...field}
                         value={field.value || ''}
                         placeholder="e.g., 44700"
                         className="h-11 bg-white border-gray-300 rounded text-base"
                         onChange={(e) => {
-                          field.onChange(e.target.value);
+                          const value = e.target.value;
+                          field.onChange(value);
                           // Real-time validation
-                          const error = validatePostalCode(e.target.value);
+                          const error = validatePostalCode(value);
+                          console.log(`[Form Error Setting] Error for postal_code: "${error}"`);
                           if (error) {
                             form.setError('postal_code', { message: error });
                           } else {
                             form.clearErrors('postal_code');
                           }
                         }}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     </FormControl>
                     <FormMessage />
@@ -988,14 +999,15 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                     <FormControl>
                       <Input
                         placeholder={selectedCountry ? InternationalAddressValidator.getPostalCodeExample(selectedCountry) : ''}
-                        {...field}
                         value={field.value || ''}
                         className="h-11 bg-white border-gray-300 rounded text-base"
                         onChange={(e) => {
-                          field.onChange(e.target.value);
+                          const value = e.target.value;
+                          field.onChange(value);
                           
                           // Real-time validation
-                          const error = validatePostalCode(e.target.value);
+                          const error = validatePostalCode(value);
+                          console.log(`[Form Error Setting Non-Nepal] Error for postal_code: "${error}"`);
                           if (error) {
                             form.setError('postal_code', { message: error });
                           } else {
@@ -1018,6 +1030,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                             }
                           }
                         }}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     </FormControl>
                     <FormMessage />

@@ -67,18 +67,18 @@ export class InternationalAddressValidator {
 
   // Country-specific field labels
   private static FIELD_LABELS: Record<string, Record<string, string>> = {
-    US: { state: 'State', postal: 'ZIP Code' },
-    CA: { state: 'Province', postal: 'Postal Code' },
-    UK: { state: 'County', postal: 'Postcode' },
-    GB: { state: 'County', postal: 'Postcode' },
-    AU: { state: 'State/Territory', postal: 'Postcode' },
-    JP: { state: 'Prefecture', postal: 'Postal Code' },
-    IN: { state: 'State', postal: 'PIN Code' },
-    NP: { state: 'Province', postal: 'Postal Code' },
-    DE: { state: 'State', postal: 'Postcode' },
-    FR: { state: 'Region', postal: 'Code Postal' },
+    US: { state: 'State', postal: 'ZIP Code', city: 'City' },
+    CA: { state: 'Province', postal: 'Postal Code', city: 'City' },
+    UK: { state: 'County', postal: 'Postcode', city: 'City' },
+    GB: { state: 'County', postal: 'Postcode', city: 'City' },
+    AU: { state: 'State/Territory', postal: 'Postcode', city: 'City' },
+    JP: { state: 'Prefecture', postal: 'Postal Code', city: 'City' },
+    IN: { state: 'State', postal: 'PIN Code', city: 'City' },
+    NP: { state: 'Province', postal: 'Postal Code', city: 'District' },
+    DE: { state: 'State', postal: 'Postcode', city: 'City' },
+    FR: { state: 'Region', postal: 'Code Postal', city: 'City' },
     // Default
-    default: { state: 'State/Province', postal: 'Postal Code' }
+    default: { state: 'State/Province', postal: 'Postal Code', city: 'City', address: 'Address' }
   };
 
   // Phone number patterns (simplified - in production use libphonenumber)
@@ -210,8 +210,14 @@ export class InternationalAddressValidator {
   /**
    * Get field labels based on country
    */
-  static getFieldLabels(countryCode: string): { state: string; postal: string } {
-    return this.FIELD_LABELS[countryCode.toUpperCase()] || this.FIELD_LABELS.default;
+  static getFieldLabels(countryCode: string): { state: string; postal: string; city: string; address: string } {
+    const labels = this.FIELD_LABELS[countryCode.toUpperCase()] || this.FIELD_LABELS.default;
+    return {
+      state: labels.state || 'State/Province',
+      postal: labels.postal || 'Postal Code',
+      city: labels.city || 'City',
+      address: labels.address || 'Address'
+    };
   }
 
   /**
