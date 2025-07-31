@@ -31,6 +31,7 @@ import {
 import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
 import { ConditionalSkeleton } from '@/components/ui/skeleton-loader';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Globe,
   MapPin,
@@ -51,8 +52,6 @@ import { currencyService, type Currency } from '@/services/CurrencyService';
 import { H1, Body, BodySmall } from '@/components/ui/typography';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
-import { getAvatarWithGravatarFallback } from '@/utils/gravatarUtils';
-import { ProfilePictureUpload } from '@/components/profile/ProfilePictureUpload';
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
@@ -100,8 +99,7 @@ const Profile = () => {
     if (user?.user_metadata?.picture) {
       return user.user_metadata.picture;
     }
-    // For email users, try Gravatar
-    return getAvatarWithGravatarFallback(user?.email, null);
+    return null;
   };
 
   const {
@@ -251,11 +249,7 @@ const Profile = () => {
     const loadCurrencies = async () => {
       try {
         setCurrencyLoading(true);
-        console.log('[Profile] Loading currencies...');
         const currencies = await currencyService.getAllCurrencies();
-        console.log('[Profile] Received currencies:', currencies);
-        console.log('[Profile] Currency count:', currencies?.length);
-        console.log('[Profile] First 5 currencies:', currencies?.slice(0, 5));
         setAvailableCurrencies(currencies);
       } catch (error) {
         console.error('[Profile] Error loading currencies:', error);
@@ -269,7 +263,6 @@ const Profile = () => {
   useEffect(() => {
     // Wait for both countries and currencies to be loaded before resetting form
     if (!allCountries || allCountries.length === 0 || availableCurrencies.length === 0) {
-      console.log('[Profile] Waiting for data to load before resetting form...');
       return;
     }
 
@@ -285,10 +278,6 @@ const Profile = () => {
     const userPhone = user?.phone || user?.user_metadata?.phone || '';
 
     // Set form values whether profile exists or not
-    console.log('[Profile] Resetting form with values:', {
-      country: profile?.country || 'US',
-      preferred_display_currency: profile?.preferred_display_currency || 'USD'
-    });
     
     form.reset({
       full_name: displayName,
@@ -297,7 +286,7 @@ const Profile = () => {
       country: profile?.country || 'US',
       preferred_display_currency: profile?.preferred_display_currency || 'USD',
     });
-  }, [profile, user, form, allCountries, availableCurrencies]);
+  }, [profile, user, allCountries, availableCurrencies]); // Removed 'form' from dependencies to prevent infinite loop
 
   const onSubmit = (data: ProfileFormValues) => {
     // Check if there's a phone validation error
@@ -392,17 +381,15 @@ const Profile = () => {
           <div className="max-w-4xl mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <ProfilePictureUpload
-                  userId={user?.id || ''}
-                  currentAvatarUrl={getUserAvatarUrl()}
-                  userName={customerData.displayName}
-                  userEmail={user?.email}
-                  initials={getUserInitials()}
-                  onUpdate={() => {
-                    // Refresh profile data
-                    queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-                  }}
-                />
+                <Avatar className="w-16 h-16">
+                  <AvatarImage
+                    src={getUserAvatarUrl() || undefined}
+                    alt={customerData.displayName}
+                  />
+                  <AvatarFallback className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xl font-semibold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <H1 className="text-2xl mb-1">
                     {customerData.displayName}
@@ -536,7 +523,6 @@ const Profile = () => {
                                 }
                               }}
                               initialCountry={profile?.country || 'US'}
-                              currentCountry={form.watch('country')}
                               disabled={updateProfileMutation.isPending}
                               required={true}
                               error={form.formState.errors.phone?.message}
@@ -645,14 +631,6 @@ const Profile = () => {
                           </FormControl>
                           <SelectContent>
                             {(() => {
-                              console.log('[Profile] Rendering country dropdown:', {
-                                allCountriesExists: !!allCountries,
-                                isArray: Array.isArray(allCountries),
-                                length: allCountries?.length,
-                                countriesLoading,
-                                countriesError
-                              });
-                              
                               if (countriesLoading) {
                                 return <SelectItem key="loading" value="loading" disabled>Loading countries...</SelectItem>;
                               }

@@ -24,15 +24,6 @@ export const useAllCountries = () => {
     },
   });
   
-  // Debug what the hook is actually returning
-  console.log('[useAllCountries] Hook returning:', {
-    data: result.data,
-    isArray: Array.isArray(result.data),
-    length: result.data?.length,
-    isLoading: result.isLoading,
-    error: result.error,
-    status: result.status
-  });
   
   return result;
 };
