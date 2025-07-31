@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { InternationalAddressValidator } from '@/services/InternationalAddressValidator';
 import { StateProvinceService } from '@/services/StateProvinceService';
+import { NepalAddressService } from '@/services/NepalAddressService';
 import { isValidPhone, isValidPhoneForCountry } from '@/lib/phoneUtils';
 import { ipLocationService } from '@/services/IPLocationService';
 import { Info, Search, ChevronDown, ChevronUp, Truck } from 'lucide-react';
@@ -71,7 +72,7 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedCountry, setSelectedCountry] = useState(address?.destination_country || 'US');
-  const [fieldLabels, setFieldLabels] = useState({ state: 'State', postal: 'ZIP Code' });
+  const [fieldLabels, setFieldLabels] = useState({ state: 'State', postal: 'ZIP Code', city: 'City', address: 'Address' });
   const [stateProvinces, setStateProvinces] = useState(StateProvinceService.getStatesForCountry(selectedCountry) || null);
   const [isAutoDetecting, setIsAutoDetecting] = useState(false);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -81,8 +82,20 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
     !!(address?.delivery_instructions && address.delivery_instructions.trim())
   );
   
+  // Nepal-specific state
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [districts, setDistricts] = useState<Array<{ code: string; name: string }>>([]);
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [municipalities, setMunicipalities] = useState<Array<{ name: string; type: string }>>([]);
+  const [selectedMunicipality, setSelectedMunicipality] = useState<string>('');
+  const [wardNumber, setWardNumber] = useState<string>('');
+  const [area, setArea] = useState<string>('');
+  
   // Custom validation states for real-time feedback
   const [phoneError, setPhoneError] = useState<string>('');
+  
+  // Check if Nepal is selected
+  const isNepal = selectedCountry === 'NP';
 
 
   const { data: allCountries, isLoading: countriesLoading } = useQuery({
@@ -210,12 +223,87 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
   useEffect(() => {
     if (selectedCountry) {
       const labels = InternationalAddressValidator.getFieldLabels(selectedCountry);
-      setFieldLabels(labels);
+      
+      // Override labels for Nepal
+      if (selectedCountry === 'NP') {
+        setFieldLabels({
+          state: 'Province',
+          postal: 'Postal Code',
+          city: 'District',
+          address: 'Street Address'
+        });
+      } else {
+        setFieldLabels(labels);
+      }
       
       const states = StateProvinceService.getStatesForCountry(selectedCountry);
       setStateProvinces(states);
+      
+      // Reset Nepal-specific fields when country changes
+      if (selectedCountry !== 'NP') {
+        setSelectedProvince('');
+        setDistricts([]);
+        setSelectedDistrict('');
+        setMunicipalities([]);
+        setSelectedMunicipality('');
+        setWardNumber('');
+        setArea('');
+      }
     }
   }, [selectedCountry]);
+  
+  // Load districts when province changes (Nepal)
+  useEffect(() => {
+    if (isNepal && selectedProvince) {
+      const provinceDistricts = NepalAddressService.getDistrictsForProvince(selectedProvince);
+      setDistricts(provinceDistricts);
+      setSelectedDistrict(''); // Reset district selection
+      setMunicipalities([]); // Reset municipalities
+      setSelectedMunicipality(''); // Reset municipality selection
+    }
+  }, [selectedProvince, isNepal]);
+  
+  // Load municipalities when district changes (Nepal)
+  useEffect(() => {
+    if (isNepal && selectedDistrict) {
+      const districtMunicipalities = NepalAddressService.getMunicipalitiesForDistrict(selectedDistrict);
+      setMunicipalities(districtMunicipalities);
+    }
+  }, [selectedDistrict, isNepal]);
+  
+  // Initialize Nepal fields when editing an existing address
+  useEffect(() => {
+    if (address && selectedCountry === 'NP') {
+      // Parse municipality, ward, and area from address_line1
+      if (address.address_line1) {
+        const parts = address.address_line1.split(',').map(p => p.trim());
+        
+        if (parts.length > 0) {
+          setSelectedMunicipality(parts[0]);
+        }
+        
+        // Parse ward number
+        const wardMatch = address.address_line1.match(/Ward (\d+)/i);
+        if (wardMatch) {
+          setWardNumber(wardMatch[1]);
+        }
+        
+        // Parse area/street (if exists after ward)
+        if (parts.length > 2) {
+          // Format: "Municipality, Ward X, Street/Area"
+          const areaIndex = parts.findIndex(p => p.match(/Ward \d+/i)) + 1;
+          if (areaIndex < parts.length) {
+            setArea(parts.slice(areaIndex).join(', '));
+          }
+        }
+      }
+      
+      // Province should already be set in state_province_region
+      if (address.state_province_region) {
+        setSelectedProvince(address.state_province_region);
+      }
+    }
+  }, [address, selectedCountry]);
 
   // Auto-detect country on component mount (only for new addresses)
   useEffect(() => {
@@ -290,10 +378,18 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
       // Combine first and last name
       const recipient_name = `${values.first_name} ${values.last_name}`.trim();
 
+      // Build payload with special handling for Nepal
+      let finalAddress1 = values.address_line1;
+      
+      // For Nepal, if we have street/area data (when municipalities dropdown is shown), append it
+      if (isNepal && municipalities.length > 0 && area) {
+        finalAddress1 = `${values.address_line1}, ${area}`;
+      }
+      
       const payload = {
         recipient_name,
         company_name: values.company_name || null,
-        address_line1: values.address_line1,
+        address_line1: finalAddress1,
         address_line2: values.address_line2 || null,
         city: values.city,
         state_province_region: values.state_province_region,
@@ -547,42 +643,157 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
           />
           */}
           
-          {/* Address */}
-          <FormField
-            control={form.control}
-            name="address_line1"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm text-gray-600">Address</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    className="h-11 bg-white border-gray-300 rounded text-base"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          {/* Address Line 2 */}
-          <FormField
-            control={form.control}
-            name="address_line2"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm text-gray-600">Address Line 2 (optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    value={field.value ?? ''}
-                    className="h-11 bg-white border-gray-300 rounded text-base"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Address - Adaptive for Nepal */}
+          {isNepal ? (
+            <>
+              {/* Municipality dropdown (when available) */}
+              {municipalities.length > 0 && (
+                <FormItem>
+                  <FormLabel className="text-sm text-gray-600">Municipality/City</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      setSelectedMunicipality(value);
+                      // Update address_line1 with municipality and ward
+                      const currentWard = wardNumber || '';
+                      form.setValue('address_line1', currentWard ? `${value}, Ward ${currentWard}` : value);
+                    }}
+                    value={selectedMunicipality}
+                    disabled={addressMutation.isPending || !selectedDistrict}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                        <SelectValue placeholder="Select municipality" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {municipalities.map((municipality) => (
+                        <SelectItem key={municipality.name} value={municipality.name}>
+                          {municipality.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+              
+              {/* Street Address and Ward Number */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="address_line1"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm text-gray-600">Street Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          value={municipalities.length > 0 ? area : selectedMunicipality}
+                          onChange={(e) => {
+                            if (municipalities.length > 0) {
+                              // If municipalities dropdown exists, this is for street/area
+                              setArea(e.target.value);
+                            } else {
+                              // If no dropdown, this is for municipality name
+                              const municipality = e.target.value;
+                              setSelectedMunicipality(municipality);
+                              const currentWard = wardNumber || '';
+                              field.onChange(currentWard ? `${municipality}, Ward ${currentWard}` : municipality);
+                            }
+                          }}
+                          placeholder={municipalities.length > 0 ? "e.g., Baneshwor, Shankhamul" : "Enter municipality name"}
+                          className="h-11 bg-white border-gray-300 rounded text-base"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Ward Number */}
+                <FormItem>
+                  <FormLabel className="text-sm text-gray-600">Ward Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="32"
+                      value={wardNumber}
+                      onChange={(e) => {
+                        const ward = e.target.value;
+                        setWardNumber(ward);
+                        // Update address_line1 with municipality and ward
+                        if (selectedMunicipality && ward) {
+                          form.setValue('address_line1', `${selectedMunicipality}, Ward ${ward}`);
+                        } else if (selectedMunicipality) {
+                          form.setValue('address_line1', selectedMunicipality);
+                        }
+                      }}
+                      placeholder="e.g., 16"
+                      className="h-11 bg-white border-gray-300 rounded text-base"
+                    />
+                  </FormControl>
+                </FormItem>
+              </div>
+              
+              {/* Landmark for Nepal */}
+              <FormField
+                control={form.control}
+                name="address_line2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">Landmark</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        placeholder="e.g., Near Everest Bank, opposite Civil Mall"
+                        className="h-11 bg-white border-gray-300 rounded text-base"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          ) : (
+            <>
+              {/* Standard Address fields for other countries */}
+              <FormField
+                control={form.control}
+                name="address_line1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">{fieldLabels.address}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="h-11 bg-white border-gray-300 rounded text-base"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Address Line 2 */}
+              <FormField
+                control={form.control}
+                name="address_line2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm text-gray-600">Address Line 2 (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ''}
+                        className="h-11 bg-white border-gray-300 rounded text-base"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
           
           {/* City, State, and Postal Code Row */}
           <div className="grid grid-cols-3 gap-4">
@@ -591,13 +802,37 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm text-gray-600">City</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      className="h-11 bg-white border-gray-300 rounded text-base"
-                    />
-                  </FormControl>
+                  <FormLabel className="text-sm text-gray-600">{fieldLabels.city}</FormLabel>
+                  {isNepal && districts.length > 0 ? (
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(NepalAddressService.getDistrictName(value) || value);
+                        setSelectedDistrict(value);
+                      }}
+                      value={selectedDistrict}
+                      disabled={addressMutation.isPending || !selectedProvince}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 bg-white border-gray-300 rounded text-base">
+                          <SelectValue placeholder="Select district" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {districts.map((district) => (
+                          <SelectItem key={district.code} value={district.code}>
+                            {district.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="h-11 bg-white border-gray-300 rounded text-base"
+                      />
+                    </FormControl>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -613,7 +848,13 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                   </FormLabel>
                   {stateProvinces ? (
                     <Select
-                      onValueChange={field.onChange}
+                      key={`province-${selectedCountry}-${stateProvinces?.length}`}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        if (isNepal) {
+                          setSelectedProvince(value);
+                        }
+                      }}
                       value={field.value || ''}
                       disabled={addressMutation.isPending}
                     >

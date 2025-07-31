@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { StateProvinceService } from '@/services/StateProvinceService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -33,11 +35,23 @@ const AddressCard = ({
   address,
   onEdit,
   onDelete,
+  countries,
 }: {
   address: Tables<'delivery_addresses'>;
   onEdit: () => void;
   onDelete: () => void;
-}) => (
+  countries?: Array<{ code: string; name: string }>;
+}) => {
+  // Get country name from code
+  const countryName = countries?.find(c => c.code === address.destination_country)?.name || address.destination_country;
+  
+  // Get state/province name from code
+  const stateName = StateProvinceService.getStateName(address.destination_country, address.state_province_region) || address.state_province_region;
+  
+  // Check if this is a Nepal address
+  const isNepal = address.destination_country === 'NP';
+  
+  return (
   <div className="border border-gray-200 p-6 rounded-lg hover:border-gray-300 transition-colors">
     <div className="flex items-start justify-between">
       <div className="flex-1">
@@ -56,14 +70,31 @@ const AddressCard = ({
           </div>
         </div>
         <div className="space-y-1 ml-10">
-          <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
-          {address.address_line2 && (
-            <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
+          {isNepal ? (
+            <>
+              <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
+              {address.address_line2 && (
+                <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
+              )}
+              <BodySmall className="text-gray-600">
+                {address.city} District, {stateName}
+              </BodySmall>
+              <BodySmall className="text-gray-600">
+                {countryName} {address.postal_code && `- ${address.postal_code}`}
+              </BodySmall>
+            </>
+          ) : (
+            <>
+              <BodySmall className="text-gray-700 font-medium">{address.address_line1}</BodySmall>
+              {address.address_line2 && (
+                <BodySmall className="text-gray-600">{address.address_line2}</BodySmall>
+              )}
+              <BodySmall className="text-gray-600">
+                {address.city}, {stateName} {address.postal_code}
+              </BodySmall>
+              <BodySmall className="text-gray-600">{countryName}</BodySmall>
+            </>
           )}
-          <BodySmall className="text-gray-600">
-            {address.city}, {address.state_province_region} {address.postal_code}
-          </BodySmall>
-          <BodySmall className="text-gray-600">{address.destination_country}</BodySmall>
           {address.phone && (
             <BodySmall className="text-gray-600 flex items-center gap-1">
               <Phone className="h-3 w-3" />
@@ -98,12 +129,14 @@ const AddressCard = ({
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export function AddressList() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { data: countries } = useAllCountries();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<Tables<'delivery_addresses'> | undefined>(
     undefined,
@@ -195,6 +228,7 @@ export function AddressList() {
                 address={address}
                 onEdit={() => handleEdit(address)}
                 onDelete={() => handleDelete(address)}
+                countries={countries}
               />
             ))
           : !isLoading && (

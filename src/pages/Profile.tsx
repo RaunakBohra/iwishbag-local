@@ -10,6 +10,7 @@ import { useAllCountries } from '@/hooks/useAllCountries';
 import { usePhoneCollection } from '@/hooks/usePhoneCollection';
 import { PhoneCollectionModal } from '@/components/auth/PhoneCollectionModal';
 import { ChangePasswordModal } from '@/components/auth/ChangePasswordModal';
+import { ChangeEmailModal } from '@/components/auth/ChangeEmailModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +46,7 @@ import {
   Settings,
   Calendar,
   Phone,
+  Mail,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -85,6 +87,7 @@ const Profile = () => {
   const phoneCollection = usePhoneCollection();
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const [phoneError, setPhoneError] = useState<string>('');
   const [phoneCountry, setPhoneCountry] = useState<string | null>(null);
 
@@ -577,14 +580,40 @@ const Profile = () => {
                     <FormItem>
                       <FormLabel className="text-sm font-medium text-gray-700">Email</FormLabel>
                       <FormControl>
-                        <div className="relative">
-                          <Input {...field} disabled className="pl-10 bg-gray-50 text-gray-500" />
-                          <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <div className="space-y-2">
+                          <div className="relative flex items-center gap-2">
+                            <div className="flex-1 relative">
+                              <Input 
+                                {...field} 
+                                readOnly 
+                                className="pl-10 bg-gray-50 text-gray-700 cursor-default" 
+                              />
+                              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              {user?.app_metadata?.provider && user.app_metadata.provider !== 'email' && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-gray-200 px-2 py-1 rounded">
+                                  {user.app_metadata.provider}
+                                </span>
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowEmailModal(true)}
+                              className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 border-teal-300"
+                            >
+                              <Mail className="h-4 w-4 mr-1" />
+                              Change
+                            </Button>
+                          </div>
+                          <BodySmall className="text-gray-500">
+                            {user?.app_metadata?.provider && user.app_metadata.provider !== 'email' 
+                              ? `Your ${user.app_metadata.provider} email. You can add email/password login.`
+                              : 'Update your email address with verification.'
+                            }
+                          </BodySmall>
                         </div>
                       </FormControl>
-                      <BodySmall className="text-gray-500 mt-1">
-                        Your email address is managed by your account and cannot be changed here.
-                      </BodySmall>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -706,8 +735,9 @@ const Profile = () => {
             {/* Action Buttons */}
             <div className="flex justify-between items-center pt-6 border-t border-gray-200">
               <Button
+                type="button"
                 variant="outline"
-                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600"
                 onClick={() => {
                   signOut();
                   toast({
@@ -795,6 +825,12 @@ const Profile = () => {
       <ChangePasswordModal
         open={showPasswordModal}
         onOpenChange={setShowPasswordModal}
+      />
+
+      {/* Change Email Modal */}
+      <ChangeEmailModal
+        open={showEmailModal}
+        onOpenChange={setShowEmailModal}
       />
     </div>
     </ConditionalSkeleton>

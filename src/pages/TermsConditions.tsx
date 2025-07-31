@@ -1,7 +1,18 @@
+import { useEffect } from 'react';
 import { H1, H2, H3, Body, BodyLarge } from '@/components/ui/typography';
 import { AlertTriangle } from 'lucide-react';
+import { useCountryDetection } from '@/hooks/useCountryDetection';
+import { getCompanyInfo, getFormattedAddress } from '@/config/companyInfo';
 
 const TermsConditions = () => {
+  const { countryCode } = useCountryDetection();
+  const companyInfo = getCompanyInfo(countryCode);
+  const formattedAddress = getFormattedAddress(countryCode, true);
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -10,7 +21,7 @@ const TermsConditions = () => {
           <div className="text-center">
             <h1 className="text-4xl font-semibold text-gray-900 mb-4">Terms and Conditions</h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              These terms govern your use of iwishBag's international shopping services.
+              These terms govern your use of {companyInfo.shortName}'s international shopping services.
             </p>
           </div>
         </div>
@@ -22,14 +33,14 @@ const TermsConditions = () => {
           <div className="prose prose-gray max-w-none">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Acceptance of Terms</h2>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              By accessing and using iwishBag's services, you accept and agree to be bound by these
+              By accessing and using {companyInfo.shortName}'s services, you accept and agree to be bound by these
               terms and conditions. If you do not agree to these terms, please do not use our
               services.
             </p>
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Service Description</h2>
             <p className="text-gray-600 mb-8 leading-relaxed">
-              iwishBag provides international shopping and shipping services, helping customers
+              {companyInfo.shortName} provides international shopping and shipping services, helping customers
               purchase products from global retailers and deliver them worldwide.
             </p>
 
@@ -244,7 +255,7 @@ const TermsConditions = () => {
 
             <h2 className="text-2xl font-semibold text-gray-900 mb-4 mt-12">Governing Law</h2>
             <p className="text-gray-600 mb-12 leading-relaxed">
-              These terms are governed by the laws of [Your Jurisdiction]. Any disputes will be
+              These terms are governed by the laws of {companyInfo.jurisdiction}. Any disputes will be
               resolved through binding arbitration.
             </p>
 
@@ -255,10 +266,10 @@ const TermsConditions = () => {
               </p>
               <div className="mt-4 space-y-2">
                 <p className="text-gray-700">
-                  <strong>Email:</strong> legal@iwishbag.com
+                  <strong>Email:</strong> {companyInfo.contact.legalEmail}
                 </p>
                 <p className="text-gray-700">
-                  <strong>Address:</strong> iwishBag Legal Department, [Your Address]
+                  <strong>Address:</strong> {companyInfo.companyName}, {companyInfo.address}
                 </p>
               </div>
             </div>

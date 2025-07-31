@@ -30,6 +30,9 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCountryDetection } from '@/hooks/useCountryDetection';
+import { getContactInfo, hasPhoneSupport, getPhoneLink, getFormattedHours } from '@/config/contactInfo';
+import { getCountryFAQs } from '@/config/countryFAQs';
 
 interface FAQItem {
   question: string;
@@ -48,12 +51,17 @@ interface FAQCategory {
 const Help = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { countryCode, isLoading: countryLoading } = useCountryDetection();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [expandedQuestions, setExpandedQuestions] = useState<string[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<FAQCategory[]>([]);
 
-  const faqCategories: FAQCategory[] = [
+  // Get country-specific FAQs based on auto-detected country
+  const countryFAQs = getCountryFAQs(countryCode);
+
+  // Universal FAQ categories that don't change by country
+  const universalCategories: FAQCategory[] = [
     {
       id: 'getting-started',
       title: 'Getting Started',
@@ -95,6 +103,26 @@ const Help = () => {
           answer: 'We currently deliver to India and Nepal. We\'re expanding to more countries soon!'
         },
         {
+          question: 'Can I track my package from the origin country?',
+          answer: 'Yes! We provide end-to-end tracking. You\'ll get the original carrier tracking (like USPS, UPS) plus our consolidated tracking that follows your package through customs to final delivery.'
+        },
+        {
+          question: 'What shipping carriers do you use?',
+          answer: 'We partner with DHL, FedEx, Aramex for international shipping, and local carriers like Blue Dart, DTDC for final delivery. We choose the best option based on speed and reliability.'
+        },
+        {
+          question: 'Do you offer express shipping options?',
+          answer: 'Yes! We offer Express (3-7 days) and Standard (7-15 days) shipping. Express shipping is available for most items under 30kg. Rates are shown in your quote.'
+        },
+        {
+          question: 'What happens if my package is damaged?',
+          answer: 'All packages are insured. If damaged, take photos immediately and contact us within 48 hours. We\'ll handle the claim and ensure you get a replacement or full refund.'
+        },
+        {
+          question: 'Can I ship to a different address?',
+          answer: 'Yes, you can ship to any address in India or Nepal. Just provide the delivery address when approving your quote. We\'ll verify it for successful delivery.'
+        },
+        {
           question: 'How can I track my order?',
           answer: 'Once your order ships, you\'ll receive a tracking number via email. You can also track your order in your dashboard or using our tracking page.'
         },
@@ -120,12 +148,28 @@ const Help = () => {
           answer: 'Your quote includes: product price, international shipping, customs duties, handling fees, and any applicable taxes. The quoted price is final - no hidden charges.'
         },
         {
+          question: 'How are customs duties calculated?',
+          answer: 'Customs duties are calculated based on product category (HSN code), value, and destination country regulations. We use official government rates and include them transparently in your quote.'
+        },
+        {
           question: 'What payment methods do you accept?',
           answer: 'We accept all major credit/debit cards, PayPal, and bank transfers. Payment is processed only after you approve the quote.'
         },
         {
           question: 'When do I pay?',
           answer: 'Payment is required after you approve the quote and before we purchase the item. We don\'t charge anything for quote requests.'
+        },
+        {
+          question: 'Can I pay in installments?',
+          answer: 'Currently, we require full payment upfront. However, you can use your credit card\'s EMI option if available. We\'re working on adding installment plans soon.'
+        },
+        {
+          question: 'What happens if actual customs differ from the estimate?',
+          answer: 'Our estimates are highly accurate. If customs are lower, we refund the difference. If higher by more than 10%, we cover the extra cost. Minor variations (under 10%) are absorbed as per our policy.'
+        },
+        {
+          question: 'Are there any hidden fees?',
+          answer: 'Absolutely not! The quote price is all-inclusive. It covers product cost, shipping, customs, and our service fee. You pay exactly what\'s quoted, nothing more.'
         },
         {
           question: 'Can I get a refund if the price changes?',
@@ -157,8 +201,20 @@ const Help = () => {
           answer: 'For defective or wrong items, we cover return shipping. For change of mind returns, the customer covers return shipping costs which will be deducted from the refund.'
         },
         {
+          question: 'Can I cancel my order after payment?',
+          answer: 'Yes, if we haven\'t purchased the item yet. Once purchased from the seller, cancellation isn\'t possible, but you can still return it after delivery (return shipping charges apply).'
+        },
+        {
           question: 'How long do refunds take?',
-          answer: 'Once we receive and inspect the returned item, refunds are processed within 5-7 business days. The amount will be credited to your original payment method.'
+          answer: 'Refunds are processed within 2-3 business days after we receive the returned item. Bank processing may take additional 5-7 business days. Card refunds are usually faster.'
+        },
+        {
+          question: 'What if I receive the wrong item?',
+          answer: 'Take photos and notify us immediately. We\'ll arrange free return pickup and either send the correct item or provide a full refund including all shipping costs.'
+        },
+        {
+          question: 'Do you handle warranty claims?',
+          answer: 'Yes! We assist with international warranty claims. We\'ll coordinate with the manufacturer and handle shipping if repairs/replacements are needed. Warranty terms vary by product.'
         },
         {
           question: 'Can I return items bought from any store?',
@@ -203,6 +259,18 @@ const Help = () => {
           answer: 'Our team reviews your request, calculates all costs, and sends you a detailed quote within 24-48 hours. You can then approve, modify, or decline the quote.'
         },
         {
+          question: 'Which international stores do you support?',
+          answer: 'We support major platforms like Amazon (all countries), eBay, Walmart, Best Buy, Target, Alibaba, AliExpress, and most US/UK/Europe based online stores. If you\'re unsure, just submit a quote request!'
+        },
+        {
+          question: 'How do I request a quote for multiple items?',
+          answer: 'You can add multiple product URLs in a single quote request, or submit separate requests and ask us to combine them. We\'ll calculate the best shipping option for all items together.'
+        },
+        {
+          question: 'Can I combine orders from different websites?',
+          answer: 'Yes! We can consolidate items from multiple websites into a single shipment to save on shipping costs. Just mention in your quote request that you want to combine orders.'
+        },
+        {
           question: 'Can I modify my order after approval?',
           answer: 'Minor modifications may be possible before we purchase the item. Contact support immediately if you need changes. After purchase, modifications aren\'t possible.'
         },
@@ -211,22 +279,108 @@ const Help = () => {
           answer: 'If an item becomes unavailable after quote approval, we\'ll notify you immediately and offer alternatives or a full refund of any payment made.'
         },
         {
-          question: 'Can I order restricted items?',
-          answer: 'Some items like weapons, hazardous materials, and certain electronics cannot be shipped internationally. We\'ll inform you if your item has restrictions.'
+          question: 'Do you handle restricted/prohibited items?',
+          answer: 'Some items like weapons, hazardous materials, certain electronics, and liquids cannot be shipped internationally. We\'ll inform you during quote review if your item has restrictions.'
+        }
+      ]
+    },
+    {
+      id: 'customs',
+      title: 'Customs & Import',
+      icon: Globe,
+      description: 'Import regulations and documentation',
+      color: 'purple',
+      faqs: [
+        {
+          question: 'Will I need to pay customs separately?',
+          answer: 'No! All customs duties and taxes are included in your quote. You won\'t have to pay anything extra at delivery. We handle all customs clearance for you.'
+        },
+        {
+          question: 'What documents do I need for customs?',
+          answer: 'We handle all documentation! For personal imports, we just need your ID (Aadhaar/PAN). For commercial imports, GST registration may be required.'
+        },
+        {
+          question: 'How do you handle customs inspections?',
+          answer: 'Our customs team manages all inspections. If customs officials need additional info, we\'ll contact you immediately. Most packages clear without inspection.'
+        },
+        {
+          question: 'What items are prohibited for import?',
+          answer: 'Prohibited items include: weapons, explosives, drugs, counterfeit goods, ivory, certain electronics, and items violating Indian/Nepali laws. We screen all orders for compliance.'
+        },
+        {
+          question: 'Can you help with commercial imports?',
+          answer: 'Yes! We handle both personal and commercial imports. For commercial shipments, we\'ll help with proper invoicing, GST compliance, and bulk shipping rates.'
+        },
+        {
+          question: 'What is the duty-free limit?',
+          answer: 'For India: ₹5,000 for gifts, no general exemption. For Nepal: Similar limits apply. However, our quotes always include applicable duties regardless of value.'
+        }
+      ]
+    },
+    {
+      id: 'issues',
+      title: 'Common Issues',
+      icon: AlertCircle,
+      description: 'Solutions to frequent problems',
+      color: 'red',
+      faqs: [
+        {
+          question: 'My tracking hasn\'t updated in days',
+          answer: 'International tracking can have gaps, especially during customs processing. If no update for 5+ days, contact support with your tracking number for investigation.'
+        },
+        {
+          question: 'I can\'t log into my account',
+          answer: 'Try resetting your password first. If that doesn\'t work, clear your browser cache or try a different browser. Contact support if the issue persists.'
+        },
+        {
+          question: 'The website I want to order from isn\'t working',
+          answer: 'Some sites block international IPs. Send us the product link - we have methods to access most sites. If truly inaccessible, we\'ll suggest alternatives.'
+        },
+        {
+          question: 'My payment was declined',
+          answer: 'Common reasons: international transaction block, insufficient funds, or wrong CVV. Contact your bank to enable international transactions or try a different payment method.'
+        },
+        {
+          question: 'I received a customs notice',
+          answer: 'Don\'t worry! Forward the notice to us immediately. This is usually routine verification. We\'ll handle all communication with customs on your behalf.'
+        },
+        {
+          question: 'My order shows delivered but I haven\'t received it',
+          answer: 'Check with neighbors/security first. If truly missing, contact us within 24 hours with delivery proof. We\'ll investigate with the carrier and ensure resolution.'
         }
       ]
     }
   ];
 
+  // Merge universal and country-specific FAQs
+  const mergedCategories = React.useMemo(() => {
+    // Create a map of country-specific categories by ID
+    const countryFAQMap = new Map<string, FAQCategory>();
+    countryFAQs.forEach(category => {
+      countryFAQMap.set(category.id, category);
+    });
+
+    // Replace universal categories with country-specific ones where they exist
+    return universalCategories.map(universalCategory => {
+      const countrySpecificCategory = countryFAQMap.get(universalCategory.id);
+      return countrySpecificCategory || universalCategory;
+    });
+  }, [countryCode]);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Search functionality
   useEffect(() => {
     if (!searchQuery) {
-      setFilteredCategories(faqCategories);
+      setFilteredCategories(mergedCategories);
       return;
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = faqCategories.map(category => ({
+    const filtered = mergedCategories.map(category => ({
       ...category,
       faqs: category.faqs.filter(
         faq => 
@@ -241,7 +395,7 @@ const Help = () => {
     setFilteredCategories(filtered);
     // Auto-expand categories with search results
     setExpandedCategories(filtered.map(cat => cat.id));
-  }, [searchQuery]);
+  }, [searchQuery, mergedCategories]);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev =>
@@ -303,6 +457,7 @@ const Help = () => {
                 </button>
               )}
             </div>
+
           </div>
         </div>
       </div>
@@ -395,7 +550,51 @@ const Help = () => {
                               </button>
                               {isQuestionExpanded && (
                                 <div className="px-4 py-3 bg-gray-50 text-sm text-gray-600 leading-relaxed">
-                                  {faq.answer}
+                                  {/* Special handling for specific FAQs with links */}
+                                  {faq.question === 'Can I delete my account?' ? (
+                                    <>
+                                      Yes, you can request account deletion from{' '}
+                                      <Link 
+                                        to="/profile" 
+                                        className="text-teal-600 hover:text-teal-700 underline font-medium"
+                                      >
+                                        Profile Settings
+                                      </Link>
+                                      . Note that order history is retained for legal compliance but personal data is anonymized.
+                                    </>
+                                  ) : faq.question === 'How do I reset my password?' ? (
+                                    <>
+                                      {user ? (
+                                        <>
+                                          You can change your password from your{' '}
+                                          <Link 
+                                            to="/profile" 
+                                            className="text-teal-600 hover:text-teal-700 underline font-medium"
+                                          >
+                                            Profile Settings
+                                          </Link>
+                                          . Look for the "Change Password" option in your account settings.
+                                        </>
+                                      ) : (
+                                        <>
+                                          Go to the{' '}
+                                          <Link 
+                                            to="/auth" 
+                                            className="text-teal-600 hover:text-teal-700 underline font-medium"
+                                            onClick={() => {
+                                              // Store a flag to open forgot password modal after navigation
+                                              sessionStorage.setItem('openForgotPassword', 'true');
+                                            }}
+                                          >
+                                            login page and click "Forgot Password?"
+                                          </Link>
+                                          {' '}Enter your email, and we'll send you a 6-digit verification code. The code expires in 24 hours for security.
+                                        </>
+                                      )}
+                                    </>
+                                  ) : (
+                                    faq.answer
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -478,7 +677,7 @@ const Help = () => {
               </Card>
             )}
 
-            {/* Emergency Support */}
+            {/* Emergency Support - Country-Specific */}
             <Card className="hover:shadow-lg transition-all group border-2 border-transparent hover:border-orange-500">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
@@ -488,18 +687,62 @@ const Help = () => {
                 <p className="text-sm text-gray-600 mb-4">
                   For urgent shipping issues
                 </p>
-                <a href="mailto:support@iwishbag.com" className="text-sm font-medium text-orange-600 hover:text-orange-700">
-                  support@iwishbag.com
-                </a>
+                
+                {/* Country-specific contact information */}
+                {!countryLoading && (() => {
+                  const contactInfo = getContactInfo(countryCode);
+                  const showPhone = hasPhoneSupport(countryCode);
+                  
+                  return (
+                    <div className="space-y-3">
+                      {/* Phone numbers for supported countries */}
+                      {showPhone && contactInfo.phone && contactInfo.phone.map((phone, index) => (
+                        <div key={index}>
+                          <a 
+                            href={getPhoneLink(phone)} 
+                            className="text-sm font-medium text-orange-600 hover:text-orange-700 flex items-center justify-center gap-2"
+                          >
+                            <Phone className="h-4 w-4" />
+                            {phone}
+                          </a>
+                        </div>
+                      ))}
+                      
+                      {/* Email (always shown) */}
+                      <div className={showPhone ? "border-t border-gray-200 pt-3" : ""}>
+                        <a 
+                          href={`mailto:${contactInfo.email}`} 
+                          className="text-sm font-medium text-orange-600 hover:text-orange-700 flex items-center justify-center gap-2"
+                        >
+                          <Mail className="h-4 w-4" />
+                          {contactInfo.email}
+                        </a>
+                      </div>
+                      
+                    </div>
+                  );
+                })()}
+                
+                {/* Loading state */}
+                {countryLoading && (
+                  <div className="text-sm text-gray-500">
+                    Loading contact information...
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Business Hours */}
+          {/* Business Hours - Country-Specific */}
           <div className="mt-8 text-center">
             <div className="inline-flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
               <Clock className="h-4 w-4" />
-              <span>Support Hours: Monday - Friday, 10:00 AM - 5:00 PM IST</span>
+              <span>
+                {countryLoading 
+                  ? 'Loading support hours...' 
+                  : `Support Hours: ${getFormattedHours(countryCode)}`
+                }
+              </span>
             </div>
             <p className="text-xs text-gray-500 mt-2">
               Need help outside business hours? Browse our FAQ above or create a ticket for a response within 24-48 hours.

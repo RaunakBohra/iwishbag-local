@@ -5,7 +5,7 @@
  * Provides both policy information and functional return request capability.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,6 +35,10 @@ const Returns: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'policy' | 'refund' | 'return' | 'track'>('policy');
   const [showRefundForm, setShowRefundForm] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
   const [submittedRmaNumber, setSubmittedRmaNumber] = useState<string | null>(null);

@@ -1,42 +1,34 @@
 import { Link } from 'react-router-dom';
-import { Twitter, Facebook, Instagram, Linkedin, Clock } from 'lucide-react';
+import { Twitter, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { cn } from '@/lib/design-system';
-import { businessHoursService } from '@/config/businessHours';
+import { useCountryDetection } from '@/hooks/useCountryDetection';
+import { getCompanyInfo, getRegistrationDetails } from '@/config/companyInfo';
 
 const Footer = () => {
-  // Business hours status
-  const isBusinessHours = businessHoursService.isCurrentlyBusinessHours();
-
-  // Default footer settings
-  const homePageSettings = {
-    website_logo_url:
-      'https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png',
-    company_name: 'iwishBag',
-    company_description: 'Shop the world, delivered to your doorstep.',
-    social_twitter: 'https://twitter.com/iwishbag',
-    social_facebook: 'https://facebook.com/iwishbag',
-    social_instagram: 'https://instagram.com/iwishbag',
-    social_linkedin: 'https://linkedin.com/company/iwishbag',
-  };
+  const { countryCode } = useCountryDetection();
+  
+  // Get country-specific company info
+  const companyInfo = getCompanyInfo(countryCode);
+  const registrationDetails = getRegistrationDetails(countryCode);
 
   return (
     <footer className="border-t border-gray-200 bg-white">
       <div className="container py-6 md:py-8">
         {/* Logo & Description Centered */}
         <div className="flex flex-col items-center justify-center text-center space-y-2">
-          {homePageSettings?.website_logo_url ? (
+          {companyInfo.logoUrl ? (
             <img
-              src={homePageSettings.website_logo_url}
-              alt="Logo"
+              src={companyInfo.logoUrl}
+              alt={companyInfo.shortName}
               className="h-8 w-auto object-contain mb-1"
             />
           ) : (
             <span className="font-semibold text-lg mb-1 text-gray-900">
-              {homePageSettings?.company_name || 'WishBag'}
+              {companyInfo.shortName}
             </span>
           )}
           <p className="text-xs md:text-sm leading-relaxed line-clamp-2 mb-1 text-gray-600">
-            {homePageSettings?.company_description || 'Shop the world, delivered to your doorstep.'}
+            {companyInfo.tagline}
           </p>
         </div>
         {/* Divider */}
@@ -52,11 +44,8 @@ const Footer = () => {
             >
               About Us
             </Link>
-            <Link to="/blog" className="text-gray-600 hover:text-teal-600 transition-colors mb-0.5">
+            <Link to="/blog" className="text-gray-600 hover:text-teal-600 transition-colors">
               Blog
-            </Link>
-            <Link to="/help" className="text-gray-600 hover:text-teal-600 transition-colors">
-              Help Center
             </Link>
           </div>
           {/* Services */}
@@ -81,22 +70,11 @@ const Footer = () => {
               Cost Estimator
             </Link>
             <Link
-              to="/support/my-tickets"
+              to="/help"
               className="text-gray-600 hover:text-teal-600 transition-colors mb-0.5"
             >
-              Get Help
+              Help Center
             </Link>
-
-            {/* Business Hours Status */}
-            <div className="flex items-center gap-1 text-xs">
-              <Clock
-                className={`w-3 h-3 ${isBusinessHours ? 'text-green-600' : 'text-orange-600'}`}
-              />
-              <span className={isBusinessHours ? 'text-green-600' : 'text-orange-600'}>
-                {isBusinessHours ? 'Support Online' : 'Support Offline'}
-              </span>
-            </div>
-            <div className="text-xs text-gray-500 text-center">Mon-Fri 10AM-5PM IST</div>
           </div>
           {/* Legal */}
           <div className="flex flex-col items-center min-w-[80px]">
@@ -121,9 +99,9 @@ const Footer = () => {
           <div className="flex flex-col items-center min-w-[80px]">
             <span className="font-semibold mb-1 text-gray-900">Follow</span>
             <div className="flex space-x-3 mt-1">
-              {homePageSettings?.social_twitter && (
+              {companyInfo.socialMedia.twitter && (
                 <a
-                  href={homePageSettings.social_twitter}
+                  href={companyInfo.socialMedia.twitter}
                   className="text-gray-600 hover:text-teal-600 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -131,9 +109,9 @@ const Footer = () => {
                   <Twitter className="h-4 w-4 md:h-5 md:w-5" />
                 </a>
               )}
-              {homePageSettings?.social_facebook && (
+              {companyInfo.socialMedia.facebook && (
                 <a
-                  href={homePageSettings.social_facebook}
+                  href={companyInfo.socialMedia.facebook}
                   className="text-gray-600 hover:text-teal-600 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -141,9 +119,9 @@ const Footer = () => {
                   <Facebook className="h-4 w-4 md:h-5 md:w-5" />
                 </a>
               )}
-              {homePageSettings?.social_instagram && (
+              {companyInfo.socialMedia.instagram && (
                 <a
-                  href={homePageSettings.social_instagram}
+                  href={companyInfo.socialMedia.instagram}
                   className="text-gray-600 hover:text-teal-600 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -151,9 +129,9 @@ const Footer = () => {
                   <Instagram className="h-4 w-4 md:h-5 md:w-5" />
                 </a>
               )}
-              {homePageSettings?.social_linkedin && (
+              {companyInfo.socialMedia.linkedin && (
                 <a
-                  href={homePageSettings.social_linkedin}
+                  href={companyInfo.socialMedia.linkedin}
                   className="text-gray-600 hover:text-teal-600 transition-colors"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -164,11 +142,62 @@ const Footer = () => {
             </div>
           </div>
         </div>
-        {/* Copyright Section */}
+        
+        {/* Payment Methods - Country Specific */}
+        <div className="flex justify-center items-center gap-4 mt-6 pt-6 border-t border-gray-200">
+          <span className="text-xs text-gray-500">We accept:</span>
+          <div className="flex items-center gap-3 flex-wrap justify-center">
+            {countryCode === 'IN' ? (
+              <>
+                {/* India-specific payment methods */}
+                <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium" title="Visa">
+                  VISA
+                </div>
+                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium" title="Mastercard">
+                  Mastercard
+                </div>
+                <div className="bg-orange-600 text-white px-2 py-1 rounded text-xs font-medium" title="UPI">
+                  UPI
+                </div>
+                <div className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600" title="Bank Transfer">
+                  Bank Transfer
+                </div>
+                <div className="bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium" title="PayPal">
+                  PayPal
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Default payment methods for other countries */}
+                <div className="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600" title="Bank Transfer">
+                  Bank Transfer
+                </div>
+                <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium" title="Visa">
+                  VISA
+                </div>
+                <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium" title="Mastercard">
+                  MC
+                </div>
+                <div className="bg-green-600 text-white px-2 py-1 rounded text-xs font-medium" title="PayU">
+                  PayU
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Copyright Section with Company Info */}
         <div className="border-t border-gray-200 mt-6 pt-4 text-center">
           <p className="text-xs md:text-sm text-gray-500">
-            © {new Date().getFullYear()} {homePageSettings?.company_name || 'WishBag'}. All rights
-            reserved.
+            © {new Date().getFullYear()} {companyInfo.companyName}. All rights reserved.
+          </p>
+          {registrationDetails && (
+            <p className="text-xs text-gray-400 mt-1">
+              {registrationDetails}
+            </p>
+          )}
+          <p className="text-xs text-gray-400 mt-1">
+            {companyInfo.address}
           </p>
         </div>
       </div>

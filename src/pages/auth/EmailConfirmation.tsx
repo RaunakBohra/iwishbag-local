@@ -15,6 +15,7 @@ export default function EmailConfirmation() {
     'pending' | 'success' | 'error' | 'expired'
   >('pending');
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [confirmationType, setConfirmationType] = useState<'signup' | 'email_change'>('signup');
 
   useEffect(() => {
     // Enhanced session handling with SIGNED_UP event detection
@@ -56,11 +57,31 @@ export default function EmailConfirmation() {
     const type = searchParams.get('type');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+    const tokenHash = searchParams.get('token_hash');
 
     if (error) {
       setConfirmationStatus('error');
       setIsLoading(false);
       console.error('Email confirmation error:', error, errorDescription);
+    } else if (tokenHash && type === 'email_change') {
+      // Handle email change confirmation
+      setConfirmationType('email_change');
+      supabase.auth
+        .verifyOtp({
+          token_hash: tokenHash,
+          type: 'email_change',
+        })
+        .then(({ data, error }) => {
+          if (error) {
+            setConfirmationStatus('error');
+            console.error('Email change verification error:', error);
+          } else {
+            setConfirmationStatus('success');
+            setUserEmail(data.user?.email || null);
+            toast.success('Email address updated successfully!');
+          }
+          setIsLoading(false);
+        });
     } else if (accessToken && refreshToken && type === 'signup') {
       // Handle confirmation manually if SIGNED_UP event wasn't triggered
       supabase.auth
@@ -78,7 +99,7 @@ export default function EmailConfirmation() {
           }
           setIsLoading(false);
         });
-    } else if (!accessToken && !error) {
+    } else if (!accessToken && !error && !tokenHash) {
       // No tokens present, might be a direct visit
       setTimeout(() => {
         setConfirmationStatus('expired');
@@ -125,55 +146,71 @@ export default function EmailConfirmation() {
               </div>
             </div>
             <CardTitle className="text-2xl text-center text-green-800">
-              Welcome to iWishBag!
+              {confirmationType === 'email_change' ? 'Email Updated!' : 'Welcome to iWishBag!'}
             </CardTitle>
             <CardDescription className="text-center">
-              Your email has been confirmed successfully
+              {confirmationType === 'email_change' 
+                ? 'Your email address has been changed successfully' 
+                : 'Your email has been confirmed successfully'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                {userEmail ? (
-                  <>
-                    Your account <strong>{userEmail}</strong> is now active and ready to use!
-                  </>
+                {confirmationType === 'email_change' ? (
+                  userEmail ? (
+                    <>
+                      Your email has been successfully changed to <strong>{userEmail}</strong>
+                    </>
+                  ) : (
+                    'Your email has been successfully updated!'
+                  )
                 ) : (
-                  'Your account is now active and ready to use!'
+                  userEmail ? (
+                    <>
+                      Your account <strong>{userEmail}</strong> is now active and ready to use!
+                    </>
+                  ) : (
+                    'Your account is now active and ready to use!'
+                  )
                 )}
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-3">
-              <h4 className="font-semibold text-sm">What's next?</h4>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <ArrowRight className="h-3 w-3" />
-                  <span>Browse international products</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ArrowRight className="h-3 w-3" />
-                  <span>Get instant shipping quotes</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ArrowRight className="h-3 w-3" />
-                  <span>Track your orders in real-time</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ArrowRight className="h-3 w-3" />
-                  <span>Enjoy secure international shopping</span>
+            {confirmationType === 'signup' && (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">What's next?</h4>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="h-3 w-3" />
+                    <span>Browse international products</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="h-3 w-3" />
+                    <span>Get instant shipping quotes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="h-3 w-3" />
+                    <span>Track your orders in real-time</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="h-3 w-3" />
+                    <span>Enjoy secure international shopping</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2 pt-2">
-              <Button className="w-full" onClick={() => navigate('/')}>
-                Start Shopping
+              <Button className="w-full" onClick={() => navigate(confirmationType === 'email_change' ? '/profile' : '/')}>
+                {confirmationType === 'email_change' ? 'Back to Profile' : 'Start Shopping'}
               </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate('/profile')}>
-                Complete Your Profile
-              </Button>
+              {confirmationType === 'signup' && (
+                <Button variant="outline" className="w-full" onClick={() => navigate('/profile')}>
+                  Complete Your Profile
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

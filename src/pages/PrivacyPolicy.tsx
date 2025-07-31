@@ -1,6 +1,16 @@
+import { useEffect } from 'react';
 import { H1, H2, H3, Body, BodyLarge } from '@/components/ui/typography';
+import { useCountryDetection } from '@/hooks/useCountryDetection';
+import { getCompanyInfo } from '@/config/companyInfo';
 
 const PrivacyPolicy = () => {
+  const { countryCode } = useCountryDetection();
+  const companyInfo = getCompanyInfo(countryCode);
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -128,7 +138,7 @@ const PrivacyPolicy = () => {
 
             <div className="bg-teal-50 border border-teal-200 p-6 rounded-lg mb-12">
               <p className="text-gray-700 leading-relaxed">
-                <strong>Contact us</strong> at privacy@iwishbag.com if you have any questions about
+                <strong>Contact us</strong> at {companyInfo.contact.privacyEmail} if you have any questions about
                 your privacy rights or want to exercise any of these rights.
               </p>
             </div>
@@ -164,10 +174,10 @@ const PrivacyPolicy = () => {
               </p>
               <div className="space-y-2">
                 <p className="text-gray-700">
-                  <strong>Email:</strong> privacy@iwishbag.com
+                  <strong>Email:</strong> {companyInfo.contact.privacyEmail}
                 </p>
                 <p className="text-gray-700">
-                  <strong>Address:</strong> iwishBag Privacy Team, [Your Address]
+                  <strong>Address:</strong> {companyInfo.companyName}, {companyInfo.address}
                 </p>
               </div>
             </div>

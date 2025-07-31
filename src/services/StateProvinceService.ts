@@ -131,10 +131,10 @@ export class StateProvinceService {
     { code: 'WB', name: 'West Bengal' },
   ];
 
-  // Nepal Provinces
+  // Nepal Provinces (Updated with official names as of 2023)
   private static NP_PROVINCES: StateProvince[] = [
-    { code: 'P1', name: 'Province No. 1' },
-    { code: 'P2', name: 'Province No. 2' },
+    { code: 'P1', name: 'Koshi Province' },
+    { code: 'P2', name: 'Madhesh Province' },
     { code: 'P3', name: 'Bagmati Province' },
     { code: 'P4', name: 'Gandaki Province' },
     { code: 'P5', name: 'Lumbini Province' },

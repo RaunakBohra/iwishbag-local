@@ -217,7 +217,8 @@
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/EnhancedHSNSearchService.ts )",
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNTaxIntegrationService.ts )",
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/__tests__/HSNQuoteIntegrationService.test.ts )",
-      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNDataValidationService.ts)"
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNDataValidationService.ts)",
+      "WebFetch(domain:blog.daraz.com.np)"
     ],
     "deny": []
   }

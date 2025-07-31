@@ -99,7 +99,8 @@ export class SmartQuoteCacheService {
   private generateCacheKey(input: EnhancedCalculationInput): QuoteCacheKey {
     const quote = input.quote;
     
-    // Create items hash (includes prices, weights, quantities,
+    // Create items hash (includes prices, weights, quantities, HSN codes, etc.)
+    const itemsData = quote.items.map(item => ({
       price: item.costprice_origin,
       weight: item.weight,
       quantity: item.quantity,

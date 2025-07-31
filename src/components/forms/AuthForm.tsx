@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -94,6 +94,15 @@ const AuthForm = ({ onLogin, onPasswordResetModeChange }: AuthFormProps = {}) =>
   const [otpVerified, setOtpVerified] = useState(false);
   const [verifiedOtp, setVerifiedOtp] = useState('');
   const [inPasswordResetFlow, setInPasswordResetFlow] = useState(false);
+
+  // Check if we should open forgot password modal
+  useEffect(() => {
+    const shouldOpenForgotPassword = sessionStorage.getItem('openForgotPassword');
+    if (shouldOpenForgotPassword === 'true') {
+      setShowForgot(true);
+      sessionStorage.removeItem('openForgotPassword');
+    }
+  }, []);
 
   const signInForm = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),

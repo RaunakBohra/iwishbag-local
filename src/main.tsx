@@ -43,4 +43,9 @@ if (!validateEnv()) {
   logger.error('❌ Environment validation failed. Check your environment variables.');
 }
 
+// Load country testing utils in development
+if (import.meta.env.MODE === 'development') {
+  import('./utils/countryTestUtils');
+}
+
 createRoot(document.getElementById('root')!).render(<App />);

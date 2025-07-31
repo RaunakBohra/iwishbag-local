@@ -1,14 +1,24 @@
+import { useEffect } from 'react';
 import { Heart, Globe, Users } from 'lucide-react';
 import { H1, H2, H3, Body, BodyLarge, StatNumber, StatLabel } from '@/components/ui/typography';
+import { useCountryDetection } from '@/hooks/useCountryDetection';
+import { getCompanyInfo } from '@/config/companyInfo';
 
 const About = () => {
+  const { countryCode } = useCountryDetection();
+  const companyInfo = getCompanyInfo(countryCode);
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Simple Hero */}
       <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto">
-            <H1 className="mb-6">About iwishBag</H1>
+            <H1 className="mb-6">About {companyInfo.shortName}</H1>
             <BodyLarge className="text-gray-600">
               We believe everyone should have access to the world's best products, no matter where
               they live.
@@ -25,7 +35,7 @@ const About = () => {
               <div>
                 <H2 className="mb-6">Our Mission</H2>
                 <BodyLarge className="text-gray-600 mb-6">
-                  Founded in 2019, iwishBag was born from a simple frustration: great products were
+                  Founded in {companyInfo.foundedYear}, {companyInfo.shortName} was born from a simple frustration: great products were
                   often out of reach due to geography and complex international shipping.
                 </BodyLarge>
                 <BodyLarge className="text-gray-600">
@@ -89,7 +99,7 @@ const About = () => {
               <div className="relative">
                 <div className="w-full h-64 bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl flex items-center justify-center">
                   <div className="text-center">
-                    <StatNumber className="text-orange-600 mb-2">50,000+</StatNumber>
+                    <StatNumber className="text-orange-600 mb-2">100,000+</StatNumber>
                     <StatLabel>Happy Customers</StatLabel>
                   </div>
                 </div>
@@ -123,22 +133,22 @@ const About = () => {
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
-                  name: 'Sarah Chen',
-                  role: 'CEO & Founder',
+                  name: 'Leadership Team',
+                  role: 'Executive Management',
                   description:
-                    'Former logistics executive who started iwishBag to solve her own international shopping challenges.',
+                    `Experienced professionals dedicated to making international shopping accessible for everyone.`,
                 },
                 {
-                  name: 'David Kim',
-                  role: 'Head of Operations',
+                  name: 'Operations Team',
+                  role: 'Logistics & Fulfillment',
                   description:
-                    'Shipping expert ensuring every package gets to its destination safely and on time.',
+                    'Shipping experts ensuring every package gets to its destination safely and on time.',
                 },
                 {
-                  name: 'Maya Patel',
-                  role: 'Customer Success',
+                  name: 'Customer Success',
+                  role: 'Support & Service',
                   description:
-                    'Your friendly voice when you need help, making sure every customer has a great experience.',
+                    'Your friendly team when you need help, making sure every customer has a great experience.',
                 },
               ].map((member, index) => (
                 <div key={index} className="text-center">

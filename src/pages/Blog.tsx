@@ -40,6 +40,11 @@ const Blog = () => {
   const { data: popularPosts, isLoading: popularLoading } = usePopularPosts(5);
   const { data: categories } = useBlogCategories();
 
+  // Scroll to top on component mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   // Initialize filters from URL
   useEffect(() => {
     const categoryId = searchParams.get('category');
