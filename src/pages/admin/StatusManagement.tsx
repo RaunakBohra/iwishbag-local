@@ -36,6 +36,7 @@ import {
   MoreHorizontal,
   Activity,
   Zap,
+  Banknote,
 } from 'lucide-react';
 import { useStatusManagement, StatusConfig } from '@/hooks/useStatusManagement';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,6 +113,7 @@ const iconOptions = [
   { value: 'FileText', label: 'File Text', icon: FileText },
   { value: 'ShoppingCart', label: 'Shopping Cart', icon: ShoppingCart },
   { value: 'Calculator', label: 'Calculator', icon: Calculator },
+  { value: 'Banknote', label: 'Banknote', icon: Banknote },
 ];
 
 export default function StatusManagement() {
@@ -122,7 +124,7 @@ export default function StatusManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { quoteStatuses, orderStatuses, isLoading, error, saveStatusSettings } =
+  const { quoteStatuses, orderStatuses, isLoading, error, saveStatusSettings, refreshData } =
     useStatusManagement();
 
   // Check authentication and role
@@ -410,6 +412,46 @@ export default function StatusManagement() {
               )}
             </div>
           </div>
+
+          {/* Payment Configuration Display - Only for Order Statuses */}
+          {category === 'order' && status.paymentType && (
+            <div className="border-t border-gray-100 pt-4 mb-4">
+              <h4 className="text-xs font-medium text-gray-700 mb-3">Payment Configuration</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">Payment Type:</span>
+                  <Badge variant="outline" className="text-xs px-2 py-0.5">
+                    {status.paymentType === 'prepaid' && 'Prepaid'}
+                    {status.paymentType === 'cod' && 'Cash on Delivery'}
+                    {status.paymentType === 'partial' && 'Partial Payment'}
+                    {status.paymentType === 'mixed' && 'Mixed (Partial + COD)'}
+                  </Badge>
+                </div>
+                {status.requiresPaymentBefore && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Payment Required:</span>
+                    <span className="font-medium text-gray-700">
+                      {status.requiresPaymentBefore === 'shipping' && 'Before Shipping'}
+                      {status.requiresPaymentBefore === 'processing' && 'Before Processing'}
+                      {status.requiresPaymentBefore === 'never' && 'Not Required'}
+                    </span>
+                  </div>
+                )}
+                {status.minimumPaymentPercentage && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Minimum Payment:</span>
+                    <span className="font-medium text-gray-700">{status.minimumPaymentPercentage}%</span>
+                  </div>
+                )}
+                {status.isCODStatus && (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                    <span className="text-xs font-medium text-yellow-600">COD Status</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Allowed Transitions */}
           <div className="mb-4">
@@ -827,6 +869,177 @@ export default function StatusManagement() {
               </div>
             </div>
 
+            {/* Payment Configuration - Only for Order Statuses */}
+            {editingStatus.category === 'order' && (
+              <div className="border-t border-gray-200 pt-4">
+                <Label className="text-sm font-medium text-gray-700 mb-4 block">Payment Configuration</Label>
+                <div className="space-y-4">
+                  {/* Payment Type */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Payment Type</Label>
+                    <Select
+                      value={editingStatus.paymentType || 'prepaid'}
+                      onValueChange={(value) =>
+                        updateStatus(
+                          editingStatus.id,
+                          { paymentType: value as 'prepaid' | 'cod' | 'partial' | 'mixed' },
+                          editingStatus.category,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="border-gray-300 focus:border-teal-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prepaid">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Prepaid (Full payment required)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="cod">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            Cash on Delivery
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="partial">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Partial Payment
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="mixed">
+                          <div className="flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            Mixed (Partial + COD)
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Requires Payment Before */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Payment Required Before</Label>
+                    <Select
+                      value={editingStatus.requiresPaymentBefore || 'shipping'}
+                      onValueChange={(value) =>
+                        updateStatus(
+                          editingStatus.id,
+                          { requiresPaymentBefore: value as 'shipping' | 'processing' | 'never' },
+                          editingStatus.category,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="border-gray-300 focus:border-teal-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="shipping">Before Shipping</SelectItem>
+                        <SelectItem value="processing">Before Processing</SelectItem>
+                        <SelectItem value="never">Never (COD/Trust-based)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Minimum Payment Percentage (for partial payments) */}
+                  {(editingStatus.paymentType === 'partial' || editingStatus.paymentType === 'mixed') && (
+                    <div>
+                      <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                        Minimum Payment Percentage
+                      </Label>
+                      <Input
+                        type="number"
+                        value={editingStatus.minimumPaymentPercentage || 50}
+                        onChange={(e) =>
+                          updateStatus(
+                            editingStatus.id,
+                            { minimumPaymentPercentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) },
+                            editingStatus.category,
+                          )
+                        }
+                        min="0"
+                        max="100"
+                        placeholder="50"
+                        className="border-gray-300 focus:border-teal-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Percentage of total amount required before shipping</p>
+                    </div>
+                  )}
+
+                  {/* COD-specific settings */}
+                  {(editingStatus.paymentType === 'cod' || editingStatus.paymentType === 'mixed') && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">COD Status</Label>
+                          <p className="text-xs text-gray-500">Mark this as a COD-specific status</p>
+                        </div>
+                        <Switch
+                          checked={editingStatus.isCODStatus || false}
+                          onCheckedChange={(checked) =>
+                            updateStatus(editingStatus.id, { isCODStatus: checked }, editingStatus.category)
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">COD Collection Required</Label>
+                          <p className="text-xs text-gray-500">Track COD collection from delivery agent</p>
+                        </div>
+                        <Switch
+                          checked={editingStatus.codCollectionRequired || false}
+                          onCheckedChange={(checked) =>
+                            updateStatus(editingStatus.id, { codCollectionRequired: checked }, editingStatus.category)
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">COD Remittance Tracking</Label>
+                          <p className="text-xs text-gray-500">Track remittance from delivery agent to merchant</p>
+                        </div>
+                        <Switch
+                          checked={editingStatus.codRemittanceTracking || false}
+                          onCheckedChange={(checked) =>
+                            updateStatus(editingStatus.id, { codRemittanceTracking: checked }, editingStatus.category)
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Payment Validation Rule */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Payment Validation Rule</Label>
+                    <Select
+                      value={editingStatus.paymentValidationRule || 'full_payment'}
+                      onValueChange={(value) =>
+                        updateStatus(
+                          editingStatus.id,
+                          { paymentValidationRule: value as 'full_payment' | 'partial_payment' | 'cod_allowed' | 'custom' },
+                          editingStatus.category,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="border-gray-300 focus:border-teal-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full_payment">Full Payment Required</SelectItem>
+                        <SelectItem value="partial_payment">Partial Payment Allowed</SelectItem>
+                        <SelectItem value="cod_allowed">COD Allowed</SelectItem>
+                        <SelectItem value="custom">Custom Validation</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Allowed Transitions */}
             <div className="border-t border-gray-200 pt-4">
               <Label className="text-sm font-medium text-gray-700 mb-3 block">
@@ -992,6 +1205,37 @@ export default function StatusManagement() {
                 </div>
               </div>
               <div className="flex items-center space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (confirm('This will clear your database and load all new statuses including COD and partial payment statuses. Are you sure?')) {
+                      setIsSaving(true);
+                      try {
+                        // Clear existing statuses
+                        await supabase
+                          .from('system_settings')
+                          .delete()
+                          .in('setting_key', ['quote_statuses', 'order_statuses']);
+                        
+                        // Refresh data - this will trigger loading defaults from StatusConfigProvider
+                        await refreshData();
+                        
+                        // Success message
+                        alert('Statuses reset to new defaults! You now have COD and partial payment statuses.');
+                      } catch (error) {
+                        console.error('Failed to reset statuses:', error);
+                        alert('Failed to reset statuses. Check console for details.');
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }
+                  }}
+                  className="text-orange-700 border-orange-300 hover:bg-orange-50"
+                  disabled={isSaving}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Load All Payment Statuses
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => {

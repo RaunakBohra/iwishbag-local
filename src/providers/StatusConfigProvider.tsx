@@ -234,9 +234,13 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'Clock',
     isActive: true,
     order: 1,
-    allowedTransitions: ['paid', 'ordered', 'cancelled'],
+    allowedTransitions: ['paid', 'ordered', 'cancelled', 'partial_paid'],
     isTerminal: false,
     category: 'order',
+    // Payment properties
+    paymentType: 'prepaid',
+    requiresPaymentBefore: 'processing',
+    paymentValidationRule: 'full_payment',
     // Flow properties
     triggersEmail: true,
     emailTemplate: 'payment_instructions',
@@ -273,12 +277,15 @@ const defaultOrderStatuses: StatusConfig[] = [
     label: 'Processing',
     description: 'Order is being processed and prepared for fulfillment',
     color: 'secondary',
-    icon: 'RefreshCw',
+    icon: 'Clock',
     isActive: true,
     order: 2,
     allowedTransitions: ['ordered', 'shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
+    // Payment properties
+    paymentType: 'prepaid',
+    requiresPaymentBefore: 'processing',
     // Flow properties
     triggersEmail: true,
     emailTemplate: 'order_processing',
@@ -286,6 +293,28 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: false,
     showsInOrdersList: true,
     canBePaid: false,
+    // Action permissions
+    allowEdit: false,
+    allowApproval: false,
+    allowRejection: false,
+    allowCartActions: false,
+    allowCancellation: true,
+    allowRenewal: false,
+    allowShipping: false,
+    allowAddressEdit: false,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    showExpiration: false,
+    isSuccessful: false,
+    countsAsOrder: true,
+    progressPercentage: 75,
+    // Customer messaging
+    customerMessage: 'Your order is being processed',
+    customerActionText: 'View Status',
+    // CSS styling
+    cssClass: 'status-processing',
+    badgeVariant: 'secondary',
   },
   {
     id: 'paid',
@@ -296,9 +325,12 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'DollarSign',
     isActive: true,
     order: 3,
-    allowedTransitions: ['ordered', 'cancelled'],
+    allowedTransitions: ['ordered', 'shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
+    // Payment properties
+    paymentType: 'prepaid',
+    paymentValidationRule: 'full_payment',
     // Flow properties
     triggersEmail: true,
     emailTemplate: 'payment_received',
@@ -313,7 +345,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     allowCartActions: false,
     allowCancellation: true,
     allowRenewal: false,
-    allowShipping: false,
+    allowShipping: true,
     allowAddressEdit: false,
     // Display properties
     showInCustomerView: true,
@@ -341,6 +373,9 @@ const defaultOrderStatuses: StatusConfig[] = [
     allowedTransitions: ['shipped', 'cancelled'],
     isTerminal: false,
     category: 'order',
+    // Payment properties - mixed support for various payment types
+    paymentType: 'mixed',
+    requiresPaymentBefore: 'shipping',
     // Flow properties
     triggersEmail: true,
     emailTemplate: 'order_placed',
@@ -348,6 +383,28 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: false,
     showsInOrdersList: true,
     canBePaid: false,
+    allowShipping: true,
+    // Action permissions
+    allowEdit: false,
+    allowApproval: false,
+    allowRejection: false,
+    allowCartActions: false,
+    allowCancellation: true,
+    allowRenewal: false,
+    allowAddressEdit: false,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    showExpiration: false,
+    isSuccessful: true,
+    countsAsOrder: true,
+    progressPercentage: 85,
+    // Customer messaging
+    customerMessage: 'Order placed with merchant',
+    customerActionText: 'View Order',
+    // CSS styling
+    cssClass: 'status-ordered',
+    badgeVariant: 'default',
   },
   {
     id: 'shipped',
@@ -358,9 +415,11 @@ const defaultOrderStatuses: StatusConfig[] = [
     icon: 'Truck',
     isActive: true,
     order: 5,
-    allowedTransitions: ['completed', 'cancelled'],
+    allowedTransitions: ['completed', 'cancelled', 'balance_due', 'cod_collected'],
     isTerminal: false,
     category: 'order',
+    // Payment properties
+    paymentType: 'mixed',
     // Flow properties
     triggersEmail: true,
     emailTemplate: 'order_shipped',
@@ -403,6 +462,9 @@ const defaultOrderStatuses: StatusConfig[] = [
     allowedTransitions: ['completed'],
     isTerminal: true,
     category: 'order',
+    // Payment properties
+    paymentType: 'mixed',
+    paymentValidationRule: 'full_payment',
     // Flow properties
     triggersEmail: true,
     emailTemplate: 'order_completed',
@@ -433,6 +495,147 @@ const defaultOrderStatuses: StatusConfig[] = [
     cssClass: 'status-completed',
     badgeVariant: 'outline',
   },
+  // COD-specific statuses
+  {
+    id: 'cod_approved',
+    name: 'cod_approved',
+    label: 'COD Approved',
+    description: 'Order approved for Cash on Delivery',
+    color: 'outline',
+    icon: 'Banknote',
+    isActive: true,
+    order: 7,
+    allowedTransitions: ['ordered', 'shipped', 'cancelled'],
+    isTerminal: false,
+    category: 'order',
+    // Payment properties
+    paymentType: 'cod',
+    requiresPaymentBefore: 'never',
+    isCODStatus: true,
+    paymentValidationRule: 'cod_allowed',
+    // Flow properties
+    triggersEmail: true,
+    emailTemplate: 'cod_order_confirmed',
+    requiresAction: false,
+    showsInQuotesList: false,
+    showsInOrdersList: true,
+    canBePaid: false,
+    // Action permissions
+    allowShipping: true, // Can ship without payment
+    allowCancellation: true,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    countsAsOrder: true,
+    progressPercentage: 70,
+    // Customer messaging
+    customerMessage: 'Order confirmed - Pay on delivery',
+    customerActionText: 'Track Order',
+    cssClass: 'status-cod-approved',
+    badgeVariant: 'outline',
+  },
+  {
+    id: 'partial_paid',
+    name: 'partial_paid',
+    label: 'Partially Paid',
+    description: 'Partial payment received',
+    color: 'secondary',
+    icon: 'Clock',
+    isActive: true,
+    order: 8,
+    allowedTransitions: ['ordered', 'balance_due', 'paid', 'cancelled'],
+    isTerminal: false,
+    category: 'order',
+    // Payment properties
+    paymentType: 'partial',
+    minimumPaymentPercentage: 50, // Require 50% before shipping
+    requiresPaymentBefore: 'shipping',
+    paymentValidationRule: 'partial_payment',
+    paymentMilestones: [
+      { percentage: 50, label: 'Advance Payment', required: true },
+      { percentage: 100, label: 'Full Payment', required: false }
+    ],
+    // Flow properties
+    triggersEmail: true,
+    emailTemplate: 'partial_payment_received',
+    requiresAction: false,
+    showsInOrdersList: true,
+    // Action permissions
+    allowShipping: true, // If minimum payment met
+    allowCancellation: true,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    countsAsOrder: true,
+    progressPercentage: 75,
+    // Customer messaging
+    customerMessage: 'Advance payment received - Balance due on delivery',
+    customerActionText: 'Pay Balance',
+    cssClass: 'status-partial-paid',
+    badgeVariant: 'secondary',
+  },
+  {
+    id: 'balance_due',
+    name: 'balance_due',
+    label: 'Balance Due',
+    description: 'Shipped with balance payment pending',
+    color: 'outline',
+    icon: 'AlertCircle',
+    isActive: true,
+    order: 9,
+    allowedTransitions: ['paid', 'delivered', 'cod_collected'],
+    isTerminal: false,
+    category: 'order',
+    // Payment properties
+    paymentType: 'partial',
+    requiresPaymentBefore: 'never', // Already shipped
+    paymentValidationRule: 'partial_payment',
+    // Flow properties
+    triggersEmail: true,
+    emailTemplate: 'balance_payment_reminder',
+    requiresAction: true,
+    showsInOrdersList: true,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    countsAsOrder: true,
+    progressPercentage: 85,
+    // Customer messaging
+    customerMessage: 'Order shipped - Balance payment due on delivery',
+    customerActionText: 'Pay Now',
+    cssClass: 'status-balance-due',
+    badgeVariant: 'outline',
+  },
+  {
+    id: 'cod_collected',
+    name: 'cod_collected',
+    label: 'COD Collected',
+    description: 'Cash collected by delivery agent',
+    color: 'default',
+    icon: 'CheckCircle',
+    isActive: true,
+    order: 10,
+    allowedTransitions: ['delivered', 'cod_remitted'],
+    isTerminal: false,
+    category: 'order',
+    // Payment properties
+    paymentType: 'cod',
+    isCODStatus: true,
+    codCollectionRequired: true,
+    codRemittanceTracking: true,
+    // Flow properties
+    triggersEmail: true,
+    emailTemplate: 'cod_collection_confirmed',
+    showsInOrdersList: true,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    countsAsOrder: true,
+    progressPercentage: 95,
+    customerMessage: 'Payment collected successfully',
+    cssClass: 'status-cod-collected',
+    badgeVariant: 'default',
+  },
   {
     id: 'cancelled',
     name: 'cancelled',
@@ -441,7 +644,7 @@ const defaultOrderStatuses: StatusConfig[] = [
     color: 'destructive',
     icon: 'XCircle',
     isActive: true,
-    order: 7,
+    order: 11,
     allowedTransitions: ['cancelled'],
     isTerminal: true,
     category: 'order',
@@ -452,6 +655,28 @@ const defaultOrderStatuses: StatusConfig[] = [
     showsInQuotesList: true,
     showsInOrdersList: true,
     canBePaid: false,
+    // Action permissions
+    allowEdit: false,
+    allowApproval: false,
+    allowRejection: false,
+    allowCartActions: false,
+    allowCancellation: false,
+    allowRenewal: false,
+    allowShipping: false,
+    allowAddressEdit: false,
+    // Display properties
+    showInCustomerView: true,
+    showInAdminView: true,
+    showExpiration: false,
+    isSuccessful: false,
+    countsAsOrder: false,
+    progressPercentage: 0,
+    // Customer messaging
+    customerMessage: 'Order has been cancelled',
+    customerActionText: 'Create New Order',
+    // CSS styling
+    cssClass: 'status-cancelled',
+    badgeVariant: 'destructive',
   },
 ];
 

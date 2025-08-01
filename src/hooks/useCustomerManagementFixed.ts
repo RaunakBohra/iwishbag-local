@@ -9,7 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 
 interface CustomerProfile {
   id: string;
+  email?: string | null;
   full_name: string | null;
+  country?: string | null;
   cod_enabled: boolean;
   internal_notes: string | null;
   created_at: string;
@@ -38,19 +40,22 @@ export const useCustomerManagementFixed = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: customers, isLoading } = useQuery({
+  const { data: customers, isLoading, refetch } = useQuery({
     queryKey: ['admin-customers-fixed'],
     queryFn: async () => {
       try {
         console.log('[CustomerManagement] Fetching customers with real emails...');
 
-        // First, get all profiles with addresses
+        // First, get all profiles with addresses and emails
         const { data: profiles, error: profilesError } = await supabase.from('profiles').select(`
             id, 
+            email,
             full_name, 
             avatar_url,
+            country,
             cod_enabled, 
-            internal_notes, 
+            internal_notes,
+            tags, 
             created_at,
             delivery_addresses(
               id, 
@@ -77,6 +82,7 @@ export const useCustomerManagementFixed = () => {
         let usersWithEmails: any[] = [];
 
         try {
+          console.log('[CustomerManagement] Invoking edge function get-users-with-emails...');
           const { data: authData, error: authError } = await supabase.functions.invoke(
             'get-users-with-emails',
             {
@@ -84,32 +90,22 @@ export const useCustomerManagementFixed = () => {
             },
           );
 
+          console.log('[CustomerManagement] Edge function response:', { authData, authError });
+
           if (authError) {
             console.warn('[CustomerManagement] Edge function error, falling back:', authError);
-            // Fallback to manual email construction with better logic
-            usersWithEmails = profiles.map((profile) => ({
-              id: profile.id,
-              email: profile.full_name
-                ? `${profile.full_name.toLowerCase().replace(/\s+/g, '.')}@iwishbag.com`
-                : `customer.${profile.id.substring(0, 8)}@iwishbag.com`,
-              role: 'customer',
-              created_at: profile.created_at,
-            }));
+            // Don't generate fake emails - just return empty data
+            console.warn('[CustomerManagement] Edge function failed, not generating fake emails');
+            usersWithEmails = [];
           } else {
             usersWithEmails = authData || [];
             console.log('[CustomerManagement] Got auth users:', usersWithEmails.length);
+            console.log('[CustomerManagement] Sample user data:', usersWithEmails[0]);
           }
         } catch (error) {
-          console.warn('[CustomerManagement] Edge function not available, using fallback');
-          // Enhanced fallback with better email generation
-          usersWithEmails = profiles.map((profile) => ({
-            id: profile.id,
-            email: profile.full_name
-              ? `${profile.full_name.toLowerCase().replace(/\s+/g, '.')}@iwishbag.com`
-              : `customer.${profile.id.substring(0, 8)}@iwishbag.com`,
-            role: 'customer',
-            created_at: profile.created_at,
-          }));
+          console.warn('[CustomerManagement] Edge function not available');
+          // Don't generate fake emails
+          usersWithEmails = [];
         }
 
         // Get quote statistics for each customer
@@ -134,9 +130,7 @@ export const useCustomerManagementFixed = () => {
 
           return {
             ...profile,
-            email:
-              authUser?.email ||
-              `${profile.full_name?.toLowerCase().replace(/\s+/g, '.') || 'customer'}@example.com`,
+            email: profile.email || authUser?.email || null, // Use profile.email first, then auth email, then null
             role: authUser?.role || 'customer',
             avatar_url: authUser?.avatar_url || profile.avatar_url,
             phone: authUser?.phone,
@@ -169,13 +163,24 @@ export const useCustomerManagementFixed = () => {
 
   const updateCodMutation = useMutation({
     mutationFn: async ({ userId, codEnabled }: { userId: string; codEnabled: boolean }) => {
+      console.log('Updating COD:', { userId, codEnabled });
+      
+      if (!userId) {
+        throw new Error('User ID is required for COD update');
+      }
+      
       const { data, error } = await supabase
         .from('profiles')
         .update({ cod_enabled: codEnabled })
         .eq('id', userId)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('COD update error:', error);
+        throw error;
+      }
+      
+      console.log('COD update success:', data);
       return data;
     },
     onSuccess: () => {
@@ -196,11 +201,25 @@ export const useCustomerManagementFixed = () => {
 
   const updateNotesMutation = useMutation({
     mutationFn: async ({ userId, notes }: { userId: string; notes: string }) => {
-      const { error } = await supabase
+      console.log('Updating notes:', { userId, notes });
+      
+      if (!userId) {
+        throw new Error('User ID is required for notes update');
+      }
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ internal_notes: notes.trim() || null })
-        .eq('id', userId);
-      if (error) throw error;
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Notes update error:', error);
+        throw error;
+      }
+      
+      console.log('Notes update success:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-customers-fixed'] });
@@ -220,11 +239,25 @@ export const useCustomerManagementFixed = () => {
 
   const updateProfileMutation = useMutation({
     mutationFn: async ({ userId, fullName }: { userId: string; fullName: string }) => {
-      const { error } = await supabase
+      console.log('Updating profile:', { userId, fullName });
+      
+      if (!userId) {
+        throw new Error('User ID is required for profile update');
+      }
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ full_name: fullName.trim() || null })
-        .eq('id', userId);
-      if (error) throw error;
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Profile update error:', error);
+        throw error;
+      }
+      
+      console.log('Profile update success:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-customers-fixed'] });
@@ -242,11 +275,51 @@ export const useCustomerManagementFixed = () => {
     },
   });
 
+  const updateTagsMutation = useMutation({
+    mutationFn: async ({ userId, tags }: { userId: string; tags: string }) => {
+      console.log('Updating tags:', { userId, tags });
+      
+      if (!userId) {
+        throw new Error('User ID is required for tags update');
+      }
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ tags: tags.trim() || null })
+        .eq('id', userId)
+        .select();
+      
+      if (error) {
+        console.error('Tags update error:', error);
+        throw error;
+      }
+      
+      console.log('Tags update success:', data);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-customers-fixed'] });
+      toast({
+        title: 'Success',
+        description: 'Customer tags updated successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update customer tags',
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     customers,
     isLoading,
+    refetch,
     updateCodMutation,
     updateNotesMutation,
     updateProfileMutation,
+    updateTagsMutation,
   };
 };

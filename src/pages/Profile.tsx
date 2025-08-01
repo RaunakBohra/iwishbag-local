@@ -347,7 +347,7 @@ const Profile = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto px-4 py-8">
           <Card className="max-w-md mx-auto text-center">
             <CardContent className="pt-6">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -369,7 +369,7 @@ const Profile = () => {
       minimumLoadTime={400}
       skeleton={
         <div className="min-h-screen bg-white">
-          <div className="max-w-4xl mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto px-4 py-8">
             <div className="space-y-8">
               {/* Header skeleton */}
               <div className="flex items-center justify-between">
@@ -461,7 +461,7 @@ const Profile = () => {
         </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Quick Actions */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Link
@@ -866,6 +866,7 @@ const Profile = () => {
       <ChangePhoneModal
         open={showChangePhoneModal}
         onOpenChange={setShowChangePhoneModal}
+        initialCountry={profile?.country || 'US'}
         onPhoneChanged={(newPhone) => {
           // Update the form with the new phone number
           form.setValue('phone', newPhone);

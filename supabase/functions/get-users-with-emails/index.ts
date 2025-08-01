@@ -25,11 +25,11 @@ serve(async (req) => {
 
     console.log(`🔐 Admin user ${user.email} accessing user emails`);
 
-    // Fetch all profiles with their addresses
+    // Fetch all profiles with their addresses and emails
     const { data: profiles, error: profilesError } = await supabaseClient
       .from('profiles')
       .select(
-        'id, full_name, cod_enabled, internal_notes, created_at, user_addresses(id, address_line1, address_line2, city, country, postal_code, is_default)',
+        'id, email, full_name, country, cod_enabled, internal_notes, tags, created_at, delivery_addresses(id, address_line1, address_line2, city, destination_country, postal_code, is_default)',
       );
 
     if (profilesError) {
@@ -68,12 +68,14 @@ serve(async (req) => {
         const authUser = userDataMap.get(profile.id);
         return {
           id: profile.id,
-          email: authUser?.email || 'No email found',
+          email: profile.email || authUser?.email || '',
           full_name: profile.full_name,
+          country: profile.country,
           cod_enabled: profile.cod_enabled,
           internal_notes: profile.internal_notes,
+          tags: profile.tags,
           created_at: profile.created_at,
-          user_addresses: profile.user_addresses || [],
+          delivery_addresses: profile.delivery_addresses || [],
           role: authUser?.role || 'customer',
           phone: authUser?.phone,
           avatar_url: authUser?.avatar_url,
@@ -81,7 +83,7 @@ serve(async (req) => {
         };
       }) || [];
 
-    return new Response(JSON.stringify({ data: usersWithEmails }), {
+    return new Response(JSON.stringify(usersWithEmails), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

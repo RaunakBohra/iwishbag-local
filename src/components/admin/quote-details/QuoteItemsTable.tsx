@@ -64,7 +64,12 @@ export const QuoteItemsTable: React.FC<QuoteItemsTableProps> = ({
   const startEditing = (item: QuoteItem, index: number) => {
     const itemId = item.id || `item-${index}`;
     setEditingItemId(itemId);
-    setEditedItem({ ...item });
+    setEditedItem({ 
+      ...item,
+      costprice_origin: Number(item.costprice_origin) || 0,
+      weight: Number(item.weight) || 0,
+      quantity: Number(item.quantity) || 1
+    });
   };
 
   // Cancel editing
@@ -235,10 +240,10 @@ export const QuoteItemsTable: React.FC<QuoteItemsTableProps> = ({
                         ) : (
                           <>
                             <p className="font-medium">
-                              {originCurrency}{item.costprice_origin.toFixed(2)}
+                              {originCurrency}{(Number(item.costprice_origin) || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-500">
-                              Total: {originCurrency}{(item.costprice_origin * item.quantity).toFixed(2)}
+                              Total: {originCurrency}{((Number(item.costprice_origin) || 0) * item.quantity).toFixed(2)}
                             </p>
                           </>
                         )}
@@ -248,7 +253,7 @@ export const QuoteItemsTable: React.FC<QuoteItemsTableProps> = ({
                       {isEditing ? (
                         <Input
                           type="number"
-                          value={currentItem.weight}
+                          value={Number(currentItem.weight) || 0}
                           onChange={(e) => setEditedItem({
                             ...currentItem,
                             weight: parseFloat(e.target.value) || 0
@@ -259,7 +264,7 @@ export const QuoteItemsTable: React.FC<QuoteItemsTableProps> = ({
                       ) : (
                         <div className="flex items-center justify-end gap-1">
                           <Weight className="w-3 h-3 text-gray-400" />
-                          <span>{item.weight.toFixed(2)} kg</span>
+                          <span>{(Number(item.weight) || 0).toFixed(2)} kg</span>
                         </div>
                       )}
                     </TableCell>
@@ -315,10 +320,10 @@ export const QuoteItemsTable: React.FC<QuoteItemsTableProps> = ({
                       {taxBreakdown ? (
                         <div className="space-y-1">
                           <p className="font-medium">
-                            {originCurrency}{taxBreakdown.customs.toFixed(2)}
+                            {originCurrency}{(Number(taxBreakdown.customs) || 0).toFixed(2)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            on {originCurrency}{taxBreakdown.customs_value.toFixed(2)}
+                            on {originCurrency}{(Number(taxBreakdown.customs_value) || 0).toFixed(2)}
                           </p>
                         </div>
                       ) : (
@@ -373,13 +378,13 @@ export const QuoteItemsTable: React.FC<QuoteItemsTableProps> = ({
               <div>
                 <p className="text-gray-500">Total Customs</p>
                 <p className="font-medium">
-                  {originCurrency}{calculationResult.hsn_calculation_summary.total_customs.toFixed(2)}
+                  {originCurrency}{(Number(calculationResult.hsn_calculation_summary.total_customs) || 0).toFixed(2)}
                 </p>
               </div>
               <div>
                 <p className="text-gray-500">Total Local Taxes</p>
                 <p className="font-medium">
-                  {originCurrency}{calculationResult.hsn_calculation_summary.total_local_taxes.toFixed(2)}
+                  {originCurrency}{(Number(calculationResult.hsn_calculation_summary.total_local_taxes) || 0).toFixed(2)}
                 </p>
               </div>
               <div>

@@ -1,0 +1,318 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/lib/utils';
+import { 
+  Package, 
+  MapPin, 
+  Calendar, 
+  Clock, 
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  ArrowRight,
+  Share2,
+  FileText
+} from 'lucide-react';
+import { format } from 'date-fns';
+
+interface QuoteItem {
+  id: string;
+  name: string;
+  quantity: number;
+  costprice_origin: number;
+  weight: number;
+  url?: string;
+  image?: string;
+}
+
+export default function PublicQuoteView() {
+  const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
+  const [quote, setQuote] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    fetchQuote();
+  }, [token]);
+
+  const fetchQuote = async () => {
+    if (!token) {
+      setError('No quote token provided');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch quote by share token
+      const { data, error: fetchError } = await supabase
+        .from('quotes_v2')
+        .select('*')
+        .eq('share_token', token)
+        .single();
+
+      if (fetchError || !data) {
+        setError('Quote not found or link is invalid');
+        setLoading(false);
+        return;
+      }
+
+      setQuote(data);
+
+      // Check if expired
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        setIsExpired(true);
+      }
+
+      // Track view (this happens automatically via RLS)
+      await supabase.rpc('track_quote_view', {
+        quote_id: data.id,
+        token: token
+      });
+
+    } catch (err) {
+      console.error('Error fetching quote:', err);
+      setError('Failed to load quote');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { label: 'Draft', variant: 'secondary' as const },
+      sent: { label: 'Sent', variant: 'default' as const },
+      viewed: { label: 'Viewed', variant: 'default' as const },
+      approved: { label: 'Approved', variant: 'success' as const },
+      rejected: { label: 'Rejected', variant: 'destructive' as const },
+      expired: { label: 'Expired', variant: 'destructive' as const },
+    };
+
+    const config = statusConfig[status] || { label: status, variant: 'default' as const };
+    
+    return (
+      <Badge variant={config.variant}>
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const handleApprove = () => {
+    // Navigate to checkout or contact page
+    navigate(`/contact?quote=${quote.id}`);
+  };
+
+  const handleReject = () => {
+    // Could implement a rejection flow here
+    navigate('/contact');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading quote...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Quote Not Found</h2>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => navigate('/')}>
+                Go to Homepage
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const items = quote.items || [];
+  const breakdown = quote.calculation_data?.breakdown || {};
+  const expiryDate = quote.expires_at ? new Date(quote.expires_at) : null;
+  const daysUntilExpiry = expiryDate ? Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="container max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold mb-2">Your Quote</h1>
+          <p className="text-muted-foreground">
+            Quote #{quote.quote_number || quote.id.slice(0, 8)}
+          </p>
+        </div>
+
+        {/* Expiry Warning */}
+        {isExpired && (
+          <Card className="mb-6 border-destructive">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <XCircle className="h-5 w-5 text-destructive" />
+                <div>
+                  <p className="font-semibold text-destructive">This quote has expired</p>
+                  <p className="text-sm text-muted-foreground">
+                    Please contact us for an updated quote
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quote Status */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="flex items-center gap-2 mt-1">
+                  {getStatusBadge(isExpired ? 'expired' : quote.status)}
+                  {quote.version > 1 && (
+                    <Badge variant="outline">Version {quote.version}</Badge>
+                  )}
+                </div>
+              </div>
+              {!isExpired && daysUntilExpiry !== null && (
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Valid for</p>
+                  <p className="font-semibold">
+                    {daysUntilExpiry > 0 ? `${daysUntilExpiry} days` : 'Expires today'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {quote.customer_message && (
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
+                <p className="text-sm">{quote.customer_message}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Items */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {items.map((item: QuoteItem, index: number) => (
+                <div key={item.id || index} className="flex items-start gap-4 pb-4 border-b last:border-0">
+                  <Package className="h-5 w-5 text-muted-foreground mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium">{item.name}</h4>
+                    <div className="flex gap-4 text-sm text-muted-foreground mt-1">
+                      <span>Qty: {item.quantity}</span>
+                      <span>Weight: {item.weight}kg</span>
+                      <span>Price: {formatCurrency(item.costprice_origin, quote.customer_currency || 'USD')}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cost Breakdown */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg">Cost Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Items Total</span>
+                <span>{formatCurrency(breakdown.items_total || 0, quote.customer_currency || 'USD')}</span>
+              </div>
+              {breakdown.shipping > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <span>{formatCurrency(breakdown.shipping, quote.customer_currency || 'USD')}</span>
+                </div>
+              )}
+              {breakdown.customs > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Customs & Duties</span>
+                  <span>{formatCurrency(breakdown.customs, quote.customer_currency || 'USD')}</span>
+                </div>
+              )}
+              {breakdown.fees > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Processing Fees</span>
+                  <span>{formatCurrency(breakdown.fees, quote.customer_currency || 'USD')}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between font-semibold text-lg">
+                <span>Total</span>
+                <span>{formatCurrency(quote.total_customer_currency || quote.total_usd, quote.customer_currency || 'USD')}</span>
+              </div>
+            </div>
+
+            {quote.payment_terms && (
+              <div className="mt-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Payment Terms</p>
+                <p className="text-sm text-muted-foreground">{quote.payment_terms}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        {!isExpired && quote.status !== 'approved' && quote.status !== 'rejected' && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  onClick={handleApprove}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve Quote
+                </Button>
+                <Button 
+                  onClick={handleReject}
+                  variant="outline"
+                  className="flex-1"
+                  size="lg"
+                >
+                  Request Changes
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground text-center mt-4">
+                By approving, you agree to proceed with this order
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-sm text-muted-foreground">
+          <p>Quote generated on {format(new Date(quote.created_at), 'MMMM d, yyyy')}</p>
+          <p className="mt-2">
+            Need help? <a href="/contact" className="text-primary hover:underline">Contact us</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

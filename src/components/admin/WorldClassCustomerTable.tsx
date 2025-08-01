@@ -63,6 +63,7 @@ import {
   Clock,
   Shield,
   AlertCircle,
+  FileText,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -71,6 +72,9 @@ import { CustomerCodToggle } from './CustomerCodToggle';
 import { AdvancedCustomerFilters, FilterCondition } from './AdvancedCustomerFilters';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAdminCustomerDisplayData, getCustomerInitials as getInitials } from '@/lib/customerDisplayUtils';
+import { getCountryDisplayName } from '@/lib/countryUtils';
+import { useAllCountries } from '@/hooks/useAllCountries';
+import { parseTags, isVIP } from '@/utils/customerTagUtils';
 
 interface WorldClassCustomerTableProps {
   customers: Customer[];
@@ -86,6 +90,7 @@ interface WorldClassCustomerTableProps {
   onBulkEmail?: (customerIds: string[]) => void;
   onBulkTag?: (customerIds: string[]) => void;
   onBulkExport?: (customerIds: string[]) => void;
+  onBulkCodToggle?: (customerIds: string[], enabled: boolean) => void;
   onEditCustomer?: (customerId: string) => void;
   onSendEmail?: (customerId: string, email: string) => void;
   onViewMessages?: (customerId: string) => void;
@@ -100,7 +105,9 @@ type SortField =
   | 'totalSpent'
   | 'orders'
   | 'lastActivity'
-  | 'status';
+  | 'status'
+  | 'cod'
+  | 'tags';
 type SortDirection = 'asc' | 'desc';
 
 export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = ({
@@ -117,12 +124,14 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   onBulkEmail,
   onBulkTag,
   onBulkExport,
+  onBulkCodToggle,
   onEditCustomer,
   onSendEmail,
   onViewMessages,
   onViewOrders,
 }) => {
   const navigate = useNavigate();
+  const { data: countries = [] } = useAllCountries();
   // Table state
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [sortField, setSortField] = useState<SortField>('joinDate');
@@ -183,7 +192,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
     else if (lastActivityDays <= 7) score += 10;
 
     // VIP bonus
-    if (customer.internal_notes?.includes('VIP')) score += 20;
+    if (isVIP(customer)) score += 20;
 
     return Math.max(0, Math.min(100, score));
   };
@@ -197,7 +206,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
   };
 
   const getCustomerStatus = (customer: Customer) => {
-    if (customer.internal_notes?.includes('VIP')) {
+    if (isVIP(customer)) {
       return {
         label: 'VIP',
         className: 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -216,6 +225,10 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
       className: 'bg-gray-100 text-gray-800 border-gray-300',
       icon: Clock,
     };
+  };
+
+  const getCustomerTags = (customer: Customer): string[] => {
+    return parseTags(customer.tags);
   };
 
   // Apply filter conditions
@@ -262,12 +275,12 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         fieldValue = customer.email;
         break;
       case 'status':
-        if (customer.internal_notes?.includes('VIP')) fieldValue = 'vip';
+        if (isVIP(customer)) fieldValue = 'vip';
         else if (customer.cod_enabled) fieldValue = 'active';
         else fieldValue = 'inactive';
         break;
       case 'location':
-        fieldValue = customer.delivery_addresses[0]?.destination_country || '';
+        fieldValue = customer.country || customer.delivery_addresses[0]?.destination_country || '';
         break;
       case 'joinDate':
         const daysSinceJoin = Math.ceil(
@@ -335,7 +348,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
       const matchesSearch =
         !searchQuery ||
         getAdminCustomerDisplayData(customer).name.toLowerCase().includes(searchLower) ||
-        customer.email.toLowerCase().includes(searchLower) ||
+        (customer.email && customer.email.toLowerCase().includes(searchLower)) ||
+        (customer.country && customer.country.toLowerCase().includes(searchLower)) ||
         customer.delivery_addresses.some(
           (addr) =>
             addr.city?.toLowerCase().includes(searchLower) ||
@@ -364,8 +378,8 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
           bValue = b.email;
           break;
         case 'location':
-          aValue = a.delivery_addresses[0]?.destination_country || '';
-          bValue = b.delivery_addresses[0]?.destination_country || '';
+          aValue = a.country || a.delivery_addresses[0]?.destination_country || '';
+          bValue = b.country || b.delivery_addresses[0]?.destination_country || '';
           break;
         case 'joinDate':
           aValue = new Date(a.created_at).getTime();
@@ -386,6 +400,14 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
         case 'status':
           aValue = getCustomerHealthScore(a, aAnalytics);
           bValue = getCustomerHealthScore(b, bAnalytics);
+          break;
+        case 'cod':
+          aValue = a.cod_enabled ? 1 : 0;
+          bValue = b.cod_enabled ? 1 : 0;
+          break;
+        case 'tags':
+          aValue = getCustomerTags(a).length;
+          bValue = getCustomerTags(b).length;
           break;
         default:
           return 0;
@@ -548,6 +570,24 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               <Button
                 variant="outline"
                 size="sm"
+                className="text-green-700 border-green-300"
+                onClick={() => onBulkCodToggle?.(selectedCustomers, true)}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Enable COD
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-700 border-red-300"
+                onClick={() => onBulkCodToggle?.(selectedCustomers, false)}
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Disable COD
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setSelectedCustomers([]);
                   setShowBulkActions(false);
@@ -591,6 +631,24 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                 <div className="flex items-center space-x-2">
                   <span className="font-medium text-gray-900">Location</span>
                   {getSortIcon('location')}
+                </div>
+              </TableHead>
+              <TableHead
+                className="px-6 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('cod')}
+              >
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-gray-900">COD</span>
+                  {getSortIcon('cod')}
+                </div>
+              </TableHead>
+              <TableHead
+                className="px-6 cursor-pointer hover:bg-gray-100"
+                onClick={() => handleSort('tags')}
+              >
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-gray-900">Tags</span>
+                  {getSortIcon('tags')}
                 </div>
               </TableHead>
               <TableHead
@@ -641,7 +699,7 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
               const healthIndicator = getHealthIndicator(healthScore);
               const status = getCustomerStatus(customer);
               const isSelected = selectedCustomers.includes(customer.id);
-              const primaryAddress = customer.delivery_addresses?.[0];
+              const primaryAddress = customer.delivery_addresses?.find(addr => addr.is_default) || customer.delivery_addresses?.[0];
 
               return (
                 <TableRow
@@ -674,12 +732,21 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                       </Avatar>
                       <div>
                         <div
-                          className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer transition-colors"
+                          className="font-medium text-gray-900 hover:text-blue-600 cursor-pointer transition-colors flex items-center gap-2"
                           onClick={() => navigate(`/admin/customers/${customer.id}`)}
                         >
                           {getAdminCustomerDisplayData(customer).name}
+                          {customer.internal_notes && (
+                            <FileText className="w-3 h-3 text-gray-400" title={`Notes: ${customer.internal_notes}`} />
+                          )}
                         </div>
-                        <div className="text-sm text-gray-600">{customer.email}</div>
+                        <div className="text-sm text-gray-600">
+                          {customer.email || (
+                            <span className="text-gray-400 italic font-mono text-xs">
+                              ID: {customer.id.substring(0, 8)}...
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -688,10 +755,46 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                     <div className="flex items-center space-x-1 text-sm text-gray-600">
                       <MapPin className="w-4 h-4" />
                       <span>
-                        {primaryAddress
-                          ? `${primaryAddress.city}, ${primaryAddress.destination_country}`
-                          : 'No address'}
+                        {customer.country 
+                          ? getCountryDisplayName(customer.country, countries)
+                          : primaryAddress
+                            ? `${primaryAddress.city}, ${getCountryDisplayName(primaryAddress.destination_country, countries)}`
+                            : 'No location'}
                       </span>
+                    </div>
+                  </TableCell>
+
+                  <TableCell className="px-6">
+                    <CustomerCodToggle
+                      customerId={customer.id}
+                      codEnabled={customer.cod_enabled}
+                      onToggle={onUpdateCod}
+                      isUpdating={isUpdating || false}
+                    />
+                  </TableCell>
+
+                  <TableCell className="px-6">
+                    <div className="flex flex-wrap gap-1 max-w-32">
+                      {getCustomerTags(customer).slice(0, 3).map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs px-2 py-0.5 bg-purple-50 text-purple-700 border-purple-200"
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                      {getCustomerTags(customer).length > 3 && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-2 py-0.5 bg-gray-50 text-gray-600 border-gray-200"
+                        >
+                          +{getCustomerTags(customer).length - 3}
+                        </Badge>
+                      )}
+                      {getCustomerTags(customer).length === 0 && (
+                        <span className="text-xs text-gray-400">No tags</span>
+                      )}
                     </div>
                   </TableCell>
 
@@ -758,7 +861,20 @@ export const WorldClassCustomerTable: React.FC<WorldClassCustomerTableProps> = (
                           Edit Customer
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => onSendEmail?.(customer.id, customer.email)}
+                          onClick={() => {
+                            const notes = prompt('Edit internal notes:', customer.internal_notes || '');
+                            if (notes !== null) {
+                              onUpdateNotes(customer.id, notes);
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Notes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => customer.email && onSendEmail?.(customer.id, customer.email)}
+                          disabled={!customer.email}
                           className="cursor-pointer"
                         >
                           <Mail className="w-4 h-4 mr-2" />

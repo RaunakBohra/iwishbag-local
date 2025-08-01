@@ -11,6 +11,7 @@ import { EditCustomerModal } from './modals/EditCustomerModal';
 import { H1, H2, Body, BodySmall } from '@/components/ui/typography';
 import { Users } from 'lucide-react';
 import { Customer } from './CustomerTable';
+import { isVIP } from '@/utils/customerTagUtils';
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,12 +94,13 @@ export const EnhancedCustomerManagementPage = () => {
       customers
         .map((customer) => {
           const analytics = customerAnalytics?.find((a) => a.customerId === customer.id);
-          const status = customer.internal_notes?.includes('VIP')
+          const status = isVIP(customer)
             ? 'VIP'
             : customer.cod_enabled
               ? 'Active'
               : 'Inactive';
-          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.delivery_addresses[0]?.city || 'N/A'}, ${customer.delivery_addresses[0]?.destination_country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
+          const location = customer.country || customer.delivery_addresses[0]?.destination_country || 'N/A';
+          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email || 'No email'}","${location}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
         })
         .join('\n');
 
@@ -143,12 +145,13 @@ export const EnhancedCustomerManagementPage = () => {
       selectedCustomers
         .map((customer) => {
           const analytics = customerAnalytics?.find((a) => a.customerId === customer.id);
-          const status = customer.internal_notes?.includes('VIP')
+          const status = isVIP(customer)
             ? 'VIP'
             : customer.cod_enabled
               ? 'Active'
               : 'Inactive';
-          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email}","${customer.delivery_addresses[0]?.city || 'N/A'}, ${customer.delivery_addresses[0]?.destination_country || 'N/A'}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
+          const location = customer.country || customer.delivery_addresses[0]?.destination_country || 'N/A';
+          return `${customer.id},"${customer.full_name || 'N/A'}","${customer.email || 'No email'}","${location}","${new Date(customer.created_at).toLocaleDateString()}","${analytics?.totalSpent || 0}","${analytics?.orderCount || 0}","${analytics?.avgOrderValue || 0}","${status}"`;
         })
         .join('\n');
 
@@ -195,6 +198,27 @@ export const EnhancedCustomerManagementPage = () => {
     navigate(`/admin/quotes?customer=${customerId}`);
   };
 
+  const handleBulkCodToggle = async (customerIds: string[], enabled: boolean) => {
+    try {
+      // Update COD status for all selected customers
+      for (const customerId of customerIds) {
+        await updateCodMutation.mutateAsync({ userId: customerId, codEnabled: enabled });
+      }
+      
+      toast({
+        title: 'Success',
+        description: `COD ${enabled ? 'enabled' : 'disabled'} for ${customerIds.length} customers`,
+      });
+    } catch (error) {
+      console.error('Bulk COD toggle error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update COD status for some customers',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50/40">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -238,6 +262,7 @@ export const EnhancedCustomerManagementPage = () => {
           onBulkEmail={handleBulkEmail}
           onBulkTag={handleBulkTag}
           onBulkExport={handleBulkExport}
+          onBulkCodToggle={handleBulkCodToggle}
           onEditCustomer={handleEditCustomer}
           onSendEmail={handleSendEmail}
           onViewMessages={handleViewMessages}

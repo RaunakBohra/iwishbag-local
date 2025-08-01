@@ -61,32 +61,32 @@ export const BulkTagModal: React.FC<BulkTagModalProps> = ({
       setIsSubmitting(true);
 
       const updates = selectedCustomers.map(async (customer) => {
-        const currentNotes = customer.internal_notes || '';
-        let updatedNotes = currentNotes;
+        const currentTags = customer.tags || '';
+        let updatedTags = currentTags;
 
         if (action === 'add') {
           // Add new tags (avoid duplicates)
-          const existingTags = currentNotes
+          const existingTags = currentTags
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean);
           const newTags = selectedTags.filter((tag) => !existingTags.includes(tag));
           if (newTags.length > 0) {
-            updatedNotes = [...existingTags, ...newTags].join(', ');
+            updatedTags = [...existingTags, ...newTags].join(', ');
           }
         } else {
           // Remove tags
-          const existingTags = currentNotes
+          const existingTags = currentTags
             .split(',')
             .map((tag) => tag.trim())
             .filter(Boolean);
           const remainingTags = existingTags.filter((tag) => !selectedTags.includes(tag));
-          updatedNotes = remainingTags.join(', ');
+          updatedTags = remainingTags.join(', ');
         }
 
         const { error } = await supabase
           .from('profiles')
-          .update({ internal_notes: updatedNotes || null })
+          .update({ tags: updatedTags || null })
           .eq('id', customer.id);
 
         if (error) throw error;

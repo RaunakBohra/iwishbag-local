@@ -1,0 +1,44 @@
+name: Check Expired Quotes
+
+on:
+  schedule:
+    # Run every day at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  check-expired:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci --only=production
+        npm install @supabase/supabase-js dotenv
+
+    - name: Check Expired Quotes
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: node scripts/check-expired-quotes.js
+
+    - name: Create Summary
+      if: always()
+      run: |
+        echo "## Expired Quotes Check Summary" >> $GITHUB_STEP_SUMMARY
+        echo "Run completed at: $(date)" >> $GITHUB_STEP_SUMMARY
+        if [ -f expiry-summary.json ]; then
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat expiry-summary.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi

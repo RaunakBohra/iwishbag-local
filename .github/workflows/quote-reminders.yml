@@ -1,0 +1,46 @@
+name: Send Quote Reminders
+
+on:
+  schedule:
+    # Run every day at 10 AM UTC (adjust for your timezone)
+    - cron: '0 10 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci --only=production
+        npm install @supabase/supabase-js dotenv
+
+    - name: Send Quote Reminders
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL || 'https://iwishbag.com' }}
+        EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY || '' }}
+      run: node scripts/send-quote-reminders.js
+
+    - name: Create Summary
+      if: always()
+      run: |
+        echo "## Quote Reminder Summary" >> $GITHUB_STEP_SUMMARY
+        echo "Run completed at: $(date)" >> $GITHUB_STEP_SUMMARY
+        if [ -f reminder-summary.json ]; then
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat reminder-summary.json >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi

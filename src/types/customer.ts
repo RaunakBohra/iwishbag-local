@@ -4,8 +4,11 @@ export type Customer = {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  phone: string | null; // From auth.users
+  country: string | null; // Country code from profile
   cod_enabled: boolean;
   internal_notes: string | null;
+  tags: string | null; // Comma-separated tags for categorization
   created_at: string;
   delivery_addresses: {
     id: string;

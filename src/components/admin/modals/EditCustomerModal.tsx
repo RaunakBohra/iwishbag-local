@@ -31,6 +31,7 @@ const editCustomerSchema = z.object({
   phone: z.string().optional(),
   cod_enabled: z.boolean(),
   internal_notes: z.string().optional(),
+  tags: z.string().optional(),
 });
 
 type EditCustomerFormData = z.infer<typeof editCustomerSchema>;
@@ -65,6 +66,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
       phone: customer.phone || '',
       cod_enabled: customer.cod_enabled,
       internal_notes: customer.internal_notes || '',
+      tags: customer.tags || '',
     },
   });
 
@@ -76,6 +78,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
       phone: customer.phone || '',
       cod_enabled: customer.cod_enabled,
       internal_notes: customer.internal_notes || '',
+      tags: customer.tags || '',
     });
   }, [customer, reset]);
 
@@ -91,11 +94,14 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
         .from('profiles')
         .update({
           full_name: data.full_name,
-          phone: data.phone || null,
           cod_enabled: data.cod_enabled,
           internal_notes: data.internal_notes || null,
+          tags: data.tags || null,
         })
         .eq('id', customer.id);
+      
+      // Note: Phone is stored in auth.users table, not profiles
+      // To update phone, we would need to use auth.admin.updateUserById() which requires service role
 
       if (profileError) throw profileError;
 
@@ -215,8 +221,16 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               <Phone className="h-4 w-4" />
               <span>Phone Number</span>
             </Label>
-            <Input id="phone" placeholder="Enter phone number (optional)" {...register('phone')} />
+            <Input 
+              id="phone" 
+              placeholder="Enter phone number (optional)" 
+              {...register('phone')} 
+              disabled 
+            />
             {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
+            <p className="text-xs text-gray-500">
+              Phone number updates require authentication system access. Contact system admin if needed.
+            </p>
           </div>
 
           {/* Address Display (Read-only) */}
@@ -256,6 +270,22 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
             <p className="text-xs text-gray-500">Allow this customer to pay via Cash on Delivery</p>
           </div>
 
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label htmlFor="tags">Customer Tags</Label>
+            <Input
+              id="tags"
+              placeholder="VIP, High Value, Frequent Buyer (comma-separated)"
+              {...register('tags')}
+            />
+            {errors.tags && (
+              <p className="text-sm text-red-600">{errors.tags.message}</p>
+            )}
+            <p className="text-xs text-gray-500">
+              Add comma-separated tags for categorization and filtering
+            </p>
+          </div>
+
           {/* Internal Notes */}
           <div className="space-y-2">
             <Label htmlFor="internal_notes">Internal Notes</Label>
@@ -269,7 +299,7 @@ export const EditCustomerModal: React.FC<EditCustomerModalProps> = ({
               <p className="text-sm text-red-600">{errors.internal_notes.message}</p>
             )}
             <p className="text-xs text-gray-500">
-              These notes are only visible to admin users and can include tags, preferences, etc.
+              Private notes visible only to admin users
             </p>
           </div>
 

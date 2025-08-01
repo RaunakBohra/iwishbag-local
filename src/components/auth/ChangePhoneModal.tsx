@@ -41,6 +41,7 @@ interface ChangePhoneModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPhoneChanged?: (newPhone: string) => void;
+  initialCountry?: string;
 }
 
 type ModalStep = 'phone-input' | 'otp-verification' | 'success';
@@ -49,6 +50,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
   open,
   onOpenChange,
   onPhoneChanged,
+  initialCountry = 'US',
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -536,6 +538,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
                           onChange={(newPhoneValue) => {
                             field.onChange(newPhoneValue);
                           }}
+                          initialCountry={initialCountry}
                           disabled={isLoading}
                           placeholder="Enter your new phone number"
                         />

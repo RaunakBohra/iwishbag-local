@@ -50,6 +50,24 @@ export interface StatusConfig {
   // CSS and styling
   cssClass?: string; // CSS class for styling
   badgeVariant?: string; // Badge variant for UI
+  
+  // Payment-specific properties
+  paymentType?: 'prepaid' | 'cod' | 'partial' | 'mixed';
+  requiresPaymentBefore?: 'shipping' | 'processing' | 'never';
+  minimumPaymentPercentage?: number; // For partial payments (0-100)
+  paymentMilestones?: {
+    percentage: number;
+    label: string;
+    required: boolean;
+  }[];
+  
+  // COD-specific properties
+  isCODStatus?: boolean;
+  codCollectionRequired?: boolean;
+  codRemittanceTracking?: boolean;
+  
+  // Payment validation function name (will be resolved at runtime)
+  paymentValidationRule?: 'full_payment' | 'partial_payment' | 'cod_allowed' | 'custom';
 }
 
 export interface StatusWorkflow {
