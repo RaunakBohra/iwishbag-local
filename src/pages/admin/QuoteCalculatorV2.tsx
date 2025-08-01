@@ -400,7 +400,7 @@ const QuoteCalculatorV2: React.FC = () => {
       // Track coupon usage if a discount code was applied
       if (orderDiscountCodeId && result && customerEmail) {
         try {
-          const discountService = (await import('@/services/DiscountService')).DiscountService;
+          const { DiscountService: discountService } = await import('@/services/DiscountService');
           const trackingResult = await discountService.trackCouponUsage(
             customerEmail, // Using email as customer ID for now
             result.id,

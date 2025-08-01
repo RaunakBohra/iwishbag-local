@@ -201,6 +201,12 @@ const sendTwilioSMS = async (phone: string, message: string) => {
 
   console.log('🌍 Sending SMS via Twilio to:', phone);
   
+  // Check if using test credentials
+  const isTestMode = twilioAccountSid === 'ACaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  if (isTestMode) {
+    console.log('🧪 TWILIO TEST MODE - Using test credentials');
+  }
+  
   // Twilio API uses basic auth
   const auth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
   

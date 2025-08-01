@@ -54,7 +54,7 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
     setError(null);
 
     try {
-      const discountService = DiscountService.getInstance();
+      const discountService = DiscountService;
       const validation = await discountService.validateDiscountCode(code.trim(), customerId);
 
       if (!validation.valid) {
