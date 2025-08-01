@@ -33,6 +33,7 @@ import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
 import { QuoteStatusManager } from '@/components/quotes-v2/QuoteStatusManager';
 import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
+import { QuoteExportControls } from '@/components/quotes-v2/QuoteExportControls';
 
 interface QuoteItem {
   id: string;
@@ -1129,6 +1130,42 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   ) : null;
                 })()}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Export Controls - Show in edit mode for saved quotes */}
+          {isEditMode && quoteId && calculationResult && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Export Quote</CardTitle>
+                <CardDescription>Download professional quote documents</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <QuoteExportControls
+                  quote={{
+                    id: quoteId,
+                    customer_name: customerName,
+                    customer_email: customerEmail,
+                    customer_phone: customerPhone,
+                    status: currentQuoteStatus,
+                    items: items,
+                    total_usd: calculationResult.total,
+                    total_customer_currency: calculationResult.totalCustomerCurrency,
+                    customer_currency: customerCurrency,
+                    origin_country: originCountry,
+                    destination_country: destinationCountry,
+                    created_at: new Date().toISOString(),
+                    expires_at: expiresAt,
+                    notes: adminNotes,
+                    calculation_data: calculationResult,
+                    share_token: shareToken,
+                  }}
+                  variant="outline"
+                  size="default"
+                  showLabel={true}
+                  className="w-full"
+                />
               </CardContent>
             </Card>
           )}

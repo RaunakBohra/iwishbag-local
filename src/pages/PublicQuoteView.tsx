@@ -19,6 +19,7 @@ import {
   FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { QuoteExportButton } from '@/components/quotes-v2/QuoteExportControls';
 
 interface QuoteItem {
   id: string;
@@ -341,6 +342,63 @@ export default function PublicQuoteView() {
                 <p className="text-sm text-muted-foreground">{quote.payment_terms}</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Export Actions - Always Available */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Download Quote</h3>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <QuoteExportButton
+                quote={{
+                  id: quote.id,
+                  customer_name: quote.customer_name,
+                  customer_email: quote.customer_email,
+                  customer_phone: quote.customer_phone,
+                  status: isExpired ? 'expired' : quote.status,
+                  items: quote.items || [],
+                  total_usd: quote.total_usd,
+                  total_customer_currency: quote.total_customer_currency,
+                  customer_currency: quote.customer_currency,
+                  origin_country: quote.origin_country,
+                  destination_country: quote.destination_country,
+                  created_at: quote.created_at,
+                  expires_at: quote.expires_at,
+                  notes: quote.notes,
+                  calculation_data: quote.calculation_data,
+                  share_token: actualToken,
+                }}
+                type="pdf"
+                variant="outline"
+                size="default"
+              />
+              <QuoteExportButton
+                quote={{
+                  id: quote.id,
+                  customer_name: quote.customer_name,
+                  customer_email: quote.customer_email,
+                  customer_phone: quote.customer_phone,
+                  status: isExpired ? 'expired' : quote.status,
+                  items: quote.items || [],
+                  total_usd: quote.total_usd,
+                  total_customer_currency: quote.total_customer_currency,
+                  customer_currency: quote.customer_currency,
+                  origin_country: quote.origin_country,
+                  destination_country: quote.destination_country,
+                  created_at: quote.created_at,
+                  expires_at: quote.expires_at,
+                  notes: quote.notes,
+                  calculation_data: quote.calculation_data,
+                  share_token: actualToken,
+                }}
+                type="excel"
+                variant="outline"
+                size="default"
+              />
+            </div>
           </CardContent>
         </Card>
 

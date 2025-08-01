@@ -79,39 +79,102 @@ const sendSparrowSMS = async (phone: string, message: string) => {
 // MSG91 for India
 const sendMSG91SMS = async (phone: string, message: string) => {
   const msg91AuthKey = Deno.env.get('MSG91_AUTH_KEY');
-  const msg91Sender = Deno.env.get('MSG91_SENDER');
+  const msg91Sender = Deno.env.get('MSG91_SENDER') || 'IWISH';
   const msg91TemplateId = Deno.env.get('MSG91_TEMPLATE_ID');
   
-  if (!msg91AuthKey || !msg91Sender) {
-    throw new Error('MSG91 credentials not configured');
+  if (!msg91AuthKey) {
+    throw new Error('MSG91 AUTH_KEY not configured');
   }
 
-  console.log('🇮🇳 Sending SMS via MSG91 to:', phone);
+  console.log('🇮🇳 Sending SMS via MSG91 to:', phone.replace(/\d(?=\d{4})/g, '*'));
   
-  // MSG91 API endpoint for sending SMS
-  const response = await fetch('https://control.msg91.com/api/v5/flow/', {
-    method: 'POST',
-    headers: {
-      'Authkey': msg91AuthKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  // Clean phone number - MSG91 expects without country code for Indian numbers
+  let cleanPhone = phone.replace(/[^\d]/g, '');
+  if (cleanPhone.startsWith('91')) {
+    cleanPhone = cleanPhone.substring(2); // Remove 91 country code
+  }
+  
+  console.log('📱 Clean phone for MSG91:', cleanPhone.replace(/\d(?=\d{4})/g, '*'));
+  
+  let response;
+  let requestBody;
+  
+  // Try template-based API first (required for promotional/OTP messages)
+  if (msg91TemplateId) {
+    console.log('📝 Using MSG91 Template API with template:', msg91TemplateId);
+    
+    requestBody = {
+      template_id: msg91TemplateId,
       sender: msg91Sender,
-      message: message,
-      mobiles: phone.replace(/[^\d]/g, ''), // Remove non-digits
-      template_id: msg91TemplateId || undefined,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('❌ MSG91 SMS error:', errorData);
-    throw new Error(`MSG91 SMS error: ${response.status} ${errorData}`);
+      short_url: "0",
+      mobiles: cleanPhone,
+      var1: message.match(/\d{6}/)?.[0] || 'CODE' // Extract OTP from message
+    };
+    
+    response = await fetch('https://control.msg91.com/api/v5/flow/', {
+      method: 'POST',
+      headers: {
+        'Authkey': msg91AuthKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+  } else {
+    console.log('📝 Using MSG91 Direct SMS API');
+    
+    // Fallback to direct SMS API
+    requestBody = {
+      sender: msg91Sender,
+      route: "4", // Transactional route
+      country: "91",
+      sms: [
+        {
+          message: message,
+          to: [cleanPhone]
+        }
+      ]
+    };
+    
+    response = await fetch('https://control.msg91.com/api/v5/sms/', {
+      method: 'POST',
+      headers: {
+        'Authkey': msg91AuthKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
   }
 
-  const result = await response.json();
+  console.log('📤 MSG91 Request:', JSON.stringify(requestBody, null, 2));
+  
+  const responseText = await response.text();
+  console.log('📥 MSG91 Raw Response:', responseText);
+  
+  if (!response.ok) {
+    console.error('❌ MSG91 SMS error:', responseText);
+    throw new Error(`MSG91 SMS error: ${response.status} ${responseText}`);
+  }
+
+  let result;
+  try {
+    result = JSON.parse(responseText);
+  } catch (parseError) {
+    console.log('⚠️ MSG91 returned non-JSON response:', responseText);
+    // Some MSG91 responses are plain text success messages
+    if (responseText.includes('success') || responseText.includes('sent')) {
+      result = { status: 'success', message: responseText };
+    } else {
+      throw new Error(`MSG91 response parsing failed: ${responseText}`);
+    }
+  }
   console.log('✅ MSG91 SMS sent successfully:', result);
-  return result;
+  
+  return {
+    provider: 'MSG91',
+    result: result,
+    phone: cleanPhone,
+    template_id: msg91TemplateId,
+  };
 };
 
 // Twilio for all other countries
