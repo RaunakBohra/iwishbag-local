@@ -534,6 +534,50 @@ class DiscountServiceClass {
     }
   }
 
+  async trackCouponUsage(
+    customerId: string,
+    quoteId: string,
+    discountCodeId: string,
+    discountAmount: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Record the usage
+      const { error: usageError } = await supabase
+        .from('customer_discount_usage')
+        .insert({
+          customer_id: customerId,
+          quote_id: quoteId,
+          discount_code_id: discountCodeId,
+          discount_amount: discountAmount,
+          used_at: new Date().toISOString()
+        });
+
+      if (usageError) {
+        console.error('Error tracking coupon usage:', usageError);
+        return { success: false, error: 'Failed to track coupon usage' };
+      }
+
+      // Increment usage count on the discount code
+      const { error: incrementError } = await supabase
+        .rpc('increment_discount_usage', {
+          p_discount_code_id: discountCodeId
+        });
+
+      if (incrementError) {
+        console.error('Error incrementing usage count:', incrementError);
+        // Don't fail the whole operation if increment fails
+      }
+
+      // Clear cache for this discount code
+      this.discountCache.clear();
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error in trackCouponUsage:', error);
+      return { success: false, error: 'Unexpected error tracking coupon usage' };
+    }
+  }
+
   clearCache(): void {
     this.discountCache.clear();
   }

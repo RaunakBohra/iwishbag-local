@@ -79,7 +79,7 @@ const sendSparrowSMS = async (phone: string, message: string) => {
 // MSG91 for India
 const sendMSG91SMS = async (phone: string, message: string) => {
   const msg91AuthKey = Deno.env.get('MSG91_AUTH_KEY');
-  const msg91Sender = Deno.env.get('MSG91_SENDER') || 'IWISH';
+  const msg91Sender = Deno.env.get('MSG91_SENDER') || 'MSGIND';
   const msg91TemplateId = Deno.env.get('MSG91_TEMPLATE_ID');
   
   if (!msg91AuthKey) {
@@ -122,26 +122,21 @@ const sendMSG91SMS = async (phone: string, message: string) => {
   } else {
     console.log('📝 Using MSG91 Direct SMS API');
     
-    // Fallback to direct SMS API
-    requestBody = {
-      sender: msg91Sender,
-      route: "4", // Transactional route
-      country: "91",
-      sms: [
-        {
-          message: message,
-          to: [cleanPhone]
-        }
-      ]
-    };
+    // Fallback to direct SMS API - using simpler format
+    console.log('📝 Using MSG91 Direct SMS API with simple format');
     
-    response = await fetch('https://control.msg91.com/api/v5/sms/', {
-      method: 'POST',
-      headers: {
-        'Authkey': msg91AuthKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
+    // Try the simpler API format first
+    const params = new URLSearchParams({
+      authkey: msg91AuthKey,
+      mobiles: cleanPhone,
+      message: message,
+      sender: msg91Sender,
+      route: '4', // Transactional route
+      country: '91',
+    });
+    
+    response = await fetch(`https://control.msg91.com/api/sendhttp.php?${params}`, {
+      method: 'GET',
     });
   }
 
@@ -160,8 +155,25 @@ const sendMSG91SMS = async (phone: string, message: string) => {
     result = JSON.parse(responseText);
   } catch (parseError) {
     console.log('⚠️ MSG91 returned non-JSON response:', responseText);
-    // Some MSG91 responses are plain text success messages
-    if (responseText.includes('success') || responseText.includes('sent')) {
+    
+    // Check if it's a hex encoded response
+    if (/^[0-9a-fA-F]+$/.test(responseText)) {
+      try {
+        // Try to decode hex to ASCII
+        const decoded = responseText.match(/.{2}/g)?.map(hex => String.fromCharCode(parseInt(hex, 16))).join('');
+        console.log('📄 Decoded MSG91 response:', decoded);
+        
+        // Check if decoded contains success indicators
+        if (decoded && (decoded.includes('success') || decoded.includes('sent') || decoded.includes('SMS'))) {
+          result = { status: 'success', message: decoded, hex: responseText };
+        } else {
+          result = { status: 'error', message: decoded || responseText };
+        }
+      } catch (hexError) {
+        console.log('❌ Failed to decode hex response');
+        result = { status: 'unknown', message: responseText };
+      }
+    } else if (responseText.includes('success') || responseText.includes('sent')) {
       result = { status: 'success', message: responseText };
     } else {
       throw new Error(`MSG91 response parsing failed: ${responseText}`);

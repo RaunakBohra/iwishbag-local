@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuoteExportButton } from '@/components/quotes-v2/QuoteExportControls';
+import { AvailableDiscounts } from '@/components/quotes-v2/AvailableDiscounts';
 
 interface QuoteItem {
   id: string;
@@ -344,6 +345,15 @@ export default function PublicQuoteView() {
             )}
           </CardContent>
         </Card>
+
+        {/* Available Discounts */}
+        {!isExpired && quote.status === 'draft' && (
+          <AvailableDiscounts 
+            countryCode={quote.destination_country}
+            customerEmail={quote.customer_email}
+            className="mb-6"
+          />
+        )}
 
         {/* Export Actions - Always Available */}
         <Card>

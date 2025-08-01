@@ -245,7 +245,8 @@
       "Bash(./check-lambda-logs.sh:*)",
       "Bash(zip:*)",
       "WebFetch(domain:docs.msg91.com)",
-      "WebFetch(domain:msg91.com)"
+      "WebFetch(domain:msg91.com)",
+      "Bash(./test-msg91.sh:*)"
     ],
     "deny": []
   }

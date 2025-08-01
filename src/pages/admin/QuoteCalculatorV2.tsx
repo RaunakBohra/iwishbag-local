@@ -34,6 +34,7 @@ import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
 import { QuoteStatusManager } from '@/components/quotes-v2/QuoteStatusManager';
 import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
 import { QuoteExportControls } from '@/components/quotes-v2/QuoteExportControls';
+import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 
 interface QuoteItem {
   id: string;
@@ -85,6 +86,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [orderDiscountType, setOrderDiscountType] = useState<'percentage' | 'fixed'>('percentage');
   const [orderDiscountValue, setOrderDiscountValue] = useState(0);
   const [orderDiscountCode, setOrderDiscountCode] = useState('');
+  const [orderDiscountCodeId, setOrderDiscountCodeId] = useState<string | null>(null);
   const [shippingDiscountType, setShippingDiscountType] = useState<'percentage' | 'fixed' | 'free'>('percentage');
   const [shippingDiscountValue, setShippingDiscountValue] = useState(0);
   
@@ -393,6 +395,26 @@ const QuoteCalculatorV2: React.FC = () => {
         
         // Update URL to include the new quote ID
         navigate(`/admin/quote-calculator-v2/${data.id}`, { replace: true });
+      }
+
+      // Track coupon usage if a discount code was applied
+      if (orderDiscountCodeId && result && customerEmail) {
+        try {
+          const discountService = (await import('@/services/DiscountService')).DiscountService;
+          const trackingResult = await discountService.trackCouponUsage(
+            customerEmail, // Using email as customer ID for now
+            result.id,
+            orderDiscountCodeId,
+            calculationResult.calculation_steps?.order_discount_amount || 0
+          );
+
+          if (!trackingResult.success) {
+            console.error('Failed to track coupon usage:', trackingResult.error);
+          }
+        } catch (trackingError) {
+          console.error('Error tracking coupon usage:', trackingError);
+          // Don't fail the quote save if tracking fails
+        }
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -918,9 +940,32 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Order Discount */}
+                {/* Coupon Code */}
                 <div className="space-y-2">
-                  <h4 className="font-medium">Order Discount</h4>
+                  <h4 className="font-medium">Coupon Code</h4>
+                  <CouponCodeInput
+                    customerId={customerEmail} // Using email as customer identifier for now
+                    quoteTotal={calculationResult?.calculation_steps?.subtotal || 0}
+                    onDiscountApplied={(discount) => {
+                      setOrderDiscountType(discount.type);
+                      setOrderDiscountValue(discount.value);
+                      setOrderDiscountCode(discount.code);
+                      setOrderDiscountCodeId(discount.discountCodeId || null);
+                    }}
+                    onDiscountRemoved={() => {
+                      setOrderDiscountType('percentage');
+                      setOrderDiscountValue(0);
+                      setOrderDiscountCode('');
+                      setOrderDiscountCodeId(null);
+                    }}
+                    currentCode={orderDiscountCode}
+                    disabled={!customerEmail || !calculationResult}
+                  />
+                </div>
+
+                {/* Manual Discount (Admin Override) */}
+                <div className="space-y-2">
+                  <h4 className="font-medium">Manual Discount (Admin)</h4>
                   <div className="flex gap-2">
                     <Select value={orderDiscountType} onValueChange={(value: any) => setOrderDiscountType(value)}>
                       <SelectTrigger className="w-32">
@@ -938,15 +983,20 @@ const QuoteCalculatorV2: React.FC = () => {
                       value={orderDiscountValue}
                       onChange={(e) => setOrderDiscountValue(parseFloat(e.target.value) || 0)}
                       placeholder="0"
+                      disabled={!!orderDiscountCode} // Disable if coupon is applied
                     />
                   </div>
-                  <Input
-                    value={orderDiscountCode}
-                    onChange={(e) => setOrderDiscountCode(e.target.value)}
-                    placeholder="Promo code (optional)"
-                  />
+                  {orderDiscountCode && (
+                    <p className="text-sm text-amber-600">
+                      Coupon applied - manual discount disabled
+                    </p>
+                  )}
                 </div>
+              </div>
 
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Shipping Discount */}
                 <div className="space-y-2">
                   <h4 className="font-medium">Shipping Discount</h4>
