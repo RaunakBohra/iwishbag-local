@@ -69,7 +69,11 @@ export function QuoteSendEmailSimple({
           currency: quoteData.customer_currency,
           status: quoteData.status,
           share_token: quoteData.share_token,
-          expires_at: quoteData.expires_at
+          expires_at: quoteData.expires_at,
+          // Also include the alternative field name for compatibility
+          totalAmount: quoteData.total_customer_currency || quoteData.total_usd,
+          customerName: quoteData.customer_name,
+          quoteId: quoteData.id
         };
         emailAddress = quoteData.customer_email;
       } else {
