@@ -945,7 +945,12 @@ const QuoteCalculatorV2: React.FC = () => {
                   <h4 className="font-medium">Coupon Code</h4>
                   <CouponCodeInput
                     customerId={customerEmail} // Using email as customer identifier for now
-                    quoteTotal={calculationResult?.calculation_steps?.subtotal || 0}
+                    quoteTotal={
+                      calculationResult?.calculation_steps?.subtotal || 
+                      calculationResult?.calculation_steps?.items_subtotal ||
+                      items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                      0
+                    }
                     onDiscountApplied={(discount) => {
                       setOrderDiscountType(discount.type);
                       setOrderDiscountValue(discount.value);
