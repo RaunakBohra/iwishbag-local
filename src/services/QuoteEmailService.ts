@@ -65,16 +65,21 @@ export class QuoteEmailService {
         text: this.generateQuoteEmailText(quote, shareUrl, expiryDate),
       };
 
-      // Send email via your email service (Supabase Edge Function, SendGrid, etc.)
-      const { error: sendError } = await supabase.functions.invoke('send-email', {
-        body: emailData,
+      // Send email via AWS SES Edge Function
+      const { data, error: sendError } = await supabase.functions.invoke('send-email-ses', {
+        body: {
+          ...emailData,
+          from: 'iwishBag <noreply@mail.iwishbag.com>', // Your verified domain
+          replyTo: 'support@mail.iwishbag.com',
+        },
       });
 
       if (sendError) {
         console.error('Error sending email:', sendError);
-        // For demo purposes, we'll just log the email content
-        console.log('Email would be sent:', emailData);
+        throw new Error('Failed to send email');
       }
+
+      console.log('Quote email sent successfully:', data);
 
       // Update quote to mark as sent
       await supabase
@@ -115,14 +120,21 @@ export class QuoteEmailService {
         text: this.generateReminderEmailText(quote, shareUrl, reminderNumber),
       };
 
-      // Send email
-      const { error: sendError } = await supabase.functions.invoke('send-email', {
-        body: emailData,
+      // Send email via AWS SES Edge Function
+      const { data, error: sendError } = await supabase.functions.invoke('send-email-ses', {
+        body: {
+          ...emailData,
+          from: 'iwishBag <noreply@mail.iwishbag.com>', // Your verified domain
+          replyTo: 'support@mail.iwishbag.com',
+        },
       });
 
       if (sendError) {
-        console.log('Reminder email would be sent:', emailData);
+        console.error('Error sending reminder email:', sendError);
+        throw new Error('Failed to send reminder email');
       }
+
+      console.log('Reminder email sent successfully:', data);
 
       // Update reminder count
       await supabase.rpc('send_quote_reminder', { quote_id: quoteId });

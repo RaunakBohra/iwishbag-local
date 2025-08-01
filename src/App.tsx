@@ -112,6 +112,7 @@ const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDi
 const CompactPhoneInputDemo = React.lazy(() => import('@/demo/CompactPhoneInputDemo'));
 const QuoteV2Demo = React.lazy(() => import('@/components/demo/QuoteV2Demo').then((m) => ({ default: m.QuoteV2Demo })));
 const QuoteV2Integration = React.lazy(() => import('@/pages/demos/QuoteV2Integration'));
+const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
@@ -325,11 +326,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'quote/view/:token',
-        element: (
-          <Suspense fallback={<SkeletonProvider.QuoteDetailSkeleton />}>
-            <PublicQuoteView />
-          </Suspense>
-        ),
+        element: <PublicQuoteView />,
       },
       {
         path: 'cost-estimator',

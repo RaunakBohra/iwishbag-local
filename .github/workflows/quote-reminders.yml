@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci --only=production
-        npm install @supabase/supabase-js dotenv
+        npm install @supabase/supabase-js dotenv node-fetch
 
     - name: Send Quote Reminders
       env:

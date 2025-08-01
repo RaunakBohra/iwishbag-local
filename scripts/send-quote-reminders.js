@@ -8,6 +8,11 @@
 const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 
+// Ensure fetch is available in Node.js environment
+if (!global.fetch) {
+  global.fetch = require('node-fetch');
+}
+
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,26 +25,44 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Email sending function (implement based on your email service)
+// Email sending function using Supabase Edge Function with AWS SES
 async function sendEmail(emailData) {
-  // For demonstration, we'll log the email
-  console.log('Sending email:', {
-    to: emailData.to,
-    subject: emailData.subject,
-  });
+  try {
+    console.log('Sending email via AWS SES:', {
+      to: emailData.to,
+      subject: emailData.subject,
+    });
 
-  // TODO: Implement actual email sending using your service
-  // Example with SendGrid:
-  // const sgMail = require('@sendgrid/mail');
-  // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  // await sgMail.send(emailData);
+    // Call the Supabase Edge Function that uses AWS SES
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-email-ses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseServiceKey}`,
+      },
+      body: JSON.stringify({
+        to: emailData.to,
+        subject: emailData.subject,
+        html: emailData.html,
+        text: emailData.text,
+        from: 'iwishBag <noreply@mail.iwishbag.com>', // Your verified domain
+        replyTo: 'support@mail.iwishbag.com',
+      }),
+    });
 
-  // Example with AWS SES:
-  // const AWS = require('aws-sdk');
-  // const ses = new AWS.SES({ region: 'us-east-1' });
-  // await ses.sendEmail(emailData).promise();
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Email send failed:', error);
+      return false;
+    }
 
-  return true;
+    const result = await response.json();
+    console.log('Email sent successfully:', result);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
 }
 
 // Generate reminder email HTML
