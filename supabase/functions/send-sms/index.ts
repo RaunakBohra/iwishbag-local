@@ -201,10 +201,24 @@ const sendTwilioSMS = async (phone: string, message: string) => {
 
   console.log('🌍 Sending SMS via Twilio to:', phone);
   
-  // Check if using test credentials
-  const isTestMode = twilioAccountSid === 'ACaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  // Check if using test credentials or test mode is enabled
+  const isTestMode = twilioAccountSid === 'ACaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' || 
+                     Deno.env.get('SMS_TEST_MODE') === 'true';
+  
   if (isTestMode) {
-    console.log('🧪 TWILIO TEST MODE - Using test credentials');
+    console.log('🧪 TWILIO TEST MODE - Simulating SMS send');
+    // In test mode, return success without actually calling Twilio
+    return {
+      provider: 'Twilio (Test Mode)',
+      result: {
+        sid: 'TEST_' + Math.random().toString(36).substr(2, 9),
+        status: 'sent',
+        to: phone,
+        from: twilioFromNumber,
+        body: message,
+        test_mode: true
+      }
+    };
   }
   
   // Twilio API uses basic auth

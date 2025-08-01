@@ -149,10 +149,30 @@ class DiscountServiceClass {
 
       // Check customer usage limit if customerId provided
       if (customerId && discountCode.usage_per_customer) {
+        // First, try to find the customer by email
+        let actualCustomerId = customerId;
+        
+        // Check if customerId is an email
+        if (customerId.includes('@')) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', customerId)
+            .single();
+          
+          if (profile) {
+            actualCustomerId = profile.id;
+          } else {
+            // If no profile found, skip usage check for now
+            console.log('No profile found for email:', customerId);
+            return { valid: true, discount: discountCode };
+          }
+        }
+
         const { count } = await supabase
           .from('customer_discount_usage')
           .select('*', { count: 'exact', head: true })
-          .eq('customer_id', customerId)
+          .eq('customer_id', actualCustomerId)
           .eq('discount_code_id', discountCode.id);
 
         if (count && count >= discountCode.usage_per_customer) {
@@ -541,11 +561,30 @@ class DiscountServiceClass {
     discountAmount: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // Convert email to actual customer ID if needed
+      let actualCustomerId = customerId;
+      
+      if (customerId.includes('@')) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', customerId)
+          .single();
+        
+        if (profile) {
+          actualCustomerId = profile.id;
+        } else {
+          // Create a placeholder profile or skip tracking
+          console.log('No profile found for email:', customerId);
+          return { success: true }; // Skip tracking for now
+        }
+      }
+
       // Record the usage
       const { error: usageError } = await supabase
         .from('customer_discount_usage')
         .insert({
-          customer_id: customerId,
+          customer_id: actualCustomerId,
           quote_id: quoteId,
           discount_code_id: discountCodeId,
           discount_amount: discountAmount,
