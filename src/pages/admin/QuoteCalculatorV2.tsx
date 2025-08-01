@@ -23,9 +23,10 @@ import {
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { currencyService } from '@/services/CurrencyService';
 import { QuoteBreakdownV2 } from '@/components/quotes-v2/QuoteBreakdownV2';
+import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 
 interface QuoteItem {
   id: string;
@@ -44,8 +45,14 @@ interface QuoteItem {
 
 const QuoteCalculatorV2: React.FC = () => {
   const navigate = useNavigate();
+  const { id: quoteId } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState(false);
+  const [currentQuoteStatus, setCurrentQuoteStatus] = useState<string>('draft');
+  const [emailSent, setEmailSent] = useState(false);
+  const [showEmailSection, setShowEmailSection] = useState(false);
   
   // Form state
   const [customerEmail, setCustomerEmail] = useState('');
@@ -97,12 +104,84 @@ const QuoteCalculatorV2: React.FC = () => {
     });
   }, [destinationCountry]);
 
-  // Auto-calculate on changes
+  // Load existing quote if ID is provided
   useEffect(() => {
-    if (items.some(item => item.name && item.unit_price_usd > 0)) {
+    if (quoteId) {
+      loadExistingQuote(quoteId);
+    }
+  }, [quoteId]);
+
+  // Auto-calculate on changes (but not during initial quote loading)
+  useEffect(() => {
+    if (!loadingQuote && items.some(item => item.name && item.unit_price_usd > 0)) {
       calculateQuote();
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+
+  const loadExistingQuote = async (id: string) => {
+    setLoadingQuote(true);
+    try {
+      const { data: quote, error } = await supabase
+        .from('quotes_v2')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      if (quote) {
+        // Set edit mode
+        setIsEditMode(true);
+        setCurrentQuoteStatus(quote.status || 'draft');
+        setEmailSent(quote.email_sent || false);
+
+        // Map quote data to form fields
+        setCustomerEmail(quote.customer_email || '');
+        setCustomerName(quote.customer_name || '');
+        setCustomerPhone(quote.customer_phone || '');
+        setOriginCountry(quote.origin_country || 'US');
+        setDestinationCountry(quote.destination_country || 'NP');
+        setCustomerCurrency(quote.customer_currency || 'USD');
+        setAdminNotes(quote.admin_notes || '');
+
+        // Map items - convert from V2 format to calculator format
+        if (quote.items && Array.isArray(quote.items)) {
+          const mappedItems = quote.items.map((item: any, index: number) => ({
+            id: item.id || `item-${index}`,
+            name: item.name || '',
+            url: item.url || '',
+            quantity: item.quantity || 1,
+            unit_price_usd: item.costprice_origin || 0, // V2 uses costprice_origin
+            weight_kg: item.weight || undefined,
+            category: item.category || '',
+            notes: item.notes || item.customer_notes || '',
+            hsn_code: item.hsn_code || '',
+            use_hsn_rates: item.use_hsn_rates || false
+          }));
+          setItems(mappedItems);
+        }
+
+        // Set calculation result if available
+        if (quote.calculation_data) {
+          setCalculationResult(quote.calculation_data);
+        }
+
+        toast({
+          title: 'Quote Loaded',
+          description: `Editing quote ${quote.quote_number || id.slice(-8)}`
+        });
+      }
+    } catch (error) {
+      console.error('Error loading quote:', error);
+      toast({
+        title: 'Error Loading Quote',
+        description: 'Failed to load the quote data',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingQuote(false);
+    }
+  };
 
   const addItem = () => {
     setItems([...items, {
@@ -198,44 +277,77 @@ const QuoteCalculatorV2: React.FC = () => {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Generate quote number
-      const { data: quoteNumber } = await supabase
-        .rpc('generate_quote_number_v2');
+      // Prepare quote data
+      const quoteData = {
+        customer_email: customerEmail,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        origin_country: originCountry,
+        destination_country: destinationCountry,
+        shipping_method: shippingMethod,
+        insurance_required: insuranceRequired,
+        items: items.filter(item => item.name && item.unit_price_usd > 0).map(item => ({
+          ...item,
+          costprice_origin: item.unit_price_usd, // Map back to V2 format
+          weight: item.weight_kg,
+          customer_notes: item.notes
+        })),
+        calculation_data: calculationResult,
+        total_usd: calculationResult.calculation_steps.total_usd,
+        total_customer_currency: calculationResult.calculation_steps.total_customer_currency,
+        customer_currency: customerCurrency,
+        admin_notes: adminNotes,
+        status: isEditMode ? 'calculated' : 'draft', // Update status when editing
+        calculated_at: new Date().toISOString()
+      };
 
-      // Save quote
-      const { data, error } = await supabase
-        .from('quotes_v2')
-        .insert({
-          quote_number: quoteNumber,
-          customer_email: customerEmail,
-          customer_name: customerName,
-          customer_phone: customerPhone,
-          origin_country: originCountry,
-          destination_country: destinationCountry,
-          shipping_method: shippingMethod,
-          insurance_required: insuranceRequired,
-          items: items.filter(item => item.name && item.unit_price_usd > 0),
-          calculation_data: calculationResult,
-          total_usd: calculationResult.calculation_steps.total_usd,
-          total_customer_currency: calculationResult.calculation_steps.total_customer_currency,
-          customer_currency: customerCurrency,
-          admin_notes: adminNotes,
-          status: 'draft',
-          created_by: user?.id,
-          calculated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      let result;
+      if (isEditMode && quoteId) {
+        // Update existing quote
+        const { data, error } = await supabase
+          .from('quotes_v2')
+          .update(quoteData)
+          .eq('id', quoteId)
+          .select()
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
+        result = data;
+        
+        toast({
+          title: 'Success',
+          description: 'Quote updated successfully'
+        });
+      } else {
+        // Create new quote
+        const { data: quoteNumber } = await supabase
+          .rpc('generate_quote_number_v2');
 
-      toast({
-        title: 'Success',
-        description: `Quote ${quoteNumber} created successfully`
-      });
+        const { data, error } = await supabase
+          .from('quotes_v2')
+          .insert({
+            ...quoteData,
+            quote_number: quoteNumber,
+            created_by: user?.id,
+          })
+          .select()
+          .single();
 
-      // Navigate to quote details
-      navigate(`/admin/quotes-v2/${data.id}`);
+        if (error) throw error;
+        result = data;
+
+        toast({
+          title: 'Success',
+          description: `Quote ${quoteNumber} created successfully`
+        });
+
+        // Switch to edit mode after creating
+        setIsEditMode(true);
+        setCurrentQuoteStatus('draft');
+        
+        // Update URL to include the new quote ID
+        navigate(`/admin/quote-calculator-v2/${data.id}`, { replace: true });
+      }
     } catch (error) {
       console.error('Save error:', error);
       toast({
@@ -246,6 +358,19 @@ const QuoteCalculatorV2: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEmailSent = async () => {
+    // Refresh quote to get updated email_sent status  
+    if (quoteId) {
+      await loadExistingQuote(quoteId);
+    }
+    setShowEmailSection(false);
+    setCurrentQuoteStatus('sent');
+    toast({
+      title: "Success",
+      description: "Quote email sent successfully",
+    });
   };
 
   const getCustomerCurrency = async (countryCode: string): Promise<string> => {
@@ -263,14 +388,51 @@ const QuoteCalculatorV2: React.FC = () => {
   const taxInfo = simplifiedQuoteCalculator.getTaxInfo(destinationCountry);
   const shippingMethods = simplifiedQuoteCalculator.getShippingMethods();
 
+  // Show loading state when loading existing quote
+  if (loadingQuote) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading quote data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Quote Calculator V2</h1>
-          <p className="text-gray-500 mt-1">Simplified and transparent quote calculation</p>
+          <h1 className="text-3xl font-bold">
+            {isEditMode ? 'Edit Quote' : 'Quote Calculator V2'}
+          </h1>
+          <p className="text-gray-500 mt-1">
+            {isEditMode 
+              ? `Editing customer quote • Status: ${currentQuoteStatus}` 
+              : 'Simplified and transparent quote calculation'
+            }
+          </p>
+          {isEditMode && quoteId && (
+            <p className="text-xs text-gray-400 mt-1">ID: {quoteId}</p>
+          )}
         </div>
         <div className="flex items-center gap-4">
+          {isEditMode && (
+            <div className="flex items-center gap-2">
+              <Badge variant={currentQuoteStatus === 'calculated' ? 'default' : 'secondary'}>
+                {currentQuoteStatus}
+              </Badge>
+              {emailSent && (
+                <Badge variant="outline" className="text-green-600">
+                  <Eye className="mr-1 h-3 w-3" />
+                  Email Sent
+                </Badge>
+              )}
+            </div>
+          )}
           <div className="flex items-center space-x-2">
             <Switch
               id="advanced-mode"
@@ -286,7 +448,7 @@ const QuoteCalculatorV2: React.FC = () => {
           </div>
           <Badge variant="secondary" className="text-lg px-4 py-2">
             <Calculator className="w-4 h-4 mr-2" />
-            New Calculator
+            {isEditMode ? 'Edit Mode' : 'New Calculator'}
           </Badge>
         </div>
       </div>
@@ -749,12 +911,40 @@ const QuoteCalculatorV2: React.FC = () => {
                     disabled={loading}
                   >
                     <Save className="w-4 h-4 mr-2" />
-                    {loading ? 'Saving...' : 'Save Quote'}
+                    {loading ? 'Saving...' : (isEditMode ? 'Update Quote' : 'Save Quote')}
                   </Button>
+                  
+                  {/* Email sending for edit mode */}
+                  {isEditMode && calculationResult && currentQuoteStatus === 'calculated' && !emailSent && (
+                    <Button 
+                      onClick={() => setShowEmailSection(true)} 
+                      variant="secondary"
+                      className="w-full"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Send Quote Email
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>
           </Card>
+
+          {/* Email Sending Section */}
+          {isEditMode && showEmailSection && quoteId && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Send Quote Email</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <QuoteSendEmailSimple
+                  quoteId={quoteId}
+                  onEmailSent={handleEmailSent}
+                  isV2={true}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Calculation Result */}
           {calculationResult && (

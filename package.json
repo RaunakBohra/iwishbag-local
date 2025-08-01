@@ -47,9 +47,13 @@
     "e2e:debug": "playwright test --debug",
     "e2e:report": "playwright show-report",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test:email": "tsx src/scripts/test-ses-email.ts",
+    "setup:aws": "tsx src/scripts/setup-aws-credentials.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.858.0",
+    "@aws-sdk/client-ses": "^3.858.0",
     "@cloudflare/mcp-server-cloudflare": "^0.2.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
@@ -97,7 +101,6 @@
     "libphonenumber-js": "^1.12.10",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
-    "node-fetch": "^2.7.0",
     "otplib": "^12.0.1",
     "papaparse": "^5.5.3",
     "pg": "^8.16.3",
@@ -156,8 +159,10 @@
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",
     "eslint-plugin-storybook": "^9.0.17",
+    "form-data": "^4.0.4",
     "globals": "^15.9.0",
     "jsdom": "^26.1.0",
+    "node-fetch": "^2.7.0",
     "prettier": "^3.6.2",
     "storybook": "^9.0.17",
     "supabase": "^2.26.9",

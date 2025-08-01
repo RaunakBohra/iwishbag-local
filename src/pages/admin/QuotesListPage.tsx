@@ -19,26 +19,37 @@ const QuotesListPage: React.FC = () => {
     queryKey: ['admin-quotes-list', searchTerm],
     queryFn: async () => {
       let query = supabase
-        .from('quotes')
+        .from('quotes_v2')
         .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            email,
-            avatar_url
-          )
+          *
         `)
         .order('created_at', { ascending: false })
         .limit(200); // Increased limit to show more quotes
 
-      // Apply search filter only
+      // Apply search filter only - V2 uses different fields
       if (searchTerm) {
-        query = query.or(`iwish_tracking_id.ilike.%${searchTerm}%,customer_data->>email.ilike.%${searchTerm}%`);
+        query = query.or(`id.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      
+      // Map V2 quotes to UnifiedQuote format for compatibility
+      const mappedQuotes = (data || []).map(quote => ({
+        ...quote,
+        final_total_usd: quote.total_usd || 0,
+        costprice_total_usd: quote.items?.reduce((sum: number, item: any) => 
+          sum + (item.costprice_origin || 0) * (item.quantity || 1), 0) || 0,
+        customer_data: {
+          info: {
+            name: quote.customer_name,
+            email: quote.customer_email,
+            phone: quote.customer_phone,
+          }
+        },
+      }));
+      
+      return mappedQuotes;
     },
     staleTime: 30000, // 30 seconds
   });
@@ -116,8 +127,7 @@ const QuotesListPage: React.FC = () => {
                   <CompactQuoteListItem
                     key={quote.id}
                     quote={quote}
-                    customerProfile={quote.profiles}
-                    onQuoteClick={(quoteId) => navigate(`/admin/quotes/${quoteId}`)}
+                    onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
                   />
                 ))}
               </div>

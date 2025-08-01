@@ -1,0 +1,153 @@
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAdminQuoteDetails } from '@/hooks/admin/useAdminQuoteDetails';
+import { QuoteHeader } from '@/components/admin/quote-details/QuoteHeader';
+import { QuoteItemsTable } from '@/components/admin/quote-details/QuoteItemsTable';
+import { QuoteCostBreakdown } from '@/components/admin/quote-details/QuoteCostBreakdown';
+import { QuoteTaxDetails } from '@/components/admin/quote-details/QuoteTaxDetails';
+import { QuoteOperationalData } from '@/components/admin/quote-details/QuoteOperationalData';
+import { QuoteActivityLog } from '@/components/admin/quote-details/QuoteActivityLog';
+import { QuoteActions } from '@/components/admin/quote-details/QuoteActions';
+import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
+
+const AdminQuoteDetailsPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  
+  const {
+    quote,
+    isLoading,
+    error,
+    updateQuote,
+    isUpdating,
+    calculationResult,
+    recalculate,
+    isRecalculating
+  } = useAdminQuoteDetails(id || undefined);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading quote details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !quote) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md mx-auto p-8 bg-white rounded-lg shadow-lg text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">
+            {error?.message === 'Admin access required' ? 'Access Denied' : 'Quote Not Found'}
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {error?.message || 'The quote you\'re looking for doesn\'t exist or you don\'t have permission to view it.'}
+          </p>
+          {id && (
+            <p className="text-sm text-gray-500 mb-4">
+              Quote ID: {id}
+            </p>
+          )}
+          <Button
+            onClick={() => navigate('/admin/quotes')}
+            className="inline-flex items-center"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Quotes
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Navigation */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/admin/quotes')}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Quotes
+          </Button>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Main Details */}
+          <div className="lg:col-span-2 space-y-6">
+            <QuoteHeader 
+              quote={quote}
+              onUpdate={updateQuote}
+              isUpdating={isUpdating}
+            />
+            
+            <QuoteItemsTable 
+              quote={quote}
+              calculationResult={calculationResult}
+              onUpdate={updateQuote}
+              onRecalculate={recalculate}
+              isUpdating={isUpdating}
+              isRecalculating={isRecalculating}
+            />
+            
+            <QuoteTaxDetails 
+              quote={quote}
+              calculationResult={calculationResult}
+              onUpdate={updateQuote}
+              onRecalculate={recalculate}
+              isUpdating={isUpdating}
+            />
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            <QuoteCostBreakdown 
+              quote={quote}
+              calculationResult={calculationResult}
+              onRecalculate={recalculate}
+              isRecalculating={isRecalculating}
+            />
+            
+            <QuoteActions 
+              quote={quote}
+              onUpdate={updateQuote}
+              isUpdating={isUpdating}
+            />
+            
+            <QuoteSendEmailSimple 
+              quoteId={quote.id}
+              customerEmail={quote.email}
+              customerName={quote.customer_name}
+              quoteStatus={quote.status}
+              totalAmount={quote.total_amount}
+              currency={quote.currency}
+            />
+            
+            <QuoteOperationalData 
+              quote={quote}
+              onUpdate={updateQuote}
+              isUpdating={isUpdating}
+            />
+            
+            <QuoteActivityLog 
+              quote={quote}
+              onUpdate={updateQuote}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminQuoteDetailsPage;

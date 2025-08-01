@@ -5,14 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { Share2, Eye, Bell, Clock, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Share2, Eye, Bell, Clock, Copy, CheckCircle2, AlertCircle, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { QuoteEmailServiceLocal } from '@/services/QuoteEmailServiceLocal';
 
 export function QuoteV2Demo() {
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastAction, setLastAction] = useState<string>('');
   const { toast } = useToast();
+  const emailService = new QuoteEmailServiceLocal();
 
   // Fetch quotes
   const fetchQuotes = async () => {
@@ -136,6 +138,30 @@ export function QuoteV2Demo() {
     }
   };
 
+  // Test email (using local service)
+  const testEmail = async (quoteId: string) => {
+    try {
+      const success = await emailService.sendQuoteEmail(quoteId);
+      
+      if (success) {
+        setLastAction(`Email test successful! Check console for email preview.`);
+        toast({
+          title: 'Email test complete',
+          description: 'Check console for email preview',
+        });
+      } else {
+        throw new Error('Email test failed');
+      }
+    } catch (error) {
+      console.error('Error testing email:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to test email',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Create revision
   const createRevision = async (quoteId: string) => {
     try {
@@ -163,7 +189,7 @@ export function QuoteV2Demo() {
   const createTestQuote = async () => {
     try {
       const testData = {
-        customer_email: 'test@example.com',
+        customer_email: 'rnkbohra@gmail.com',
         customer_name: 'Test Customer',
         status: 'sent', // Set to 'sent' so reminder button works
         origin_country: 'US',
@@ -347,6 +373,16 @@ export function QuoteV2Demo() {
                       >
                         <Clock className="w-4 h-4 mr-1" />
                         New Version
+                      </Button>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testEmail(quote.id)}
+                        title="Test email locally (console log)"
+                      >
+                        <Mail className="w-4 h-4 mr-1" />
+                        Test Email
                       </Button>
                     </div>
                   </div>

@@ -165,12 +165,14 @@ class UnifiedConfigurationService {
    * Get configuration by category and optional key
    */
   async getConfig<T = any>(category: ConfigCategory, key?: string): Promise<T | null> {
-    const transaction = typeof Sentry?.startTransaction === 'function' 
-      ? Sentry.startTransaction({
-          name: 'UnifiedConfigurationService.getConfig',
-          op: 'config',
-        })
-      : null;
+    // Temporarily disable Sentry transaction due to API change
+    const transaction = null;
+    // const transaction = typeof Sentry?.startTransaction === 'function' 
+    //   ? Sentry.startTransaction({
+    //       name: 'UnifiedConfigurationService.getConfig',
+    //       op: 'config',
+    //     })
+    //   : null;
 
     try {
       const cacheKey = this.getCacheKey(category, key);

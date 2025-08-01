@@ -45,6 +45,7 @@ import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { currencyService } from '@/services/CurrencyService';
 import { ConditionalSkeleton } from '@/components/ui/skeleton-loader';
 import { Skeleton } from '@/components/ui/skeleton';
+import { QuoteV2MigrationService } from '@/services/QuoteV2MigrationService';
 // import { TurnstileProtectedForm } from '@/components/security/TurnstileProtectedForm'; // Component removed
 
 const steps = ['Product Info', 'Contact & Submit'];
@@ -177,6 +178,12 @@ export default function QuoteRequestPage() {
         return;
       }
 
+      // Check if V2 is enabled at the start
+      const isV2Enabled = await QuoteV2MigrationService.isV2Enabled();
+      
+      // Track created quote IDs for email sending
+      const createdQuoteIds: string[] = [];
+
       // Store minimal contact and shipping info
       const shippingAddressData = {
         fullName: submissionData?.name || contactInfo.name,
@@ -228,20 +235,21 @@ export default function QuoteRequestPage() {
         // Use the sessionId generated at the start of this quote process
         // sessionId is already available from state
 
-        // Submit combined quote to Supabase using unified structure
-        const { data: quote, error: quoteError } = await supabase
-          .from('quotes')
-          .insert({
+        // Use appropriate service based on V2 availability
+        let quoteResult;
+        if (isV2Enabled) {
+          // Use V2 service for new quotes
+          quoteResult = await QuoteV2MigrationService.createQuoteV2({
             destination_country: destinationCountry,
             origin_country: originCountry,
             status: 'pending',
             currency: originCurrency,
-            user_id: user?.id || null, // Now uses anonymous auth user ID
+            user_id: user?.id || null,
             items: products.map((product) => ({
               id: crypto.randomUUID(),
               name: product.title,
               url: product.url,
-              image: product.imageUrl || null, // Use separate imageUrl field
+              image: product.imageUrl || null,
               options: product.notes || null,
               quantity: product.quantity || 1,
               costprice_origin: product.price || 0,
@@ -255,10 +263,8 @@ export default function QuoteRequestPage() {
               preferences: {
                 insurance_opted_in: submissionData?.insuranceOptedIn || false
               },
-              sessionId: sessionId, // Store session ID for linking uploaded files
+              sessionId: sessionId,
             },
-            // ✅ FIX: Prices are now in origin currency, store original values
-            // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
             costprice_total_usd: products.reduce(
               (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
               0,
@@ -266,13 +272,61 @@ export default function QuoteRequestPage() {
             final_total_usd: products.reduce(
               (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
               0,
-            )
-          })
-          .select('id')
-          .single();
+            ),
+            // V2 specific fields
+            customer_email: emailToUse,
+            customer_name: emailToUse.split('@')[0],
+            validity_days: 7,
+            customer_message: 'Thank you for choosing iwishBag for your international shopping needs!',
+            payment_terms: 'Payment required before shipping'
+          });
+        } else {
+          // Fallback to V1 quotes table
+          const { data: quote, error: quoteError } = await supabase
+            .from('quotes')
+            .insert({
+              destination_country: destinationCountry,
+              origin_country: originCountry,
+              status: 'pending',
+              currency: originCurrency,
+              user_id: user?.id || null,
+              items: products.map((product) => ({
+                id: crypto.randomUUID(),
+                name: product.title,
+                url: product.url,
+                image: product.imageUrl || null,
+                options: product.notes || null,
+                quantity: product.quantity || 1,
+                costprice_origin: product.price || 0,
+                weight_kg: product.weight || 1
+              })),
+              customer_data: {
+                info: {
+                  email: emailToUse
+                },
+                shipping_address: shippingAddressData,
+                preferences: {
+                  insurance_opted_in: submissionData?.insuranceOptedIn || false
+                },
+                sessionId: sessionId,
+              },
+              costprice_total_usd: products.reduce(
+                (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
+                0,
+              ),
+              final_total_usd: products.reduce(
+                (sum, p) => sum + (p.price || 0) * (p.quantity || 1),
+                0,
+              )
+            })
+            .select('id')
+            .single();
+          
+          quoteResult = { quote, error: quoteError };
+        }
 
-        if (quoteError || !quote) {
-          console.error('Error inserting quote:', quoteError);
+        if (quoteResult.error || !quoteResult.quote) {
+          console.error('Error inserting quote:', quoteResult.error);
           setSubmitError(
             'Failed to create quote. Please try again or contact support if the problem persists.',
           );
@@ -280,24 +334,31 @@ export default function QuoteRequestPage() {
           return;
         }
 
-        const quoteItemsToInsert = items.map((item) => ({
-          quote_id: quote.id,
-          product_url: item.productUrl,
-          product_name: item.productName,
-          quantity: item.quantity,
-          options: item.options,
-          image_url: item.imageUrl,
-          item_price: item.price && !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0,
-          item_weight: item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0
-        }));
+        // Add the created quote ID to the list
+        createdQuoteIds.push(quoteResult.quote.id);
 
-        const { error: itemsError } = await supabase.from('quote_items').insert(quoteItemsToInsert);
+        // V2 quotes include items directly, no need for separate quote_items table
+        // For V1, we still need to insert quote_items
+        if (!isV2Enabled) {
+          const quoteItemsToInsert = items.map((item) => ({
+            quote_id: quoteResult.quote.id,
+            product_url: item.productUrl,
+            product_name: item.productName,
+            quantity: item.quantity,
+            options: item.options,
+            image_url: item.imageUrl,
+            item_price: item.price && !isNaN(parseFloat(item.price)) ? parseFloat(item.price) : 0,
+            item_weight: item.weight && !isNaN(parseFloat(item.weight)) ? parseFloat(item.weight) : 0
+          }));
 
-        if (itemsError) {
-          console.error('Error inserting quote items:', itemsError);
-          setSubmitError('Failed to save product details. Please try again.');
-          setIsSubmitting(false);
-          return;
+          const { error: itemsError } = await supabase.from('quote_items').insert(quoteItemsToInsert);
+
+          if (itemsError) {
+            console.error('Error inserting quote items:', itemsError);
+            setSubmitError('Failed to save product details. Please try again.');
+            setIsSubmitting(false);
+            return;
+          }
         }
 
         // Mark uploaded files as used (combined quote)
@@ -350,21 +411,23 @@ export default function QuoteRequestPage() {
           // Use the sessionId generated at the start of this quote process
           // sessionId is already available from state
 
-          // Submit individual quote to Supabase using unified structure
-          const { data: quote, error: quoteError } = await supabase
-            .from('quotes')
-            .insert({
+          // Check if V2 is enabled and use appropriate service
+          let individualQuoteResult;
+          
+          if (isV2Enabled) {
+            // Use V2 service for new quotes
+            individualQuoteResult = await QuoteV2MigrationService.createQuoteV2({
               destination_country: destinationCountry,
               origin_country: product.country,
               status: 'pending',
               currency: productOriginCurrency,
-              user_id: user?.id || null, // Now uses anonymous auth user ID
+              user_id: user?.id || null,
               items: [
                 {
                   id: crypto.randomUUID(),
                   name: product.title,
                   url: product.url,
-                  image: product.imageUrl || null, // Use separate imageUrl field
+                  image: product.imageUrl || null,
                   options: product.notes || null,
                   quantity: product.quantity || 1,
                   costprice_origin: product.price || 0,
@@ -379,18 +442,60 @@ export default function QuoteRequestPage() {
                 preferences: {
                   insurance_opted_in: submissionData?.insuranceOptedIn || false
                 },
-                sessionId: sessionId, // Store session ID for linking uploaded files
+                sessionId: sessionId,
               },
-              // ✅ FIX: Prices are now in origin currency, store original values
-              // Note: costprice_total_usd will be properly converted by SmartCalculationEngine
               costprice_total_usd: (product.price || 0) * (product.quantity || 1),
-              final_total_usd: (product.price || 0) * (product.quantity || 1)
-            })
-            .select('id')
-            .single();
+              final_total_usd: (product.price || 0) * (product.quantity || 1),
+              // V2 specific fields
+              customer_email: emailToUse,
+              customer_name: emailToUse.split('@')[0],
+              validity_days: 7,
+              customer_message: 'Thank you for choosing iwishBag for your international shopping needs!',
+              payment_terms: 'Payment required before shipping'
+            });
+          } else {
+            // Fallback to V1 quotes table
+            const { data: quote, error: quoteError } = await supabase
+              .from('quotes')
+              .insert({
+                destination_country: destinationCountry,
+                origin_country: product.country,
+                status: 'pending',
+                currency: productOriginCurrency,
+                user_id: user?.id || null,
+                items: [
+                  {
+                    id: crypto.randomUUID(),
+                    name: product.title,
+                    url: product.url,
+                    image: product.imageUrl || null,
+                    options: product.notes || null,
+                    quantity: product.quantity || 1,
+                    costprice_origin: product.price || 0,
+                    weight_kg: product.weight || 0
+                  }
+                ],
+                customer_data: {
+                  info: {
+                    email: emailToUse
+                  },
+                  shipping_address: shippingAddressData,
+                  preferences: {
+                    insurance_opted_in: submissionData?.insuranceOptedIn || false
+                  },
+                  sessionId: sessionId,
+                },
+                costprice_total_usd: (product.price || 0) * (product.quantity || 1),
+                final_total_usd: (product.price || 0) * (product.quantity || 1)
+              })
+              .select('id')
+              .single();
+            
+            individualQuoteResult = { quote, error: quoteError };
+          }
 
-          if (quoteError || !quote) {
-            console.error('Error inserting quote:', quoteError);
+          if (individualQuoteResult.error || !individualQuoteResult.quote) {
+            console.error('Error inserting quote:', individualQuoteResult.error);
             setSubmitError(
               `Failed to create quote for ${product.title || 'one of your products'}. Some quotes may have been created successfully.`,
             );
@@ -404,7 +509,7 @@ export default function QuoteRequestPage() {
               if (fileName) {
                 await supabase.rpc('mark_file_as_used', {
                   p_file_path: fileName,
-                  p_quote_id: quote.id
+                  p_quote_id: individualQuoteResult.quote.id
                 });
               }
             }
@@ -413,9 +518,26 @@ export default function QuoteRequestPage() {
             // Don't fail the quote creation for this
           }
 
+          // Add the created quote ID to the list
+          createdQuoteIds.push(individualQuoteResult.quote.id);
+
           // Items are now stored in the JSONB items array within the quote
           // No need for separate quote_items table insertion
-          console.log(`Quote created successfully for ${product.title} with ID: ${quote.id}`);
+          console.log(`Quote created successfully for ${product.title} with ID: ${individualQuoteResult.quote.id}`);
+        }
+      }
+
+      // If V2 is enabled and quotes were created, send email notifications
+      if (isV2Enabled && createdQuoteIds.length > 0) {
+        try {
+          // Send email for the first quote (or all quotes if needed)
+          const emailService = new (await import('@/services/QuoteEmailService')).QuoteEmailService();
+          const firstQuoteId = createdQuoteIds[0];
+          await emailService.sendQuoteEmail(firstQuoteId);
+          console.log('Quote email sent successfully');
+        } catch (error) {
+          console.error('Failed to send quote email:', error);
+          // Don't fail the entire submission for email errors
         }
       }
 

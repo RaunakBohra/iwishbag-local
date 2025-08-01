@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,13 +6,15 @@ import { Mail, Send, Bell, Eye, Copy, CheckCircle } from 'lucide-react';
 import { QuoteEmailService } from '@/services/QuoteEmailService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useEmailNotifications } from '@/hooks/useEmailNotifications';
 
 interface QuoteSendEmailProps {
   quoteId: string;
   customerEmail: string;
-  shareToken: string;
+  shareToken?: string;
   emailSent?: boolean;
   reminderCount?: number;
+  quoteStatus?: string;
 }
 
 export function QuoteSendEmail({ 
@@ -20,14 +22,16 @@ export function QuoteSendEmail({
   customerEmail, 
   shareToken,
   emailSent = false,
-  reminderCount = 0
+  reminderCount = 0,
+  quoteStatus = 'draft'
 }: QuoteSendEmailProps) {
   const [sending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isV2Quote, setIsV2Quote] = useState(false);
   const { toast } = useToast();
   const emailService = QuoteEmailService.getInstance();
 
-  const shareUrl = `${window.location.origin}/quote/view/${shareToken}`;
+  const shareUrl = shareToken ? `${window.location.origin}/quote/view/${shareToken}` : '';
 
   const handleSendEmail = async () => {
     setSending(true);

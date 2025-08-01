@@ -206,13 +206,15 @@ export const useEmailNotifications = () => {
         }
       }
 
-      // Use Supabase Edge Function instead of /api/send-email
-      const { data: result, error } = await supabase.functions.invoke('send-email', {
+      // Use AWS SES via Supabase Edge Function
+      const { data: result, error } = await supabase.functions.invoke('send-email-ses', {
         body: {
           to,
           subject,
           html: generateEmailHtml(template, data),
-          from: from || 'noreply@whyteclub.com',
+          text: generateEmailText(template, data),
+          from: from || 'iwishBag <noreply@mail.iwishbag.com>',
+          replyTo: 'support@mail.iwishbag.com',
         },
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -598,6 +600,56 @@ export const useEmailNotifications = () => {
       </html>
     `
     );
+  };
+
+  // Helper function to generate plain text email
+  const generateEmailText = (template: EmailTemplate, data: EmailData) => {
+    const customerName = 'customerName' in data ? data.customerName : 'Customer';
+    let content = `Dear ${customerName || 'Customer'},\n\n`;
+
+    switch (template) {
+      case 'quote_sent':
+        if ('quoteId' in data) {
+          content += `Your quote has been sent for review.\n\n`;
+          content += `Quote Details:\n`;
+          content += `Quote ID: ${data.quoteId}\n`;
+          content += `Total Amount: $${data.totalAmount || 'N/A'}\n`;
+          content += `Currency: ${data.currency || 'USD'}\n`;
+        }
+        break;
+      case 'quote_approved':
+        if ('quoteId' in data) {
+          content += `Great news! Your quote has been approved.\n\n`;
+          content += `Approved Quote:\n`;
+          content += `Quote ID: ${data.quoteId}\n`;
+          content += `Total Amount: $${data.totalAmount || 'N/A'}\n`;
+          content += `Currency: ${data.currency || 'USD'}\n`;
+        }
+        break;
+      case 'quote_rejected':
+        if ('quoteId' in data && 'rejectionReason' in data) {
+          content += `Your quote has been reviewed.\n\n`;
+          content += `Quote ID: ${data.quoteId}\n`;
+          content += `Status: Not approved\n`;
+          content += `Reason: ${data.rejectionReason}\n`;
+        }
+        break;
+      case 'payment_link':
+        if ('orderNumber' in data && 'paymentLink' in data) {
+          content += `Your payment link for order ${data.orderNumber} is ready.\n\n`;
+          content += `Amount: ${data.currency || '$'}${data.amount || '0.00'}\n`;
+          content += `Payment Link: ${data.paymentLink}\n`;
+          content += `Expires: ${data.expiryDate || 'In 24 hours'}\n`;
+        }
+        break;
+      default:
+        content += `You have a new notification regarding your ${template.replace(/_/g, ' ')}.`;
+    }
+
+    content += `\n\nBest regards,\nThe iwishBag Team\n`;
+    content += `\nThis is an automated email. Please do not reply directly to this message.`;
+    
+    return content;
   };
 
   // Predefined email notification functions

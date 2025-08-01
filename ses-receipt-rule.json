@@ -1,0 +1,19 @@
+{
+  "Name": "process-support-emails",
+  "Enabled": true,
+  "TlsPolicy": "Optional",
+  "Recipients": [
+    "support@mail.iwishbag.com",
+    "info@mail.iwishbag.com",
+    "noreply@mail.iwishbag.com"
+  ],
+  "Actions": [
+    {
+      "S3Action": {
+        "BucketName": "iwishbag-emails",
+        "ObjectKeyPrefix": "inbox/"
+      }
+    }
+  ],
+  "ScanEnabled": false
+}

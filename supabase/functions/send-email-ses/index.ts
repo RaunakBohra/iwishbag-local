@@ -68,8 +68,8 @@ serve(async (req) => {
       subject,
       html,
       text,
-      from = 'iwishBag <noreply@iwishbag.in>',
-      replyTo = 'support@iwishbag.in',
+      from = 'iwishBag <noreply@iwishbag.com>',
+      replyTo = 'support@iwishbag.com',
     }: EmailRequest = body as EmailRequest;
 
     // Validation
@@ -152,6 +152,74 @@ serve(async (req) => {
       const response = await sesClient.send(command);
       console.log('✅ Email sent successfully via AWS SES');
       console.log('  - MessageId:', response.MessageId);
+
+      // Store sent email in S3 bucket
+      try {
+        console.log('💾 Storing sent email in S3...');
+        
+        const { S3Client, PutObjectCommand } = await import("npm:@aws-sdk/client-s3@3.454.0");
+        
+        // Create S3 client using same credentials as SES
+        const s3Client = new S3Client({
+          region: awsRegion,
+          credentials: {
+            accessKeyId: awsAccessKeyId,
+            secretAccessKey: awsSecretAccessKey,
+          },
+        });
+        
+        // Create email metadata and content
+        const emailData = {
+          messageId: response.MessageId,
+          to: toAddresses,
+          from: from,
+          replyTo: replyTo,
+          subject: subject,
+          sentAt: new Date().toISOString(),
+          status: 'sent',
+          provider: 'AWS SES',
+          metadata: {
+            userId: user?.id || null,
+            userEmail: user?.email || null,
+            isServiceCall: isServiceCall,
+            sentFromEdgeFunction: true,
+          },
+          content: {
+            html: html || null,
+            text: text || null,
+          }
+        };
+        
+        // Store in S3 bucket under sent/ prefix
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `${timestamp}-${response.MessageId}.json`;
+        const s3Key = `sent/${fileName}`;
+        
+        const putCommand = new PutObjectCommand({
+          Bucket: 'iwishbag-emails',
+          Key: s3Key,
+          Body: JSON.stringify(emailData, null, 2),
+          ContentType: 'application/json',
+          Metadata: {
+            'message-id': response.MessageId,
+            'sent-at': new Date().toISOString(),
+            'recipients': toAddresses.join(','),
+            'subject': subject.substring(0, 100), // S3 metadata has length limits
+          }
+        });
+        
+        const s3Response = await s3Client.send(putCommand);
+        console.log('✅ Sent email stored in S3:', s3Key);
+        console.log('✅ S3 Response:', JSON.stringify(s3Response));
+        
+      } catch (s3Error) {
+        console.error('⚠️ Error storing sent email in S3:', s3Error);
+        console.error('⚠️ S3 Error details:', JSON.stringify(s3Error, null, 2));
+        if (s3Error.name === 'AccessDenied') {
+          console.error('⚠️ S3 Access Denied - check bucket policy and IAM permissions');
+        }
+        // Don't fail the request if storage fails
+      }
 
       return new Response(
         JSON.stringify({

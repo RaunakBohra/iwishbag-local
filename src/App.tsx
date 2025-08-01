@@ -150,6 +150,14 @@ const router = createBrowserRouter([
               </ErrorBoundary>
             ),
           },
+          {
+            path: 'quote-calculator-v2/:id',
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <QuoteCalculatorV2 />
+              </ErrorBoundary>
+            ),
+          },
           { path: 'orders', element: <Navigate to="/admin/quotes" replace /> },
           {
             path: 'orders/:id',

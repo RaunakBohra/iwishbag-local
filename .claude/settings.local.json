@@ -219,7 +219,18 @@
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/__tests__/HSNQuoteIntegrationService.test.ts )",
       "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/src/services/HSNDataValidationService.ts)",
       "WebFetch(domain:blog.daraz.com.np)",
-      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/scripts/check-otp.sh:*)"
+      "Bash(/Users/raunakbohra/Desktop/global-wishlist-hub/scripts/check-otp.sh:*)",
+      "Bash(./test-ses-local.sh:*)",
+      "Bash(aws s3 ls:*)",
+      "Bash(brew install:*)",
+      "Bash(./configure-aws-cli.sh)",
+      "Bash(aws iam attach-user-policy:*)",
+      "Bash(aws iam list-user-policies:*)",
+      "Bash(aws ses:*)",
+      "Bash(aws s3 mb:*)",
+      "Bash(aws lambda list-functions:*)",
+      "Bash(aws s3api put-bucket-policy:*)",
+      "Bash(aws s3api get-bucket-policy:*)"
     ],
     "deny": []
   }

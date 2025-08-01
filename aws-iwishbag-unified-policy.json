@@ -1,0 +1,55 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "IWishBagCoreServices",
+      "Effect": "Allow",
+      "Action": [
+        "ses:*",
+        "s3:*",
+        "lambda:*",
+        "logs:*",
+        "cloudwatch:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IWishBagFutureServices",
+      "Effect": "Allow",
+      "Action": [
+        "sns:*",
+        "sqs:*",
+        "events:*",
+        "dynamodb:*",
+        "secretsmanager:*",
+        "apigateway:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IWishBagIAMRoles",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:AttachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:PassRole",
+        "iam:GetRole",
+        "iam:ListRolePolicies",
+        "iam:CreateServiceLinkedRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::597088020156:role/iwishbag-*",
+        "arn:aws:iam::597088020156:role/aws-service-role/*"
+      ]
+    },
+    {
+      "Sid": "CloudFormationDeployments",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*"
+      ],
+      "Resource": "arn:aws:cloudformation:*:597088020156:stack/iwishbag-*/*"
+    }
+  ]
+}

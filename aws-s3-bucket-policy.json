@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSESPuts",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ses.amazonaws.com"
+      },
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::iwishbag-emails/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceAccount": "YOUR_AWS_ACCOUNT_ID"
+        },
+        "StringLike": {
+          "AWS:SourceArn": "arn:aws:ses:us-east-1:YOUR_AWS_ACCOUNT_ID:*"
+        }
+      }
+    }
+  ]
+}

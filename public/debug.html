@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Page</title>
+</head>
+<body>
+    <h1>Debug Page</h1>
+    <p>If you can see this, the server is working.</p>
+    <script>
+        console.log('Debug page loaded successfully');
+        // Check if React is trying to load
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            console.log('Root element:', root);
+        }, 1000);
+    </script>
+</body>
+</html>

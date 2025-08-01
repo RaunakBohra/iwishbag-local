@@ -306,14 +306,16 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Send email using the existing send-email function
-    console.log('🔵 Calling send-email function...');
-    const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-email', {
+    // Send email using AWS SES
+    console.log('🔵 Calling send-email-ses function...');
+    const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-email-ses', {
       body: {
         to,
         subject,
         html,
-        from,
+        text: `Payment Link for Order ${orderNumber}\n\nDear ${customerName || 'Customer'},\n\nYour payment link is ready!\n\nOrder Number: ${orderNumber}\nAmount: ${currency} ${amount}\nPayment Link: ${paymentUrl}\nExpires: ${expiryDate}\n\nPlease complete your payment before the expiry date.\n\nThank you for choosing iwishBag!\n\nThe iwishBag Team`,
+        from: 'iwishBag <payments@mail.iwishbag.com>',
+        replyTo: 'support@mail.iwishbag.com',
       },
     });
 
