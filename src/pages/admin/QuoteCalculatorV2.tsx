@@ -30,6 +30,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { currencyService } from '@/services/CurrencyService';
 import { QuoteBreakdownV2 } from '@/components/quotes-v2/QuoteBreakdownV2';
 import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
+import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
 
 interface QuoteItem {
   id: string;
@@ -58,6 +59,8 @@ const QuoteCalculatorV2: React.FC = () => {
   const [showEmailSection, setShowEmailSection] = useState(false);
   const [shareToken, setShareToken] = useState<string>('');
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [reminderCount, setReminderCount] = useState(0);
+  const [lastReminderAt, setLastReminderAt] = useState<string | null>(null);
   
   // Form state
   const [customerEmail, setCustomerEmail] = useState('');
@@ -141,6 +144,8 @@ const QuoteCalculatorV2: React.FC = () => {
         setEmailSent(quote.email_sent || false);
         setShareToken(quote.share_token || '');
         setExpiresAt(quote.expires_at || null);
+        setReminderCount(quote.reminder_count || 0);
+        setLastReminderAt(quote.last_reminder_at || null);
 
         // Map quote data to form fields
         setCustomerEmail(quote.customer_email || '');
@@ -1079,6 +1084,20 @@ const QuoteCalculatorV2: React.FC = () => {
                 })()}
               </CardContent>
             </Card>
+          )}
+
+          {/* Reminder Controls - Only show in edit mode for saved quotes */}
+          {isEditMode && quoteId && emailSent && (
+            <QuoteReminderControls
+              quoteId={quoteId}
+              status={currentQuoteStatus}
+              reminderCount={reminderCount}
+              lastReminderAt={lastReminderAt}
+              customerEmail={customerEmail}
+              expiresAt={expiresAt}
+              shareToken={shareToken}
+              onUpdate={() => loadQuote(quoteId)}
+            />
           )}
 
           {/* Calculation Result */}

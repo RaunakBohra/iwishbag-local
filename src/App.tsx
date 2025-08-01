@@ -20,10 +20,10 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
-const Quote = React.lazy(() => import('@/pages/Quote'));
+// const Quote = React.lazy(() => import('@/pages/Quote')); // REMOVED: V1 quote page
 const Auth = React.lazy(() => import('@/pages/Auth'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
-const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes'));
+// const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes')); // REMOVED: V1 customer quotes page
 const Orders = React.lazy(() => import('@/pages/dashboard/Orders'));
 const OrderDetail = React.lazy(() => import('@/pages/dashboard/OrderDetail'));
 const Profile = React.lazy(() => import('@/pages/Profile'));
@@ -49,16 +49,14 @@ const PaymentFailure = React.lazy(() => import('@/pages/PaymentFailure'));
 const PaymentTest = React.lazy(() => import('@/pages/PaymentTest'));
 const PaypalSuccess = React.lazy(() => import('@/pages/PaypalSuccess'));
 const PaypalFailure = React.lazy(() => import('@/pages/PaypalFailure'));
-const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified'));
-// Temporarily remove lazy loading for debugging
-import CustomerQuoteDetail from '@/pages/dashboard/CustomerQuoteDetail';
-import TestQuotePage from '@/pages/TestQuotePage';
-// const CustomerQuoteDetail = React.lazy(() => import('@/pages/dashboard/CustomerQuoteDetail'));
-const UnifiedQuotePage = React.lazy(() => import('@/pages/unified/UnifiedQuotePage'));
+// const QuoteDetailUnified = React.lazy(() => import('@/pages/dashboard/QuoteDetailUnified')); // REMOVED: V1
+// import CustomerQuoteDetail from '@/pages/dashboard/CustomerQuoteDetail'; // REMOVED: V1
+// import TestQuotePage from '@/pages/TestQuotePage'; // REMOVED: V1 test page
+// const UnifiedQuotePage = React.lazy(() => import('@/pages/unified/UnifiedQuotePage')); // REMOVED: V1 unified page
 const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
 const EmailConfirmation = React.lazy(() => import('@/pages/auth/EmailConfirmation'));
 const OAuthCallback = React.lazy(() => import('@/pages/auth/OAuthCallback'));
-const VerifyQuoteApproval = React.lazy(() => import('@/pages/auth/VerifyQuoteApproval'));
+// const VerifyQuoteApproval = React.lazy(() => import('@/pages/auth/VerifyQuoteApproval')); // REMOVED: V1 verification page
 const FonepayCallback = React.lazy(() => import('@/pages/api/fonepay-callback'));
 const EsewaSuccess = React.lazy(() => import('@/pages/payment-callback/esewa-success'));
 const EsewaFailure = React.lazy(() => import('@/pages/payment-callback/esewa-failure'));
@@ -101,6 +99,7 @@ const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement
 const MembershipManagementPage = React.lazy(() => import('@/pages/admin/MembershipManagement'));
 const DiscountManagementPage = React.lazy(() => import('@/pages/admin/DiscountManagement'));
 const QuoteCalculatorV2 = React.lazy(() => import('@/pages/admin/QuoteCalculatorV2'));
+const QuoteReminderSettings = React.lazy(() => import('@/pages/admin/QuoteReminderSettings'));
 const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement'));
 const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDiscount'));
 
@@ -206,6 +205,7 @@ const router = createBrowserRouter([
           { path: 'blog', element: <BlogManagementPage /> },
           { path: 'memberships', element: <MembershipManagementPage /> },
           { path: 'discounts', element: <DiscountManagementPage /> },
+          { path: 'quote-reminders', element: <QuoteReminderSettings /> },
           // Audit logs page removed
           {
             path: 'returns',
@@ -268,10 +268,10 @@ const router = createBrowserRouter([
     path: 'auth/callback',
     element: <OAuthCallback />,
   },
-  {
-    path: 'auth/verify-quote',
-    element: <VerifyQuoteApproval />,
-  },
+  // {
+  //   path: 'auth/verify-quote',
+  //   element: <VerifyQuoteApproval />, // REMOVED: V1 verification page
+  // },
   {
     path: '/',
     element: <Layout />,
@@ -282,11 +282,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'quote',
-        element: (
-          <ErrorBoundary fallback={QuoteFormErrorFallback}>
-            <Quote />
-          </ErrorBoundary>
-        ),
+        element: <Navigate to="/admin/quote-calculator-v2" replace />,
       },
       {
         path: 'about',
@@ -346,7 +342,7 @@ const router = createBrowserRouter([
       },
       {
         path: 's/:shareToken',
-        element: <QuoteDetailUnified isShareToken={true} />,
+        element: <PublicQuoteView />, // Use V2 public quote view
       },
       // Moved quotes/:id to ProtectedRoute children section below
       {
@@ -430,15 +426,11 @@ const router = createBrowserRouter([
           },
           {
             path: 'dashboard/quotes',
-            element: <Quotes />,
+            element: <Navigate to="/admin/quotes" replace />, // Redirect to admin quotes list
           },
           {
             path: 'dashboard/quotes/:id',
-            element: (
-              <ErrorBoundary fallback={AdminErrorFallback}>
-                <QuoteDetailUnified />
-              </ErrorBoundary>
-            ),
+            element: <Navigate to="/admin/quotes" replace />, // Redirect to admin quotes
           },
           {
             path: 'dashboard/orders',
@@ -458,7 +450,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'quote/:id',
-            element: <QuoteDetailUnified />,
+            element: <Navigate to="/admin/quotes" replace />, // Redirect to admin quotes
           },
           {
             path: 'order/:id',
@@ -502,7 +494,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'quotes/:id',
-            element: <CustomerQuoteDetail />,
+            element: <Navigate to="/admin/quotes" replace />, // Redirect to admin quotes
           },
         ],
       },

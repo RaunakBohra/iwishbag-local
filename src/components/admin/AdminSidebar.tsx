@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Users,
   Tag,
+  Mail,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -53,6 +54,11 @@ const menuGroups = [
         title: 'All Quotes',
         url: '/admin/quotes',
         icon: FileText,
+      },
+      {
+        title: 'Reminder Settings',
+        url: '/admin/quote-reminders',
+        icon: Mail,
       },
     ],
   },
