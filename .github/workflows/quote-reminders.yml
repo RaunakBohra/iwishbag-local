@@ -27,10 +27,10 @@ jobs:
 
     - name: Send Quote Reminders
       env:
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+        SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL || 'https://iwishbag.com' }}
-        EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY || '' }}
+        PUBLIC_SITE_URL: 'https://iwishbag.com'
+        EMAIL_API_KEY: ''
       run: node scripts/send-quote-reminders.js
 
     - name: Create Summary
