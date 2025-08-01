@@ -58,6 +58,14 @@ export const QuoteExportControls: React.FC<QuoteExportControlsProps> = ({
       setIsExporting(true);
       setExportType('pdf');
       
+      // Debug log the quote data structure
+      console.log('Quote data for PDF export:', {
+        id: quote.id,
+        total_usd: quote.total_usd,
+        items: quote.items,
+        itemsLength: quote.items?.length
+      });
+      
       await QuoteExportService.exportToPDF(quote);
       
       toast({
@@ -66,6 +74,7 @@ export const QuoteExportControls: React.FC<QuoteExportControlsProps> = ({
       });
     } catch (error) {
       console.error('PDF export failed:', error);
+      console.error('Quote data that caused the error:', quote);
       toast({
         title: "PDF Export Failed",
         description: "There was an error generating the PDF. Please try again.",

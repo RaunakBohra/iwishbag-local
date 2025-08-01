@@ -243,7 +243,9 @@
       "Bash(aws logs tail:*)",
       "Bash(./update-lambda-env.sh)",
       "Bash(./check-lambda-logs.sh:*)",
-      "Bash(zip:*)"
+      "Bash(zip:*)",
+      "WebFetch(domain:docs.msg91.com)",
+      "WebFetch(domain:msg91.com)"
     ],
     "deny": []
   }

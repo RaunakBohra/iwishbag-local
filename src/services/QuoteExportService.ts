@@ -139,8 +139,10 @@ export class QuoteExportService {
 
     // Items
     doc.setFont('helvetica', 'normal');
-    for (const item of quote.items) {
-      const subtotal = item.quantity * item.unit_price_usd;
+    for (const item of quote.items || []) {
+      const quantity = item.quantity || 0;
+      const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+      const subtotal = quantity * unitPrice;
       const discountAmount = item.discount_percentage ? (subtotal * item.discount_percentage / 100) : 0;
       const finalSubtotal = subtotal - discountAmount;
 
@@ -150,10 +152,10 @@ export class QuoteExportService {
         currentY = 20;
       }
 
-      doc.text(item.name.substring(0, 35), colPositions[0], currentY);
-      doc.text(item.quantity.toString(), colPositions[1], currentY);
-      doc.text(`$${item.unit_price_usd.toFixed(2)}`, colPositions[2], currentY);
-      doc.text(item.weight_kg?.toFixed(2) || 'N/A', colPositions[3], currentY);
+      doc.text((item.name || 'Unknown Item').substring(0, 35), colPositions[0], currentY);
+      doc.text(quantity.toString(), colPositions[1], currentY);
+      doc.text(`$${unitPrice.toFixed(2)}`, colPositions[2], currentY);
+      doc.text((item.weight_kg || item.weight)?.toFixed(2) || 'N/A', colPositions[3], currentY);
       doc.text(`$${finalSubtotal.toFixed(2)}`, colPositions[4], currentY);
       
       currentY += 6;
@@ -178,9 +180,10 @@ export class QuoteExportService {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     
+    const totalUsd = quote.total_usd || quote.total || 0;
     const totalText = quote.customer_currency && quote.total_customer_currency 
       ? `Total: ${await currencyService.formatAmount(quote.total_customer_currency, quote.customer_currency)}`
-      : `Total: $${quote.total_usd.toFixed(2)} USD`;
+      : `Total: $${totalUsd.toFixed(2)} USD`;
     
     doc.text(totalText, pageWidth - margin - 60, currentY);
     currentY += 15;
@@ -230,7 +233,7 @@ export class QuoteExportService {
       ['Origin Country', quote.origin_country || 'N/A'],
       ['Destination Country', quote.destination_country || 'N/A'],
       [''],
-      ['Total (USD)', `$${quote.total_usd.toFixed(2)}`],
+      ['Total (USD)', `$${(quote.total_usd || quote.total || 0).toFixed(2)}`],
     ];
 
     if (quote.customer_currency && quote.total_customer_currency) {
@@ -251,17 +254,19 @@ export class QuoteExportService {
       'Category', 'HSN Code', 'Discount %', 'Subtotal (USD)', 'Notes'
     ];
 
-    const itemsData = quote.items.map(item => {
-      const subtotal = item.quantity * item.unit_price_usd;
+    const itemsData = (quote.items || []).map(item => {
+      const quantity = item.quantity || 0;
+      const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+      const subtotal = quantity * unitPrice;
       const discountAmount = item.discount_percentage ? (subtotal * item.discount_percentage / 100) : 0;
       const finalSubtotal = subtotal - discountAmount;
 
       return [
-        item.name,
+        item.name || 'Unknown Item',
         item.url || 'N/A',
-        item.quantity,
-        item.unit_price_usd,
-        item.weight_kg || 'N/A',
+        quantity,
+        unitPrice,
+        (item.weight_kg || item.weight) || 'N/A',
         item.category || 'N/A',
         item.hsn_code || 'N/A',
         item.discount_percentage || 0,
@@ -353,11 +358,11 @@ export class QuoteExportService {
 
     quotes.forEach(quote => {
       summaryData.push([
-        quote.id.slice(-8).toUpperCase(),
-        quote.customer_name,
-        quote.status.toUpperCase(),
-        quote.total_usd,
-        new Date(quote.created_at).toLocaleDateString()
+        quote.id?.slice(-8).toUpperCase() || 'Unknown',
+        quote.customer_name || 'Unknown Customer',
+        quote.status?.toUpperCase() || 'Unknown',
+        quote.total_usd || quote.total || 0,
+        quote.created_at ? new Date(quote.created_at).toLocaleDateString() : 'Unknown'
       ]);
     });
 
@@ -370,16 +375,20 @@ export class QuoteExportService {
       const quote = quotesToExport[i];
       const itemsData = [
         ['Item Name', 'Quantity', 'Unit Price', 'Subtotal'],
-        ...quote.items.map(item => [
-          item.name,
-          item.quantity,
-          item.unit_price_usd,
-          item.quantity * item.unit_price_usd
-        ])
+        ...(quote.items || []).map(item => {
+          const quantity = item.quantity || 0;
+          const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+          return [
+            item.name || 'Unknown Item',
+            quantity,
+            unitPrice,
+            quantity * unitPrice
+          ];
+        })
       ];
 
       const quoteSheet = XLSX.utils.aoa_to_sheet(itemsData);
-      const sheetName = `Quote-${quote.id.slice(-6)}`.substring(0, 31); // Excel sheet name limit
+      const sheetName = `Quote-${quote.id?.slice(-6) || 'Unknown'}`.substring(0, 31); // Excel sheet name limit
       XLSX.utils.book_append_sheet(workbook, quoteSheet, sheetName);
     }
 
