@@ -18,6 +18,7 @@ import {
   Users,
   Tag,
   Mail,
+  MessageCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -84,6 +85,11 @@ const menuGroups = [
         title: 'Email Dashboard',
         url: '/admin/emails',
         icon: Mail,
+      },
+      {
+        title: 'SMS',
+        url: '/admin/sms',
+        icon: MessageCircle,
       },
     ],
   },

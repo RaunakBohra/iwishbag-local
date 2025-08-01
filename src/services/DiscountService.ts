@@ -495,7 +495,7 @@ class DiscountServiceClass {
           discount_type:discount_types(*)
         `)
         .eq('is_active', true)
-        .gte('start_date', new Date().toISOString())
+        .lte('start_date', new Date().toISOString()) // Start date should be in the past or now
         .or('end_date.is.null,end_date.gte.' + new Date().toISOString());
 
       const { data, error } = await query;

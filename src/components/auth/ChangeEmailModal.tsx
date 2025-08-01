@@ -51,6 +51,7 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [isPhoneOnlyUser, setIsPhoneOnlyUser] = useState(false);
   const [currentEmail, setCurrentEmail] = useState('');
   const [currentStep, setCurrentStep] = useState<ModalStep>('email-input');
   const [newEmailAddress, setNewEmailAddress] = useState('');
@@ -62,12 +63,17 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
   const [currentEmailOtpError, setCurrentEmailOtpError] = useState('');
   const [newEmailOtpError, setNewEmailOtpError] = useState('');
 
-  // Check if user is OAuth user
+  // Check if user is OAuth or phone-only user
   useEffect(() => {
     if (user) {
       const provider = user.app_metadata?.provider;
       setIsOAuthUser(provider && provider !== 'email');
-      setCurrentEmail(user.email || '');
+      // Check if user signed up via phone (has temp email)
+      const isPhoneAuth = user.email?.includes('@phone.iwishbag.com') || 
+                         (user.user_metadata?.signed_up_via === 'phone');
+      setIsPhoneOnlyUser(isPhoneAuth);
+      // Don't show temp email to phone-only users
+      setCurrentEmail(isPhoneAuth ? '' : (user.email || ''));
     }
   }, [user]);
 
@@ -98,11 +104,11 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
   });
 
   // Use appropriate schema based on user type
-  const emailChangeSchema = isOAuthUser ? emailChangeSchemaOAuth : emailChangeSchemaWithPassword;
+  const emailChangeSchema = (isOAuthUser || isPhoneOnlyUser) ? emailChangeSchemaOAuth : emailChangeSchemaWithPassword;
   
   const form = useForm<any>({
     resolver: zodResolver(emailChangeSchema),
-    defaultValues: isOAuthUser 
+    defaultValues: (isOAuthUser || isPhoneOnlyUser)
       ? {
           newEmail: '',
           confirmEmail: '',
@@ -119,8 +125,8 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
 
     setIsLoading(true);
     try {
-      // Step 1: Verify current password (only for non-OAuth users)
-      if (!isOAuthUser) {
+      // Step 1: Verify current password (only for email/password users)
+      if (!isOAuthUser && !isPhoneOnlyUser) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: user.email!,
           password: values.currentPassword,
@@ -352,6 +358,8 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
               `Enter the 6-digit codes sent to both email addresses`
             ) : isOAuthUser ? (
               "Add an email address for password-based login alongside your social login."
+            ) : isPhoneOnlyUser ? (
+              "Add an email address to enable email login alongside your phone login."
             ) : (
               "Update your email address with secure two-step verification."
             )}
@@ -496,14 +504,18 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
           </div>
         ) : (
           <>
-            {isOAuthUser && (
+            {(isOAuthUser || isPhoneOnlyUser) && (
               <Alert className="mb-4 border-blue-200 bg-blue-50">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800">
-                  <p className="font-medium mb-1">Social Login Account</p>
+                  <p className="font-medium mb-1">
+                    {isPhoneOnlyUser ? 'Phone Login Account' : 'Social Login Account'}
+                  </p>
                   <p className="text-sm">
-                    You signed up with {user?.app_metadata?.provider === 'google' ? 'Google' : 'Facebook'}.
-                    Your social login email ({currentEmail}) will continue to work for {user?.app_metadata?.provider} sign-in.
+                    {isPhoneOnlyUser 
+                      ? "You signed up with phone number. Adding an email will give you another way to login."
+                      : `You signed up with ${user?.app_metadata?.provider === 'google' ? 'Google' : 'Facebook'}. Your social login email (${currentEmail}) will continue to work for ${user?.app_metadata?.provider} sign-in.`
+                    }
                   </p>
                 </AlertDescription>
               </Alert>
@@ -524,7 +536,7 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
                   </div>
                 </div>
 
-                {!isOAuthUser && (
+                {!isOAuthUser && !isPhoneOnlyUser && (
                   <FormField
                     control={form.control}
                     name="currentPassword"

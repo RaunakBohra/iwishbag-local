@@ -58,6 +58,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [isPhoneOnlyUser, setIsPhoneOnlyUser] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
   const [currentStep, setCurrentStep] = useState<ModalStep>('phone-input');
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
@@ -72,6 +73,10 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
     if (user) {
       const provider = user.app_metadata?.provider;
       setIsOAuthUser(provider && provider !== 'email');
+      // Check if user signed up via phone (has temp email)
+      const isPhoneAuth = user.email?.includes('@phone.iwishbag.com') || 
+                         (user.user_metadata?.signed_up_via === 'phone');
+      setIsPhoneOnlyUser(isPhoneAuth);
       setCurrentPhone(user.phone || '');
     }
   }, [user]);
@@ -93,11 +98,11 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
   });
 
   // Use appropriate schema based on user type
-  const phoneChangeSchema = isOAuthUser ? phoneChangeSchemaOAuth : phoneChangeSchemaWithPassword;
+  const phoneChangeSchema = (isOAuthUser || isPhoneOnlyUser) ? phoneChangeSchemaOAuth : phoneChangeSchemaWithPassword;
   
   const form = useForm<any>({
     resolver: zodResolver(phoneChangeSchema),
-    defaultValues: isOAuthUser 
+    defaultValues: (isOAuthUser || isPhoneOnlyUser)
       ? {
           newPhone: '',
         }
@@ -112,8 +117,8 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
 
     setIsLoading(true);
     try {
-      // Step 1: Verify current password (only for non-OAuth users)
-      if (!isOAuthUser) {
+      // Step 1: Verify current password (only for email/password users)
+      if (!isOAuthUser && !isPhoneOnlyUser) {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: user.email!,
           password: values.currentPassword,
@@ -352,6 +357,8 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
               `Enter the 6-digit code sent to your new phone number`
             ) : isOAuthUser ? (
               "Update your phone number for order notifications and security."
+            ) : isPhoneOnlyUser ? (
+              "Update your phone number with secure OTP verification."
             ) : (
               "Update your phone number with secure verification."
             )}
@@ -462,14 +469,18 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
           </div>
         ) : (
           <>
-            {isOAuthUser && (
+            {(isOAuthUser || isPhoneOnlyUser) && (
               <Alert className="mb-4 border-blue-200 bg-blue-50">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-800">
-                  <p className="font-medium mb-1">Social Login Account</p>
+                  <p className="font-medium mb-1">
+                    {isPhoneOnlyUser ? 'Phone Login Account' : 'Social Login Account'}
+                  </p>
                   <p className="text-sm">
-                    You signed up with {user?.app_metadata?.provider === 'google' ? 'Google' : 'Facebook'}.
-                    Your social login will continue to work normally.
+                    {isPhoneOnlyUser 
+                      ? "You signed up with phone number. No password required for verification."
+                      : `You signed up with ${user?.app_metadata?.provider === 'google' ? 'Google' : 'Facebook'}. Your social login will continue to work normally.`
+                    }
                   </p>
                 </AlertDescription>
               </Alert>
@@ -490,7 +501,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
                   </div>
                 </div>
 
-                {!isOAuthUser && (
+                {!isOAuthUser && !isPhoneOnlyUser && (
                   <FormField
                     control={form.control}
                     name="currentPassword"
