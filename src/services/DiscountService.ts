@@ -157,7 +157,7 @@ class DiscountServiceClass {
           const { data: profile } = await supabase
             .from('profiles')
             .select('id')
-            .eq('email', customerId)
+            .ilike('email', customerId)
             .single();
           
           if (profile) {
@@ -568,7 +568,7 @@ class DiscountServiceClass {
         const { data: profile } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', customerId)
+          .ilike('email', customerId)
           .single();
         
         if (profile) {

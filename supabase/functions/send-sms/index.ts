@@ -257,7 +257,9 @@ const sendSMS = async (phone: string, message: string) => {
     case 'NP':
       return await sendSparrowSMS(phone, message);
     case 'IN':
-      return await sendMSG91SMS(phone, message);
+      // Temporarily use Twilio for India until MSG91 is ready
+      console.log('🇮🇳 Using Twilio for India (temporary)');
+      return await sendTwilioSMS(phone, message);
     default:
       return await sendTwilioSMS(phone, message);
   }
