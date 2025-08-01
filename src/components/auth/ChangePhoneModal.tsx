@@ -63,6 +63,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
   const [currentStep, setCurrentStep] = useState<ModalStep>('phone-input');
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [verifiedPassword, setVerifiedPassword] = useState('');
+  const [detectedCountry, setDetectedCountry] = useState(initialCountry);
   
   // OTP state for new phone verification
   const [otpValues, setOtpValues] = useState<string[]>(new Array(6).fill(''));
@@ -80,6 +81,28 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
       setCurrentPhone(user.phone || '');
     }
   }, [user]);
+
+  // Detect country from IP
+  useEffect(() => {
+    const detectCountryFromIP = async () => {
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        
+        if (data.country_code) {
+          console.log('Detected country from IP:', data.country_code);
+          setDetectedCountry(data.country_code);
+        }
+      } catch (error) {
+        console.error('Failed to detect country from IP:', error);
+        // Keep the default country
+      }
+    };
+
+    if (open) {
+      detectCountryFromIP();
+    }
+  }, [open]);
 
   // Create dynamic schema based on user type
   const phoneChangeSchemaWithPassword = z.object({
@@ -176,6 +199,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
           phone: phoneToChange,
           type: 'phone_change',
           user_id: user.id,
+          test_mode: true, // Enable test mode
         },
       });
 
@@ -185,6 +209,11 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
 
       if (!data.success) {
         throw new Error(data.error || 'Failed to send SMS');
+      }
+
+      // In test mode, log the OTP
+      if (data.test_otp) {
+        console.log('📱 TEST MODE OTP:', data.test_otp);
       }
 
       toast({
@@ -549,7 +578,7 @@ export const ChangePhoneModal: React.FC<ChangePhoneModalProps> = ({
                           onChange={(newPhoneValue) => {
                             field.onChange(newPhoneValue);
                           }}
-                          initialCountry={initialCountry}
+                          initialCountry={detectedCountry}
                           disabled={isLoading}
                           placeholder="Enter your new phone number"
                         />

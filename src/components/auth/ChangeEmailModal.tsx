@@ -98,7 +98,11 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
   }).refine((data) => data.newEmail === data.confirmEmail, {
     message: "Email addresses don't match",
     path: ['confirmEmail'],
-  }).refine((data) => data.newEmail.toLowerCase() !== currentEmail.toLowerCase(), {
+  }).refine((data) => {
+    // Skip current email check for phone-only users
+    if (isPhoneOnlyUser) return true;
+    return data.newEmail.toLowerCase() !== currentEmail.toLowerCase();
+  }, {
     message: "New email must be different from current email",
     path: ['newEmail'],
   });
@@ -146,11 +150,33 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
       // Store new email for later
       setNewEmailAddress(values.newEmail);
       
-      // Step 2: Initiate email change (sends OTPs to both emails)
-      await initiateEmailChange(values.newEmail);
-      
-      // Move to dual OTP verification step
-      setCurrentStep('dual-otp');
+      // For phone-only users, just add the email without dual verification
+      if (isPhoneOnlyUser) {
+        // Phone users are adding their first email, no need for dual verification
+        const { error: updateError } = await supabase.auth.updateUser({
+          email: values.newEmail,
+        });
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        toast({
+          title: 'Verification Email Sent',
+          description: `Please check ${values.newEmail} to verify your email address.`,
+        });
+
+        // Close modal after a short delay
+        setTimeout(() => {
+          onOpenChange(false);
+        }, 2000);
+      } else {
+        // Step 2: Initiate email change (sends OTPs to both emails)
+        await initiateEmailChange(values.newEmail);
+        
+        // Move to dual OTP verification step
+        setCurrentStep('dual-otp');
+      }
 
     } catch (error: any) {
       toast({
@@ -617,17 +643,27 @@ export const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
                   )}
                 />
 
-                <Alert className="border-orange-200 bg-orange-50">
-                  <AlertCircle className="h-4 w-4 text-orange-600" />
-                  <AlertDescription className="text-orange-800 text-sm">
-                    <p className="font-medium mb-1">Two-Step Verification Process</p>
-                    <ol className="text-sm space-y-1 ml-4 list-decimal">
-                      <li>We'll send 6-digit codes to both email addresses</li>
-                      <li>Enter both codes on the verification screen</li>
-                      <li>Your email will be updated after both codes are verified</li>
-                    </ol>
-                  </AlertDescription>
-                </Alert>
+                {isPhoneOnlyUser ? (
+                  <Alert className="border-blue-200 bg-blue-50">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 text-sm">
+                      <p className="font-medium mb-1">Email Verification</p>
+                      <p className="text-sm">We'll send a verification link to your new email address. Click the link to confirm your email.</p>
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert className="border-orange-200 bg-orange-50">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-800 text-sm">
+                      <p className="font-medium mb-1">Two-Step Verification Process</p>
+                      <ol className="text-sm space-y-1 ml-4 list-decimal">
+                        <li>We'll send 6-digit codes to both email addresses</li>
+                        <li>Enter both codes on the verification screen</li>
+                        <li>Your email will be updated after both codes are verified</li>
+                      </ol>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <Button

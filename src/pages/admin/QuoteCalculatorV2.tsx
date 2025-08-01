@@ -90,6 +90,10 @@ const QuoteCalculatorV2: React.FC = () => {
   const [shippingDiscountType, setShippingDiscountType] = useState<'percentage' | 'fixed' | 'free'>('percentage');
   const [shippingDiscountValue, setShippingDiscountValue] = useState(0);
   
+  // Component discount state
+  const [discountCodes, setDiscountCodes] = useState<string[]>([]);
+  const [applyComponentDiscounts, setApplyComponentDiscounts] = useState(true);
+  
   // Items
   const [items, setItems] = useState<QuoteItem[]>([
     {
@@ -198,6 +202,11 @@ const QuoteCalculatorV2: React.FC = () => {
         if (quote.calculation_data) {
           setCalculationResult(quote.calculation_data);
         }
+        
+        // Load discount codes if available
+        if (quote.discount_codes && Array.isArray(quote.discount_codes)) {
+          setDiscountCodes(quote.discount_codes);
+        }
 
         // Load documents
         await loadQuoteDocuments(id);
@@ -255,6 +264,22 @@ const QuoteCalculatorV2: React.FC = () => {
         return;
       }
 
+      // Get customer_id for component discounts
+      let customerId = null;
+      if (applyComponentDiscounts && customerEmail) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', customerEmail.toLowerCase())
+            .single();
+          customerId = profile?.id || customerEmail; // Fallback to email if no profile
+        } catch (error) {
+          console.log('No profile found for email, using email as customer_id');
+          customerId = customerEmail;
+        }
+      }
+
       const result = await simplifiedQuoteCalculator.calculate({
         items: validItems,
         origin_country: originCountry,
@@ -273,7 +298,12 @@ const QuoteCalculatorV2: React.FC = () => {
         shipping_discount: shippingDiscountValue > 0 || shippingDiscountType === 'free' ? {
           type: shippingDiscountType,
           value: shippingDiscountValue
-        } : undefined
+        } : undefined,
+        // Component discount parameters
+        apply_component_discounts: applyComponentDiscounts,
+        customer_id: customerId,
+        discount_codes: discountCodes,
+        is_first_order: false // Could be enhanced later with first-order detection
       });
 
       setCalculationResult(result);
@@ -342,6 +372,7 @@ const QuoteCalculatorV2: React.FC = () => {
         customer_currency: customerCurrency,
         admin_notes: adminNotes,
         status: isEditMode ? 'calculated' : 'draft', // Update status when editing
+        discount_codes: discountCodes.length > 0 ? discountCodes : null,
         calculated_at: new Date().toISOString(),
         ...(newShareToken && { share_token: newShareToken }), // Add share token if generated
         ...(isEditMode && currentQuoteStatus === 'calculated' && { 
@@ -952,12 +983,22 @@ const QuoteCalculatorV2: React.FC = () => {
                       0
                     }
                     onDiscountApplied={(discount) => {
+                      // Add to component discount codes for V2 system
+                      if (!discountCodes.includes(discount.code)) {
+                        setDiscountCodes([...discountCodes, discount.code]);
+                      }
+                      
+                      // Also keep old system for backward compatibility
                       setOrderDiscountType(discount.type);
                       setOrderDiscountValue(discount.value);
                       setOrderDiscountCode(discount.code);
                       setOrderDiscountCodeId(discount.discountCodeId || null);
                     }}
                     onDiscountRemoved={() => {
+                      // Remove from component discount codes
+                      setDiscountCodes([]);
+                      
+                      // Also clear old system
                       setOrderDiscountType('percentage');
                       setOrderDiscountValue(0);
                       setOrderDiscountCode('');

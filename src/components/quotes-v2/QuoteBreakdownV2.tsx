@@ -11,7 +11,9 @@ import {
   Globe,
   Info,
   CheckCircle,
-  Clock
+  Clock,
+  Tag,
+  Check
 } from 'lucide-react';
 import { currencyService } from '@/services/CurrencyService';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
@@ -137,6 +139,35 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
           </div>
         </CardContent>
       </Card>
+
+      {/* Applied Discount Codes */}
+      {quote.discount_codes && quote.discount_codes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Tag className="w-5 h-5 mr-2" />
+              Applied Discount Codes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {quote.discount_codes.map((code, index) => (
+                <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                  <Check className="w-3 h-3 mr-1" />
+                  {code}
+                </Badge>
+              ))}
+            </div>
+            {steps.total_savings > 0 && (
+              <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
+                <p className="text-sm text-green-700 font-medium">
+                  🎉 Total savings from coupons: ${steps.total_savings.toFixed(2)}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Applied Rates */}
       <Card>
@@ -306,8 +337,8 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             </p>
           </div>
 
-          {/* Shipping Discount */}
-          {steps.shipping_discount_amount > 0 && (
+          {/* Shipping Discount - Legacy */}
+          {steps.shipping_discount_amount > 0 && !steps.component_discounts?.shipping && (
             <div className="p-3 bg-green-50 rounded-lg border border-green-200">
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
@@ -319,6 +350,31 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               <p className="text-sm text-green-600 mt-1">
                 Final shipping cost: ${steps.discounted_shipping_cost.toFixed(2)}
               </p>
+            </div>
+          )}
+
+          {/* Shipping Component Discount */}
+          {steps.component_discounts?.shipping && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                  <span className="font-medium text-green-800">Shipping Discount</span>
+                </div>
+                <span className="font-bold text-green-800">-${steps.component_discounts.shipping.discount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-green-600 mt-2">
+                {steps.component_discounts.shipping.applied_discounts?.map((discount, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>• {discount.description}</span>
+                    <span>-${discount.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
+                  <span>Final shipping cost:</span>
+                  <span>${steps.component_discounts.shipping.final.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -363,6 +419,31 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             </p>
           </div>
 
+          {/* Customs Discount */}
+          {steps.component_discounts?.customs && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                  <span className="font-medium text-green-800">Customs Discount</span>
+                </div>
+                <span className="font-bold text-green-800">-${steps.component_discounts.customs.discount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-green-600 mt-2">
+                {steps.component_discounts.customs.applied_discounts?.map((discount, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>• {discount.description}</span>
+                    <span>-${discount.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
+                  <span>Final customs duty:</span>
+                  <span>${steps.component_discounts.customs.final.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Step 6: Handling Fees */}
           {steps.handling_fee > 0 && (
             <div className="p-3 bg-gray-50 rounded-lg">
@@ -384,6 +465,31 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             </div>
           )}
 
+          {/* Handling Fee Discount */}
+          {steps.component_discounts?.handling && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                  <span className="font-medium text-green-800">Handling Fee Discount</span>
+                </div>
+                <span className="font-bold text-green-800">-${steps.component_discounts.handling.discount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-green-600 mt-2">
+                {steps.component_discounts.handling.applied_discounts?.map((discount, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>• {discount.description}</span>
+                    <span>-${discount.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
+                  <span>Final handling fee:</span>
+                  <span>${steps.component_discounts.handling.final.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Step 7: Domestic Delivery */}
           {steps.domestic_delivery > 0 && (
             <div className="p-3 bg-gray-50 rounded-lg">
@@ -397,6 +503,31 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               <p className="text-sm text-gray-500 mt-1">
                 {inputs.destination_state === 'rural' ? 'Rural' : 'Urban'} delivery in {inputs.destination_country}
               </p>
+            </div>
+          )}
+
+          {/* Delivery Discount */}
+          {steps.component_discounts?.delivery && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                  <span className="font-medium text-green-800">Delivery Discount</span>
+                </div>
+                <span className="font-bold text-green-800">-${steps.component_discounts.delivery.discount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-green-600 mt-2">
+                {steps.component_discounts.delivery.applied_discounts?.map((discount, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>• {discount.description}</span>
+                    <span>-${discount.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
+                  <span>Final delivery fee:</span>
+                  <span>${steps.component_discounts.delivery.final.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -424,6 +555,31 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               <p className="text-sm text-gray-500 mt-1">
                 {rates.local_tax_percentage}% of taxable value ${steps.taxable_value.toFixed(2)} = ${steps.local_tax_amount.toFixed(2)}
               </p>
+            </div>
+          )}
+
+          {/* Tax Discount */}
+          {steps.component_discounts?.taxes && (
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                  <span className="font-medium text-green-800">{taxInfo.local_tax_name} Discount</span>
+                </div>
+                <span className="font-bold text-green-800">-${steps.component_discounts.taxes.discount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-green-600 mt-2">
+                {steps.component_discounts.taxes.applied_discounts?.map((discount, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>• {discount.description}</span>
+                    <span>-${discount.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-semibold mt-1 pt-1 border-t border-green-300">
+                  <span>Final {taxInfo.local_tax_name.toLowerCase()}:</span>
+                  <span>${steps.component_discounts.taxes.final.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
           )}
 

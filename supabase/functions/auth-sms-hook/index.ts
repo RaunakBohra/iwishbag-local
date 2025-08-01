@@ -248,6 +248,7 @@ serve(async (req) => {
         provider: smsResult.provider,
         expires_at: expiresAt.toISOString(),
         type,
+        ...(isTestMode ? { test_otp: otp } : {}), // Include OTP in test mode
       }),
       {
         status: 200,

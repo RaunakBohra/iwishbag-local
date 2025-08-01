@@ -140,11 +140,12 @@ const Header = () => {
     else if (user?.user_metadata?.full_name) {
       fullName = user.user_metadata.full_name;
     }
-    // Fallback to email prefix
-    else if (user?.email) {
+    // Fallback to email prefix (but not for phone-only users)
+    else if (user?.email && !user.email.includes('@phone.iwishbag.com')) {
       fullName = user.email.split('@')[0];
     } else {
-      fullName = 'Customer';
+      // For phone-only users or users without names, don't show greeting
+      return null;
     }
 
     // Extract first name and add greeting
@@ -586,17 +587,22 @@ const Header = () => {
                       className="px-2 md:px-3 py-2 text-left hover:bg-gray-50 min-w-0 h-9 rounded-md transition-colors"
                     >
                       <div className="flex items-center space-x-2 min-w-0">
-                        <Avatar className="h-6 w-6 flex-shrink-0">
-                          <AvatarImage src={getAvatarUrl() || undefined} alt={getDisplayName()} />
-                          <AvatarFallback className="bg-teal-50 text-teal-600 text-xs font-medium">
-                            {getInitials()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col items-start min-w-0 hidden md:block">
-                          <span className="text-sm font-medium truncate text-gray-900">
-                            {getDisplayName()}
-                          </span>
-                        </div>
+                        {getAvatarUrl() ? (
+                          <Avatar className="h-6 w-6 flex-shrink-0">
+                            <AvatarImage src={getAvatarUrl()} alt={getDisplayName() || 'User'} />
+                          </Avatar>
+                        ) : (
+                          <div className="h-6 w-6 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center">
+                            <User className="h-4 w-4 text-gray-600" />
+                          </div>
+                        )}
+                        {getDisplayName() && (
+                          <div className="flex flex-col items-start min-w-0 hidden md:block">
+                            <span className="text-sm font-medium truncate text-gray-900">
+                              {getDisplayName()}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </Button>
                   </DropdownMenuTrigger>
@@ -608,7 +614,12 @@ const Header = () => {
                       <div className="flex flex-col">
                         <span>My Account</span>
                         <span className="text-xs font-normal text-gray-500 truncate">
-                          {user.email}
+                          {user.email && !user.email.includes('@phone.iwishbag.com') 
+                            ? user.email 
+                            : user?.phone 
+                              ? `Phone: ${user.phone}` 
+                              : 'Account'
+                          }
                         </span>
                       </div>
                     </DropdownMenuLabel>

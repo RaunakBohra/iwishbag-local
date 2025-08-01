@@ -55,7 +55,7 @@ import { currencyService, type Currency } from '@/services/CurrencyService';
 import { H1, Body, BodySmall } from '@/components/ui/typography';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 import { customerDisplayUtils } from '@/utils/customerDisplayUtils';
-import { detectCountryFromNumber } from '@/lib/phoneFormatUtils';
+import { detectCountryFromNumber, getDialCode, parsePhoneInput } from '@/lib/phoneFormatUtils';
 
 const profileFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
@@ -130,13 +130,14 @@ const Profile = () => {
     enabled: !!user,
   });
 
-  // Get customer display data using the utility
+  // Get customer display data using the utility (filter out default "User" name)
   const customerData = customerDisplayUtils.getCustomerDisplayData(
     {
       user: user,
       profiles: profile,
       customer_data: {
-        name: user?.user_metadata?.name || user?.user_metadata?.full_name,
+        name: (user?.user_metadata?.name !== 'User' ? user?.user_metadata?.name : null) || 
+              (user?.user_metadata?.full_name !== 'User' ? user?.user_metadata?.full_name : null),
         email: user?.email,
         phone: user?.phone
       }
@@ -286,12 +287,12 @@ const Profile = () => {
     // Also wait for profile query to settle (either with data or null)
     if (isLoading) return;
 
-    // Always get display name, even if no profile exists yet
+    // Always get display name, even if no profile exists yet (don't use "User" as default)
     const displayName =
-      profile?.full_name ||
-      user?.user_metadata?.name ||
-      user?.user_metadata?.full_name ||
-      user?.email?.split('@')[0] ||
+      (profile?.full_name && profile.full_name !== 'User' ? profile.full_name : '') ||
+      (user?.user_metadata?.name && user.user_metadata.name !== 'User' ? user.user_metadata.name : '') ||
+      (user?.user_metadata?.full_name && user.user_metadata.full_name !== 'User' ? user.user_metadata.full_name : '') ||
+      (user?.email && !user.email.includes('@phone.iwishbag.com') ? user.email.split('@')[0] : '') ||
       '';
 
     // Get phone from auth.users.phone instead of profiles.phone
@@ -305,12 +306,34 @@ const Profile = () => {
       }
     }
 
+    // Parse phone number to remove country code for the input
+    let phoneForInput = userPhone;
+    if (userPhone && userPhone.startsWith('+')) {
+      // If we have a detected country, remove its dial code
+      if (phoneCountry) {
+        const dialCode = getDialCode(phoneCountry);
+        if (userPhone.startsWith(dialCode)) {
+          phoneForInput = userPhone.substring(dialCode.length).trim();
+        }
+      } else {
+        // Try to parse and get national number
+        try {
+          const parsed = parsePhoneInput(userPhone);
+          if (parsed.digits) {
+            phoneForInput = parsed.digits;
+          }
+        } catch {
+          // Keep original if parsing fails
+        }
+      }
+    }
+
     // Set form values whether profile exists or not
     form.reset({
       full_name: displayName,
       email: (user?.email && !user.email.includes('@phone.iwishbag.com')) ? user.email : '',
-      phone: userPhone,
-      country: profile?.country || 'US',
+      phone: phoneForInput,
+      country: profile?.country || phoneCountry || 'US',
       preferred_display_currency: profile?.preferred_display_currency || 'USD',
     });
     
@@ -420,18 +443,19 @@ const Profile = () => {
           <div className="max-w-4xl mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage
-                    src={getUserAvatarUrl() || undefined}
-                    alt={customerData.displayName}
-                  />
-                  <AvatarFallback className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xl font-semibold">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
+                {getUserAvatarUrl() && (
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage
+                      src={getUserAvatarUrl()}
+                      alt={customerData.displayName}
+                    />
+                  </Avatar>
+                )}
                 <div>
                   <H1 className="text-2xl mb-1">
-                    {customerData.displayName}
+                    {customerData.displayName || (
+                      <span className="text-gray-400">Add your name</span>
+                    )}
                   </H1>
                   <BodySmall className="text-gray-600">
                     {user?.email && !user.email.includes('@phone.iwishbag.com') 
@@ -570,29 +594,43 @@ const Profile = () => {
                       </div>
                       <FormControl>
                         <div className="space-y-2">
-                          <div className="[&_.text-green-500]:hidden [&_.border-green-300]:border-gray-300 [&_.ring-green-200]:ring-0 [&_.focus-within\\:border-blue-500]:focus-within:border-teal-500 [&_.focus-within\\:ring-blue-200]:focus-within:ring-teal-500/20">
-                            <WorldClassPhoneInput
-                              countries={Array.isArray(allCountries) ? allCountries : []}
-                              value={field.value}
-                              onChange={(newPhoneValue) => {
-                                field.onChange(newPhoneValue);
-                              }}
-                              onValidationChange={(_, error) => {
-                                setPhoneError(error || '');
-                                if (error) {
-                                  form.setError('phone', { message: error });
-                                } else {
-                                  form.clearErrors('phone');
-                                }
-                              }}
-                              initialCountry={phoneCountry || profile?.country || 'US'}
-                              currentCountry={phoneCountry || undefined}
-                              disabled={updateProfileMutation.isPending}
-                              required={true}
-                              error={form.formState.errors.phone?.message}
-                              placeholder="Enter phone number"
-                            />
-                          </div>
+                          {user?.phone ? (
+                            // Show verified phone as read-only text (like WhatsApp/Apple)
+                            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-3">
+                                <Phone className="h-4 w-4 text-gray-400" />
+                                <span className="text-gray-900 font-medium">{user.phone}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">Verified</span>
+                              </div>
+                            </div>
+                          ) : (
+                            // Show input only for users without phone
+                            <div className="[&_.text-green-500]:hidden [&_.border-green-300]:border-gray-300 [&_.ring-green-200]:ring-0 [&_.focus-within\\:border-blue-500]:focus-within:border-teal-500 [&_.focus-within\\:ring-blue-200]:focus-within:ring-teal-500/20">
+                              <WorldClassPhoneInput
+                                countries={Array.isArray(allCountries) ? allCountries : []}
+                                value={field.value}
+                                onChange={(newPhoneValue) => {
+                                  field.onChange(newPhoneValue);
+                                }}
+                                onValidationChange={(_, error) => {
+                                  setPhoneError(error || '');
+                                  if (error) {
+                                    form.setError('phone', { message: error });
+                                  } else {
+                                    form.clearErrors('phone');
+                                  }
+                                }}
+                                initialCountry={phoneCountry || profile?.country || 'US'}
+                                currentCountry={phoneCountry || profile?.country || undefined}
+                                disabled={updateProfileMutation.isPending}
+                                required={true}
+                                error={form.formState.errors.phone?.message}
+                                placeholder="Enter phone number"
+                              />
+                            </div>
+                          )}
                           <BodySmall className="text-gray-500">
                             {user?.phone 
                               ? 'Update your phone number with secure verification.'

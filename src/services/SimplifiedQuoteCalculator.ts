@@ -1,4 +1,5 @@
 import { currencyService } from './CurrencyService';
+import { DiscountService } from './DiscountService';
 
 interface CalculationInput {
   items: Array<{
@@ -29,6 +30,12 @@ interface CalculationInput {
     type: 'percentage' | 'fixed' | 'free';
     value?: number; // Not needed if type is 'free'
   };
+  
+  // Enhanced discount inputs
+  discount_codes?: string[];
+  customer_id?: string;
+  is_first_order?: boolean;
+  apply_component_discounts?: boolean; // Enable component-based discounts
 }
 
 interface CalculationResult {
@@ -66,15 +73,35 @@ interface CalculationResult {
     insurance_amount: number;
     cif_value: number;
     customs_duty: number;
+    customs_discount_amount?: number; // NEW: Customs discount
+    discounted_customs_duty?: number; // NEW: Final customs after discount
     handling_fee: number;
+    handling_discount_amount?: number; // NEW: Handling fee discount
+    discounted_handling_fee?: number; // NEW: Final handling fee after discount
     domestic_delivery: number;
+    delivery_discount_amount?: number; // NEW: Delivery discount
+    discounted_delivery?: number; // NEW: Final delivery after discount
     taxable_value: number; // All costs before local tax
     local_tax_amount: number; // GST/VAT on taxable value
+    tax_discount_amount?: number; // NEW: Tax discount (rare)
+    discounted_tax_amount?: number; // NEW: Final tax after discount
     subtotal_before_gateway: number;
     payment_gateway_fee: number;
     total_usd: number;
     total_customer_currency: number;
     total_savings: number; // Total discount amount
+    component_discounts?: { // NEW: Breakdown by component
+      [component: string]: {
+        original: number;
+        discount: number;
+        final: number;
+        applied_discounts: Array<{
+          source: string;
+          description: string;
+          amount: number;
+        }>;
+      };
+    };
   };
   calculation_timestamp: string;
   calculation_version: 'v2';
@@ -312,7 +339,56 @@ class SimplifiedQuoteCalculator {
     
     const customsDuty = cifValue * (effectiveCustomsRate / 100);
 
-    // Step 9: Calculate handling fee (on discounted items value)
+    // Step 9: Apply component-based discounts if enabled
+    let componentDiscounts: { [key: string]: any } = {};
+    let discountedCustomsDuty = customsDuty;
+    let customsDiscountAmount = 0;
+    let discountedHandlingFee = 0;
+    let handlingDiscountAmount = 0;
+    let discountedDelivery = 0;
+    let deliveryDiscountAmount = 0;
+    let discountedTaxAmount = 0;
+    let taxDiscountAmount = 0;
+    
+    // Fetch all component discounts once
+    let discountsByComponent = new Map<string, any[]>();
+    if (input.apply_component_discounts && input.customer_id) {
+      try {
+        discountsByComponent = await DiscountService.getComponentDiscounts(
+          input.customer_id,
+          finalItemsSubtotal,
+          input.destination_country,
+          input.is_first_order || false,
+          input.items.length,
+          input.discount_codes || []
+        );
+        
+        // Apply customs discounts
+        if (discountsByComponent.has('customs')) {
+          const customsDiscountResult = DiscountService.calculateComponentDiscount(
+            customsDuty,
+            discountsByComponent.get('customs')!,
+            'customs'
+          );
+          discountedCustomsDuty = customsDiscountResult.finalValue;
+          customsDiscountAmount = customsDiscountResult.totalDiscount;
+          componentDiscounts.customs = {
+            original: customsDuty,
+            discount: customsDiscountAmount,
+            final: discountedCustomsDuty,
+            applied_discounts: customsDiscountResult.appliedDiscounts.map(d => ({
+              source: d.discount_source,
+              description: d.description || '',
+              amount: d.discount_amount
+            }))
+          };
+        }
+      } catch (error) {
+        console.error('Error fetching component discounts:', error);
+      }
+    }
+
+    // Step 10: Calculate handling fee (on discounted items value)
     const handlingFeeType = input.handling_fee_type || 'both';
     let handlingFee = 0;
     let handlingFeeFixed = 0;
@@ -327,12 +403,56 @@ class SimplifiedQuoteCalculator {
       handlingFee += finalItemsSubtotal * (handlingFeePercentage / 100);
     }
 
-    // Step 9: Calculate domestic delivery
+    // Apply handling fee discounts if available
+    discountedHandlingFee = handlingFee;
+    if (discountsByComponent.has('handling')) {
+      const handlingDiscountResult = DiscountService.calculateComponentDiscount(
+        handlingFee,
+        discountsByComponent.get('handling')!,
+        'handling'
+      );
+      discountedHandlingFee = handlingDiscountResult.finalValue;
+      handlingDiscountAmount = handlingDiscountResult.totalDiscount;
+      componentDiscounts.handling = {
+        original: handlingFee,
+        discount: handlingDiscountAmount,
+        final: discountedHandlingFee,
+        applied_discounts: handlingDiscountResult.appliedDiscounts.map(d => ({
+          source: d.discount_source,
+          description: d.description || '',
+          amount: d.discount_amount
+        }))
+      };
+    }
+
+    // Step 11: Calculate domestic delivery
     const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
     const domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
 
-    // Step 10: Calculate taxable value (all costs before local tax)
-    const taxableValue = cifValue + customsDuty + handlingFee + domesticDelivery;
+    // Apply delivery discounts if available
+    discountedDelivery = domesticDelivery;
+    if (discountsByComponent.has('delivery')) {
+      const deliveryDiscountResult = DiscountService.calculateComponentDiscount(
+        domesticDelivery,
+        discountsByComponent.get('delivery')!,
+        'delivery'
+      );
+      discountedDelivery = deliveryDiscountResult.finalValue;
+      deliveryDiscountAmount = deliveryDiscountResult.totalDiscount;
+      componentDiscounts.delivery = {
+        original: domesticDelivery,
+        discount: deliveryDiscountAmount,
+        final: discountedDelivery,
+        applied_discounts: deliveryDiscountResult.appliedDiscounts.map(d => ({
+          source: d.discount_source,
+          description: d.description || '',
+          amount: d.discount_amount
+        }))
+      };
+    }
+
+    // Step 12: Calculate taxable value (all costs before local tax)
+    const taxableValue = cifValue + discountedCustomsDuty + discountedHandlingFee + discountedDelivery;
 
     // Step 11: Calculate local tax (GST/VAT) on taxable value
     let localTaxRate = countryConfig.local_tax;
@@ -343,9 +463,31 @@ class SimplifiedQuoteCalculator {
     }
     
     const localTaxAmount = taxableValue * (localTaxRate / 100);
+    
+    // Apply tax discounts if available (rare but possible for "we pay the VAT" campaigns)
+    discountedTaxAmount = localTaxAmount;
+    if (discountsByComponent.has('taxes')) {
+      const taxDiscountResult = DiscountService.calculateComponentDiscount(
+        localTaxAmount,
+        discountsByComponent.get('taxes')!,
+        'taxes'
+      );
+      discountedTaxAmount = taxDiscountResult.finalValue;
+      taxDiscountAmount = taxDiscountResult.totalDiscount;
+      componentDiscounts.taxes = {
+        original: localTaxAmount,
+        discount: taxDiscountAmount,
+        final: discountedTaxAmount,
+        applied_discounts: taxDiscountResult.appliedDiscounts.map(d => ({
+          source: d.discount_source,
+          description: d.description || '',
+          amount: d.discount_amount
+        }))
+      };
+    }
 
     // Step 12: Calculate subtotal before payment gateway fee
-    const subtotalBeforeGateway = taxableValue + localTaxAmount;
+    const subtotalBeforeGateway = taxableValue + discountedTaxAmount;
 
     // Step 13: Calculate payment gateway fee
     const gateway = input.payment_gateway || 'stripe';
@@ -356,8 +498,9 @@ class SimplifiedQuoteCalculator {
     const totalUSD = subtotalBeforeGateway + paymentGatewayFee;
     const totalCustomerCurrency = totalUSD * exchangeRate;
     
-    // Calculate total savings
-    const totalSavings = totalItemDiscounts + orderDiscountAmount + shippingDiscountAmount;
+    // Calculate total savings (including all component discounts)
+    const totalSavings = totalItemDiscounts + orderDiscountAmount + shippingDiscountAmount + 
+                        customsDiscountAmount + handlingDiscountAmount + deliveryDiscountAmount + taxDiscountAmount;
 
     // Return structured result
     return {
@@ -398,15 +541,24 @@ class SimplifiedQuoteCalculator {
         insurance_amount: this.round(insuranceAmount),
         cif_value: this.round(cifValue),
         customs_duty: this.round(customsDuty),
+        customs_discount_amount: this.round(customsDiscountAmount),
+        discounted_customs_duty: this.round(discountedCustomsDuty),
         handling_fee: this.round(handlingFee),
+        handling_discount_amount: this.round(handlingDiscountAmount),
+        discounted_handling_fee: this.round(discountedHandlingFee),
         domestic_delivery: this.round(domesticDelivery),
+        delivery_discount_amount: this.round(deliveryDiscountAmount),
+        discounted_delivery: this.round(discountedDelivery),
         taxable_value: this.round(taxableValue),
         local_tax_amount: this.round(localTaxAmount),
+        tax_discount_amount: this.round(taxDiscountAmount),
+        discounted_tax_amount: this.round(discountedTaxAmount),
         subtotal_before_gateway: this.round(subtotalBeforeGateway),
         payment_gateway_fee: this.round(paymentGatewayFee),
         total_usd: this.round(totalUSD),
         total_customer_currency: this.round(totalCustomerCurrency),
-        total_savings: this.round(totalSavings)
+        total_savings: this.round(totalSavings),
+        component_discounts: Object.keys(componentDiscounts).length > 0 ? componentDiscounts : undefined
       },
       calculation_timestamp: new Date().toISOString(),
       calculation_version: 'v2'

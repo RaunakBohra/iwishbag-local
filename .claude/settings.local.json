@@ -246,7 +246,8 @@
       "Bash(zip:*)",
       "WebFetch(domain:docs.msg91.com)",
       "WebFetch(domain:msg91.com)",
-      "Bash(./test-msg91.sh:*)"
+      "Bash(./test-msg91.sh:*)",
+      "Bash(./setup-local-email-testing.sh:*)"
     ],
     "deny": []
   }

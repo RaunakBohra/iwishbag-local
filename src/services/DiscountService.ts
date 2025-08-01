@@ -5,14 +5,41 @@ export interface DiscountType {
   id: string;
   name: string;
   code: string;
-  type: 'percentage' | 'fixed_amount' | 'shipping' | 'handling_fee';
+  type: 'percentage' | 'fixed_amount' | 'shipping' | 'handling_fee' | 'customs' | 'taxes' | 'all_fees';
   value: number;
   conditions: {
     min_order?: number;
     max_discount?: number;
-    applicable_to?: 'total' | 'handling' | 'shipping';
+    max_discount_percentage?: number;
+    applicable_to?: 'total' | 'handling' | 'shipping' | 'customs' | 'taxes' | 'insurance' | 'delivery' | 'all_fees';
+    exclude_components?: string[];
+    stacking_allowed?: boolean;
+    membership_required?: boolean;
+    first_time_only?: boolean;
+    min_items?: number;
+    use_tiers?: boolean;
   };
+  applicable_components?: string[];
+  tier_rules?: DiscountTier[];
+  priority?: number;
   is_active: boolean;
+}
+
+export interface DiscountTier {
+  id: string;
+  min_order_value: number;
+  max_order_value?: number;
+  discount_value: number;
+  applicable_components: string[];
+}
+
+export interface CountryDiscountRule {
+  id: string;
+  discount_type_id: string;
+  country_code: string;
+  component_discounts: { [component: string]: number };
+  min_order_amount?: number;
+  max_uses_per_customer?: number;
 }
 
 export interface DiscountCampaign {
@@ -59,12 +86,14 @@ export interface DiscountCode {
 }
 
 export interface ApplicableDiscount {
-  discount_source: 'membership' | 'payment_method' | 'campaign' | 'code';
+  discount_source: 'membership' | 'payment_method' | 'campaign' | 'code' | 'volume' | 'first_time';
   discount_type: 'percentage' | 'fixed_amount';
   discount_value: number;
   discount_amount: number;
-  applies_to: 'total' | 'handling' | 'shipping';
+  applies_to: 'total' | 'handling' | 'shipping' | 'customs' | 'taxes' | 'insurance' | 'delivery' | 'all_fees';
+  component_breakdown?: { [component: string]: number }; // e.g., {"customs": 25, "handling": 10}
   is_stackable: boolean;
+  priority?: number;
   description?: string;
 }
 
@@ -488,6 +517,8 @@ class DiscountServiceClass {
     membershipType?: string
   ): Promise<DiscountCampaign[]> {
     try {
+      const now = new Date().toISOString();
+      
       let query = supabase
         .from('discount_campaigns')
         .select(`
@@ -495,15 +526,17 @@ class DiscountServiceClass {
           discount_type:discount_types(*)
         `)
         .eq('is_active', true)
-        .lte('start_date', new Date().toISOString()) // Start date should be in the past or now
-        .or('end_date.is.null,end_date.gte.' + new Date().toISOString());
+        .lte('start_date', now); // Start date should be in the past or now
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Filter by target audience
-      let campaigns = data || [];
+      // Filter by end_date after fetching (to handle null end_date properly)
+      let campaigns = (data || []).filter(campaign => {
+        if (!campaign.end_date) return true; // No end date means ongoing
+        return new Date(campaign.end_date) >= new Date(now);
+      });
       
       if (countryCode) {
         campaigns = campaigns.filter(c => 
@@ -522,6 +555,25 @@ class DiscountServiceClass {
       return campaigns;
     } catch (error) {
       console.error('Error getting active campaigns:', error);
+      return [];
+    }
+  }
+
+  async getAllCampaigns(): Promise<DiscountCampaign[]> {
+    try {
+      const { data, error } = await supabase
+        .from('discount_campaigns')
+        .select(`
+          *,
+          discount_type:discount_types(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error getting all campaigns:', error);
       return [];
     }
   }
@@ -619,6 +671,233 @@ class DiscountServiceClass {
 
   clearCache(): void {
     this.discountCache.clear();
+  }
+
+  async getComponentDiscounts(
+    customerId: string,
+    orderTotal: number,
+    countryCode: string,
+    isFirstOrder: boolean = false,
+    itemCount: number = 1,
+    discountCodes: string[] = []
+  ): Promise<Map<string, ApplicableDiscount[]>> {
+    const componentDiscounts = new Map<string, ApplicableDiscount[]>();
+    
+    try {
+      // Get all applicable discounts
+      const allDiscounts = await this.getApplicableDiscounts(
+        customerId,
+        orderTotal,
+        0, // We'll calculate handling separately
+        undefined,
+        countryCode,
+        discountCodes[0] // For now, just use first code
+      );
+
+      // Get volume discounts
+      const volumeDiscounts = await this.getVolumeDiscounts(orderTotal, itemCount);
+      
+      // Get first-time customer discounts
+      if (isFirstOrder) {
+        const firstTimeDiscounts = await this.getFirstTimeDiscounts(orderTotal);
+        allDiscounts.push(...firstTimeDiscounts);
+      }
+
+      // Get country-specific discounts
+      const countryDiscounts = await this.getCountrySpecificDiscounts(countryCode, orderTotal);
+      allDiscounts.push(...countryDiscounts);
+
+      // Group discounts by component
+      [...allDiscounts, ...volumeDiscounts].forEach(discount => {
+        const components = this.getDiscountComponents(discount);
+        components.forEach(component => {
+          if (!componentDiscounts.has(component)) {
+            componentDiscounts.set(component, []);
+          }
+          componentDiscounts.get(component)!.push(discount);
+        });
+      });
+
+      return componentDiscounts;
+    } catch (error) {
+      console.error('Error getting component discounts:', error);
+      return componentDiscounts;
+    }
+  }
+
+  private getDiscountComponents(discount: ApplicableDiscount): string[] {
+    if (discount.applies_to === 'all_fees') {
+      return ['customs', 'handling', 'taxes', 'delivery'];
+    }
+    return [discount.applies_to];
+  }
+
+  async getVolumeDiscounts(orderTotal: number, itemCount: number): Promise<ApplicableDiscount[]> {
+    try {
+      const { data: volumeDiscounts, error } = await supabase
+        .from('discount_types')
+        .select(`
+          *,
+          tiers:discount_tiers(*)
+        `)
+        .eq('is_active', true)
+        .eq('conditions->use_tiers', true);
+
+      if (error || !volumeDiscounts) return [];
+
+      const applicableDiscounts: ApplicableDiscount[] = [];
+
+      volumeDiscounts.forEach(discount => {
+        if (!discount.tiers || discount.tiers.length === 0) return;
+
+        // Find applicable tier
+        const applicableTier = discount.tiers
+          .sort((a, b) => b.min_order_value - a.min_order_value)
+          .find(tier => 
+            orderTotal >= tier.min_order_value && 
+            (!tier.max_order_value || orderTotal <= tier.max_order_value)
+          );
+
+        if (applicableTier) {
+          applicableTier.applicable_components.forEach(component => {
+            applicableDiscounts.push({
+              discount_source: 'volume',
+              discount_type: 'percentage',
+              discount_value: applicableTier.discount_value,
+              discount_amount: 0, // Will be calculated later
+              applies_to: component as any,
+              is_stackable: discount.conditions?.stacking_allowed !== false,
+              priority: discount.priority || 100,
+              description: `Volume discount: ${applicableTier.discount_value}% off ${component}`
+            });
+          });
+        }
+      });
+
+      return applicableDiscounts;
+    } catch (error) {
+      console.error('Error getting volume discounts:', error);
+      return [];
+    }
+  }
+
+  async getFirstTimeDiscounts(orderTotal: number): Promise<ApplicableDiscount[]> {
+    try {
+      const { data: firstTimeDiscounts, error } = await supabase
+        .from('discount_types')
+        .select('*')
+        .eq('is_active', true)
+        .eq('conditions->first_time_only', true)
+        .or(`conditions->min_order.is.null,conditions->min_order.lte.${orderTotal}`);
+
+      if (error || !firstTimeDiscounts) return [];
+
+      return firstTimeDiscounts.map(discount => ({
+        discount_source: 'first_time' as const,
+        discount_type: discount.type.includes('percentage') ? 'percentage' : 'fixed_amount' as const,
+        discount_value: discount.value,
+        discount_amount: 0,
+        applies_to: (discount.conditions?.applicable_to || 'total') as any,
+        is_stackable: discount.conditions?.stacking_allowed !== false,
+        priority: discount.priority || 100,
+        description: discount.name
+      }));
+    } catch (error) {
+      console.error('Error getting first-time discounts:', error);
+      return [];
+    }
+  }
+
+  async getCountrySpecificDiscounts(countryCode: string, orderTotal: number): Promise<ApplicableDiscount[]> {
+    try {
+      const { data: countryRules, error } = await supabase
+        .from('country_discount_rules')
+        .select(`
+          *,
+          discount_type:discount_types(*)
+        `)
+        .eq('country_code', countryCode)
+        .or(`min_order_amount.is.null,min_order_amount.lte.${orderTotal}`);
+
+      if (error || !countryRules) return [];
+
+      const discounts: ApplicableDiscount[] = [];
+
+      countryRules.forEach(rule => {
+        if (!rule.discount_type?.is_active) return;
+
+        // Apply component-specific discounts
+        Object.entries(rule.component_discounts).forEach(([component, value]) => {
+          discounts.push({
+            discount_source: 'campaign',
+            discount_type: 'percentage',
+            discount_value: value as number,
+            discount_amount: 0,
+            applies_to: component as any,
+            is_stackable: rule.discount_type.conditions?.stacking_allowed !== false,
+            priority: rule.discount_type.priority || 100,
+            description: `${countryCode} special: ${value}% off ${component}`
+          });
+        });
+      });
+
+      return discounts;
+    } catch (error) {
+      console.error('Error getting country-specific discounts:', error);
+      return [];
+    }
+  }
+
+  calculateComponentDiscount(
+    componentValue: number,
+    discounts: ApplicableDiscount[],
+    componentName: string
+  ): { finalValue: number; totalDiscount: number; appliedDiscounts: ApplicableDiscount[] } {
+    // Sort by priority (higher priority first)
+    const sortedDiscounts = discounts.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    
+    let remainingValue = componentValue;
+    let totalDiscount = 0;
+    const appliedDiscounts: ApplicableDiscount[] = [];
+
+    for (const discount of sortedDiscounts) {
+      if (!discount.is_stackable && appliedDiscounts.length > 0) continue;
+
+      let discountAmount = 0;
+      if (discount.discount_type === 'percentage') {
+        discountAmount = remainingValue * (discount.discount_value / 100);
+        
+        // Apply max discount limits
+        const conditions = (discount as any).conditions;
+        if (conditions?.max_discount) {
+          discountAmount = Math.min(discountAmount, conditions.max_discount);
+        }
+        if (conditions?.max_discount_percentage) {
+          const maxAllowed = componentValue * (conditions.max_discount_percentage / 100);
+          discountAmount = Math.min(discountAmount, maxAllowed);
+        }
+      } else {
+        discountAmount = Math.min(discount.discount_value, remainingValue);
+      }
+
+      if (discountAmount > 0) {
+        totalDiscount += discountAmount;
+        remainingValue -= discountAmount;
+        appliedDiscounts.push({
+          ...discount,
+          discount_amount: discountAmount
+        });
+
+        // If this discount brings the value to 0, stop
+        if (remainingValue <= 0) break;
+      }
+    }
+
+    return {
+      finalValue: Math.max(0, remainingValue),
+      totalDiscount,
+      appliedDiscounts
+    };
   }
 }
 
