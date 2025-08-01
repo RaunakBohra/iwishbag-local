@@ -1,5 +1,7 @@
 import React from 'react';
 import type { UnifiedQuote } from '@/types/unified-quote';
+import { Badge } from '@/components/ui/badge';
+import { Clock, Mail, Share2 } from 'lucide-react';
 
 interface CompactQuoteListItemProps {
   quote: UnifiedQuote;
@@ -28,17 +30,45 @@ export const CompactQuoteListItem: React.FC<CompactQuoteListItemProps> = ({
       onClick={handleClick}
     >
       <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-medium text-gray-900">
-            Quote #{quote.id?.slice(-8) || 'Unknown'}
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-medium text-gray-900">
+              Quote #{quote.id?.slice(-8) || 'Unknown'}
+            </h3>
+            {(quote as any).email_sent && (
+              <Badge variant="outline" className="text-green-600 text-xs">
+                <Mail className="mr-1 h-3 w-3" />
+                Sent
+              </Badge>
+            )}
+            {(quote as any).has_share_token && (
+              <Badge variant="outline" className="text-blue-600 text-xs">
+                <Share2 className="mr-1 h-3 w-3" />
+                Shared
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-gray-600">
             {quote.items?.length || 0} items • {quote.status || 'Unknown status'}
           </p>
+          {(quote as any).expiry_status && (
+            <div className="mt-2">
+              <Badge 
+                variant={(quote as any).expiry_status.variant as any}
+                className="text-xs"
+              >
+                <Clock className="mr-1 h-3 w-3" />
+                {(quote as any).expiry_status.text}
+              </Badge>
+            </div>
+          )}
         </div>
         <div className="text-right">
           <p className="font-bold text-gray-900">
             ${(quote.final_total_usd || 0).toFixed(2)}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {quote.customer_data?.info?.name || 'Unknown'}
           </p>
         </div>
       </div>

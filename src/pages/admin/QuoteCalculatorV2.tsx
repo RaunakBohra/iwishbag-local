@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,10 @@ import {
   DollarSign,
   Globe,
   Info,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  ExternalLink,
+  Clock
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +56,8 @@ const QuoteCalculatorV2: React.FC = () => {
   const [currentQuoteStatus, setCurrentQuoteStatus] = useState<string>('draft');
   const [emailSent, setEmailSent] = useState(false);
   const [showEmailSection, setShowEmailSection] = useState(false);
+  const [shareToken, setShareToken] = useState<string>('');
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
   
   // Form state
   const [customerEmail, setCustomerEmail] = useState('');
@@ -134,6 +139,8 @@ const QuoteCalculatorV2: React.FC = () => {
         setIsEditMode(true);
         setCurrentQuoteStatus(quote.status || 'draft');
         setEmailSent(quote.email_sent || false);
+        setShareToken(quote.share_token || '');
+        setExpiresAt(quote.expires_at || null);
 
         // Map quote data to form fields
         setCustomerEmail(quote.customer_email || '');
@@ -277,6 +284,14 @@ const QuoteCalculatorV2: React.FC = () => {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
+      // Generate share token if not exists (for new quotes or quotes without tokens)
+      let newShareToken = shareToken; // Use existing token
+      if (!isEditMode || !shareToken) {
+        const { data: tokenData } = await supabase.rpc('generate_quote_share_token');
+        newShareToken = tokenData;
+        setShareToken(newShareToken); // Update state
+      }
+
       // Prepare quote data
       const quoteData = {
         customer_email: customerEmail,
@@ -298,7 +313,11 @@ const QuoteCalculatorV2: React.FC = () => {
         customer_currency: customerCurrency,
         admin_notes: adminNotes,
         status: isEditMode ? 'calculated' : 'draft', // Update status when editing
-        calculated_at: new Date().toISOString()
+        calculated_at: new Date().toISOString(),
+        ...(newShareToken && { share_token: newShareToken }), // Add share token if generated
+        ...(isEditMode && currentQuoteStatus === 'calculated' && { 
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+        })
       };
 
       let result;
@@ -367,10 +386,69 @@ const QuoteCalculatorV2: React.FC = () => {
     }
     setShowEmailSection(false);
     setCurrentQuoteStatus('sent');
+    
+    // Update expires_at when email is sent
+    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    setExpiresAt(newExpiresAt);
+    
+    // Update in database
+    if (quoteId) {
+      await supabase
+        .from('quotes_v2')
+        .update({ 
+          expires_at: newExpiresAt,
+          sent_at: new Date().toISOString()
+        })
+        .eq('id', quoteId);
+    }
+    
     toast({
       title: "Success",
       description: "Quote email sent successfully",
     });
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareToken) return;
+    
+    const shareUrl = `${window.location.origin}/quote/view/${shareToken}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Copied!",
+        description: "Share URL copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openShareUrl = () => {
+    if (!shareToken) return;
+    const shareUrl = `${window.location.origin}/quote/view/${shareToken}`;
+    window.open(shareUrl, '_blank');
+  };
+
+  const getExpiryStatus = () => {
+    if (!expiresAt) return null;
+    
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft < 0) {
+      return { status: 'expired', text: 'Expired', color: 'text-red-600' };
+    } else if (daysLeft <= 1) {
+      return { status: 'expiring', text: `Expires today`, color: 'text-orange-600' };
+    } else if (daysLeft <= 3) {
+      return { status: 'expiring-soon', text: `Expires in ${daysLeft} days`, color: 'text-orange-600' };
+    } else {
+      return { status: 'valid', text: `Expires in ${daysLeft} days`, color: 'text-green-600' };
+    }
   };
 
   const getCustomerCurrency = async (countryCode: string): Promise<string> => {
@@ -431,6 +509,15 @@ const QuoteCalculatorV2: React.FC = () => {
                   Email Sent
                 </Badge>
               )}
+              {expiresAt && (() => {
+                const expiryStatus = getExpiryStatus();
+                return expiryStatus ? (
+                  <Badge variant="outline" className={expiryStatus.color}>
+                    <Clock className="mr-1 h-3 w-3" />
+                    {expiryStatus.text}
+                  </Badge>
+                ) : null;
+              })()}
             </div>
           )}
           <div className="flex items-center space-x-2">
@@ -942,6 +1029,54 @@ const QuoteCalculatorV2: React.FC = () => {
                   onEmailSent={handleEmailSent}
                   isV2={true}
                 />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Share URL Section */}
+          {shareToken && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Share Quote</CardTitle>
+                <CardDescription>Customer can view this quote directly</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                  <code className="flex-1 text-sm font-mono text-gray-700 truncate">
+                    /quote/view/{shareToken}
+                  </code>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={copyShareUrl}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy URL
+                  </Button>
+                  <Button
+                    onClick={openShareUrl}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                </div>
+                
+                {expiresAt && (() => {
+                  const expiryStatus = getExpiryStatus();
+                  return expiryStatus ? (
+                    <div className={`text-sm ${expiryStatus.color} flex items-center gap-1`}>
+                      <Clock className="w-4 h-4" />
+                      {expiryStatus.text}
+                    </div>
+                  ) : null;
+                })()}
               </CardContent>
             </Card>
           )}

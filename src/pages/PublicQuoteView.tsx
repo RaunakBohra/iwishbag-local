@@ -50,34 +50,47 @@ export default function PublicQuoteView() {
     }
 
     try {
-      // Fetch quote by share token
-      const { data, error: fetchError } = await supabase
+      // Fetch quote using share token from V2 table
+      const { data: quote, error } = await supabase
         .from('quotes_v2')
         .select('*')
         .eq('share_token', token)
         .single();
 
-      if (fetchError || !data) {
-        setError('Quote not found or link is invalid');
+      if (error) {
+        if (error.code === 'PGRST116') {
+          setError('Quote not found or invalid share link');
+        } else {
+          setError('Failed to load quote');
+        }
         setLoading(false);
         return;
       }
 
-      setQuote(data);
-
-      // Check if expired
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        setIsExpired(true);
+      if (!quote) {
+        setError('Quote not found');
+        setLoading(false);
+        return;
       }
 
-      // Track view (this happens automatically via RLS)
-      await supabase.rpc('track_quote_view', {
-        quote_id: data.id,
-        token: token
-      });
+      // Check if quote is expired
+      if (quote.expires_at) {
+        const now = new Date();
+        const expiry = new Date(quote.expires_at);
+        setIsExpired(now > expiry);
+      }
 
-    } catch (err) {
-      console.error('Error fetching quote:', err);
+      // Track that the quote was viewed
+      if (!quote.viewed_at) {
+        await supabase
+          .from('quotes_v2')
+          .update({ viewed_at: new Date().toISOString() })
+          .eq('id', quote.id);
+      }
+
+      setQuote(quote);
+    } catch (error) {
+      console.error('Error fetching quote:', error);
       setError('Failed to load quote');
     } finally {
       setLoading(false);
@@ -151,6 +164,48 @@ export default function PublicQuoteView() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="container max-w-4xl mx-auto px-4">
+        {/* Expiry Warning Banner */}
+        {!isExpired && expiryDate && (() => {
+          const daysLeft = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+          if (daysLeft <= 3) {
+            return (
+              <Card className={`mb-4 border-l-4 ${daysLeft <= 1 ? 'border-l-red-500 bg-red-50' : 'border-l-orange-500 bg-orange-50'}`}>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className={`h-5 w-5 ${daysLeft <= 1 ? 'text-red-600' : 'text-orange-600'}`} />
+                    <div>
+                      <p className="font-medium text-sm">
+                        {daysLeft <= 1 ? '⚠️ This quote expires today!' : `⏰ This quote expires in ${daysLeft} days`}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Please approve soon to secure these prices. Contact us for an extension.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
+          return null;
+        })()}
+
+        {/* Expired Banner */}
+        {isExpired && (
+          <Card className="mb-4 border-l-4 border-l-red-500 bg-red-50">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <p className="font-medium text-sm text-red-900">This quote has expired</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Please contact us to request a new quote with current pricing.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-2">Your Quote</h1>
@@ -187,6 +242,18 @@ export default function PublicQuoteView() {
                   {quote.version > 1 && (
                     <Badge variant="outline">Version {quote.version}</Badge>
                   )}
+                  {expiryDate && !isExpired && (() => {
+                    const daysLeft = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= 3) {
+                      return (
+                        <Badge variant={daysLeft <= 1 ? 'destructive' : 'secondary'}>
+                          <Clock className="mr-1 h-3 w-3" />
+                          {daysLeft <= 1 ? 'Expires today' : `${daysLeft} days left`}
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
               {!isExpired && daysUntilExpiry !== null && (

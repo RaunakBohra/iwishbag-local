@@ -6,7 +6,7 @@ import { CompactQuoteMetrics } from '@/components/admin/CompactQuoteMetrics';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, RefreshCw } from 'lucide-react';
+import { Search, Plus, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const QuotesListPage: React.FC = () => {
@@ -35,19 +35,44 @@ const QuotesListPage: React.FC = () => {
       if (error) throw error;
       
       // Map V2 quotes to UnifiedQuote format for compatibility
-      const mappedQuotes = (data || []).map(quote => ({
-        ...quote,
-        final_total_usd: quote.total_usd || 0,
-        costprice_total_usd: quote.items?.reduce((sum: number, item: any) => 
-          sum + (item.costprice_origin || 0) * (item.quantity || 1), 0) || 0,
-        customer_data: {
-          info: {
-            name: quote.customer_name,
-            email: quote.customer_email,
-            phone: quote.customer_phone,
+      const mappedQuotes = (data || []).map(quote => {
+        // Calculate expiry status
+        const getExpiryStatus = (expiresAt: string | null) => {
+          if (!expiresAt) return null;
+          
+          const now = new Date();
+          const expiry = new Date(expiresAt);
+          const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysLeft < 0) {
+            return { status: 'expired', text: 'Expired', variant: 'destructive' };
+          } else if (daysLeft <= 1) {
+            return { status: 'expiring', text: 'Expires today', variant: 'destructive' };
+          } else if (daysLeft <= 3) {
+            return { status: 'expiring-soon', text: `${daysLeft} days left`, variant: 'secondary' };
+          } else {
+            return { status: 'valid', text: `${daysLeft} days left`, variant: 'outline' };
           }
-        },
-      }));
+        };
+
+        return {
+          ...quote,
+          final_total_usd: quote.total_usd || 0,
+          costprice_total_usd: quote.items?.reduce((sum: number, item: any) => 
+            sum + (item.costprice_origin || 0) * (item.quantity || 1), 0) || 0,
+          customer_data: {
+            info: {
+              name: quote.customer_name,
+              email: quote.customer_email,
+              phone: quote.customer_phone,
+            }
+          },
+          // Add expiry info for display
+          expiry_status: getExpiryStatus(quote.expires_at),
+          has_share_token: !!quote.share_token,
+          email_sent: quote.email_sent || false,
+        };
+      });
       
       return mappedQuotes;
     },

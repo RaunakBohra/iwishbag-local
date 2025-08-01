@@ -69,7 +69,7 @@ const MyTicketsPage = React.lazy(() => import('@/pages/support/MyTickets'));
 
 // Admin pages (lazy loaded)
 const AdminDashboard = React.lazy(() => import('@/pages/admin/Dashboard'));
-const AdminQuoteDetailsPage = React.lazy(() => import('@/pages/admin/quote/AdminQuoteDetailsPage'));
+// const AdminQuoteDetailsPage = React.lazy(() => import('@/pages/admin/quote/AdminQuoteDetailsPage')); // REMOVED: Redundant - QuoteCalculatorV2 handles editing
 const QuotesListPage = React.lazy(() => import('@/pages/admin/QuotesListPage'));
 // const EmailTemplatesPage = React.lazy(() => import('@/pages/admin/EmailTemplates')); // Email templates removed
 const PaymentManagement = React.lazy(() => import('@/pages/admin/PaymentManagement'));
@@ -177,7 +177,7 @@ const router = createBrowserRouter([
             path: 'quotes/:id',
             element: (
               <ErrorBoundary fallback={AdminErrorFallback}>
-                <AdminQuoteDetailsPage />
+                <QuoteCalculatorV2 />
               </ErrorBoundary>
             ),
           },
