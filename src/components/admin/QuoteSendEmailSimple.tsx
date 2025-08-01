@@ -105,7 +105,6 @@ export function QuoteSendEmailSimple({
           .from('quotes_v2')
           .update({ 
             email_sent: true,
-            email_sent_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
           .eq('id', quoteId);
