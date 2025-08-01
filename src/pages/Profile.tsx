@@ -248,7 +248,7 @@ const Profile = () => {
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       full_name: '',
-      email: user?.email || '',
+      email: (user?.email && !user.email.includes('@phone.iwishbag.com')) ? user.email : '',
       phone: '',
       country: 'US',
       preferred_display_currency: 'USD',
@@ -308,7 +308,7 @@ const Profile = () => {
     // Set form values whether profile exists or not
     form.reset({
       full_name: displayName,
-      email: user?.email || '',
+      email: (user?.email && !user.email.includes('@phone.iwishbag.com')) ? user.email : '',
       phone: userPhone,
       country: profile?.country || 'US',
       preferred_display_currency: profile?.preferred_display_currency || 'USD',
@@ -433,7 +433,14 @@ const Profile = () => {
                   <H1 className="text-2xl mb-1">
                     {customerData.displayName}
                   </H1>
-                  <BodySmall className="text-gray-600">{user?.email}</BodySmall>
+                  <BodySmall className="text-gray-600">
+                    {user?.email && !user.email.includes('@phone.iwishbag.com') 
+                      ? user.email 
+                      : user?.phone 
+                        ? `Phone: ${user.phone}` 
+                        : 'No email provided'
+                    }
+                  </BodySmall>
                   {stats?.memberSince && (
                     <BodySmall className="text-gray-500 flex items-center gap-1 mt-1">
                       <Calendar className="w-3 h-3" />
@@ -626,6 +633,7 @@ const Profile = () => {
                             <Input 
                               {...field} 
                               readOnly 
+                              placeholder={!field.value ? "No email address" : undefined}
                               className="pl-10 bg-gray-50 text-gray-700 cursor-default" 
                             />
                             <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -634,11 +642,18 @@ const Profile = () => {
                                 {user.app_metadata.provider}
                               </span>
                             )}
+                            {!field.value && user?.phone && (
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                Phone User
+                              </span>
+                            )}
                           </div>
                           <BodySmall className="text-gray-500">
-                            {user?.app_metadata?.provider && user.app_metadata.provider !== 'email' 
-                              ? `Your ${user.app_metadata.provider} email. You can add email/password login.`
-                              : 'Update your email address with verification.'
+                            {!field.value && user?.phone 
+                              ? 'You signed up with phone. You can add an email address for additional login options.'
+                              : user?.app_metadata?.provider && user.app_metadata.provider !== 'email' 
+                                ? `Your ${user.app_metadata.provider} email. You can add email/password login.`
+                                : 'Update your email address with verification.'
                             }
                           </BodySmall>
                         </div>

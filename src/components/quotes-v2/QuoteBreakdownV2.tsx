@@ -38,7 +38,7 @@ interface QuoteBreakdownV2Props {
 }
 
 export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => {
-  if (!quote.calculation_data) {
+  if (!quote.calculation_data || !quote.calculation_data.calculation_steps) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -49,9 +49,45 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
   }
 
   const calc = quote.calculation_data;
-  const steps = calc.calculation_steps;
-  const rates = calc.applied_rates;
-  const inputs = calc.inputs;
+  
+  // Create default steps object with all properties set to 0
+  const defaultSteps = {
+    items_subtotal: 0,
+    item_discounts: 0,
+    discounted_items_subtotal: 0,
+    order_discount_amount: 0,
+    origin_sales_tax: 0,
+    shipping_cost: 0,
+    shipping_discount_amount: 0,
+    discounted_shipping_cost: 0,
+    insurance_amount: 0,
+    cif_value: 0,
+    customs_duty: 0,
+    handling_fee: 0,
+    domestic_delivery: 0,
+    taxable_value: 0,
+    local_tax_amount: 0,
+    payment_gateway_fee: 0,
+    total_savings: 0,
+    total_usd: 0,
+    total_customer_currency: 0
+  };
+  
+  const steps = { ...defaultSteps, ...(calc.calculation_steps || {}) };
+  const rates = {
+    origin_sales_tax_percentage: 0,
+    shipping_rate_per_kg: 0,
+    insurance_percentage: 0,
+    customs_percentage: 0,
+    local_tax_percentage: 0,
+    payment_gateway_percentage: 0,
+    payment_gateway_fixed: 0,
+    ...(calc.applied_rates || {})
+  };
+  const inputs = {
+    total_weight_kg: 0,
+    ...(calc.inputs || {})
+  };
   
   const taxInfo = simplifiedQuoteCalculator.getTaxInfo(quote.destination_country);
 
@@ -433,9 +469,14 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 <p className="text-sm text-green-700">All costs included</p>
               </div>
               <div className="text-right">
-                <p className="font-bold text-2xl text-green-900">${steps.total_usd.toFixed(2)}</p>
+                <p className="font-bold text-2xl text-green-900">
+                  ${(steps.total_usd || quote.total_usd || 0).toFixed(2)}
+                </p>
                 <p className="text-lg text-green-700">
-                  {currencyService.formatAmount(steps.total_customer_currency, quote.customer_currency)}
+                  {currencyService.formatAmount(
+                    steps.total_customer_currency || quote.total_customer_currency || 0, 
+                    quote.customer_currency
+                  )}
                 </p>
               </div>
             </div>

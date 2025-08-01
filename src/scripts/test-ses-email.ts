@@ -27,8 +27,8 @@ async function testEmailSending() {
         </a>
       `,
       text: 'Test email from iwishBag. If you receive this, the email system is working!',
-      from: 'iwishBag <noreply@iwishbag.com>',
-      replyTo: 'support@iwishbag.com',
+      from: 'iwishBag <noreply@mail.iwishbag.com>',
+      replyTo: 'support@mail.iwishbag.com',
     };
 
     console.log('📧 Sending test email to:', emailData.to);
@@ -74,8 +74,8 @@ async function testDirectFetch() {
         subject: 'Direct Fetch Test',
         html: '<p>Test via direct fetch</p>',
         text: 'Test via direct fetch',
-        from: 'iwishBag <noreply@iwishbag.com>',
-        replyTo: 'support@iwishbag.com',
+        from: 'iwishBag <noreply@mail.iwishbag.com>',
+        replyTo: 'support@mail.iwishbag.com',
       }),
     });
 
@@ -99,7 +99,7 @@ async function testDirectFetch() {
 // Run tests
 async function runTests() {
   await testEmailSending();
-  await testDirectFetch();
+  // await testDirectFetch(); // Commented out to send only one email
   
   console.log('\n\n💡 Debugging Tips:');
   console.log('1. Check Supabase Dashboard → Edge Functions → Logs');

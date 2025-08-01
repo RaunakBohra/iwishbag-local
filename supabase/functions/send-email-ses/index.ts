@@ -68,8 +68,8 @@ serve(async (req) => {
       subject,
       html,
       text,
-      from = 'iwishBag <noreply@iwishbag.com>',
-      replyTo = 'support@iwishbag.com',
+      from = 'iwishBag <noreply@mail.iwishbag.com>',
+      replyTo = 'support@mail.iwishbag.com',
     }: EmailRequest = body as EmailRequest;
 
     // Validation
@@ -211,6 +211,52 @@ serve(async (req) => {
         const s3Response = await s3Client.send(putCommand);
         console.log('✅ Sent email stored in S3:', s3Key);
         console.log('✅ S3 Response:', JSON.stringify(s3Response));
+        
+        // Also store in Supabase for easier querying
+        try {
+          const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+          const supabaseUrl = Deno.env.get('SUPABASE_URL');
+          const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+          
+          if (supabaseUrl && supabaseServiceKey) {
+            const supabase = createClient(supabaseUrl, supabaseServiceKey);
+            
+            const emailRecord = {
+              message_id: response.MessageId,
+              direction: 'sent',
+              from_address: from,
+              to_addresses: toAddresses,
+              subject: subject,
+              text_body: text || null,
+              html_body: html || null,
+              s3_key: s3Key,
+              s3_bucket: 'iwishbag-emails',
+              size_bytes: JSON.stringify(emailData).length,
+              status: 'unread',
+              sent_at: new Date().toISOString(),
+              processed_at: new Date().toISOString(),
+              user_id: user?.id || null,
+              customer_email: toAddresses[0], // Primary recipient
+              metadata: {
+                user_email: user?.email || null,
+                is_service_call: isServiceCall,
+                sent_from_edge_function: true,
+              },
+            };
+            
+            const { error: dbError } = await supabase
+              .from('email_messages')
+              .insert(emailRecord);
+            
+            if (dbError) {
+              console.error('⚠️ Failed to store email record in Supabase:', dbError);
+            } else {
+              console.log('✅ Email record stored in Supabase');
+            }
+          }
+        } catch (dbError) {
+          console.error('⚠️ Error storing email in Supabase:', dbError);
+        }
         
       } catch (s3Error) {
         console.error('⚠️ Error storing sent email in S3:', s3Error);

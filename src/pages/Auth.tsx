@@ -1,4 +1,4 @@
-import AuthForm from '@/components/forms/AuthForm';
+import EnhancedAuthForm from '@/components/forms/EnhancedAuthForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -77,7 +77,7 @@ const Auth = () => {
               </div>
 
               {/* Auth Form */}
-              <AuthForm onPasswordResetModeChange={setAllowPasswordReset} />
+              <EnhancedAuthForm onPasswordResetModeChange={setAllowPasswordReset} />
             </div>
 
             {/* Footer */}

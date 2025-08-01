@@ -31,6 +31,8 @@ import { currencyService } from '@/services/CurrencyService';
 import { QuoteBreakdownV2 } from '@/components/quotes-v2/QuoteBreakdownV2';
 import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
+import { QuoteStatusManager } from '@/components/quotes-v2/QuoteStatusManager';
+import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
 
 interface QuoteItem {
   id: string;
@@ -61,6 +63,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [reminderCount, setReminderCount] = useState(0);
   const [lastReminderAt, setLastReminderAt] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
   
   // Form state
   const [customerEmail, setCustomerEmail] = useState('');
@@ -126,6 +129,21 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   }, [items, originCountry, originState, destinationCountry, destinationState, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
+  const loadQuoteDocuments = async (quoteId: string) => {
+    try {
+      const { data: docs, error } = await supabase
+        .from('quote_documents')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setDocuments(docs || []);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    }
+  };
+
   const loadExistingQuote = async (id: string) => {
     setLoadingQuote(true);
     try {
@@ -177,6 +195,9 @@ const QuoteCalculatorV2: React.FC = () => {
         if (quote.calculation_data) {
           setCalculationResult(quote.calculation_data);
         }
+
+        // Load documents
+        await loadQuoteDocuments(id);
 
         toast({
           title: 'Quote Loaded',
@@ -275,7 +296,7 @@ const QuoteCalculatorV2: React.FC = () => {
       return;
     }
 
-    if (!calculationResult) {
+    if (!calculationResult || !calculationResult.calculation_steps) {
       toast({
         title: 'No Calculation',
         description: 'Please calculate the quote first',
@@ -313,8 +334,8 @@ const QuoteCalculatorV2: React.FC = () => {
           customer_notes: item.notes
         })),
         calculation_data: calculationResult,
-        total_usd: calculationResult.calculation_steps.total_usd,
-        total_customer_currency: calculationResult.calculation_steps.total_customer_currency,
+        total_usd: calculationResult.calculation_steps?.total_usd || 0,
+        total_customer_currency: calculationResult.calculation_steps?.total_customer_currency || 0,
         customer_currency: customerCurrency,
         admin_notes: adminNotes,
         status: isEditMode ? 'calculated' : 'draft', // Update status when editing
@@ -1022,6 +1043,32 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Status Management Section */}
+          {isEditMode && quoteId && (
+            <QuoteStatusManager
+              quoteId={quoteId}
+              currentStatus={currentQuoteStatus}
+              onStatusChange={(newStatus) => {
+                setCurrentQuoteStatus(newStatus);
+                // Refresh the quote data to get updated status
+                if (quoteId) {
+                  loadExistingQuote(quoteId);
+                }
+              }}
+              isEditMode={isEditMode}
+            />
+          )}
+
+          {/* File Upload Section */}
+          {isEditMode && quoteId && (
+            <QuoteFileUpload
+              quoteId={quoteId}
+              documents={documents}
+              onDocumentsUpdate={setDocuments}
+              isReadOnly={false}
+            />
+          )}
+
           {/* Email Sending Section */}
           {isEditMode && showEmailSection && quoteId && (
             <Card>
@@ -1101,7 +1148,7 @@ const QuoteCalculatorV2: React.FC = () => {
           )}
 
           {/* Calculation Result */}
-          {calculationResult && (
+          {calculationResult && calculationResult.calculation_steps && (
             <Card>
               <CardHeader>
                 <CardTitle>Quote Total</CardTitle>
@@ -1109,11 +1156,11 @@ const QuoteCalculatorV2: React.FC = () => {
               <CardContent>
                 <div className="space-y-2">
                   <div className="text-3xl font-bold">
-                    ${calculationResult.calculation_steps.total_usd.toFixed(2)}
+                    ${(calculationResult.calculation_steps.total_usd || 0).toFixed(2)}
                   </div>
                   <div className="text-xl text-gray-600">
                     {currencyService.formatAmount(
-                      calculationResult.calculation_steps.total_customer_currency,
+                      calculationResult.calculation_steps.total_customer_currency || 0,
                       customerCurrency
                     )}
                   </div>
@@ -1123,7 +1170,7 @@ const QuoteCalculatorV2: React.FC = () => {
           )}
 
           {/* Detailed Breakdown using proper component */}
-          {calculationResult && showPreview && (
+          {calculationResult && showPreview && calculationResult.calculation_steps && (
             <QuoteBreakdownV2 
               quote={{
                 id: 'temp-' + Date.now(),
@@ -1135,8 +1182,8 @@ const QuoteCalculatorV2: React.FC = () => {
                 destination_country: destinationCountry,
                 items: items.filter(item => item.name && item.unit_price_usd > 0),
                 calculation_data: calculationResult,
-                total_usd: calculationResult.calculation_steps.total_usd,
-                total_customer_currency: calculationResult.calculation_steps.total_customer_currency,
+                total_usd: calculationResult.calculation_steps.total_usd || 0,
+                total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
                 customer_currency: customerCurrency,
                 created_at: new Date().toISOString(),
                 calculated_at: calculationResult.calculation_timestamp

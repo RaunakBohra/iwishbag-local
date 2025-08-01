@@ -230,7 +230,20 @@
       "Bash(aws s3 mb:*)",
       "Bash(aws lambda list-functions:*)",
       "Bash(aws s3api put-bucket-policy:*)",
-      "Bash(aws s3api get-bucket-policy:*)"
+      "Bash(aws s3api get-bucket-policy:*)",
+      "Bash(nslookup:*)",
+      "Bash(./lambda/deploy-email-processor.sh:*)",
+      "Bash(aws lambda:*)",
+      "Bash(--function-name iwishbag-process-incoming-email )",
+      "Bash(--statement-id AllowSESInvoke )",
+      "Bash(--action lambda:InvokeFunction )",
+      "Bash(--principal ses.amazonaws.com )",
+      "Bash(--source-account 597088020156)",
+      "Bash(./update-ses-receipt-rule.sh:*)",
+      "Bash(aws logs tail:*)",
+      "Bash(./update-lambda-env.sh)",
+      "Bash(./check-lambda-logs.sh:*)",
+      "Bash(zip:*)"
     ],
     "deny": []
   }

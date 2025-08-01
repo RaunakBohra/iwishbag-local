@@ -18,16 +18,19 @@ export function useAdminCheck() {
       }
 
       try {
-        // Check user role from user_roles table
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
+        // Use the is_admin() RPC function instead of querying user_roles directly
+        // This avoids the infinite recursion issue
+        const { data: adminStatus, error } = await supabase
+          .rpc('is_admin');
 
-        const role = roleData?.role || 'user';
-        setUserRole(role);
-        setIsAdmin(role === 'admin');
+        if (error) {
+          console.error('Error checking admin status:', error);
+          setIsAdmin(false);
+          setUserRole('user');
+        } else {
+          setIsAdmin(adminStatus === true);
+          setUserRole(adminStatus ? 'admin' : 'user');
+        }
       } catch (error) {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);

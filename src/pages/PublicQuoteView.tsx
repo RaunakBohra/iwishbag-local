@@ -31,8 +31,9 @@ interface QuoteItem {
 }
 
 export default function PublicQuoteView() {
-  const { token } = useParams<{ token: string }>();
+  const { token, shareToken } = useParams<{ token: string; shareToken: string }>();
   const navigate = useNavigate();
+  const actualToken = token || shareToken; // Support both route param names
   const [quote, setQuote] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +41,10 @@ export default function PublicQuoteView() {
 
   useEffect(() => {
     fetchQuote();
-  }, [token]);
+  }, [actualToken]);
 
   const fetchQuote = async () => {
-    if (!token) {
+    if (!actualToken) {
       setError('No quote token provided');
       setLoading(false);
       return;
@@ -54,7 +55,7 @@ export default function PublicQuoteView() {
       const { data: quote, error } = await supabase
         .from('quotes_v2')
         .select('*')
-        .eq('share_token', token)
+        .eq('share_token', actualToken)
         .single();
 
       if (error) {

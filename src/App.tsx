@@ -16,7 +16,7 @@ import { SkeletonProvider } from './providers/SkeletonProvider';
 import { Toaster } from '@/components/ui/toaster';
 import Layout from '@/components/layout/Layout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-// AdminProtectedRoute removed - using simple authentication only
+import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
@@ -94,10 +94,13 @@ const AdminLayout = React.lazy(() => import('@/components/admin/AdminLayout'));
 const WAFManagement = React.lazy(() => import('@/pages/admin/WAFManagement'));
 const RateLimitManagement = React.lazy(() => import('@/pages/admin/RateLimitManagement'));
 const StatusDebug = React.lazy(() => import('@/pages/debug/StatusDebug'));
+const AdminStatusDebug = React.lazy(() => import('@/pages/debug/AdminStatusDebug'));
 const DuplicateComponentsPreview = React.lazy(() => import('@/pages/admin/DuplicateComponentsPreview'));
 const BlogManagementPage = React.lazy(() => import('@/pages/admin/BlogManagement'));
 const MembershipManagementPage = React.lazy(() => import('@/pages/admin/MembershipManagement'));
 const DiscountManagementPage = React.lazy(() => import('@/pages/admin/DiscountManagement'));
+const EmailDashboard = React.lazy(() => import('@/pages/admin/EmailDashboard'));
+const SMSDashboard = React.lazy(() => import('@/pages/admin/SMSDashboard'));
 const QuoteCalculatorV2 = React.lazy(() => import('@/pages/admin/QuoteCalculatorV2'));
 const QuoteReminderSettings = React.lazy(() => import('@/pages/admin/QuoteReminderSettings'));
 const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement'));
@@ -206,6 +209,8 @@ const router = createBrowserRouter([
           { path: 'memberships', element: <MembershipManagementPage /> },
           { path: 'discounts', element: <DiscountManagementPage /> },
           { path: 'quote-reminders', element: <QuoteReminderSettings /> },
+          { path: 'emails', element: <EmailDashboard /> },
+          { path: 'sms', element: <SMSDashboard /> },
           // Audit logs page removed
           {
             path: 'returns',
@@ -479,6 +484,10 @@ const router = createBrowserRouter([
           {
             path: 'profile/address',
             element: <Address />,
+          },
+          {
+            path: 'debug/admin-status',
+            element: <AdminStatusDebug />,
           },
           {
             path: 'test-payment',

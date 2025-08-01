@@ -80,6 +80,11 @@ const menuGroups = [
         url: '/admin/support-tickets',
         icon: Ticket,
       },
+      {
+        title: 'Email Dashboard',
+        url: '/admin/emails',
+        icon: Mail,
+      },
     ],
   },
   {

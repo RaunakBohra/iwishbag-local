@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createCorsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 // Phone number country detection
 const detectCountryFromPhone = (phone: string): string => {
@@ -16,39 +17,63 @@ const detectCountryFromPhone = (phone: string): string => {
   }
 };
 
+// Get Supabase client
+const getSupabaseClient = () => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  return createClient(supabaseUrl, supabaseServiceKey);
+};
+
 // Sparrow SMS for Nepal
 const sendSparrowSMS = async (phone: string, message: string) => {
   const sparrowToken = Deno.env.get('SPARROW_SMS_TOKEN');
-  const sparrowSender = Deno.env.get('SPARROW_SMS_SENDER');
+  const sparrowSender = Deno.env.get('SPARROW_SMS_SENDER') || 'InfoAlert';
   
-  if (!sparrowToken || !sparrowSender) {
-    throw new Error('Sparrow SMS credentials not configured');
+  if (!sparrowToken) {
+    throw new Error('Sparrow SMS token not configured');
   }
 
   console.log('🇳🇵 Sending SMS via Sparrow SMS to:', phone);
   
-  const response = await fetch('https://api.sparrowsms.com/v2/sms/', {
+  // Clean phone number - remove country code if present
+  let cleanPhone = phone.replace(/[^\d]/g, '');
+  if (cleanPhone.startsWith('977')) {
+    cleanPhone = cleanPhone.substring(3);
+  }
+  
+  // Sparrow SMS uses form-urlencoded data, not JSON
+  const formData = new URLSearchParams({
+    token: sparrowToken,
+    from: sparrowSender,
+    to: cleanPhone,
+    text: message,
+  });
+  
+  const response = await fetch('http://api.sparrowsms.com/v2/sms/', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${sparrowToken}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
-      sender: sparrowSender,
-      message: message,
-      phone: phone.replace(/[^\d]/g, ''), // Remove non-digits for Sparrow
-    }),
+    body: formData.toString(),
   });
 
+  const responseText = await response.text();
+  console.log('Sparrow SMS Response:', responseText);
+
   if (!response.ok) {
-    const errorData = await response.text();
-    console.error('❌ Sparrow SMS error:', errorData);
-    throw new Error(`Sparrow SMS error: ${response.status} ${errorData}`);
+    console.error('❌ Sparrow SMS error:', responseText);
+    throw new Error(`Sparrow SMS error: ${response.status} ${responseText}`);
   }
 
-  const result = await response.json();
-  console.log('✅ Sparrow SMS sent successfully:', result);
-  return result;
+  try {
+    const result = JSON.parse(responseText);
+    console.log('✅ Sparrow SMS sent successfully:', result);
+    return result;
+  } catch {
+    // Sometimes Sparrow returns plain text instead of JSON
+    console.log('✅ Sparrow SMS sent (text response):', responseText);
+    return { response: responseText, count: 1 };
+  }
 };
 
 // MSG91 for India
@@ -157,7 +182,7 @@ serve(async (req) => {
     const body = await req.json();
     console.log('📱 SMS request:', JSON.stringify(body, null, 2));
     
-    const { phone, message, type } = body;
+    const { phone, message, type, userId, customerPhone } = body;
     
     if (!phone || !message) {
       return new Response(
@@ -174,32 +199,108 @@ serve(async (req) => {
       );
     }
 
-    // Send SMS via appropriate provider
-    const result = await sendSMS(phone, message);
-    
+    // Get auth header to check if it's a service call
+    const authHeader = req.headers.get('authorization');
+    const isServiceCall = authHeader?.includes('service_role') || false;
+
+    // Get Supabase client
+    const supabase = getSupabaseClient();
+
+    // Detect country and provider
     const country = detectCountryFromPhone(phone);
-    const provider = country === 'NP' ? 'Sparrow SMS' : 
-                    country === 'IN' ? 'MSG91' : 'Twilio';
-    
-    console.log(`✅ SMS sent successfully via ${provider}`);
-    
-    return new Response(
-      JSON.stringify({
-        success: true,
-        provider,
-        country,
-        phone: phone.replace(/\d(?=\d{4})/g, '*'), // Mask phone number in response
-        result,
-        type,
-      }),
-      {
-        status: 200,
-        headers: {
-          ...createCorsHeaders(req, ['GET', 'POST', 'PUT', 'DELETE']),
-          'Content-Type': 'application/json',
-        },
+    const provider = country === 'NP' ? 'sparrow' : 
+                    country === 'IN' ? 'msg91' : 'twilio';
+
+    // Create SMS record
+    const smsRecord = {
+      direction: 'sent',
+      from_phone: 'InfoAlert',
+      to_phone: phone,
+      message: message,
+      status: 'pending',
+      provider: provider,
+      country_code: country,
+      metadata: {
+        type: type || 'general',
+        is_service_call: isServiceCall,
       },
-    );
+      user_id: userId || null,
+      customer_phone: customerPhone || phone,
+    };
+
+    // Insert SMS record
+    const { data: smsData, error: insertError } = await supabase
+      .from('sms_messages')
+      .insert(smsRecord)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('❌ Failed to insert SMS record:', insertError);
+      // Continue anyway - we still want to send the SMS
+    }
+
+    const messageId = smsData?.id;
+
+    try {
+      // Send SMS via appropriate provider
+      const result = await sendSMS(phone, message);
+      
+      // Calculate credits used (1 credit per 160 characters)
+      const creditsUsed = Math.ceil(message.length / 160);
+      
+      // Update SMS record with success
+      if (messageId) {
+        await supabase
+          .from('sms_messages')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            credits_used: creditsUsed,
+            metadata: {
+              ...smsRecord.metadata,
+              provider_response: result,
+            },
+          })
+          .eq('id', messageId);
+      }
+      
+      console.log(`✅ SMS sent successfully via ${provider}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          id: messageId,
+          provider,
+          country,
+          phone: phone.replace(/\d(?=\d{4})/g, '*'), // Mask phone number in response
+          credits_used: creditsUsed,
+          result,
+          type,
+        }),
+        {
+          status: 200,
+          headers: {
+            ...createCorsHeaders(req, ['GET', 'POST', 'PUT', 'DELETE']),
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+    } catch (sendError) {
+      // Update SMS record with failure
+      if (messageId) {
+        await supabase
+          .from('sms_messages')
+          .update({
+            status: 'failed',
+            failed_at: new Date().toISOString(),
+            error_message: sendError.message,
+          })
+          .eq('id', messageId);
+      }
+      
+      throw sendError;
+    }
     
   } catch (error) {
     console.error('❌ SMS sending error:', error);
