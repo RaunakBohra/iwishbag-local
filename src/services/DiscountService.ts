@@ -831,21 +831,33 @@ class DiscountServiceClass {
     appliedCodes: string[] = []
   ): Promise<ApplicableDiscount[]> {
     try {
-      const { data: countryRules, error } = await supabase
-        .from('country_discount_rules')
-        .select(`
-          *,
-          discount_type:discount_types(*)
-        `)
-        .eq('country_code', countryCode)
-        .or(`min_order_amount.is.null,min_order_amount.lte.${orderTotal}`)
-        .order('priority', { ascending: false });
-
-      if (error || !countryRules) return [];
+      // Cache country rules by country code only (order total filtering happens after cache)
+      const cacheKey = this.getCacheKey('country_rules', { countryCode });
+      let countryRules = this.getFromCache(cacheKey);
+      
+      if (!countryRules) {
+        const { data, error } = await supabase
+          .from('country_discount_rules')
+          .select(`
+            *,
+            discount_type:discount_types(*)
+          `)
+          .eq('country_code', countryCode)
+          .order('priority', { ascending: false });
+        
+        if (error) throw error;
+        countryRules = data || [];
+        this.setCache(cacheKey, countryRules);
+      }
+      
+      // Filter by order total after getting from cache
+      const applicableRules = countryRules.filter(rule => 
+        !rule.min_order_amount || orderTotal >= rule.min_order_amount
+      );
 
       const discounts: ApplicableDiscount[] = [];
       
-      for (const rule of countryRules) {
+      for (const rule of applicableRules) {
         if (!rule.discount_type?.is_active) continue;
         
         // Determine if this rule should be applied
