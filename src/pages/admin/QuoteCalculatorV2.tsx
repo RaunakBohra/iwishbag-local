@@ -35,6 +35,7 @@ import { QuoteStatusManager } from '@/components/quotes-v2/QuoteStatusManager';
 import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
 import { QuoteExportControls } from '@/components/quotes-v2/QuoteExportControls';
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
+import { DiscountEligibilityNotification } from '@/components/quotes-v2/DiscountEligibilityNotification';
 
 interface QuoteItem {
   id: string;
@@ -1029,6 +1030,32 @@ const QuoteCalculatorV2: React.FC = () => {
                     disabled={!customerEmail || !calculationResult}
                   />
                 </div>
+
+                {/* Discount Eligibility Notification */}
+                {customerEmail && destinationCountry && calculationResult && (
+                  <div className="col-span-full">
+                    <DiscountEligibilityNotification
+                      customerContext={{
+                        customer_id: customerEmail.includes('@') ? undefined : customerEmail,
+                        email: customerEmail.includes('@') ? customerEmail : undefined,
+                        country: destinationCountry,
+                        is_first_order: false, // We can enhance this later
+                        order_total: calculationResult?.calculation_steps?.items_subtotal || 
+                                   items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) || 0,
+                        applied_codes: discountCodes
+                      }}
+                      onCodeApply={(code) => {
+                        // Simulate applying the code through CouponCodeInput
+                        const codeInput = document.querySelector('input[placeholder*="coupon"]') as HTMLInputElement;
+                        if (codeInput) {
+                          codeInput.value = code;
+                          codeInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                      }}
+                      className="mt-4"
+                    />
+                  </div>
+                )}
 
                 {/* Manual Discount (Admin Override) */}
                 <div className="space-y-2">

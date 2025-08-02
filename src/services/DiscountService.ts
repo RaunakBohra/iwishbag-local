@@ -40,6 +40,11 @@ export interface CountryDiscountRule {
   component_discounts: { [component: string]: number };
   min_order_amount?: number;
   max_uses_per_customer?: number;
+  requires_code?: boolean;
+  auto_apply?: boolean;
+  description?: string;
+  priority?: number;
+  discount_conditions?: any;
 }
 
 export interface DiscountCampaign {
@@ -714,8 +719,8 @@ class DiscountServiceClass {
         allDiscounts.push(...firstTimeDiscounts);
       }
 
-      // Get country-specific discounts
-      const countryDiscounts = await this.getCountrySpecificDiscounts(countryCode, orderTotal);
+      // Get country-specific discounts (both automatic and code-based)
+      const countryDiscounts = await this.getCountrySpecificDiscounts(countryCode, orderTotal, true, discountCodes);
       allDiscounts.push(...countryDiscounts);
 
       // Group discounts by component
@@ -819,7 +824,12 @@ class DiscountServiceClass {
     }
   }
 
-  async getCountrySpecificDiscounts(countryCode: string, orderTotal: number): Promise<ApplicableDiscount[]> {
+  async getCountrySpecificDiscounts(
+    countryCode: string, 
+    orderTotal: number, 
+    includeAutomatic: boolean = true,
+    appliedCodes: string[] = []
+  ): Promise<ApplicableDiscount[]> {
     try {
       const { data: countryRules, error } = await supabase
         .from('country_discount_rules')
@@ -828,34 +838,122 @@ class DiscountServiceClass {
           discount_type:discount_types(*)
         `)
         .eq('country_code', countryCode)
-        .or(`min_order_amount.is.null,min_order_amount.lte.${orderTotal}`);
+        .or(`min_order_amount.is.null,min_order_amount.lte.${orderTotal}`)
+        .order('priority', { ascending: false });
 
       if (error || !countryRules) return [];
 
       const discounts: ApplicableDiscount[] = [];
-
-      countryRules.forEach(rule => {
-        if (!rule.discount_type?.is_active) return;
-
-        // Apply component-specific discounts
-        Object.entries(rule.component_discounts).forEach(([component, value]) => {
-          discounts.push({
-            discount_source: 'campaign',
-            discount_type: 'percentage',
-            discount_value: value as number,
-            discount_amount: 0,
-            applies_to: component as any,
-            is_stackable: rule.discount_type.conditions?.stacking_allowed !== false,
-            priority: rule.discount_type.priority || 100,
-            description: `${countryCode} special: ${value}% off ${component}`
+      
+      for (const rule of countryRules) {
+        if (!rule.discount_type?.is_active) continue;
+        
+        // Determine if this rule should be applied
+        let shouldApply = false;
+        let discountSource: 'campaign' | 'code' = 'campaign';
+        
+        if (rule.auto_apply && !rule.requires_code && includeAutomatic) {
+          // Automatic discount - apply if conditions are met
+          shouldApply = true;
+          discountSource = 'campaign';
+        } else if (rule.requires_code && appliedCodes.length > 0) {
+          // Code-based discount - check if matching code is applied
+          const hasMatchingCode = await this.checkCodeMatchesRule(rule, appliedCodes);
+          if (hasMatchingCode) {
+            shouldApply = true;
+            discountSource = 'code';
+          }
+        }
+        
+        if (shouldApply) {
+          // Apply component-specific discounts
+          Object.entries(rule.component_discounts).forEach(([component, value]) => {
+            discounts.push({
+              discount_source: discountSource,
+              discount_type: 'percentage',
+              discount_value: value as number,
+              discount_amount: 0,
+              applies_to: component as any,
+              is_stackable: rule.discount_type.conditions?.stacking_allowed !== false,
+              priority: rule.priority || rule.discount_type.priority || 100,
+              description: rule.description || `${countryCode} special: ${value}% off ${component}`,
+              conditions: rule.discount_type.conditions
+            });
           });
-        });
-      });
-
+        }
+      }
+      
       return discounts;
     } catch (error) {
       console.error('Error getting country-specific discounts:', error);
       return [];
+    }
+  }
+
+  private async checkCodeMatchesRule(rule: CountryDiscountRule, appliedCodes: string[]): Promise<boolean> {
+    try {
+      // Check if any of the applied codes match the discount type for this rule
+      const { data: matchingCodes, error } = await supabase
+        .from('discount_codes')
+        .select('code')
+        .eq('discount_type_id', rule.discount_type_id)
+        .in('code', appliedCodes)
+        .eq('is_active', true);
+
+      return !error && matchingCodes && matchingCodes.length > 0;
+    } catch (error) {
+      console.error('Error checking code match:', error);
+      return false;
+    }
+  }
+
+  // Separate method to get only automatic discounts for UI display
+  async getAutomaticCountryBenefits(countryCode: string, orderTotal: number): Promise<ApplicableDiscount[]> {
+    return this.getCountrySpecificDiscounts(countryCode, orderTotal, true, []);
+  }
+
+  // Method to get eligible discounts that require codes (for notifications)
+  async getEligibleCodeBasedDiscounts(countryCode: string, orderTotal: number): Promise<{
+    available_codes: string[];
+    discount_descriptions: string[];
+  }> {
+    try {
+      const { data: eligibleRules, error } = await supabase
+        .from('country_discount_rules')
+        .select(`
+          *,
+          discount_type:discount_types(
+            *,
+            discount_codes(code, is_active)
+          )
+        `)
+        .eq('country_code', countryCode)
+        .eq('requires_code', true)
+        .or(`min_order_amount.is.null,min_order_amount.lte.${orderTotal}`);
+
+      if (error || !eligibleRules) return { available_codes: [], discount_descriptions: [] };
+
+      const availableCodes: string[] = [];
+      const descriptions: string[] = [];
+
+      eligibleRules.forEach(rule => {
+        if (rule.discount_type?.is_active && rule.discount_type.discount_codes) {
+          rule.discount_type.discount_codes.forEach((codeObj: any) => {
+            if (codeObj.is_active) {
+              availableCodes.push(codeObj.code);
+              descriptions.push(rule.description || `Use code ${codeObj.code} for discount`);
+            }
+          });
+        }
+      });
+
+      return {
+        available_codes: [...new Set(availableCodes)],
+        discount_descriptions: [...new Set(descriptions)]
+      };
+    } catch (error) {
+      console.error('Error getting eligible code-based discounts:', error);
+      return { available_codes: [], discount_descriptions: [] };
     }
   }
 

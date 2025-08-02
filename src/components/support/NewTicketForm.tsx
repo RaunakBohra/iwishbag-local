@@ -23,7 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, HelpCircle, Package, MapPin, Calendar, DollarSign, Search } from 'lucide-react';
-import { QuoteSelectionModal } from '@/components/admin/modals/QuoteSelectionModal';
+// import { QuoteSelectionModal } from '@/components/admin/modals/QuoteSelectionModal';
 import { useCreateCustomerTicket } from '@/hooks/useTickets';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardState } from '@/hooks/useDashboardState';
@@ -328,6 +328,8 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
         </Form>
 
         {/* Quote Selection Modal */}
+        {/* Temporarily disabled - QuoteSelectionModal component missing */}
+        {/*
         <QuoteSelectionModal
           isOpen={showQuoteModal}
           onClose={() => setShowQuoteModal(false)}
@@ -341,6 +343,7 @@ export const NewTicketForm = ({ onSuccess, onCancel, preSelectedQuoteId }: NewTi
           viewMode="customer"
           maxHeight={500}
         />
+        */}
       </CardContent>
     </Card>
   );

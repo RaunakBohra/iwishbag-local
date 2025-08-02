@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { QuoteSendEmail } from '@/components/admin/QuoteSendEmail';
+import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   FileText, 
@@ -196,7 +196,7 @@ export default function QuoteV2Integration() {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <QuoteSendEmail
+                        <QuoteSendEmailSimple
                           quoteId={quote.id}
                           customerEmail={quote.customer_email}
                           shareToken={quote.share_token}

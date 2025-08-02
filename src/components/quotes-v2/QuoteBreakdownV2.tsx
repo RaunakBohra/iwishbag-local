@@ -140,29 +140,79 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
         </CardContent>
       </Card>
 
-      {/* Applied Discount Codes */}
-      {quote.discount_codes && quote.discount_codes.length > 0 && (
+      {/* Discount Summary */}
+      {((quote.discount_codes && quote.discount_codes.length > 0) || steps.total_savings > 0) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
               <Tag className="w-5 h-5 mr-2" />
-              Applied Discount Codes
+              Applied Discounts
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {quote.discount_codes.map((code, index) => (
-                <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                  <Check className="w-3 h-3 mr-1" />
-                  {code}
-                </Badge>
-              ))}
-            </div>
+          <CardContent className="space-y-4">
+            {/* Automatic Benefits */}
+            {steps.component_discounts && Object.keys(steps.component_discounts).length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Automatic Benefits
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(steps.component_discounts).map(([component, discountData]: [string, any]) => (
+                    discountData.applied_discounts?.filter((d: any) => d.source !== 'code').map((discount: any, index: number) => (
+                      <div key={`${component}-${index}`} className="flex justify-between items-center text-sm bg-blue-50 p-2 rounded border border-blue-200">
+                        <span className="text-blue-700">
+                          🎁 {discount.description || `${component} benefit`}
+                        </span>
+                        <span className="font-medium text-blue-800">-${discount.amount.toFixed(2)}</span>
+                      </div>
+                    ))
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Applied Discount Codes */}
+            {quote.discount_codes && quote.discount_codes.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-green-800 mb-2 flex items-center">
+                  <Tag className="w-4 h-4 mr-1" />
+                  Discount Codes Applied
+                </h4>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {quote.discount_codes.map((code, index) => (
+                    <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                      <Check className="w-3 h-3 mr-1" />
+                      {code}
+                    </Badge>
+                  ))}
+                </div>
+                
+                {/* Code-based discount details */}
+                {steps.component_discounts && Object.keys(steps.component_discounts).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(steps.component_discounts).map(([component, discountData]: [string, any]) => (
+                      discountData.applied_discounts?.filter((d: any) => d.source === 'code').map((discount: any, index: number) => (
+                        <div key={`${component}-code-${index}`} className="flex justify-between items-center text-sm bg-green-50 p-2 rounded border border-green-200">
+                          <span className="text-green-700">
+                            💳 {discount.description || `${component} discount`}
+                          </span>
+                          <span className="font-medium text-green-800">-${discount.amount.toFixed(2)}</span>
+                        </div>
+                      ))
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Total Savings */}
             {steps.total_savings > 0 && (
-              <div className="mt-3 p-2 bg-green-50 rounded border border-green-200">
-                <p className="text-sm text-green-700 font-medium">
-                  🎉 Total savings from coupons: ${steps.total_savings.toFixed(2)}
-                </p>
+              <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-800">🎉 Your Total Savings:</span>
+                  <span className="font-bold text-green-600 text-lg">${steps.total_savings.toFixed(2)}</span>
+                </div>
               </div>
             )}
           </CardContent>
