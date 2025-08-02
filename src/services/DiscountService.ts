@@ -1010,4 +1010,4 @@ class DiscountServiceClass {
   }
 }
 
-export const DiscountService = DiscountServiceClass.getInstance();
+export const DiscountService = DiscountServiceClass;

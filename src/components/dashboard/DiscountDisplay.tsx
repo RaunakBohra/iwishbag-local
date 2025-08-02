@@ -60,7 +60,7 @@ export function DiscountDisplay({
     if (!customerId || subtotal <= 0) return;
 
     try {
-      const result = await DiscountService.calculateDiscounts(
+      const result = await DiscountService.getInstance().calculateDiscounts(
         customerId,
         subtotal,
         handlingFee,
@@ -86,7 +86,7 @@ export function DiscountDisplay({
 
     setValidatingCode(true);
     try {
-      const validation = await DiscountService.validateDiscountCode(discountCode.trim(), customerId);
+      const validation = await DiscountService.getInstance().validateDiscountCode(discountCode.trim(), customerId);
       
       if (validation.valid) {
         setAppliedCodes([...appliedCodes, discountCode.trim().toUpperCase()]);

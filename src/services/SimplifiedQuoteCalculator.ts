@@ -354,7 +354,7 @@ class SimplifiedQuoteCalculator {
     let discountsByComponent = new Map<string, any[]>();
     if (input.apply_component_discounts && input.customer_id) {
       try {
-        discountsByComponent = await DiscountService.getComponentDiscounts(
+        discountsByComponent = await DiscountService.getInstance().getComponentDiscounts(
           input.customer_id,
           finalItemsSubtotal,
           input.destination_country,
@@ -365,7 +365,7 @@ class SimplifiedQuoteCalculator {
         
         // Apply customs discounts
         if (discountsByComponent.has('customs')) {
-          const customsDiscountResult = DiscountService.calculateComponentDiscount(
+          const customsDiscountResult = DiscountService.getInstance().calculateComponentDiscount(
             customsDuty,
             discountsByComponent.get('customs')!,
             'customs'
@@ -386,7 +386,7 @@ class SimplifiedQuoteCalculator {
         
         // Apply shipping discounts if available
         if (discountsByComponent.has('shipping')) {
-          const shippingDiscountResult = DiscountService.calculateComponentDiscount(
+          const shippingDiscountResult = DiscountService.getInstance().calculateComponentDiscount(
             baseShippingCost,
             discountsByComponent.get('shipping')!,
             'shipping'
@@ -431,7 +431,7 @@ class SimplifiedQuoteCalculator {
     // Apply handling fee discounts if available
     discountedHandlingFee = handlingFee;
     if (discountsByComponent.has('handling')) {
-      const handlingDiscountResult = DiscountService.calculateComponentDiscount(
+      const handlingDiscountResult = DiscountService.getInstance().calculateComponentDiscount(
         handlingFee,
         discountsByComponent.get('handling')!,
         'handling'
@@ -457,7 +457,7 @@ class SimplifiedQuoteCalculator {
     // Apply delivery discounts if available
     discountedDelivery = domesticDelivery;
     if (discountsByComponent.has('delivery')) {
-      const deliveryDiscountResult = DiscountService.calculateComponentDiscount(
+      const deliveryDiscountResult = DiscountService.getInstance().calculateComponentDiscount(
         domesticDelivery,
         discountsByComponent.get('delivery')!,
         'delivery'
@@ -492,7 +492,7 @@ class SimplifiedQuoteCalculator {
     // Apply tax discounts if available (rare but possible for "we pay the VAT" campaigns)
     discountedTaxAmount = localTaxAmount;
     if (discountsByComponent.has('taxes')) {
-      const taxDiscountResult = DiscountService.calculateComponentDiscount(
+      const taxDiscountResult = DiscountService.getInstance().calculateComponentDiscount(
         localTaxAmount,
         discountsByComponent.get('taxes')!,
         'taxes'

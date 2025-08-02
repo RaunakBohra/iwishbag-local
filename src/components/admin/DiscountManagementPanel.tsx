@@ -99,10 +99,10 @@ export function DiscountManagementPanel() {
       setLoading(true);
 
       // Clear cache to ensure fresh data
-      DiscountService.clearCache();
+      DiscountService.getInstance().clearCache();
 
       // Load all campaigns (both active and inactive)
-      const allCampaigns = await DiscountService.getAllCampaigns();
+      const allCampaigns = await DiscountService.getInstance().getAllCampaigns();
       setCampaigns(allCampaigns);
 
       // Load discount codes
