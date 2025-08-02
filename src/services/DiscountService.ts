@@ -95,6 +95,9 @@ export interface ApplicableDiscount {
   is_stackable: boolean;
   priority?: number;
   description?: string;
+  discount_code_id?: string;
+  campaign_id?: string;
+  conditions?: any; // Contains max_discount and other conditions
 }
 
 export interface DiscountCalculation {
@@ -288,46 +291,54 @@ class DiscountServiceClass {
           const discount = validation.discount;
           const discountType = discount.discount_type!;
           
-          // Calculate discount amount based on order size
-          const orderSizeCategory = quoteTotal < 500 ? 'small' : 'large';
-          let discountAmount = 0;
-          let appliesTo = discountType.conditions?.applicable_to || 'total';
-
-          if (orderSizeCategory === 'small' && appliesTo === 'total') {
-            // Small orders can only discount handling fee
-            appliesTo = 'handling';
-            if (discountType.type === 'percentage') {
-              discountAmount = handlingFee * (discountType.value / 100);
-            } else {
-              discountAmount = Math.min(discountType.value, handlingFee);
-            }
+          // Check if this is a component-specific discount
+          if (discountType.applicable_components && discountType.applicable_components.length > 0) {
+            // Component-specific discount - add for each component
+            discountType.applicable_components.forEach((component: string) => {
+              discounts.push({
+                discount_source: 'code',
+                discount_type: discountType.type as 'percentage' | 'fixed_amount',
+                discount_value: discountType.value,
+                discount_amount: 0, // Will be calculated by component
+                applies_to: component as any,
+                is_stackable: discountType.conditions?.stacking_allowed !== false,
+                priority: discount.priority || discountType.priority || 100,
+                description: discountType.name || `Promo Code: ${discountCode}`,
+                discount_code_id: discount.id,
+                campaign_id: discount.campaign_id || undefined,
+                conditions: discountType.conditions // Pass through conditions including max_discount
+              });
+            });
           } else {
-            // Large orders or specific handling fee discounts
+            // Traditional order-level discount (applies to total)
+            let discountAmount = 0;
+            let appliesTo = 'total';
+            
+            // Calculate discount amount for order-level discounts
             if (discountType.type === 'percentage') {
-              const baseAmount = appliesTo === 'handling' ? handlingFee : quoteTotal;
-              discountAmount = baseAmount * (discountType.value / 100);
-              
-              // Cap at 50% of handling fee for large orders
-              if (orderSizeCategory === 'large' && appliesTo === 'total') {
-                discountAmount = Math.min(discountAmount, handlingFee * 0.5);
+              discountAmount = quoteTotal * (discountType.value / 100);
+              // Apply max discount cap if exists
+              if (discountType.conditions?.max_discount) {
+                discountAmount = Math.min(discountAmount, discountType.conditions.max_discount);
               }
             } else {
-              discountAmount = discountType.value;
-              if (orderSizeCategory === 'large' && appliesTo === 'total') {
-                discountAmount = Math.min(discountAmount, handlingFee * 0.5);
-              }
+              discountAmount = Math.min(discountType.value, quoteTotal);
             }
-          }
 
-          discounts.push({
-            discount_source: 'code',
-            discount_type: discountType.type as 'percentage' | 'fixed_amount',
-            discount_value: discountType.value,
-            discount_amount: discountAmount,
-            applies_to: appliesTo as 'total' | 'handling' | 'shipping',
-            is_stackable: true,
-            description: `Promo Code: ${discountCode}`
-          });
+            discounts.push({
+              discount_source: 'code',
+              discount_type: discountType.type as 'percentage' | 'fixed_amount',
+              discount_value: discountType.value,
+              discount_amount: discountAmount,
+              applies_to: appliesTo as 'total' | 'handling' | 'shipping',
+              is_stackable: discountType.conditions?.stacking_allowed !== false,
+              priority: discount.priority || discountType.priority || 0,
+              description: discountType.name || `Promo Code: ${discountCode}`,
+              discount_code_id: discount.id,
+              campaign_id: discount.campaign_id || undefined,
+              conditions: discountType.conditions
+            });
+          }
         }
       }
 

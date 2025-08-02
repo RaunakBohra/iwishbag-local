@@ -77,6 +77,8 @@ export function DiscountManagementPanel() {
   const [selectedCampaign, setSelectedCampaign] = useState<DiscountCampaign | null>(null);
   const [editingCampaign, setEditingCampaign] = useState<DiscountCampaign | null>(null);
   const [editingCode, setEditingCode] = useState<DiscountCode | null>(null);
+  const [editingCountryRule, setEditingCountryRule] = useState<CountryDiscountRule | null>(null);
+  const [editingDiscountTier, setEditingDiscountTier] = useState<DiscountTier | null>(null);
   const [showInactive, setShowInactive] = useState(true);
   const [paymentDiscounts, setPaymentDiscounts] = useState({
     bank_transfer: { percentage: 2, is_active: true },
@@ -185,29 +187,31 @@ export function DiscountManagementPanel() {
         });
       }
 
-      // Calculate stats manually for now since get_discount_stats RPC doesn't exist
+      // Get discount statistics using RPC function
       try {
-        // Get total discounts used
-        const { count: totalUsed } = await supabase
-          .from('discount_codes')
-          .select('*', { count: 'exact', head: true })
-          .gt('usage_count', 0);
+        const { data: statsData, error: statsError } = await supabase
+          .rpc('get_discount_stats');
 
-        // Get active campaigns count
-        const { count: activeCampaignCount } = await supabase
-          .from('discount_campaigns')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true);
-
-        // Set basic stats
-        setStats({
-          total_discounts_used: totalUsed || 0,
-          total_savings: 0, // Would need to calculate from orders
-          active_campaigns: activeCampaignCount || 0,
-          conversion_rate: 0 // Would need to calculate from analytics
-        });
+        if (!statsError && statsData && statsData.length > 0) {
+          const stat = statsData[0];
+          setStats({
+            total_discounts_used: Number(stat.total_discounts_used) || 0,
+            total_savings: Number(stat.total_savings) || 0,
+            active_campaigns: Number(stat.active_campaigns) || 0,
+            conversion_rate: Number(stat.conversion_rate) || 0
+          });
+        } else {
+          console.warn('Could not fetch discount stats:', statsError);
+          // Set default stats
+          setStats({
+            total_discounts_used: 0,
+            total_savings: 0,
+            active_campaigns: campaigns.length,
+            conversion_rate: 0
+          });
+        }
       } catch (error) {
-        console.warn('Could not calculate discount stats:', error);
+        console.error('Error fetching discount stats:', error);
         // Set default stats
         setStats({
           total_discounts_used: 0,
@@ -777,7 +781,7 @@ export function DiscountManagementPanel() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          // TODO: Implement edit functionality
+                          setEditingCountryRule(rule);
                         }}
                       >
                         <Edit2 className="h-4 w-4" />
@@ -868,7 +872,7 @@ export function DiscountManagementPanel() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          // TODO: Implement edit functionality
+                          setEditingDiscountTier(tier);
                         }}
                       >
                         <Edit2 className="h-4 w-4" />
@@ -1117,6 +1121,34 @@ export function DiscountManagementPanel() {
           onSuccess={() => {
             loadData();
             setEditingCode(null);
+          }}
+        />
+      )}
+
+      {/* Edit Country Rule Dialog */}
+      {editingCountryRule && (
+        <EditCountryRuleDialog
+          rule={editingCountryRule}
+          campaigns={campaigns}
+          open={!!editingCountryRule}
+          onOpenChange={() => setEditingCountryRule(null)}
+          onSuccess={() => {
+            loadData();
+            setEditingCountryRule(null);
+          }}
+        />
+      )}
+
+      {/* Edit Discount Tier Dialog */}
+      {editingDiscountTier && (
+        <EditDiscountTierDialog
+          tier={editingDiscountTier}
+          campaigns={campaigns}
+          open={!!editingDiscountTier}
+          onOpenChange={() => setEditingDiscountTier(null)}
+          onSuccess={() => {
+            loadData();
+            setEditingDiscountTier(null);
           }}
         />
       )}
@@ -2170,6 +2202,307 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
           </Button>
           <Button onClick={handleSubmit}>
             Create Tier
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditCountryRuleDialog({ rule, campaigns, open, onOpenChange, onSuccess }: {
+  rule: CountryDiscountRule;
+  campaigns: DiscountCampaign[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    discount_type_id: rule.discount_type_id,
+    country_code: rule.country_code,
+    component_discounts: rule.component_discounts || {},
+    min_order_amount: rule.min_order_amount?.toString() || '',
+    max_uses_per_customer: rule.max_uses_per_customer?.toString() || ''
+  });
+
+  const componentOptions = [
+    { value: 'shipping', label: 'Shipping' },
+    { value: 'customs', label: 'Customs Duty' },
+    { value: 'handling', label: 'Handling Fee' },
+    { value: 'taxes', label: 'Taxes (GST/VAT)' },
+    { value: 'delivery', label: 'Domestic Delivery' }
+  ];
+
+  const handleComponentDiscountChange = (component: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setFormData(prev => ({
+      ...prev,
+      component_discounts: {
+        ...prev.component_discounts,
+        [component]: numValue
+      }
+    }));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const { error } = await supabase
+        .from('country_discount_rules')
+        .update({
+          discount_type_id: formData.discount_type_id,
+          country_code: formData.country_code.toUpperCase(),
+          component_discounts: formData.component_discounts,
+          min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : null,
+          max_uses_per_customer: formData.max_uses_per_customer ? parseInt(formData.max_uses_per_customer) : null
+        })
+        .eq('id', rule.id);
+
+      if (error) throw error;
+
+      toast.success('Country rule updated');
+      onSuccess();
+    } catch (error) {
+      console.error('Error updating country rule:', error);
+      toast.error('Failed to update country rule');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Country-Specific Discount Rule</DialogTitle>
+          <DialogDescription>
+            Update component-specific discounts for {rule.country_code}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Discount Type</Label>
+              <Select value={formData.discount_type_id} onValueChange={(value) => setFormData({ ...formData, discount_type_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select discount type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.discount_type_id}>
+                      {campaign.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Country Code</Label>
+              <Input
+                value={formData.country_code}
+                onChange={(e) => setFormData({ ...formData, country_code: e.target.value })}
+                placeholder="NP, IN, US, etc."
+                className="uppercase"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Component-Specific Discounts (%)</Label>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              {componentOptions.map((component) => (
+                <div key={component.value} className="flex items-center gap-2">
+                  <label className="flex items-center gap-2 flex-1">
+                    <span className="text-sm">{component.label}:</span>
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    className="w-20"
+                    value={formData.component_discounts[component.value] || ''}
+                    onChange={(e) => handleComponentDiscountChange(component.value, e.target.value)}
+                  />
+                  <span className="text-sm">%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Minimum Order Amount</Label>
+              <Input
+                type="number"
+                value={formData.min_order_amount}
+                onChange={(e) => setFormData({ ...formData, min_order_amount: e.target.value })}
+                placeholder="No minimum"
+              />
+            </div>
+
+            <div>
+              <Label>Max Uses Per Customer</Label>
+              <Input
+                type="number"
+                value={formData.max_uses_per_customer}
+                onChange={(e) => setFormData({ ...formData, max_uses_per_customer: e.target.value })}
+                placeholder="Unlimited"
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            Update Rule
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess }: {
+  tier: DiscountTier;
+  campaigns: DiscountCampaign[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const [formData, setFormData] = useState({
+    discount_type_id: tier.discount_type_id,
+    min_order_value: tier.min_order_value.toString(),
+    max_order_value: tier.max_order_value?.toString() || '',
+    discount_value: tier.discount_value.toString(),
+    applicable_components: tier.applicable_components || ['total']
+  });
+
+  const componentOptions = [
+    { value: 'total', label: 'Item Total' },
+    { value: 'shipping', label: 'Shipping' },
+    { value: 'customs', label: 'Customs Duty' },
+    { value: 'handling', label: 'Handling Fee' },
+    { value: 'taxes', label: 'Taxes (GST/VAT)' },
+    { value: 'delivery', label: 'Domestic Delivery' }
+  ];
+
+  const handleSubmit = async () => {
+    try {
+      const { error } = await supabase
+        .from('discount_tiers')
+        .update({
+          discount_type_id: formData.discount_type_id,
+          min_order_value: parseFloat(formData.min_order_value),
+          max_order_value: formData.max_order_value ? parseFloat(formData.max_order_value) : null,
+          discount_value: parseFloat(formData.discount_value),
+          applicable_components: formData.applicable_components
+        })
+        .eq('id', tier.id);
+
+      if (error) throw error;
+
+      toast.success('Discount tier updated');
+      onSuccess();
+    } catch (error) {
+      console.error('Error updating discount tier:', error);
+      toast.error('Failed to update discount tier');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Volume Discount Tier</DialogTitle>
+          <DialogDescription>
+            Update tiered discount settings
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label>Discount Type</Label>
+            <Select value={formData.discount_type_id} onValueChange={(value) => setFormData({ ...formData, discount_type_id: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select discount type" />
+              </SelectTrigger>
+              <SelectContent>
+                {campaigns.map((campaign) => (
+                  <SelectItem key={campaign.id} value={campaign.discount_type_id}>
+                    {campaign.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label>Min Order Value</Label>
+              <Input
+                type="number"
+                value={formData.min_order_value}
+                onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
+                placeholder="100"
+              />
+            </div>
+
+            <div>
+              <Label>Max Order Value (Optional)</Label>
+              <Input
+                type="number"
+                value={formData.max_order_value}
+                onChange={(e) => setFormData({ ...formData, max_order_value: e.target.value })}
+                placeholder="No maximum"
+              />
+            </div>
+
+            <div>
+              <Label>Discount Value (%)</Label>
+              <Input
+                type="number"
+                value={formData.discount_value}
+                onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
+                placeholder="10"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Applicable Components</Label>
+            <div className="grid grid-cols-3 gap-3 mt-2">
+              {componentOptions.map((component) => (
+                <label key={component.value} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.applicable_components.includes(component.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          applicable_components: [...formData.applicable_components, component.value]
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          applicable_components: formData.applicable_components.filter(c => c !== component.value)
+                        });
+                      }
+                    }}
+                  />
+                  <span className="text-sm">{component.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit}>
+            Update Tier
           </Button>
         </DialogFooter>
       </DialogContent>

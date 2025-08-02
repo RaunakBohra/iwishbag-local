@@ -982,29 +982,50 @@ const QuoteCalculatorV2: React.FC = () => {
                       items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
                       0
                     }
+                    appliedCodes={discountCodes} // Pass the loaded discount codes
                     onDiscountApplied={(discount) => {
                       // Add to component discount codes for V2 system
                       if (!discountCodes.includes(discount.code)) {
                         setDiscountCodes([...discountCodes, discount.code]);
                       }
                       
-                      // Also keep old system for backward compatibility
-                      setOrderDiscountType(discount.type);
-                      setOrderDiscountValue(discount.value);
-                      setOrderDiscountCode(discount.code);
-                      setOrderDiscountCodeId(discount.discountCodeId || null);
+                      // Only set order-level discount if it applies to 'total'
+                      // Component-specific discounts (shipping, customs, etc.) should NOT be set as order discounts
+                      if (discount.appliesTo === 'total') {
+                        setOrderDiscountType(discount.type);
+                        setOrderDiscountValue(discount.value);
+                        setOrderDiscountCode(discount.code);
+                        setOrderDiscountCodeId(discount.discountCodeId || null);
+                      } else {
+                        // Clear order discount values for component-specific discounts
+                        setOrderDiscountType('percentage');
+                        setOrderDiscountValue(0);
+                        setOrderDiscountCode('');
+                        setOrderDiscountCodeId(null);
+                      }
                     }}
-                    onDiscountRemoved={() => {
-                      // Remove from component discount codes
-                      setDiscountCodes([]);
-                      
-                      // Also clear old system
-                      setOrderDiscountType('percentage');
-                      setOrderDiscountValue(0);
-                      setOrderDiscountCode('');
-                      setOrderDiscountCodeId(null);
+                    onDiscountRemoved={(codeToRemove) => {
+                      if (codeToRemove) {
+                        // Remove specific code
+                        setDiscountCodes(discountCodes.filter(c => c !== codeToRemove));
+                        
+                        // If this was the order discount code, clear it
+                        if (orderDiscountCode === codeToRemove) {
+                          setOrderDiscountType('percentage');
+                          setOrderDiscountValue(0);
+                          setOrderDiscountCode('');
+                          setOrderDiscountCodeId(null);
+                        }
+                      } else {
+                        // Remove all codes (backward compatibility)
+                        setDiscountCodes([]);
+                        setOrderDiscountType('percentage');
+                        setOrderDiscountValue(0);
+                        setOrderDiscountCode('');
+                        setOrderDiscountCodeId(null);
+                      }
                     }}
-                    currentCode={orderDiscountCode}
+                    currentCode={discountCodes.length > 0 ? discountCodes[0] : orderDiscountCode}
                     disabled={!customerEmail || !calculationResult}
                   />
                 </div>

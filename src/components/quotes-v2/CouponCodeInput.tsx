@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,8 +26,9 @@ interface CouponCodeInputProps {
     appliesTo: 'total' | 'shipping' | 'handling';
     discountCodeId?: string;
   }) => void;
-  onDiscountRemoved: () => void;
+  onDiscountRemoved: (code?: string) => void; // Updated to accept specific code
   currentCode?: string;
+  appliedCodes?: string[]; // New prop to show multiple applied codes
   disabled?: boolean;
 }
 
@@ -37,12 +38,22 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
   onDiscountApplied,
   onDiscountRemoved,
   currentCode,
+  appliedCodes = [],
   disabled = false,
 }) => {
   const [code, setCode] = useState(currentCode || '');
   const [isValidating, setIsValidating] = useState(false);
   const [validatedDiscount, setValidatedDiscount] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Effect to set code when appliedCodes are provided (on page reload)
+  useEffect(() => {
+    if (appliedCodes.length > 0 && !validatedDiscount && !code) {
+      // Just set the code, don't set validatedDiscount
+      // This shows the applied codes without trying to render discount details
+      setCode(appliedCodes[0]);
+    }
+  }, [appliedCodes]);
 
   const validateAndApplyCoupon = async () => {
     if (!code.trim()) {
@@ -90,13 +101,28 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
         calculatedAmount: discountAmount
       });
 
+      // Determine what the discount applies to
+      let appliesTo: 'total' | 'shipping' | 'handling' = 'total';
+      if (Array.isArray(discountType.conditions?.applicable_to)) {
+        // If it's an array, check if it contains component-specific discounts
+        const applicableComponents = discountType.conditions.applicable_to;
+        if (applicableComponents.includes('shipping') && applicableComponents.length === 1) {
+          appliesTo = 'shipping';
+        } else if (applicableComponents.includes('handling') && applicableComponents.length === 1) {
+          appliesTo = 'handling';
+        }
+        // If multiple components or includes other components, treat as 'total'
+      } else if (typeof discountType.conditions?.applicable_to === 'string') {
+        appliesTo = discountType.conditions.applicable_to as any;
+      }
+
       // Notify parent component
       onDiscountApplied({
         code: discount.code,
         type: discountType.type === 'percentage' ? 'percentage' : 'fixed',
         value: discountType.value,
         discountAmount: discountAmount,
-        appliesTo: (discountType.conditions?.applicable_to || 'total') as any,
+        appliesTo: appliesTo,
         discountCodeId: discount.id,
       });
 
@@ -124,8 +150,25 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
       description: "The discount has been removed from your quote.",
     });
   };
+  
+  const removeSpecificCoupon = (codeToRemove: string) => {
+    onDiscountRemoved(codeToRemove);
+    
+    // If this was the current code in the input, clear it
+    if (code === codeToRemove) {
+      setCode('');
+      setValidatedDiscount(null);
+    }
+    
+    toast({
+      title: "Coupon Removed",
+      description: `${codeToRemove} has been removed from your quote.`,
+    });
+  };
 
   const getDiscountDescription = (discountType: any, amount: number) => {
+    if (!discountType) return '';
+    
     if (discountType.type === 'percentage') {
       let desc = `${discountType.value}% off`;
       if (discountType.conditions?.max_discount) {
@@ -235,6 +278,32 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
         <p className="text-xs text-gray-500">
           Quote total: ${quoteTotal.toFixed(2)}
         </p>
+      )}
+      
+      {/* Show all applied codes when reloaded */}
+      {!validatedDiscount && appliedCodes.length > 0 && (
+        <div className="mt-3 space-y-2">
+          <p className="text-sm text-muted-foreground">Applied discount codes:</p>
+          <div className="flex flex-wrap gap-2">
+            {appliedCodes.map((appliedCode) => (
+              <Badge 
+                key={appliedCode} 
+                variant="secondary" 
+                className="flex items-center gap-1 pr-1"
+              >
+                <Tag className="w-3 h-3" />
+                {appliedCode}
+                <button
+                  onClick={() => removeSpecificCoupon(appliedCode)}
+                  className="ml-1 rounded-full hover:bg-gray-300 p-0.5 transition-colors"
+                  disabled={disabled}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

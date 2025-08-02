@@ -383,6 +383,31 @@ class SimplifiedQuoteCalculator {
             }))
           };
         }
+        
+        // Apply shipping discounts if available
+        if (discountsByComponent.has('shipping')) {
+          const shippingDiscountResult = DiscountService.calculateComponentDiscount(
+            baseShippingCost,
+            discountsByComponent.get('shipping')!,
+            'shipping'
+          );
+          const componentShippingDiscount = shippingDiscountResult.totalDiscount;
+          
+          // Combine with existing shipping discount (if any)
+          shippingDiscountAmount = Math.min(shippingDiscountAmount + componentShippingDiscount, baseShippingCost);
+          finalShippingCost = baseShippingCost - shippingDiscountAmount;
+          
+          componentDiscounts.shipping = {
+            original: baseShippingCost,
+            discount: componentShippingDiscount,
+            final: finalShippingCost,
+            applied_discounts: shippingDiscountResult.appliedDiscounts.map(d => ({
+              source: d.discount_source,
+              description: d.description || '',
+              amount: d.discount_amount
+            }))
+          };
+        }
       } catch (error) {
         console.error('Error fetching component discounts:', error);
       }
