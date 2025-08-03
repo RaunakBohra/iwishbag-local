@@ -116,6 +116,7 @@ const CompactPhoneInputDemo = React.lazy(() => import('@/demo/CompactPhoneInputD
 const QuoteV2Demo = React.lazy(() => import('@/components/demo/QuoteV2Demo').then((m) => ({ default: m.QuoteV2Demo })));
 const QuoteV2Integration = React.lazy(() => import('@/pages/demos/QuoteV2Integration'));
 const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
+const TestSmartProductForm = React.lazy(() => import('@/pages/TestSmartProductForm'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
@@ -341,6 +342,10 @@ const router = createBrowserRouter([
       {
         path: 'demo/quotes-v2-integration',
         element: <QuoteV2Integration />,
+      },
+      {
+        path: 'test-smart-product-form',
+        element: <TestSmartProductForm />,
       },
       {
         path: 'quote/view/:token',
