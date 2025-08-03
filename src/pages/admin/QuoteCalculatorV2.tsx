@@ -66,6 +66,8 @@ interface QuoteItem {
   // Optional HSN fields - safe additions
   hsn_code?: string;
   use_hsn_rates?: boolean; // Feature flag per item
+  // Valuation method preference - safe addition
+  valuation_preference?: 'auto' | 'product_price' | 'minimum_valuation'; // Per-item valuation choice
   // Optional volumetric weight fields
   dimensions?: {
     length: number;
@@ -272,7 +274,8 @@ const QuoteCalculatorV2: React.FC = () => {
       weight_kg: undefined,
       category: '',
       notes: '',
-      discount_type: 'percentage' // Default to percentage
+      discount_type: 'percentage', // Default to percentage
+      valuation_preference: 'auto' // Default to auto (use higher value)
     }]);
   };
 
@@ -1073,6 +1076,41 @@ const QuoteCalculatorV2: React.FC = () => {
                           </p>
                         );
                       })()}
+                    </div>
+                  )}
+
+                  {/* Valuation Method Toggle */}
+                  {item.hsn_code && (
+                    <div className="border rounded-lg p-3 bg-blue-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor={`valuation-${item.id}`} className="cursor-pointer font-medium">
+                            Customs Valuation Method
+                          </Label>
+                          <Badge variant="outline" className="text-xs">
+                            {item.valuation_preference === 'auto' ? 'Auto (Higher)' : 
+                             item.valuation_preference === 'minimum_valuation' ? 'Min Valuation' : 'Product Price'}
+                          </Badge>
+                        </div>
+                        <select
+                          id={`valuation-${item.id}`}
+                          className="text-xs border rounded px-2 py-1"
+                          value={item.valuation_preference || 'auto'}
+                          onChange={(e) => {
+                            const newValuation = e.target.value as 'auto' | 'product_price' | 'minimum_valuation';
+                            updateItem(item.id, 'valuation_preference', newValuation);
+                          }}
+                        >
+                          <option value="auto">🤖 Auto (Higher)</option>
+                          <option value="product_price">💰 Product Price</option>
+                          <option value="minimum_valuation">🏛️ Minimum Valuation</option>
+                        </select>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-2">
+                        <strong>Auto:</strong> Uses higher of product price vs minimum valuation (recommended) <br/>
+                        <strong>Product Price:</strong> Forces actual product price for customs calculation <br/>
+                        <strong>Minimum Valuation:</strong> Forces minimum valuation even if product price is lower
+                      </p>
                     </div>
                   )}
 

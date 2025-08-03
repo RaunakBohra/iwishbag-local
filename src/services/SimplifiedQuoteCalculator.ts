@@ -5,6 +5,7 @@ import { volumetricWeightService } from './VolumetricWeightService';
 
 interface CalculationInput {
   items: Array<{
+    name?: string; // Item name for logging
     quantity: number;
     unit_price_usd: number;
     weight_kg?: number;
@@ -14,6 +15,8 @@ interface CalculationInput {
     // Optional HSN fields - safe additions
     hsn_code?: string;
     use_hsn_rates?: boolean; // Feature flag per item
+    // Valuation method preference
+    valuation_preference?: 'auto' | 'product_price' | 'minimum_valuation';
     // Optional volumetric weight fields
     dimensions?: {
       length: number;
@@ -298,17 +301,77 @@ class SimplifiedQuoteCalculator {
     return defaultRate;
   }
 
+  private async getItemValuationData(item: any, destinationCountry: string): Promise<{
+    product_price: number;
+    minimum_valuation: number | null;
+    effective_value: number;
+    valuation_method_used: string;
+  }> {
+    const productPrice = item.quantity * item.unit_price_usd;
+    let minimumValuation: number | null = null;
+    let effectiveValue = productPrice;
+    let valuationMethodUsed = 'product_price';
+
+    // Get minimum valuation from database if HSN code exists
+    if (item.hsn_code) {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        // Use RPC call to avoid TypeScript issues with complex table types
+        const { data: hsnData, error } = await supabase.rpc('get_minimum_valuation', {
+          p_classification_code: item.hsn_code,
+          p_country_code: destinationCountry
+        });
+
+        if (!error && hsnData && hsnData.minimum_valuation_usd) {
+          minimumValuation = hsnData.minimum_valuation_usd * item.quantity;
+          
+          // Apply valuation method logic based on admin choice
+          if (item.valuation_preference === 'minimum_valuation') {
+            // Force minimum valuation
+            effectiveValue = minimumValuation;
+            valuationMethodUsed = 'minimum_valuation (forced)';
+          } else if (item.valuation_preference === 'product_price') {
+            // Force product price
+            effectiveValue = productPrice;
+            valuationMethodUsed = 'product_price (forced)';
+          } else {
+            // Auto mode - use higher value (default)
+            effectiveValue = Math.max(productPrice, minimumValuation);
+            valuationMethodUsed = effectiveValue === minimumValuation ? 'minimum_valuation (auto)' : 'product_price (auto)';
+          }
+
+          console.log(`💰 [Valuation] ${item.hsn_code}: product=$${productPrice.toFixed(2)}, min=$${minimumValuation.toFixed(2)}, using=$${effectiveValue.toFixed(2)} (${valuationMethodUsed})`);
+        }
+      } catch (error) {
+        console.warn('Failed to fetch minimum valuation:', error);
+      }
+    }
+
+    return {
+      product_price: productPrice,
+      minimum_valuation: minimumValuation,
+      effective_value: effectiveValue,
+      valuation_method_used: valuationMethodUsed
+    };
+  }
+
   async calculate(input: CalculationInput): Promise<CalculationResult> {
 
-    // Step 1: Calculate items total with item-level discounts
+    // Step 1: Calculate items total with minimum valuation consideration and item-level discounts
     let itemsTotal = 0;
     let totalItemDiscounts = 0;
+    let customsValuationTotal = 0; // For customs calculation (may use minimum valuation)
+    let valuationAnalysis: any[] = [];
     
-    input.items.forEach(item => {
+    // Process each item for both pricing and valuation
+    for (const item of input.items) {
+      // Get valuation data (product price vs minimum valuation)
+      const valuationData = await this.getItemValuationData(item, input.destination_country);
+      
       const itemSubtotal = item.quantity * item.unit_price_usd;
       let itemDiscount = 0;
       
-      // Calculate discount based on type
+      // Calculate discount based on type (always applied to product price, not minimum valuation)
       if (item.discount_type === 'amount' && item.discount_amount) {
         itemDiscount = Math.min(item.discount_amount, itemSubtotal); // Can't discount more than item value
       } else if (item.discount_percentage) {
@@ -317,9 +380,24 @@ class SimplifiedQuoteCalculator {
       
       itemsTotal += itemSubtotal;
       totalItemDiscounts += itemDiscount;
-    });
+      customsValuationTotal += valuationData.effective_value;
+      
+      valuationAnalysis.push({
+        item_name: item.name || 'Unnamed item',
+        hsn_code: item.hsn_code,
+        product_price: valuationData.product_price,
+        minimum_valuation: valuationData.minimum_valuation,
+        effective_value: valuationData.effective_value,
+        method_used: valuationData.valuation_method_used,
+        preference: item.valuation_preference || 'auto'
+      });
+    }
     
+    // For regular pricing: use discounted product prices
     const discountedItemsSubtotal = itemsTotal - totalItemDiscounts;
+    
+    // For customs calculation: use minimum valuation total (discounts still apply but to base calculation)
+    const customsDiscountedTotal = customsValuationTotal - totalItemDiscounts;
     
     // Step 1.5: Calculate total weight with volumetric consideration
     let totalActualWeight = 0;
@@ -443,8 +521,13 @@ class SimplifiedQuoteCalculator {
       ? Math.max((finalItemsSubtotal + originSalesTax) * (insurancePercentage / 100), 5)
       : 0;
 
-    // Step 7: Calculate CIF (Cost + Insurance + Freight) - using discounted values
-    const cifValue = finalItemsSubtotal + originSalesTax + insuranceAmount + finalShippingCost;
+    // Step 7: Calculate CIF (Cost + Insurance + Freight) 
+    // For customs calculation: use customs valuation (which may include minimum valuations)
+    const finalCustomsValuation = customsValuationTotal - totalItemDiscounts - orderDiscountAmount;
+    const cifValue = finalCustomsValuation + originSalesTax + insuranceAmount + finalShippingCost;
+    
+    console.log(`📦 [CIF Calculation] Customs Valuation: $${finalCustomsValuation.toFixed(2)} (vs Product Price: $${finalItemsSubtotal.toFixed(2)})`);
+    console.log(`📦 [CIF Components] Items: $${finalCustomsValuation.toFixed(2)} + Tax: $${originSalesTax.toFixed(2)} + Insurance: $${insuranceAmount.toFixed(2)} + Shipping: $${finalShippingCost.toFixed(2)} = CIF: $${cifValue.toFixed(2)}`);
 
     // Step 8: Calculate customs duty on CIF
     // Check if any items use HSN rates
