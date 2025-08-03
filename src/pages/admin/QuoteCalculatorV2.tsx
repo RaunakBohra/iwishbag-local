@@ -1168,7 +1168,14 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                     {/* Category field removed - now handled by UnifiedHSNSearch */}
                     <div>
-                      <Label>Item Discount (%)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Item Discount (%)</Label>
+                        {item.discount_percentage && item.discount_percentage > 0 && (
+                          <span className="text-sm text-green-600 font-medium">
+                            Save: ${((item.quantity * item.unit_price_usd * item.discount_percentage) / 100).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
                       <Input
                         type="number"
                         min="0"
