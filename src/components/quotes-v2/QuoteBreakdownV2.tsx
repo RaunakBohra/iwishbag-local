@@ -133,8 +133,13 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               <p className="font-medium">{quote.items.length} items</p>
             </div>
             <div>
-              <span className="text-gray-500">Total Weight</span>
-              <p className="font-medium">{inputs.total_weight_kg} kg</p>
+              <span className="text-gray-500">Chargeable Weight</span>
+              <p className="font-medium">
+                {inputs.total_chargeable_weight_kg || inputs.total_weight_kg} kg
+                {inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > inputs.total_weight_kg && (
+                  <Badge variant="outline" className="ml-1 text-xs">Volumetric</Badge>
+                )}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -215,6 +220,104 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Weight Analysis */}
+      {steps.weight_analysis && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Package className="w-5 h-5 mr-2" />
+              Weight Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Total Actual Weight</span>
+                    <p className="font-bold text-lg">{steps.weight_analysis.totals.total_actual_weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Total Volumetric Weight</span>
+                    <p className="font-bold text-lg">{steps.weight_analysis.totals.total_volumetric_weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Chargeable Weight</span>
+                    <p className="font-bold text-lg text-blue-600">{steps.weight_analysis.totals.total_chargeable_weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Volumetric Items</span>
+                    <p className="font-bold text-lg">{steps.weight_analysis.totals.volumetric_items_count}/{steps.weight_analysis.items.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Per-item breakdown */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-800">Item-by-Item Analysis</h4>
+                {steps.weight_analysis.items.map((item: any, index: number) => (
+                  <div key={index} className={`p-3 rounded-lg border ${
+                    item.is_volumetric ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'
+                  }`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-medium text-sm">Item {index + 1}</span>
+                      {item.is_volumetric && (
+                        <Badge variant="outline" className="text-orange-600 border-orange-300">
+                          ⚠️ Volumetric Weight Applies
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-600">Actual Weight</span>
+                        <p className="font-medium">{item.actual_weight}kg</p>
+                      </div>
+                      {item.volumetric_weight && (
+                        <div>
+                          <span className="text-gray-600">Volumetric Weight</span>
+                          <p className="font-medium">{item.volumetric_weight}kg</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-600">Chargeable Weight</span>
+                        <p className={`font-bold ${
+                          item.is_volumetric ? 'text-orange-600' : 'text-green-600'
+                        }`}>
+                          {item.chargeable_weight}kg
+                        </p>
+                      </div>
+                      {item.dimensions && (
+                        <div>
+                          <span className="text-gray-600">Dimensions</span>
+                          <p className="font-medium">
+                            {item.dimensions.length}×{item.dimensions.width}×{item.dimensions.height} {item.dimensions.unit}
+                          </p>
+                          <p className="text-gray-500">Vol: {item.dimensions.volume_cm3.toLocaleString()} cm³</p>
+                          {item.divisor_used && (
+                            <p className="text-gray-500">Divisor: {item.divisor_used}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {steps.weight_analysis.totals.volumetric_items_count > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Shipping cost is calculated using chargeable weight</strong> ({steps.weight_analysis.totals.total_chargeable_weight}kg), 
+                    which is the higher of actual weight vs volumetric weight for each item.
+                  </p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

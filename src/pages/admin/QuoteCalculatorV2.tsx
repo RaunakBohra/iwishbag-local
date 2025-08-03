@@ -24,9 +24,11 @@ import {
   Clock,
   Check,
   X,
-  Tag
+  Tag,
+  Ruler
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
+import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -57,6 +59,14 @@ interface QuoteItem {
   // Optional HSN fields - safe additions
   hsn_code?: string;
   use_hsn_rates?: boolean; // Feature flag per item
+  // Optional volumetric weight fields
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+    unit?: 'cm' | 'in';
+  };
+  volumetric_divisor?: number; // Default 5000, admin can override
 }
 
 const QuoteCalculatorV2: React.FC = () => {
@@ -959,6 +969,146 @@ const QuoteCalculatorV2: React.FC = () => {
                         <Label htmlFor={`hsn-${item.id}`} className="cursor-pointer">
                           Use HSN-specific rates
                         </Label>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Volumetric Weight Section */}
+                  {showAdvancedFeatures && (
+                    <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          📦 Volumetric Weight Calculator
+                          <Badge variant="secondary" className="text-xs">Optional</Badge>
+                        </Label>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                        <div>
+                          <Label className="text-xs">Length</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={item.dimensions?.length || ''}
+                            onChange={(e) => {
+                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
+                              updateItem(item.id, 'dimensions', {
+                                ...dimensions,
+                                length: parseFloat(e.target.value) || 0
+                              });
+                            }}
+                            placeholder="cm"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Width</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={item.dimensions?.width || ''}
+                            onChange={(e) => {
+                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
+                              updateItem(item.id, 'dimensions', {
+                                ...dimensions,
+                                width: parseFloat(e.target.value) || 0
+                              });
+                            }}
+                            placeholder="cm"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Height</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={item.dimensions?.height || ''}
+                            onChange={(e) => {
+                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
+                              updateItem(item.id, 'dimensions', {
+                                ...dimensions,
+                                height: parseFloat(e.target.value) || 0
+                              });
+                            }}
+                            placeholder="cm"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Unit</Label>
+                          <Select
+                            value={item.dimensions?.unit || 'cm'}
+                            onValueChange={(value) => {
+                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
+                              updateItem(item.id, 'dimensions', {
+                                ...dimensions,
+                                unit: value as 'cm' | 'in'
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cm">cm</SelectItem>
+                              <SelectItem value="in">inches</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Volumetric Divisor</Label>
+                          <Input
+                            type="number"
+                            min="1000"
+                            max="10000"
+                            step="100"
+                            value={item.volumetric_divisor || 5000}
+                            onChange={(e) => updateItem(item.id, 'volumetric_divisor', parseFloat(e.target.value) || 5000)}
+                            placeholder="5000"
+                            className="text-sm font-mono"
+                          />
+                          <p className="text-xs text-gray-600 mt-1">Default: 5000 (air freight), 6000 (sea), 4000 (road)</p>
+                        </div>
+                        
+                        {item.dimensions?.length && item.dimensions?.width && item.dimensions?.height && (
+                          <div className="bg-white p-3 rounded border">
+                            <Label className="text-xs text-gray-600">Weight Analysis</Label>
+                            {(() => {
+                              const { length, width, height, unit = 'cm' } = item.dimensions;
+                              let l = length, w = width, h = height;
+                              if (unit === 'in') {
+                                l *= 2.54; w *= 2.54; h *= 2.54;
+                              }
+                              const volume = l * w * h;
+                              const divisor = item.volumetric_divisor || 5000;
+                              const volumetricWeight = volume / divisor;
+                              const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                              const chargeableWeight = Math.max(actualWeight, volumetricWeight);
+                              const isVolumetric = volumetricWeight > actualWeight;
+                              
+                              return (
+                                <div className="space-y-1 text-xs">
+                                  <p>Volume: {Math.round(volume).toLocaleString()} cm³</p>
+                                  <p>Actual: {actualWeight.toFixed(2)}kg</p>
+                                  <p>Volumetric: {volumetricWeight.toFixed(3)}kg</p>
+                                  <p className={`font-medium ${
+                                    isVolumetric ? 'text-orange-600' : 'text-green-600'
+                                  }`}>
+                                    Chargeable: {chargeableWeight.toFixed(3)}kg
+                                    {isVolumetric && ' ⚠️ Volumetric applies'}
+                                  </p>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
