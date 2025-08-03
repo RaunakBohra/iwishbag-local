@@ -74,6 +74,8 @@ interface QuoteItem {
 }
 
 const QuoteCalculatorV2: React.FC = () => {
+  // Smart feature loading states
+  const [smartFeatureLoading, setSmartFeatureLoading] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
   const { id: quoteId } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
@@ -877,6 +879,8 @@ const QuoteCalculatorV2: React.FC = () => {
                           size="sm"
                           onClick={async () => {
                             if (item.name) {
+                              const loadingKey = `enhance-${item.id}`;
+                              setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
                               try {
                                 const suggestions = await productIntelligenceService.getSmartSuggestions(
                                   item.name, 
@@ -886,12 +890,36 @@ const QuoteCalculatorV2: React.FC = () => {
                                 );
                                 if (suggestions.length > 0) {
                                   const suggestion = suggestions[0];
+                                  const confidence = Math.round(suggestion.confidence_score * 100);
                                   updateItem(item.id, 'hsn_code', suggestion.classification_code);
                                   updateItem(item.id, 'weight_kg', suggestion.typical_weight_kg);
                                   updateItem(item.id, 'category', suggestion.category);
                                   toast({
                                     title: "🤖 Smart Enhancement Applied",
-                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.typical_weight_kg}kg, Category: ${suggestion.category}`,
+                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.typical_weight_kg}kg, Category: ${suggestion.category} (${confidence}% confidence)`,
+                                    duration: 5000,
+                                  });
+                                  
+                                  // Add visual feedback for high/low confidence
+                                  if (confidence >= 80) {
+                                    toast({
+                                      title: "✅ High Confidence Match",
+                                      description: "AI is very confident about these suggestions.",
+                                      duration: 3000,
+                                    });
+                                  } else if (confidence < 60) {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "⚠️ Low Confidence Match", 
+                                      description: "Please review and verify the AI suggestions manually.",
+                                      duration: 4000,
+                                    });
+                                  }
+                                } else {
+                                  toast({
+                                    variant: "destructive",
+                                    title: "No Suggestions Found",
+                                    description: "No matching product classification found. Please fill manually.",
                                   });
                                 }
                               } catch (error) {
@@ -901,14 +929,16 @@ const QuoteCalculatorV2: React.FC = () => {
                                   title: "Enhancement Failed",
                                   description: "Unable to get smart suggestions. Please fill manually.",
                                 });
+                              } finally {
+                                setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
                               }
                             }
                           }}
                           className="text-xs"
-                          disabled={!item.name}
+                          disabled={!item.name || smartFeatureLoading[`enhance-${item.id}`]}
                         >
-                          <Sparkles className="w-3 h-3 mr-1" />
-                          AI Enhance
+                          <Sparkles className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
+                          {smartFeatureLoading[`enhance-${item.id}`] ? 'Enhancing...' : 'AI Enhance'}
                         </Button>
                       </div>
                       <Input
@@ -955,6 +985,8 @@ const QuoteCalculatorV2: React.FC = () => {
                             size="sm"
                             onClick={async () => {
                               if (item.name || item.category) {
+                                const loadingKey = `weight-${item.id}`;
+                                setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
                                 try {
                                   const estimatedWeight = await productIntelligenceService.estimateProductWeight(
                                     item.name || '', 
@@ -964,7 +996,8 @@ const QuoteCalculatorV2: React.FC = () => {
                                     updateItem(item.id, 'weight_kg', estimatedWeight);
                                     toast({
                                       title: "⚖️ Weight Estimated",
-                                      description: `Estimated weight: ${estimatedWeight}kg based on product type`,
+                                      description: `Estimated weight: ${estimatedWeight}kg based on product analysis`,
+                                      duration: 4000,
                                     });
                                   }
                                 } catch (error) {
@@ -974,14 +1007,16 @@ const QuoteCalculatorV2: React.FC = () => {
                                     title: "Estimation Failed",
                                     description: "Unable to estimate weight. Please enter manually.",
                                   });
+                                } finally {
+                                  setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
                                 }
                               }
                             }}
                             className="text-xs"
-                            disabled={!item.name && !item.category}
+                            disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
                           >
-                            <Brain className="w-3 h-3 mr-1" />
-                            AI Weight
+                            <Brain className={`w-3 h-3 mr-1 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                            {smartFeatureLoading[`weight-${item.id}`] ? 'Estimating...' : 'AI Weight'}
                           </Button>
                           <button
                             type="button"
