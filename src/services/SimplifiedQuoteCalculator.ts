@@ -316,11 +316,15 @@ class SimplifiedQuoteCalculator {
     if (item.hsn_code) {
       try {
         const { supabase } = await import('@/integrations/supabase/client');
-        // Use RPC call to avoid TypeScript issues with complex table types
-        const { data: hsnData, error } = await supabase.rpc('get_minimum_valuation', {
-          p_classification_code: item.hsn_code,
-          p_country_code: destinationCountry
-        });
+        // Use direct SQL query to avoid TypeScript RPC issues
+        const { data: hsnData, error } = await supabase
+          .from('product_classifications')
+          .select('minimum_valuation_usd, valuation_method')
+          .eq('classification_code', item.hsn_code)
+          .eq('country_code', destinationCountry)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no match
 
         if (!error && hsnData && hsnData.minimum_valuation_usd) {
           minimumValuation = hsnData.minimum_valuation_usd * item.quantity;
@@ -373,8 +377,12 @@ class SimplifiedQuoteCalculator {
     
     // Process each item for both pricing and valuation
     for (const item of input.items) {
+      console.log(`🔍 [Calculator] Processing item: ${item.name}, HSN: ${item.hsn_code}, valuation_preference: ${item.valuation_preference}`);
+      
       // Get valuation data (product price vs minimum valuation)
       const valuationData = await this.getItemValuationData(item, input.destination_country);
+      
+      console.log(`📊 [Calculator] Valuation result for ${item.name}:`, valuationData);
       
       const itemSubtotal = item.quantity * item.unit_price_usd;
       let itemDiscount = 0;
