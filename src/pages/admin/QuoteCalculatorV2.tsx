@@ -25,9 +25,12 @@ import {
   Check,
   X,
   Tag,
-  Ruler
+  Ruler,
+  Sparkles,
+  Brain
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
+import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -866,7 +869,48 @@ const QuoteCalculatorV2: React.FC = () => {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
-                      <Label>Product Name *</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Product Name *</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            if (item.name) {
+                              try {
+                                const suggestions = await productIntelligenceService.getSmartSuggestions(
+                                  item.name, 
+                                  destinationCountry, 
+                                  item.category, 
+                                  1
+                                );
+                                if (suggestions.length > 0) {
+                                  const suggestion = suggestions[0];
+                                  updateItem(item.id, 'hsn_code', suggestion.classification_code);
+                                  updateItem(item.id, 'weight_kg', suggestion.typical_weight_kg);
+                                  updateItem(item.id, 'category', suggestion.category);
+                                  toast({
+                                    title: "🤖 Smart Enhancement Applied",
+                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.typical_weight_kg}kg, Category: ${suggestion.category}`,
+                                  });
+                                }
+                              } catch (error) {
+                                console.error('Smart enhancement error:', error);
+                                toast({
+                                  variant: "destructive",
+                                  title: "Enhancement Failed",
+                                  description: "Unable to get smart suggestions. Please fill manually.",
+                                });
+                              }
+                            }
+                          }}
+                          className="text-xs"
+                          disabled={!item.name}
+                        >
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          AI Enhance
+                        </Button>
+                      </div>
                       <Input
                         value={item.name}
                         onChange={(e) => updateItem(item.id, 'name', e.target.value)}
@@ -904,14 +948,50 @@ const QuoteCalculatorV2: React.FC = () => {
                     <div>
                       <div className="flex items-center justify-between">
                         <Label>Weight per unit (kg)</Label>
-                        <button
-                          type="button"
-                          onClick={() => setVolumetricModalOpen(item.id)}
-                          className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                        >
-                          <Ruler className="w-3 h-3" />
-                          {item.dimensions ? 'Edit dimensions' : 'Add dimensions'}
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (item.name || item.category) {
+                                try {
+                                  const estimatedWeight = await productIntelligenceService.estimateProductWeight(
+                                    item.name || '', 
+                                    item.category || 'general'
+                                  );
+                                  if (estimatedWeight > 0) {
+                                    updateItem(item.id, 'weight_kg', estimatedWeight);
+                                    toast({
+                                      title: "⚖️ Weight Estimated",
+                                      description: `Estimated weight: ${estimatedWeight}kg based on product type`,
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Weight estimation error:', error);
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Estimation Failed",
+                                    description: "Unable to estimate weight. Please enter manually.",
+                                  });
+                                }
+                              }
+                            }}
+                            className="text-xs"
+                            disabled={!item.name && !item.category}
+                          >
+                            <Brain className="w-3 h-3 mr-1" />
+                            AI Weight
+                          </Button>
+                          <button
+                            type="button"
+                            onClick={() => setVolumetricModalOpen(item.id)}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                          >
+                            <Ruler className="w-3 h-3" />
+                            {item.dimensions ? 'Edit dimensions' : 'Add dimensions'}
+                          </button>
+                        </div>
                       </div>
                       <Input
                         type="number"
@@ -971,14 +1051,59 @@ const QuoteCalculatorV2: React.FC = () => {
                   {showAdvancedFeatures && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-blue-50 rounded-lg">
                       <div>
-                        <Label className="flex items-center gap-2">
-                          HSN Code 
-                          <Badge variant="secondary" className="text-xs">Optional</Badge>
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="flex items-center gap-2">
+                            HSN Code 
+                            <Badge variant="secondary" className="text-xs">Smart AI</Badge>
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (item.name || item.category) {
+                                try {
+                                  const suggestions = await productIntelligenceService.getSmartSuggestions(
+                                    item.name || item.category || '', 
+                                    destinationCountry, 
+                                    item.category, 
+                                    3
+                                  );
+                                  if (suggestions.length > 0) {
+                                    const suggestion = suggestions[0];
+                                    updateItem(item.id, 'hsn_code', suggestion.classification_code);
+                                    toast({
+                                      title: "🔍 HSN Code Found",
+                                      description: `Applied HSN ${suggestion.classification_code} with ${Math.round(suggestion.confidence_score * 100)}% confidence`,
+                                    });
+                                  } else {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "No HSN Found",
+                                      description: "No matching HSN code found. Please enter manually.",
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('HSN search error:', error);
+                                  toast({
+                                    variant: "destructive",
+                                    title: "Search Failed",
+                                    description: "Unable to search HSN codes. Please enter manually.",
+                                  });
+                                }
+                              }
+                            }}
+                            className="text-xs"
+                            disabled={!item.name && !item.category}
+                          >
+                            <Brain className="w-3 h-3 mr-1" />
+                            Find HSN
+                          </Button>
+                        </div>
                         <Input
                           value={item.hsn_code || ''}
                           onChange={(e) => updateItem(item.id, 'hsn_code', e.target.value)}
-                          placeholder="e.g., 6109"
+                          placeholder="e.g., 6109 (or use AI to find)"
                           className="font-mono"
                         />
                         {item.hsn_code && (() => {
@@ -1011,6 +1136,64 @@ const QuoteCalculatorV2: React.FC = () => {
                           Use HSN-specific rates
                         </Label>
                       </div>
+                      
+                      {/* Smart Customs Preview */}
+                      {item.hsn_code && item.unit_price_usd > 0 && (
+                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-sm font-medium flex items-center">
+                              <Calculator className="w-4 h-4 mr-1 text-green-600" />
+                              Smart Customs Preview
+                            </h4>
+                            <Badge variant="outline" className="text-xs text-green-700 border-green-300">
+                              Real-time
+                            </Badge>
+                          </div>
+                          {(() => {
+                            // Calculate customs using our enhanced logic
+                            const price = item.unit_price_usd;
+                            const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
+                            const customsRate = hsnInfo?.customsRate || 10; // Default rate
+                            
+                            // TODO: Get minimum valuation from product intelligence service
+                            // For now, use some realistic minimums based on category
+                            const minimumValuations: Record<string, number> = {
+                              'electronics': 50,
+                              'clothing': 15,
+                              'books': 3,
+                              'toys': 10,
+                              'home_living': 25
+                            };
+                            const minimumValuation = minimumValuations[item.category || ''] || 10;
+                            const useMinimumValuation = price < minimumValuation;
+                            const valuationAmount = useMinimumValuation ? minimumValuation : price;
+                            const customsAmount = (valuationAmount * customsRate) / 100;
+                            
+                            return (
+                              <div className="space-y-2 text-xs">
+                                {useMinimumValuation && (
+                                  <div className="p-2 bg-orange-100 border border-orange-200 rounded text-orange-800">
+                                    <p className="font-medium">⚠️ Minimum Valuation Applied</p>
+                                    <p>Product price (${price}) is below minimum valuation of ${minimumValuation}</p>
+                                  </div>
+                                )}
+                                <div className="flex justify-between">
+                                  <span>Customs Rate:</span>
+                                  <span className="font-medium">{customsRate}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Valuation Base:</span>
+                                  <span className="font-medium">${valuationAmount}</span>
+                                </div>
+                                <div className="flex justify-between border-t pt-2">
+                                  <span className="font-medium">Customs Duty:</span>
+                                  <span className="font-bold text-green-600">${customsAmount.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
