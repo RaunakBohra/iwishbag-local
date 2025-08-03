@@ -88,11 +88,8 @@ const VolumetricWeightModal: React.FC<VolumetricWeightModalProps> = ({
   const handleSave = () => {
     if (length > 0 && width > 0 && height > 0) {
       const dimensions = { length, width, height, unit };
-      console.log('Saving volumetric weight data:', { dimensions, divisor });
       onSave(dimensions, divisor);
       onClose();
-    } else {
-      console.warn('Cannot save: invalid dimensions', { length, width, height });
     }
   };
 

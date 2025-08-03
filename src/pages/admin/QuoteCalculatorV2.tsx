@@ -1511,10 +1511,8 @@ const QuoteCalculatorV2: React.FC = () => {
             quantity={currentItem.quantity}
             actualWeightKg={currentItem.weight_kg}
             onSave={(dimensions, divisor) => {
-              console.log('Received volumetric data from modal:', { dimensions, divisor, itemId: currentItem.id });
               updateItem(currentItem.id, 'dimensions', dimensions);
               updateItem(currentItem.id, 'volumetric_divisor', divisor);
-              console.log('Updated item with volumetric data');
             }}
             onClear={() => {
               updateItem(currentItem.id, 'dimensions', undefined);
