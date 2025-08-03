@@ -1,6 +1,7 @@
 import { currencyService } from './CurrencyService';
 import { DiscountService } from './DiscountService';
 import { DiscountLoggingService } from './DiscountLoggingService';
+import { volumetricWeightService } from './VolumetricWeightService';
 
 interface CalculationInput {
   items: Array<{
@@ -11,6 +12,14 @@ interface CalculationInput {
     // Optional HSN fields - safe additions
     hsn_code?: string;
     use_hsn_rates?: boolean; // Feature flag per item
+    // Optional volumetric weight fields
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+      unit?: 'cm' | 'in';
+    };
+    volumetric_divisor?: number; // Default 5000, admin can override
   }>;
   origin_country: string;
   origin_state?: string; // For US sales tax
@@ -44,6 +53,8 @@ interface CalculationResult {
   inputs: {
     items_cost: number;
     total_weight_kg: number;
+    total_volumetric_weight_kg?: number; // NEW: Total volumetric weight
+    total_chargeable_weight_kg: number; // NEW: Chargeable weight (max of actual vs volumetric)
     origin_country: string;
     origin_state?: string;
     destination_country: string;
@@ -102,6 +113,30 @@ interface CalculationResult {
           description: string;
           amount: number;
         }>;
+      };
+    };
+    // NEW: Weight analysis breakdown
+    weight_analysis?: {
+      items: Array<{
+        item_index: number;
+        actual_weight: number;
+        volumetric_weight?: number;
+        chargeable_weight: number;
+        is_volumetric: boolean;
+        divisor_used?: number;
+        dimensions?: {
+          length: number;
+          width: number;
+          height: number;
+          unit: string;
+          volume_cm3: number;
+        };
+      }>;
+      totals: {
+        total_actual_weight: number;
+        total_volumetric_weight: number;
+        total_chargeable_weight: number;
+        volumetric_items_count: number;
       };
     };
   };
@@ -257,9 +292,78 @@ class SimplifiedQuoteCalculator {
     
     const discountedItemsSubtotal = itemsTotal - totalItemDiscounts;
     
-    const totalWeight = input.items.reduce((sum, item) => 
-      sum + (item.quantity * (item.weight_kg || 0.5)), 0 // Default 0.5kg if not specified
-    );
+    // Step 1.5: Calculate total weight with volumetric consideration
+    let totalActualWeight = 0;
+    let totalVolumetricWeight = 0;
+    let totalChargeableWeight = 0;
+    const weightAnalysisItems: any[] = [];
+    let volumetricItemsCount = 0;
+
+    for (let itemIndex = 0; itemIndex < input.items.length; itemIndex++) {
+      const item = input.items[itemIndex];
+      const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+      let volumetricWeight = 0;
+      let chargeableWeight = actualWeight;
+      let isVolumetric = false;
+      let divisorUsed: number | undefined;
+      let dimensionsData: any;
+
+      totalActualWeight += actualWeight;
+
+      if (item.dimensions) {
+        // Calculate volumetric weight for this item
+        divisorUsed = item.volumetric_divisor || 5000; // Default 5000
+        volumetricWeight = volumetricWeightService.calculateVolumetricWeight(
+          item.dimensions,
+          divisorUsed
+        ) * item.quantity;
+        
+        totalVolumetricWeight += volumetricWeight;
+        chargeableWeight = Math.max(actualWeight, volumetricWeight);
+        isVolumetric = volumetricWeight > actualWeight;
+        
+        if (isVolumetric) {
+          volumetricItemsCount++;
+        }
+
+        // Calculate volume for analysis
+        let { length, width, height, unit = 'cm' } = item.dimensions;
+        if (unit === 'in') {
+          length *= 2.54;
+          width *= 2.54;
+          height *= 2.54;
+        }
+        const volumeCm3 = length * width * height;
+
+        dimensionsData = {
+          length: item.dimensions.length,
+          width: item.dimensions.width,
+          height: item.dimensions.height,
+          unit: item.dimensions.unit || 'cm',
+          volume_cm3: Math.round(volumeCm3 * 100) / 100
+        };
+      }
+
+      totalChargeableWeight += chargeableWeight;
+
+      // Store weight analysis for this item
+      weightAnalysisItems.push({
+        item_index: itemIndex,
+        actual_weight: this.round(actualWeight),
+        volumetric_weight: volumetricWeight > 0 ? this.round(volumetricWeight) : undefined,
+        chargeable_weight: this.round(chargeableWeight),
+        is_volumetric: isVolumetric,
+        divisor_used: divisorUsed,
+        dimensions: dimensionsData
+      });
+    }
+
+    console.log('[VOLUMETRIC] Weight analysis:', {
+      totalActualWeight: this.round(totalActualWeight),
+      totalVolumetricWeight: this.round(totalVolumetricWeight),
+      totalChargeableWeight: this.round(totalChargeableWeight),
+      volumetricItemsCount
+    });
 
     // Step 2: Get configurations
     const countryConfig = COUNTRY_TAX_CONFIG[input.destination_country as keyof typeof COUNTRY_TAX_CONFIG] 
@@ -291,7 +395,13 @@ class SimplifiedQuoteCalculator {
     // Step 5: Calculate shipping with discount
     const shippingMethod = input.shipping_method || 'standard';
     const shippingRatePerKg = SHIPPING_RATES[shippingMethod];
-    const baseShippingCost = Math.max(totalWeight * shippingRatePerKg, 25); // Minimum $25
+    const baseShippingCost = Math.max(totalChargeableWeight * shippingRatePerKg, 25); // Minimum $25
+    
+    console.log('[SHIPPING] Using chargeable weight for shipping calculation:', {
+      totalChargeableWeight: this.round(totalChargeableWeight),
+      shippingRatePerKg,
+      baseShippingCost: this.round(baseShippingCost)
+    });
     
     let shippingDiscountAmount = 0;
     let finalShippingCost = baseShippingCost;
@@ -601,7 +711,9 @@ class SimplifiedQuoteCalculator {
     return {
       inputs: {
         items_cost: itemsTotal,
-        total_weight_kg: totalWeight,
+        total_weight_kg: this.round(totalActualWeight),
+        total_volumetric_weight_kg: totalVolumetricWeight > 0 ? this.round(totalVolumetricWeight) : undefined,
+        total_chargeable_weight_kg: this.round(totalChargeableWeight),
         origin_country: input.origin_country,
         origin_state: input.origin_state,
         destination_country: input.destination_country,
@@ -653,7 +765,16 @@ class SimplifiedQuoteCalculator {
         total_usd: this.round(totalUSD),
         total_customer_currency: this.round(totalCustomerCurrency),
         total_savings: this.round(totalSavings),
-        component_discounts: Object.keys(componentDiscounts).length > 0 ? componentDiscounts : undefined
+        component_discounts: Object.keys(componentDiscounts).length > 0 ? componentDiscounts : undefined,
+        weight_analysis: {
+          items: weightAnalysisItems,
+          totals: {
+            total_actual_weight: this.round(totalActualWeight),
+            total_volumetric_weight: this.round(totalVolumetricWeight),
+            total_chargeable_weight: this.round(totalChargeableWeight),
+            volumetric_items_count: volumetricItemsCount
+          }
+        }
       },
       calculation_timestamp: new Date().toISOString(),
       calculation_version: 'v2'
