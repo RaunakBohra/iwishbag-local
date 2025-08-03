@@ -45,6 +45,7 @@ import { DiscountPreviewPanel } from '@/components/quotes-v2/DiscountPreviewPane
 import { LiveDiscountPreview } from '@/components/quotes-v2/LiveDiscountPreview';
 import { DiscountEligibilityChecker } from '@/components/quotes-v2/DiscountEligibilityChecker';
 import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
+import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
 
 interface QuoteItem {
   id: string;
@@ -132,6 +133,9 @@ const QuoteCalculatorV2: React.FC = () => {
   
   // Feature toggles for safe implementation
   const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false);
+  
+  // Volumetric weight modal state
+  const [volumetricModalOpen, setVolumetricModalOpen] = useState<string | null>(null);
 
   // Update customer currency when destination changes
   useEffect(() => {
@@ -894,7 +898,17 @@ const QuoteCalculatorV2: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <Label>Weight per unit (kg)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Weight per unit (kg)</Label>
+                        <button
+                          type="button"
+                          onClick={() => setVolumetricModalOpen(item.id)}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+                        >
+                          <Ruler className="w-3 h-3" />
+                          {item.dimensions ? 'Edit dimensions' : 'Add dimensions'}
+                        </button>
+                      </div>
                       <Input
                         type="number"
                         min="0"
@@ -903,6 +917,29 @@ const QuoteCalculatorV2: React.FC = () => {
                         onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
                         placeholder="0.5"
                       />
+                      {item.dimensions && (() => {
+                        const { length, width, height, unit = 'cm' } = item.dimensions;
+                        let l = length, w = width, h = height;
+                        if (unit === 'in') {
+                          l *= 2.54; w *= 2.54; h *= 2.54;
+                        }
+                        const volume = l * w * h;
+                        const divisor = item.volumetric_divisor || 5000;
+                        const volumetricWeightPerItem = volume / divisor;
+                        const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                        const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                        const isVolumetric = volumetricWeight > actualWeight;
+                        
+                        return (
+                          <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                            <p className="text-blue-700 font-medium">📦 Dimensions: {length}×{width}×{height} {unit}</p>
+                            <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
+                              Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}kg
+                              {isVolumetric && ' (volumetric)'}
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div>
                       <Label>Category</Label>
@@ -972,166 +1009,6 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Package Dimensions - Always Visible for All Items */}
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-blue-800">
-                        📦 Package Dimensions
-                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">Optional - improves shipping accuracy</Badge>
-                      </Label>
-                    </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                        <div>
-                          <Label className="text-xs">Length</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={item.dimensions?.length || ''}
-                            onChange={(e) => {
-                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
-                              updateItem(item.id, 'dimensions', {
-                                ...dimensions,
-                                length: parseFloat(e.target.value) || 0
-                              });
-                            }}
-                            placeholder="cm"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Width</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={item.dimensions?.width || ''}
-                            onChange={(e) => {
-                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
-                              updateItem(item.id, 'dimensions', {
-                                ...dimensions,
-                                width: parseFloat(e.target.value) || 0
-                              });
-                            }}
-                            placeholder="cm"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Height</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={item.dimensions?.height || ''}
-                            onChange={(e) => {
-                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
-                              updateItem(item.id, 'dimensions', {
-                                ...dimensions,
-                                height: parseFloat(e.target.value) || 0
-                              });
-                            }}
-                            placeholder="cm"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">Unit</Label>
-                          <Select
-                            value={item.dimensions?.unit || 'cm'}
-                            onValueChange={(value) => {
-                              const dimensions = item.dimensions || { length: 0, width: 0, height: 0, unit: 'cm' };
-                              updateItem(item.id, 'dimensions', {
-                                ...dimensions,
-                                unit: value as 'cm' | 'in'
-                              });
-                            }}
-                          >
-                            <SelectTrigger className="text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cm">cm</SelectItem>
-                              <SelectItem value="in">inches</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      {/* Advanced Divisor Override - Only show when volumetric weight applies and user wants to override */}
-                      {item.dimensions?.length && item.dimensions?.width && item.dimensions?.height && (() => {
-                        const { length, width, height, unit = 'cm' } = item.dimensions;
-                        let l = length, w = width, h = height;
-                        if (unit === 'in') {
-                          l *= 2.54; w *= 2.54; h *= 2.54;
-                        }
-                        const volume = l * w * h;
-                        const volumetricWeight = volume / 5000; // Always check with standard divisor
-                        const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                        const isVolumetric = volumetricWeight > actualWeight;
-                        
-                        return isVolumetric ? (
-                          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded">
-                            <div className="flex items-center justify-between mb-2">
-                              <Label className="text-xs text-amber-800 font-medium">🛠️ Advanced: Override Divisor</Label>
-                              <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">Expert Use</Badge>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              <div>
-                                <Input
-                                  type="number"
-                                  min="1000"
-                                  max="10000"
-                                  step="100"
-                                  value={item.volumetric_divisor || 5000}
-                                  onChange={(e) => updateItem(item.id, 'volumetric_divisor', parseFloat(e.target.value) || 5000)}
-                                  placeholder="5000"
-                                  className="text-sm font-mono"
-                                />
-                                <p className="text-xs text-amber-700 mt-1">Air: 5000, Sea: 6000, Express: 4500</p>
-                              </div>
-                            </div>
-                          </div>
-                        ) : null;
-                      })()}
-                        
-                        {item.dimensions?.length && item.dimensions?.width && item.dimensions?.height && (
-                          <div className="bg-white p-3 rounded border border-blue-200">
-                            <Label className="text-xs text-blue-700 font-medium">Shipping Weight</Label>
-                            {(() => {
-                              const { length, width, height, unit = 'cm' } = item.dimensions;
-                              let l = length, w = width, h = height;
-                              if (unit === 'in') {
-                                l *= 2.54; w *= 2.54; h *= 2.54;
-                              }
-                              const volume = l * w * h;
-                              const divisor = item.volumetric_divisor || 5000;
-                              const volumetricWeight = volume / divisor;
-                              const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                              const chargeableWeight = Math.max(actualWeight, volumetricWeight);
-                              const isVolumetric = volumetricWeight > actualWeight;
-                              
-                              return (
-                                <div className="space-y-1 text-xs">
-                                  <p>Volume: {Math.round(volume).toLocaleString()} cm³</p>
-                                  <p>Actual: {actualWeight.toFixed(2)}kg</p>
-                                  <p>Volumetric: {volumetricWeight.toFixed(3)}kg</p>
-                                  <p className={`font-medium ${
-                                    isVolumetric ? 'text-orange-600' : 'text-green-600'
-                                  }`}>
-                                    Chargeable: {chargeableWeight.toFixed(3)}kg
-                                    {isVolumetric && ' ⚠️ Volumetric applies'}
-                                  </p>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               ))}
               
@@ -1570,7 +1447,7 @@ const QuoteCalculatorV2: React.FC = () => {
               customerEmail={customerEmail}
               expiresAt={expiresAt}
               shareToken={shareToken}
-              onUpdate={() => loadQuote(quoteId)}
+              onUpdate={() => loadExistingQuote(quoteId)}
             />
           )}
 
@@ -1619,6 +1496,31 @@ const QuoteCalculatorV2: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Volumetric Weight Modal */}
+      {volumetricModalOpen && (() => {
+        const currentItem = items.find(item => item.id === volumetricModalOpen);
+        if (!currentItem) return null;
+
+        return (
+          <VolumetricWeightModal
+            isOpen={true}
+            onClose={() => setVolumetricModalOpen(null)}
+            dimensions={currentItem.dimensions}
+            volumetricDivisor={currentItem.volumetric_divisor}
+            quantity={currentItem.quantity}
+            actualWeightKg={currentItem.weight_kg}
+            onSave={(dimensions, divisor) => {
+              updateItem(currentItem.id, 'dimensions', dimensions);
+              updateItem(currentItem.id, 'volumetric_divisor', divisor);
+            }}
+            onClear={() => {
+              updateItem(currentItem.id, 'dimensions', undefined);
+              updateItem(currentItem.id, 'volumetric_divisor', undefined);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };
