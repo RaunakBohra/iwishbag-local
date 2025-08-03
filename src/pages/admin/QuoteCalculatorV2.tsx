@@ -973,8 +973,14 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Volumetric Weight Section - Always Visible */}
-                </div>
+                  {/* Package Dimensions - Always Visible for All Items */}
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <Label className="flex items-center gap-2 text-sm font-medium text-blue-800">
+                        📦 Package Dimensions
+                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">Optional - improves shipping accuracy</Badge>
+                      </Label>
+                    </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                         <div>
