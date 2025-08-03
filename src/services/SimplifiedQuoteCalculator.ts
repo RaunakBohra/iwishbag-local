@@ -4,6 +4,9 @@ import { DiscountLoggingService } from './DiscountLoggingService';
 import { volumetricWeightService } from './VolumetricWeightService';
 import { delhiveryService, DelhiveryService } from './DelhiveryService';
 import type { DelhiveryRateRequest, DelhiveryMultiRateResponse } from './DelhiveryService';
+import NCMService from './NCMService';
+import type { NCMRateRequest, NCMMultiRateResponse } from './NCMService';
+import { ncmBranchMappingService } from './NCMBranchMappingService';
 
 interface CalculationInput {
   items: Array<{
@@ -39,8 +42,10 @@ interface CalculationInput {
     city?: string;
     state?: string;
     pincode?: string;
+    district?: string; // For Nepal NCM branch mapping
   };
   delhivery_service_type?: 'standard' | 'express' | 'same_day'; // For Indian deliveries
+  ncm_service_type?: 'pickup' | 'collect'; // For Nepal NCM deliveries
   shipping_method?: 'standard' | 'express' | 'economy';
   insurance_required?: boolean;
   handling_fee_type?: 'fixed' | 'percentage' | 'both';
@@ -111,6 +116,7 @@ interface CalculationResult {
     delivery_discount_amount?: number; // NEW: Delivery discount
     discounted_delivery?: number; // NEW: Final delivery after discount
     delhivery_rates?: DelhiveryMultiRateResponse; // NEW: Delhivery API response for Indian deliveries
+    ncm_rates?: NCMMultiRateResponse; // NEW: NCM API response for Nepal deliveries
     taxable_value: number; // All costs before local tax
     local_tax_amount: number; // GST/VAT on taxable value
     tax_discount_amount?: number; // NEW: Tax discount (rare)
@@ -759,9 +765,10 @@ class SimplifiedQuoteCalculator {
       };
     }
 
-    // Step 11: Calculate domestic delivery (with Delhivery for India)
+    // Step 11: Calculate domestic delivery (with Delhivery for India, NCM for Nepal)
     let domesticDelivery = 0;
     let delhiveryRates: DelhiveryMultiRateResponse | undefined;
+    let ncmRates: NCMMultiRateResponse | undefined;
     
     if (input.destination_country === 'IN') {
       // Use Delhivery for Indian deliveries
@@ -801,8 +808,56 @@ class SimplifiedQuoteCalculator {
         const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
         domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
       }
+    } else if (input.destination_country === 'NP') {
+      // Use NCM for Nepal deliveries
+      try {
+        console.log('🏔️ [Calculator] Using NCM for Nepal delivery calculation');
+        
+        const ncmService = NCMService.getInstance();
+        
+        // Get branch mapping for the destination address
+        const branchPair = await ncmBranchMappingService.getBranchPair({
+          city: input.destination_address?.city,
+          district: input.destination_address?.district,
+          addressLine1: input.destination_address?.line1,
+          addressLine2: input.destination_address?.line2
+        });
+        
+        if (branchPair.pickup && branchPair.destination) {
+          console.log(`🏔️ [NCM] Branch mapping: ${branchPair.pickup.name} → ${branchPair.destination.name}`);
+          
+          const ncmRequest: NCMRateRequest = {
+            creation: branchPair.pickup.name,
+            destination: branchPair.destination.name,
+            type: input.ncm_service_type || 'pickup', // Default to pickup
+            weight: totalChargeableWeight
+          };
+          
+          ncmRates = await ncmService.getDeliveryRates(ncmRequest);
+          
+          // Use the specific service type selected by the user
+          const selectedService = ncmRates.rates.find(r => r.service_type === (input.ncm_service_type || 'pickup'));
+          const deliveryRateNPR = selectedService ? selectedService.rate : ncmRates.rates[0]?.rate || 0;
+          
+          // Convert NPR to USD for calculation consistency
+          domesticDelivery = await ncmService.convertToUSD(deliveryRateNPR);
+          
+          console.log(`🏔️ [NCM] Rate: ₨${deliveryRateNPR} → $${domesticDelivery.toFixed(2)} USD`);
+          
+        } else {
+          console.log('⚠️ [NCM] No suitable branches found, using fallback rates');
+          // Fallback to fixed rates if no branches found
+          const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
+          domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+        }
+      } catch (error) {
+        console.error('❌ [NCM] API error, using fallback rates:', error);
+        // Fallback to fixed rates on API failure
+        const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
+        domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+      }
     } else {
-      // Use existing logic for non-Indian destinations
+      // Use existing logic for other destinations
       const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
       domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
     }
@@ -930,6 +985,7 @@ class SimplifiedQuoteCalculator {
         delivery_discount_amount: this.round(deliveryDiscountAmount),
         discounted_delivery: this.round(discountedDelivery),
         delhivery_rates: delhiveryRates,
+        ncm_rates: ncmRates,
         taxable_value: this.round(taxableValue),
         local_tax_amount: this.round(localTaxAmount),
         tax_discount_amount: this.round(taxDiscountAmount),

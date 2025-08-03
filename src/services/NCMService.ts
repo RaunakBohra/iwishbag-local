@@ -15,6 +15,31 @@ export interface NCMDeliveryRate {
   deliveryType: 'Pickup' | 'Collect';
 }
 
+interface NCMRateRequest {
+  creation: string;
+  destination: string;
+  type: 'Pickup' | 'Collect';
+  weight?: number; // For future use
+}
+
+interface NCMRateResponse {
+  service_type: 'pickup' | 'collect';
+  rate: number; // in NPR
+  estimated_days: number;
+  service_name: string;
+  available: boolean;
+  error?: string;
+}
+
+interface NCMMultiRateResponse {
+  rates: NCMRateResponse[];
+  currency: 'NPR';
+  markup_applied: number;
+  original_total: number;
+  final_total: number;
+  cache_used: boolean;
+}
+
 export interface NCMOrderDetails {
   orderid: number;
   cod_charge: string;
@@ -61,6 +86,17 @@ class NCMService {
   private apiToken: string = '';
   private headers: HeadersInit = {};
   private initialized = false;
+  private cache = new Map<string, { data: any; timestamp: number }>();
+  
+  // NCM configuration similar to Delhivery
+  private readonly NCM_CONFIG = {
+    markup_percentage: 15, // 15% markup on NCM rates
+    cache_duration: 300, // 5 minutes cache
+    fallback_rates: {
+      pickup: 250, // NPR 250 base for pickup
+      collect: 150 // NPR 150 base for collect
+    }
+  };
 
   private constructor() {}
   
@@ -130,6 +166,61 @@ class NCMService {
     return this.fetchApi(`/api/v1/shipping-rate?${queryParams}`);
   }
 
+  /**
+   * Get delivery rates for both Pickup and Collect with markup via Edge Function
+   * Similar to Delhivery's getDeliveryRates method
+   */
+  async getDeliveryRates(request: NCMRateRequest): Promise<NCMMultiRateResponse> {
+    console.log('🚚 [NCM] Getting delivery rates via Edge Function for:', request);
+
+    const cacheKey = `ncm_rates_${request.creation}_${request.destination}`;
+    
+    // Check cache first
+    const cached = this.getFromCache(cacheKey);
+    if (cached) {
+      console.log('📦 [NCM] Using cached rates');
+      return { ...cached, cache_used: true };
+    }
+
+    try {
+      // Call Supabase Edge Function instead of direct API call
+      const { supabase } = await import('../integrations/supabase/client');
+      
+      console.log('🚚 [NCM] Calling Edge Function with request:', request);
+      
+      const { data, error } = await supabase.functions.invoke('ncm-rates', {
+        body: {
+          creation: request.creation,
+          destination: request.destination,
+          type: request.type,
+          weight: request.weight || 1
+        }
+      });
+
+      if (error) {
+        console.error('❌ [NCM] Edge Function error:', error);
+        throw new Error(`Edge Function error: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No data received from Edge Function');
+      }
+
+      console.log('✅ [NCM] Edge Function response:', data);
+
+      // Cache the response
+      this.setCache(cacheKey, data);
+
+      return data as NCMMultiRateResponse;
+
+    } catch (error) {
+      console.error('❌ [NCM] Edge Function call failed:', error);
+      
+      // Return fallback rates
+      return this.getFallbackRates(request);
+    }
+  }
+
   // Get order details
   async getOrderDetails(orderId: string | number): Promise<NCMOrderDetails> {
     return this.fetchApi(`/api/v1/order?id=${orderId}`);
@@ -195,6 +286,107 @@ class NCMService {
 
     return statusMap[ncmStatus] || 'pending';
   }
+
+  /**
+   * Get fallback rates when API fails
+   */
+  private getFallbackRates(request: NCMRateRequest): NCMMultiRateResponse {
+    console.log('🔄 [NCM] Using fallback rates');
+    
+    const pickupRate = this.NCM_CONFIG.fallback_rates.pickup;
+    const collectRate = this.NCM_CONFIG.fallback_rates.collect;
+
+    return {
+      rates: [
+        {
+          service_type: 'pickup',
+          rate: pickupRate,
+          estimated_days: 3,
+          service_name: 'NCM Pickup Service',
+          available: false,
+          error: 'Using fallback rate (API unavailable)'
+        },
+        {
+          service_type: 'collect',
+          rate: collectRate,
+          estimated_days: 5,
+          service_name: 'NCM Collect Service',
+          available: false,
+          error: 'Using fallback rate (API unavailable)'
+        }
+      ],
+      currency: 'NPR',
+      markup_applied: 0, // No markup on fallback
+      original_total: pickupRate + collectRate,
+      final_total: pickupRate + collectRate,
+      cache_used: false
+    };
+  }
+
+  /**
+   * Estimate delivery days based on service type and location
+   */
+  private estimateDeliveryDays(fromBranch: string, toBranch: string, serviceType: 'pickup' | 'collect'): number {
+    // Pickup service is faster
+    const basePickupDays = 2;
+    const baseCollectDays = 4;
+    
+    // Same branch/district - faster delivery
+    if (fromBranch === toBranch) {
+      return serviceType === 'pickup' ? 1 : 2;
+    }
+    
+    // Kathmandu valley deliveries are faster
+    const kathmanduBranches = ['TINKUNE', 'KATHMANDU', 'LALITPUR', 'BHAKTAPUR'];
+    if (kathmanduBranches.includes(fromBranch.toUpperCase()) && 
+        kathmanduBranches.includes(toBranch.toUpperCase())) {
+      return serviceType === 'pickup' ? 1 : 2;
+    }
+    
+    return serviceType === 'pickup' ? basePickupDays : baseCollectDays;
+  }
+
+  /**
+   * Convert NPR to USD for quote calculations
+   */
+  async convertToUSD(amountNPR: number): Promise<number> {
+    try {
+      // Use your existing currency service
+      const { currencyService } = await import('./CurrencyService');
+      const rate = await currencyService.getExchangeRate('NPR', 'USD');
+      return amountNPR * (rate?.rate || 0.0075); // Fallback: 1 NPR = 0.0075 USD
+    } catch (error) {
+      console.error('Currency conversion error:', error);
+      return amountNPR * 0.0075; // Fallback conversion
+    }
+  }
+
+  /**
+   * Get recommended service for quote calculator
+   */
+  getRecommendedService(rates: NCMRateResponse[]): NCMRateResponse {
+    // Return pickup service as default (faster), or first available
+    return rates.find(r => r.service_type === 'pickup') || rates[0];
+  }
+
+  /**
+   * Cache management
+   */
+  private getFromCache(key: string): any {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.NCM_CONFIG.cache_duration * 1000) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setCache(key: string, data: any): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
 }
 
 export default NCMService;
+export type { NCMRateRequest, NCMRateResponse, NCMMultiRateResponse };

@@ -30,6 +30,7 @@ import {
   Brain
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
+import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
 import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { supabase } from '@/integrations/supabase/client';
@@ -113,6 +114,8 @@ const QuoteCalculatorV2: React.FC = () => {
     pincode: ''
   });
   const [delhiveryServiceType, setDelhiveryServiceType] = useState<'standard' | 'express' | 'same_day'>('standard');
+  const [availableServices, setAvailableServices] = useState<DelhiveryServiceOption[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [insuranceRequired, setInsuranceRequired] = useState(true);
   const [handlingFeeType, setHandlingFeeType] = useState<'fixed' | 'percentage' | 'both'>('both');
@@ -187,6 +190,18 @@ const QuoteCalculatorV2: React.FC = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+
+  // Fetch available services when pincode or destination country changes
+  useEffect(() => {
+    if (destinationCountry === 'IN' && destinationPincode) {
+      const timeoutId = setTimeout(() => {
+        fetchAvailableServices(destinationPincode);
+      }, 500); // Debounce API calls
+      return () => clearTimeout(timeoutId);
+    } else {
+      setAvailableServices([]);
+    }
+  }, [destinationPincode, destinationCountry, items]);
 
   const loadQuoteDocuments = async (quoteId: string) => {
     try {
@@ -336,6 +351,38 @@ const QuoteCalculatorV2: React.FC = () => {
       }
       return item;
     }));
+  };
+
+  // Fetch available Delhivery services when pincode changes
+  const fetchAvailableServices = async (pincode: string) => {
+    if (!pincode || destinationCountry !== 'IN' || !/^[1-9][0-9]{5}$/.test(pincode)) {
+      setAvailableServices([]);
+      return;
+    }
+
+    setLoadingServices(true);
+    try {
+      console.log('🔍 [UI] Fetching available services for pincode:', pincode);
+      
+      // Calculate approximate weight from items
+      const totalWeight = items.reduce((sum, item) => sum + (item.weight || 1), 0);
+      
+      const services = await delhiveryService.getAvailableServices(pincode, totalWeight);
+      console.log('✅ [UI] Available services:', services);
+      
+      setAvailableServices(services);
+      
+      // If current service type is not available, switch to first available
+      if (services.length > 0 && !services.find(s => s.value === delhiveryServiceType)) {
+        setDelhiveryServiceType(services[0].value as 'standard' | 'express' | 'same_day');
+      }
+      
+    } catch (error) {
+      console.error('❌ [UI] Failed to fetch available services:', error);
+      setAvailableServices([]);
+    } finally {
+      setLoadingServices(false);
+    }
   };
 
   const calculateQuote = async () => {
@@ -862,33 +909,56 @@ const QuoteCalculatorV2: React.FC = () => {
                   <div>
                     <Label htmlFor="delhiveryServiceType">
                       Delivery Service 
-                      <span className="text-xs text-blue-600 ml-2">
-                        (Delhivery Options)
-                      </span>
+                      {loadingServices && (
+                        <span className="text-xs text-orange-600 ml-2">
+                          (Checking availability...)
+                        </span>
+                      )}
+                      {!loadingServices && availableServices.length > 0 && (
+                        <span className="text-xs text-green-600 ml-2">
+                          ({availableServices.length} option{availableServices.length > 1 ? 's' : ''} available)
+                        </span>
+                      )}
+                      {!loadingServices && availableServices.length === 0 && (
+                        <span className="text-xs text-red-600 ml-2">
+                          (No services available)
+                        </span>
+                      )}
                     </Label>
-                    <Select value={delhiveryServiceType} onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}>
+                    <Select 
+                      value={delhiveryServiceType} 
+                      onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}
+                      disabled={loadingServices || availableServices.length === 0}
+                    >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder={loadingServices ? "Loading services..." : "Select delivery service"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="standard">
-                          <div className="flex flex-col">
-                            <span className="font-medium">📦 Standard Delivery</span>
-                            <span className="text-xs text-gray-500">3-5 business days · Most economical</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="express">
-                          <div className="flex flex-col">
-                            <span className="font-medium">⚡ Express Delivery</span>
-                            <span className="text-xs text-gray-500">1-2 business days · Faster delivery</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="same_day">
-                          <div className="flex flex-col">
-                            <span className="font-medium">🚀 Same Day Delivery</span>
-                            <span className="text-xs text-gray-500">Same day · Premium service (if available)</span>
-                          </div>
-                        </SelectItem>
+                        {availableServices.length > 0 ? (
+                          availableServices.map((service) => (
+                            <SelectItem key={service.value} value={service.value}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {service.value === 'standard' && '📦 '}
+                                  {service.value === 'express' && '⚡ '}
+                                  {service.value === 'same_day' && '🚀 '}
+                                  {service.label}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {service.description}
+                                  {!service.available && ' (API unavailable)'}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : !loadingServices ? (
+                          <SelectItem value="standard" disabled>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-gray-400">📦 Standard Delivery</span>
+                              <span className="text-xs text-gray-400">No services available for this pincode</span>
+                            </div>
+                          </SelectItem>
+                        ) : null}
                       </SelectContent>
                     </Select>
                     <div className="text-xs text-blue-600 mt-1">

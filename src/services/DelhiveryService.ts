@@ -49,6 +49,15 @@ interface DelhiveryMultiRateResponse {
   cache_used: boolean;
 }
 
+interface DelhiveryServiceOption {
+  value: string;
+  label: string;
+  rate: number;
+  estimated_days: number;
+  available: boolean;
+  description: string;
+}
+
 class DelhiveryService {
   private static instance: DelhiveryService;
   private cache = new Map<string, { data: any; timestamp: number }>();
@@ -166,6 +175,50 @@ class DelhiveryService {
   }
 
   /**
+   * Get available service options for a specific pincode
+   */
+  async getAvailableServices(pincode: string, weight: number = 1): Promise<DelhiveryServiceOption[]> {
+    if (!DelhiveryService.isValidPincode(pincode)) {
+      return [];
+    }
+
+    try {
+      const rates = await this.getDeliveryRates({
+        destination_pincode: pincode,
+        weight: weight,
+        cod: false
+      });
+
+      // Filter only available services and format for UI
+      return rates.rates
+        .filter(rate => rate.available)
+        .map(rate => ({
+          value: rate.service_type,
+          label: rate.service_name,
+          rate: rate.rate,
+          estimated_days: rate.estimated_days,
+          available: rate.available,
+          description: `₹${rate.rate} • ${rate.estimated_days} ${rate.estimated_days === 1 ? 'day' : 'days'}`
+        }));
+
+    } catch (error) {
+      console.error('❌ [Delhivery] Failed to get available services:', error);
+      
+      // Return basic options as fallback
+      return [
+        {
+          value: 'standard',
+          label: 'Standard Delivery',
+          rate: 100,
+          estimated_days: 3,
+          available: false,
+          description: '₹100 • 3 days (estimated)'
+        }
+      ];
+    }
+  }
+
+  /**
    * Convert INR to USD for quote calculations
    */
   async convertToUSD(amountINR: number): Promise<number> {
@@ -216,4 +269,5 @@ class DelhiveryService {
 
 export const delhiveryService = DelhiveryService.getInstance();
 export { DelhiveryService };
+export type { DelhiveryServiceOption };
 export type { DelhiveryRateRequest, DelhiveryRateResponse, DelhiveryMultiRateResponse };

@@ -257,7 +257,9 @@
       "Bash(aws iam list-roles:*)",
       "Bash(aws ec2 describe-instances:*)",
       "Bash(aws iam:*)",
-      "Bash(aws sts get-caller-identity:*)"
+      "Bash(aws sts get-caller-identity:*)",
+      "WebFetch(domain:help.delhivery.com)",
+      "WebFetch(domain:sharma-ramesh-ib.medium.com)"
     ],
     "deny": []
   }
