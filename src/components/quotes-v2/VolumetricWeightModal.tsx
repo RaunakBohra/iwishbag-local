@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,15 @@ const VolumetricWeightModal: React.FC<VolumetricWeightModalProps> = ({
   const [unit, setUnit] = useState<'cm' | 'in'>(dimensions?.unit || 'cm');
   const [divisor, setDivisor] = useState(volumetricDivisor);
 
+  // Update state when props change (when switching between items)
+  useEffect(() => {
+    setLength(dimensions?.length || 0);
+    setWidth(dimensions?.width || 0);
+    setHeight(dimensions?.height || 0);
+    setUnit(dimensions?.unit || 'cm');
+    setDivisor(volumetricDivisor);
+  }, [dimensions, volumetricDivisor, isOpen]);
+
   // Calculate preview weights
   const calculatePreview = () => {
     if (!length || !width || !height) return null;
@@ -77,10 +86,14 @@ const VolumetricWeightModal: React.FC<VolumetricWeightModalProps> = ({
   const preview = calculatePreview();
 
   const handleSave = () => {
-    if (length && width && height) {
-      onSave({ length, width, height, unit }, divisor);
+    if (length > 0 && width > 0 && height > 0) {
+      const dimensions = { length, width, height, unit };
+      console.log('Saving volumetric weight data:', { dimensions, divisor });
+      onSave(dimensions, divisor);
+      onClose();
+    } else {
+      console.warn('Cannot save: invalid dimensions', { length, width, height });
     }
-    onClose();
   };
 
   const handleClear = () => {

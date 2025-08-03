@@ -917,7 +917,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
                         placeholder="0.5"
                       />
-                      {item.dimensions && (() => {
+                      {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
                         const { length, width, height, unit = 'cm' } = item.dimensions;
                         let l = length, w = width, h = height;
                         if (unit === 'in') {
@@ -1511,8 +1511,10 @@ const QuoteCalculatorV2: React.FC = () => {
             quantity={currentItem.quantity}
             actualWeightKg={currentItem.weight_kg}
             onSave={(dimensions, divisor) => {
+              console.log('Received volumetric data from modal:', { dimensions, divisor, itemId: currentItem.id });
               updateItem(currentItem.id, 'dimensions', dimensions);
               updateItem(currentItem.id, 'volumetric_divisor', divisor);
+              console.log('Updated item with volumetric data');
             }}
             onClear={() => {
               updateItem(currentItem.id, 'dimensions', undefined);
