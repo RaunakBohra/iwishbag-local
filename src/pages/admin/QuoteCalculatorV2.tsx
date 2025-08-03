@@ -61,6 +61,8 @@ interface QuoteItem {
   category?: string;
   notes?: string;
   discount_percentage?: number;
+  discount_amount?: number; // New: Fixed dollar amount discount
+  discount_type?: 'percentage' | 'amount'; // New: Type of discount being used
   // Optional HSN fields - safe additions
   hsn_code?: string;
   use_hsn_rates?: boolean; // Feature flag per item
@@ -269,7 +271,8 @@ const QuoteCalculatorV2: React.FC = () => {
       unit_price_usd: 0,
       weight_kg: undefined,
       category: '',
-      notes: ''
+      notes: '',
+      discount_type: 'percentage' // Default to percentage
     }]);
   };
 
@@ -1169,22 +1172,64 @@ const QuoteCalculatorV2: React.FC = () => {
                     {/* Category field removed - now handled by UnifiedHSNSearch */}
                     <div>
                       <div className="flex items-center justify-between">
-                        <Label>Item Discount (%)</Label>
-                        {item.discount_percentage && item.discount_percentage > 0 && (
-                          <span className="text-sm text-green-600 font-medium">
-                            Save: ${((item.quantity * item.unit_price_usd * item.discount_percentage) / 100).toFixed(2)}
-                          </span>
-                        )}
+                        <Label>Item Discount</Label>
+                        <div className="flex items-center space-x-2">
+                          <select
+                            className="text-xs border rounded px-2 py-1"
+                            value={item.discount_type || 'percentage'}
+                            onChange={(e) => {
+                              const newType = e.target.value as 'percentage' | 'amount';
+                              updateItem(item.id, 'discount_type', newType);
+                              // Clear the other discount type when switching
+                              if (newType === 'percentage') {
+                                updateItem(item.id, 'discount_amount', undefined);
+                              } else {
+                                updateItem(item.id, 'discount_percentage', undefined);
+                              }
+                            }}
+                          >
+                            <option value="percentage">%</option>
+                            <option value="amount">$</option>
+                          </select>
+                          {/* Show calculated value */}
+                          {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
+                            (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
+                            <span className="text-sm text-green-600 font-medium">
+                              Save: ${item.discount_type === 'percentage' 
+                                ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
+                                : (item.discount_amount || 0).toFixed(2)
+                              }
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={item.discount_percentage || ''}
-                        onChange={(e) => updateItem(item.id, 'discount_percentage', parseFloat(e.target.value) || undefined)}
-                        placeholder="0"
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="0"
+                          max={item.discount_type === 'percentage' ? "100" : undefined}
+                          step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
+                          value={item.discount_type === 'amount' 
+                            ? (item.discount_amount || '') 
+                            : (item.discount_percentage || '')
+                          }
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value) || undefined;
+                            if (item.discount_type === 'amount') {
+                              updateItem(item.id, 'discount_amount', value);
+                            } else {
+                              updateItem(item.id, 'discount_percentage', value);
+                            }
+                          }}
+                          placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
+                          className="pr-8"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <span className="text-gray-500 text-sm">
+                            {item.discount_type === 'amount' ? '$' : '%'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   

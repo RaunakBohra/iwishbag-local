@@ -8,7 +8,9 @@ interface CalculationInput {
     quantity: number;
     unit_price_usd: number;
     weight_kg?: number;
-    discount_percentage?: number; // Item-level discount
+    discount_percentage?: number; // Item-level discount percentage
+    discount_amount?: number; // Item-level discount fixed amount
+    discount_type?: 'percentage' | 'amount'; // Type of discount being used
     // Optional HSN fields - safe additions
     hsn_code?: string;
     use_hsn_rates?: boolean; // Feature flag per item
@@ -304,9 +306,15 @@ class SimplifiedQuoteCalculator {
     
     input.items.forEach(item => {
       const itemSubtotal = item.quantity * item.unit_price_usd;
-      const itemDiscount = item.discount_percentage 
-        ? itemSubtotal * (item.discount_percentage / 100)
-        : 0;
+      let itemDiscount = 0;
+      
+      // Calculate discount based on type
+      if (item.discount_type === 'amount' && item.discount_amount) {
+        itemDiscount = Math.min(item.discount_amount, itemSubtotal); // Can't discount more than item value
+      } else if (item.discount_percentage) {
+        itemDiscount = itemSubtotal * (item.discount_percentage / 100);
+      }
+      
       itemsTotal += itemSubtotal;
       totalItemDiscounts += itemDiscount;
     });
