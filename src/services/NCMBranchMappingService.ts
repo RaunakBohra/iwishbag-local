@@ -37,17 +37,21 @@ class NCMBranchMappingService {
     const cacheKey = 'ncm_branches';
     const cached = this.getFromCache(cacheKey);
     
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       console.log('📦 [NCM] Using cached branches');
       return cached;
+    } else if (cached) {
+      console.warn('⚠️ [NCM] Cached data is not an array, fetching fresh data');
     }
 
     try {
       const ncmService = NCMService.getInstance();
       const branches = await ncmService.getBranches();
       
-      // Cache the branches
-      this.setCache(cacheKey, branches);
+      // Cache the branches (only if it's a valid array)
+      if (Array.isArray(branches) && branches.length > 0) {
+        this.setCache(cacheKey, branches);
+      }
       
       console.log(`✅ [NCM] Fetched ${branches.length} branches`);
       return branches;
@@ -154,6 +158,11 @@ class NCMBranchMappingService {
 
   // Private helper methods
   private findExactMatch(address: AddressInput, branches: NCMBranch[]): BranchMapping | null {
+    if (!Array.isArray(branches) || branches.length === 0) {
+      console.warn('⚠️ [NCM] Branches is not a valid array:', branches);
+      return null;
+    }
+
     const searchTerms = [
       address.city?.toLowerCase(),
       address.district?.toLowerCase(),
@@ -189,6 +198,11 @@ class NCMBranchMappingService {
   }
 
   private findPartialMatch(address: AddressInput, branches: NCMBranch[]): BranchMapping | null {
+    if (!Array.isArray(branches) || branches.length === 0) {
+      console.warn('⚠️ [NCM] Branches is not a valid array for partial match:', branches);
+      return null;
+    }
+
     const searchText = [
       address.addressLine1,
       address.addressLine2,
@@ -225,6 +239,11 @@ class NCMBranchMappingService {
   }
 
   private findFallbackMatch(address: AddressInput, branches: NCMBranch[]): BranchMapping | null {
+    if (!Array.isArray(branches) || branches.length === 0) {
+      console.warn('⚠️ [NCM] Branches is not a valid array for fallback match:', branches);
+      return null;
+    }
+
     // Major city fallbacks
     const majorCities = ['kathmandu', 'pokhara', 'chitwan', 'butwal', 'biratnagar'];
     

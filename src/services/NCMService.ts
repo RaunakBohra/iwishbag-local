@@ -153,7 +153,22 @@ class NCMService {
 
   // Get list of all NCM branches
   async getBranches(): Promise<NCMBranch[]> {
-    return this.fetchApi('/api/v1/branchlist');
+    try {
+      const response = await this.fetchApi('/api/v1/branchlist');
+      
+      // Validate response is an array
+      if (!Array.isArray(response)) {
+        console.error('❌ [NCM] API response is not an array:', response);
+        throw new Error('Invalid branch list response format');
+      }
+      
+      console.log(`✅ [NCM] Fetched ${response.length} branches from API`);
+      return response;
+      
+    } catch (error) {
+      console.error('❌ [NCM] Failed to fetch branches from API:', error);
+      throw error; // Re-throw to trigger fallback in branch mapping service
+    }
   }
 
   // Calculate delivery charges between branches
