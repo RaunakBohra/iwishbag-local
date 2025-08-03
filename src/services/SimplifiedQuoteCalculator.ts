@@ -258,18 +258,41 @@ const HSN_CUSTOMS_RATES: Record<string, Record<string, number>> = {
 
 class SimplifiedQuoteCalculator {
   // Safe method to get customs rate - HSN only if explicitly enabled
-  private getCustomsRateForItem(item: any, destinationCountry: string, defaultRate: number): number {
+  private async getCustomsRateForItem(item: any, destinationCountry: string, defaultRate: number): Promise<number> {
     // Only use HSN if explicitly enabled for this item
     if (item.use_hsn_rates && item.hsn_code) {
+      // First check database for HSN rates
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: hsnData, error } = await supabase
+          .from('product_classifications')
+          .select('customs_rate')
+          .eq('classification_code', item.hsn_code)
+          .eq('country_code', destinationCountry)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (!error && hsnData && hsnData.customs_rate !== null) {
+          console.log(`🎯 [HSN] Using database rate for ${item.hsn_code}: ${hsnData.customs_rate}%`);
+          return hsnData.customs_rate;
+        }
+      } catch (dbError) {
+        console.warn('Failed to fetch HSN rate from database:', dbError);
+      }
+
+      // Fallback to hardcoded HSN rates
       const countryHsnRates = HSN_CUSTOMS_RATES[destinationCountry];
       if (countryHsnRates) {
         const hsnRate = countryHsnRates[item.hsn_code];
         if (hsnRate !== undefined) {
+          console.log(`🎯 [HSN] Using hardcoded rate for ${item.hsn_code}: ${hsnRate}%`);
           return hsnRate;
         }
       }
     }
     // Fallback to default country rate
+    console.log(`🎯 [HSN] Using default rate for ${destinationCountry}: ${defaultRate}%`);
     return defaultRate;
   }
 
@@ -425,12 +448,13 @@ class SimplifiedQuoteCalculator {
       let totalValue = 0;
       let weightedRateSum = 0;
       
-      input.items.forEach(item => {
+      // Process items sequentially to handle async calls
+      for (const item of input.items) {
         const itemValue = item.quantity * item.unit_price_usd;
-        const itemRate = this.getCustomsRateForItem(item, input.destination_country, countryConfig.customs);
+        const itemRate = await this.getCustomsRateForItem(item, input.destination_country, countryConfig.customs);
         totalValue += itemValue;
         weightedRateSum += itemValue * itemRate;
-      });
+      }
       
       effectiveCustomsRate = totalValue > 0 ? weightedRateSum / totalValue : countryConfig.customs;
     }

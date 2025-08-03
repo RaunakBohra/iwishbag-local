@@ -49,6 +49,7 @@ import { LiveDiscountPreview } from '@/components/quotes-v2/LiveDiscountPreview'
 import { DiscountEligibilityChecker } from '@/components/quotes-v2/DiscountEligibilityChecker';
 import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
 import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
+import { UnifiedHSNSearch } from '@/components/forms/quote-form-fields/UnifiedHSNSearch';
 
 interface QuoteItem {
   id: string;
@@ -282,6 +283,31 @@ const QuoteCalculatorV2: React.FC = () => {
     setItems(items.map(item => 
       item.id === id ? { ...item, [field]: value } : item
     ));
+  };
+
+  const handleHSNSelection = (itemId: string, data: {
+    hsnCode: string;
+    category: string;
+    customsRate?: number;
+    weight?: number;
+  }) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        const updates: Partial<QuoteItem> = {
+          hsn_code: data.hsnCode,
+          category: data.category,
+          use_hsn_rates: true, // Enable HSN rates when selected
+        };
+        
+        // Apply weight if not manually set and AI suggests one
+        if (data.weight && !item.weight_kg) {
+          updates.weight_kg = data.weight;
+        }
+        
+        return { ...item, ...updates };
+      }
+      return item;
+    }));
   };
 
   const calculateQuote = async () => {
@@ -974,6 +1000,80 @@ const QuoteCalculatorV2: React.FC = () => {
                         placeholder="0.00"
                       />
                     </div>
+                  </div>
+
+                  {/* Unified HSN Search Component - Positioned after price as requested */}
+                  {item.name && item.unit_price_usd > 0 && (
+                    <div className="mt-6">
+                      <UnifiedHSNSearch
+                        control={null}
+                        index={0}
+                        setValue={(name: string, value: any) => {
+                          if (name.includes('hsnCode') || name === 'hsnCode') {
+                            updateItem(item.id, 'hsn_code', value);
+                          } else if (name.includes('category') || name === 'category') {
+                            updateItem(item.id, 'category', value);
+                          }
+                        }}
+                        countryCode={destinationCountry}
+                        productName={item.name}
+                        currentCategory={item.category}
+                        currentHSN={item.hsn_code}
+                        onSelection={(data) => handleHSNSelection(item.id, data)}
+                      />
+                    </div>
+                  )}
+
+                  {/* HSN Rate Toggle - Show when HSN code is available */}
+                  {item.hsn_code && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Label htmlFor={`hsn-toggle-${item.id}`} className="cursor-pointer font-medium">
+                            Use HSN-specific customs rates
+                          </Label>
+                          <Badge variant="outline" className="text-xs">
+                            {item.use_hsn_rates ? 'HSN Rate' : 'Default Rate'}
+                          </Badge>
+                        </div>
+                        <Switch
+                          id={`hsn-toggle-${item.id}`}
+                          checked={item.use_hsn_rates || false}
+                          onCheckedChange={(checked) => updateItem(item.id, 'use_hsn_rates', checked)}
+                        />
+                      </div>
+                      {item.hsn_code && (() => {
+                        const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
+                        return hsnInfo ? (
+                          <div className="text-xs mt-2 space-y-1">
+                            <p className="text-blue-600">{hsnInfo.description}</p>
+                            <div className="flex items-center justify-between">
+                              <span>HSN Rate: {hsnInfo.customsRate}%</span>
+                              <span>Default Rate: {hsnInfo.countryRate}%</span>
+                            </div>
+                            {item.use_hsn_rates ? (
+                              <p className="text-green-600 font-medium">
+                                ✅ Using HSN rate: {hsnInfo.customsRate}%
+                                {hsnInfo.customsRate < hsnInfo.countryRate && 
+                                  <span className="text-green-700"> (saves {hsnInfo.countryRate - hsnInfo.customsRate}%)</span>
+                                }
+                              </p>
+                            ) : (
+                              <p className="text-orange-600 font-medium">
+                                ⚠️ Using default rate: {hsnInfo.countryRate}%
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 mt-2">
+                            HSN code not found - will use default country rate
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <div className="flex items-center justify-between">
                         <Label>Weight per unit (kg)</Label>
@@ -1066,14 +1166,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         );
                       })()}
                     </div>
-                    <div>
-                      <Label>Category</Label>
-                      <Input
-                        value={item.category}
-                        onChange={(e) => updateItem(item.id, 'category', e.target.value)}
-                        placeholder="Electronics, Clothing, etc."
-                      />
-                    </div>
+                    {/* Category field removed - now handled by UnifiedHSNSearch */}
                     <div>
                       <Label>Item Discount (%)</Label>
                       <Input
@@ -1088,153 +1181,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Optional HSN fields - only show in advanced mode */}
-                  {showAdvancedFeatures && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-blue-50 rounded-lg">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <Label className="flex items-center gap-2">
-                            HSN Code 
-                            <Badge variant="secondary" className="text-xs">Smart AI</Badge>
-                          </Label>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              if (item.name || item.category) {
-                                try {
-                                  const suggestion = await productIntelligenceService.getSmartSuggestions({
-                                    product_name: item.name || item.category || '',
-                                    destination_country: destinationCountry,
-                                    category: item.category
-                                  });
-                                  if (suggestion) {
-                                    updateItem(item.id, 'hsn_code', suggestion.classification_code);
-                                    toast({
-                                      title: "🔍 HSN Code Found",
-                                      description: `Applied HSN ${suggestion.classification_code} with ${Math.round(suggestion.confidence_score * 100)}% confidence`,
-                                    });
-                                  } else {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "No HSN Found",
-                                      description: "No matching HSN code found. Please enter manually.",
-                                    });
-                                  }
-                                } catch (error) {
-                                  console.error('HSN search error:', error);
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Search Failed",
-                                    description: "Unable to search HSN codes. Please enter manually.",
-                                  });
-                                }
-                              }
-                            }}
-                            className="text-xs"
-                            disabled={!item.name && !item.category}
-                          >
-                            <Brain className="w-3 h-3 mr-1" />
-                            Find HSN
-                          </Button>
-                        </div>
-                        <Input
-                          value={item.hsn_code || ''}
-                          onChange={(e) => updateItem(item.id, 'hsn_code', e.target.value)}
-                          placeholder="e.g., 6109 (or use AI to find)"
-                          className="font-mono"
-                        />
-                        {item.hsn_code && (() => {
-                          const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
-                          return hsnInfo ? (
-                            <div className="text-xs mt-1 space-y-1">
-                              <p className="text-blue-600">{hsnInfo.description}</p>
-                              <p className="text-green-600 font-medium">
-                                Customs: {hsnInfo.customsRate}% 
-                                {hsnInfo.customsRate < hsnInfo.countryRate && 
-                                  <span className="text-green-700"> (saves {hsnInfo.countryRate - hsnInfo.customsRate}%)</span>
-                                }
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-gray-500 mt-1">
-                              HSN not found - will use default rate
-                            </p>
-                          );
-                        })()}
-                      </div>
-                      <div className="flex items-center space-x-2 pt-6">
-                        <Switch
-                          id={`hsn-${item.id}`}
-                          checked={item.use_hsn_rates || false}
-                          onCheckedChange={(checked) => updateItem(item.id, 'use_hsn_rates', checked)}
-                          disabled={!item.hsn_code}
-                        />
-                        <Label htmlFor={`hsn-${item.id}`} className="cursor-pointer">
-                          Use HSN-specific rates
-                        </Label>
-                      </div>
-                      
-                      {/* Smart Customs Preview */}
-                      {item.hsn_code && item.unit_price_usd > 0 && (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-sm font-medium flex items-center">
-                              <Calculator className="w-4 h-4 mr-1 text-green-600" />
-                              Smart Customs Preview
-                            </h4>
-                            <Badge variant="outline" className="text-xs text-green-700 border-green-300">
-                              Real-time
-                            </Badge>
-                          </div>
-                          {(() => {
-                            // Calculate customs using our enhanced logic
-                            const price = item.unit_price_usd;
-                            const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
-                            const customsRate = hsnInfo?.customsRate || 10; // Default rate
-                            
-                            // TODO: Get minimum valuation from product intelligence service
-                            // For now, use some realistic minimums based on category
-                            const minimumValuations: Record<string, number> = {
-                              'electronics': 50,
-                              'clothing': 15,
-                              'books': 3,
-                              'toys': 10,
-                              'home_living': 25
-                            };
-                            const minimumValuation = minimumValuations[item.category || ''] || 10;
-                            const useMinimumValuation = price < minimumValuation;
-                            const valuationAmount = useMinimumValuation ? minimumValuation : price;
-                            const customsAmount = (valuationAmount * customsRate) / 100;
-                            
-                            return (
-                              <div className="space-y-2 text-xs">
-                                {useMinimumValuation && (
-                                  <div className="p-2 bg-orange-100 border border-orange-200 rounded text-orange-800">
-                                    <p className="font-medium">⚠️ Minimum Valuation Applied</p>
-                                    <p>Product price (${price}) is below minimum valuation of ${minimumValuation}</p>
-                                  </div>
-                                )}
-                                <div className="flex justify-between">
-                                  <span>Customs Rate:</span>
-                                  <span className="font-medium">{customsRate}%</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Valuation Base:</span>
-                                  <span className="font-medium">${valuationAmount}</span>
-                                </div>
-                                <div className="flex justify-between border-t pt-2">
-                                  <span className="font-medium">Customs Duty:</span>
-                                  <span className="font-bold text-green-600">${customsAmount.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Legacy HSN fields removed - now handled by UnifiedHSNSearch */}
                 </div>
               ))}
               
