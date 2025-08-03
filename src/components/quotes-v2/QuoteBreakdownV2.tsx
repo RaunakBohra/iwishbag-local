@@ -486,7 +486,7 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               <span className="font-bold">${steps.shipping_cost.toFixed(2)}</span>
             </div>
             <p className="text-sm text-gray-500 mt-1">
-              {inputs.total_weight_kg}kg × ${rates.shipping_rate_per_kg}/kg = ${steps.shipping_cost.toFixed(2)}
+              {inputs.total_chargeable_weight_kg}kg × ${rates.shipping_rate_per_kg}/kg = ${steps.shipping_cost.toFixed(2)}
             </p>
           </div>
 
