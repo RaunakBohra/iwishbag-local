@@ -1179,13 +1179,18 @@ const QuoteCalculatorV2: React.FC = () => {
                             value={item.discount_type || 'percentage'}
                             onChange={(e) => {
                               const newType = e.target.value as 'percentage' | 'amount';
-                              updateItem(item.id, 'discount_type', newType);
-                              // Clear the other discount type when switching
-                              if (newType === 'percentage') {
-                                updateItem(item.id, 'discount_amount', undefined);
-                              } else {
-                                updateItem(item.id, 'discount_percentage', undefined);
-                              }
+                              console.log(`🔄 Switching discount type from ${item.discount_type || 'percentage'} to ${newType} for item ${item.id}`);
+                              
+                              // Update all fields in a single state update to ensure React detects the change
+                              setItems(items.map(currentItem => 
+                                currentItem.id === item.id ? {
+                                  ...currentItem,
+                                  discount_type: newType,
+                                  // Clear the other discount type when switching
+                                  discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
+                                  discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
+                                } : currentItem
+                              ));
                             }}
                           >
                             <option value="percentage">%</option>
@@ -1215,6 +1220,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           }
                           onChange={(e) => {
                             const value = parseFloat(e.target.value) || undefined;
+                            console.log(`💰 Input change: type=${item.discount_type}, value=${value}`);
                             if (item.discount_type === 'amount') {
                               updateItem(item.id, 'discount_amount', value);
                             } else {
