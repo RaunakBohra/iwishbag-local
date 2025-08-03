@@ -655,6 +655,27 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
               <p className="text-sm text-gray-500 mt-1">
                 {inputs.destination_state === 'rural' ? 'Rural' : 'Urban'} delivery in {inputs.destination_country}
+                {steps.delhivery_rates && inputs.destination_country === 'IN' && (
+                  <span className="text-blue-600 font-medium block mt-1">
+                    📦 Powered by Delhivery API
+                    {steps.delhivery_rates.cache_used && (
+                      <span className="text-xs text-gray-400 ml-2">(cached)</span>
+                    )}
+                    <div className="text-xs text-gray-600 mt-1">
+                      {steps.delhivery_rates.rates.map(rate => (
+                        <div key={rate.service_type} className="flex justify-between">
+                          <span>
+                            {rate.service_type === 'standard' ? '📦 Standard' : 
+                             rate.service_type === 'express' ? '⚡ Express' : 
+                             '🚀 Same Day'}: 
+                            {rate.estimated_days ? ` ${rate.estimated_days} days` : ''}
+                          </span>
+                          <span>₹{rate.rate}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </span>
+                )}
               </p>
             </div>
           )}

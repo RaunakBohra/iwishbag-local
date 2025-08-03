@@ -2,6 +2,8 @@ import { currencyService } from './CurrencyService';
 import { DiscountService } from './DiscountService';
 import { DiscountLoggingService } from './DiscountLoggingService';
 import { volumetricWeightService } from './VolumetricWeightService';
+import { delhiveryService, DelhiveryService } from './DelhiveryService';
+import type { DelhiveryRateRequest, DelhiveryMultiRateResponse } from './DelhiveryService';
 
 interface CalculationInput {
   items: Array<{
@@ -30,6 +32,15 @@ interface CalculationInput {
   origin_state?: string; // For US sales tax
   destination_country: string;
   destination_state?: string; // For domestic delivery rates
+  destination_pincode?: string; // For Indian Delhivery delivery rates
+  destination_address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+  delhivery_service_type?: 'standard' | 'express' | 'same_day'; // For Indian deliveries
   shipping_method?: 'standard' | 'express' | 'economy';
   insurance_required?: boolean;
   handling_fee_type?: 'fixed' | 'percentage' | 'both';
@@ -99,6 +110,7 @@ interface CalculationResult {
     domestic_delivery: number;
     delivery_discount_amount?: number; // NEW: Delivery discount
     discounted_delivery?: number; // NEW: Final delivery after discount
+    delhivery_rates?: DelhiveryMultiRateResponse; // NEW: Delhivery API response for Indian deliveries
     taxable_value: number; // All costs before local tax
     local_tax_amount: number; // GST/VAT on taxable value
     tax_discount_amount?: number; // NEW: Tax discount (rare)
@@ -747,9 +759,53 @@ class SimplifiedQuoteCalculator {
       };
     }
 
-    // Step 11: Calculate domestic delivery
-    const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
-    const domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+    // Step 11: Calculate domestic delivery (with Delhivery for India)
+    let domesticDelivery = 0;
+    let delhiveryRates: DelhiveryMultiRateResponse | undefined;
+    
+    if (input.destination_country === 'IN') {
+      // Use Delhivery for Indian deliveries
+      try {
+        const pincode = input.destination_pincode || input.destination_address?.pincode;
+        
+        if (pincode && DelhiveryService.isValidPincode(pincode)) {
+          console.log('🚚 [Calculator] Using Delhivery for Indian delivery calculation');
+          
+          const delhiveryRequest: DelhiveryRateRequest = {
+            destination_pincode: pincode,
+            weight: totalChargeableWeight,
+            cod: false, // Assuming prepaid by default
+            service_type: input.delhivery_service_type || 'standard'
+          };
+          
+          delhiveryRates = await delhiveryService.getDeliveryRates(delhiveryRequest);
+          
+          // Use the specific service type selected by the user
+          const selectedService = delhiveryRates.rates.find(r => r.service_type === (input.delhivery_service_type || 'standard'));
+          const deliveryRateINR = selectedService ? selectedService.rate : delhiveryRates.rates[0]?.rate || 0;
+          
+          // Convert INR to USD for calculation consistency
+          domesticDelivery = await delhiveryService.convertToUSD(deliveryRateINR);
+          
+          console.log(`🚚 [Delhivery] Rate: ₹${deliveryRateINR} → $${domesticDelivery.toFixed(2)} USD`);
+          
+        } else {
+          console.log('⚠️ [Calculator] Invalid/missing pincode for Delhivery, using fallback rates');
+          // Fallback to fixed rates if no valid pincode
+          const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
+          domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+        }
+      } catch (error) {
+        console.error('❌ [Delhivery] API error, using fallback rates:', error);
+        // Fallback to fixed rates on API failure
+        const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
+        domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+      }
+    } else {
+      // Use existing logic for non-Indian destinations
+      const deliveryRates = DOMESTIC_DELIVERY_RATES[input.destination_country] || DOMESTIC_DELIVERY_RATES.DEFAULT;
+      domesticDelivery = input.destination_state === 'rural' ? deliveryRates.rural : deliveryRates.urban;
+    }
 
     // Apply delivery discounts if available
     discountedDelivery = domesticDelivery;
@@ -873,6 +929,7 @@ class SimplifiedQuoteCalculator {
         domestic_delivery: this.round(domesticDelivery),
         delivery_discount_amount: this.round(deliveryDiscountAmount),
         discounted_delivery: this.round(discountedDelivery),
+        delhivery_rates: delhiveryRates,
         taxable_value: this.round(taxableValue),
         local_tax_amount: this.round(localTaxAmount),
         tax_discount_amount: this.round(taxDiscountAmount),

@@ -104,6 +104,15 @@ const QuoteCalculatorV2: React.FC = () => {
   const [originState, setOriginState] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('NP');
   const [destinationState, setDestinationState] = useState('urban');
+  const [destinationPincode, setDestinationPincode] = useState('');
+  const [destinationAddress, setDestinationAddress] = useState({
+    line1: '',
+    line2: '',
+    city: '',
+    state: '',
+    pincode: ''
+  });
+  const [delhiveryServiceType, setDelhiveryServiceType] = useState<'standard' | 'express' | 'same_day'>('standard');
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [insuranceRequired, setInsuranceRequired] = useState(true);
   const [handlingFeeType, setHandlingFeeType] = useState<'fixed' | 'percentage' | 'both'>('both');
@@ -154,6 +163,13 @@ const QuoteCalculatorV2: React.FC = () => {
     });
   }, [destinationCountry]);
 
+  // Clear pincode when switching away from India
+  useEffect(() => {
+    if (destinationCountry !== 'IN') {
+      setDestinationPincode('');
+    }
+  }, [destinationCountry]);
+
   // Load existing quote if ID is provided
   useEffect(() => {
     if (quoteId) {
@@ -170,7 +186,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
   const loadQuoteDocuments = async (quoteId: string) => {
     try {
@@ -355,6 +371,8 @@ const QuoteCalculatorV2: React.FC = () => {
         origin_state: originState,
         destination_country: destinationCountry,
         destination_state: destinationState,
+        destination_pincode: destinationPincode,
+        delhivery_service_type: delhiveryServiceType,
         shipping_method: shippingMethod,
         insurance_required: insuranceRequired,
         handling_fee_type: handlingFeeType,
@@ -789,6 +807,95 @@ const QuoteCalculatorV2: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Indian Pincode Field - Only show for India */}
+                {destinationCountry === 'IN' && (
+                  <div>
+                    <Label htmlFor="destinationPincode">
+                      Delivery Pincode 
+                      <span className="text-xs text-blue-600 ml-2">
+                        (Required for accurate rates)
+                      </span>
+                    </Label>
+                    <Input
+                      id="destinationPincode"
+                      type="text"
+                      placeholder="e.g., 400001 (Mumbai), 110001 (Delhi)"
+                      value={destinationPincode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                        if (value.length <= 6) {
+                          setDestinationPincode(value);
+                        }
+                      }}
+                      className={`${
+                        destinationPincode && !/^[1-9][0-9]{5}$/.test(destinationPincode) 
+                          ? 'border-orange-300 focus:border-orange-500' 
+                          : destinationPincode 
+                            ? 'border-green-300 focus:border-green-500' 
+                            : ''
+                      }`}
+                    />
+                    {destinationPincode && (
+                      <div className="text-xs mt-1">
+                        {/^[1-9][0-9]{5}$/.test(destinationPincode) ? (
+                          <span className="text-green-600 flex items-center">
+                            <Check className="h-3 w-3 mr-1" />
+                            Valid pincode - Delhivery rates will be used
+                          </span>
+                        ) : (
+                          <span className="text-orange-600 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {destinationPincode.length < 6 
+                              ? `Enter ${6 - destinationPincode.length} more digits` 
+                              : 'Invalid pincode format - will use fallback rates'
+                            }
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Delhivery Service Type - Only show for India with valid pincode */}
+                {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
+                  <div>
+                    <Label htmlFor="delhiveryServiceType">
+                      Delivery Service 
+                      <span className="text-xs text-blue-600 ml-2">
+                        (Delhivery Options)
+                      </span>
+                    </Label>
+                    <Select value={delhiveryServiceType} onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="standard">
+                          <div className="flex flex-col">
+                            <span className="font-medium">📦 Standard Delivery</span>
+                            <span className="text-xs text-gray-500">3-5 business days · Most economical</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="express">
+                          <div className="flex flex-col">
+                            <span className="font-medium">⚡ Express Delivery</span>
+                            <span className="text-xs text-gray-500">1-2 business days · Faster delivery</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="same_day">
+                          <div className="flex flex-col">
+                            <span className="font-medium">🚀 Same Day Delivery</span>
+                            <span className="text-xs text-gray-500">Same day · Premium service (if available)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="text-xs text-blue-600 mt-1">
+                      💡 Rates will update automatically based on your selection
+                    </div>
+                  </div>
+                )}
                 
                 <div>
                   <Label htmlFor="destinationLocation">Delivery Location</Label>
