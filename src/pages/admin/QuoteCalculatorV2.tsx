@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
+import NCMService from '@/services/NCMService';
+import { ncmBranchMappingService } from '@/services/NCMBranchMappingService';
 import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
 import { supabase } from '@/integrations/supabase/client';
@@ -116,6 +118,12 @@ const QuoteCalculatorV2: React.FC = () => {
   const [delhiveryServiceType, setDelhiveryServiceType] = useState<'standard' | 'express' | 'same_day'>('standard');
   const [availableServices, setAvailableServices] = useState<DelhiveryServiceOption[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
+  
+  // NCM (Nepal) service states
+  const [ncmServiceType, setNcmServiceType] = useState<'pickup' | 'collect'>('pickup');
+  const [destinationDistrict, setDestinationDistrict] = useState('');
+  const [availableNCMBranches, setAvailableNCMBranches] = useState<any[]>([]);
+  const [loadingNCMBranches, setLoadingNCMBranches] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [insuranceRequired, setInsuranceRequired] = useState(true);
   const [handlingFeeType, setHandlingFeeType] = useState<'fixed' | 'percentage' | 'both'>('both');
@@ -173,6 +181,13 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   }, [destinationCountry]);
 
+  // Clear district when switching away from Nepal
+  useEffect(() => {
+    if (destinationCountry !== 'NP') {
+      setDestinationDistrict('');
+    }
+  }, [destinationCountry]);
+
   // Load existing quote if ID is provided
   useEffect(() => {
     if (quoteId) {
@@ -189,7 +204,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, destinationDistrict, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -202,6 +217,18 @@ const QuoteCalculatorV2: React.FC = () => {
       setAvailableServices([]);
     }
   }, [destinationPincode, destinationCountry, items]);
+
+  // Fetch available NCM branches when district or destination country changes
+  useEffect(() => {
+    if (destinationCountry === 'NP' && destinationDistrict) {
+      const timeoutId = setTimeout(() => {
+        fetchAvailableNCMBranches(destinationDistrict);
+      }, 500); // Debounce API calls
+      return () => clearTimeout(timeoutId);
+    } else {
+      setAvailableNCMBranches([]);
+    }
+  }, [destinationDistrict, destinationCountry, destinationAddress.city, destinationAddress.line1]);
 
   const loadQuoteDocuments = async (quoteId: string) => {
     try {
@@ -385,6 +412,58 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
+  // Fetch available NCM branches when district changes for Nepal
+  const fetchAvailableNCMBranches = async (district: string) => {
+    if (!district || destinationCountry !== 'NP') {
+      setAvailableNCMBranches([]);
+      return;
+    }
+
+    setLoadingNCMBranches(true);
+    try {
+      console.log('🏔️ [UI] Fetching available NCM branches for district:', district);
+      
+      // Check if the address is serviceable
+      const isServiceable = await ncmBranchMappingService.isServiceable({
+        district: district,
+        city: destinationAddress.city
+      });
+      
+      if (isServiceable) {
+        // Get branch mapping for display
+        const branchPair = await ncmBranchMappingService.getBranchPair({
+          district: district,
+          city: destinationAddress.city,
+          addressLine1: destinationAddress.line1
+        });
+        
+        if (branchPair.pickup && branchPair.destination) {
+          setAvailableNCMBranches([
+            {
+              name: branchPair.destination.name,
+              district: branchPair.destination.district,
+              confidence: branchPair.mapping?.confidence,
+              pickup_branch: branchPair.pickup.name
+            }
+          ]);
+          console.log('✅ [UI] NCM branch mapping:', branchPair);
+        } else {
+          setAvailableNCMBranches([]);
+          console.log('⚠️ [UI] No suitable NCM branches found');
+        }
+      } else {
+        setAvailableNCMBranches([]);
+        console.log('⚠️ [UI] Address not serviceable by NCM');
+      }
+      
+    } catch (error) {
+      console.error('❌ [UI] Failed to fetch NCM branches:', error);
+      setAvailableNCMBranches([]);
+    } finally {
+      setLoadingNCMBranches(false);
+    }
+  };
+
   const calculateQuote = async () => {
     setCalculating(true);
     try {
@@ -419,7 +498,16 @@ const QuoteCalculatorV2: React.FC = () => {
         destination_country: destinationCountry,
         destination_state: destinationState,
         destination_pincode: destinationPincode,
+        destination_address: {
+          line1: destinationAddress.line1,
+          line2: destinationAddress.line2,
+          city: destinationAddress.city,
+          state: destinationAddress.state,
+          pincode: destinationAddress.pincode,
+          district: destinationDistrict // For Nepal NCM mapping
+        },
         delhivery_service_type: delhiveryServiceType,
+        ncm_service_type: ncmServiceType,
         shipping_method: shippingMethod,
         insurance_required: insuranceRequired,
         handling_fee_type: handlingFeeType,
@@ -904,6 +992,57 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 )}
 
+                {/* Nepal District Field - Only show for Nepal */}
+                {destinationCountry === 'NP' && (
+                  <div>
+                    <Label htmlFor="destinationDistrict">
+                      District 
+                      <span className="text-xs text-blue-600 ml-2">
+                        (Required for NCM branch mapping)
+                      </span>
+                    </Label>
+                    <Input
+                      id="destinationDistrict"
+                      type="text"
+                      placeholder="e.g., Kathmandu, Kaski, Morang"
+                      value={destinationDistrict}
+                      onChange={(e) => setDestinationDistrict(e.target.value)}
+                      className={`${
+                        destinationDistrict && availableNCMBranches.length > 0
+                          ? 'border-green-300 focus:border-green-500' 
+                          : destinationDistrict
+                            ? 'border-orange-300 focus:border-orange-500'
+                            : ''
+                      }`}
+                    />
+                    {destinationDistrict && (
+                      <div className="text-xs mt-1">
+                        {loadingNCMBranches ? (
+                          <span className="text-blue-600 flex items-center">
+                            <Clock className="h-3 w-3 mr-1 animate-spin" />
+                            Checking NCM branch availability...
+                          </span>
+                        ) : availableNCMBranches.length > 0 ? (
+                          <span className="text-green-600 flex items-center">
+                            <Check className="h-3 w-3 mr-1" />
+                            Serviceable via {availableNCMBranches[0].name} branch
+                            {availableNCMBranches[0].confidence && (
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {availableNCMBranches[0].confidence} match
+                              </Badge>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-orange-600 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            No NCM branch found - will use fallback rates
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Delhivery Service Type - Only show for India with valid pincode */}
                 {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
                   <div>
@@ -963,6 +1102,52 @@ const QuoteCalculatorV2: React.FC = () => {
                     </Select>
                     <div className="text-xs text-blue-600 mt-1">
                       💡 Rates will update automatically based on your selection
+                    </div>
+                  </div>
+                )}
+
+                {/* NCM Service Type - Only show for Nepal with district */}
+                {destinationCountry === 'NP' && destinationDistrict && (
+                  <div>
+                    <Label htmlFor="ncmServiceType">
+                      NCM Service Type
+                      <span className="text-xs text-blue-600 ml-2">
+                        (Pickup is faster, Collect is cheaper)
+                      </span>
+                    </Label>
+                    <Select 
+                      value={ncmServiceType} 
+                      onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
+                      disabled={loadingNCMBranches || availableNCMBranches.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingNCMBranches ? "Loading services..." : "Select NCM service"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pickup">
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              🚚 Pickup Service
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Faster delivery (1-2 days) - NCM picks up from branch
+                            </span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="collect">
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              🏪 Collect Service
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Lower cost (2-4 days) - Customer collects from branch
+                            </span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="text-xs text-blue-600 mt-1">
+                      🏔️ Nepal delivery via NCM (Nepal Can Move)
                     </div>
                   </div>
                 )}
