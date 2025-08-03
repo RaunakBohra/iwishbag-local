@@ -882,21 +882,20 @@ const QuoteCalculatorV2: React.FC = () => {
                               const loadingKey = `enhance-${item.id}`;
                               setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
                               try {
-                                const suggestions = await productIntelligenceService.getSmartSuggestions(
-                                  item.name, 
-                                  destinationCountry, 
-                                  item.category, 
-                                  1
-                                );
-                                if (suggestions.length > 0) {
-                                  const suggestion = suggestions[0];
+                                const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                  product_name: item.name,
+                                  destination_country: destinationCountry,
+                                  category: item.category,
+                                  price_usd: item.unit_price_usd
+                                });
+                                if (suggestion) {
                                   const confidence = Math.round(suggestion.confidence_score * 100);
                                   updateItem(item.id, 'hsn_code', suggestion.classification_code);
-                                  updateItem(item.id, 'weight_kg', suggestion.typical_weight_kg);
+                                  updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
                                   updateItem(item.id, 'category', suggestion.category);
                                   toast({
                                     title: "🤖 Smart Enhancement Applied",
-                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.typical_weight_kg}kg, Category: ${suggestion.category} (${confidence}% confidence)`,
+                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.suggested_weight_kg}kg, Category: ${suggestion.category} (${confidence}% confidence)`,
                                     duration: 5000,
                                   });
                                   
@@ -988,16 +987,23 @@ const QuoteCalculatorV2: React.FC = () => {
                                 const loadingKey = `weight-${item.id}`;
                                 setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
                                 try {
-                                  const estimatedWeight = await productIntelligenceService.estimateProductWeight(
-                                    item.name || '', 
-                                    item.category || 'general'
-                                  );
-                                  if (estimatedWeight > 0) {
-                                    updateItem(item.id, 'weight_kg', estimatedWeight);
+                                  const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                    product_name: item.name || '',
+                                    destination_country: destinationCountry,
+                                    category: item.category || 'general'
+                                  });
+                                  if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
+                                    updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
                                     toast({
                                       title: "⚖️ Weight Estimated",
-                                      description: `Estimated weight: ${estimatedWeight}kg based on product analysis`,
+                                      description: `Estimated weight: ${suggestion.suggested_weight_kg}kg based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
                                       duration: 4000,
+                                    });
+                                  } else {
+                                    toast({
+                                      variant: "destructive",
+                                      title: "Weight Estimation Failed",
+                                      description: "No weight data available for this product type.",
                                     });
                                   }
                                 } catch (error) {
@@ -1098,14 +1104,12 @@ const QuoteCalculatorV2: React.FC = () => {
                             onClick={async () => {
                               if (item.name || item.category) {
                                 try {
-                                  const suggestions = await productIntelligenceService.getSmartSuggestions(
-                                    item.name || item.category || '', 
-                                    destinationCountry, 
-                                    item.category, 
-                                    3
-                                  );
-                                  if (suggestions.length > 0) {
-                                    const suggestion = suggestions[0];
+                                  const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                    product_name: item.name || item.category || '',
+                                    destination_country: destinationCountry,
+                                    category: item.category
+                                  });
+                                  if (suggestion) {
                                     updateItem(item.id, 'hsn_code', suggestion.classification_code);
                                     toast({
                                       title: "🔍 HSN Code Found",

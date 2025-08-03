@@ -20,6 +20,9 @@ import {
   Mail,
   MessageCircle,
   Shield,
+  Brain,
+  Package,
+  Database,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -131,6 +134,36 @@ const menuGroups = [
         title: 'Blog',
         url: '/admin/blog',
         icon: Edit,
+      },
+    ],
+  },
+  {
+    title: 'Smart Intelligence',
+    items: [
+      {
+        title: 'Dashboard',
+        url: '/admin/smart-intelligence',
+        icon: Brain,
+      },
+      {
+        title: 'Classifications',
+        url: '/admin/product-classifications',
+        icon: Package,
+      },
+      {
+        title: 'Country Settings',
+        url: '/admin/country-settings',
+        icon: Globe,
+      },
+      {
+        title: 'AI Settings',
+        url: '/admin/intelligence-settings',
+        icon: Settings,
+      },
+      {
+        title: 'Data Management',
+        url: '/admin/data-management',
+        icon: Database,
       },
     ],
   },

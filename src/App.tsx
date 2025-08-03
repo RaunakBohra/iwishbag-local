@@ -119,6 +119,13 @@ const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
 const TestSmartProductForm = React.lazy(() => import('@/pages/TestSmartProductForm'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
+// Smart Intelligence Management pages
+const SmartIntelligenceDashboard = React.lazy(() => import('@/pages/admin/SmartIntelligenceDashboard'));
+const ProductClassificationsManager = React.lazy(() => import('@/pages/admin/ProductClassificationsManager'));
+const CountrySettingsManager = React.lazy(() => import('@/pages/admin/CountrySettingsManager'));
+const IntelligenceSettings = React.lazy(() => import('@/pages/admin/IntelligenceSettings'));
+const DataManagement = React.lazy(() => import('@/pages/admin/DataManagement'));
+
 import { StatusConfigProvider } from './providers/StatusConfigProvider';
 // Role-related imports removed - using simple authentication only
 
@@ -229,6 +236,47 @@ const router = createBrowserRouter([
                 <ReturnManagement />
               </ErrorBoundary>
             ),
+          },
+          // Smart Intelligence Management routes
+          { 
+            path: 'smart-intelligence', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <SmartIntelligenceDashboard />
+              </ErrorBoundary>
+            )
+          },
+          { 
+            path: 'product-classifications', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <ProductClassificationsManager />
+              </ErrorBoundary>
+            )
+          },
+          { 
+            path: 'country-settings', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <CountrySettingsManager />
+              </ErrorBoundary>
+            )
+          },
+          { 
+            path: 'intelligence-settings', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <IntelligenceSettings />
+              </ErrorBoundary>
+            )
+          },
+          { 
+            path: 'data-management', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <DataManagement />
+              </ErrorBoundary>
+            )
           },
           { path: '*', element: <NotFound /> },
         ],
