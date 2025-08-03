@@ -105,6 +105,17 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
         const price = parseFloat(costPrice);
         const baseRate = matchingSuggestion.customs_rate;
         
+        // Determine valuation method and amount
+        const hasMinimumValuation = matchingSuggestion.minimum_valuation_usd && matchingSuggestion.minimum_valuation_usd > 0;
+        const minimumValuation = matchingSuggestion.minimum_valuation_usd || 0;
+        const useMinimumValuation = hasMinimumValuation && (
+          matchingSuggestion.valuation_method === 'minimum_valuation' || 
+          price < minimumValuation
+        );
+        
+        const valuationAmount = useMinimumValuation ? minimumValuation : price;
+        const valuationBasis = useMinimumValuation ? 'minimum_valuation' : 'product_price';
+        
         // Calculate GST for India
         let gstRate = 0;
         if (countryCode === 'IN') {
@@ -116,7 +127,8 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
           gst_rate: gstRate,
           total_rate: baseRate + gstRate,
           exemptions: [],
-          calculation_basis: 'product_price',
+          calculation_basis: valuationBasis,
+          minimum_valuation_usd: hasMinimumValuation ? minimumValuation : undefined,
           confidence_score: matchingSuggestion.confidence_score,
         };
 
@@ -175,8 +187,15 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
   };
 
   const calculateCustomsAmount = (rate: number) => {
-    if (!costPrice) return 0;
-    return (parseFloat(costPrice) * rate) / 100;
+    if (!costPrice || !customsCalculation) return 0;
+    
+    // Use the correct valuation amount (minimum valuation or product price)
+    const price = parseFloat(costPrice);
+    const valuationAmount = customsCalculation.calculation_basis === 'minimum_valuation' 
+      ? (customsCalculation.minimum_valuation_usd || price)
+      : price;
+      
+    return (valuationAmount * rate) / 100;
   };
 
   if (!hsnCode) {
@@ -219,6 +238,24 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
       <CardContent className="space-y-3">
         {customsCalculation ? (
           <>
+            {/* Valuation Method Info */}
+            {customsCalculation.calculation_basis === 'minimum_valuation' && customsCalculation.minimum_valuation_usd && (
+              <Alert className="border-orange-200 bg-orange-50 mb-3">
+                <Info className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800 text-xs">
+                  <div className="space-y-1">
+                    <p className="font-medium">Minimum Valuation Applied</p>
+                    <p>
+                      Customs calculated on ${customsCalculation.minimum_valuation_usd} minimum valuation 
+                      {costPrice && parseFloat(costPrice) < customsCalculation.minimum_valuation_usd 
+                        ? ` (product price $${costPrice} is below minimum)`
+                        : ' (classification requires minimum valuation)'}
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Rate Breakdown */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">

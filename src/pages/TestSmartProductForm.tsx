@@ -265,3 +265,5 @@ export const TestSmartProductForm: React.FC = () => {
     </div>
   );
 };
+
+export default TestSmartProductForm;
