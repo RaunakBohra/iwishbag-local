@@ -247,7 +247,17 @@
       "WebFetch(domain:docs.msg91.com)",
       "WebFetch(domain:msg91.com)",
       "Bash(./test-msg91.sh:*)",
-      "Bash(./setup-local-email-testing.sh:*)"
+      "Bash(./setup-local-email-testing.sh:*)",
+      "WebFetch(domain:resend.com)",
+      "WebFetch(domain:sendgrid.com)",
+      "WebFetch(domain:docs.sendgrid.com)",
+      "WebFetch(domain:www.twilio.com)",
+      "Bash(aws s3 rm:*)",
+      "Bash(aws s3 rb:*)",
+      "Bash(aws iam list-roles:*)",
+      "Bash(aws ec2 describe-instances:*)",
+      "Bash(aws iam:*)",
+      "Bash(aws sts get-caller-identity:*)"
     ],
     "deny": []
   }

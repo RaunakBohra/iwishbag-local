@@ -65,12 +65,12 @@ export class QuoteEmailService {
         text: this.generateQuoteEmailText(quote, shareUrl, expiryDate),
       };
 
-      // Send email via AWS SES Edge Function
-      const { data, error: sendError } = await supabase.functions.invoke('send-email-ses', {
+      // Send email via Resend Edge Function
+      const { data, error: sendError } = await supabase.functions.invoke('send-email-resend', {
         body: {
           ...emailData,
-          from: 'iwishBag <noreply@mail.iwishbag.com>', // Your verified domain
-          replyTo: 'support@mail.iwishbag.com',
+          from: 'iwishBag <noreply@iwishbag.com>', // Your verified domain
+          replyTo: 'support@iwishbag.com',
         },
       });
 
@@ -120,12 +120,12 @@ export class QuoteEmailService {
         text: this.generateReminderEmailText(quote, shareUrl, reminderNumber),
       };
 
-      // Send email via AWS SES Edge Function
-      const { data, error: sendError } = await supabase.functions.invoke('send-email-ses', {
+      // Send email via Resend Edge Function
+      const { data, error: sendError } = await supabase.functions.invoke('send-email-resend', {
         body: {
           ...emailData,
-          from: 'iwishBag <noreply@mail.iwishbag.com>', // Your verified domain
-          replyTo: 'support@mail.iwishbag.com',
+          from: 'iwishBag <noreply@iwishbag.com>', // Your verified domain
+          replyTo: 'support@iwishbag.com',
         },
       });
 

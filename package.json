@@ -52,8 +52,6 @@
     "setup:aws": "tsx src/scripts/setup-aws-credentials.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.858.0",
-    "@aws-sdk/client-ses": "^3.858.0",
     "@cloudflare/mcp-server-cloudflare": "^0.2.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",

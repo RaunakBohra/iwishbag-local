@@ -154,7 +154,11 @@ const QuoteCalculatorV2: React.FC = () => {
   // Auto-calculate on changes (but not during initial quote loading)
   useEffect(() => {
     if (!loadingQuote && items.some(item => item.name && item.unit_price_usd > 0)) {
-      calculateQuote();
+      // Add small delay to ensure state is fully updated, especially after updateItem calls
+      const timeoutId = setTimeout(() => {
+        calculateQuote();
+      }, 50);
+      return () => clearTimeout(timeoutId);
     }
   }, [items, originCountry, originState, destinationCountry, destinationState, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
@@ -1511,12 +1515,20 @@ const QuoteCalculatorV2: React.FC = () => {
             quantity={currentItem.quantity}
             actualWeightKg={currentItem.weight_kg}
             onSave={(dimensions, divisor) => {
-              updateItem(currentItem.id, 'dimensions', dimensions);
-              updateItem(currentItem.id, 'volumetric_divisor', divisor);
+              // Update both fields in a single state update to avoid race condition
+              setItems(prevItems => prevItems.map(item => 
+                item.id === currentItem.id 
+                  ? { ...item, dimensions: dimensions, volumetric_divisor: divisor }
+                  : item
+              ));
             }}
             onClear={() => {
-              updateItem(currentItem.id, 'dimensions', undefined);
-              updateItem(currentItem.id, 'volumetric_divisor', undefined);
+              // Clear both fields in a single state update
+              setItems(prevItems => prevItems.map(item => 
+                item.id === currentItem.id 
+                  ? { ...item, dimensions: undefined, volumetric_divisor: undefined }
+                  : item
+              ));
             }}
           />
         );

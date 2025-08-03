@@ -12,7 +12,7 @@ export interface DiscountApplicationLog {
   discount_code_id?: string;
   discount_type_id?: string;
   country_rule_id?: string;
-  application_type: 'manual' | 'automatic' | 'volume' | 'country' | 'campaign';
+  application_type: 'manual' | 'automatic' | 'code' | 'campaign';
   customer_id?: string;
   customer_country?: string;
   discount_amount: number;
@@ -221,7 +221,7 @@ export class DiscountLoggingService {
         delivery_order_id: discountData.order_id,
         country_rule_id: type === 'country' ? discountData.discount_details.rule_id : undefined,
         discount_type_id: type === 'volume' ? discountData.discount_details.rule_id : undefined,
-        application_type: type,
+        application_type: 'automatic',
         customer_id: discountData.customer_id,
         customer_country: discountData.country,
         discount_amount: discountData.discount_amount,
