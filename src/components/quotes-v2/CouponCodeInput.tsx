@@ -18,6 +18,14 @@ import { toast } from '@/hooks/use-toast';
 interface CouponCodeInputProps {
   customerId?: string;
   quoteTotal: number;
+  countryCode?: string; // Add country code for validation
+  componentBreakdown?: {
+    shipping_cost?: number;
+    customs_duty?: number;
+    handling_fee?: number;
+    local_tax?: number;
+    insurance_amount?: number;
+  }; // Add component breakdown for accurate discount calculation
   onDiscountApplied: (discount: {
     code: string;
     type: 'percentage' | 'fixed';
@@ -35,6 +43,8 @@ interface CouponCodeInputProps {
 export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
   customerId,
   quoteTotal,
+  countryCode,
+  componentBreakdown,
   onDiscountApplied,
   onDiscountRemoved,
   currentCode,
@@ -65,8 +75,12 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
     setError(null);
 
     try {
-      const discountService = DiscountService;
-      const validation = await discountService.validateDiscountCode(code.trim(), customerId);
+      const validation = await DiscountService.getInstance().validateDiscountCode(
+        code.trim(), 
+        customerId, 
+        countryCode, 
+        quoteTotal
+      );
 
       if (!validation.valid) {
         setError(validation.error || 'Invalid coupon code');
@@ -83,25 +97,7 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
         return;
       }
 
-      // Calculate discount amount
-      let discountAmount = 0;
-      if (discountType.type === 'percentage') {
-        discountAmount = (quoteTotal * discountType.value) / 100;
-        // Apply max discount cap if exists
-        if (discountType.conditions?.max_discount) {
-          discountAmount = Math.min(discountAmount, discountType.conditions.max_discount);
-        }
-      } else if (discountType.type === 'fixed_amount') {
-        discountAmount = Math.min(discountType.value, quoteTotal);
-      }
-
-      // Set validated discount
-      setValidatedDiscount({
-        ...discount,
-        calculatedAmount: discountAmount
-      });
-
-      // Determine what the discount applies to
+      // Determine what the discount applies to first
       let appliesTo: 'total' | 'shipping' | 'handling' = 'total';
       if (Array.isArray(discountType.conditions?.applicable_to)) {
         // If it's an array, check if it contains component-specific discounts
@@ -115,6 +111,40 @@ export const CouponCodeInput: React.FC<CouponCodeInputProps> = ({
       } else if (typeof discountType.conditions?.applicable_to === 'string') {
         appliesTo = discountType.conditions.applicable_to as any;
       }
+
+      // Calculate discount amount based on the actual component value
+      let discountAmount = 0;
+      let componentValue = quoteTotal; // Default to total if no breakdown or not component-specific
+      
+      // Use component-specific amounts if available and discount is component-specific
+      if (componentBreakdown && appliesTo !== 'total') {
+        switch (appliesTo) {
+          case 'shipping':
+            componentValue = componentBreakdown.shipping_cost || 0;
+            break;
+          case 'handling':
+            componentValue = componentBreakdown.handling_fee || 0;
+            break;
+          default:
+            componentValue = quoteTotal;
+        }
+      }
+      
+      if (discountType.type === 'percentage') {
+        discountAmount = (componentValue * discountType.value) / 100;
+        // Apply max discount cap if exists
+        if (discountType.conditions?.max_discount) {
+          discountAmount = Math.min(discountAmount, discountType.conditions.max_discount);
+        }
+      } else if (discountType.type === 'fixed_amount') {
+        discountAmount = Math.min(discountType.value, componentValue);
+      }
+
+      // Set validated discount
+      setValidatedDiscount({
+        ...discount,
+        calculatedAmount: discountAmount
+      });
 
       // Notify parent component
       onDiscountApplied({

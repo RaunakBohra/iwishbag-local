@@ -29,6 +29,11 @@ interface CountryDiscountRule {
   component_discounts: { [component: string]: number };
   min_order_amount?: number;
   max_uses_per_customer?: number;
+  requires_code?: boolean;
+  auto_apply?: boolean;
+  description?: string;
+  priority?: number;
+  discount_conditions?: any;
   created_at: string;
   discount_type?: {
     id: string;
@@ -46,6 +51,12 @@ interface DiscountTier {
   max_order_value?: number;
   discount_value: number;
   applicable_components: string[];
+  description?: string;
+  priority?: number;
+  usage_count?: number;
+  total_savings?: number;
+  avg_order_value?: number;
+  last_used_at?: string;
   created_at: string;
 }
 
@@ -80,6 +91,8 @@ export function DiscountManagementPanel() {
   const [editingCountryRule, setEditingCountryRule] = useState<CountryDiscountRule | null>(null);
   const [editingDiscountTier, setEditingDiscountTier] = useState<DiscountTier | null>(null);
   const [showInactive, setShowInactive] = useState(true);
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [paymentDiscounts, setPaymentDiscounts] = useState({
     bank_transfer: { percentage: 2, is_active: true },
     wire_transfer: { percentage: 2, is_active: true }
@@ -93,6 +106,111 @@ export function DiscountManagementPanel() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Bulk operations functions
+  const bulkActivateCampaigns = async () => {
+    try {
+      const { error } = await supabase
+        .from('discount_campaigns')
+        .update({ is_active: true })
+        .in('id', selectedCampaigns);
+      
+      if (error) throw error;
+      toast.success(`${selectedCampaigns.length} campaigns activated`);
+      setSelectedCampaigns([]);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to activate campaigns');
+    }
+  };
+
+  const bulkDeactivateCampaigns = async () => {
+    try {
+      const { error } = await supabase
+        .from('discount_campaigns')
+        .update({ is_active: false })
+        .in('id', selectedCampaigns);
+      
+      if (error) throw error;
+      toast.success(`${selectedCampaigns.length} campaigns deactivated`);
+      setSelectedCampaigns([]);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to deactivate campaigns');
+    }
+  };
+
+  const bulkDeleteCampaigns = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedCampaigns.length} campaigns? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('discount_campaigns')
+        .delete()
+        .in('id', selectedCampaigns);
+      
+      if (error) throw error;
+      toast.success(`${selectedCampaigns.length} campaigns deleted`);
+      setSelectedCampaigns([]);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to delete campaigns');
+    }
+  };
+
+  const bulkActivateCodes = async () => {
+    try {
+      const { error } = await supabase
+        .from('discount_codes')
+        .update({ is_active: true })
+        .in('id', selectedCodes);
+      
+      if (error) throw error;
+      toast.success(`${selectedCodes.length} codes activated`);
+      setSelectedCodes([]);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to activate codes');
+    }
+  };
+
+  const bulkDeactivateCodes = async () => {
+    try {
+      const { error } = await supabase
+        .from('discount_codes')
+        .update({ is_active: false })
+        .in('id', selectedCodes);
+      
+      if (error) throw error;
+      toast.success(`${selectedCodes.length} codes deactivated`);
+      setSelectedCodes([]);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to deactivate codes');
+    }
+  };
+
+  const bulkDeleteCodes = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedCodes.length} codes? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('discount_codes')
+        .delete()
+        .in('id', selectedCodes);
+      
+      if (error) throw error;
+      toast.success(`${selectedCodes.length} codes deleted`);
+      setSelectedCodes([]);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to delete codes');
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -180,10 +298,23 @@ export function DiscountManagementPanel() {
         .single();
 
       if (!stackingError && stackingRulesData) {
+        // Handle allowed_combinations which might be an object or array
+        let allowedCombinations = ['membership', 'payment_method', 'campaign']; // default
+        if (stackingRulesData.allowed_combinations) {
+          if (Array.isArray(stackingRulesData.allowed_combinations)) {
+            allowedCombinations = stackingRulesData.allowed_combinations;
+          } else if (typeof stackingRulesData.allowed_combinations === 'object') {
+            // Convert object to array based on true values
+            allowedCombinations = Object.entries(stackingRulesData.allowed_combinations)
+              .filter(([key, value]) => value === true)
+              .map(([key]) => key);
+          }
+        }
+        
         setStackingRules({
           max_stack_count: stackingRulesData.max_stack_count || 3,
           max_total_discount_percentage: stackingRulesData.max_total_discount_percentage || 30,
-          allowed_combinations: stackingRulesData.allowed_combinations || ['membership', 'payment_method', 'campaign']
+          allowed_combinations: allowedCombinations
         });
       }
 
@@ -309,6 +440,40 @@ export function DiscountManagementPanel() {
                   Show inactive
                 </Label>
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedCampaigns.length === campaigns.filter(c => showInactive || c.is_active).length && campaigns.length > 0}
+                  onChange={(e) => {
+                    const visibleCampaigns = campaigns.filter(c => showInactive || c.is_active);
+                    if (e.target.checked) {
+                      setSelectedCampaigns(visibleCampaigns.map(c => c.id));
+                    } else {
+                      setSelectedCampaigns([]);
+                    }
+                  }}
+                />
+                <Label className="text-sm">Select All</Label>
+              </div>
+              {selectedCampaigns.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedCampaigns.length} selected
+                  </span>
+                  <Button variant="outline" size="sm" onClick={bulkActivateCampaigns}>
+                    Activate
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={bulkDeactivateCampaigns}>
+                    Deactivate
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={bulkDeleteCampaigns} className="text-red-600 hover:text-red-700">
+                    Delete
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedCampaigns([])}>
+                    Clear
+                  </Button>
+                </div>
+              )}
               <Button onClick={() => setCreateDialogOpen(true)}>
                 <Gift className="mr-2 h-4 w-4" />
                 Create Campaign
@@ -321,8 +486,21 @@ export function DiscountManagementPanel() {
             {campaigns
               .filter(campaign => showInactive || campaign.is_active)
               .map((campaign) => (
-              <div key={campaign.id} className={`flex items-center justify-between p-4 border rounded-lg ${!campaign.is_active ? 'opacity-60' : ''}`}>
-                <div className="space-y-1">
+              <div key={campaign.id} className={!campaign.is_active ? 'flex items-center justify-between p-4 border rounded-lg opacity-60' : 'flex items-center justify-between p-4 border rounded-lg'}>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedCampaigns.includes(campaign.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedCampaigns([...selectedCampaigns, campaign.id]);
+                      } else {
+                        setSelectedCampaigns(selectedCampaigns.filter(id => id !== campaign.id));
+                      }
+                    }}
+                    className="mt-1"
+                  />
+                  <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold">{campaign.name}</h3>
                     {!campaign.is_active && (
@@ -339,9 +517,7 @@ export function DiscountManagementPanel() {
                   <div className="flex items-center gap-4 text-sm">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {format(new Date(campaign.start_date), 'MMM dd')} - {
-                        campaign.end_date ? format(new Date(campaign.end_date), 'MMM dd') : 'Ongoing'
-                      }
+                      {format(new Date(campaign.start_date), 'MMM dd')} - {campaign.end_date ? format(new Date(campaign.end_date), 'MMM dd') : 'Ongoing'}
                     </span>
                     {campaign.usage_limit && (
                       <span className="flex items-center gap-1">
@@ -363,6 +539,7 @@ export function DiscountManagementPanel() {
                       </span>
                     )}
                   </div>
+                </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch 
@@ -437,7 +614,28 @@ export function DiscountManagementPanel() {
             <CardTitle>Discount Codes</CardTitle>
             <CardDescription>Manage individual discount codes and coupons</CardDescription>
           </div>
-          <CreateDiscountCodeDialog onSuccess={loadData} campaigns={campaigns} />
+          <div className="flex items-center gap-4">
+            {selectedCodes.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {selectedCodes.length} selected
+                </span>
+                <Button variant="outline" size="sm" onClick={bulkActivateCodes}>
+                  Activate
+                </Button>
+                <Button variant="outline" size="sm" onClick={bulkDeactivateCodes}>
+                  Deactivate
+                </Button>
+                <Button variant="outline" size="sm" onClick={bulkDeleteCodes} className="text-red-600 hover:text-red-700">
+                  Delete
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedCodes([])}>
+                  Clear
+                </Button>
+              </div>
+            )}
+            <CreateDiscountCodeDialog onSuccess={loadData} campaigns={campaigns} />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -445,6 +643,19 @@ export function DiscountManagementPanel() {
           <table className="w-full">
             <thead>
               <tr className="border-b">
+                <th className="text-left p-4 w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedCodes.length === discountCodes.length && discountCodes.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedCodes(discountCodes.map(code => code.id));
+                      } else {
+                        setSelectedCodes([]);
+                      }
+                    }}
+                  />
+                </th>
                 <th className="text-left p-4">Code</th>
                 <th className="text-left p-4">Type</th>
                 <th className="text-left p-4">Value</th>
@@ -458,6 +669,19 @@ export function DiscountManagementPanel() {
               {discountCodes.map((code) => (
                 <tr key={code.id} className="border-b">
                   <td className="p-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedCodes.includes(code.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCodes([...selectedCodes, code.id]);
+                        } else {
+                          setSelectedCodes(selectedCodes.filter(id => id !== code.id));
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className="p-4">
                     <code className="font-mono font-semibold">{code.code}</code>
                   </td>
                   <td className="p-4">
@@ -470,7 +694,12 @@ export function DiscountManagementPanel() {
                     }
                   </td>
                   <td className="p-4">
-                    {code.usage_count}/{code.usage_limit || '∞'}
+                    <div className="space-y-1">
+                      <div>{code.usage_count}/{code.usage_limit || '∞'}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Max {code.usage_per_customer || 1}/customer
+                      </div>
+                    </div>
                   </td>
                   <td className="p-4">
                     {code.valid_until 
@@ -692,17 +921,21 @@ export function DiscountManagementPanel() {
                   <label key={combination.value} className="flex items-center gap-2">
                     <input 
                       type="checkbox" 
-                      checked={stackingRules.allowed_combinations.includes(combination.value)}
+                      checked={Array.isArray(stackingRules.allowed_combinations) && stackingRules.allowed_combinations.includes(combination.value)}
                       onChange={(e) => {
                         if (e.target.checked) {
                           setStackingRules(prev => ({
                             ...prev,
-                            allowed_combinations: [...prev.allowed_combinations, combination.value]
+                            allowed_combinations: Array.isArray(prev.allowed_combinations) 
+                              ? [...prev.allowed_combinations, combination.value]
+                              : [combination.value]
                           }));
                         } else {
                           setStackingRules(prev => ({
                             ...prev,
-                            allowed_combinations: prev.allowed_combinations.filter(c => c !== combination.value)
+                            allowed_combinations: Array.isArray(prev.allowed_combinations)
+                              ? prev.allowed_combinations.filter(c => c !== combination.value)
+                              : []
                           }));
                         }
                       }}
@@ -740,6 +973,9 @@ export function DiscountManagementPanel() {
                 <th className="text-left p-4">Country</th>
                 <th className="text-left p-4">Discount Type</th>
                 <th className="text-left p-4">Component Discounts</th>
+                <th className="text-left p-4">Description</th>
+                <th className="text-left p-4">Application</th>
+                <th className="text-left p-4">Priority</th>
                 <th className="text-left p-4">Min Order</th>
                 <th className="text-left p-4">Max Uses</th>
                 <th className="text-left p-4">Actions</th>
@@ -764,10 +1000,37 @@ export function DiscountManagementPanel() {
                           <Badge variant="secondary" className="text-xs">
                             {component}
                           </Badge>
-                          <span className="text-sm font-medium">{value}%</span>
+                          <span className="text-sm font-medium">
+                            {typeof value === 'object' && value !== null ? 
+                              (value.percentage || Object.values(value)[0] || 0) : 
+                              (value || 0)
+                            }%
+                          </span>
                         </div>
                       ))}
                     </div>
+                  </td>
+                  <td className="p-4">
+                    <p className="text-sm text-muted-foreground max-w-48 truncate">
+                      {rule.description || 'No description'}
+                    </p>
+                  </td>
+                  <td className="p-4">
+                    <div className="space-y-1">
+                      <Badge variant={rule.auto_apply ? 'default' : 'outline'} className="text-xs">
+                        {rule.auto_apply ? 'Auto-Apply' : 'Code Required'}
+                      </Badge>
+                      {rule.requires_code && (
+                        <Badge variant="secondary" className="text-xs">
+                          Code: {rule.requires_code ? 'Yes' : 'No'}
+                        </Badge>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <Badge variant="outline" className="text-xs">
+                      {rule.priority || 0}
+                    </Badge>
                   </td>
                   <td className="p-4">
                     {rule.min_order_amount ? `$${rule.min_order_amount}` : 'No minimum'}
@@ -838,6 +1101,9 @@ export function DiscountManagementPanel() {
                 <th className="text-left p-4">Order Range</th>
                 <th className="text-left p-4">Discount Value</th>
                 <th className="text-left p-4">Applicable Components</th>
+                <th className="text-left p-4">Description</th>
+                <th className="text-left p-4">Analytics</th>
+                <th className="text-left p-4">Priority</th>
                 <th className="text-left p-4">Created</th>
                 <th className="text-left p-4">Actions</th>
               </tr>
@@ -862,6 +1128,38 @@ export function DiscountManagementPanel() {
                         </Badge>
                       ))}
                     </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-sm text-gray-600">
+                      {tier.description || 'No description'}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="space-y-1 text-sm">
+                      <div className="text-green-600 font-medium">
+                        {tier.usage_count || 0} uses
+                      </div>
+                      {tier.total_savings && tier.total_savings > 0 && (
+                        <div className="text-blue-600">
+                          ${(tier.total_savings || 0).toFixed(2)} saved
+                        </div>
+                      )}
+                      {tier.avg_order_value && tier.avg_order_value > 0 && (
+                        <div className="text-purple-600">
+                          Avg: ${tier.avg_order_value.toFixed(2)}
+                        </div>
+                      )}
+                      {tier.last_used_at && (
+                        <div className="text-gray-500 text-xs">
+                          Last: {format(new Date(tier.last_used_at), 'MMM dd')}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <Badge variant="secondary" className="text-xs">
+                      {tier.priority || 100}
+                    </Badge>
                   </td>
                   <td className="p-4">
                     {format(new Date(tier.created_at), 'MMM dd, yyyy')}
@@ -1172,10 +1470,20 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
     end_date: '',
     auto_apply: false,
     target_membership: 'all',
+    target_countries: [] as string[],
     usage_limit: '',
     applicable_components: ['total'] as string[],
     min_order: '',
-    max_discount: ''
+    max_discount: '',
+    priority: '100',
+    trigger_rules: {
+      happy_hour: {
+        enabled: false,
+        days: [] as number[],
+        hours: [] as number[]
+      },
+      birthday: false
+    }
   });
 
   useEffect(() => {
@@ -1190,10 +1498,20 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
         end_date: editingCampaign.end_date ? format(new Date(editingCampaign.end_date), 'yyyy-MM-dd') : '',
         auto_apply: editingCampaign.auto_apply,
         target_membership: editingCampaign.target_audience?.membership?.[0] || 'all',
+        target_countries: editingCampaign.target_audience?.countries || [],
         usage_limit: editingCampaign.usage_limit?.toString() || '',
         applicable_components: editingCampaign.discount_type?.applicable_components || ['total'],
         min_order: editingCampaign.discount_type?.conditions?.min_order?.toString() || '',
-        max_discount: editingCampaign.discount_type?.conditions?.max_discount?.toString() || ''
+        max_discount: editingCampaign.discount_type?.conditions?.max_discount?.toString() || '',
+        priority: editingCampaign.priority?.toString() || '100',
+        trigger_rules: {
+          happy_hour: {
+            enabled: !!editingCampaign.trigger_rules?.happy_hour,
+            days: editingCampaign.trigger_rules?.happy_hour?.days || [],
+            hours: editingCampaign.trigger_rules?.happy_hour?.hours || []
+          },
+          birthday: !!editingCampaign.trigger_rules?.birthday
+        }
       });
     } else {
       // Reset form when not editing
@@ -1207,10 +1525,20 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
         end_date: '',
         auto_apply: false,
         target_membership: 'all',
+        target_countries: [] as string[],
         usage_limit: '',
         applicable_components: ['total'],
         min_order: '',
-        max_discount: ''
+        max_discount: '',
+        priority: '100',
+        trigger_rules: {
+          happy_hour: {
+            enabled: false,
+            days: [] as number[],
+            hours: [] as number[]
+          },
+          birthday: false
+        }
       });
     }
   }, [editingCampaign]);
@@ -1251,8 +1579,14 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
             end_date: formData.end_date || null,
             auto_apply: formData.auto_apply,
             usage_limit: formData.usage_limit ? parseInt(formData.usage_limit) : null,
-            target_audience: formData.target_membership && formData.target_membership !== 'all' ? 
-              { membership: [formData.target_membership] } : {},
+            target_audience: {
+              ...(formData.target_membership && formData.target_membership !== 'all' && {
+                membership: [formData.target_membership]
+              }),
+              ...(formData.target_countries.length > 0 && {
+                countries: formData.target_countries
+              })
+            },
           })
           .eq('id', editingCampaign.id);
 
@@ -1276,7 +1610,7 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
               stacking_allowed: true
             },
             applicable_components: formData.applicable_components,
-            priority: 100
+            priority: parseInt(formData.priority) || 100
           })
           .select()
           .single();
@@ -1295,10 +1629,25 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
             end_date: formData.end_date || null,
             auto_apply: formData.auto_apply,
             usage_limit: formData.usage_limit ? parseInt(formData.usage_limit) : null,
-            target_audience: formData.target_membership && formData.target_membership !== 'all' ? 
-              { membership: [formData.target_membership] } : {},
+            target_audience: {
+              ...(formData.target_membership && formData.target_membership !== 'all' && {
+                membership: [formData.target_membership]
+              }),
+              ...(formData.target_countries.length > 0 && {
+                countries: formData.target_countries
+              })
+            },
             is_active: true,
-            priority: 0
+            priority: parseInt(formData.priority) || 100,
+            trigger_rules: (formData.trigger_rules.happy_hour.enabled || formData.trigger_rules.birthday) ? {
+              ...(formData.trigger_rules.happy_hour.enabled && {
+                happy_hour: {
+                  days: formData.trigger_rules.happy_hour.days,
+                  hours: formData.trigger_rules.happy_hour.hours
+                }
+              }),
+              ...(formData.trigger_rules.birthday && { birthday: true })
+            } : null
           });
 
         if (campaignError) throw campaignError;
@@ -1378,7 +1727,20 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>Target Countries (Optional)</Label>
+            <div className="mt-2">
+              <CountryMultiSelect
+                selectedCountries={formData.target_countries}
+                onChange={(countries) => setFormData({ ...formData, target_countries: countries })}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Leave empty to target all countries, or select specific countries
+            </p>
+          </div>
+
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <Label>Discount Type</Label>
               <Select 
@@ -1411,6 +1773,18 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
                 value={formData.usage_limit}
                 onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value })}
                 placeholder="Unlimited"
+              />
+            </div>
+
+            <div>
+              <Label>Priority</Label>
+              <Input
+                type="number"
+                min="1"
+                max="999"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                placeholder="100"
               />
             </div>
           </div>
@@ -1495,6 +1869,11 @@ function CreateCampaignDialog({ open, onOpenChange, onSuccess, editingCampaign }
             </div>
           </div>
 
+          <TriggerRulesEditor
+            triggerRules={formData.trigger_rules}
+            onChange={(triggerRules) => setFormData({ ...formData, trigger_rules: triggerRules })}
+          />
+
           <div className="flex items-center justify-between">
             <Label htmlFor="auto-apply" className="flex items-center gap-2">
               Auto-apply this discount
@@ -1531,6 +1910,7 @@ function CreateDiscountCodeDialog({ onSuccess, campaigns }: {
   const [code, setCode] = useState('');
   const [campaignId, setCampaignId] = useState('');
   const [usageLimit, setUsageLimit] = useState('');
+  const [usagePerCustomer, setUsagePerCustomer] = useState('1');
   const [validUntil, setValidUntil] = useState('');
 
   const generateCode = () => {
@@ -1559,6 +1939,7 @@ function CreateDiscountCodeDialog({ onSuccess, campaigns }: {
           campaign_id: campaignId,
           discount_type_id: campaign.discount_type_id,
           usage_limit: usageLimit ? parseInt(usageLimit) : null,
+          usage_per_customer: parseInt(usagePerCustomer) || 1,
           valid_until: validUntil || null,
           is_active: true
         });
@@ -1571,6 +1952,7 @@ function CreateDiscountCodeDialog({ onSuccess, campaigns }: {
       setCode('');
       setCampaignId('');
       setUsageLimit('');
+      setUsagePerCustomer('1');
       setValidUntil('');
     } catch (error) {
       console.error('Error creating discount code:', error);
@@ -1626,14 +2008,27 @@ function CreateDiscountCodeDialog({ onSuccess, campaigns }: {
             </Select>
           </div>
 
-          <div>
-            <Label>Usage Limit (Optional)</Label>
-            <Input
-              type="number"
-              value={usageLimit}
-              onChange={(e) => setUsageLimit(e.target.value)}
-              placeholder="Unlimited"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Usage Limit (Optional)</Label>
+              <Input
+                type="number"
+                value={usageLimit}
+                onChange={(e) => setUsageLimit(e.target.value)}
+                placeholder="Unlimited"
+              />
+            </div>
+
+            <div>
+              <Label>Usage Per Customer</Label>
+              <Input
+                type="number"
+                min="1"
+                value={usagePerCustomer}
+                onChange={(e) => setUsagePerCustomer(e.target.value)}
+                placeholder="1"
+              />
+            </div>
           </div>
 
           <div>
@@ -1747,11 +2142,7 @@ function CampaignDetailsDialog({ campaign, open, onOpenChange }: {
           {campaign.trigger_rules && Object.keys(campaign.trigger_rules).length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Trigger Rules</p>
-              <div className="p-3 bg-muted rounded-lg">
-                <pre className="text-sm">
-                  {JSON.stringify(campaign.trigger_rules, null, 2)}
-                </pre>
-              </div>
+              <TriggerRulesDisplay triggerRules={campaign.trigger_rules} />
             </div>
           )}
         </div>
@@ -1886,7 +2277,11 @@ function CreateCountryRuleDialog({ onSuccess, campaigns }: {
     country_code: '',
     component_discounts: {} as { [key: string]: number },
     min_order_amount: '',
-    max_uses_per_customer: ''
+    max_uses_per_customer: '',
+    requires_code: false,
+    auto_apply: true,
+    description: '',
+    priority: '100'
   });
 
   const componentOptions = [
@@ -1922,7 +2317,11 @@ function CreateCountryRuleDialog({ onSuccess, campaigns }: {
           country_code: formData.country_code.toUpperCase(),
           component_discounts: formData.component_discounts,
           min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : null,
-          max_uses_per_customer: formData.max_uses_per_customer ? parseInt(formData.max_uses_per_customer) : null
+          max_uses_per_customer: formData.max_uses_per_customer ? parseInt(formData.max_uses_per_customer) : null,
+          requires_code: formData.requires_code,
+          auto_apply: formData.auto_apply,
+          description: formData.description.trim() || null,
+          priority: parseInt(formData.priority) || 100
         });
 
       if (error) throw error;
@@ -1935,7 +2334,11 @@ function CreateCountryRuleDialog({ onSuccess, campaigns }: {
         country_code: '',
         component_discounts: {},
         min_order_amount: '',
-        max_uses_per_customer: ''
+        max_uses_per_customer: '',
+        requires_code: false,
+        auto_apply: true,
+        description: '',
+        priority: '100'
       });
     } catch (error) {
       console.error('Error creating country rule:', error);
@@ -2009,7 +2412,17 @@ function CreateCountryRuleDialog({ onSuccess, campaigns }: {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Description (Optional)</Label>
+            <Textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Admin notes about this country rule..."
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <Label>Minimum Order Amount</Label>
               <Input
@@ -2028,6 +2441,53 @@ function CreateCountryRuleDialog({ onSuccess, campaigns }: {
                 onChange={(e) => setFormData({ ...formData, max_uses_per_customer: e.target.value })}
                 placeholder="Unlimited"
               />
+            </div>
+
+            <div>
+              <Label>Priority (Higher = First)</Label>
+              <Input
+                type="number"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                placeholder="100"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label>Application Method</Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <Label htmlFor="create-auto-apply" className="font-medium">
+                    Auto-Apply Discount
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Automatically applies when conditions are met (no code required)
+                  </p>
+                </div>
+                <Switch
+                  id="create-auto-apply"
+                  checked={formData.auto_apply}
+                  onCheckedChange={(checked) => setFormData({ ...formData, auto_apply: checked })}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <Label htmlFor="create-requires-code" className="font-medium">
+                    Requires Discount Code
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Customer must enter a valid discount code to activate
+                  </p>
+                </div>
+                <Switch
+                  id="create-requires-code"
+                  checked={formData.requires_code}
+                  onCheckedChange={(checked) => setFormData({ ...formData, requires_code: checked })}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -2055,7 +2515,9 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
     min_order_value: '',
     max_order_value: '',
     discount_value: '',
-    applicable_components: ['total'] as string[]
+    applicable_components: ['total'] as string[],
+    priority: '100',
+    description: ''
   });
 
   const componentOptions = [
@@ -2081,7 +2543,9 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
           min_order_value: parseFloat(formData.min_order_value),
           max_order_value: formData.max_order_value ? parseFloat(formData.max_order_value) : null,
           discount_value: parseFloat(formData.discount_value),
-          applicable_components: formData.applicable_components
+          applicable_components: formData.applicable_components,
+          priority: parseInt(formData.priority) || 100,
+          description: formData.description || null
         });
 
       if (error) throw error;
@@ -2094,7 +2558,9 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
         min_order_value: '',
         max_order_value: '',
         discount_value: '',
-        applicable_components: ['total']
+        applicable_components: ['total'],
+        priority: '100',
+        description: ''
       });
     } catch (error) {
       console.error('Error creating discount tier:', error);
@@ -2135,7 +2601,7 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
             </Select>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <Label>Min Order Value</Label>
               <Input
@@ -2163,6 +2629,18 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
                 value={formData.discount_value}
                 onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
                 placeholder="10"
+              />
+            </div>
+
+            <div>
+              <Label>Priority</Label>
+              <Input
+                type="number"
+                min="1"
+                max="999"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                placeholder="100"
               />
             </div>
           </div>
@@ -2194,6 +2672,15 @@ function CreateDiscountTierDialog({ onSuccess, campaigns }: {
               ))}
             </div>
           </div>
+
+          <div>
+            <Label>Description (Optional)</Label>
+            <Input
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Admin notes about this tier"
+            />
+          </div>
         </div>
 
         <DialogFooter>
@@ -2221,7 +2708,11 @@ function EditCountryRuleDialog({ rule, campaigns, open, onOpenChange, onSuccess 
     country_code: rule.country_code,
     component_discounts: rule.component_discounts || {},
     min_order_amount: rule.min_order_amount?.toString() || '',
-    max_uses_per_customer: rule.max_uses_per_customer?.toString() || ''
+    max_uses_per_customer: rule.max_uses_per_customer?.toString() || '',
+    requires_code: rule.requires_code || false,
+    auto_apply: rule.auto_apply !== undefined ? rule.auto_apply : true,
+    description: rule.description || '',
+    priority: rule.priority?.toString() || '100'
   });
 
   const componentOptions = [
@@ -2252,7 +2743,11 @@ function EditCountryRuleDialog({ rule, campaigns, open, onOpenChange, onSuccess 
           country_code: formData.country_code.toUpperCase(),
           component_discounts: formData.component_discounts,
           min_order_amount: formData.min_order_amount ? parseFloat(formData.min_order_amount) : null,
-          max_uses_per_customer: formData.max_uses_per_customer ? parseInt(formData.max_uses_per_customer) : null
+          max_uses_per_customer: formData.max_uses_per_customer ? parseInt(formData.max_uses_per_customer) : null,
+          requires_code: formData.requires_code,
+          auto_apply: formData.auto_apply,
+          description: formData.description.trim() || null,
+          priority: parseInt(formData.priority) || 100
         })
         .eq('id', rule.id);
 
@@ -2374,7 +2869,9 @@ function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess
     min_order_value: tier.min_order_value.toString(),
     max_order_value: tier.max_order_value?.toString() || '',
     discount_value: tier.discount_value.toString(),
-    applicable_components: tier.applicable_components || ['total']
+    applicable_components: tier.applicable_components || ['total'],
+    priority: tier.priority?.toString() || '100',
+    description: tier.description || ''
   });
 
   const componentOptions = [
@@ -2395,7 +2892,9 @@ function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess
           min_order_value: parseFloat(formData.min_order_value),
           max_order_value: formData.max_order_value ? parseFloat(formData.max_order_value) : null,
           discount_value: parseFloat(formData.discount_value),
-          applicable_components: formData.applicable_components
+          applicable_components: formData.applicable_components,
+          priority: parseInt(formData.priority) || 100,
+          description: formData.description || null
         })
         .eq('id', tier.id);
 
@@ -2436,7 +2935,7 @@ function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess
             </Select>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <Label>Min Order Value</Label>
               <Input
@@ -2464,6 +2963,18 @@ function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess
                 value={formData.discount_value}
                 onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
                 placeholder="10"
+              />
+            </div>
+
+            <div>
+              <Label>Priority</Label>
+              <Input
+                type="number"
+                min="1"
+                max="999"
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                placeholder="100"
               />
             </div>
           </div>
@@ -2495,6 +3006,15 @@ function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess
               ))}
             </div>
           </div>
+
+          <div>
+            <Label>Description (Optional)</Label>
+            <Input
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Admin notes about this tier"
+            />
+          </div>
         </div>
 
         <DialogFooter>
@@ -2507,5 +3027,302 @@ function EditDiscountTierDialog({ tier, campaigns, open, onOpenChange, onSuccess
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// TriggerRulesDisplay Component
+function TriggerRulesDisplay({ triggerRules }: { triggerRules: any }) {
+  const getDayName = (dayIndex: number) => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayIndex] || dayIndex.toString();
+  };
+
+  const formatHour = (hour: number) => {
+    if (hour === 0) return '12:00 AM';
+    if (hour < 12) return `${hour}:00 AM`;
+    if (hour === 12) return '12:00 PM';
+    return `${hour - 12}:00 PM`;
+  };
+
+  return (
+    <div className="space-y-3 p-3 bg-muted rounded-lg">
+      {triggerRules.happy_hour && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-600" />
+            <span className="font-medium text-sm">Happy Hour</span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 pl-6">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Days:</p>
+              <div className="flex flex-wrap gap-1">
+                {triggerRules.happy_hour.days?.map((day: number) => (
+                  <Badge key={day} variant="secondary" className="text-xs">
+                    {getDayName(day)}
+                  </Badge>
+                )) || <span className="text-xs text-muted-foreground">All days</span>}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Hours:</p>
+              <div className="flex flex-wrap gap-1">
+                {triggerRules.happy_hour.hours?.map((hour: number) => (
+                  <Badge key={hour} variant="outline" className="text-xs">
+                    {formatHour(hour)}
+                  </Badge>
+                )) || <span className="text-xs text-muted-foreground">All hours</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {triggerRules.birthday && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Gift className="w-4 h-4 text-pink-600" />
+            <span className="font-medium text-sm">Birthday Special</span>
+            <Badge variant="default" className="text-xs">Active</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground pl-6">
+            Triggers on customer's birthday month
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// TriggerRulesEditor Component
+function TriggerRulesEditor({ 
+  triggerRules, 
+  onChange 
+}: { 
+  triggerRules: any;
+  onChange: (rules: any) => void;
+}) {
+  const dayOptions = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' }
+  ];
+
+  const hourOptions = Array.from({ length: 24 }, (_, i) => ({
+    value: i,
+    label: i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`
+  }));
+
+  const toggleDay = (day: number) => {
+    const newDays = triggerRules.happy_hour.days.includes(day)
+      ? triggerRules.happy_hour.days.filter((d: number) => d !== day)
+      : [...triggerRules.happy_hour.days, day];
+    
+    onChange({
+      ...triggerRules,
+      happy_hour: {
+        ...triggerRules.happy_hour,
+        days: newDays
+      }
+    });
+  };
+
+  const toggleHour = (hour: number) => {
+    const newHours = triggerRules.happy_hour.hours.includes(hour)
+      ? triggerRules.happy_hour.hours.filter((h: number) => h !== hour)
+      : [...triggerRules.happy_hour.hours, hour];
+    
+    onChange({
+      ...triggerRules,
+      happy_hour: {
+        ...triggerRules.happy_hour,
+        hours: newHours
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Label className="text-base font-medium">Trigger Rules</Label>
+      
+      {/* Happy Hour Section */}
+      <div className="space-y-3 p-4 border rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-600" />
+            <Label htmlFor="happy-hour-toggle" className="font-medium">Happy Hour Discount</Label>
+          </div>
+          <Switch
+            id="happy-hour-toggle"
+            checked={triggerRules.happy_hour.enabled}
+            onCheckedChange={(enabled) => onChange({
+              ...triggerRules,
+              happy_hour: {
+                ...triggerRules.happy_hour,
+                enabled
+              }
+            })}
+          />
+        </div>
+
+        {triggerRules.happy_hour.enabled && (
+          <div className="space-y-3 ml-6">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Active Days:</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {dayOptions.map((day) => (
+                  <Button
+                    key={day.value}
+                    type="button"
+                    variant={triggerRules.happy_hour.days.includes(day.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleDay(day.value)}
+                    className="text-xs"
+                  >
+                    {day.label.substring(0, 3)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Active Hours:</Label>
+              <div className="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto">
+                {hourOptions.map((hour) => (
+                  <Button
+                    key={hour.value}
+                    type="button"
+                    variant={triggerRules.happy_hour.hours.includes(hour.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleHour(hour.value)}
+                    className="text-xs px-2"
+                  >
+                    {hour.value}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Click hours to toggle (24-hour format)
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Birthday Section */}
+      <div className="space-y-3 p-4 border rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Gift className="w-4 h-4 text-pink-600" />
+            <Label htmlFor="birthday-toggle" className="font-medium">Birthday Special</Label>
+          </div>
+          <Switch
+            id="birthday-toggle"
+            checked={triggerRules.birthday}
+            onCheckedChange={(birthday) => onChange({
+              ...triggerRules,
+              birthday
+            })}
+          />
+        </div>
+        
+        {triggerRules.birthday && (
+          <p className="text-sm text-muted-foreground ml-6">
+            This discount will be automatically available to customers during their birthday month
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// CountryMultiSelect Component
+function CountryMultiSelect({ 
+  selectedCountries, 
+  onChange 
+}: { 
+  selectedCountries: string[];
+  onChange: (countries: string[]) => void;
+}) {
+  const commonCountries = [
+    { code: 'US', name: 'United States' },
+    { code: 'IN', name: 'India' },
+    { code: 'NP', name: 'Nepal' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'FR', name: 'France' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'SG', name: 'Singapore' },
+    { code: 'AE', name: 'UAE' },
+    { code: 'MY', name: 'Malaysia' }
+  ];
+
+  const toggleCountry = (countryCode: string) => {
+    if (selectedCountries.includes(countryCode)) {
+      onChange(selectedCountries.filter(c => c !== countryCode));
+    } else {
+      onChange([...selectedCountries, countryCode]);
+    }
+  };
+
+  const selectAll = () => {
+    onChange(commonCountries.map(c => c.code));
+  };
+
+  const clearAll = () => {
+    onChange([]);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={selectAll}
+          className="text-xs"
+        >
+          Select All
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={clearAll}
+          className="text-xs"
+        >
+          Clear All
+        </Button>
+        {selectedCountries.length > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {selectedCountries.length} countries selected
+          </span>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+        {commonCountries.map((country) => (
+          <Button
+            key={country.code}
+            type="button"
+            variant={selectedCountries.includes(country.code) ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleCountry(country.code)}
+            className="justify-start text-xs"
+          >
+            <span className="mr-2">{country.code}</span>
+            {country.name}
+          </Button>
+        ))}
+      </div>
+    </div>
   );
 }

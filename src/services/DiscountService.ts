@@ -1,5 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { MembershipService } from './MembershipService';
+import { DiscountErrorService, DiscountError } from './DiscountErrorService';
+import { DiscountLoggingService } from './DiscountLoggingService';
+import { DiscountAbuseDetectionService } from './DiscountAbuseDetectionService';
 
 export interface DiscountType {
   id: string;
@@ -31,6 +34,12 @@ export interface DiscountTier {
   max_order_value?: number;
   discount_value: number;
   applicable_components: string[];
+  description?: string;
+  priority?: number;
+  usage_count?: number;
+  total_savings?: number;
+  avg_order_value?: number;
+  last_used_at?: string;
 }
 
 export interface CountryDiscountRule {
@@ -144,12 +153,68 @@ class DiscountServiceClass {
     this.discountCache.set(key, { data, timestamp: Date.now() });
   }
 
-  async validateDiscountCode(code: string, customerId?: string): Promise<{
+  async validateDiscountCode(
+    code: string, 
+    customerId?: string, 
+    countryCode?: string, 
+    orderTotal?: number,
+    sessionId?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{
     valid: boolean;
     discount?: DiscountCode;
     error?: string;
+    enhancedError?: DiscountError;
+    actionRequired?: 'captcha' | 'block' | 'rate_limit';
+    blockDuration?: number;
   }> {
     try {
+      // **STEP 1: ABUSE DETECTION CHECK**
+      // Check if this discount attempt should be allowed (prevent abuse)
+      if (sessionId) {
+        const abuseDetection = DiscountAbuseDetectionService.getInstance();
+        const abuseCheck = await abuseDetection.checkDiscountAttempt({
+          session_id: sessionId,
+          customer_id: customerId,
+          discount_code: code,
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          country: countryCode
+        });
+
+        if (!abuseCheck.allowed) {
+          // Log the blocked attempt
+          await DiscountLoggingService.getInstance().logSuspiciousActivity({
+            type: 'blocked_attempt',
+            severity: 'high',
+            details: {
+              discount_code: code,
+              reason: abuseCheck.reason,
+              action_required: abuseCheck.action_required,
+              session_id: sessionId,
+              ip_address: ipAddress
+            },
+            customer_id: customerId,
+            ip_address: ipAddress
+          });
+
+          const enhancedError = DiscountErrorService.getEnhancedError('BLOCKED_SUSPICIOUS_ACTIVITY', code, {
+            reason: abuseCheck.reason,
+            action: abuseCheck.action_required
+          });
+
+          return {
+            valid: false,
+            error: abuseCheck.reason || 'Request blocked due to suspicious activity',
+            enhancedError,
+            actionRequired: abuseCheck.action_required,
+            blockDuration: abuseCheck.block_duration
+          };
+        }
+      }
+
+      // **STEP 2: STANDARD DISCOUNT CODE VALIDATION**
       // Get discount code
       const { data: discountCode, error } = await supabase
         .from('discount_codes')
@@ -162,26 +227,93 @@ class DiscountServiceClass {
         .single();
 
       if (error || !discountCode) {
-        return { valid: false, error: 'Invalid discount code' };
+        // Log invalid code attempt
+        await DiscountLoggingService.getInstance().logDiscountValidation({
+          discount_code: code,
+          customer_id: customerId,
+          validation_result: 'invalid',
+          error_message: 'Discount code not found',
+          order_total: orderTotal,
+          customer_country: countryCode,
+          validated_at: new Date(),
+          metadata: {
+            error_type: 'invalid_code',
+            user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined
+          }
+        });
+
+        const enhancedError = DiscountErrorService.getEnhancedError('INVALID_CODE', code);
+        return { 
+          valid: false, 
+          error: 'Invalid discount code',
+          enhancedError 
+        };
       }
 
       // Check if active
       if (!discountCode.is_active) {
-        return { valid: false, error: 'This discount code is no longer active' };
+        const enhancedError = DiscountErrorService.getEnhancedError('CODE_INACTIVE', code);
+        return { 
+          valid: false, 
+          error: 'This discount code is no longer active',
+          enhancedError 
+        };
       }
 
       // Check validity dates
       const now = new Date();
       if (new Date(discountCode.valid_from) > now) {
-        return { valid: false, error: 'This discount code is not yet valid' };
+        const enhancedError = DiscountErrorService.getEnhancedError('CODE_NOT_YET_VALID', code, {
+          validFrom: discountCode.valid_from
+        });
+        return { 
+          valid: false, 
+          error: 'This discount code is not yet valid',
+          enhancedError 
+        };
       }
       if (discountCode.valid_until && new Date(discountCode.valid_until) < now) {
-        return { valid: false, error: 'This discount code has expired' };
+        // Log expired code attempt
+        await DiscountLoggingService.getInstance().logDiscountValidation({
+          discount_code: code,
+          customer_id: customerId,
+          validation_result: 'expired',
+          error_message: 'Discount code has expired',
+          order_total: orderTotal,
+          customer_country: countryCode,
+          conditions_checked: {
+            valid_until: discountCode.valid_until,
+            current_date: now.toISOString()
+          },
+          validated_at: new Date(),
+          metadata: {
+            error_type: 'expired_code',
+            expired_date: discountCode.valid_until,
+            user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined
+          }
+        });
+
+        const enhancedError = DiscountErrorService.getEnhancedError('CODE_EXPIRED', code, {
+          validUntil: discountCode.valid_until
+        });
+        return { 
+          valid: false, 
+          error: 'This discount code has expired',
+          enhancedError 
+        };
       }
 
       // Check usage limits
       if (discountCode.usage_limit && discountCode.usage_count >= discountCode.usage_limit) {
-        return { valid: false, error: 'This discount code has reached its usage limit' };
+        const enhancedError = DiscountErrorService.getEnhancedError('USAGE_LIMIT_REACHED', code, {
+          usageLimit: discountCode.usage_limit,
+          usageCount: discountCode.usage_count
+        });
+        return { 
+          valid: false, 
+          error: 'This discount code has reached its usage limit',
+          enhancedError 
+        };
       }
 
       // Check customer usage limit if customerId provided
@@ -213,14 +345,118 @@ class DiscountServiceClass {
           .eq('discount_code_id', discountCode.id);
 
         if (count && count >= discountCode.usage_per_customer) {
-          return { valid: false, error: 'You have already used this discount code' };
+          const enhancedError = DiscountErrorService.getEnhancedError('CUSTOMER_LIMIT_REACHED', code, {
+            customerLimit: discountCode.usage_per_customer,
+            customerUsage: count
+          });
+          return { 
+            valid: false, 
+            error: 'You have already used this discount code',
+            enhancedError 
+          };
         }
       }
+
+      // Check country-specific validation if country and order total are provided
+      if (countryCode && orderTotal !== undefined) {
+        const { data: countryValidation, error: countryError } = await supabase
+          .rpc('validate_country_discount_code', {
+            p_discount_code: code.toUpperCase(),
+            p_customer_country: countryCode,
+            p_order_total: orderTotal
+          });
+
+        if (countryError) {
+          console.error('Error validating country discount:', countryError);
+          const enhancedError = DiscountErrorService.getEnhancedError('SERVER_ERROR', code);
+          return { 
+            valid: false, 
+            error: 'Error validating discount for your location',
+            enhancedError 
+          };
+        }
+
+        if (countryValidation && countryValidation.length > 0) {
+          const validation = countryValidation[0];
+          if (!validation.is_valid) {
+            // Determine specific error type based on validation message
+            let errorType = 'COUNTRY_NOT_ELIGIBLE';
+            if (validation.error_message?.includes('minimum')) {
+              errorType = 'MINIMUM_ORDER_NOT_MET';
+            }
+            
+            const enhancedError = DiscountErrorService.getEnhancedError(errorType, code, {
+              country: countryCode,
+              orderTotal: orderTotal,
+              minOrder: validation.min_order_amount
+            });
+            
+            return { 
+              valid: false, 
+              error: validation.error_message || 'This discount is not valid for your location or order amount',
+              enhancedError 
+            };
+          }
+        } else {
+          const enhancedError = DiscountErrorService.getEnhancedError('COUNTRY_NOT_ELIGIBLE', code, {
+            country: countryCode
+          });
+          return { 
+            valid: false, 
+            error: 'This discount is not available for your location',
+            enhancedError 
+          };
+        }
+      }
+
+      // Log successful validation
+      await DiscountLoggingService.getInstance().logDiscountValidation({
+        discount_code: code,
+        customer_id: customerId,
+        validation_result: 'valid',
+        order_total: orderTotal,
+        customer_country: countryCode,
+        conditions_checked: {
+          is_active: discountCode.is_active,
+          date_valid: true,
+          usage_limit_ok: true,
+          customer_limit_ok: true,
+          country_eligible: countryCode ? true : undefined,
+          min_order_met: orderTotal ? true : undefined
+        },
+        validated_at: new Date(),
+        metadata: {
+          discount_name: discountCode.discount_type?.name,
+          discount_value: discountCode.discount_type?.value,
+          user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined
+        }
+      });
 
       return { valid: true, discount: discountCode };
     } catch (error) {
       console.error('Error validating discount code:', error);
-      return { valid: false, error: 'Error validating discount code' };
+      
+      // Log network error
+      await DiscountLoggingService.getInstance().logDiscountValidation({
+        discount_code: code,
+        customer_id: customerId,
+        validation_result: 'invalid',
+        error_message: 'Network error during validation',
+        order_total: orderTotal,
+        customer_country: countryCode,
+        validated_at: new Date(),
+        metadata: {
+          error_type: 'network_error',
+          user_agent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined
+        }
+      });
+
+      const enhancedError = DiscountErrorService.getEnhancedError('NETWORK_ERROR', code);
+      return { 
+        valid: false, 
+        error: 'Error validating discount code',
+        enhancedError 
+      };
     }
   }
 
@@ -974,8 +1210,15 @@ class DiscountServiceClass {
     discounts: ApplicableDiscount[],
     componentName: string
   ): { finalValue: number; totalDiscount: number; appliedDiscounts: ApplicableDiscount[] } {
+    // Separate user-applied codes from automatic discounts
+    const userCodeDiscounts = discounts.filter(d => d.discount_source === 'code');
+    const automaticDiscounts = discounts.filter(d => d.discount_source !== 'code');
+    
+    // If user applied a code, ONLY use code discounts (ignore automatic ones)
+    const discountsToUse = userCodeDiscounts.length > 0 ? userCodeDiscounts : discounts;
+    
     // Sort by priority (higher priority first)
-    const sortedDiscounts = discounts.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const sortedDiscounts = discountsToUse.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     
     let remainingValue = componentValue;
     let totalDiscount = 0;

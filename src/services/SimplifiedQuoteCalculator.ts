@@ -1,5 +1,6 @@
 import { currencyService } from './CurrencyService';
 import { DiscountService } from './DiscountService';
+import { DiscountLoggingService } from './DiscountLoggingService';
 
 interface CalculationInput {
   items: Array<{
@@ -34,6 +35,7 @@ interface CalculationInput {
   // Enhanced discount inputs
   discount_codes?: string[];
   customer_id?: string;
+  quote_id?: string; // For logging purposes
   is_first_order?: boolean;
   apply_component_discounts?: boolean; // Enable component-based discounts
 }
@@ -372,6 +374,36 @@ class SimplifiedQuoteCalculator {
           );
           discountedCustomsDuty = customsDiscountResult.finalValue;
           customsDiscountAmount = customsDiscountResult.totalDiscount;
+          
+          // Log automatic customs discount application
+          if (customsDiscountAmount > 0) {
+            customsDiscountResult.appliedDiscounts.forEach(async (discount) => {
+              await DiscountLoggingService.getInstance().logAutomaticDiscount(
+                discount.discount_source === 'volume' ? 'volume' : 'country',
+                {
+                  customer_id: input.customerId,
+                  quote_id: input.quoteId,
+                  country: input.destination_country,
+                  order_total: finalItemsSubtotal,
+                  discount_amount: discount.discount_amount,
+                  discount_details: {
+                    rule_id: discount.discount_id,
+                    tier_name: discount.description,
+                    percentage: discount.discount_percentage,
+                    components_affected: ['customs']
+                  },
+                  component_breakdown: {
+                    customs: {
+                      original: customsDuty,
+                      discount: discount.discount_amount,
+                      final: customsDuty - discount.discount_amount
+                    }
+                  }
+                }
+              );
+            });
+          }
+
           componentDiscounts.customs = {
             original: customsDuty,
             discount: customsDiscountAmount,
@@ -393,9 +425,47 @@ class SimplifiedQuoteCalculator {
           );
           const componentShippingDiscount = shippingDiscountResult.totalDiscount;
           
-          // Combine with existing shipping discount (if any)
-          shippingDiscountAmount = Math.min(shippingDiscountAmount + componentShippingDiscount, baseShippingCost);
+          // Check if any of the applied discounts are from user-applied codes
+          const hasUserAppliedCode = shippingDiscountResult.appliedDiscounts.some(d => d.discount_source === 'code');
+          
+          if (hasUserAppliedCode) {
+            // User applied a coupon code - use ONLY the code discount, ignore automatic discounts
+            shippingDiscountAmount = componentShippingDiscount;
+          } else {
+            // No user codes - combine with any existing shipping discount (legacy behavior)
+            shippingDiscountAmount = Math.min(shippingDiscountAmount + componentShippingDiscount, baseShippingCost);
+          }
+          
           finalShippingCost = baseShippingCost - shippingDiscountAmount;
+          
+          // Log automatic shipping discount application
+          if (componentShippingDiscount > 0) {
+            shippingDiscountResult.appliedDiscounts.forEach(async (discount) => {
+              await DiscountLoggingService.getInstance().logAutomaticDiscount(
+                discount.discount_source === 'volume' ? 'volume' : 'country',
+                {
+                  customer_id: input.customer_id,
+                  quote_id: input.quote_id,
+                  country: input.destination_country,
+                  order_total: finalItemsSubtotal,
+                  discount_amount: discount.discount_amount,
+                  discount_details: {
+                    rule_id: discount.discount_id,
+                    tier_name: discount.description,
+                    percentage: discount.discount_percentage,
+                    components_affected: ['shipping']
+                  },
+                  component_breakdown: {
+                    shipping: {
+                      original: baseShippingCost,
+                      discount: discount.discount_amount,
+                      final: baseShippingCost - discount.discount_amount
+                    }
+                  }
+                }
+              );
+            });
+          }
           
           componentDiscounts.shipping = {
             original: baseShippingCost,

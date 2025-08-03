@@ -105,6 +105,7 @@ const QuoteCalculatorV2 = React.lazy(() => import('@/pages/admin/QuoteCalculator
 const QuoteReminderSettings = React.lazy(() => import('@/pages/admin/QuoteReminderSettings'));
 const ReturnManagement = React.lazy(() => import('@/pages/admin/ReturnManagement'));
 const TestMembershipDiscount = React.lazy(() => import('@/pages/TestMembershipDiscount'));
+const AbuseMonitoringDashboard = React.lazy(() => import('@/components/admin/AbuseMonitoringDashboard').then((m) => ({ default: m.AbuseMonitoringDashboard })));
 
 // Demo components - temporarily disabled for build issues
 // const ManualTaxInputDesigns = React.lazy(() => import('@/demo/ManualTaxInputDesigns'));
@@ -208,6 +209,14 @@ const router = createBrowserRouter([
           { path: 'blog', element: <BlogManagementPage /> },
           { path: 'memberships', element: <MembershipManagementPage /> },
           { path: 'discounts', element: <DiscountManagementPage /> },
+          { 
+            path: 'abuse-monitoring', 
+            element: (
+              <ErrorBoundary fallback={AdminErrorFallback}>
+                <AbuseMonitoringDashboard />
+              </ErrorBoundary>
+            )
+          },
           { path: 'quote-reminders', element: <QuoteReminderSettings /> },
           { path: 'emails', element: <EmailDashboard /> },
           { path: 'sms', element: <SMSDashboard /> },

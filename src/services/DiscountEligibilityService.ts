@@ -19,6 +19,13 @@ export interface CustomerContext {
   membership_tier?: string;
   order_total: number;
   applied_codes: string[];
+  component_breakdown?: {
+    shipping_cost?: number;
+    customs_duty?: number;
+    handling_fee?: number;
+    local_tax?: number;
+    insurance_amount?: number;
+  }; // Add component breakdown for accurate savings calculation
 }
 
 export class DiscountEligibilityService {
@@ -79,7 +86,8 @@ export class DiscountEligibilityService {
       // Calculate potential savings
       result.total_potential_savings = this.calculatePotentialSavings(
         [...result.automatic_benefits, ...result.applied_discounts],
-        context.order_total
+        context.order_total,
+        context.component_breakdown
       );
 
       // Generate eligibility messages
@@ -235,7 +243,17 @@ export class DiscountEligibilityService {
   /**
    * Calculate potential savings from discounts
    */
-  private calculatePotentialSavings(discounts: ApplicableDiscount[], orderTotal: number): number {
+  private calculatePotentialSavings(
+    discounts: ApplicableDiscount[], 
+    orderTotal: number, 
+    componentBreakdown?: {
+      shipping_cost?: number;
+      customs_duty?: number;
+      handling_fee?: number;
+      local_tax?: number;
+      insurance_amount?: number;
+    }
+  ): number {
     let totalSavings = 0;
 
     // Group by component to avoid double-counting
@@ -251,29 +269,55 @@ export class DiscountEligibilityService {
       }
     });
 
-    // Calculate approximate savings (simplified calculation)
+    // Calculate savings using actual component values when available
     componentDiscounts.forEach((percentage, component) => {
       let componentValue = 0;
       
-      // Estimate component values based on typical order structure
-      switch (component) {
-        case 'shipping':
-          componentValue = Math.min(orderTotal * 0.1, 50); // Estimate shipping as 10% of order, max $50
-          break;
-        case 'customs':
-          componentValue = orderTotal * 0.15; // Estimate customs as 15%
-          break;
-        case 'handling':
-          componentValue = Math.max(orderTotal * 0.02, 10); // Estimate handling as 2%, min $10
-          break;
-        case 'taxes':
-          componentValue = orderTotal * 0.1; // Estimate taxes as 10%
-          break;
-        case 'total':
-          componentValue = orderTotal;
-          break;
-        default:
-          componentValue = orderTotal * 0.05; // Default estimate
+      // Use actual component values if available, otherwise fall back to estimates
+      if (componentBreakdown) {
+        switch (component) {
+          case 'shipping':
+            componentValue = componentBreakdown.shipping_cost || Math.min(orderTotal * 0.1, 50);
+            break;
+          case 'customs':
+            componentValue = componentBreakdown.customs_duty || orderTotal * 0.15;
+            break;
+          case 'handling':
+            componentValue = componentBreakdown.handling_fee || Math.max(orderTotal * 0.02, 10);
+            break;
+          case 'taxes':
+            componentValue = componentBreakdown.local_tax || orderTotal * 0.1;
+            break;
+          case 'insurance':
+            componentValue = componentBreakdown.insurance_amount || orderTotal * 0.02;
+            break;
+          case 'total':
+            componentValue = orderTotal;
+            break;
+          default:
+            componentValue = orderTotal * 0.05; // Default estimate
+        }
+      } else {
+        // Fall back to estimates when no breakdown is available
+        switch (component) {
+          case 'shipping':
+            componentValue = Math.min(orderTotal * 0.1, 50); // Estimate shipping as 10% of order, max $50
+            break;
+          case 'customs':
+            componentValue = orderTotal * 0.15; // Estimate customs as 15%
+            break;
+          case 'handling':
+            componentValue = Math.max(orderTotal * 0.02, 10); // Estimate handling as 2%, min $10
+            break;
+          case 'taxes':
+            componentValue = orderTotal * 0.1; // Estimate taxes as 10%
+            break;
+          case 'total':
+            componentValue = orderTotal;
+            break;
+          default:
+            componentValue = orderTotal * 0.05; // Default estimate
+        }
       }
       
       totalSavings += componentValue * (percentage / 100);

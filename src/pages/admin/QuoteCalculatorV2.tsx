@@ -21,7 +21,10 @@ import {
   AlertCircle,
   Copy,
   ExternalLink,
-  Clock
+  Clock,
+  Check,
+  X,
+  Tag
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +39,10 @@ import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
 import { QuoteExportControls } from '@/components/quotes-v2/QuoteExportControls';
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
 import { DiscountEligibilityNotification } from '@/components/quotes-v2/DiscountEligibilityNotification';
+import { DiscountPreviewPanel } from '@/components/quotes-v2/DiscountPreviewPanel';
+import { LiveDiscountPreview } from '@/components/quotes-v2/LiveDiscountPreview';
+import { DiscountEligibilityChecker } from '@/components/quotes-v2/DiscountEligibilityChecker';
+import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
 
 interface QuoteItem {
   id: string;
@@ -965,25 +972,79 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Discounts */}
+          {/* Enhanced Discounts Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Discounts (Optional)</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                Smart Discount System
+              </CardTitle>
+              <CardDescription>
+                Automatic discounts are applied based on order details. Add coupon codes for additional savings.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Coupon Code */}
+            <CardContent className="space-y-6">
+              {/* Discount Preview Panel */}
+              {customerEmail && destinationCountry && calculationResult && (
+                <DiscountPreviewPanel
+                  orderTotal={
+                    calculationResult?.calculation_steps?.subtotal || 
+                    calculationResult?.calculation_steps?.items_subtotal ||
+                    items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                    0
+                  }
+                  countryCode={destinationCountry}
+                  customerId={customerEmail}
+                  itemCount={items.length}
+                  componentBreakdown={{
+                    shipping_cost: calculationResult?.calculation_steps?.shipping_cost,
+                    customs_duty: calculationResult?.calculation_steps?.customs_duty,
+                    handling_fee: calculationResult?.calculation_steps?.handling_fee,
+                    local_tax: calculationResult?.calculation_steps?.local_tax,
+                    insurance_amount: calculationResult?.calculation_steps?.insurance_amount,
+                  }}
+                  appliedCodes={discountCodes}
+                  onCodeSelect={(code) => {
+                    // Auto-fill the coupon input with the selected code
+                    const codeInput = document.querySelector('input[placeholder*="coupon"]') as HTMLInputElement;
+                    if (codeInput) {
+                      codeInput.value = code;
+                      codeInput.focus();
+                      // Trigger the change event to activate live preview
+                      codeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                  }}
+                />
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Enhanced Coupon Code Input with Live Preview */}
                 <div className="space-y-2">
-                  <h4 className="font-medium">Coupon Code</h4>
-                  <CouponCodeInput
-                    customerId={customerEmail} // Using email as customer identifier for now
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+                        Live Preview
+                      </Badge>
+                      Coupon Code
+                    </h4>
+                    <DiscountHelpTooltips context="admin" showAdvanced={true} />
+                  </div>
+                  <LiveDiscountPreview
+                    customerId={customerEmail}
+                    countryCode={destinationCountry}
                     quoteTotal={
                       calculationResult?.calculation_steps?.subtotal || 
                       calculationResult?.calculation_steps?.items_subtotal ||
                       items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
                       0
                     }
-                    appliedCodes={discountCodes} // Pass the loaded discount codes
+                    componentBreakdown={{
+                      shipping_cost: calculationResult?.calculation_steps?.shipping_cost,
+                      customs_duty: calculationResult?.calculation_steps?.customs_duty,
+                      handling_fee: calculationResult?.calculation_steps?.handling_fee,
+                      local_tax: calculationResult?.calculation_steps?.local_tax,
+                      insurance_amount: calculationResult?.calculation_steps?.insurance_amount,
+                    }}
                     onDiscountApplied={(discount) => {
                       // Add to component discount codes for V2 system
                       if (!discountCodes.includes(discount.code)) {
@@ -991,7 +1052,6 @@ const QuoteCalculatorV2: React.FC = () => {
                       }
                       
                       // Only set order-level discount if it applies to 'total'
-                      // Component-specific discounts (shipping, customs, etc.) should NOT be set as order discounts
                       if (discount.appliesTo === 'total') {
                         setOrderDiscountType(discount.type);
                         setOrderDiscountValue(discount.value);
@@ -1005,58 +1065,74 @@ const QuoteCalculatorV2: React.FC = () => {
                         setOrderDiscountCodeId(null);
                       }
                     }}
-                    onDiscountRemoved={(codeToRemove) => {
-                      if (codeToRemove) {
-                        // Remove specific code
-                        setDiscountCodes(discountCodes.filter(c => c !== codeToRemove));
-                        
-                        // If this was the order discount code, clear it
-                        if (orderDiscountCode === codeToRemove) {
-                          setOrderDiscountType('percentage');
-                          setOrderDiscountValue(0);
-                          setOrderDiscountCode('');
-                          setOrderDiscountCodeId(null);
-                        }
-                      } else {
-                        // Remove all codes (backward compatibility)
-                        setDiscountCodes([]);
-                        setOrderDiscountType('percentage');
-                        setOrderDiscountValue(0);
-                        setOrderDiscountCode('');
-                        setOrderDiscountCodeId(null);
-                      }
+                    onDiscountRemoved={() => {
+                      // Remove all codes and reset discount state
+                      setDiscountCodes([]);
+                      setOrderDiscountType('percentage');
+                      setOrderDiscountValue(0);
+                      setOrderDiscountCode('');
+                      setOrderDiscountCodeId(null);
                     }}
-                    currentCode={discountCodes.length > 0 ? discountCodes[0] : orderDiscountCode}
                     disabled={!customerEmail || !calculationResult}
                   />
                 </div>
 
-                {/* Discount Eligibility Notification */}
-                {customerEmail && destinationCountry && calculationResult && (
-                  <div className="col-span-full">
-                    <DiscountEligibilityNotification
-                      customerContext={{
-                        customer_id: customerEmail.includes('@') ? undefined : customerEmail,
-                        email: customerEmail.includes('@') ? customerEmail : undefined,
-                        country: destinationCountry,
-                        is_first_order: false, // We can enhance this later
-                        order_total: calculationResult?.calculation_steps?.items_subtotal || 
-                                   items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) || 0,
-                        applied_codes: discountCodes
-                      }}
-                      onCodeApply={(code) => {
-                        // Simulate applying the code through CouponCodeInput
-                        const codeInput = document.querySelector('input[placeholder*="coupon"]') as HTMLInputElement;
-                        if (codeInput) {
-                          codeInput.value = code;
-                          codeInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        }
-                      }}
-                      className="mt-4"
+                {/* Discount Eligibility Checker */}
+                {customerEmail && calculationResult && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-blue-900">Discount Opportunities</h4>
+                    <DiscountEligibilityChecker
+                      customerId={customerEmail}
+                      orderTotal={
+                        calculationResult?.calculation_steps?.subtotal || 
+                        calculationResult?.calculation_steps?.items_subtotal ||
+                        items.reduce((sum, item) => sum + (item.quantity * item.unit_price_usd), 0) ||
+                        0
+                      }
+                      countryCode={destinationCountry}
+                      isFirstOrder={false} // Could be determined from customer data
+                      hasAccount={!!customerEmail}
+                      className="border-blue-200"
                     />
                   </div>
                 )}
 
+                {/* Applied Discounts Summary */}
+                {discountCodes.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Applied Discount Codes
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {discountCodes.map((code) => (
+                        <Badge key={code} variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
+                          <Tag className="w-3 h-3" />
+                          {code}
+                          <button
+                            onClick={() => {
+                              setDiscountCodes(discountCodes.filter(c => c !== code));
+                              if (orderDiscountCode === code) {
+                                setOrderDiscountType('percentage');
+                                setOrderDiscountValue(0);
+                                setOrderDiscountCode('');
+                                setOrderDiscountCodeId(null);
+                              }
+                            }}
+                            className="ml-1 rounded-full hover:bg-green-200 p-0.5 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Legacy Manual Discount Controls (Admin Override) */}
+              <Separator />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Manual Discount (Admin Override) */}
                 <div className="space-y-2">
                   <h4 className="font-medium">Manual Discount (Admin)</h4>

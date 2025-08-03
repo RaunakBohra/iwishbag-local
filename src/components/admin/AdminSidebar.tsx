@@ -19,6 +19,7 @@ import {
   Tag,
   Mail,
   MessageCircle,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -115,6 +116,11 @@ const menuGroups = [
         title: 'Discounts',
         url: '/admin/discounts',
         icon: Tag,
+      },
+      {
+        title: 'Abuse Monitoring',
+        url: '/admin/abuse-monitoring',
+        icon: Shield,
       },
       {
         title: 'Memberships',
