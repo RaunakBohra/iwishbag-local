@@ -265,7 +265,6 @@ class SimplifiedQuoteCalculator {
       if (countryHsnRates) {
         const hsnRate = countryHsnRates[item.hsn_code];
         if (hsnRate !== undefined) {
-          console.log(`[HSN] Using HSN rate for ${item.hsn_code}: ${hsnRate}% (instead of default ${defaultRate}%)`);
           return hsnRate;
         }
       }
@@ -275,7 +274,6 @@ class SimplifiedQuoteCalculator {
   }
 
   async calculate(input: CalculationInput): Promise<CalculationResult> {
-    console.log('[CALCULATOR V2] Starting calculation', input);
 
     // Step 1: Calculate items total with item-level discounts
     let itemsTotal = 0;
@@ -358,12 +356,6 @@ class SimplifiedQuoteCalculator {
       });
     }
 
-    console.log('[VOLUMETRIC] Weight analysis:', {
-      totalActualWeight: this.round(totalActualWeight),
-      totalVolumetricWeight: this.round(totalVolumetricWeight),
-      totalChargeableWeight: this.round(totalChargeableWeight),
-      volumetricItemsCount
-    });
 
     // Step 2: Get configurations
     const countryConfig = COUNTRY_TAX_CONFIG[input.destination_country as keyof typeof COUNTRY_TAX_CONFIG] 
@@ -397,11 +389,6 @@ class SimplifiedQuoteCalculator {
     const shippingRatePerKg = SHIPPING_RATES[shippingMethod];
     const baseShippingCost = Math.max(totalChargeableWeight * shippingRatePerKg, 25); // Minimum $25
     
-    console.log('[SHIPPING] Using chargeable weight for shipping calculation:', {
-      totalChargeableWeight: this.round(totalChargeableWeight),
-      shippingRatePerKg,
-      baseShippingCost: this.round(baseShippingCost)
-    });
     
     let shippingDiscountAmount = 0;
     let finalShippingCost = baseShippingCost;
@@ -446,7 +433,6 @@ class SimplifiedQuoteCalculator {
       });
       
       effectiveCustomsRate = totalValue > 0 ? weightedRateSum / totalValue : countryConfig.customs;
-      console.log(`[HSN] Using weighted average customs rate: ${effectiveCustomsRate.toFixed(2)}%`);
     }
     
     const customsDuty = cifValue * (effectiveCustomsRate / 100);
