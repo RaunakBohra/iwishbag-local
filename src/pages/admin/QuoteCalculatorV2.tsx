@@ -224,12 +224,18 @@ const QuoteCalculatorV2: React.FC = () => {
             name: item.name || '',
             url: item.url || '',
             quantity: item.quantity || 1,
-            unit_price_usd: item.costprice_origin || 0, // V2 uses costprice_origin
-            weight_kg: item.weight || undefined,
+            unit_price_usd: item.costprice_origin || item.unit_price_usd || 0, // V2 uses costprice_origin
+            weight_kg: item.weight || item.weight_kg || undefined,
             category: item.category || '',
             notes: item.notes || item.customer_notes || '',
             hsn_code: item.hsn_code || '',
-            use_hsn_rates: item.use_hsn_rates || false
+            use_hsn_rates: item.use_hsn_rates || false,
+            // Discount fields
+            discount_type: item.discount_type || 'percentage',
+            discount_percentage: item.discount_percentage || undefined,
+            discount_amount: item.discount_amount || undefined,
+            // Valuation preference field - this was missing!
+            valuation_preference: item.valuation_preference || 'auto'
           }));
           setItems(mappedItems);
         }
@@ -1088,8 +1094,15 @@ const QuoteCalculatorV2: React.FC = () => {
                             Customs Valuation Method
                           </Label>
                           <Badge variant="outline" className="text-xs">
-                            {item.valuation_preference === 'auto' ? 'Auto (Higher)' : 
-                             item.valuation_preference === 'minimum_valuation' ? 'Min Valuation' : 'Product Price'}
+                            {(() => {
+                              const pref = item.valuation_preference || 'auto';
+                              switch (pref) {
+                                case 'auto': return 'Auto (Higher)';
+                                case 'minimum_valuation': return 'Min Valuation';
+                                case 'product_price': return 'Product Price';
+                                default: return 'Auto (Higher)';
+                              }
+                            })()}
                           </Badge>
                         </div>
                         <select
@@ -1098,7 +1111,15 @@ const QuoteCalculatorV2: React.FC = () => {
                           value={item.valuation_preference || 'auto'}
                           onChange={(e) => {
                             const newValuation = e.target.value as 'auto' | 'product_price' | 'minimum_valuation';
-                            updateItem(item.id, 'valuation_preference', newValuation);
+                            console.log(`🔄 [Valuation] Switching from ${item.valuation_preference || 'auto'} to ${newValuation} for item ${item.id}`);
+                            
+                            // Direct state update to ensure React detects the change
+                            setItems(items.map(currentItem => 
+                              currentItem.id === item.id ? {
+                                ...currentItem,
+                                valuation_preference: newValuation
+                              } : currentItem
+                            ));
                           }}
                         >
                           <option value="auto">🤖 Auto (Higher)</option>

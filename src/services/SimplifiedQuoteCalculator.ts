@@ -356,6 +356,14 @@ class SimplifiedQuoteCalculator {
   }
 
   async calculate(input: CalculationInput): Promise<CalculationResult> {
+    
+    // Debug: Log items with valuation preferences
+    console.log('🔍 [Calculator] Starting calculation with items:', input.items.map(item => ({
+      name: item.name,
+      hsn_code: item.hsn_code,
+      valuation_preference: item.valuation_preference || 'auto',
+      unit_price_usd: item.unit_price_usd
+    })));
 
     // Step 1: Calculate items total with minimum valuation consideration and item-level discounts
     let itemsTotal = 0;
