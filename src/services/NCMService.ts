@@ -155,15 +155,55 @@ class NCMService {
   async getBranches(): Promise<NCMBranch[]> {
     try {
       const response = await this.fetchApi('/api/v1/branchlist');
+      console.log('🔍 [NCM] Raw API response:', response);
       
-      // Validate response is an array
-      if (!Array.isArray(response)) {
-        console.error('❌ [NCM] API response is not an array:', response);
+      let branchData: any[];
+      
+      // Handle different response formats
+      if (Array.isArray(response)) {
+        branchData = response;
+      } else if (response && response.data) {
+        // Handle case where data is wrapped in a data property
+        if (typeof response.data === 'string') {
+          // Parse JSON string
+          try {
+            branchData = JSON.parse(response.data);
+          } catch (parseError) {
+            console.error('❌ [NCM] Failed to parse data string:', parseError);
+            throw new Error('Invalid JSON in branch data');
+          }
+        } else if (Array.isArray(response.data)) {
+          branchData = response.data;
+        } else {
+          console.error('❌ [NCM] Unknown data format:', response);
+          throw new Error('Unexpected branch data format');
+        }
+      } else {
+        console.error('❌ [NCM] API response is not in expected format:', response);
         throw new Error('Invalid branch list response format');
       }
       
-      console.log(`✅ [NCM] Fetched ${response.length} branches from API`);
-      return response;
+      // Validate we have an array
+      if (!Array.isArray(branchData)) {
+        console.error('❌ [NCM] Parsed data is not an array:', branchData);
+        throw new Error('Branch data is not an array');
+      }
+      
+      // Transform raw branch data to our NCMBranch format
+      const branches: NCMBranch[] = branchData.map((branchArray: any[]) => {
+        // NCM API returns arrays like: ["WALING", "WLNG", null, "WALING MUNICIPALITY", ...]
+        // We need to map this to our NCMBranch interface
+        return {
+          name: branchArray[1] || branchArray[0], // Use code (index 1) or name (index 0)
+          phone: '015199684', // Default NCM phone
+          coveredAreas: [branchArray[3] || branchArray[0]], // Use municipality or name
+          district: branchArray[0] || 'Unknown',
+          region: 'Nepal'
+        };
+      });
+      
+      console.log(`✅ [NCM] Processed ${branches.length} branches from API`);
+      return branches;
       
     } catch (error) {
       console.error('❌ [NCM] Failed to fetch branches from API:', error);
