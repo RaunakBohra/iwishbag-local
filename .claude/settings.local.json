@@ -261,7 +261,9 @@
       "WebFetch(domain:help.delhivery.com)",
       "WebFetch(domain:sharma-ramesh-ib.medium.com)",
       "WebFetch(domain:one.delhivery.com)",
-      "Bash(for:*)"
+      "Bash(for:*)",
+      "WebFetch(domain:linear.app)",
+      "WebFetch(domain:ui.shadcn.com)"
     ],
     "deny": []
   }
