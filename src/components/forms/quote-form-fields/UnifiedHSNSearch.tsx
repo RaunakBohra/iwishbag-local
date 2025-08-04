@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Search,
   Hash,
@@ -50,6 +52,17 @@ interface UnifiedHSNSearchProps {
     weight?: number;
     suggestion: HSNSearchResult;
   }) => void;
+  // Additional props for consolidated controls
+  currentUseHSNRates?: boolean;
+  currentValuationPreference?: 'auto' | 'product_price' | 'minimum_valuation';
+  onHSNRateToggle?: (useHSNRates: boolean) => void;
+  onValuationChange?: (preference: 'auto' | 'product_price' | 'minimum_valuation') => void;
+  // For getting HSN info to show rates
+  getHSNInfo?: (hsnCode: string, countryCode: string) => {
+    description: string;
+    customsRate: number;
+    countryRate: number;
+  } | null;
 }
 
 export const UnifiedHSNSearch: React.FC<UnifiedHSNSearchProps> = ({
@@ -61,6 +74,11 @@ export const UnifiedHSNSearch: React.FC<UnifiedHSNSearchProps> = ({
   currentCategory: propCurrentCategory,
   currentHSN: propCurrentHSN,
   onSelection,
+  currentUseHSNRates,
+  currentValuationPreference,
+  onHSNRateToggle,
+  onValuationChange,
+  getHSNInfo,
 }) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,6 +260,72 @@ export const UnifiedHSNSearch: React.FC<UnifiedHSNSearchProps> = ({
                 <Button variant="ghost" size="sm" onClick={clearSelection}>
                   Clear
                 </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Consolidated HSN Controls - Show when HSN is selected */}
+      {(selectedResult || currentHSN) && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="space-y-3">
+              {/* HSN Rate Information */}
+              {getHSNInfo && (selectedResult?.classification_code || currentHSN) && (() => {
+                const hsnCode = selectedResult?.classification_code || currentHSN || '';
+                const hsnInfo = getHSNInfo(hsnCode, countryCode);
+                const savings = hsnInfo ? Math.max(0, hsnInfo.countryRate - hsnInfo.customsRate) : 0;
+                const isUsingHSN = currentUseHSNRates || false;
+                
+                return (
+                  <div className="flex items-center p-3 bg-white rounded border">
+                    <CheckCircle className="h-4 w-4 text-green-600 mr-3" />
+                    <div className="flex-1">
+                      <div className="font-medium text-green-800">
+                        {hsnCode} - {selectedResult?.category || currentCategory}
+                      </div>
+                      {hsnInfo && (
+                        <div className="text-sm text-green-600">
+                          HSN: {hsnInfo.customsRate}% • Default: {hsnInfo.countryRate}%
+                          {savings > 0 && ` • Saves ${savings}%`}
+                          {isUsingHSN ? (
+                            <span className="ml-2 text-green-700 font-medium">✅ Using HSN rate</span>
+                          ) : (
+                            <span className="ml-2 text-orange-600 font-medium">⚠️ Using default rate</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Compact Settings Row */}
+              <div className="flex items-center justify-between p-3 bg-white rounded border">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium text-green-700">Valuation:</Label>
+                  <select
+                    className="text-sm border rounded px-2 py-1 bg-white"
+                    value={currentValuationPreference || 'auto'}
+                    onChange={(e) => onValuationChange?.(e.target.value as 'auto' | 'product_price' | 'minimum_valuation')}
+                  >
+                    <option value="auto">🤖 Auto</option>
+                    <option value="product_price">💰 Product Price</option>
+                    <option value="minimum_valuation">🏛️ Min Valuation</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="hsn-toggle-compact" className="text-sm font-medium text-green-700">
+                    Use HSN Rate
+                  </Label>
+                  <Switch
+                    id="hsn-toggle-compact"
+                    checked={currentUseHSNRates || false}
+                    onCheckedChange={onHSNRateToggle}
+                  />
+                </div>
               </div>
             </div>
           </CardContent>

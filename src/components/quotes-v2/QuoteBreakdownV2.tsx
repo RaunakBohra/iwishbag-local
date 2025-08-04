@@ -145,272 +145,6 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
         </CardContent>
       </Card>
 
-      {/* Discount Summary */}
-      {((quote.discount_codes && quote.discount_codes.length > 0) || steps.total_savings > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Tag className="w-5 h-5 mr-2" />
-              Applied Discounts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Automatic Benefits */}
-            {steps.component_discounts && Object.keys(steps.component_discounts).length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Automatic Benefits
-                </h4>
-                <div className="space-y-2">
-                  {Object.entries(steps.component_discounts).map(([component, discountData]: [string, any]) => (
-                    discountData.applied_discounts?.filter((d: any) => d.source !== 'code').map((discount: any, index: number) => (
-                      <div key={`${component}-${index}`} className="flex justify-between items-center text-sm bg-blue-50 p-2 rounded border border-blue-200">
-                        <span className="text-blue-700">
-                          🎁 {discount.description || `${component} benefit`}
-                        </span>
-                        <span className="font-medium text-blue-800">-${discount.amount.toFixed(2)}</span>
-                      </div>
-                    ))
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Applied Discount Codes */}
-            {quote.discount_codes && quote.discount_codes.length > 0 && (
-              <div>
-                <h4 className="text-sm font-semibold text-green-800 mb-2 flex items-center">
-                  <Tag className="w-4 h-4 mr-1" />
-                  Discount Codes Applied
-                </h4>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {quote.discount_codes.map((code, index) => (
-                    <Badge key={index} variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                      <Check className="w-3 h-3 mr-1" />
-                      {code}
-                    </Badge>
-                  ))}
-                </div>
-                
-                {/* Code-based discount details */}
-                {steps.component_discounts && Object.keys(steps.component_discounts).length > 0 && (
-                  <div className="space-y-2">
-                    {Object.entries(steps.component_discounts).map(([component, discountData]: [string, any]) => (
-                      discountData.applied_discounts?.filter((d: any) => d.source === 'code').map((discount: any, index: number) => (
-                        <div key={`${component}-code-${index}`} className="flex justify-between items-center text-sm bg-green-50 p-2 rounded border border-green-200">
-                          <span className="text-green-700">
-                            💳 {discount.description || `${component} discount`}
-                          </span>
-                          <span className="font-medium text-green-800">-${discount.amount.toFixed(2)}</span>
-                        </div>
-                      ))
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Total Savings */}
-            {steps.total_savings > 0 && (
-              <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-gray-800">🎉 Your Total Savings:</span>
-                  <span className="font-bold text-green-600 text-lg">${steps.total_savings.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Weight Analysis */}
-      {steps.weight_analysis && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Package className="w-5 h-5 mr-2" />
-              Weight Analysis
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Summary */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Total Actual Weight</span>
-                    <p className="font-bold text-lg">{steps.weight_analysis.totals.total_actual_weight}kg</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Total Volumetric Weight</span>
-                    <p className="font-bold text-lg">{steps.weight_analysis.totals.total_volumetric_weight}kg</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Chargeable Weight</span>
-                    <p className="font-bold text-lg text-blue-600">{steps.weight_analysis.totals.total_chargeable_weight}kg</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Volumetric Items</span>
-                    <p className="font-bold text-lg">{steps.weight_analysis.totals.volumetric_items_count}/{steps.weight_analysis.items.length}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Per-item breakdown */}
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-800">Item-by-Item Analysis</h4>
-                {steps.weight_analysis.items.map((item: any, index: number) => (
-                  <div key={index} className={`p-3 rounded-lg border ${
-                    item.is_volumetric ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'
-                  }`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-medium text-sm">Item {index + 1}</span>
-                      {item.is_volumetric && (
-                        <Badge variant="outline" className="text-orange-600 border-orange-300">
-                          ⚠️ Volumetric Weight Applies
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                      <div>
-                        <span className="text-gray-600">Actual Weight</span>
-                        <p className="font-medium">{item.actual_weight}kg</p>
-                      </div>
-                      {item.volumetric_weight && (
-                        <div>
-                          <span className="text-gray-600">Volumetric Weight</span>
-                          <p className="font-medium">{item.volumetric_weight}kg</p>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-gray-600">Chargeable Weight</span>
-                        <p className={`font-bold ${
-                          item.is_volumetric ? 'text-orange-600' : 'text-green-600'
-                        }`}>
-                          {item.chargeable_weight}kg
-                        </p>
-                      </div>
-                      {item.dimensions && (
-                        <div>
-                          <span className="text-gray-600">Dimensions</span>
-                          <p className="font-medium">
-                            {item.dimensions.length}×{item.dimensions.width}×{item.dimensions.height} {item.dimensions.unit}
-                          </p>
-                          <p className="text-gray-500">Vol: {item.dimensions.volume_cm3.toLocaleString()} cm³</p>
-                          {item.divisor_used && (
-                            <p className="text-gray-500">Divisor: {item.divisor_used}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {steps.weight_analysis.totals.volumetric_items_count > 0 && (
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    💡 <strong>Shipping cost is calculated using chargeable weight</strong> ({steps.weight_analysis.totals.total_chargeable_weight}kg), 
-                    which is the higher of actual weight vs volumetric weight for each item.
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Applied Rates */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Info className="w-5 h-5 mr-2" />
-            Applied Rates & Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <h4 className="font-medium text-blue-900 mb-2">Tax Configuration for {taxInfo.country}</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Customs Rate:</span>
-                <p className="font-bold text-lg">
-                  {rates.customs_percentage}%
-                  {rates.hsn_applied && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      HSN Applied
-                    </Badge>
-                  )}
-                </p>
-              </div>
-              <div>
-                <span className="text-gray-600">{taxInfo.local_tax_name}:</span>
-                <p className="font-bold text-lg">{rates.local_tax_percentage}%</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <span className="text-gray-500">Exchange Rate</span>
-              <p className="font-medium">1 USD = {rates.exchange_rate} {quote.customer_currency}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Shipping Method</span>
-              <p className="font-medium capitalize">{inputs.shipping_method}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Shipping Rate</span>
-              <p className="font-medium">${rates.shipping_rate_per_kg}/kg</p>
-            </div>
-            {rates.insurance_percentage > 0 && (
-              <div>
-                <span className="text-gray-500">Insurance Rate</span>
-                <p className="font-medium">{rates.insurance_percentage}% of value</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Package className="w-5 h-5 mr-2" />
-            Items ({quote.items.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {quote.items.map((item, index) => (
-              <div key={item.id || index} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium">{item.name}</p>
-                  <div className="text-sm text-gray-500 mt-1">
-                    Qty: {item.quantity} × ${item.unit_price_usd} = ${(item.quantity * item.unit_price_usd).toFixed(2)}
-                  </div>
-                  {item.weight_kg && (
-                    <div className="text-sm text-gray-500">
-                      Weight: {item.weight_kg}kg each ({(item.quantity * item.weight_kg).toFixed(2)}kg total)
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            <div className="pt-3 border-t">
-              <div className="flex justify-between font-medium">
-                <span>Items Subtotal</span>
-                <span>${steps.items_subtotal.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Calculation Breakdown */}
       <Card>
         <CardHeader>
@@ -822,6 +556,194 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
           </div>
         </CardContent>
       </Card>
+
+      {/* Weight Analysis */}
+      {steps.weight_analysis && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Package className="w-5 h-5 mr-2" />
+              Weight Analysis
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Total Actual Weight</span>
+                    <p className="font-bold text-lg">{steps.weight_analysis.totals.total_actual_weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Total Volumetric Weight</span>
+                    <p className="font-bold text-lg">{steps.weight_analysis.totals.total_volumetric_weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Chargeable Weight</span>
+                    <p className="font-bold text-lg text-blue-600">{steps.weight_analysis.totals.total_chargeable_weight}kg</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Volumetric Items</span>
+                    <p className="font-bold text-lg">{steps.weight_analysis.totals.volumetric_items_count}/{steps.weight_analysis.items.length}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Per-item breakdown */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-800">Item-by-Item Analysis</h4>
+                {steps.weight_analysis.items.map((item: any, index: number) => (
+                  <div key={index} className={`p-3 rounded-lg border ${
+                    item.is_volumetric ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'
+                  }`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-medium text-sm">Item {index + 1}</span>
+                      {item.is_volumetric && (
+                        <Badge variant="outline" className="text-orange-600 border-orange-300">
+                          ⚠️ Volumetric Weight Applies
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-600">Actual Weight</span>
+                        <p className="font-medium">{item.actual_weight}kg</p>
+                      </div>
+                      {item.volumetric_weight && (
+                        <div>
+                          <span className="text-gray-600">Volumetric Weight</span>
+                          <p className="font-medium">{item.volumetric_weight}kg</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-600">Chargeable Weight</span>
+                        <p className={`font-bold ${
+                          item.is_volumetric ? 'text-orange-600' : 'text-green-600'
+                        }`}>
+                          {item.chargeable_weight}kg
+                        </p>
+                      </div>
+                      {item.dimensions && (
+                        <div>
+                          <span className="text-gray-600">Dimensions</span>
+                          <p className="font-medium">
+                            {item.dimensions.length}×{item.dimensions.width}×{item.dimensions.height} {item.dimensions.unit}
+                          </p>
+                          <p className="text-gray-500">Vol: {item.dimensions.volume_cm3.toLocaleString()} cm³</p>
+                          {item.divisor_used && (
+                            <p className="text-gray-500">Divisor: {item.divisor_used}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {steps.weight_analysis.totals.volumetric_items_count > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Shipping cost is calculated using chargeable weight</strong> ({steps.weight_analysis.totals.total_chargeable_weight}kg), 
+                    which is the higher of actual weight vs volumetric weight for each item.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Applied Rates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Info className="w-5 h-5 mr-2" />
+            Applied Rates & Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-blue-50 p-4 rounded-lg mb-4">
+            <h4 className="font-medium text-blue-900 mb-2">Tax Configuration for {taxInfo.country}</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Customs Rate:</span>
+                <p className="font-bold text-lg">
+                  {rates.customs_percentage}%
+                  {rates.hsn_applied && (
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      HSN Applied
+                    </Badge>
+                  )}
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-600">{taxInfo.local_tax_name}:</span>
+                <p className="font-bold text-lg">{rates.local_tax_percentage}%</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Exchange Rate</span>
+              <p className="font-medium">1 USD = {rates.exchange_rate} {quote.customer_currency}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Shipping Method</span>
+              <p className="font-medium capitalize">{inputs.shipping_method}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Shipping Rate</span>
+              <p className="font-medium">${rates.shipping_rate_per_kg}/kg</p>
+            </div>
+            {rates.insurance_percentage > 0 && (
+              <div>
+                <span className="text-gray-500">Insurance Rate</span>
+                <p className="font-medium">{rates.insurance_percentage}% of value</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Package className="w-5 h-5 mr-2" />
+            Items ({quote.items.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {quote.items.map((item, index) => (
+              <div key={item.id || index} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <p className="font-medium">{item.name}</p>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Qty: {item.quantity} × ${item.unit_price_usd} = ${(item.quantity * item.unit_price_usd).toFixed(2)}
+                  </div>
+                  {item.weight_kg && (
+                    <div className="text-sm text-gray-500">
+                      Weight: {item.weight_kg}kg each ({(item.quantity * item.weight_kg).toFixed(2)}kg total)
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            <div className="pt-3 border-t">
+              <div className="flex justify-between font-medium">
+                <span>Items Subtotal</span>
+                <span>${steps.items_subtotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 };

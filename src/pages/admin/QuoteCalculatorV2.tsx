@@ -1854,7 +1854,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* HSN Search Section */}
+                    {/* HSN Search Section with Consolidated Controls */}
                     {item.name && item.unit_price_usd > 0 && (
                       <UnifiedHSNSearch
                         control={null}
@@ -1871,125 +1871,16 @@ const QuoteCalculatorV2: React.FC = () => {
                         currentCategory={item.category}
                         currentHSN={item.hsn_code}
                         onSelection={(data) => handleHSNSelection(item.id, data)}
+                        // Consolidated controls props
+                        currentUseHSNRates={item.use_hsn_rates}
+                        currentValuationPreference={item.valuation_preference}
+                        onHSNRateToggle={(useHSNRates) => updateItem(item.id, 'use_hsn_rates', useHSNRates)}
+                        onValuationChange={(preference) => updateItem(item.id, 'valuation_preference', preference)}
+                        getHSNInfo={(hsnCode, countryCode) => simplifiedQuoteCalculator.getHSNInfo(hsnCode, countryCode)}
                       />
                     )}
 
-                    {/* HSN Rate Toggle - Show when HSN code is available */}
-                    {item.hsn_code && (
-                      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                        <h5 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          HSN Configuration
-                        </h5>
-                        <div className="space-y-4">
-                          {/* HSN Rate Toggle */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Label htmlFor={`hsn-toggle-${item.id}`} className="cursor-pointer font-medium text-green-700">
-                                Use HSN-specific customs rates
-                              </Label>
-                              <Badge variant="outline" className="text-xs bg-white">
-                                {item.use_hsn_rates ? 'HSN Rate' : 'Default Rate'}
-                              </Badge>
-                            </div>
-                            <Switch
-                              id={`hsn-toggle-${item.id}`}
-                              checked={item.use_hsn_rates || false}
-                              onCheckedChange={(checked) => updateItem(item.id, 'use_hsn_rates', checked)}
-                            />
-                          </div>
-                          
-                          {/* HSN Rate Information */}
-                          {item.hsn_code && (() => {
-                            const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
-                            return hsnInfo ? (
-                              <div className="text-xs mt-2 space-y-2 bg-white rounded p-3 border">
-                                <p className="text-green-700 font-medium">{hsnInfo.description}</p>
-                                <div className="flex items-center justify-between">
-                                  <span>HSN Rate: {hsnInfo.customsRate}%</span>
-                                  <span>Default Rate: {hsnInfo.countryRate}%</span>
-                                </div>
-                                {item.use_hsn_rates ? (
-                                  <p className="text-green-600 font-medium">
-                                    ✅ Using HSN rate: {hsnInfo.customsRate}%
-                                    {hsnInfo.customsRate < hsnInfo.countryRate && 
-                                      <span className="text-green-700"> (saves {hsnInfo.countryRate - hsnInfo.customsRate}%)</span>
-                                    }
-                                  </p>
-                                ) : (
-                                  <p className="text-orange-600 font-medium">
-                                    ⚠️ Using default rate: {hsnInfo.countryRate}%
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-xs text-gray-500 bg-white rounded p-3 border">
-                                HSN code not found - will use default country rate
-                              </p>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    )}
 
-                    {/* Advanced Options Section */}
-                    {(item.hsn_code || item.notes) && (
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <h5 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                          <Settings className="w-4 h-4" />
-                          Advanced Options
-                        </h5>
-                        <div className="space-y-4">
-                          {/* Customs Valuation Method */}
-                          {item.hsn_code && (
-                            <div>
-                              <div className="flex items-center justify-between mb-2">
-                                <Label className="text-sm font-medium text-blue-700">Customs Valuation Method</Label>
-                                <Badge variant="outline" className="text-xs bg-white">
-                                  {(() => {
-                                    const pref = item.valuation_preference || 'auto';
-                                    switch (pref) {
-                                      case 'auto': return '🤖 Auto (Higher)';
-                                      case 'minimum_valuation': return '🏛️ Min Valuation';
-                                      case 'product_price': return '💰 Product Price';
-                                      default: return '🤖 Auto (Higher)';
-                                    }
-                                  })()}
-                                </Badge>
-                              </div>
-                              <select
-                                className="w-full text-sm border rounded px-3 py-2 bg-white"
-                                value={item.valuation_preference || 'auto'}
-                                onChange={(e) => {
-                                  const newValuation = e.target.value as 'auto' | 'product_price' | 'minimum_valuation';
-                                  setItems(items.map(currentItem => 
-                                    currentItem.id === item.id ? {
-                                      ...currentItem,
-                                      valuation_preference: newValuation
-                                    } : currentItem
-                                  ));
-                                }}
-                              >
-                                <option value="auto">🤖 Auto (Higher) - Recommended</option>
-                                <option value="product_price">💰 Product Price - Force actual price</option>
-                                <option value="minimum_valuation">🏛️ Minimum Valuation - Force minimum</option>
-                              </select>
-                            </div>
-                          )}
-
-                          {/* Notes Section */}
-                          <div>
-                            <Label className="text-sm font-medium text-blue-700 mb-2 block">Item Notes</Label>
-                            <Input
-                              value={item.notes || ''}
-                              onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
-                              placeholder="Additional notes for this item..."
-                              className="text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Discount Section */}
                     <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
