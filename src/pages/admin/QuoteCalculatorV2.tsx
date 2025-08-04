@@ -744,14 +744,6 @@ const QuoteCalculatorV2: React.FC = () => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
-      // Generate share token if not exists (for new quotes or quotes without tokens)
-      let newShareToken = shareToken; // Use existing token
-      if (!isEditMode || !shareToken) {
-        const { data: tokenData } = await supabase.rpc('generate_quote_share_token');
-        newShareToken = tokenData;
-        setShareToken(newShareToken); // Update state
-      }
 
       // Prepare quote data
       const quoteData = {
@@ -776,10 +768,6 @@ const QuoteCalculatorV2: React.FC = () => {
         status: isEditMode ? 'calculated' : 'draft', // Update status when editing
         discount_codes: discountCodes.length > 0 ? discountCodes : null,
         calculated_at: new Date().toISOString(),
-        ...(newShareToken && { share_token: newShareToken }), // Add share token if generated
-        ...(isEditMode && currentQuoteStatus === 'calculated' && { 
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
-        })
       };
 
       let result;
@@ -997,8 +985,8 @@ const QuoteCalculatorV2: React.FC = () => {
                   <User className="h-3 w-3 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-medium text-blue-700 uppercase tracking-wide">Name</div>
-                  <div className="text-xs font-medium text-gray-900 truncate">
+                  <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Name</div>
+                  <div className="text-sm font-semibold text-gray-900 truncate">
                     {customerName || 'Not provided'}
                   </div>
                 </div>
@@ -1010,8 +998,8 @@ const QuoteCalculatorV2: React.FC = () => {
                   <Mail className="h-3 w-3 text-green-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Email</div>
-                  <div className="text-xs font-medium text-gray-900 truncate">
+                  <div className="text-xs font-medium text-green-700 uppercase tracking-wide">Email</div>
+                  <div className="text-sm font-semibold text-gray-900 truncate">
                     {customerEmail || 'Not provided'}
                   </div>
                 </div>
@@ -1023,8 +1011,8 @@ const QuoteCalculatorV2: React.FC = () => {
                   <Phone className="h-3 w-3 text-purple-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-medium text-purple-700 uppercase tracking-wide">Phone</div>
-                  <div className="text-xs font-medium text-gray-900 truncate">
+                  <div className="text-xs font-medium text-purple-700 uppercase tracking-wide">Phone</div>
+                  <div className="text-sm font-semibold text-gray-900 truncate">
                     {customerPhone || 'Not provided'}
                   </div>
                 </div>
@@ -1042,11 +1030,11 @@ const QuoteCalculatorV2: React.FC = () => {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-medium text-teal-700 uppercase tracking-wide">Address</div>
+                    <div className="text-xs font-medium text-teal-700 uppercase tracking-wide">Address</div>
                     {(() => {
                       const addressDisplay = getAddressDisplay(deliveryAddress, showAddressDetails);
                       return addressDisplay.isMultiline ? (
-                        <div className="text-xs font-medium text-gray-900">
+                        <div className="text-sm font-semibold text-gray-900">
                           {addressDisplay.lines?.map((line, index) => (
                             <div key={index} className="leading-tight">
                               {line}
@@ -1054,7 +1042,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-xs font-medium text-gray-900 truncate">
+                        <div className="text-sm font-semibold text-gray-900 truncate">
                           {addressDisplay.text}
                         </div>
                       );
@@ -2126,8 +2114,8 @@ const QuoteCalculatorV2: React.FC = () => {
                     {loading ? 'Saving...' : (isEditMode ? 'Update Quote' : 'Save Quote')}
                   </Button>
                   
-                  {/* Share Quote Button - Show when quote exists */}
-                  {quoteId && shareToken && (
+                  {/* Share Quote Button - Show when quote is saved */}
+                  {quoteId && (
                     <ShareQuoteButtonV2
                       quote={{
                         id: quoteId,
