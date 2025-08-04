@@ -207,7 +207,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -1076,6 +1076,74 @@ const QuoteCalculatorV2: React.FC = () => {
                         </span>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Nepal Customer Delivery Address - Only show for Nepal */}
+                {destinationCountry === 'NP' && (
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">
+                      Customer Delivery Address
+                      <span className="text-xs text-blue-600 ml-2">
+                        (Final delivery address for the customer)
+                      </span>
+                    </Label>
+                    
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <Label htmlFor="addressLine1" className="text-xs text-gray-600">Address Line 1 *</Label>
+                        <Input
+                          id="addressLine1"
+                          type="text"
+                          placeholder="Street address, house number"
+                          value={destinationAddress.line1}
+                          onChange={(e) => setDestinationAddress(prev => ({...prev, line1: e.target.value}))}
+                          className="text-sm"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="addressLine2" className="text-xs text-gray-600">Address Line 2</Label>
+                        <Input
+                          id="addressLine2"
+                          type="text"
+                          placeholder="Apartment, suite, landmark (optional)"
+                          value={destinationAddress.line2}
+                          onChange={(e) => setDestinationAddress(prev => ({...prev, line2: e.target.value}))}
+                          className="text-sm"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="addressCity" className="text-xs text-gray-600">City *</Label>
+                          <Input
+                            id="addressCity"
+                            type="text"
+                            placeholder="City name"
+                            value={destinationAddress.city}
+                            onChange={(e) => setDestinationAddress(prev => ({...prev, city: e.target.value}))}
+                            className="text-sm"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="addressState" className="text-xs text-gray-600">State/Province</Label>
+                          <Input
+                            id="addressState"
+                            type="text"
+                            placeholder="State or province"
+                            value={destinationAddress.state}
+                            onChange={(e) => setDestinationAddress(prev => ({...prev, state: e.target.value}))}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                      💡 <strong>Delivery Flow:</strong> US Warehouse → {selectedNCMBranch?.name || 'NCM Branch'} → Customer Address
+                    </div>
                   </div>
                 )}
 
