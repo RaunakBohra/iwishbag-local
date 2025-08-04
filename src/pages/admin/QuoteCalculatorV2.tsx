@@ -1075,410 +1075,295 @@ const QuoteCalculatorV2: React.FC = () => {
             </div>
           )}
 
-          {/* Route Info */}
+          {/* Route Info - Compact Professional Design */}
           <Card>
-            <CardHeader>
-              <CardTitle>Route & Shipping</CardTitle>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Route & Shipping</CardTitle>
+                <Badge variant="outline" className="text-xs">
+                  <Globe className="h-3 w-3 mr-1" />
+                  Configuration
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                {/* Origin Column */}
                 <div>
-                  <Label htmlFor="origin">Origin Country</Label>
-                  <Select value={originCountry} onValueChange={setOriginCountry}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="CN">China</SelectItem>
-                      <SelectItem value="GB">United Kingdom</SelectItem>
-                      <SelectItem value="JP">Japan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {originCountry === 'US' && (
-                  <div>
-                    <Label htmlFor="originState">Origin State (for sales tax)</Label>
-                    <Select value={originState} onValueChange={setOriginState}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select state" />
+                  <Label className="text-xs font-medium text-gray-600">Origin</Label>
+                  <div className="space-y-2">
+                    <Select value={originCountry} onValueChange={setOriginCountry}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No state tax</SelectItem>
-                        {simplifiedQuoteCalculator.getUSStates().map(state => (
-                          <SelectItem key={state.code} value={state.code}>
-                            {state.code} - {state.rate}% tax
+                        <SelectItem value="US">🇺🇸 US</SelectItem>
+                        <SelectItem value="CN">🇨🇳 China</SelectItem>
+                        <SelectItem value="GB">🇬🇧 UK</SelectItem>
+                        <SelectItem value="JP">🇯🇵 Japan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {originCountry === 'US' && (
+                      <Select value={originState} onValueChange={setOriginState}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="State" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No tax</SelectItem>
+                          {simplifiedQuoteCalculator.getUSStates().map(state => (
+                            <SelectItem key={state.code} value={state.code}>
+                              {state.code} - {state.rate}%
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                {/* Destination Column */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600">Destination</Label>
+                  <div className="space-y-2">
+                    <Select value={destinationCountry} onValueChange={setDestinationCountry}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="IN">🇮🇳 India</SelectItem>
+                        <SelectItem value="NP">🇳🇵 Nepal</SelectItem>
+                        <SelectItem value="US">🇺🇸 US</SelectItem>
+                        <SelectItem value="CA">🇨🇦 Canada</SelectItem>
+                        <SelectItem value="GB">🇬🇧 UK</SelectItem>
+                        <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Location/Service selector based on destination */}
+                    {destinationCountry === 'IN' && (
+                      <Input
+                        type="text"
+                        placeholder="Pincode (e.g., 400001)"
+                        value={destinationPincode}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          if (value.length <= 6) {
+                            setDestinationPincode(value);
+                          }
+                        }}
+                        className={`h-8 text-xs ${
+                          destinationPincode && !/^[1-9][0-9]{5}$/.test(destinationPincode) 
+                            ? 'border-orange-300' 
+                            : destinationPincode 
+                              ? 'border-green-300' 
+                              : ''
+                        }`}
+                      />
+                    )}
+                    
+                    {destinationCountry === 'NP' || (!destinationPincode && destinationCountry !== 'IN') ? (
+                      <Select value={destinationState} onValueChange={setDestinationState}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {simplifiedQuoteCalculator.getDeliveryTypes().map(type => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Shipping Column */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600">Shipping</Label>
+                  <div className="space-y-2">
+                    <Select value={shippingMethod} onValueChange={(value: any) => setShippingMethod(value)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {shippingMethods.map(method => (
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - ${method.rate}/kg
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
-                
-                <div>
-                  <Label htmlFor="destination">Destination Country</Label>
-                  <Select value={destinationCountry} onValueChange={setDestinationCountry}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IN">India</SelectItem>
-                      <SelectItem value="NP">Nepal</SelectItem>
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="CA">Canada</SelectItem>
-                      <SelectItem value="GB">United Kingdom</SelectItem>
-                      <SelectItem value="AU">Australia</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Indian Pincode Field - Only show for India */}
-                {destinationCountry === 'IN' && (
-                  <div>
-                    <Label htmlFor="destinationPincode">
-                      Delivery Pincode 
-                      <span className="text-xs text-blue-600 ml-2">
-                        (Required for accurate rates)
-                      </span>
-                    </Label>
-                    <Input
-                      id="destinationPincode"
-                      type="text"
-                      placeholder="e.g., 400001 (Mumbai), 110001 (Delhi)"
-                      value={destinationPincode}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, ''); // Only allow digits
-                        if (value.length <= 6) {
-                          setDestinationPincode(value);
-                        }
-                      }}
-                      className={`${
-                        destinationPincode && !/^[1-9][0-9]{5}$/.test(destinationPincode) 
-                          ? 'border-orange-300 focus:border-orange-500' 
-                          : destinationPincode 
-                            ? 'border-green-300 focus:border-green-500' 
-                            : ''
-                      }`}
-                    />
-                    {destinationPincode && (
-                      <div className="text-xs mt-1">
-                        {/^[1-9][0-9]{5}$/.test(destinationPincode) ? (
-                          <span className="text-green-600 flex items-center">
-                            <Check className="h-3 w-3 mr-1" />
-                            Valid pincode - Delhivery rates will be used
-                          </span>
-                        ) : (
-                          <span className="text-orange-600 flex items-center">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            {destinationPincode.length < 6 
-                              ? `Enter ${6 - destinationPincode.length} more digits` 
-                              : 'Invalid pincode format - will use fallback rates'
-                            }
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Nepal Branch Selector - Only show for Nepal */}
-                {destinationCountry === 'NP' && (
-                  <div>
-                    <Label htmlFor="ncmBranchSelector">
-                      Customer's Local NCM Branch 
-                      <span className="text-xs text-blue-600 ml-2">
-                        (Where NCM will deliver the package in Nepal)
-                      </span>
-                    </Label>
-                    <Select 
-                      value={selectedNCMBranch?.name || ''} 
-                      onValueChange={(branchName) => {
-                        const branch = availableNCMBranches.find(b => b.name === branchName);
-                        setSelectedNCMBranch(branch || null);
-                      }}
-                      disabled={loadingNCMBranches || availableNCMBranches.length === 0}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={
-                          loadingNCMBranches 
-                            ? "Loading branches..." 
-                            : availableNCMBranches.length === 0
-                              ? "No branches available"
-                              : "Select NCM branch"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableNCMBranches.length > 0 ? (
-                          availableNCMBranches.map((branch) => (
-                            <SelectItem key={branch.name} value={branch.name}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">
-                                  📍 {branch.name}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {branch.district} • {branch.region}
-                                  {branch.coveredAreas && ` • Covers: ${branch.coveredAreas.slice(0, 2).join(', ')}`}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))
-                        ) : loadingNCMBranches ? (
-                          <SelectItem value="loading" disabled>
-                            <div className="flex items-center">
-                              <Clock className="h-3 w-3 mr-2 animate-spin" />
-                              Loading branches...
-                            </div>
-                          </SelectItem>
-                        ) : (
-                          <SelectItem value="none" disabled>
-                            <div className="flex items-center text-gray-400">
-                              <AlertCircle className="h-3 w-3 mr-2" />
-                              No branches available
-                            </div>
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {selectedNCMBranch && (
-                      <div className="text-xs mt-1">
-                        <span className="text-green-600 flex items-center">
-                          <Check className="h-3 w-3 mr-1" />
-                          Selected: {selectedNCMBranch.name} ({selectedNCMBranch.district})
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-
-                {/* Delhivery Service Type - Only show for India with valid pincode */}
-                {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
-                  <div>
-                    <Label htmlFor="delhiveryServiceType">
-                      Delivery Service 
-                      {loadingServices && (
-                        <span className="text-xs text-orange-600 ml-2">
-                          (Checking availability...)
-                        </span>
-                      )}
-                      {!loadingServices && availableServices.length > 0 && (
-                        <span className="text-xs text-green-600 ml-2">
-                          ({availableServices.length} option{availableServices.length > 1 ? 's' : ''} available)
-                        </span>
-                      )}
-                      {!loadingServices && availableServices.length === 0 && (
-                        <span className="text-xs text-red-600 ml-2">
-                          (No services available)
-                        </span>
-                      )}
-                    </Label>
-                    <Select 
-                      value={delhiveryServiceType} 
-                      onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}
-                      disabled={loadingServices || availableServices.length === 0}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingServices ? "Loading services..." : "Select delivery service"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableServices.length > 0 ? (
-                          availableServices.map((service) => (
+                    
+                    {/* Show service type for India with valid pincode */}
+                    {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
+                      <Select 
+                        value={delhiveryServiceType} 
+                        onValueChange={(value: 'standard' | 'express' | 'same_day') => setDelhiveryServiceType(value)}
+                        disabled={loadingServices}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Service" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableServices.map((service) => (
                             <SelectItem key={service.value} value={service.value}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">
-                                  {service.value === 'standard' && '📦 '}
-                                  {service.value === 'express' && '⚡ '}
-                                  {service.value === 'same_day' && '🚀 '}
-                                  {service.label}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {service.description}
-                                  {!service.available && ' (API unavailable)'}
-                                </span>
-                              </div>
+                              {service.value === 'standard' && '📦 '}
+                              {service.value === 'express' && '⚡ '}
+                              {service.value === 'same_day' && '🚀 '}
+                              {service.label.replace('Standard', 'Std').replace('Express', 'Exp')}
                             </SelectItem>
-                          ))
-                        ) : !loadingServices ? (
-                          <SelectItem value="standard" disabled>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-gray-400">📦 Standard Delivery</span>
-                              <span className="text-xs text-gray-400">No services available for this pincode</span>
-                            </div>
-                          </SelectItem>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                    <div className="text-xs text-blue-600 mt-1">
-                      💡 Rates will update automatically based on your selection
-                    </div>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    
+                    {/* Show NCM service type for Nepal */}
+                    {destinationCountry === 'NP' && selectedNCMBranch && (
+                      <Select 
+                        value={ncmServiceType} 
+                        onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
+                        disabled={loadingNCMRates}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pickup">🚪 Door</SelectItem>
+                          <SelectItem value="collect">🏪 Pickup</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {/* NCM Service Type - Only show for Nepal with selected branch */}
-                {destinationCountry === 'NP' && selectedNCMBranch && (
-                  <div>
-                    <Label htmlFor="ncmServiceType">
-                      NCM Delivery Method
-                      <span className="text-xs text-blue-600 ml-2">
-                        {loadingNCMRates ? "(Loading rates...)" : "(Door delivery vs Branch pickup)"}
-                      </span>
-                    </Label>
-                    <Select 
-                      value={ncmServiceType} 
-                      onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
-                      disabled={loadingNCMRates}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={loadingNCMRates ? "Loading rates..." : "Choose delivery method"} />
+                {/* Payment Column */}
+                <div>
+                  <Label className="text-xs font-medium text-gray-600">Payment</Label>
+                  <div className="space-y-2">
+                    <Select value={paymentGateway} onValueChange={setPaymentGateway}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pickup">
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              🚪 Door Delivery
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Faster delivery (1-2 days) - NCM delivers directly to customer's door
-                              {ncmRates?.rates && (
-                                <span className="ml-2 font-semibold text-green-600">
-                                  ₨{ncmRates.rates.find((r: any) => r.service_type === 'pickup')?.rate || 'N/A'}
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="collect">
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              🏪 Branch Pickup
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              Lower cost (2-4 days) - Customer collects from selected NCM branch
-                              {ncmRates?.rates && (
-                                <span className="ml-2 font-semibold text-green-600">
-                                  ₨{ncmRates.rates.find((r: any) => r.service_type === 'collect')?.rate || 'N/A'}
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </SelectItem>
+                        {simplifiedQuoteCalculator.getPaymentGateways().map(gateway => (
+                          <SelectItem key={gateway.value} value={gateway.value}>
+                            {gateway.label} - {gateway.fees.percentage}%
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <div className="text-xs mt-1">
-                      {loadingNCMRates ? (
-                        <span className="text-blue-600 flex items-center">
-                          <Clock className="h-3 w-3 mr-1 animate-spin" />
-                          Loading NCM rates...
-                        </span>
-                      ) : ncmRates?.rates ? (
-                        <div>
-                          <span className="text-green-600 flex items-center">
-                            <Check className="h-3 w-3 mr-1" />
-                            Rates loaded • {ncmRates.markup_applied}% markup applied
-                          </span>
-                          {(() => {
-                            // Check if NCM API returns same rates for both services
-                            // Note: NCM demo API currently returns 149.00 NPR for all routes and both service types
-                            // This is expected behavior in the demo environment - production API may have different pricing
-                            const pickupRate = ncmRates.rates.find((r: any) => r.service_type === 'pickup')?.rate;
-                            const collectRate = ncmRates.rates.find((r: any) => r.service_type === 'collect')?.rate;
-                            if (pickupRate === collectRate) {
-                              return (
-                                <div className="text-amber-600 flex items-center mt-1">
-                                  <Info className="h-3 w-3 mr-1" />
-                                  NCM demo API: Both services currently show same rate (₨{pickupRate})
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                      ) : (
-                        <span className="text-blue-600">
-                          🏔️ Nepal delivery via NCM (Nepal Can Move)
-                        </span>
-                      )}
+                    <Select value={handlingFeeType} onValueChange={(value: any) => setHandlingFeeType(value)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Handling" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {simplifiedQuoteCalculator.getHandlingFeeOptions().map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label.replace('Both', 'Both ($10+2%)').replace('Fixed', 'Fixed $10').replace('Percentage', '2%')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center space-x-2">
+                      <Switch 
+                        id="insurance" 
+                        checked={insuranceRequired} 
+                        onCheckedChange={setInsuranceRequired}
+                        className="scale-75"
+                      />
+                      <Label htmlFor="insurance" className="text-xs">Insurance</Label>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* NCM Branch as full width when Nepal is selected */}
+              {destinationCountry === 'NP' && (
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs font-medium text-gray-600">
+                    NCM Branch 
+                    <span className="text-xs text-blue-600 ml-1">(Where NCM will deliver the package in Nepal)</span>
+                  </Label>
+                  <Select 
+                    value={selectedNCMBranch?.name || ''} 
+                    onValueChange={(branchName) => {
+                      const branch = availableNCMBranches.find(b => b.name === branchName);
+                      setSelectedNCMBranch(branch || null);
+                    }}
+                    disabled={loadingNCMBranches || availableNCMBranches.length === 0}
+                  >
+                    <SelectTrigger className="h-8 text-xs mt-1">
+                      <SelectValue placeholder={
+                        loadingNCMBranches 
+                          ? "Loading branches..." 
+                          : availableNCMBranches.length === 0
+                            ? "No branches available"
+                            : "Select NCM branch"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableNCMBranches.length > 0 ? (
+                        availableNCMBranches.map((branch) => (
+                          <SelectItem key={branch.name} value={branch.name}>
+                            📍 {branch.name} • {branch.district}
+                          </SelectItem>
+                        ))
+                      ) : loadingNCMBranches ? (
+                        <SelectItem value="loading" disabled>
+                          <Clock className="h-3 w-3 mr-2 animate-spin inline" />
+                          Loading branches...
+                        </SelectItem>
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          <AlertCircle className="h-3 w-3 mr-2 inline" />
+                          No branches available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {selectedNCMBranch && (
+                    <div className="text-xs mt-1 text-green-600 flex items-center">
+                      <Check className="h-3 w-3 mr-1" />
+                      Selected: {selectedNCMBranch.name} ({selectedNCMBranch.district})
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Status indicators for validation */}
+              <div className="flex flex-wrap gap-2 text-xs mt-3 pt-2 border-t">
+                {destinationCountry === 'IN' && destinationPincode && (
+                  <div className="flex items-center">
+                    {/^[1-9][0-9]{5}$/.test(destinationPincode) ? (
+                      <span className="text-green-600 flex items-center">
+                        <Check className="h-3 w-3 mr-1" />
+                        Pincode valid - Delhivery rates active
+                      </span>
+                    ) : (
+                      <span className="text-orange-600 flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {destinationPincode.length < 6 
+                          ? `Enter ${6 - destinationPincode.length} more digits` 
+                          : 'Invalid pincode - fallback rates'
+                        }
+                      </span>
+                    )}
+                  </div>
                 )}
-                
-                <div>
-                  <Label htmlFor="destinationLocation">Delivery Location</Label>
-                  <Select value={destinationState} onValueChange={setDestinationState}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {simplifiedQuoteCalculator.getDeliveryTypes().map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="shipping">Shipping Method</Label>
-                  <Select value={shippingMethod} onValueChange={(value: any) => setShippingMethod(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {shippingMethods.map(method => (
-                        <SelectItem key={method.value} value={method.value}>
-                          {method.label} - ${method.rate}/kg
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="handlingFee">Handling Fee Type</Label>
-                  <Select value={handlingFeeType} onValueChange={(value: any) => setHandlingFeeType(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {simplifiedQuoteCalculator.getHandlingFeeOptions().map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {destinationCountry === 'NP' && loadingNCMRates && (
+                  <span className="text-blue-600 flex items-center">
+                    <Clock className="h-3 w-3 mr-1 animate-spin" />
+                    Loading NCM rates...
+                  </span>
+                )}
+                {destinationCountry === 'NP' && ncmRates?.rates && (
+                  <span className="text-green-600 flex items-center">
+                    <Check className="h-3 w-3 mr-1" />
+                    NCM rates loaded • {ncmRates.markup_applied}% markup
+                  </span>
+                )}
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="paymentGateway">Payment Gateway</Label>
-                  <Select value={paymentGateway} onValueChange={setPaymentGateway}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {simplifiedQuoteCalculator.getPaymentGateways().map(gateway => (
-                        <SelectItem key={gateway.value} value={gateway.value}>
-                          {gateway.label} - {gateway.fees.percentage}% + ${gateway.fees.fixed}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-center space-x-2 pt-6">
-                  <Switch
-                    id="insurance"
-                    checked={insuranceRequired}
-                    onCheckedChange={setInsuranceRequired}
-                  />
-                  <Label htmlFor="insurance">Include Insurance (1% of value)</Label>
-                </div>
-              </div>
-              
             </CardContent>
           </Card>
 

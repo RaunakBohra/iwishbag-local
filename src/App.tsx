@@ -117,6 +117,7 @@ const QuoteV2Demo = React.lazy(() => import('@/components/demo/QuoteV2Demo').the
 const QuoteV2Integration = React.lazy(() => import('@/pages/demos/QuoteV2Integration'));
 const PublicQuoteView = React.lazy(() => import('@/pages/PublicQuoteView'));
 const TestSmartProductForm = React.lazy(() => import('@/pages/TestSmartProductForm'));
+const RouteShippingDesigns = React.lazy(() => import('@/pages/demo/RouteShippingDesigns'));
 // const ProfessionalProductTableVariants = React.lazy(() => import('@/demo/ProfessionalProductTableVariants' /* webpackChunkName: "demo-product-table" */));
 
 // Smart Intelligence Management pages
@@ -398,6 +399,10 @@ const router = createBrowserRouter([
       {
         path: 'test-smart-product-form',
         element: <TestSmartProductForm />,
+      },
+      {
+        path: 'demo/route-shipping-designs',
+        element: <RouteShippingDesigns />,
       },
       {
         path: 'quote/view/:token',
