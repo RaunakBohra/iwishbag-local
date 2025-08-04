@@ -70,6 +70,18 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   const finalTotalCustomer = steps.total_customer_currency || quote.total_customer_currency || 0;
   const customerCurrency = quote.customer_currency || 'USD';
 
+  // Validation: Check for impossible scenarios
+  const isImpossibleScenario = finalTotalUSD < itemsSubtotal && itemsSubtotal > 0;
+  if (isImpossibleScenario) {
+    console.error(`🚨 [VALIDATION ERROR] Total ($${finalTotalUSD.toFixed(2)}) is less than items cost ($${itemsSubtotal.toFixed(2)}) - this is impossible!`);
+    console.error(`🔍 [DEBUG] Quote ID: ${quote.id}, Items:`, quote.items.map(item => ({
+      name: item.name,
+      price: item.costprice_origin || item.unit_price_usd || 0,
+      quantity: item.quantity,
+      valuation_preference: item.valuation_preference
+    })));
+  }
+
   // Enhanced metrics for dashboard (6 cards in 2 rows)
   const keyMetrics = [
     // Row 1: Quote & Items Overview
@@ -124,9 +136,27 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
         <CardTitle className="flex items-center">
           <Info className="w-5 h-5 mr-2" />
           Quote Details & Analysis
+          {isImpossibleScenario && (
+            <Badge variant="destructive" className="ml-2">
+              ⚠️ Calculation Error
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Warning for impossible scenarios */}
+        {isImpossibleScenario && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <Info className="w-4 h-4" />
+              <span className="font-semibold">Calculation Error Detected</span>
+            </div>
+            <p className="text-sm text-red-700 mt-1">
+              Total amount (${finalTotalUSD.toFixed(2)}) is less than items cost (${itemsSubtotal.toFixed(2)}). 
+              This indicates a calculation bug that needs to be fixed.
+            </p>
+          </div>
+        )}
         {/* Enhanced Metrics Dashboard - 6 Cards in 2 Rows */}
         <div className="space-y-4">
           {/* Row 1: Quote & Items Overview */}

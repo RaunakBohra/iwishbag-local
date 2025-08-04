@@ -556,14 +556,20 @@ class SimplifiedQuoteCalculator {
       : 0;
 
     // Step 7: Calculate CIF (Cost + Insurance + Freight) 
-    // For customs calculation: use customs valuation (which may include minimum valuations)
-    const finalCustomsValuation = customsValuationTotal - totalItemDiscounts - orderDiscountAmount;
-    const cifValue = finalCustomsValuation + originSalesTax + insuranceAmount + finalShippingCost;
+    // CRITICAL FIX: Separate customer billing base from customs calculation base
     
-    console.log(`📦 [CIF Calculation] Customs Valuation: $${finalCustomsValuation.toFixed(2)} (vs Product Price: $${finalItemsSubtotal.toFixed(2)})`);
-    console.log(`📦 [CIF Components] Items: $${finalCustomsValuation.toFixed(2)} + Tax: $${originSalesTax.toFixed(2)} + Insurance: $${insuranceAmount.toFixed(2)} + Shipping: $${finalShippingCost.toFixed(2)} = CIF: $${cifValue.toFixed(2)}`);
+    // For customer billing: always use actual product prices
+    const customerBillingBase = finalItemsSubtotal + originSalesTax + insuranceAmount + finalShippingCost;
+    
+    // For customs calculation only: use customs valuation (which may include minimum valuations)
+    const finalCustomsValuation = customsValuationTotal - totalItemDiscounts - orderDiscountAmount;
+    const cifValueForCustoms = finalCustomsValuation + originSalesTax + insuranceAmount + finalShippingCost;
+    
+    console.log(`🚨 [FIXED] Customer Billing Base: $${customerBillingBase.toFixed(2)} (using actual product prices: $${finalItemsSubtotal.toFixed(2)})`);
+    console.log(`📦 [CIF for Customs] Customs Valuation: $${finalCustomsValuation.toFixed(2)} (may use minimum valuations)`);
+    console.log(`📦 [CIF Components] Customs Items: $${finalCustomsValuation.toFixed(2)} + Tax: $${originSalesTax.toFixed(2)} + Insurance: $${insuranceAmount.toFixed(2)} + Shipping: $${finalShippingCost.toFixed(2)} = CIF: $${cifValueForCustoms.toFixed(2)}`);
 
-    // Step 8: Calculate customs duty on CIF
+    // Step 8: Calculate customs duty on CIF (use customs-specific CIF)
     // Check if any items use HSN rates
     const itemsWithHSN = input.items.filter(item => item.use_hsn_rates && item.hsn_code);
     let effectiveCustomsRate = countryConfig.customs;
@@ -584,7 +590,7 @@ class SimplifiedQuoteCalculator {
       effectiveCustomsRate = totalValue > 0 ? weightedRateSum / totalValue : countryConfig.customs;
     }
     
-    const customsDuty = cifValue * (effectiveCustomsRate / 100);
+    const customsDuty = cifValueForCustoms * (effectiveCustomsRate / 100);
 
     // Step 9: Apply component-based discounts if enabled
     let componentDiscounts: { [key: string]: any } = {};
@@ -885,7 +891,8 @@ class SimplifiedQuoteCalculator {
     }
 
     // Step 12: Calculate taxable value (all costs before local tax)
-    const taxableValue = cifValue + discountedCustomsDuty + discountedHandlingFee + discountedDelivery;
+    // CRITICAL FIX: Use customer billing base, not customs CIF value
+    const taxableValue = customerBillingBase + discountedCustomsDuty + discountedHandlingFee + discountedDelivery;
 
     // Step 11: Calculate local tax (GST/VAT) on taxable value
     let localTaxRate = countryConfig.local_tax;
@@ -974,7 +981,7 @@ class SimplifiedQuoteCalculator {
         shipping_discount_amount: this.round(shippingDiscountAmount),
         discounted_shipping_cost: this.round(finalShippingCost),
         insurance_amount: this.round(insuranceAmount),
-        cif_value: this.round(cifValue),
+        cif_value: this.round(cifValueForCustoms),
         customs_duty: this.round(customsDuty),
         customs_discount_amount: this.round(customsDiscountAmount),
         discounted_customs_duty: this.round(discountedCustomsDuty),
