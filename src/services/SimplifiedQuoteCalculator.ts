@@ -569,6 +569,16 @@ class SimplifiedQuoteCalculator {
     console.log(`📦 [CIF for Customs] Customs Valuation: $${finalCustomsValuation.toFixed(2)} (may use minimum valuations)`);
     console.log(`📦 [CIF Components] Customs Items: $${finalCustomsValuation.toFixed(2)} + Tax: $${originSalesTax.toFixed(2)} + Insurance: $${insuranceAmount.toFixed(2)} + Shipping: $${finalShippingCost.toFixed(2)} = CIF: $${cifValueForCustoms.toFixed(2)}`);
 
+    // Debug: Log detailed valuation analysis for minimum valuation items
+    const minimumValuationItems = valuationAnalysis.filter(item => item.minimum_valuation !== null);
+    if (minimumValuationItems.length > 0) {
+      console.log(`🔍 [VALUATION DEBUG] Found ${minimumValuationItems.length} items with minimum valuations:`);
+      minimumValuationItems.forEach(item => {
+        console.log(`  - ${item.item_name}: Product $${item.product_price.toFixed(2)} vs Min $${(item.minimum_valuation || 0).toFixed(2)} → Using $${item.effective_value.toFixed(2)} (${item.method_used})`);
+      });
+      console.log(`💰 [BILLING IMPACT] Customer pays based on product prices ($${finalItemsSubtotal.toFixed(2)}), customs calculated on valuation ($${finalCustomsValuation.toFixed(2)})`);
+    }
+
     // Step 8: Calculate customs duty on CIF (use customs-specific CIF)
     // Check if any items use HSN rates
     const itemsWithHSN = input.items.filter(item => item.use_hsn_rates && item.hsn_code);
