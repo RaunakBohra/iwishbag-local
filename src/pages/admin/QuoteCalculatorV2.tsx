@@ -57,6 +57,7 @@ import { toast } from '@/hooks/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import { currencyService } from '@/services/CurrencyService';
 import { QuoteBreakdownV2 } from '@/components/quotes-v2/QuoteBreakdownV2';
+import { QuoteDetailsAnalysis } from '@/components/quotes-v2/QuoteDetailsAnalysis';
 import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
 import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
@@ -2257,6 +2258,28 @@ const QuoteCalculatorV2: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Quote Details & Analysis - Positioned directly below buttons */}
+          {calculationResult && showPreview && calculationResult.calculation_steps && (
+            <QuoteDetailsAnalysis 
+              quote={{
+                id: 'temp-' + Date.now(),
+                quote_number: 'PREVIEW',
+                status: 'draft',
+                customer_email: customerEmail || 'preview@example.com',
+                customer_name: customerName,
+                origin_country: originCountry,
+                destination_country: destinationCountry,
+                items: items.filter(item => item.name && item.unit_price_usd > 0),
+                calculation_data: calculationResult,
+                total_usd: calculationResult.calculation_steps.total_usd || 0,
+                total_customer_currency: calculationResult.calculation_steps.total_customer_currency || 0,
+                customer_currency: customerCurrency,
+                created_at: new Date().toISOString(),
+                calculated_at: calculationResult.calculation_timestamp
+              }}
+            />
+          )}
 
           {/* Calculation Result */}
           {calculationResult && calculationResult.calculation_steps && (
