@@ -63,6 +63,8 @@ import React from 'react';
 const menuGroups = [
   {
     title: 'Dashboard',
+    categoryIcon: LayoutDashboard,
+    primaryUrl: '/admin',
     items: [
       {
         title: 'Overview',
@@ -73,6 +75,8 @@ const menuGroups = [
   },
   {
     title: 'Orders & Quotes',
+    categoryIcon: FileText,
+    primaryUrl: '/admin/quotes',
     items: [
       {
         title: 'All Quotes',
@@ -88,6 +92,8 @@ const menuGroups = [
   },
   {
     title: 'Customers',
+    categoryIcon: UserCheck,
+    primaryUrl: '/admin/customers',
     items: [
       {
         title: 'All Customers',
@@ -118,6 +124,8 @@ const menuGroups = [
   },
   {
     title: 'Operations',
+    categoryIcon: Zap,
+    primaryUrl: '/admin/returns',
     items: [
       {
         title: 'Returns Management',
@@ -153,6 +161,8 @@ const menuGroups = [
   },
   {
     title: 'Intelligence',
+    categoryIcon: Brain,
+    primaryUrl: '/admin/smart-intelligence',
     items: [
       {
         title: 'AI Dashboard',
@@ -183,6 +193,8 @@ const menuGroups = [
   },
   {
     title: 'System Settings',
+    categoryIcon: Settings,
+    primaryUrl: '/admin/countries',
     items: [
       {
         title: 'Countries & Regions',
@@ -360,34 +372,35 @@ export const AdminSidebar = () => {
                   // Multiple items - different behavior for collapsed vs expanded
                   <>
                     {isCollapsed ? (
-                      // In collapsed state, show all items as individual icons
-                      group.items.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <SidebarMenuButton asChild>
-                                <NavLink
-                                  to={item.url}
-                                  className={({ isActive }) =>
-                                    `flex items-center justify-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
-                                      isActive ? 'bg-accent text-accent-foreground font-medium' : ''
-                                    }`
-                                  }
-                                >
-                                  <div className="flex items-center justify-center w-full">
-                                    {React.createElement(item.icon, {
-                                      className: 'h-4 w-4 shrink-0',
-                                    })}
-                                  </div>
-                                </NavLink>
-                              </SidebarMenuButton>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">
-                              <p>{item.title}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </SidebarMenuItem>
-                      ))
+                      // In collapsed state, show only ONE category icon representing the whole group
+                      <SidebarMenuItem key={group.title}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <SidebarMenuButton asChild>
+                              <NavLink
+                                to={(group as any).primaryUrl}
+                                className={({ isActive }) =>
+                                  `flex items-center justify-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
+                                    isActive ? 'bg-accent text-accent-foreground font-medium' : ''
+                                  }`
+                                }
+                              >
+                                <div className="flex items-center justify-center w-full">
+                                  {React.createElement((group as any).categoryIcon, {
+                                    className: 'h-4 w-4 shrink-0',
+                                  })}
+                                </div>
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            <p>{group.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {group.items.length} items
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </SidebarMenuItem>
                     ) : (
                       // In expanded state, use collapsible groups
                       <Collapsible
