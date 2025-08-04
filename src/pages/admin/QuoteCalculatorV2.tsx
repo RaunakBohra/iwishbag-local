@@ -141,21 +141,27 @@ const QuoteCalculatorV2: React.FC = () => {
     return countryMap[code] || code;
   };
 
-  // Format address for inline display
+  // Format address for display
   const getAddressDisplay = (address: any, showDetails: boolean) => {
-    if (!address) return 'Not provided';
+    if (!address) return { text: 'Not provided', isMultiline: false };
     
     if (showDetails) {
-      // Show full address inline
-      const parts = [
-        address.address_line1,
-        address.address_line2,
-        address.city
-      ].filter(Boolean);
-      return parts.join(', ');
+      // Show full address with all details
+      return {
+        lines: [
+          address.address_line1,
+          address.address_line2,
+          `${address.city}, ${address.state_province_region} ${address.postal_code}`,
+          getCountryName(address.destination_country)
+        ].filter(Boolean),
+        isMultiline: true
+      };
     } else {
       // Show city, country summary
-      return `${address.city}, ${getCountryName(address.destination_country)}`;
+      return {
+        text: `${address.city}, ${getCountryName(address.destination_country)}`,
+        isMultiline: false
+      };
     }
   };
 
@@ -996,9 +1002,22 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] font-medium text-teal-700 uppercase tracking-wide">Address</div>
-                    <div className="text-xs font-medium text-gray-900 truncate">
-                      {getAddressDisplay(deliveryAddress, showAddressDetails)}
-                    </div>
+                    {(() => {
+                      const addressDisplay = getAddressDisplay(deliveryAddress, showAddressDetails);
+                      return addressDisplay.isMultiline ? (
+                        <div className="text-xs font-medium text-gray-900">
+                          {addressDisplay.lines?.map((line, index) => (
+                            <div key={index} className="leading-tight">
+                              {line}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs font-medium text-gray-900 truncate">
+                          {addressDisplay.text}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button
                     onClick={() => setShowAddressDetails(!showAddressDetails)}
