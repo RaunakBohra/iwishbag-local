@@ -6,7 +6,7 @@
 
 import { supabase } from '../integrations/supabase/client';
 import NCMService, { NCMOrderDetails, NCMOrderStatus, NCMOrderComment } from './NCMService';
-import { TrackingService } from './TrackingService';
+import { trackingService } from './TrackingService';
 
 export interface NCMTrackingData {
   ncm_order_id: number;
@@ -67,7 +67,7 @@ class NCMOrderTrackingService {
 
   private constructor() {
     this.ncmService = NCMService.getInstance();
-    this.trackingService = TrackingService.getInstance();
+    this.trackingService = trackingService;
   }
 
   static getInstance(): NCMOrderTrackingService {
