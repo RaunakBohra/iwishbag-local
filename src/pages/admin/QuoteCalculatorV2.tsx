@@ -48,6 +48,7 @@ import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
 import NCMService from '@/services/NCMService';
+import { EditableUrlInput } from '@/components/EditableUrlInput';
 import { ncmBranchMappingService } from '@/services/NCMBranchMappingService';
 import { productIntelligenceService } from '@/services/ProductIntelligenceService';
 import { volumetricWeightService } from '@/services/VolumetricWeightService';
@@ -1687,44 +1688,32 @@ const QuoteCalculatorV2: React.FC = () => {
                   <CardContent className="space-y-6">
                     {/* Product Information Section */}
                     <div className="space-y-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <Package className="w-4 h-4 text-gray-500" />
-                          <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
-                        </div>
-                        <Input
-                          value={item.name}
-                          onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                          placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
-                          className="text-base"
-                        />
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                      {/* Product URL and Name - Inline */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
                             <ExternalLink className="w-4 h-4 text-gray-500" />
                             <Label className="text-sm font-medium text-gray-700">Product URL</Label>
                           </div>
-                          {item.url && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
-                              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
-                            >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              Open
-                            </Button>
-                          )}
+                          <EditableUrlInput
+                            value={item.url}
+                            onChange={(value) => updateItem(item.id, 'url', value)}
+                            placeholder="https://www.amazon.com/product-link or any international store"
+                          />
                         </div>
-                        <Input
-                          value={item.url}
-                          onChange={(e) => updateItem(item.id, 'url', e.target.value)}
-                          placeholder="https://www.amazon.com/product-link or any international store"
-                          className="text-sm"
-                        />
+                        
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Package className="w-4 h-4 text-gray-500" />
+                            <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
+                          </div>
+                          <Input
+                            value={item.name}
+                            onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                            placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
+                            className="text-base"
+                          />
+                        </div>
                       </div>
                     </div>
 
