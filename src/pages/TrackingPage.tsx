@@ -24,6 +24,9 @@ import {
   User,
   Mail,
   Phone,
+  RefreshCw,
+  Building,
+  Route,
 } from 'lucide-react';
 import { trackingService } from '@/services/TrackingService';
 import type { UnifiedQuote } from '@/types/unified-quote';
@@ -32,8 +35,9 @@ export const TrackingPage: React.FC = () => {
   const { trackingId } = useParams<{ trackingId: string }>();
   const navigate = useNavigate();
 
-  const [quote, setQuote] = useState<UnifiedQuote | null>(null);
+  const [trackingData, setTrackingData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchId, setSearchId] = useState(trackingId || '');
 
@@ -46,15 +50,19 @@ export const TrackingPage: React.FC = () => {
     }
   }, [trackingId]);
 
-  const fetchTrackingInfo = async (id: string) => {
-    setLoading(true);
+  const fetchTrackingInfo = async (id: string, isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
 
     try {
       const trackingInfo = await trackingService.getTrackingInfo(id);
 
       if (trackingInfo) {
-        setQuote(trackingInfo);
+        setTrackingData(trackingInfo);
       } else {
         setError('Tracking information not found. Please check your tracking ID and try again.');
       }
@@ -63,6 +71,13 @@ export const TrackingPage: React.FC = () => {
       setError('Unable to load tracking information. Please try again later.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    if (trackingId && !refreshing) {
+      fetchTrackingInfo(trackingId, true);
     }
   };
 
@@ -72,17 +87,20 @@ export const TrackingPage: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: string | null) => {
+  const getStatusIcon = (status: string | null, isNCMOrder = false) => {
     switch (status) {
       case 'pending':
         return <Clock className="w-5 h-5 text-gray-500" />;
       case 'preparing':
         return <Package className="w-5 h-5 text-blue-500" />;
       case 'shipped':
+      case 'in_transit':
         return <Truck className="w-5 h-5 text-green-500" />;
       case 'delivered':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'exception':
+      case 'returned':
+      case 'cancelled':
         return <AlertCircle className="w-5 h-5 text-red-500" />;
       default:
         return <Clock className="w-5 h-5 text-gray-400" />;
@@ -96,11 +114,14 @@ export const TrackingPage: React.FC = () => {
       case 'preparing':
         return 25;
       case 'shipped':
+      case 'in_transit':
         return 75;
       case 'delivered':
         return 100;
       case 'exception':
-        return 50;
+      case 'returned':
+      case 'cancelled':
+        return 0;
       default:
         return 0;
     }
@@ -177,6 +198,12 @@ export const TrackingPage: React.FC = () => {
                 <Search className="w-4 h-4 mr-2" />
                 Track
               </Button>
+              {trackingData && (
+                <Button onClick={handleRefresh} size="lg" variant="outline" disabled={refreshing}>
+                  <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -196,7 +223,7 @@ export const TrackingPage: React.FC = () => {
         )}
 
         {/* Tracking Information */}
-        {quote && (
+        {trackingData && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Tracking Info */}
             <div className="lg:col-span-2 space-y-6">
@@ -209,10 +236,16 @@ export const TrackingPage: React.FC = () => {
                       <span>Order Status</span>
                     </div>
                     <Badge
-                      variant={trackingService.getStatusBadgeVariant(quote?.tracking_status)}
+                      variant={trackingService.getStatusBadgeVariant(
+                        trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status,
+                        trackingData?.is_ncm_order
+                      )}
                       className="text-sm"
                     >
-                      {trackingService.getStatusDisplayText(quote?.tracking_status)}
+                      {trackingService.getStatusDisplayText(
+                        trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status,
+                        trackingData?.is_ncm_order
+                      )}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
@@ -223,34 +256,41 @@ export const TrackingPage: React.FC = () => {
                       <div>
                         <p className="text-sm text-blue-600 font-medium">iwishBag Tracking ID</p>
                         <p className="text-xl font-bold text-blue-800 font-mono">
-                          {quote?.iwish_tracking_id}
+                          {trackingData?.is_ncm_order ? trackingData?.tracking_id : trackingData?.iwish_tracking_id}
                         </p>
                       </div>
-                      {getStatusIcon(quote?.tracking_status)}
+                      {getStatusIcon(
+                        trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status,
+                        trackingData?.is_ncm_order
+                      )}
                     </div>
 
                     {/* Progress Bar */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Order Progress</span>
-                        <span>{getProgressPercentage(quote?.tracking_status)}%</span>
+                        <span>{getProgressPercentage(
+                          trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status
+                        )}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${getProgressPercentage(quote?.tracking_status)}%` }}
+                          style={{ width: `${getProgressPercentage(
+                            trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status
+                          )}%` }}
                         ></div>
                       </div>
                     </div>
 
                     {/* Estimated Delivery */}
-                    {quote?.estimated_delivery_date && (
+                    {(trackingData?.estimated_delivery_date || trackingData?.estimated_delivery) && (
                       <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                         <Calendar className="w-5 h-5 text-gray-500" />
                         <div>
                           <p className="text-sm text-gray-600">Estimated Delivery</p>
                           <p className="font-semibold text-gray-900">
-                            {new Date(quote?.estimated_delivery_date || '').toLocaleDateString(
+                            {new Date(trackingData?.estimated_delivery_date || trackingData?.estimated_delivery || '').toLocaleDateString(
                               'en-US',
                               {
                                 weekday: 'long',
@@ -267,8 +307,108 @@ export const TrackingPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Carrier Tracking */}
-              {quote?.shipping_carrier && quote?.tracking_number && (
+              {/* NCM Carrier Information */}
+              {trackingData?.is_ncm_order && trackingData?.delivery_info && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Truck className="w-5 h-5 text-green-600" />
+                      <span>NCM Delivery Information</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-600">Service Type</p>
+                          <p className="font-semibold text-gray-900">{trackingData?.delivery_info?.service_type}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">COD Amount</p>
+                          <p className="font-mono text-gray-900">
+                            {trackingData?.delivery_info?.cod_amount ? `NPR ${trackingData?.delivery_info?.cod_amount}` : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            <Building className="w-4 h-4 inline mr-1" />
+                            Pickup Branch
+                          </p>
+                          <p className="font-semibold text-gray-900">{trackingData?.delivery_info?.pickup_branch}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            <MapPin className="w-4 h-4 inline mr-1" />
+                            Destination Branch
+                          </p>
+                          <p className="font-semibold text-gray-900">{trackingData?.delivery_info?.destination_branch}</p>
+                        </div>
+                      </div>
+
+                      <Button asChild variant="outline" className="w-full">
+                        <a
+                          href="https://demo.nepalcanmove.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Track on NCM Website
+                        </a>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* NCM Timeline */}
+              {trackingData?.is_ncm_order && trackingData?.timeline && trackingData.timeline.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Route className="w-5 h-5 text-blue-600" />
+                      <span>Delivery Timeline</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {trackingData.timeline.map((event: any, index: number) => (
+                        <div key={index} className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-b-0">
+                          <div className="flex-shrink-0 mt-1">
+                            {getStatusIcon(event.status, true)}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{event.display}</p>
+                            <p className="text-sm text-gray-600">
+                              {new Date(event.timestamp).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                            {event.location && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                <MapPin className="w-3 h-3 inline mr-1" />
+                                {event.location}
+                              </p>
+                            )}
+                            {event.remarks && (
+                              <p className="text-xs text-gray-600 mt-1">{event.remarks}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Regular Carrier Tracking */}
+              {!trackingData?.is_ncm_order && trackingData?.shipping_carrier && trackingData?.tracking_number && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -281,28 +421,28 @@ export const TrackingPage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-600">Shipping Carrier</p>
-                          <p className="font-semibold text-gray-900">{quote?.shipping_carrier}</p>
+                          <p className="font-semibold text-gray-900">{trackingData?.shipping_carrier}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Carrier Tracking Number</p>
-                          <p className="font-mono text-gray-900">{quote?.tracking_number}</p>
+                          <p className="font-mono text-gray-900">{trackingData?.tracking_number}</p>
                         </div>
                       </div>
 
-                      {getCarrierTrackingLink(quote?.shipping_carrier, quote?.tracking_number) && (
+                      {getCarrierTrackingLink(trackingData?.shipping_carrier, trackingData?.tracking_number) && (
                         <Button asChild variant="outline" className="w-full">
                           <a
                             href={
                               getCarrierTrackingLink(
-                                quote?.shipping_carrier,
-                                quote?.tracking_number,
+                                trackingData?.shipping_carrier,
+                                trackingData?.tracking_number,
                               )!
                             }
                             target="_blank"
                             rel="noopener noreferrer"
                           >
                             <ExternalLink className="w-4 h-4 mr-2" />
-                            Track on {quote?.shipping_carrier} Website
+                            Track on {trackingData?.shipping_carrier} Website
                           </a>
                         </Button>
                       )}
@@ -311,14 +451,15 @@ export const TrackingPage: React.FC = () => {
                 </Card>
               )}
 
-              {/* Order Items */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {quote?.items?.map((item, index) => (
+              {/* Order Items - Only show for regular orders */}
+              {!trackingData?.is_ncm_order && trackingData?.items && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Order Items</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {trackingData?.items?.map((item: any, index: number) => (
                       <div
                         key={item.id || index}
                         className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
@@ -350,16 +491,17 @@ export const TrackingPage: React.FC = () => {
                           <p className="text-sm text-gray-600">{item.weight_kg}kg</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
               {/* Customer Information */}
-              {quote?.customer_data?.info?.name && (
+              {(trackingData?.customer_data?.info?.name || trackingData?.contact_info) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
@@ -368,27 +510,48 @@ export const TrackingPage: React.FC = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-600">Name</p>
-                      <p className="font-medium">{quote?.customer_data?.info?.name}</p>
-                    </div>
-                    {quote?.customer_data?.info?.email && (
+                    {trackingData?.customer_data?.info?.name && (
+                      <div>
+                        <p className="text-sm text-gray-600">Name</p>
+                        <p className="font-medium">{trackingData?.customer_data?.info?.name}</p>
+                      </div>
+                    )}
+                    {trackingData?.customer_data?.info?.email && (
                       <div>
                         <p className="text-sm text-gray-600">Email</p>
                         <p className="font-medium flex items-center">
                           <Mail className="w-4 h-4 mr-1 text-gray-500" />
-                          {quote?.customer_data?.info?.email}
+                          {trackingData?.customer_data?.info?.email}
                         </p>
                       </div>
                     )}
-                    {quote?.customer_data?.info?.phone && (
+                    {trackingData?.customer_data?.info?.phone && (
                       <div>
                         <p className="text-sm text-gray-600">Phone</p>
                         <p className="font-medium flex items-center">
                           <Phone className="w-4 h-4 mr-1 text-gray-500" />
-                          {quote?.customer_data?.info?.phone}
+                          {trackingData?.customer_data?.info?.phone}
                         </p>
                       </div>
+                    )}
+                    {/* NCM Contact Info */}
+                    {trackingData?.is_ncm_order && trackingData?.contact_info && (
+                      <>
+                        <div>
+                          <p className="text-sm text-gray-600">NCM Support Phone</p>
+                          <p className="font-medium flex items-center">
+                            <Phone className="w-4 h-4 mr-1 text-gray-500" />
+                            {trackingData?.contact_info?.ncm_phone}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Support Email</p>
+                          <p className="font-medium flex items-center">
+                            <Mail className="w-4 h-4 mr-1 text-gray-500" />
+                            {trackingData?.contact_info?.support_email}
+                          </p>
+                        </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>
@@ -404,20 +567,20 @@ export const TrackingPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm leading-relaxed text-gray-700">
-                    {quote?.customer_data?.shipping_address?.line1 && (
+                    {trackingData?.customer_data?.shipping_address?.line1 && (
                       <>
-                        <p>{quote?.customer_data?.shipping_address?.line1}</p>
-                        {quote?.customer_data?.shipping_address?.line2 && (
-                          <p>{quote?.customer_data?.shipping_address?.line2}</p>
+                        <p>{trackingData?.customer_data?.shipping_address?.line1}</p>
+                        {trackingData?.customer_data?.shipping_address?.line2 && (
+                          <p>{trackingData?.customer_data?.shipping_address?.line2}</p>
                         )}
                         <p>
-                          {quote?.customer_data?.shipping_address?.city}
-                          {quote?.customer_data?.shipping_address?.state &&
-                            `, ${quote?.customer_data?.shipping_address?.state}`}
+                          {trackingData?.customer_data?.shipping_address?.city}
+                          {trackingData?.customer_data?.shipping_address?.state &&
+                            `, ${trackingData?.customer_data?.shipping_address?.state}`}
                         </p>
                         <p>
-                          {quote?.customer_data?.shipping_address?.postal}{' '}
-                          {quote?.customer_data?.shipping_address?.country}
+                          {trackingData?.customer_data?.shipping_address?.postal}{' '}
+                          {trackingData?.customer_data?.shipping_address?.country}
                         </p>
                       </>
                     )}
@@ -431,26 +594,50 @@ export const TrackingPage: React.FC = () => {
                   <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span>Quote ID</span>
-                    <span className="font-mono">#{quote?.display_id}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Total Value</span>
-                    <span className="font-semibold">${quote?.final_total_usd?.toFixed(2)}</span>
-                  </div>
+                  {!trackingData?.is_ncm_order && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Quote ID</span>
+                        <span className="font-mono">#{trackingData?.display_id}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Total Value</span>
+                        <span className="font-semibold">${trackingData?.final_total_usd?.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  {trackingData?.is_ncm_order && (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Service Type</span>
+                        <span className="font-semibold">{trackingData?.delivery_info?.service_type}</span>
+                      </div>
+                      {trackingData?.delivery_info?.cod_amount && (
+                        <div className="flex justify-between text-sm">
+                          <span>COD Amount</span>
+                          <span className="font-semibold">NPR {trackingData?.delivery_info?.cod_amount}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span>Status</span>
-                    <Badge variant={trackingService.getStatusBadgeVariant(quote?.tracking_status)}>
-                      {trackingService.getStatusDisplayText(quote?.tracking_status)}
+                    <Badge variant={trackingService.getStatusBadgeVariant(
+                      trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status,
+                      trackingData?.is_ncm_order
+                    )}>
+                      {trackingService.getStatusDisplayText(
+                        trackingData?.is_ncm_order ? trackingData?.current_status : trackingData?.tracking_status,
+                        trackingData?.is_ncm_order
+                      )}
                     </Badge>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-sm">
                     <span>Created</span>
                     <span>
-                      {quote?.created_at
-                        ? new Date(quote.created_at).toLocaleDateString()
+                      {trackingData?.created_at
+                        ? new Date(trackingData.created_at).toLocaleDateString()
                         : 'Unknown'}
                     </span>
                   </div>
@@ -474,12 +661,12 @@ export const TrackingPage: React.FC = () => {
         )}
 
         {/* Empty State - No tracking ID provided */}
-        {!trackingId && !error && !quote && (
+        {!trackingId && !error && !trackingData && (
           <div className="text-center py-12">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-800 mb-2">Track Your iwishBag Order</h2>
             <p className="text-gray-600 mb-6">
-              Enter your iwishBag tracking ID above to view real-time tracking information
+              Enter your iwishBag tracking ID above to view real-time tracking information for both regular orders and NCM deliveries
             </p>
             <div className="bg-gray-50 rounded-lg p-4 max-w-md mx-auto">
               <p className="text-sm text-gray-600">

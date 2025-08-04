@@ -33,7 +33,6 @@ import { FlagIcon } from '@/components/ui/FlagIcon';
 import { WorldClassPhoneInput } from '@/components/ui/WorldClassPhoneInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
-import { DelhiveryValidatedAddressInput } from '@/components/ui/DelhiveryValidatedAddressInput';
 
 const addressSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
@@ -1087,78 +1086,6 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
                 )}
               />
             </>
-          ) : selectedCountry === 'IN' ? (
-            <>
-              {/* Delhivery Validated Address Input for Indian addresses */}
-              <div className="space-y-4">
-                <DelhiveryValidatedAddressInput
-                  address_line1={form.watch('address_line1')}
-                  city={form.watch('city')}
-                  state={form.watch('state_province_region')}
-                  pincode={form.watch('postal_code') || ''}
-                  country={selectedCountry}
-                  onAddressChange={(field, value) => {
-                    form.setValue(field as keyof AddressFormValues, value);
-                    
-                    // Update validation status based on field
-                    switch (field) {
-                      case 'address_line1':
-                        setAddressStatus(value.length >= 10 ? 'valid' : value.length > 0 ? 'invalid' : 'idle');
-                        break;
-                      case 'city':
-                        setCityStatus(value.length >= 2 ? 'valid' : value.length > 0 ? 'invalid' : 'idle');
-                        break;
-                      case 'state_province_region':
-                        setProvinceStatus(value.length >= 2 ? 'valid' : value.length > 0 ? 'invalid' : 'idle');
-                        break;
-                      case 'postal_code':
-                        setPostalCodeStatus(value.length === 6 ? 'valid' : value.length > 0 ? 'invalid' : 'idle');
-                        break;
-                    }
-                  }}
-                  onValidationChange={(isValid, details) => {
-                    // Update form validation based on Delhivery results
-                    if (details && details.deliveryInfo) {
-                      console.log('📋 Address validation results:', { isValid, details });
-                    }
-                  }}
-                  showDeliveryInfo={true}
-                  showSuggestions={true}
-                  enableRealTimeValidation={true}
-                  className="mb-4"
-                />
-                
-                {/* Address Line 2 for Indian addresses */}
-                <FormField
-                  control={form.control}
-                  name="address_line2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm text-gray-600">Landmark / Additional Info (optional)</FormLabel>
-                      <FormControl>
-                        <ValidatedInput
-                          {...field}
-                          value={field.value ?? ''}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            const value = e.target.value.trim();
-                            if (value.length === 0) {
-                              setLandmarkStatus('idle');
-                            } else {
-                              setLandmarkStatus('valid');
-                            }
-                          }}
-                          placeholder="e.g., Near XYZ Mall, Opposite ABC Hospital"
-                          validationStatus={landmarkStatus}
-                          validationError={form.formState.errors.address_line2?.message}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </>
           ) : (
             <>
               {/* Standard Address fields for other countries */}
@@ -1223,8 +1150,8 @@ export function AddressForm({ address, onSuccess }: AddressFormProps) {
             </>
           )}
           
-          {/* City, State, and Postal Code Row - Only show for non-Nepal and non-India countries */}
-          {!isNepal && selectedCountry !== 'IN' && (
+          {/* City, State, and Postal Code Row - Only show for non-Nepal countries */}
+          {!isNepal && (
             <div className="grid grid-cols-3 gap-4">
               <FormField
                 control={form.control}

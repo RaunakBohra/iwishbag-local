@@ -203,9 +203,61 @@ COMMENT ON COLUMN ncm_order_tracking.tracking_id IS 'Customer-facing iwishBag tr
 COMMENT ON COLUMN ncm_order_tracking.current_status IS 'Current iwishBag order status (mapped from NCM status)';
 COMMENT ON COLUMN ncm_order_tracking.service_type IS 'NCM service type: Pickup (door delivery) or Collect (branch pickup)';
 
+-- NCM Order Creation Failures Log
+CREATE TABLE IF NOT EXISTS ncm_order_creation_failures (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  iwishbag_order_id UUID NOT NULL,
+  error_message TEXT NOT NULL,
+  attempted_at TIMESTAMPTZ DEFAULT NOW(),
+  retry_count INTEGER DEFAULT 0,
+  resolved BOOLEAN DEFAULT false,
+  resolved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Index for efficient querying
+  CONSTRAINT fk_ncm_failure_order 
+    FOREIGN KEY (iwishbag_order_id) 
+    REFERENCES orders(id) 
+    ON DELETE CASCADE
+);
+
+-- Add NCM order tracking fields to orders table
+ALTER TABLE orders 
+ADD COLUMN IF NOT EXISTS ncm_order_id INTEGER,
+ADD COLUMN IF NOT EXISTS ncm_tracking_id TEXT;
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_ncm_failures_order ON ncm_order_creation_failures(iwishbag_order_id);
+CREATE INDEX IF NOT EXISTS idx_ncm_failures_attempted ON ncm_order_creation_failures(attempted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ncm_failures_resolved ON ncm_order_creation_failures(resolved);
+
+CREATE INDEX IF NOT EXISTS idx_orders_ncm_order_id ON orders(ncm_order_id) WHERE ncm_order_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_orders_ncm_tracking_id ON orders(ncm_tracking_id) WHERE ncm_tracking_id IS NOT NULL;
+
+-- RLS Policies for failure log
+ALTER TABLE ncm_order_creation_failures ENABLE ROW LEVEL SECURITY;
+
+-- Admin users can see all failure logs
+CREATE POLICY "Admins can view all NCM creation failures" ON ncm_order_creation_failures
+  FOR ALL USING (is_admin());
+
+-- Service role policies for background operations
+CREATE POLICY "Service role can manage NCM creation failures" ON ncm_order_creation_failures
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- Comments for documentation
+COMMENT ON TABLE ncm_order_creation_failures IS 'Log of failed NCM order creation attempts for monitoring and retry';
+COMMENT ON COLUMN ncm_order_creation_failures.iwishbag_order_id IS 'iwishBag order ID that failed NCM order creation';
+COMMENT ON COLUMN ncm_order_creation_failures.retry_count IS 'Number of retry attempts made';
+COMMENT ON COLUMN ncm_order_creation_failures.resolved IS 'Whether the failure has been resolved successfully';
+
+COMMENT ON COLUMN orders.ncm_order_id IS 'NCM API order ID for Nepal deliveries';
+COMMENT ON COLUMN orders.ncm_tracking_id IS 'iwishBag tracking ID for NCM orders';
+
 -- Grant permissions
 GRANT USAGE ON SCHEMA public TO authenticated, anon;
 GRANT ALL ON ncm_order_tracking TO authenticated, anon;
 GRANT ALL ON ncm_tracking_history TO authenticated, anon;
 GRANT ALL ON ncm_notification_preferences TO authenticated, anon;
 GRANT ALL ON ncm_notification_log TO authenticated, anon;
+GRANT ALL ON ncm_order_creation_failures TO authenticated, anon;

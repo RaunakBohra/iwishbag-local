@@ -54,18 +54,21 @@ class TrackingService {
       const trackingId = data as string;
       logger.debug('✅ Generated tracking ID:', trackingId);
 
-      // Update quote with new tracking ID
-      const { error: updateError } = await supabase
-        .from('quotes')
-        .update({ iwish_tracking_id: trackingId })
-        .eq('id', quoteId);
+      // Update quote with new tracking ID (only if quoteId provided)
+      if (quoteId) {
+        const { error: updateError } = await supabase
+          .from('quotes')
+          .update({ iwish_tracking_id: trackingId })
+          .eq('id', quoteId);
 
-      if (updateError) {
-        logger.error('❌ Error updating quote with tracking ID:', updateError);
-        return null;
+        if (updateError) {
+          logger.error('❌ Error updating quote with tracking ID:', updateError);
+          return null;
+        }
+
+        logger.debug('✅ Quote updated with tracking ID successfully');
       }
-
-      logger.debug('✅ Quote updated with tracking ID successfully');
+      
       return trackingId;
     } catch (error) {
       logger.error('❌ Exception in generateTrackingId:', error);
@@ -166,10 +169,46 @@ class TrackingService {
   }
 
   /**
-   * Get full quote data for customer tracking page by iwishBag tracking ID
-   * This is what the customer tracking page needs
+   * Get tracking info by iwishBag tracking ID - supports both quotes and NCM orders
+   * This is the unified method that the customer tracking page uses
    */
   async getTrackingInfo(iwishTrackingId: string): Promise<any> {
+    try {
+      logger.debug('🔍 Looking up tracking info for:', iwishTrackingId);
+
+      // First try to find it as a regular quote
+      const quoteTrackingInfo = await this.getQuoteTrackingInfo(iwishTrackingId);
+      if (quoteTrackingInfo) {
+        return { 
+          ...quoteTrackingInfo, 
+          tracking_type: 'iwishbag',
+          is_ncm_order: false 
+        };
+      }
+
+      // If not found as quote, try NCM tracking
+      const ncmTrackingInfo = await this.getNCMTrackingInfo(iwishTrackingId);
+      if (ncmTrackingInfo) {
+        return { 
+          ...ncmTrackingInfo, 
+          tracking_type: 'ncm',
+          is_ncm_order: true 
+        };
+      }
+
+      logger.error('❌ No tracking info found for:', iwishTrackingId);
+      return null;
+    } catch (error) {
+      logger.error('❌ Exception in getTrackingInfo:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get full quote data for customer tracking page by iwishBag tracking ID
+   * This is what the customer tracking page needs for regular orders
+   */
+  async getQuoteTrackingInfo(iwishTrackingId: string): Promise<any> {
     try {
       logger.debug('🔍 Looking up full quote for customer tracking:', iwishTrackingId);
 
@@ -199,7 +238,32 @@ class TrackingService {
       logger.debug('✅ Found full quote for customer tracking');
       return quote;
     } catch (error) {
-      logger.error('❌ Exception in getTrackingInfo for customer:', error);
+      logger.error('❌ Exception in getQuoteTrackingInfo for customer:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get NCM tracking info by iwishBag tracking ID
+   */
+  async getNCMTrackingInfo(iwishTrackingId: string): Promise<NCMCustomerTrackingInfo | null> {
+    try {
+      logger.debug('🔍 Looking up NCM tracking info for:', iwishTrackingId);
+
+      // Import NCM tracking service dynamically to avoid circular dependencies
+      const { ncmOrderTrackingService } = await import('./NCMOrderTrackingService');
+      
+      const ncmTrackingInfo = await ncmOrderTrackingService.getCustomerTrackingInfo(iwishTrackingId);
+      
+      if (ncmTrackingInfo) {
+        logger.debug('✅ Found NCM tracking info');
+      } else {
+        logger.debug('❌ No NCM tracking info found');
+      }
+      
+      return ncmTrackingInfo;
+    } catch (error) {
+      logger.error('❌ Exception in getNCMTrackingInfo:', error);
       return null;
     }
   }
@@ -242,9 +306,31 @@ class TrackingService {
   }
 
   /**
-   * Get status display text for UI
+   * Get status display text for UI (supports both regular and NCM orders)
    */
-  getStatusDisplayText(status: string | null): string {
+  getStatusDisplayText(status: string | null, isNCMOrder?: boolean): string {
+    if (isNCMOrder) {
+      // NCM-specific status display names
+      switch (status) {
+        case 'pending':
+          return 'NCM Order Placed';
+        case 'preparing':
+          return 'Preparing for Pickup';
+        case 'shipped':
+        case 'in_transit':
+          return 'In Transit via NCM';
+        case 'delivered':
+          return 'Delivered by NCM';
+        case 'returned':
+          return 'Returned to Sender';
+        case 'cancelled':
+          return 'Order Cancelled';
+        default:
+          return 'Unknown Status';
+      }
+    }
+
+    // Regular iwishBag order status display names
     switch (status) {
       case 'pending':
         return 'Order Confirmed';
@@ -262,25 +348,37 @@ class TrackingService {
   }
 
   /**
-   * Get status badge variant for UI styling
+   * Get status badge variant for UI styling (supports both regular and NCM orders)
    */
   getStatusBadgeVariant(
     status: string | null,
+    isNCMOrder?: boolean
   ): 'default' | 'secondary' | 'success' | 'destructive' {
+    // NCM and regular orders use similar color schemes
     switch (status) {
       case 'pending':
         return 'secondary';
       case 'preparing':
         return 'default';
       case 'shipped':
+      case 'in_transit':
         return 'default';
       case 'delivered':
         return 'success';
       case 'exception':
+      case 'returned':
+      case 'cancelled':
         return 'destructive';
       default:
         return 'secondary';
     }
+  }
+
+  /**
+   * Get carrier tracking link for NCM orders
+   */
+  getNCMTrackingLink(ncmOrderId: number): string {
+    return `https://demo.nepalcanmove.com/tracking/${ncmOrderId}`;
   }
 }
 
