@@ -59,7 +59,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 
-// Group menu items by category
+// Smart grouped menu structure - reduced from 23 to 6 main categories
 const menuGroups = [
   {
     title: 'Dashboard',
@@ -72,7 +72,7 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Quotes',
+    title: 'Orders & Quotes',
     items: [
       {
         title: 'All Quotes',
@@ -87,10 +87,10 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Customer Service',
+    title: 'Customers',
     items: [
       {
-        title: 'Customers',
+        title: 'All Customers',
         url: '/admin/customers',
         icon: UserCheck,
       },
@@ -110,17 +110,17 @@ const menuGroups = [
         icon: Mail,
       },
       {
-        title: 'SMS',
+        title: 'SMS Center',
         url: '/admin/sms',
         icon: MessageCircle,
       },
     ],
   },
   {
-    title: 'Fulfillment',
+    title: 'Operations',
     items: [
       {
-        title: 'Returns',
+        title: 'Returns Management',
         url: '/admin/returns',
         icon: RotateCcw,
       },
@@ -129,13 +129,8 @@ const menuGroups = [
         url: '/admin/auto-assignment',
         icon: Zap,
       },
-    ],
-  },
-  {
-    title: 'Marketing & Sales',
-    items: [
       {
-        title: 'Discounts',
+        title: 'Discounts & Promotions',
         url: '/admin/discounts',
         icon: Tag,
       },
@@ -150,27 +145,27 @@ const menuGroups = [
         icon: Users,
       },
       {
-        title: 'Blog',
+        title: 'Blog Management',
         url: '/admin/blog',
         icon: Edit,
       },
     ],
   },
   {
-    title: 'Smart Intelligence',
+    title: 'Intelligence',
     items: [
       {
-        title: 'Dashboard',
+        title: 'AI Dashboard',
         url: '/admin/smart-intelligence',
         icon: Brain,
       },
       {
-        title: 'Classifications',
+        title: 'Product Classifications',
         url: '/admin/product-classifications',
         icon: Package,
       },
       {
-        title: 'Country Settings',
+        title: 'Country Intelligence',
         url: '/admin/country-settings',
         icon: Globe,
       },
@@ -187,10 +182,10 @@ const menuGroups = [
     ],
   },
   {
-    title: 'Configuration',
+    title: 'System Settings',
     items: [
       {
-        title: 'Countries',
+        title: 'Countries & Regions',
         url: '/admin/countries',
         icon: Globe,
       },
@@ -200,7 +195,7 @@ const menuGroups = [
         icon: Route,
       },
       {
-        title: 'Status Workflow',
+        title: 'Status Workflows',
         url: '/admin/status-management',
         icon: Settings,
       },
@@ -219,7 +214,7 @@ export const AdminSidebar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isCollapsed = state === 'collapsed';
-  const [openGroups, setOpenGroups] = useState<string[]>(['Dashboard', 'Quotes']); // Keep Dashboard and Quotes open by default
+  const [openGroups, setOpenGroups] = useState<string[]>(['Dashboard', 'Orders & Quotes']); // Keep Dashboard and Orders & Quotes open by default
 
   const toggleGroup = (groupTitle: string) => {
     setOpenGroups((prev) =>
@@ -284,32 +279,35 @@ export const AdminSidebar = () => {
     <TooltipProvider>
       <Sidebar className="border-r bg-card" collapsible="icon">
         {/* Header with Logo and Toggle */}
-        <SidebarHeader className="border-b p-4">
-          <div className="flex items-center justify-between">
-            {!isCollapsed ? (
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-primary-foreground" />
+        <SidebarHeader className="border-b">
+          {!isCollapsed ? (
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center shadow-sm">
+                  <Zap className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-lg text-foreground">iWishBag</h1>
+                  <h1 className="font-bold text-lg text-foreground tracking-tight">iWishBag</h1>
                   <p className="text-xs text-muted-foreground">Admin Panel</p>
                 </div>
               </div>
-            ) : (
+              <SidebarTrigger className="h-8 w-8 hover:bg-accent/60 transition-colors" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-4 px-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center mx-auto">
-                    <Zap className="w-4 h-4 text-primary-foreground" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center shadow-sm mb-3">
+                    <Zap className="w-5 h-5 text-primary-foreground" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="right">
                   <p>iWishBag Admin</p>
                 </TooltipContent>
               </Tooltip>
-            )}
-            <SidebarTrigger className="ml-auto" />
-          </div>
+              <SidebarTrigger className="h-8 w-8 hover:bg-accent/60 transition-colors" />
+            </div>
+          )}
         </SidebarHeader>
 
         <SidebarContent className="py-4 bg-card">
