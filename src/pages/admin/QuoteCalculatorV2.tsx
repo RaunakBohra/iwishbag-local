@@ -789,7 +789,7 @@ const QuoteCalculatorV2: React.FC = () => {
   // Show loading state when loading existing quote
   if (loadingQuote) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="w-full">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -801,7 +801,7 @@ const QuoteCalculatorV2: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">

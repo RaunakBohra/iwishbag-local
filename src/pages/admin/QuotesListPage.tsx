@@ -92,19 +92,18 @@ const QuotesListPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">All Quotes</h1>
-          <p className="text-gray-600 mt-2">View all quotes regardless of status</p>
-        </div>
+    <div className="w-full space-y-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">All Quotes</h1>
+        <p className="text-muted-foreground mt-2">View and manage all quotes regardless of status</p>
+      </div>
 
-        {/* Metrics */}
-        <CompactQuoteMetrics metrics={metrics} />
+      {/* Metrics */}
+      <CompactQuoteMetrics metrics={metrics} />
 
-        {/* Search Bar */}
-        <Card className="mb-6 mt-6">
+      {/* Search Bar */}
+      <Card className="w-full">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
@@ -134,32 +133,31 @@ const QuotesListPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Quote List */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-8 text-center text-gray-500">
-                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-                Loading quotes...
-              </div>
-            ) : safeQuotes.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                No quotes found
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {safeQuotes.map((quote) => (
-                  <CompactQuoteListItem
-                    key={quote.id}
-                    quote={quote}
-                    onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Quote List */}
+      <Card className="w-full">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
+              Loading quotes...
+            </div>
+          ) : safeQuotes.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              No quotes found
+            </div>
+          ) : (
+            <div className="divide-y">
+              {safeQuotes.map((quote) => (
+                <CompactQuoteListItem
+                  key={quote.id}
+                  quote={quote}
+                  onQuoteClick={(quoteId) => navigate(`/admin/quote-calculator-v2/${quoteId}`)}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

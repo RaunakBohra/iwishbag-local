@@ -51,8 +51,7 @@ export const CountrySettings = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50/40">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="w-full space-y-6">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <Skeleton className="h-8 w-8 rounded-full" />
@@ -110,8 +109,7 @@ export const CountrySettings = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50/40">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="w-full space-y-6">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
@@ -318,8 +316,7 @@ export const CountrySettings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/40">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="w-full space-y-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -599,9 +596,7 @@ export const CountrySettings = () => {
                 </div>
               </div>
             )}
-          </div>
         </div>
-      </div>
 
       {/* Dialog for Add/Edit Country Form */}
       <Dialog
@@ -628,7 +623,7 @@ export const CountrySettings = () => {
 
       {/* Debug info */}
       {import.meta.env.DEV && (
-        <div className="max-w-7xl mx-auto px-4 mt-8">
+        <div className="w-full mt-8">
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
             <h3 className="text-sm font-medium text-gray-900 mb-2">Debug Info:</h3>
             <pre className="text-xs text-gray-600 bg-gray-50 p-3 rounded-lg overflow-x-auto">
