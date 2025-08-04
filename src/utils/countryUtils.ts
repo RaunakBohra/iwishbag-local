@@ -37,20 +37,19 @@ export const getFlagEmoji = (countryCode: string): string => {
 };
 
 /**
- * Format country display with flag, name, and currency
+ * Format country display with name and optional currency
  * @param country - Country object with code, name, currency
  * @param showCurrency - Whether to show currency in parentheses
- * @returns Formatted string like "🇺🇸 United States (USD)"
+ * @returns Formatted string like "United States (USD)" or "United States"
  */
 export const formatCountryDisplay = (
   country: { code: string; name: string; currency: string }, 
   showCurrency: boolean = true
 ): string => {
-  const flag = getFlagEmoji(country.code);
   const name = country.name;
   const currency = showCurrency ? ` (${country.currency})` : '';
   
-  return `${flag} ${name}${currency}`;
+  return `${name}${currency}`;
 };
 
 /**
