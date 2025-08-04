@@ -27,7 +27,9 @@ import {
   Tag,
   Ruler,
   Sparkles,
-  Brain
+  Brain,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
@@ -145,6 +147,11 @@ const QuoteCalculatorV2: React.FC = () => {
   // Component discount state
   const [discountCodes, setDiscountCodes] = useState<string[]>([]);
   const [applyComponentDiscounts, setApplyComponentDiscounts] = useState(true);
+  const [isDiscountSectionCollapsed, setIsDiscountSectionCollapsed] = useState(true);
+  const [isStatusSectionCollapsed, setIsStatusSectionCollapsed] = useState(true);
+  const [isDocumentsSectionCollapsed, setIsDocumentsSectionCollapsed] = useState(true);
+  const [isShareSectionCollapsed, setIsShareSectionCollapsed] = useState(true);
+  const [isExportSectionCollapsed, setIsExportSectionCollapsed] = useState(true);
   
   // Items
   const [items, setItems] = useState<QuoteItem[]>([
@@ -1079,73 +1086,6 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 )}
 
-                {/* Nepal Customer Delivery Address - Only show for Nepal */}
-                {destinationCountry === 'NP' && (
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">
-                      Customer Delivery Address
-                      <span className="text-xs text-blue-600 ml-2">
-                        (Final delivery address for the customer)
-                      </span>
-                    </Label>
-                    
-                    <div className="grid grid-cols-1 gap-3">
-                      <div>
-                        <Label htmlFor="addressLine1" className="text-xs text-gray-600">Address Line 1 *</Label>
-                        <Input
-                          id="addressLine1"
-                          type="text"
-                          placeholder="Street address, house number"
-                          value={destinationAddress.line1}
-                          onChange={(e) => setDestinationAddress(prev => ({...prev, line1: e.target.value}))}
-                          className="text-sm"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="addressLine2" className="text-xs text-gray-600">Address Line 2</Label>
-                        <Input
-                          id="addressLine2"
-                          type="text"
-                          placeholder="Apartment, suite, landmark (optional)"
-                          value={destinationAddress.line2}
-                          onChange={(e) => setDestinationAddress(prev => ({...prev, line2: e.target.value}))}
-                          className="text-sm"
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label htmlFor="addressCity" className="text-xs text-gray-600">City *</Label>
-                          <Input
-                            id="addressCity"
-                            type="text"
-                            placeholder="City name"
-                            value={destinationAddress.city}
-                            onChange={(e) => setDestinationAddress(prev => ({...prev, city: e.target.value}))}
-                            className="text-sm"
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="addressState" className="text-xs text-gray-600">State/Province</Label>
-                          <Input
-                            id="addressState"
-                            type="text"
-                            placeholder="State or province"
-                            value={destinationAddress.state}
-                            onChange={(e) => setDestinationAddress(prev => ({...prev, state: e.target.value}))}
-                            className="text-sm"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                      💡 <strong>Delivery Flow:</strong> US Warehouse → Tinkune NCM Hub → {selectedNCMBranch?.name || 'Local NCM Branch'} → Customer Address
-                    </div>
-                  </div>
-                )}
 
                 {/* Delhivery Service Type - Only show for India with valid pincode */}
                 {destinationCountry === 'IN' && destinationPincode && /^[1-9][0-9]{5}$/.test(destinationPincode) && (
@@ -1374,23 +1314,6 @@ const QuoteCalculatorV2: React.FC = () => {
                 </div>
               </div>
               
-              {/* Tax Info Display */}
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Info className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium text-blue-900">Tax Rates for {taxInfo.country}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Customs:</span>
-                    <span className="ml-2 font-medium">{taxInfo.customs}%</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">{taxInfo.local_tax_name}:</span>
-                    <span className="ml-2 font-medium">{taxInfo.local_tax}%</span>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -1819,16 +1742,27 @@ const QuoteCalculatorV2: React.FC = () => {
 
           {/* Enhanced Discounts Section */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Smart Discount System
+            <CardHeader 
+              className="cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => setIsDiscountSectionCollapsed(!isDiscountSectionCollapsed)}
+            >
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5" />
+                  Smart Discount System
+                </div>
+                {isDiscountSectionCollapsed ? (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                )}
               </CardTitle>
               <CardDescription>
                 Automatic discounts are applied based on order details. Add coupon codes for additional savings.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            {!isDiscountSectionCollapsed && (
+              <CardContent className="space-y-6">
               {/* Discount Preview Panel */}
               {customerEmail && destinationCountry && calculationResult && (
                 <DiscountPreviewPanel
@@ -2039,7 +1973,8 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </CardContent>
+              </CardContent>
+            )}
           </Card>
 
           {/* Notes */}
@@ -2109,146 +2044,6 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Status Management Section */}
-          {isEditMode && quoteId && (
-            <QuoteStatusManager
-              quoteId={quoteId}
-              currentStatus={currentQuoteStatus}
-              onStatusChange={(newStatus) => {
-                setCurrentQuoteStatus(newStatus);
-                // Refresh the quote data to get updated status
-                if (quoteId) {
-                  loadExistingQuote(quoteId);
-                }
-              }}
-              isEditMode={isEditMode}
-            />
-          )}
-
-          {/* File Upload Section */}
-          {isEditMode && quoteId && (
-            <QuoteFileUpload
-              quoteId={quoteId}
-              documents={documents}
-              onDocumentsUpdate={setDocuments}
-              isReadOnly={false}
-            />
-          )}
-
-          {/* Email Sending Section */}
-          {isEditMode && showEmailSection && quoteId && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Send Quote Email</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <QuoteSendEmailSimple
-                  quoteId={quoteId}
-                  onEmailSent={handleEmailSent}
-                  isV2={true}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Share URL Section */}
-          {shareToken && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Share Quote</CardTitle>
-                <CardDescription>Customer can view this quote directly</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                  <code className="flex-1 text-sm font-mono text-gray-700 truncate">
-                    /quote/view/{shareToken}
-                  </code>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    onClick={copyShareUrl}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy URL
-                  </Button>
-                  <Button
-                    onClick={openShareUrl}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Preview
-                  </Button>
-                </div>
-                
-                {expiresAt && (() => {
-                  const expiryStatus = getExpiryStatus();
-                  return expiryStatus ? (
-                    <div className={`text-sm ${expiryStatus.color} flex items-center gap-1`}>
-                      <Clock className="w-4 h-4" />
-                      {expiryStatus.text}
-                    </div>
-                  ) : null;
-                })()}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Export Controls - Show in edit mode for saved quotes */}
-          {isEditMode && quoteId && calculationResult && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Export Quote</CardTitle>
-                <CardDescription>Download professional quote documents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <QuoteExportControls
-                  quote={{
-                    id: quoteId,
-                    customer_name: customerName,
-                    customer_email: customerEmail,
-                    customer_phone: customerPhone,
-                    status: currentQuoteStatus,
-                    items: items,
-                    total_usd: calculationResult.calculation_steps?.total_usd || calculationResult.total || 0,
-                    total_customer_currency: calculationResult.calculation_steps?.total_customer_currency || calculationResult.totalCustomerCurrency || 0,
-                    customer_currency: customerCurrency,
-                    origin_country: originCountry,
-                    destination_country: destinationCountry,
-                    created_at: new Date().toISOString(),
-                    expires_at: expiresAt,
-                    notes: adminNotes,
-                    calculation_data: calculationResult,
-                    share_token: shareToken,
-                  }}
-                  variant="outline"
-                  size="default"
-                  showLabel={true}
-                  className="w-full"
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Reminder Controls - Only show in edit mode for saved quotes */}
-          {isEditMode && quoteId && emailSent && (
-            <QuoteReminderControls
-              quoteId={quoteId}
-              status={currentQuoteStatus}
-              reminderCount={reminderCount}
-              lastReminderAt={lastReminderAt}
-              customerEmail={customerEmail}
-              expiresAt={expiresAt}
-              shareToken={shareToken}
-              onUpdate={() => loadExistingQuote(quoteId)}
-            />
-          )}
-
           {/* Calculation Result */}
           {calculationResult && calculationResult.calculation_steps && (
             <Card>
@@ -2292,6 +2087,217 @@ const QuoteCalculatorV2: React.FC = () => {
               }}
             />
           )}
+
+          {/* Status Management Section */}
+          {isEditMode && quoteId && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setIsStatusSectionCollapsed(!isStatusSectionCollapsed)}
+              >
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    Status Management
+                  </div>
+                  {isStatusSectionCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+              {!isStatusSectionCollapsed && (
+                <CardContent>
+                  <QuoteStatusManager
+                    quoteId={quoteId}
+                    currentStatus={currentQuoteStatus}
+                    onStatusChange={(newStatus) => {
+                      setCurrentQuoteStatus(newStatus);
+                      // Refresh the quote data to get updated status
+                      if (quoteId) {
+                        loadExistingQuote(quoteId);
+                      }
+                    }}
+                    isEditMode={isEditMode}
+                  />
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* File Upload Section */}
+          {isEditMode && quoteId && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setIsDocumentsSectionCollapsed(!isDocumentsSectionCollapsed)}
+              >
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    Quote Documents
+                  </div>
+                  {isDocumentsSectionCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  )}
+                </CardTitle>
+              </CardHeader>
+              {!isDocumentsSectionCollapsed && (
+                <CardContent>
+                  <QuoteFileUpload
+                    quoteId={quoteId}
+                    documents={documents}
+                    onDocumentsUpdate={setDocuments}
+                    isReadOnly={false}
+                  />
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Email Sending Section */}
+          {isEditMode && showEmailSection && quoteId && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Send Quote Email</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <QuoteSendEmailSimple
+                  quoteId={quoteId}
+                  onEmailSent={handleEmailSent}
+                  isV2={true}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Share URL Section */}
+          {shareToken && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setIsShareSectionCollapsed(!isShareSectionCollapsed)}
+              >
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    Share Quote
+                  </div>
+                  {isShareSectionCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  )}
+                </CardTitle>
+                <CardDescription>Customer can view this quote directly</CardDescription>
+              </CardHeader>
+              {!isShareSectionCollapsed && (
+                <CardContent className="space-y-3">
+                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
+                  <code className="flex-1 text-sm font-mono text-gray-700 truncate">
+                    /quote/view/{shareToken}
+                  </code>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    onClick={copyShareUrl}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy URL
+                  </Button>
+                  <Button
+                    onClick={openShareUrl}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Preview
+                  </Button>
+                </div>
+                
+                {expiresAt && (() => {
+                  const expiryStatus = getExpiryStatus();
+                  return expiryStatus ? (
+                    <div className={`text-sm ${expiryStatus.color} flex items-center gap-1`}>
+                      <Clock className="w-4 h-4" />
+                      {expiryStatus.text}
+                    </div>
+                  ) : null;
+                })()}
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Export Controls - Show in edit mode for saved quotes */}
+          {isEditMode && quoteId && calculationResult && (
+            <Card>
+              <CardHeader 
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setIsExportSectionCollapsed(!isExportSectionCollapsed)}
+              >
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    Export Quote
+                  </div>
+                  {isExportSectionCollapsed ? (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  )}
+                </CardTitle>
+                <CardDescription>Download professional quote documents</CardDescription>
+              </CardHeader>
+              {!isExportSectionCollapsed && (
+                <CardContent>
+                <QuoteExportControls
+                  quote={{
+                    id: quoteId,
+                    customer_name: customerName,
+                    customer_email: customerEmail,
+                    customer_phone: customerPhone,
+                    status: currentQuoteStatus,
+                    items: items,
+                    total_usd: calculationResult.calculation_steps?.total_usd || calculationResult.total || 0,
+                    total_customer_currency: calculationResult.calculation_steps?.total_customer_currency || calculationResult.totalCustomerCurrency || 0,
+                    customer_currency: customerCurrency,
+                    origin_country: originCountry,
+                    destination_country: destinationCountry,
+                    created_at: new Date().toISOString(),
+                    expires_at: expiresAt,
+                    notes: adminNotes,
+                    calculation_data: calculationResult,
+                    share_token: shareToken,
+                  }}
+                  variant="outline"
+                  size="default"
+                  showLabel={true}
+                  className="w-full"
+                />
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {/* Reminder Controls - Only show in edit mode for saved quotes */}
+          {isEditMode && quoteId && emailSent && (
+            <QuoteReminderControls
+              quoteId={quoteId}
+              status={currentQuoteStatus}
+              reminderCount={reminderCount}
+              lastReminderAt={lastReminderAt}
+              customerEmail={customerEmail}
+              expiresAt={expiresAt}
+              shareToken={shareToken}
+              onUpdate={() => loadExistingQuote(quoteId)}
+            />
+          )}
+
         </div>
       </div>
 
