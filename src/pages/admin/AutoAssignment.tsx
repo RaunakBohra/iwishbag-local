@@ -7,7 +7,7 @@ import { AutoAssignmentManager } from '@/components/admin/AutoAssignmentManager'
 
 const AutoAssignmentPage = () => {
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="w-full">
       <AutoAssignmentManager />
     </div>
   );

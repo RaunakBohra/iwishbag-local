@@ -215,7 +215,7 @@ export default function QuoteReminderSettings() {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="w-full">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Quote Reminder Settings</h1>
         <p className="text-gray-600 mt-2">Configure automated email reminders for pending quotes</p>

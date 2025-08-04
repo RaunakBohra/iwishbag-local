@@ -260,7 +260,8 @@
       "Bash(aws sts get-caller-identity:*)",
       "WebFetch(domain:help.delhivery.com)",
       "WebFetch(domain:sharma-ramesh-ib.medium.com)",
-      "WebFetch(domain:one.delhivery.com)"
+      "WebFetch(domain:one.delhivery.com)",
+      "Bash(for:*)"
     ],
     "deny": []
   }

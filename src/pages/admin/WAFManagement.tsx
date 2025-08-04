@@ -16,7 +16,7 @@ export default function WAFManagement() {
   // Show loading state while checking admin status
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full">
         <Skeleton className="h-8 w-48 mb-4" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -26,7 +26,7 @@ export default function WAFManagement() {
   // Check if user is admin
   if (!isAdmin) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full">
         <Alert variant="destructive">
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
@@ -38,7 +38,7 @@ export default function WAFManagement() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full">
       {/* Header */}
       <div className="mb-6">
         <Button

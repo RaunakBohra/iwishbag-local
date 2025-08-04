@@ -14,7 +14,7 @@ export default function RateLimitManagement() {
   // Show loading state while checking admin status
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full">
         <Skeleton className="h-8 w-48 mb-4" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -24,7 +24,7 @@ export default function RateLimitManagement() {
   // Check if user is admin
   if (!isAdmin) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full">
         <Alert variant="destructive">
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription>
@@ -36,7 +36,7 @@ export default function RateLimitManagement() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full">
       {/* Header */}
       <div className="mb-6">
         <Button

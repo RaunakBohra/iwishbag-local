@@ -183,7 +183,7 @@ export default function SMSDashboard() {
   const smsCount = Math.ceil(characterCount / 160);
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">SMS Dashboard</h1>
         <Button onClick={loadMessages} variant="outline" disabled={loading}>

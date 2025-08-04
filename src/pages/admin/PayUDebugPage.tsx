@@ -121,7 +121,7 @@ export function PayUDebugPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="w-full">
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
