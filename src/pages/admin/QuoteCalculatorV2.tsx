@@ -2259,8 +2259,8 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Quote Details & Analysis - Positioned directly below buttons */}
-          {calculationResult && showPreview && calculationResult.calculation_steps && (
+          {/* Quote Details & Analysis - Always visible when calculation exists */}
+          {calculationResult && calculationResult.calculation_steps && (
             <QuoteDetailsAnalysis 
               quote={{
                 id: 'temp-' + Date.now(),
@@ -2281,27 +2281,6 @@ const QuoteCalculatorV2: React.FC = () => {
             />
           )}
 
-          {/* Calculation Result */}
-          {calculationResult && calculationResult.calculation_steps && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Quote Total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-3xl font-bold">
-                    ${(calculationResult.calculation_steps.total_usd || 0).toFixed(2)}
-                  </div>
-                  <div className="text-xl text-gray-600">
-                    {currencyService.formatAmount(
-                      calculationResult.calculation_steps.total_customer_currency || 0,
-                      customerCurrency
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Detailed Breakdown using proper component */}
           {calculationResult && showPreview && calculationResult.calculation_steps && (

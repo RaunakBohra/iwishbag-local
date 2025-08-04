@@ -106,46 +106,6 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl">{quote.quote_number}</CardTitle>
-              <p className="text-gray-500 mt-1">{quote.customer_email}</p>
-            </div>
-            <Badge className={getStatusColor(quote.status)}>
-              {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-gray-500">Created</span>
-              <p className="font-medium">{new Date(quote.created_at).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Route</span>
-              <p className="font-medium">{inputs.origin_country} → {inputs.destination_country}</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Items</span>
-              <p className="font-medium">{quote.items.length} items</p>
-            </div>
-            <div>
-              <span className="text-gray-500">Chargeable Weight</span>
-              <p className="font-medium">
-                {inputs.total_chargeable_weight_kg || inputs.total_weight_kg} kg
-                {inputs.total_volumetric_weight_kg && inputs.total_volumetric_weight_kg > inputs.total_weight_kg && (
-                  <Badge variant="outline" className="ml-1 text-xs">Volumetric</Badge>
-                )}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Calculation Breakdown */}
       <Card>
         <CardHeader>
