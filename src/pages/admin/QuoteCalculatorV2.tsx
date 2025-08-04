@@ -239,8 +239,6 @@ const QuoteCalculatorV2: React.FC = () => {
   const [calculationResult, setCalculationResult] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   
-  // Feature toggles for safe implementation
-  const [showAdvancedFeatures, setShowAdvancedFeatures] = useState(false);
   
   // Volumetric weight modal state
   const [volumetricModalOpen, setVolumetricModalOpen] = useState<string | null>(null);
@@ -331,6 +329,76 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
+  // Sync delivery address data to destination fields for admin calculator
+  const syncDeliveryAddressToDestination = async (address: any) => {
+    if (!address) return;
+
+    console.log('🔄 [Address Sync] Syncing delivery address to destination fields:', address);
+
+    // Set country first
+    const country = address.destination_country || address.country;
+    if (country && country !== destinationCountry) {
+      setDestinationCountry(country);
+    }
+
+    // Map address components to destination address object
+    setDestinationAddress({
+      line1: address.address_line1 || '',
+      line2: address.address_line2 || '',
+      city: address.city || '',
+      state: address.state_province_region || '',
+      pincode: address.postal_code || ''
+    });
+
+    // Country-specific synchronization
+    if (country === 'IN') {
+      // India: Extract and validate pincode
+      const pincode = address.postal_code;
+      if (pincode && /^[1-9][0-9]{5}$/.test(pincode)) {
+        console.log('🇮🇳 [Address Sync] Setting India pincode:', pincode);
+        setDestinationPincode(pincode);
+        setDestinationState('urban'); // Default for India
+        
+        // Trigger Delhivery API call immediately
+        console.log('🚚 [Address Sync] Triggering Delhivery API for pincode:', pincode);
+        setTimeout(() => {
+          fetchAvailableServices(pincode);
+        }, 100); // Small delay to ensure state is updated
+      } else if (pincode) {
+        console.log('⚠️ [Address Sync] Invalid India pincode format:', pincode);
+        setDestinationPincode(pincode); // Set anyway for manual correction
+      }
+    } else if (country === 'NP') {
+      // Nepal: Map state/district to NCM branch
+      const state = address.state_province_region;
+      if (state) {
+        console.log('🏔️ [Address Sync] Setting Nepal district:', state);
+        setDestinationDistrict(state);
+        setDestinationState(state);
+        
+        // Try to find matching NCM branch
+        if (availableNCMBranches.length > 0) {
+          const matchingBranch = availableNCMBranches.find(branch => 
+            branch.district?.toLowerCase() === state.toLowerCase() ||
+            branch.name?.toLowerCase().includes(state.toLowerCase())
+          );
+          if (matchingBranch) {
+            console.log('🎯 [Address Sync] Found matching NCM branch:', matchingBranch.name);
+            setSelectedNCMBranch(matchingBranch);
+          }
+        }
+      }
+    } else {
+      // Other countries: Map state from address
+      const state = address.state_province_region;
+      if (state) {
+        setDestinationState(state);
+      }
+    }
+
+    console.log('✅ [Address Sync] Address synchronization completed');
+  };
+
   const loadExistingQuote = async (id: string) => {
     setLoadingQuote(true);
     try {
@@ -408,6 +476,8 @@ const QuoteCalculatorV2: React.FC = () => {
 
             if (!addressError && address) {
               setDeliveryAddress(address);
+              // Sync delivery address data to destination fields
+              await syncDeliveryAddressToDestination(address);
             }
           } catch (addressError) {
             console.error('Error loading delivery address:', addressError);
@@ -932,19 +1002,6 @@ const QuoteCalculatorV2: React.FC = () => {
               })()}
             </div>
           )}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="advanced-mode"
-              checked={showAdvancedFeatures}
-              onCheckedChange={setShowAdvancedFeatures}
-            />
-            <Label htmlFor="advanced-mode" className="cursor-pointer">
-              Advanced Features
-              {showAdvancedFeatures && (
-                <Badge variant="secondary" className="ml-2">Beta</Badge>
-              )}
-            </Label>
-          </div>
           <Badge variant="secondary" className="text-lg px-4 py-2">
             <Calculator className="w-4 h-4 mr-2" />
             {isEditMode ? 'Edit Mode' : 'New Calculator'}
