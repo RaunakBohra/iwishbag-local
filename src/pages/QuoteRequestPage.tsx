@@ -9,17 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield, Plus, Trash2, FileText } from 'lucide-react';
+import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield, Plus, Trash2, FileText, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
 
-// Form schema
-const quoteRequestSchema = z.object({
-  customer_name: z.string().min(2, 'Name must be at least 2 characters'),
-  customer_email: z.string().email('Please enter a valid email address'),
+// Form schema - dynamic based on user authentication
+const createQuoteRequestSchema = (isLoggedIn: boolean) => z.object({
+  customer_name: isLoggedIn ? z.string().optional() : z.string().min(2, 'Name must be at least 2 characters'),
+  customer_email: isLoggedIn ? z.string().optional() : z.string().email('Please enter a valid email address'),
   customer_phone: z.string().optional(),
   destination_country: z.string().min(1, 'Please select a destination country'),
+  delivery_address_id: isLoggedIn ? z.string().min(1, 'Please select a delivery address') : z.string().optional(),
   quote_type: z.enum(['single', 'separate'], {
     required_error: 'Please select quote type',
   }),
@@ -35,14 +37,17 @@ const quoteRequestSchema = z.object({
   special_requirements: z.string().optional(),
 });
 
-type QuoteRequestFormData = z.infer<typeof quoteRequestSchema>;
-
 export default function QuoteRequestPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
   const [submittedQuoteNumber, setSubmittedQuoteNumber] = useState('');
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+
+  // Create schema based on user authentication status  
+  const quoteRequestSchema = createQuoteRequestSchema(!!user);
+  type QuoteRequestFormData = z.infer<typeof quoteRequestSchema>;
 
   const form = useForm<QuoteRequestFormData>({
     resolver: zodResolver(quoteRequestSchema),
@@ -51,6 +56,7 @@ export default function QuoteRequestPage() {
       customer_email: user?.email || '',
       customer_phone: user?.phone || '',
       destination_country: 'IN',
+      delivery_address_id: '',
       quote_type: 'single',
       items: [{
         product_name: '',
@@ -93,11 +99,12 @@ export default function QuoteRequestPage() {
 
     try {
       const baseQuoteData = {
-        customer_email: data.customer_email,
-        customer_name: data.customer_name,
-        customer_phone: data.customer_phone || null,
+        customer_email: user?.email || data.customer_email || '',
+        customer_name: user?.user_metadata?.name || data.customer_name || '',
+        customer_phone: user?.phone || data.customer_phone || null,
         origin_country: data.quote_type === 'single' ? data.items[0]?.origin_country || 'US' : 'US',
         destination_country: data.destination_country,
+        delivery_address_id: data.delivery_address_id || null,
         status: 'draft',
         created_by: user?.id || null,
         admin_notes: data.special_requirements || null,
@@ -638,6 +645,43 @@ export default function QuoteRequestPage() {
                 />
               </CardContent>
             </Card>
+
+            {/* Delivery Address Selection for logged-in users */}
+            {user && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <MapPin className="h-5 w-5" />
+                    <span>Delivery Address</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="delivery_address_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select delivery address *</FormLabel>
+                        <FormControl>
+                          <CompactAddressSelector
+                            selectedAddressId={field.value}
+                            onSelectAddress={(address) => {
+                              field.onChange(address.id);
+                              setSelectedAddress(address);
+                              // Auto-update destination country based on selected address
+                              form.setValue('destination_country', address.destination_country);
+                            }}
+                            showAddButton={true}
+                            className="mt-2"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
             {/* Submit */}
             <div className="flex justify-center">

@@ -29,7 +29,12 @@ import {
   Sparkles,
   Brain,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  MapPin,
+  Phone,
+  User,
+  Mail,
+  CheckCircle
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
@@ -105,6 +110,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState<any>(null);
   const [originCountry, setOriginCountry] = useState('US');
   const [originState, setOriginState] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('NP');
@@ -328,6 +334,23 @@ const QuoteCalculatorV2: React.FC = () => {
 
         // Load documents
         await loadQuoteDocuments(id);
+
+        // Load delivery address if available
+        if (quote.delivery_address_id) {
+          try {
+            const { data: address, error: addressError } = await supabase
+              .from('delivery_addresses')
+              .select('*')
+              .eq('id', quote.delivery_address_id)
+              .single();
+
+            if (!addressError && address) {
+              setDeliveryAddress(address);
+            }
+          } catch (addressError) {
+            console.error('Error loading delivery address:', addressError);
+          }
+        }
 
         toast({
           title: 'Quote Loaded',
@@ -873,40 +896,131 @@ const QuoteCalculatorV2: React.FC = () => {
           {/* Customer Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Customer Information</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-600" />
+                Customer Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="customer@example.com"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Customer name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="+1234567890"
-                  />
+              {/* Customer Contact Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Name */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Name</div>
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {customerName || 'Not provided'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Mail className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-green-700 uppercase tracking-wide">Email</div>
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {customerEmail || 'Not provided'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phone */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <Phone className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-medium text-purple-700 uppercase tracking-wide">Phone</div>
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {customerPhone || 'Not provided'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Edit Customer Info - Only show for new quotes */}
+              {!isEditMode && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="text-xs font-medium text-gray-600 mb-2">Edit Customer Details</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Input
+                      placeholder="Customer Name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className="text-sm"
+                    />
+                    <Input
+                      type="email"
+                      placeholder="Email Address"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      className="text-sm"
+                    />
+                    <Input
+                      placeholder="Phone Number"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Delivery Address Display */}
+              {deliveryAddress && (
+                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-teal-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-medium text-teal-700 uppercase tracking-wide">Delivery Address</div>
+                      {deliveryAddress.is_default && (
+                        <Badge className="bg-green-50 text-green-700 border-green-200 text-xs mt-1">
+                          <CheckCircle className="h-2.5 w-2.5 mr-1" />
+                          Default Address
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white/80 rounded-lg p-3 border border-teal-100">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-gray-900 text-sm">
+                        {deliveryAddress.recipient_name}
+                      </div>
+                      <div className="text-sm text-gray-700">
+                        {deliveryAddress.address_line1}
+                      </div>
+                      {deliveryAddress.address_line2 && (
+                        <div className="text-sm text-gray-600">
+                          {deliveryAddress.address_line2}
+                        </div>
+                      )}
+                      <div className="text-sm text-gray-600">
+                        {deliveryAddress.city}, {deliveryAddress.state_province_region} {deliveryAddress.postal_code}
+                      </div>
+                      <div className="text-sm font-medium text-gray-700">
+                        {deliveryAddress.destination_country}
+                      </div>
+                      {deliveryAddress.phone && (
+                        <div className="text-sm text-gray-600 flex items-center gap-1 mt-2 pt-2 border-t border-teal-100">
+                          <Phone className="h-3 w-3 text-teal-600" />
+                          {deliveryAddress.phone}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
