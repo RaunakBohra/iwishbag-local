@@ -7,6 +7,7 @@ import type { DelhiveryRateRequest, DelhiveryMultiRateResponse } from './Delhive
 import NCMService from './NCMService';
 import type { NCMRateRequest, NCMMultiRateResponse } from './NCMService';
 import { ncmBranchMappingService } from './NCMBranchMappingService';
+import { DynamicShippingService, type RouteCalculations } from './DynamicShippingService';
 
 interface CalculationInput {
   items: Array<{
@@ -527,14 +528,44 @@ class SimplifiedQuoteCalculator {
       originSalesTax = finalItemsSubtotal * (originSalesTaxRate / 100);
     }
 
-    // Step 5: Calculate shipping with discount
-    const shippingMethod = input.shipping_method || 'standard';
-    const shippingRatePerKg = SHIPPING_RATES[shippingMethod];
-    const baseShippingCost = Math.max(totalChargeableWeight * shippingRatePerKg, 25); // Minimum $25
-    
+    // Step 5: Calculate shipping dynamically
+    let baseShippingCost;
+    let finalShippingCost;
+    let routeCalculations: RouteCalculations | null = null;
+    let shippingRatePerKg = 0; // Initialize for applied_rates
+    const shippingMethod = input.shipping_method || 'standard'; // Define at function scope
+
+    try {
+      // Convert items to origin currency first
+      const itemsOriginCurrency = await this.convertToOriginCurrency(finalItemsSubtotal, input.origin_country);
+      
+      // Get dynamic calculations from shipping routes
+      const dynamicShipping = new DynamicShippingService();
+      routeCalculations = await dynamicShipping.getRouteCalculations(
+        input.origin_country,
+        input.destination_country,
+        totalChargeableWeight,
+        itemsOriginCurrency,
+        input.shipping_method // Pass selected delivery option ID
+      );
+      
+      baseShippingCost = routeCalculations.shipping.total;
+      finalShippingCost = baseShippingCost;
+      shippingRatePerKg = routeCalculations.delivery_option_used.price_per_kg;
+      
+      console.log(`🚢 [Dynamic Shipping] Route: ${input.origin_country}→${input.destination_country}`);
+      console.log(`🚢 [Dynamic Shipping] Base: ${routeCalculations.shipping.base_cost}, Per-kg: ${routeCalculations.shipping.per_kg_cost}, Cost%: ${routeCalculations.shipping.cost_percentage}, Total: ${baseShippingCost}`);
+      
+    } catch (error) {
+      console.warn('🚨 [Dynamic Shipping] Failed, using fallback:', error);
+      
+      // Fallback to hardcoded rates
+      shippingRatePerKg = SHIPPING_RATES[shippingMethod];
+      baseShippingCost = Math.max(totalChargeableWeight * shippingRatePerKg, 25); // Minimum $25
+      finalShippingCost = baseShippingCost;
+    }
     
     let shippingDiscountAmount = 0;
-    let finalShippingCost = baseShippingCost;
     
     if (input.shipping_discount) {
       if (input.shipping_discount.type === 'free') {
@@ -549,11 +580,25 @@ class SimplifiedQuoteCalculator {
       }
     }
 
-    // Step 6: Calculate insurance (on discounted value)
-    const insurancePercentage = input.insurance_required !== false ? 1 : 0;
-    const insuranceAmount = insurancePercentage > 0 
-      ? Math.max((finalItemsSubtotal + originSalesTax) * (insurancePercentage / 100), 5)
-      : 0;
+    // Step 6: Calculate insurance dynamically
+    let insuranceAmount = 0;
+    let insurancePercentage = 0;
+    
+    if (routeCalculations && routeCalculations.insurance.available && input.insurance_required !== false) {
+      // Use dynamic insurance from shipping route
+      insuranceAmount = routeCalculations.insurance.amount;
+      insurancePercentage = routeCalculations.insurance.percentage;
+      
+      console.log(`🛡️ [Dynamic Insurance] Percentage: ${insurancePercentage}%, Amount: ${insuranceAmount}`);
+    } else {
+      // Fallback to hardcoded insurance
+      insurancePercentage = input.insurance_required !== false ? 1 : 0;
+      insuranceAmount = insurancePercentage > 0 
+        ? Math.max((finalItemsSubtotal + originSalesTax) * (insurancePercentage / 100), 5)
+        : 0;
+        
+      console.log(`🛡️ [Fallback Insurance] Using hardcoded 1%, Amount: ${insuranceAmount}`);
+    }
 
     // Step 7: Calculate CIF (Cost + Insurance + Freight) 
     // CRITICAL FIX: Separate customer billing base from customs calculation base
@@ -744,19 +789,32 @@ class SimplifiedQuoteCalculator {
       }
     }
 
-    // Step 10: Calculate handling fee (on discounted items value)
-    const handlingFeeType = input.handling_fee_type || 'both';
+    // Step 10: Calculate handling fee dynamically
     let handlingFee = 0;
     let handlingFeeFixed = 0;
     let handlingFeePercentage = 0;
     
-    if (handlingFeeType === 'fixed' || handlingFeeType === 'both') {
-      handlingFeeFixed = HANDLING_FEES.fixed;
-      handlingFee += handlingFeeFixed;
-    }
-    if (handlingFeeType === 'percentage' || handlingFeeType === 'both') {
-      handlingFeePercentage = HANDLING_FEES.percentage;
-      handlingFee += finalItemsSubtotal * (handlingFeePercentage / 100);
+    if (routeCalculations) {
+      // Use dynamic handling fee from shipping route
+      handlingFee = routeCalculations.handling.total;
+      handlingFeeFixed = routeCalculations.handling.base_fee;
+      handlingFeePercentage = routeCalculations.handling.percentage_fee;
+      
+      console.log(`🤝 [Dynamic Handling] Base: ${handlingFeeFixed}, Percentage: ${handlingFeePercentage}, Total: ${handlingFee} (capped between ${routeCalculations.handling.min_fee}-${routeCalculations.handling.max_fee})`);
+    } else {
+      // Fallback to hardcoded handling fees
+      const handlingFeeType = input.handling_fee_type || 'both';
+      
+      if (handlingFeeType === 'fixed' || handlingFeeType === 'both') {
+        handlingFeeFixed = HANDLING_FEES.fixed;
+        handlingFee += handlingFeeFixed;
+      }
+      if (handlingFeeType === 'percentage' || handlingFeeType === 'both') {
+        handlingFeePercentage = HANDLING_FEES.percentage;
+        handlingFee += finalItemsSubtotal * (handlingFeePercentage / 100);
+      }
+      
+      console.log(`🤝 [Fallback Handling] Using hardcoded fees, Total: ${handlingFee}`);
     }
 
     // Apply handling fee discounts if available
@@ -1024,7 +1082,9 @@ class SimplifiedQuoteCalculator {
         }
       },
       calculation_timestamp: new Date().toISOString(),
-      calculation_version: 'v2'
+      calculation_version: 'v2',
+      // Add route calculations for debug component
+      route_calculations: routeCalculations
     };
   }
 
@@ -1041,6 +1101,19 @@ class SimplifiedQuoteCalculator {
     };
 
     return countryCurrencyMap[countryCode] || 'USD';
+  }
+
+  private async convertToOriginCurrency(amountUSD: number, originCountry: string): Promise<number> {
+    const originCurrency = await this.getCustomerCurrency(originCountry);
+    
+    // If origin is USD, no conversion needed
+    if (originCurrency === 'USD') {
+      return amountUSD;
+    }
+    
+    // Convert USD to origin currency
+    const exchangeRate = await currencyService.getExchangeRate('USD', originCurrency);
+    return amountUSD * exchangeRate;
   }
 
   private round(value: number): number {

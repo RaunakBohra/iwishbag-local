@@ -180,9 +180,29 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
               <span className="font-bold">${steps.shipping_cost.toFixed(2)}</span>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
-              {inputs.total_chargeable_weight_kg}kg × ${rates.shipping_rate_per_kg}/kg = ${steps.shipping_cost.toFixed(2)}
-            </p>
+            {calc.route_calculations ? (
+              <div className="text-sm text-gray-600 mt-2">
+                <div className="font-mono bg-white p-2 rounded border text-xs">
+                  <div className="mb-1">
+                    <strong>Dynamic Route Calculation:</strong>
+                  </div>
+                  <div>
+                    Base: ${calc.route_calculations.shipping.base_cost.toFixed(2)} + 
+                    Per-kg: ${calc.route_calculations.shipping.per_kg_cost.toFixed(2)} + 
+                    Cost%: ${calc.route_calculations.shipping.cost_percentage.toFixed(2)} = 
+                    <strong> ${calc.route_calculations.shipping.total.toFixed(2)}</strong>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Using: {calc.route_calculations.delivery_option_used.name} ({calc.route_calculations.delivery_option_used.carrier}) - 
+                    ${calc.route_calculations.delivery_option_used.price_per_kg}/kg, {calc.route_calculations.delivery_option_used.delivery_days}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 mt-1">
+                {inputs.total_chargeable_weight_kg}kg × ${rates.shipping_rate_per_kg}/kg = ${steps.shipping_cost.toFixed(2)}
+              </p>
+            )}
           </div>
 
           {/* Shipping Discount - Legacy */}

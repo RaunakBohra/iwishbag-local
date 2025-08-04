@@ -71,6 +71,8 @@ import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltip
 import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
 import { UnifiedHSNSearch } from '@/components/forms/quote-form-fields/UnifiedHSNSearch';
 import { ShareQuoteButtonV2 } from '@/components/admin/ShareQuoteButtonV2';
+import { ShippingRouteDebug } from '@/components/admin/ShippingRouteDebug';
+import { DynamicShippingService } from '@/services/DynamicShippingService';
 
 interface QuoteItem {
   id: string;
@@ -123,6 +125,8 @@ const QuoteCalculatorV2: React.FC = () => {
   const [reminderCount, setReminderCount] = useState(0);
   const [lastReminderAt, setLastReminderAt] = useState<string | null>(null);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [shippingError, setShippingError] = useState<string | null>(null);
+  const [dynamicShippingMethods, setDynamicShippingMethods] = useState<any[]>([]);
   
   // Form state
   const [customerEmail, setCustomerEmail] = useState('');
@@ -329,6 +333,40 @@ const QuoteCalculatorV2: React.FC = () => {
       setNCMRates(null);
     }
   }, [selectedNCMBranch, destinationCountry]);
+
+  // Fetch dynamic shipping methods when origin/destination changes
+  useEffect(() => {
+    const fetchDynamicShippingMethods = async () => {
+      if (originCountry && destinationCountry) {
+        try {
+          const dynamicService = new DynamicShippingService();
+          const deliveryOptions = await dynamicService.getDeliveryOptionsForDropdown(
+            originCountry, 
+            destinationCountry
+          );
+          
+          setDynamicShippingMethods(deliveryOptions);
+          setShippingError(null);
+          
+          console.log(`✅ [QuoteCalculator] Loaded ${deliveryOptions.length} delivery options for ${originCountry} → ${destinationCountry}`);
+          
+          // Auto-select the cheapest option if we have options and no method is selected
+          if (deliveryOptions.length > 0 && !shippingMethod) {
+            setShippingMethod(deliveryOptions[0].value);
+          }
+        } catch (error) {
+          console.error('Error fetching dynamic shipping methods:', error);
+          setDynamicShippingMethods([]);
+          setShippingError(`No shipping route configured for ${originCountry} → ${destinationCountry}`);
+        }
+      } else {
+        setDynamicShippingMethods([]);
+        setShippingError(null);
+      }
+    };
+
+    fetchDynamicShippingMethods();
+  }, [originCountry, destinationCountry]);
 
   const loadQuoteDocuments = async (quoteId: string) => {
     try {
@@ -725,13 +763,26 @@ const QuoteCalculatorV2: React.FC = () => {
       });
 
       setCalculationResult(result);
+      setShippingError(null); // Clear any previous shipping errors
     } catch (error) {
       console.error('Calculation error:', error);
-      toast({
-        title: 'Calculation Error',
-        description: 'Failed to calculate quote',
-        variant: 'destructive'
-      });
+      
+      // Check if it's a shipping route error
+      if (error instanceof Error && error.message.includes('No shipping route configured')) {
+        setShippingError(error.message);
+        toast({
+          title: 'Shipping Route Missing',
+          description: `No shipping route configured for ${originCountry} → ${destinationCountry}`,
+          variant: 'destructive'
+        });
+      } else {
+        setShippingError(null);
+        toast({
+          title: 'Calculation Error',
+          description: 'Failed to calculate quote',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setCalculating(false);
     }
@@ -996,7 +1047,10 @@ const QuoteCalculatorV2: React.FC = () => {
   };
 
   const taxInfo = simplifiedQuoteCalculator.getTaxInfo(destinationCountry);
-  const shippingMethods = simplifiedQuoteCalculator.getShippingMethods();
+  // Use dynamic shipping methods if available, otherwise fallback to hardcoded
+  const shippingMethods = dynamicShippingMethods.length > 0 
+    ? dynamicShippingMethods 
+    : simplifiedQuoteCalculator.getShippingMethods();
 
   // Show loading state when loading existing quote
   if (loadingQuote) {
@@ -1410,7 +1464,10 @@ const QuoteCalculatorV2: React.FC = () => {
                       <SelectContent>
                         {shippingMethods.map(method => (
                           <SelectItem key={method.value} value={method.value}>
-                            {method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - ${method.rate}/kg
+                            {dynamicShippingMethods.length > 0 
+                              ? `${method.label} - $${method.rate}/kg (${method.delivery_days})`
+                              : `${method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - $${method.rate}/kg`
+                            }
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2259,6 +2316,34 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardContent>
           </Card>
 
+          {/* Shipping Route Error */}
+          {shippingError && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-red-800 mb-1">
+                      Shipping Route Missing
+                    </div>
+                    <div className="text-sm text-red-700 mb-3">
+                      {shippingError}
+                    </div>
+                    <Button 
+                      onClick={() => navigate('/admin/shipping-routes')} 
+                      variant="outline" 
+                      size="sm"
+                      className="text-red-700 border-red-300 hover:bg-red-100"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configure Shipping Route
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Quote Details & Analysis - Always visible when calculation exists */}
           {calculationResult && calculationResult.calculation_steps && (
             <QuoteDetailsAnalysis 
@@ -2281,6 +2366,17 @@ const QuoteCalculatorV2: React.FC = () => {
             />
           )}
 
+          {/* Shipping Route Debug Component */}
+          {calculationResult && calculationResult.calculation_steps && (
+            <ShippingRouteDebug
+              routeCalculations={calculationResult.route_calculations}
+              originCountry={originCountry}
+              destinationCountry={destinationCountry}
+              weight={items.reduce((sum, item) => sum + (item.weight_kg || 0.5) * item.quantity, 0)}
+              itemValueUSD={items.reduce((sum, item) => sum + item.unit_price_usd * item.quantity, 0)}
+              fallbackUsed={!calculationResult.route_calculations}
+            />
+          )}
 
           {/* Detailed Breakdown using proper component */}
           {calculationResult && showPreview && calculationResult.calculation_steps && (
