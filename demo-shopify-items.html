@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify-Inspired Items Design</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f7f8fa;
+            color: #202223;
+            padding: 24px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 24px 32px;
+            background: white;
+            border-bottom: 1px solid #e1e3e5;
+        }
+        
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #202223;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .items-badge {
+            background: #00a047;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .bulk-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .bulk-btn {
+            background: #f6f6f7;
+            border: 1px solid #c9cccf;
+            color: #202223;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .bulk-btn:hover {
+            background: #f1f2f3;
+            border-color: #8c9196;
+        }
+        
+        .bulk-btn.primary {
+            background: #00a047;
+            border-color: #00a047;
+            color: white;
+        }
+        
+        .bulk-btn.primary:hover {
+            background: #008a3d;
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            color: #6d7175;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .items-list {
+            background: white;
+        }
+        
+        .item-card {
+            border-bottom: 1px solid #e1e3e5;
+            padding: 20px 32px;
+            transition: background-color 0.15s ease;
+        }
+        
+        .item-card:hover {
+            background: #f6f6f7;
+        }
+        
+        .item-main {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto auto auto;
+            gap: 16px;
+            align-items: center;
+        }
+        
+        .item-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #c9cccf;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .product-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 300px;
+        }
+        
+        .product-image {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #5c6ac4 0%, #00a047 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .product-info h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #202223;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .product-sku {
+            font-size: 12px;
+            color: #6d7175;
+            margin-bottom: 6px;
+        }
+        
+        .product-url {
+            font-size: 11px;
+            color: #5c6ac4;
+            background: #f4f6f8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .quantity-section {
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .quantity-label {
+            font-size: 11px;
+            color: #6d7175;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .quantity-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #202223;
+        }
+        
+        .price-section {
+            text-align: right;
+            min-width: 100px;
+        }
+        
+        .price-label {
+            font-size: 11px;
+            color: #6d7175;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .price-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00a047;
+        }
+        
+        .inventory-section {
+            text-align: center;
+            min-width: 80px;
+        }
+        
+        .inventory-label {
+            font-size: 11px;
+            color: #6d7175;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .weight-value {
+            font-size: 13px;
+            color: #202223;
+        }
+        
+        .hsn-section {
+            text-align: center;
+            min-width: 120px;
+        }
+        
+        .hsn-badge {
+            background: #f4f6f8;
+            border: 1px solid #c9cccf;
+            color: #202223;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .tax-info {
+            font-size: 10px;
+            color: #6d7175;
+            margin-top: 2px;
+        }
+        
+        .actions-section {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .action-btn {
+            background: none;
+            border: 1px solid #c9cccf;
+            color: #6d7175;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .action-btn:hover {
+            background: #f1f2f3;
+            border-color: #8c9196;
+            color: #202223;
+        }
+        
+        .enhance-btn {
+            background: #5c6ac4;
+            border-color: #5c6ac4;
+            color: white;
+        }
+        
+        .enhance-btn:hover {
+            background: #4959bd;
+        }
+        
+        .delete-btn {
+            color: #d72c0d;
+            border-color: #d72c0d;
+        }
+        
+        .delete-btn:hover {
+            background: #d72c0d;
+            color: white;
+        }
+        
+        .add-item-section {
+            padding: 32px;
+            text-align: center;
+            border-top: 1px solid #e1e3e5;
+            background: #f9fafb;
+        }
+        
+        .add-item-btn {
+            background: #00a047;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .add-item-btn:hover {
+            background: #008a3d;
+        }
+        
+        .footer-summary {
+            padding: 24px 32px;
+            background: #f9fafb;
+            border-top: 1px solid #e1e3e5;
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 32px;
+            align-items: center;
+        }
+        
+        .summary-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            color: #6d7175;
+        }
+        
+        .total-section {
+            text-align: right;
+        }
+        
+        .total-label {
+            font-size: 13px;
+            color: #6d7175;
+            margin-bottom: 4px;
+        }
+        
+        .total-amount {
+            font-size: 24px;
+            font-weight: 600;
+            color: #202223;
+        }
+        
+        .continue-btn {
+            background: #00a047;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .continue-btn:hover {
+            background: #008a3d;
+        }
+        
+        @media (max-width: 768px) {
+            .item-main {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .product-section {
+                min-width: auto;
+            }
+            
+            .footer-summary {
+                grid-template-columns: 1fr;
+                gap: 16px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>
+                    🛍️ Products
+                    <span class="items-badge">2 items</span>
+                </h1>
+                <div class="bulk-actions">
+                    <button class="bulk-btn">Export</button>
+                    <button class="bulk-btn">Bulk Edit</button>
+                    <button class="bulk-btn primary">+ Add Product</button>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span>📦</span>
+                    <span>Total value: $3,498.00</span>
+                </div>
+                <div class="stat-item">
+                    <span>⚖️</span>
+                    <span>Combined weight: 2.6kg</span>
+                </div>
+                <div class="stat-item">
+                    <span>🏷️</span>
+                    <span>2 HSN categories</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="items-list">
+            <!-- Item 1 -->
+            <div class="item-card">
+                <div class="item-main">
+                    <div class="item-checkbox"></div>
+                    
+                    <div class="product-section">
+                        <div class="product-image">📱</div>
+                        <div class="product-info">
+                            <h3>iPhone 15 Pro Max</h3>
+                            <div class="product-sku">SKU: IPHPRO15MAX</div>
+                            <a href="#" class="product-url">amazon.com/iphone-15-pro-max</a>
+                        </div>
+                    </div>
+                    
+                    <div class="quantity-section">
+                        <div class="quantity-label">Quantity</div>
+                        <div class="quantity-value">1</div>
+                    </div>
+                    
+                    <div class="price-section">
+                        <div class="price-label">Unit Price</div>
+                        <div class="price-value">$999.00</div>
+                    </div>
+                    
+                    <div class="inventory-section">
+                        <div class="inventory-label">Weight</div>
+                        <div class="weight-value">0.5kg</div>
+                    </div>
+                    
+                    <div class="hsn-section">
+                        <div class="hsn-badge">
+                            📱 HSN: 8517
+                        </div>
+                        <div class="tax-info">GST: 18% • Duty: 15%</div>
+                    </div>
+                    
+                    <div class="actions-section">
+                        <button class="action-btn enhance-btn">
+                            ✨ AI
+                        </button>
+                        <button class="action-btn">
+                            ✏️ Edit
+                        </button>
+                        <button class="action-btn delete-btn">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Item 2 -->
+            <div class="item-card">
+                <div class="item-main">
+                    <div class="item-checkbox"></div>
+                    
+                    <div class="product-section">
+                        <div class="product-image">💻</div>
+                        <div class="product-info">
+                            <h3>MacBook Pro 16" M3 Max</h3>
+                            <div class="product-sku">SKU: MBPRO16M3MAX</div>
+                            <a href="#" class="product-url">apple.com/macbook-pro-16</a>
+                        </div>
+                    </div>
+                    
+                    <div class="quantity-section">
+                        <div class="quantity-label">Quantity</div>
+                        <div class="quantity-value">1</div>
+                    </div>
+                    
+                    <div class="price-section">
+                        <div class="price-label">Unit Price</div>
+                        <div class="price-value">$2,499.00</div>
+                    </div>
+                    
+                    <div class="inventory-section">
+                        <div class="inventory-label">Weight</div>
+                        <div class="weight-value">2.1kg</div>
+                    </div>
+                    
+                    <div class="hsn-section">
+                        <div class="hsn-badge">
+                            💻 HSN: 8471
+                        </div>
+                        <div class="tax-info">GST: 28% • Duty: 20%</div>
+                    </div>
+                    
+                    <div class="actions-section">
+                        <button class="action-btn enhance-btn">
+                            ✨ AI
+                        </button>
+                        <button class="action-btn">
+                            ✏️ Edit
+                        </button>
+                        <button class="action-btn delete-btn">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="add-item-section">
+            <button class="add-item-btn">
+                + Add Product
+            </button>
+        </div>
+        
+        <div class="footer-summary">
+            <div class="summary-stats">
+                <span>2 products selected</span>
+                <span>Ready for shipping</span>
+                <span>Last updated: 2 min ago</span>
+            </div>
+            
+            <div class="total-section">
+                <div class="total-label">Order Total</div>
+                <div class="total-amount">$3,498.00</div>
+            </div>
+            
+            <button class="continue-btn">
+                Continue to Checkout
+            </button>
+        </div>
+    </div>
+</body>
+</html>

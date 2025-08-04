@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -24,11 +25,12 @@ import {
   Clock,
   Check,
   X,
+  ChevronDown,
+  ArrowRight,
   Tag,
   Ruler,
   Sparkles,
   Brain,
-  ChevronDown,
   ChevronUp,
   MapPin,
   Phone,
@@ -889,6 +891,76 @@ const QuoteCalculatorV2: React.FC = () => {
     });
   };
 
+  // Status management functions
+  const getStatusOptions = () => {
+    return [
+      { value: 'draft', label: 'Draft' },
+      { value: 'calculated', label: 'Calculated' },
+      { value: 'sent', label: 'Sent' },
+      { value: 'approved', label: 'Approved' },
+      { value: 'rejected', label: 'Rejected' },
+    ];
+  };
+
+  const getNextStatus = (currentStatus: string) => {
+    const statusFlow = {
+      'draft': 'calculated',
+      'calculated': 'sent',
+      'sent': 'approved',
+      'approved': null, // No next status
+      'rejected': 'calculated' // Can recalculate from rejected
+    };
+    return statusFlow[currentStatus as keyof typeof statusFlow];
+  };
+
+  const getNextStatusLabel = (currentStatus: string) => {
+    const nextStatus = getNextStatus(currentStatus);
+    if (!nextStatus) return null;
+    
+    const statusLabels = {
+      'calculated': 'Calculate',
+      'sent': 'Send',
+      'approved': 'Approve',
+    };
+    return statusLabels[nextStatus as keyof typeof statusLabels] || nextStatus;
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!quoteId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('quotes_v2')
+        .update({ status: newStatus })
+        .eq('id', quoteId);
+
+      if (error) throw error;
+
+      setCurrentQuoteStatus(newStatus);
+      toast({
+        title: 'Status Updated',
+        description: `Quote status changed to ${newStatus}`,
+      });
+
+      // Refresh quote data
+      loadExistingQuote(quoteId);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update quote status',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleNextStatusClick = async () => {
+    const nextStatus = getNextStatus(currentQuoteStatus);
+    if (nextStatus) {
+      await handleStatusChange(nextStatus);
+    }
+  };
+
 
   const getExpiryStatus = () => {
     if (!expiresAt) return null;
@@ -955,11 +1027,9 @@ const QuoteCalculatorV2: React.FC = () => {
           )}
         </div>
         <div className="flex items-center gap-4">
+          {/* Informational badges */}
           {isEditMode && (
             <div className="flex items-center gap-2">
-              <Badge variant={currentQuoteStatus === 'calculated' ? 'default' : 'secondary'}>
-                {currentQuoteStatus}
-              </Badge>
               {emailSent && (
                 <Badge variant="outline" className="text-green-600">
                   <Eye className="mr-1 h-3 w-3" />
@@ -977,10 +1047,60 @@ const QuoteCalculatorV2: React.FC = () => {
               })()}
             </div>
           )}
-          <Badge variant="secondary" className="text-lg px-4 py-2">
-            <Calculator className="w-4 h-4 mr-2" />
-            {isEditMode ? 'Edit Mode' : 'New Calculator'}
-          </Badge>
+
+          {/* Action bar - only show when quote exists */}
+          {quoteId ? (
+            <div className="flex items-center gap-2 border-l pl-4">
+              {/* Status dropdown */}
+              <Select value={currentQuoteStatus} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-32 h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getStatusOptions().map(status => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Next status button */}
+              {getNextStatus(currentQuoteStatus) && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleNextStatusClick}
+                  className="h-8 px-3 gap-1"
+                >
+                  <ArrowRight className="h-3 w-3" />
+                  {getNextStatusLabel(currentQuoteStatus)}
+                </Button>
+              )}
+
+              {/* Share button */}
+              <ShareQuoteButtonV2
+                quote={{
+                  id: quoteId,
+                  display_id: null,
+                  email: customerEmail,
+                  final_total_usd: calculationResult?.total || 0,
+                  status: currentQuoteStatus,
+                  created_at: new Date().toISOString(),
+                  share_token: shareToken,
+                  expires_at: expiresAt,
+                } as any}
+                variant="icon"
+                size="default"
+              />
+            </div>
+          ) : (
+            // Show mode badge when no quote exists
+            <Badge variant="secondary" className="text-lg px-4 py-2">
+              <Calculator className="w-4 h-4 mr-2" />
+              New Calculator
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -2125,24 +2245,6 @@ const QuoteCalculatorV2: React.FC = () => {
                     {loading ? 'Saving...' : (isEditMode ? 'Update Quote' : 'Save Quote')}
                   </Button>
                   
-                  {/* Share Quote Button - Show when quote is saved */}
-                  {quoteId && (
-                    <ShareQuoteButtonV2
-                      quote={{
-                        id: quoteId,
-                        display_id: null,
-                        email: customerEmail,
-                        final_total_usd: calculationResult?.total || 0,
-                        status: currentQuoteStatus,
-                        created_at: new Date().toISOString(),
-                        share_token: shareToken,
-                        expires_at: expiresAt,
-                      } as any}
-                      variant="button"
-                      size="default"
-                      className="w-full"
-                    />
-                  )}
                   
                   {/* Email sending for edit mode */}
                   {isEditMode && calculationResult && currentQuoteStatus === 'calculated' && !emailSent && (
@@ -2331,7 +2433,6 @@ const QuoteCalculatorV2: React.FC = () => {
                   }}
                   variant="outline"
                   size="default"
-                  showLabel={true}
                   className="w-full"
                 />
                 </CardContent>

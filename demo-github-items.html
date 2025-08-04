@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub-Inspired Items Design</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+        }
+        
+        .header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #30363d;
+            background: #0d1117;
+        }
+        
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #f0f6fc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .item-count {
+            background: #21262d;
+            color: #7d8590;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .add-item-btn {
+            background: #238636;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .add-item-btn:hover {
+            background: #2ea043;
+        }
+        
+        .header-stats {
+            font-size: 12px;
+            color: #7d8590;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table-header {
+            background: #0d1117;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .table-header th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #7d8590;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .item-row {
+            border-bottom: 1px solid #21262d;
+            transition: background-color 0.15s ease;
+        }
+        
+        .item-row:hover {
+            background: #0d1117;
+        }
+        
+        .item-row td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+        
+        .product-cell {
+            min-width: 300px;
+        }
+        
+        .product-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .product-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .product-info h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+        
+        .product-info h3:hover {
+            text-decoration: underline;
+        }
+        
+        .product-url {
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 11px;
+            color: #7d8590;
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+            display: inline-block;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .hsn-badge {
+            background: #21262d;
+            color: #f0f6fc;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        
+        .quantity-cell {
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+        
+        .price-cell {
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-weight: 600;
+            color: #56d364;
+        }
+        
+        .weight-cell {
+            color: #7d8590;
+            font-size: 12px;
+        }
+        
+        .tax-info {
+            font-size: 11px;
+            color: #7d8590;
+        }
+        
+        .tax-rate {
+            color: #f85149;
+            font-weight: 500;
+        }
+        
+        .actions-cell {
+            text-align: right;
+        }
+        
+        .action-btn {
+            background: none;
+            border: 1px solid #30363d;
+            color: #7d8590;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-left: 4px;
+            transition: all 0.15s ease;
+        }
+        
+        .action-btn:hover {
+            background: #21262d;
+            border-color: #8b949e;
+            color: #f0f6fc;
+        }
+        
+        .enhance-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .enhance-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .remove-btn {
+            color: #f85149;
+            border-color: #f85149;
+        }
+        
+        .remove-btn:hover {
+            background: #f85149;
+            color: white;
+        }
+        
+        .footer {
+            padding: 16px 20px;
+            border-top: 1px solid #30363d;
+            background: #0d1117;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .footer-stats {
+            font-size: 12px;
+            color: #7d8590;
+        }
+        
+        .total-amount {
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: #56d364;
+        }
+        
+        @media (max-width: 768px) {
+            .items-table, .table-header, .item-row {
+                display: block;
+            }
+            
+            .item-row {
+                margin-bottom: 12px;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+            }
+            
+            .item-row td {
+                display: block;
+                padding: 8px 12px;
+                border-bottom: 1px solid #21262d;
+            }
+            
+            .item-row td:last-child {
+                border-bottom: none;
+            }
+            
+            .table-header {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h2>
+                    📦 Items
+                    <span class="item-count">2</span>
+                </h2>
+                <button class="add-item-btn">
+                    + Add item
+                </button>
+            </div>
+            <div class="header-stats">
+                Total value: $3,498.00 • Combined weight: 2.6kg • 2 HSN categories
+            </div>
+        </div>
+        
+        <table class="items-table">
+            <thead class="table-header">
+                <tr>
+                    <th>Product</th>
+                    <th>Qty</th>
+                    <th>Price (USD)</th>
+                    <th>Weight</th>
+                    <th>Tax Info</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="item-row">
+                    <td class="product-cell">
+                        <div class="product-main">
+                            <div class="product-icon">📱</div>
+                            <div class="product-info">
+                                <h3>iPhone 15 Pro Max</h3>
+                                <div class="product-url">amazon.com/iphone-15-pro-max</div>
+                                <div class="hsn-badge">
+                                    🏷️ HSN: 8517 - Mobile Phones
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="quantity-cell">1×</td>
+                    <td class="price-cell">$999.00</td>
+                    <td class="weight-cell">0.5kg</td>
+                    <td class="tax-info">
+                        GST: <span class="tax-rate">18%</span><br>
+                        Duty: <span class="tax-rate">15%</span>
+                    </td>
+                    <td class="actions-cell">
+                        <button class="action-btn enhance-btn">✨ Enhance</button>
+                        <button class="action-btn">Edit</button>
+                        <button class="action-btn remove-btn">Delete</button>
+                    </td>
+                </tr>
+                
+                <tr class="item-row">
+                    <td class="product-cell">
+                        <div class="product-main">
+                            <div class="product-icon">💻</div>
+                            <div class="product-info">
+                                <h3>MacBook Pro 16" M3 Max</h3>
+                                <div class="product-url">apple.com/macbook-pro-16</div>
+                                <div class="hsn-badge">
+                                    🏷️ HSN: 8471 - Laptops
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="quantity-cell">1×</td>
+                    <td class="price-cell">$2,499.00</td>
+                    <td class="weight-cell">2.1kg</td>
+                    <td class="tax-info">
+                        GST: <span class="tax-rate">28%</span><br>
+                        Duty: <span class="tax-rate">20%</span>
+                    </td>
+                    <td class="actions-cell">
+                        <button class="action-btn enhance-btn">✨ Enhance</button>
+                        <button class="action-btn">Edit</button>
+                        <button class="action-btn remove-btn">Delete</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            <div class="footer-stats">
+                Last updated 2 minutes ago • Auto-save enabled
+            </div>
+            <div class="total-amount">
+                Total: $3,498.00
+            </div>
+        </div>
+    </div>
+</body>
+</html>
