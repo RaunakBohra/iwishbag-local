@@ -155,20 +155,32 @@ const QuoteCalculatorV2: React.FC = () => {
     if (!address) return { text: 'Not provided', isMultiline: false };
     
     if (showDetails) {
-      // Show full address with all details
+      // Show full address with all details including recipient info
+      const lines = [];
+      
+      // Add recipient name and phone if available
+      if (address.recipient_name) {
+        const recipientLine = address.phone 
+          ? `${address.recipient_name} • ${address.phone}`
+          : address.recipient_name;
+        lines.push(recipientLine);
+      }
+      
+      // Add address lines
+      if (address.address_line1) lines.push(address.address_line1);
+      if (address.address_line2) lines.push(address.address_line2);
+      lines.push(`${address.city}, ${address.state_province_region} ${address.postal_code}`);
+      lines.push(getCountryName(address.destination_country));
+      
       return {
-        lines: [
-          address.address_line1,
-          address.address_line2,
-          `${address.city}, ${address.state_province_region} ${address.postal_code}`,
-          getCountryName(address.destination_country)
-        ].filter(Boolean),
+        lines: lines.filter(Boolean),
         isMultiline: true
       };
     } else {
-      // Show city, country summary
+      // Show recipient name and city/country summary
+      const recipientInfo = address.recipient_name ? `${address.recipient_name} • ` : '';
       return {
-        text: `${address.city}, ${getCountryName(address.destination_country)}`,
+        text: `${recipientInfo}${address.city}, ${getCountryName(address.destination_country)}`,
         isMultiline: false
       };
     }
