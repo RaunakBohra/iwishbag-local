@@ -53,7 +53,8 @@ class NCMBranchMappingService {
         this.setCache(cacheKey, branches);
       }
       
-      console.log(`✅ [NCM] Fetched ${branches.length} branches`);
+      console.log(`✅ [NCM] Successfully fetched ${branches.length} branches from API`);
+      console.log(`📊 [NCM] Branch coverage: ${branches.length} districts across Nepal`);
       return branches;
     } catch (error) {
       console.error('❌ [NCM] Failed to fetch branches:', error);
@@ -278,7 +279,8 @@ class NCMBranchMappingService {
   }
 
   private getFallbackBranches(): NCMBranch[] {
-    console.log('🔄 [NCM] Using fallback branches');
+    console.warn('⚠️ [NCM] API failed! Using limited fallback branches (3 of 68)');
+    console.warn('⚠️ [NCM] This will limit customer delivery options - API should be fixed');
     return [
       {
         name: 'TINK',
@@ -317,9 +319,55 @@ class NCMBranchMappingService {
       data,
       timestamp: Date.now()
     });
+    console.log(`💾 [NCM] Cached ${data.length} branches for 5 minutes`);
+  }
+
+  /**
+   * Clear branch cache (useful for debugging)
+   */
+  clearCache(): void {
+    this.cache.clear();
+    console.log('🗑️ [NCM] Branch cache cleared');
+  }
+
+  /**
+   * Debug method to check branch status
+   */
+  async debugBranchStatus(): Promise<void> {
+    console.log('🔍 [NCM Debug] Checking branch status...');
+    
+    const cacheKey = 'ncm_branches';
+    const cached = this.getFromCache(cacheKey);
+    
+    if (cached) {
+      console.log(`📦 [NCM Debug] Cache: ${cached.length} branches (valid for ${Math.round((this.CACHE_DURATION - (Date.now() - this.cache.get(cacheKey)!.timestamp)) / 1000)}s)`);
+    } else {
+      console.log('❌ [NCM Debug] No cached data');
+    }
+    
+    try {
+      const fresh = await this.getBranches();
+      console.log(`🆕 [NCM Debug] Fresh fetch: ${fresh.length} branches`);
+      
+      if (fresh.length >= 60) {
+        console.log('✅ [NCM Debug] Full branch list available');
+      } else if (fresh.length <= 10) {
+        console.warn('⚠️ [NCM Debug] Limited branches - likely using fallback');
+      } else {
+        console.warn('⚠️ [NCM Debug] Partial branch list - possible API issue');
+      }
+    } catch (error) {
+      console.error('❌ [NCM Debug] Branch fetch failed:', error);
+    }
   }
 }
 
 export const ncmBranchMappingService = NCMBranchMappingService.getInstance();
 export { NCMBranchMappingService };
 export type { AddressInput, BranchMapping };
+
+// Make debug methods available globally in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  (window as any).debugNCMBranches = () => ncmBranchMappingService.debugBranchStatus();
+  (window as any).clearNCMCache = () => ncmBranchMappingService.clearCache();
+}

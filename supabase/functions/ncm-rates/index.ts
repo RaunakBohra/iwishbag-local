@@ -89,7 +89,7 @@ serve(async (req) => {
         service_type: 'pickup',
         rate: markedUpRate,
         estimated_days: estimateDeliveryDays(creation, destination, 'pickup'),
-        service_name: 'NCM Pickup Service',
+        service_name: 'NCM Door Delivery',
         available: true
       });
     }
@@ -105,7 +105,7 @@ serve(async (req) => {
         service_type: 'collect',
         rate: markedUpRate,
         estimated_days: estimateDeliveryDays(creation, destination, 'collect'),
-        service_name: 'NCM Collect Service',
+        service_name: 'NCM Branch Pickup',
         available: true
       });
     }
@@ -232,7 +232,7 @@ function getFallbackRates(): NCMMultiRateResponse {
         service_type: 'pickup',
         rate: pickupRate,
         estimated_days: 3,
-        service_name: 'NCM Pickup Service (FALLBACK)',
+        service_name: 'NCM Door Delivery (FALLBACK)',
         available: false,
         error: 'Using fallback rate (NCM API unavailable)'
       },
@@ -240,7 +240,7 @@ function getFallbackRates(): NCMMultiRateResponse {
         service_type: 'collect',
         rate: collectRate,
         estimated_days: 5,
-        service_name: 'NCM Collect Service (FALLBACK)',
+        service_name: 'NCM Branch Pickup (FALLBACK)',
         available: false,
         error: 'Using fallback rate (NCM API unavailable)'
       }

@@ -1214,9 +1214,9 @@ const QuoteCalculatorV2: React.FC = () => {
                 {destinationCountry === 'NP' && selectedNCMBranch && (
                   <div>
                     <Label htmlFor="ncmServiceType">
-                      NCM Service Type
+                      NCM Delivery Method
                       <span className="text-xs text-blue-600 ml-2">
-                        {loadingNCMRates ? "(Loading rates...)" : "(Choose delivery method)"}
+                        {loadingNCMRates ? "(Loading rates...)" : "(Door delivery vs Branch pickup)"}
                       </span>
                     </Label>
                     <Select 
@@ -1225,16 +1225,16 @@ const QuoteCalculatorV2: React.FC = () => {
                       disabled={loadingNCMRates}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingNCMRates ? "Loading rates..." : "Select service type"} />
+                        <SelectValue placeholder={loadingNCMRates ? "Loading rates..." : "Choose delivery method"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pickup">
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              🚚 Pickup Service
+                              🚪 Door Delivery
                             </span>
                             <span className="text-xs text-gray-500">
-                              Faster delivery (1-2 days) - NCM delivers from branch to customer's address
+                              Faster delivery (1-2 days) - NCM delivers directly to customer's door
                               {ncmRates?.rates && (
                                 <span className="ml-2 font-semibold text-green-600">
                                   ₨{ncmRates.rates.find((r: any) => r.service_type === 'pickup')?.rate || 'N/A'}
@@ -1246,10 +1246,10 @@ const QuoteCalculatorV2: React.FC = () => {
                         <SelectItem value="collect">
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              🏪 Collect Service
+                              🏪 Branch Pickup
                             </span>
                             <span className="text-xs text-gray-500">
-                              Lower cost (2-4 days) - Customer collects from selected branch
+                              Lower cost (2-4 days) - Customer collects from selected NCM branch
                               {ncmRates?.rates && (
                                 <span className="ml-2 font-semibold text-green-600">
                                   ₨{ncmRates.rates.find((r: any) => r.service_type === 'collect')?.rate || 'N/A'}
@@ -1267,10 +1267,28 @@ const QuoteCalculatorV2: React.FC = () => {
                           Loading NCM rates...
                         </span>
                       ) : ncmRates?.rates ? (
-                        <span className="text-green-600 flex items-center">
-                          <Check className="h-3 w-3 mr-1" />
-                          Rates loaded • {ncmRates.markup_applied}% markup applied
-                        </span>
+                        <div>
+                          <span className="text-green-600 flex items-center">
+                            <Check className="h-3 w-3 mr-1" />
+                            Rates loaded • {ncmRates.markup_applied}% markup applied
+                          </span>
+                          {(() => {
+                            // Check if NCM API returns same rates for both services
+                            // Note: NCM demo API currently returns 149.00 NPR for all routes and both service types
+                            // This is expected behavior in the demo environment - production API may have different pricing
+                            const pickupRate = ncmRates.rates.find((r: any) => r.service_type === 'pickup')?.rate;
+                            const collectRate = ncmRates.rates.find((r: any) => r.service_type === 'collect')?.rate;
+                            if (pickupRate === collectRate) {
+                              return (
+                                <div className="text-amber-600 flex items-center mt-1">
+                                  <Info className="h-3 w-3 mr-1" />
+                                  NCM demo API: Both services currently show same rate (₨{pickupRate})
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       ) : (
                         <span className="text-blue-600">
                           🏔️ Nepal delivery via NCM (Nepal Can Move)
