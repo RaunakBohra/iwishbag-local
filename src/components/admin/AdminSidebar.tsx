@@ -52,6 +52,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -372,34 +377,69 @@ export const AdminSidebar = () => {
                   // Multiple items - different behavior for collapsed vs expanded
                   <>
                     {isCollapsed ? (
-                      // In collapsed state, show only ONE category icon representing the whole group
+                      // In collapsed state, show category icon with flyout menu on hover
                       <SidebarMenuItem key={group.title}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <SidebarMenuButton asChild>
-                              <NavLink
-                                to={(group as any).primaryUrl}
-                                className={({ isActive }) =>
-                                  `flex items-center justify-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${
-                                    isActive ? 'bg-accent text-accent-foreground font-medium' : ''
-                                  }`
-                                }
-                              >
-                                <div className="flex items-center justify-center w-full">
-                                  {React.createElement((group as any).categoryIcon, {
-                                    className: 'h-4 w-4 shrink-0',
-                                  })}
-                                </div>
-                              </NavLink>
+                        <HoverCard openDelay={200} closeDelay={100}>
+                          <HoverCardTrigger asChild>
+                            <SidebarMenuButton className="flex items-center justify-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                              <div className="flex items-center justify-center w-full">
+                                {React.createElement((group as any).categoryIcon, {
+                                  className: 'h-4 w-4 shrink-0',
+                                })}
+                              </div>
                             </SidebarMenuButton>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            <p>{group.title}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {group.items.length} items
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
+                          </HoverCardTrigger>
+                          <HoverCardContent 
+                            side="right" 
+                            className="w-64 p-3 ml-2"
+                            sideOffset={8}
+                          >
+                            <div className="space-y-1">
+                              <div className="mb-3">
+                                <h4 className="font-semibold text-sm text-foreground">
+                                  {group.title}
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {group.items.length} items available
+                                </p>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                {group.items.map((item, index) => (
+                                  <Button
+                                    key={item.title}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start h-auto py-2 px-3 text-left hover:bg-accent/60"
+                                    onClick={() => navigate(item.url)}
+                                  >
+                                    <div className="flex items-center gap-3 w-full">
+                                      {React.createElement(item.icon, {
+                                        className: 'h-4 w-4 shrink-0 text-muted-foreground',
+                                      })}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium truncate">
+                                          {item.title}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </Button>
+                                ))}
+                              </div>
+                              
+                              <div className="pt-2 border-t border-border/50">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full text-xs"
+                                  onClick={() => navigate((group as any).primaryUrl)}
+                                >
+                                  Go to {group.title}
+                                </Button>
+                              </div>
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
                       </SidebarMenuItem>
                     ) : (
                       // In expanded state, use collapsible groups
