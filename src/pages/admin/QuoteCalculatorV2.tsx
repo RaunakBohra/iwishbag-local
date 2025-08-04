@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,8 @@ import {
   X,
   ChevronDown,
   ArrowRight,
+  FileText,
+  Download,
   Tag,
   Ruler,
   Sparkles,
@@ -37,7 +40,8 @@ import {
   User,
   Mail,
   CheckCircle,
-  EyeOff
+  EyeOff,
+  Settings
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
@@ -111,6 +115,7 @@ const QuoteCalculatorV2: React.FC = () => {
   const [currentQuoteStatus, setCurrentQuoteStatus] = useState<string>('draft');
   const [emailSent, setEmailSent] = useState(false);
   const [showEmailSection, setShowEmailSection] = useState(false);
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [shareToken, setShareToken] = useState<string>('');
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [reminderCount, setReminderCount] = useState(0);
@@ -229,8 +234,6 @@ const QuoteCalculatorV2: React.FC = () => {
   const [discountCodes, setDiscountCodes] = useState<string[]>([]);
   const [applyComponentDiscounts, setApplyComponentDiscounts] = useState(true);
   const [isDiscountSectionCollapsed, setIsDiscountSectionCollapsed] = useState(true);
-  const [isDocumentsSectionCollapsed, setIsDocumentsSectionCollapsed] = useState(true);
-  const [isExportSectionCollapsed, setIsExportSectionCollapsed] = useState(true);
   
   // Items
   const [items, setItems] = useState<QuoteItem[]>([
@@ -1076,6 +1079,57 @@ const QuoteCalculatorV2: React.FC = () => {
                 </Button>
               )}
 
+              {/* Documents button */}
+              <Dialog open={showDocumentsModal} onOpenChange={setShowDocumentsModal}>
+                <DialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3 gap-1"
+                  >
+                    <FileText className="h-3 w-3" />
+                    Docs
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Quote Documents</DialogTitle>
+                  </DialogHeader>
+                  <QuoteFileUpload
+                    quoteId={quoteId}
+                    documents={documents}
+                    onDocumentsUpdate={setDocuments}
+                    isReadOnly={false}
+                  />
+                </DialogContent>
+              </Dialog>
+
+              {/* Export button */}
+              <QuoteExportControls
+                quote={{
+                  id: quoteId,
+                  customer_name: customerName,
+                  customer_email: customerEmail,
+                  customer_phone: customerPhone,
+                  status: currentQuoteStatus,
+                  items: items,
+                  total_usd: calculationResult?.calculation_steps?.total_usd || calculationResult?.total || 0,
+                  total_customer_currency: calculationResult?.calculation_steps?.total_customer_currency || calculationResult?.totalCustomerCurrency || 0,
+                  customer_currency: customerCurrency,
+                  origin_country: originCountry,
+                  destination_country: destinationCountry,
+                  created_at: new Date().toISOString(),
+                  expires_at: expiresAt,
+                  notes: adminNotes,
+                  calculation_data: calculationResult,
+                  share_token: shareToken,
+                }}
+                variant="outline"
+                size="sm"
+                showLabel={false}
+                className="h-8 px-3"
+              />
+
               {/* Share button */}
               <ShareQuoteButtonV2
                 quote={{
@@ -1539,24 +1593,17 @@ const QuoteCalculatorV2: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {items.map((item, index) => (
-                <div key={item.id} className="space-y-4 p-4 border rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium">Item {index + 1}</h4>
-                    {items.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(item.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Product Name *</Label>
+                <Card key={item.id} className="border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  {/* Card Header */}
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                          {index + 1}
+                        </div>
+                        <h4 className="text-lg font-semibold text-gray-900">Item {index + 1}</h4>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Button
                           type="button"
                           variant="outline"
@@ -1617,48 +1664,104 @@ const QuoteCalculatorV2: React.FC = () => {
                               }
                             }
                           }}
-                          className="text-xs"
+                          className="text-xs h-8 px-3 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
                           disabled={!item.name || smartFeatureLoading[`enhance-${item.id}`]}
                         >
                           <Sparkles className={`w-3 h-3 mr-1 ${smartFeatureLoading[`enhance-${item.id}`] ? 'animate-spin' : ''}`} />
                           {smartFeatureLoading[`enhance-${item.id}`] ? 'Enhancing...' : 'AI Enhance'}
                         </Button>
+                        {items.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeItem(item.id)}
+                            className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
-                      <Input
-                        value={item.name}
-                        onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                        placeholder="Enter product name"
-                      />
                     </div>
-                    <div className="md:col-span-2">
-                      <Label>Product URL</Label>
-                      <Input
-                        value={item.url}
-                        onChange={(e) => updateItem(item.id, 'url', e.target.value)}
-                        placeholder="https://..."
-                      />
+                  </CardHeader>
+
+                  <CardContent className="space-y-6">
+                    {/* Product Information Section */}
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Package className="w-4 h-4 text-gray-500" />
+                          <Label className="text-sm font-medium text-gray-700">Product Name *</Label>
+                        </div>
+                        <Input
+                          value={item.name}
+                          onChange={(e) => updateItem(item.id, 'name', e.target.value)}
+                          placeholder="e.g., iPhone 15 Pro, Samsung Galaxy S23, Sony WH-1000XM5"
+                          className="text-base"
+                        />
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <ExternalLink className="w-4 h-4 text-gray-500" />
+                            <Label className="text-sm font-medium text-gray-700">Product URL</Label>
+                          </div>
+                          {item.url && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+                              className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Open
+                            </Button>
+                          )}
+                        </div>
+                        <Input
+                          value={item.url}
+                          onChange={(e) => updateItem(item.id, 'url', e.target.value)}
+                          placeholder="https://www.amazon.com/product-link or any international store"
+                          className="text-sm"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Quantity *</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                      />
+
+                    {/* Essential Details Section */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Calculator className="w-4 h-4" />
+                        Essential Details
+                      </h5>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600 mb-1 block">Quantity *</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                            className="text-center font-medium"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium text-gray-600 mb-1 block">Unit Price (USD) *</Label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unit_price_usd}
+                              onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
+                              placeholder="0.00"
+                              className="pl-9 font-medium"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label>Unit Price (USD) *</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unit_price_usd}
-                        onChange={(e) => updateItem(item.id, 'unit_price_usd', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
 
                   {/* Unified HSN Search Component - Positioned after price as requested */}
                   {item.name && item.unit_price_usd > 0 && (
@@ -1781,171 +1884,234 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <Label>Weight per unit (kg)</Label>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              if (item.name || item.category) {
-                                const loadingKey = `weight-${item.id}`;
-                                setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
-                                try {
-                                  const suggestion = await productIntelligenceService.getSmartSuggestions({
-                                    product_name: item.name || '',
-                                    destination_country: destinationCountry,
-                                    category: item.category || 'general'
-                                  });
-                                  if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
-                                    updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
-                                    toast({
-                                      title: "⚖️ Weight Estimated",
-                                      description: `Estimated weight: ${suggestion.suggested_weight_kg}kg based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
-                                      duration: 4000,
-                                    });
-                                  } else {
-                                    toast({
-                                      variant: "destructive",
-                                      title: "Weight Estimation Failed",
-                                      description: "No weight data available for this product type.",
-                                    });
+                    {/* Weight & Discount Section */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        Weight & Pricing
+                      </h5>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-medium text-gray-600">Weight per unit (kg)</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  if (item.name || item.category) {
+                                    const loadingKey = `weight-${item.id}`;
+                                    setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
+                                    try {
+                                      const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                        product_name: item.name || '',
+                                        destination_country: destinationCountry,
+                                        category: item.category || 'general'
+                                      });
+                                      if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
+                                        updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
+                                        toast({
+                                          title: "⚖️ Weight Estimated",
+                                          description: `Estimated weight: ${suggestion.suggested_weight_kg}kg based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
+                                          duration: 4000,
+                                        });
+                                      } else {
+                                        toast({
+                                          variant: "destructive",
+                                          title: "Weight Estimation Failed",
+                                          description: "No weight data available for this product type.",
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error('Weight estimation error:', error);
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Estimation Failed",
+                                        description: "Unable to estimate weight. Please enter manually.",
+                                      });
+                                    } finally {
+                                      setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
+                                    }
                                   }
-                                } catch (error) {
-                                  console.error('Weight estimation error:', error);
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Estimation Failed",
-                                    description: "Unable to estimate weight. Please enter manually.",
-                                  });
-                                } finally {
-                                  setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
-                                }
-                              }
-                            }}
-                            className="text-xs"
-                            disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
-                          >
-                            <Brain className={`w-3 h-3 mr-1 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
-                            {smartFeatureLoading[`weight-${item.id}`] ? 'Estimating...' : 'AI Weight'}
-                          </Button>
-                          <button
-                            type="button"
-                            onClick={() => setVolumetricModalOpen(item.id)}
-                            className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                          >
-                            <Ruler className="w-3 h-3" />
-                            {item.dimensions ? 'Edit dimensions' : 'Add dimensions'}
-                          </button>
-                        </div>
-                      </div>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.001"
-                        value={item.weight_kg || ''}
-                        onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
-                        placeholder="0.5"
-                      />
-                      {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
-                        const { length, width, height, unit = 'cm' } = item.dimensions;
-                        let l = length, w = width, h = height;
-                        if (unit === 'in') {
-                          l *= 2.54; w *= 2.54; h *= 2.54;
-                        }
-                        const volume = l * w * h;
-                        const divisor = item.volumetric_divisor || 5000;
-                        const volumetricWeightPerItem = volume / divisor;
-                        const volumetricWeight = volumetricWeightPerItem * item.quantity;
-                        const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                        const isVolumetric = volumetricWeight > actualWeight;
-                        
-                        return (
-                          <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                            <p className="text-blue-700 font-medium">📦 Dimensions: {length}×{width}×{height} {unit}</p>
-                            <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
-                              Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}kg
-                              {isVolumetric && ' (volumetric)'}
-                            </p>
+                                }}
+                                className="h-6 px-2 text-xs bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                                disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
+                              >
+                                <Brain className={`w-3 h-3 mr-1 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                                {smartFeatureLoading[`weight-${item.id}`] ? 'AI' : 'AI Weight'}
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => setVolumetricModalOpen(item.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1 h-6 px-1"
+                              >
+                                <Ruler className="w-3 h-3" />
+                                {item.dimensions ? 'Edit' : 'Dimensions'}
+                              </button>
+                            </div>
                           </div>
-                        );
-                      })()}
-                    </div>
-                    {/* Category field removed - now handled by UnifiedHSNSearch */}
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <Label>Item Discount</Label>
-                        <div className="flex items-center space-x-2">
-                          <select
-                            className="text-xs border rounded px-2 py-1"
-                            value={item.discount_type || 'percentage'}
-                            onChange={(e) => {
-                              const newType = e.target.value as 'percentage' | 'amount';
-                              console.log(`🔄 Switching discount type from ${item.discount_type || 'percentage'} to ${newType} for item ${item.id}`);
-                              
-                              // Update all fields in a single state update to ensure React detects the change
-                              setItems(items.map(currentItem => 
-                                currentItem.id === item.id ? {
-                                  ...currentItem,
-                                  discount_type: newType,
-                                  // Clear the other discount type when switching
-                                  discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
-                                  discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
-                                } : currentItem
-                              ));
-                            }}
-                          >
-                            <option value="percentage">%</option>
-                            <option value="amount">$</option>
-                          </select>
-                          {/* Show calculated value */}
-                          {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
-                            (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
-                            <span className="text-sm text-green-600 font-medium">
-                              Save: ${item.discount_type === 'percentage' 
-                                ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
-                                : (item.discount_amount || 0).toFixed(2)
-                              }
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          min="0"
-                          max={item.discount_type === 'percentage' ? "100" : undefined}
-                          step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
-                          value={item.discount_type === 'amount' 
-                            ? (item.discount_amount || '') 
-                            : (item.discount_percentage || '')
-                          }
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value) || undefined;
-                            console.log(`💰 Input change: type=${item.discount_type}, value=${value}`);
-                            if (item.discount_type === 'amount') {
-                              updateItem(item.id, 'discount_amount', value);
-                            } else {
-                              updateItem(item.id, 'discount_percentage', value);
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.001"
+                              value={item.weight_kg || ''}
+                              onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
+                              placeholder="0.5"
+                              className="text-sm"
+                            />
+                          </div>
+                          {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
+                            const { length, width, height, unit = 'cm' } = item.dimensions;
+                            let l = length, w = width, h = height;
+                            if (unit === 'in') {
+                              l *= 2.54; w *= 2.54; h *= 2.54;
                             }
-                          }}
-                          placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
-                          className="pr-8"
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                          <span className="text-gray-500 text-sm">
-                            {item.discount_type === 'amount' ? '$' : '%'}
-                          </span>
+                            const volume = l * w * h;
+                            const divisor = item.volumetric_divisor || 5000;
+                            const volumetricWeightPerItem = volume / divisor;
+                            const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                            const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                            const isVolumetric = volumetricWeight > actualWeight;
+                            
+                            return (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <p className="text-blue-700 font-medium">📦 {length}×{width}×{height} {unit}</p>
+                                <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
+                                  Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}kg
+                                  {isVolumetric && ' (volumetric)'}
+                                </p>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-medium text-gray-600">Item Discount</Label>
+                            <div className="flex items-center gap-2">
+                              <select
+                                className="text-xs border rounded px-2 py-1 bg-white"
+                                value={item.discount_type || 'percentage'}
+                                onChange={(e) => {
+                                  const newType = e.target.value as 'percentage' | 'amount';
+                                  setItems(items.map(currentItem => 
+                                    currentItem.id === item.id ? {
+                                      ...currentItem,
+                                      discount_type: newType,
+                                      discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
+                                      discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
+                                    } : currentItem
+                                  ));
+                                }}
+                              >
+                                <option value="percentage">%</option>
+                                <option value="amount">$</option>
+                              </select>
+                              {/* Show savings */}
+                              {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
+                                (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                  Save ${item.discount_type === 'percentage' 
+                                    ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
+                                    : (item.discount_amount || 0).toFixed(2)
+                                  }
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              min="0"
+                              max={item.discount_type === 'percentage' ? "100" : undefined}
+                              step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
+                              value={item.discount_type === 'amount' 
+                                ? (item.discount_amount || '') 
+                                : (item.discount_percentage || '')
+                              }
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || undefined;
+                                if (item.discount_type === 'amount') {
+                                  updateItem(item.id, 'discount_amount', value);
+                                } else {
+                                  updateItem(item.id, 'discount_percentage', value);
+                                }
+                              }}
+                              placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
+                              className="text-sm pr-8"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <span className="text-gray-500 text-sm">
+                                {item.discount_type === 'amount' ? '$' : '%'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Legacy HSN fields removed - now handled by UnifiedHSNSearch */}
-                </div>
+
+                    {/* Advanced Options Section */}
+                    {(item.hsn_code || item.notes) && (
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <h5 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                          <Settings className="w-4 h-4" />
+                          Advanced Options
+                        </h5>
+                        <div className="space-y-4">
+                          {/* Customs Valuation Method */}
+                          {item.hsn_code && (
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <Label className="text-sm font-medium text-blue-700">Customs Valuation Method</Label>
+                                <Badge variant="outline" className="text-xs bg-white">
+                                  {(() => {
+                                    const pref = item.valuation_preference || 'auto';
+                                    switch (pref) {
+                                      case 'auto': return '🤖 Auto (Higher)';
+                                      case 'minimum_valuation': return '🏛️ Min Valuation';
+                                      case 'product_price': return '💰 Product Price';
+                                      default: return '🤖 Auto (Higher)';
+                                    }
+                                  })()}
+                                </Badge>
+                              </div>
+                              <select
+                                className="w-full text-sm border rounded px-3 py-2 bg-white"
+                                value={item.valuation_preference || 'auto'}
+                                onChange={(e) => {
+                                  const newValuation = e.target.value as 'auto' | 'product_price' | 'minimum_valuation';
+                                  setItems(items.map(currentItem => 
+                                    currentItem.id === item.id ? {
+                                      ...currentItem,
+                                      valuation_preference: newValuation
+                                    } : currentItem
+                                  ));
+                                }}
+                              >
+                                <option value="auto">🤖 Auto (Higher) - Recommended</option>
+                                <option value="product_price">💰 Product Price - Force actual price</option>
+                                <option value="minimum_valuation">🏛️ Minimum Valuation - Force minimum</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {/* Notes Section */}
+                          <div>
+                            <Label className="text-sm font-medium text-blue-700 mb-2 block">Item Notes</Label>
+                            <Input
+                              value={item.notes || ''}
+                              onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
+                              placeholder="Additional notes for this item..."
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
               
               <Button onClick={addItem} variant="outline" className="w-full">
@@ -2305,36 +2471,6 @@ const QuoteCalculatorV2: React.FC = () => {
           )}
 
 
-          {/* File Upload Section */}
-          {isEditMode && quoteId && (
-            <Card>
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setIsDocumentsSectionCollapsed(!isDocumentsSectionCollapsed)}
-              >
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    Quote Documents
-                  </div>
-                  {isDocumentsSectionCollapsed ? (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  )}
-                </CardTitle>
-              </CardHeader>
-              {!isDocumentsSectionCollapsed && (
-                <CardContent>
-                  <QuoteFileUpload
-                    quoteId={quoteId}
-                    documents={documents}
-                    onDocumentsUpdate={setDocuments}
-                    isReadOnly={false}
-                  />
-                </CardContent>
-              )}
-            </Card>
-          )}
 
           {/* Email Sending Section */}
           {isEditMode && showEmailSection && quoteId && (
@@ -2353,54 +2489,6 @@ const QuoteCalculatorV2: React.FC = () => {
           )}
 
 
-          {/* Export Controls - Show in edit mode for saved quotes */}
-          {isEditMode && quoteId && calculationResult && (
-            <Card>
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setIsExportSectionCollapsed(!isExportSectionCollapsed)}
-              >
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    Export Quote
-                  </div>
-                  {isExportSectionCollapsed ? (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  )}
-                </CardTitle>
-                <CardDescription>Download professional quote documents</CardDescription>
-              </CardHeader>
-              {!isExportSectionCollapsed && (
-                <CardContent>
-                <QuoteExportControls
-                  quote={{
-                    id: quoteId,
-                    customer_name: customerName,
-                    customer_email: customerEmail,
-                    customer_phone: customerPhone,
-                    status: currentQuoteStatus,
-                    items: items,
-                    total_usd: calculationResult.calculation_steps?.total_usd || calculationResult.total || 0,
-                    total_customer_currency: calculationResult.calculation_steps?.total_customer_currency || calculationResult.totalCustomerCurrency || 0,
-                    customer_currency: customerCurrency,
-                    origin_country: originCountry,
-                    destination_country: destinationCountry,
-                    created_at: new Date().toISOString(),
-                    expires_at: expiresAt,
-                    notes: adminNotes,
-                    calculation_data: calculationResult,
-                    share_token: shareToken,
-                  }}
-                  variant="outline"
-                  size="default"
-                  className="w-full"
-                />
-                </CardContent>
-              )}
-            </Card>
-          )}
 
           {/* Reminder Controls - Only show in edit mode for saved quotes */}
           {isEditMode && quoteId && emailSent && (
