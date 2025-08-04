@@ -13,7 +13,7 @@ interface CalculationInput {
   items: Array<{
     name?: string; // Item name for logging
     quantity: number;
-    unit_price_usd: number;
+    costprice_origin: number; // Price in origin country currency
     weight_kg?: number;
     discount_percentage?: number; // Item-level discount percentage
     discount_amount?: number; // Item-level discount fixed amount
@@ -32,6 +32,7 @@ interface CalculationInput {
     };
     volumetric_divisor?: number; // Default 5000, admin can override
   }>;
+  origin_currency: string; // Origin country currency code (INR, USD, NPR, etc.)
   origin_country: string;
   origin_state?: string; // For US sales tax
   destination_country: string;
@@ -76,6 +77,7 @@ interface CalculationResult {
     total_volumetric_weight_kg?: number; // NEW: Total volumetric weight
     total_chargeable_weight_kg: number; // NEW: Chargeable weight (max of actual vs volumetric)
     origin_country: string;
+    origin_currency: string; // NEW: Origin country currency (INR, USD, NPR, etc.)
     origin_state?: string;
     destination_country: string;
     destination_state?: string;
@@ -122,7 +124,8 @@ interface CalculationResult {
     discounted_tax_amount?: number; // NEW: Final tax after discount
     subtotal_before_gateway: number;
     payment_gateway_fee: number;
-    total_usd: number;
+    total_usd: number; // DEPRECATED: Actually in origin currency now - use total_origin_currency
+    total_origin_currency: number; // NEW: Total amount in origin currency
     total_customer_currency: number;
     total_savings: number; // Total discount amount
     component_discounts?: { // NEW: Breakdown by component
@@ -318,15 +321,15 @@ class SimplifiedQuoteCalculator {
     return defaultRate;
   }
 
-  private async getItemValuationData(item: any, destinationCountry: string): Promise<{
+  private async getItemValuationData(item: any, destinationCountry: string, input: CalculationInput): Promise<{
     product_price: number;
     minimum_valuation: number | null;
     effective_value: number;
     valuation_method_used: string;
   }> {
-    const productPrice = item.quantity * item.unit_price_usd;
+    const productPriceOrigin = item.quantity * item.costprice_origin;
     let minimumValuation: number | null = null;
-    let effectiveValue = productPrice;
+    let effectiveValue = productPriceOrigin; // Fixed: use the correct variable
     let valuationMethodUsed = 'product_price';
 
     // Get minimum valuation from database if HSN code exists
@@ -344,7 +347,10 @@ class SimplifiedQuoteCalculator {
           .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no match
 
         if (!error && hsnData && hsnData.minimum_valuation_usd) {
-          minimumValuation = hsnData.minimum_valuation_usd * item.quantity;
+          // CRITICAL FIX: Convert minimum valuation from USD to origin currency for proper comparison
+          const minimumValuationUSD = hsnData.minimum_valuation_usd * item.quantity;
+          const exchangeRate = await currencyService.getExchangeRate('USD', input.origin_currency);
+          minimumValuation = minimumValuationUSD * exchangeRate; // Now in origin currency
           
           // Apply valuation method logic based on admin choice
           if (item.valuation_preference === 'minimum_valuation') {
@@ -353,15 +359,15 @@ class SimplifiedQuoteCalculator {
             valuationMethodUsed = 'minimum_valuation (forced)';
           } else if (item.valuation_preference === 'product_price') {
             // Force product price
-            effectiveValue = productPrice;
+            effectiveValue = productPriceOrigin;
             valuationMethodUsed = 'product_price (forced)';
           } else {
-            // Auto mode - use higher value (default)
-            effectiveValue = Math.max(productPrice, minimumValuation);
+            // Auto mode - use higher value (default) - now both values are in origin currency
+            effectiveValue = Math.max(productPriceOrigin, minimumValuation);
             valuationMethodUsed = effectiveValue === minimumValuation ? 'minimum_valuation (auto)' : 'product_price (auto)';
           }
 
-          console.log(`💰 [Valuation] ${item.hsn_code}: product=$${productPrice.toFixed(2)}, min=$${minimumValuation.toFixed(2)}, using=$${effectiveValue.toFixed(2)} (${valuationMethodUsed})`);
+          console.log(`💰 [Valuation] ${item.hsn_code}: product=${productPriceOrigin.toFixed(2)} ${input.origin_currency}, min=${minimumValuation.toFixed(2)} ${input.origin_currency} (from $${minimumValuationUSD.toFixed(2)} USD), using=${effectiveValue.toFixed(2)} ${input.origin_currency} (${valuationMethodUsed})`);
         }
       } catch (error) {
         console.warn('Failed to fetch minimum valuation:', error);
@@ -369,7 +375,7 @@ class SimplifiedQuoteCalculator {
     }
 
     return {
-      product_price: productPrice,
+      product_price: productPriceOrigin,
       minimum_valuation: minimumValuation,
       effective_value: effectiveValue,
       valuation_method_used: valuationMethodUsed
@@ -383,7 +389,7 @@ class SimplifiedQuoteCalculator {
       name: item.name,
       hsn_code: item.hsn_code,
       valuation_preference: item.valuation_preference || 'auto',
-      unit_price_usd: item.unit_price_usd
+      costprice_origin: item.costprice_origin
     })));
 
     // Step 1: Calculate items total with minimum valuation consideration and item-level discounts
@@ -397,11 +403,11 @@ class SimplifiedQuoteCalculator {
       console.log(`🔍 [Calculator] Processing item: ${item.name}, HSN: ${item.hsn_code}, valuation_preference: ${item.valuation_preference}`);
       
       // Get valuation data (product price vs minimum valuation)
-      const valuationData = await this.getItemValuationData(item, input.destination_country);
+      const valuationData = await this.getItemValuationData(item, input.destination_country, input);
       
       console.log(`📊 [Calculator] Valuation result for ${item.name}:`, valuationData);
       
-      const itemSubtotal = item.quantity * item.unit_price_usd;
+      const itemSubtotal = item.quantity * item.costprice_origin;
       let itemDiscount = 0;
       
       // Calculate discount based on type (always applied to product price, not minimum valuation)
@@ -504,7 +510,8 @@ class SimplifiedQuoteCalculator {
       || COUNTRY_TAX_CONFIG.DEFAULT;
     
     const customerCurrency = await this.getCustomerCurrency(input.destination_country);
-    const exchangeRate = await currencyService.getExchangeRate('USD', customerCurrency);
+    // CRITICAL FIX: Exchange rate should be from origin currency to customer currency, not USD to customer
+    const exchangeRate = await currencyService.getExchangeRate(input.origin_currency, customerCurrency);
 
     // Step 3: Apply order-level discount
     let orderDiscountAmount = 0;
@@ -632,7 +639,7 @@ class SimplifiedQuoteCalculator {
       
       // Process items sequentially to handle async calls
       for (const item of input.items) {
-        const itemValue = item.quantity * item.unit_price_usd;
+        const itemValue = item.quantity * item.costprice_origin;
         const itemRate = await this.getCustomsRateForItem(item, input.destination_country, countryConfig.customs);
         totalValue += itemValue;
         weightedRateSum += itemValue * itemRate;
@@ -992,8 +999,9 @@ class SimplifiedQuoteCalculator {
     const paymentGatewayFee = (subtotalBeforeGateway * (gatewayFees.percentage / 100)) + gatewayFees.fixed;
 
     // Step 14: Calculate final totals
-    const totalUSD = subtotalBeforeGateway + paymentGatewayFee;
-    const totalCustomerCurrency = totalUSD * exchangeRate;
+    // Note: totalUSD is now actually totalOriginCurrency after our origin currency integration
+    const totalOriginCurrency = subtotalBeforeGateway + paymentGatewayFee;
+    const totalCustomerCurrency = totalOriginCurrency * exchangeRate;
     
     // Calculate total savings (including all component discounts)
     const totalSavings = totalItemDiscounts + orderDiscountAmount + shippingDiscountAmount + 
@@ -1007,6 +1015,7 @@ class SimplifiedQuoteCalculator {
         total_volumetric_weight_kg: totalVolumetricWeight > 0 ? this.round(totalVolumetricWeight) : undefined,
         total_chargeable_weight_kg: this.round(totalChargeableWeight),
         origin_country: input.origin_country,
+        origin_currency: input.origin_currency, // NEW: Origin currency
         origin_state: input.origin_state,
         destination_country: input.destination_country,
         destination_state: input.destination_state,
@@ -1056,7 +1065,8 @@ class SimplifiedQuoteCalculator {
         discounted_tax_amount: this.round(discountedTaxAmount),
         subtotal_before_gateway: this.round(subtotalBeforeGateway),
         payment_gateway_fee: this.round(paymentGatewayFee),
-        total_usd: this.round(totalUSD),
+        total_usd: this.round(totalOriginCurrency), // Note: renamed from totalUSD, now in origin currency
+        total_origin_currency: this.round(totalOriginCurrency), // NEW: Explicit origin currency total
         total_customer_currency: this.round(totalCustomerCurrency),
         total_savings: this.round(totalSavings),
         component_discounts: Object.keys(componentDiscounts).length > 0 ? componentDiscounts : undefined,
