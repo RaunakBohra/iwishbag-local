@@ -256,9 +256,31 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 </div>
                 <span className="font-bold">${steps.insurance_amount.toFixed(2)}</span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                {rates.insurance_percentage}% of order value = ${steps.insurance_amount.toFixed(2)}
-              </p>
+              {calc.route_calculations?.insurance ? (
+                <div className="text-sm text-gray-600 mt-2">
+                  <div className="font-mono bg-white p-2 rounded border text-xs">
+                    <div className="mb-1">
+                      <strong>Dynamic Route Insurance:</strong>
+                    </div>
+                    <div>
+                      Coverage: {calc.route_calculations.insurance.percentage}% of order value
+                    </div>
+                    <div>
+                      Min Fee: ${calc.route_calculations.insurance.min_fee.toFixed(2)}
+                    </div>
+                    <div>
+                      <strong>Amount: ${calc.route_calculations.insurance.amount.toFixed(2)}</strong>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {calc.route_calculations.insurance.available ? '✅ Available' : '❌ Not Available'}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">
+                  {rates.insurance_percentage}% of order value = ${steps.insurance_amount.toFixed(2)}
+                </p>
+              )}
             </div>
           )}
 
@@ -322,14 +344,35 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
                 </div>
                 <span className="font-bold">${steps.handling_fee.toFixed(2)}</span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                {rates.handling_fee_fixed > 0 && rates.handling_fee_percentage > 0 
-                  ? `$${rates.handling_fee_fixed} fixed + ${rates.handling_fee_percentage}% of order`
-                  : rates.handling_fee_fixed > 0 
-                    ? `$${rates.handling_fee_fixed} fixed fee`
-                    : `${rates.handling_fee_percentage}% of order value`
-                }
-              </p>
+              {calc.route_calculations?.handling ? (
+                <div className="text-sm text-gray-600 mt-2">
+                  <div className="font-mono bg-white p-2 rounded border text-xs">
+                    <div className="mb-1">
+                      <strong>Dynamic Route Handling:</strong>
+                    </div>
+                    <div>
+                      Base Fee: ${calc.route_calculations.handling.base_fee.toFixed(2)} + 
+                      Percentage: ${calc.route_calculations.handling.percentage_fee.toFixed(2)} = 
+                      ${calc.route_calculations.handling.total_before_caps.toFixed(2)}
+                    </div>
+                    <div>
+                      <strong>Final (capped): ${calc.route_calculations.handling.total.toFixed(2)}</strong>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Caps: Min ${calc.route_calculations.handling.min_fee.toFixed(2)} - Max ${calc.route_calculations.handling.max_fee.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">
+                  {rates.handling_fee_fixed > 0 && rates.handling_fee_percentage > 0 
+                    ? `$${rates.handling_fee_fixed} fixed + ${rates.handling_fee_percentage}% of order`
+                    : rates.handling_fee_fixed > 0 
+                      ? `$${rates.handling_fee_fixed} fixed fee`
+                      : `${rates.handling_fee_percentage}% of order value`
+                  }
+                </p>
+              )}
             </div>
           )}
 
