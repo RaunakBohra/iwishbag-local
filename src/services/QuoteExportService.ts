@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { currencyService } from './CurrencyService';
 
 interface QuoteItem {
@@ -217,51 +217,71 @@ export class QuoteExportService {
    * Export quote as Excel
    */
   static async exportToExcel(quote: QuoteData, filename?: string): Promise<void> {
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'iwishBag Quote System';
+    workbook.created = new Date();
 
     // Quote Summary Sheet
-    const summaryData = [
-      ['iwishBag Quote System'],
-      [''],
-      ['Quote ID', quote.id.slice(-8).toUpperCase()],
-      ['Status', quote.status.toUpperCase()],
-      ['Customer Name', quote.customer_name],
-      ['Customer Email', quote.customer_email],
-      ['Customer Phone', quote.customer_phone || 'N/A'],
-      ['Created Date', new Date(quote.created_at).toLocaleDateString()],
-      ['Expires Date', quote.expires_at ? new Date(quote.expires_at).toLocaleDateString() : 'N/A'],
-      ['Origin Country', quote.origin_country || 'N/A'],
-      ['Destination Country', quote.destination_country || 'N/A'],
-      [''],
-      ['Total (USD)', `$${(quote.total_usd || quote.total || 0).toFixed(2)}`],
-    ];
+    const summarySheet = workbook.addWorksheet('Quote Summary');
+    
+    // Add summary data
+    summarySheet.addRow(['iwishBag Quote System']);
+    summarySheet.addRow([]);
+    summarySheet.addRow(['Quote ID', quote.id.slice(-8).toUpperCase()]);
+    summarySheet.addRow(['Status', quote.status.toUpperCase()]);
+    summarySheet.addRow(['Customer Name', quote.customer_name]);
+    summarySheet.addRow(['Customer Email', quote.customer_email]);
+    summarySheet.addRow(['Customer Phone', quote.customer_phone || 'N/A']);
+    summarySheet.addRow(['Created Date', new Date(quote.created_at).toLocaleDateString()]);
+    summarySheet.addRow(['Expires Date', quote.expires_at ? new Date(quote.expires_at).toLocaleDateString() : 'N/A']);
+    summarySheet.addRow(['Origin Country', quote.origin_country || 'N/A']);
+    summarySheet.addRow(['Destination Country', quote.destination_country || 'N/A']);
+    summarySheet.addRow([]);
+    summarySheet.addRow(['Total (USD)', `$${(quote.total_usd || quote.total || 0).toFixed(2)}`]);
 
     if (quote.customer_currency && quote.total_customer_currency) {
-      summaryData.push(['Total (Customer Currency)', 
+      summarySheet.addRow(['Total (Customer Currency)', 
         `${await currencyService.formatAmount(quote.total_customer_currency, quote.customer_currency)}`]);
     }
 
     if (quote.notes) {
-      summaryData.push([''], ['Notes', quote.notes]);
+      summarySheet.addRow([]);
+      summarySheet.addRow(['Notes', quote.notes]);
     }
 
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Quote Summary');
+    // Style the header
+    summarySheet.getCell('A1').font = { bold: true, size: 14 };
+    summarySheet.getColumn('A').width = 20;
+    summarySheet.getColumn('B').width = 30;
 
     // Items Detail Sheet
-    const itemsHeader = [
+    const itemsSheet = workbook.addWorksheet('Items Detail');
+    
+    // Add headers
+    const itemsHeaders = [
       'Item Name', 'URL', 'Quantity', 'Unit Price (USD)', 'Weight (kg)', 
       'Category', 'HSN Code', 'Discount %', 'Subtotal (USD)', 'Notes'
     ];
+    itemsSheet.addRow(itemsHeaders);
 
-    const itemsData = (quote.items || []).map(item => {
+    // Style headers
+    const headerRow = itemsSheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6E6FA' }
+    };
+
+    // Add items data
+    (quote.items || []).forEach(item => {
       const quantity = item.quantity || 0;
       const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
       const subtotal = quantity * unitPrice;
       const discountAmount = item.discount_percentage ? (subtotal * item.discount_percentage / 100) : 0;
       const finalSubtotal = subtotal - discountAmount;
 
-      return [
+      itemsSheet.addRow([
         item.name || 'Unknown Item',
         item.url || 'N/A',
         quantity,
@@ -272,53 +292,56 @@ export class QuoteExportService {
         item.discount_percentage || 0,
         finalSubtotal,
         item.notes || 'N/A'
-      ];
+      ]);
     });
 
-    const itemsSheet = XLSX.utils.aoa_to_sheet([itemsHeader, ...itemsData]);
-    
     // Auto-size columns
-    const itemsRange = XLSX.utils.decode_range(itemsSheet['!ref'] || 'A1');
-    const colWidths = [];
-    for (let col = itemsRange.s.c; col <= itemsRange.e.c; col++) {
-      let maxWidth = 10;
-      for (let row = itemsRange.s.r; row <= itemsRange.e.r; row++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-        const cell = itemsSheet[cellAddress];
-        if (cell && cell.v) {
-          const cellValue = cell.v.toString();
-          maxWidth = Math.max(maxWidth, cellValue.length);
+    itemsSheet.columns.forEach(column => {
+      let maxLength = 10;
+      column.eachCell!({ includeEmpty: false }, (cell) => {
+        const columnLength = cell.value ? cell.value.toString().length : 10;
+        if (columnLength > maxLength) {
+          maxLength = columnLength;
         }
-      }
-      colWidths.push({ wch: Math.min(maxWidth + 2, 50) });
-    }
-    itemsSheet['!cols'] = colWidths;
-
-    XLSX.utils.book_append_sheet(workbook, itemsSheet, 'Items Detail');
+      });
+      column.width = Math.min(maxLength + 2, 50);
+    });
 
     // Calculation Breakdown Sheet (if available)
     if (quote.calculation_data) {
-      const calcData = [
-        ['Calculation Breakdown'],
-        [''],
-        ['Component', 'Amount (USD)'],
-      ];
+      const calcSheet = workbook.addWorksheet('Calculation');
+      
+      calcSheet.addRow(['Calculation Breakdown']);
+      calcSheet.addRow([]);
+      calcSheet.addRow(['Component', 'Amount (USD)']);
 
       const calc = quote.calculation_data;
-      if (calc.subtotal) calcData.push(['Subtotal', calc.subtotal]);
-      if (calc.shipping) calcData.push(['Shipping', calc.shipping]);
-      if (calc.insurance) calcData.push(['Insurance', calc.insurance]);
-      if (calc.customs) calcData.push(['Customs & Duties', calc.customs]);
-      if (calc.service_fee) calcData.push(['Service Fee', calc.service_fee]);
-      if (calc.total) calcData.push(['Total', calc.total]);
+      if (calc.subtotal) calcSheet.addRow(['Subtotal', calc.subtotal]);
+      if (calc.shipping) calcSheet.addRow(['Shipping', calc.shipping]);
+      if (calc.insurance) calcSheet.addRow(['Insurance', calc.insurance]);
+      if (calc.customs) calcSheet.addRow(['Customs & Duties', calc.customs]);
+      if (calc.service_fee) calcSheet.addRow(['Service Fee', calc.service_fee]);
+      if (calc.total) calcSheet.addRow(['Total', calc.total]);
 
-      const calcSheet = XLSX.utils.aoa_to_sheet(calcData);
-      XLSX.utils.book_append_sheet(workbook, calcSheet, 'Calculation');
+      // Style calculation sheet
+      calcSheet.getCell('A1').font = { bold: true, size: 14 };
+      calcSheet.getRow(3).font = { bold: true };
+      calcSheet.getColumn('A').width = 20;
+      calcSheet.getColumn('B').width = 15;
     }
 
     // Generate filename and save
     const defaultFilename = `iwishBag-Quote-${quote.id.slice(-8).toUpperCase()}.xlsx`;
-    XLSX.writeFile(workbook, filename || defaultFilename);
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    // Create download link
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || defaultFilename;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 
   /**
@@ -345,19 +368,32 @@ export class QuoteExportService {
    * Export multiple quotes as Excel with summary
    */
   static async exportMultipleQuotesToExcel(quotes: QuoteData[], filename?: string): Promise<void> {
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'iwishBag Quote System';
+    workbook.created = new Date();
 
     // Summary Sheet
-    const summaryData = [
-      ['iwishBag Quotes Export'],
-      ['Generated on', new Date().toLocaleString()],
-      ['Total Quotes', quotes.length],
-      [''],
-      ['Quote ID', 'Customer', 'Status', 'Total (USD)', 'Created Date']
-    ];
+    const summarySheet = workbook.addWorksheet('Summary');
+    
+    summarySheet.addRow(['iwishBag Quotes Export']);
+    summarySheet.addRow(['Generated on', new Date().toLocaleString()]);
+    summarySheet.addRow(['Total Quotes', quotes.length]);
+    summarySheet.addRow([]);
+    summarySheet.addRow(['Quote ID', 'Customer', 'Status', 'Total (USD)', 'Created Date']);
 
+    // Style header
+    summarySheet.getCell('A1').font = { bold: true, size: 14 };
+    const headerRow = summarySheet.getRow(5);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6E6FA' }
+    };
+
+    // Add quotes data
     quotes.forEach(quote => {
-      summaryData.push([
+      summarySheet.addRow([
         quote.id?.slice(-8).toUpperCase() || 'Unknown',
         quote.customer_name || 'Unknown Customer',
         quote.status?.toUpperCase() || 'Unknown',
@@ -366,33 +402,66 @@ export class QuoteExportService {
       ]);
     });
 
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+    // Auto-size columns
+    summarySheet.columns.forEach(column => {
+      let maxLength = 10;
+      column.eachCell!({ includeEmpty: false }, (cell) => {
+        const columnLength = cell.value ? cell.value.toString().length : 10;
+        if (columnLength > maxLength) {
+          maxLength = columnLength;
+        }
+      });
+      column.width = Math.min(maxLength + 2, 30);
+    });
 
     // Individual quote sheets (limit to first 10 for performance)
     const quotesToExport = quotes.slice(0, 10);
     for (let i = 0; i < quotesToExport.length; i++) {
       const quote = quotesToExport[i];
-      const itemsData = [
-        ['Item Name', 'Quantity', 'Unit Price', 'Subtotal'],
-        ...(quote.items || []).map(item => {
-          const quantity = item.quantity || 0;
-          const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
-          return [
-            item.name || 'Unknown Item',
-            quantity,
-            unitPrice,
-            quantity * unitPrice
-          ];
-        })
-      ];
-
-      const quoteSheet = XLSX.utils.aoa_to_sheet(itemsData);
       const sheetName = `Quote-${quote.id?.slice(-6) || 'Unknown'}`.substring(0, 31); // Excel sheet name limit
-      XLSX.utils.book_append_sheet(workbook, quoteSheet, sheetName);
+      const quoteSheet = workbook.addWorksheet(sheetName);
+      
+      // Add headers
+      quoteSheet.addRow(['Item Name', 'Quantity', 'Unit Price', 'Subtotal']);
+      const headerRow = quoteSheet.getRow(1);
+      headerRow.font = { bold: true };
+      
+      // Add items
+      (quote.items || []).forEach(item => {
+        const quantity = item.quantity || 0;
+        const unitPrice = item.unit_price_usd || item.costprice_origin || 0;
+        quoteSheet.addRow([
+          item.name || 'Unknown Item',
+          quantity,
+          unitPrice,
+          quantity * unitPrice
+        ]);
+      });
+
+      // Auto-size columns
+      quoteSheet.columns.forEach(column => {
+        let maxLength = 10;
+        column.eachCell!({ includeEmpty: false }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          if (columnLength > maxLength) {
+            maxLength = columnLength;
+          }
+        });
+        column.width = Math.min(maxLength + 2, 40);
+      });
     }
 
+    // Generate filename and save
     const defaultFilename = `iwishBag-Quotes-Export-${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, filename || defaultFilename);
+    const buffer = await workbook.xlsx.writeBuffer();
+    
+    // Create download link
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || defaultFilename;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 }
