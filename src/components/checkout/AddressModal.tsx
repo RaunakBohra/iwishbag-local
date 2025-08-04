@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, MapPin, X } from 'lucide-react';
-import { useAllCountries } from '@/hooks/useAllCountries';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { InternationalAddressValidator } from '@/services/InternationalAddressValidator';
 import { StateProvinceService } from '@/services/StateProvinceService';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -49,7 +49,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
   isGuest = false,
   isLoading = false,
 }) => {
-  const { data: countries } = useAllCountries();
+  const { data: countries, isLoading: loadingCountries } = useShippingCountries();
   const [fieldLabels, setFieldLabels] = useState({ state: 'State/Province', postal: 'Postal Code' });
   const [stateProvinces, setStateProvinces] = useState(StateProvinceService.getStatesForCountry(initialData?.country || '') || null);
   const [formData, setFormData] = useState<AddressFormData>(
@@ -296,18 +296,25 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 <Select
                   value={formData.country}
                   onValueChange={(value) => handleInputChange('country', value)}
+                  disabled={loadingCountries}
                 >
                   <SelectTrigger
                     className={`${errors.country ? 'border-red-500' : 'border-gray-300'} focus:border-teal-500 focus:ring-teal-500`}
                   >
-                    <SelectValue placeholder="Select country" />
+                    <SelectValue placeholder={loadingCountries ? "Loading countries..." : "Select country"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {countries?.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
-                        {country.name}
-                      </SelectItem>
-                    ))}
+                    {loadingCountries ? (
+                      <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                    ) : countries && countries.length > 0 ? (
+                      countries.map((country) => (
+                        <SelectItem key={country.code} value={country.code}>
+                          {country.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.country && <p className="text-sm text-red-600">{errors.country}</p>}

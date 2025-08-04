@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
 
@@ -49,9 +50,11 @@ export default function QuoteRequestPage() {
   
   // Country data
   const { data: purchaseCountries = [], isLoading: loadingCountries } = usePurchaseCountries();
+  const { data: shippingCountries = [], isLoading: loadingShippingCountries } = useShippingCountries();
   
   // Sort countries with popular ones first
   const sortedCountries = sortCountriesByPopularity(purchaseCountries);
+  const sortedShippingCountries = sortCountriesByPopularity(shippingCountries);
 
   // Create schema based on user authentication status  
   const quoteRequestSchema = createQuoteRequestSchema(!!user);
@@ -389,18 +392,24 @@ export default function QuoteRequestPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Ship to Country *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingShippingCountries}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select country" />
+                                <SelectValue placeholder={loadingShippingCountries ? "Loading countries..." : "Select country"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="IN">India</SelectItem>
-                              <SelectItem value="NP">Nepal</SelectItem>
-                              <SelectItem value="BD">Bangladesh</SelectItem>
-                              <SelectItem value="LK">Sri Lanka</SelectItem>
-                              <SelectItem value="PK">Pakistan</SelectItem>
+                              {loadingShippingCountries ? (
+                                <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                              ) : sortedShippingCountries.length > 0 ? (
+                                sortedShippingCountries.map((country) => (
+                                  <SelectItem key={country.code} value={country.code}>
+                                    {formatCountryDisplay(country, false)}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -428,18 +437,24 @@ export default function QuoteRequestPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Ship to Country *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingShippingCountries}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select country" />
+                              <SelectValue placeholder={loadingShippingCountries ? "Loading countries..." : "Select country"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="IN">India</SelectItem>
-                            <SelectItem value="NP">Nepal</SelectItem>
-                            <SelectItem value="BD">Bangladesh</SelectItem>
-                            <SelectItem value="LK">Sri Lanka</SelectItem>
-                            <SelectItem value="PK">Pakistan</SelectItem>
+                            {loadingShippingCountries ? (
+                              <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                            ) : sortedShippingCountries.length > 0 ? (
+                              sortedShippingCountries.map((country) => (
+                                <SelectItem key={country.code} value={country.code}>
+                                  {formatCountryDisplay(country, false)}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
