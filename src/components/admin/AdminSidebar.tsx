@@ -300,7 +300,7 @@ export const AdminSidebar = () => {
           {!isCollapsed ? (
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center shadow-sm overflow-hidden">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm overflow-hidden bg-white">
                   <img 
                     src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" 
                     alt="iWishBag Logo" 
@@ -318,7 +318,7 @@ export const AdminSidebar = () => {
             <div className="flex flex-col items-center py-4 px-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center shadow-sm mb-3 overflow-hidden">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm mb-3 overflow-hidden bg-white">
                     <img 
                       src="https://res.cloudinary.com/dto2xew5c/image/upload/v1749986458/iWishBag-india-logo_p7nram.png" 
                       alt="iWishBag Logo" 
