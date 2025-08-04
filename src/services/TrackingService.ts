@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { logger } from '@/utils/logger';
+import type { NCMCustomerTrackingInfo } from './NCMOrderTrackingService';
 
 type Quote = Database['public']['Tables']['quotes']['Row'];
 type QuoteUpdate = Database['public']['Tables']['quotes']['Update'];
@@ -36,9 +37,9 @@ interface BasicTrackingInfo {
 
 class TrackingService {
   /**
-   * Generate iwishBag tracking ID for a quote
+   * Generate iwishBag tracking ID (can be used for both quotes and standalone tracking)
    */
-  async generateTrackingId(quoteId: string): Promise<string | null> {
+  async generateTrackingId(quoteId?: string): Promise<string | null> {
     try {
       logger.debug('🆔 Generating iwishBag tracking ID for quote:', quoteId);
 

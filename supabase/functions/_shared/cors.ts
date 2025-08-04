@@ -14,7 +14,8 @@
  */
 export function getAllowedOrigin(req: Request): string {
   const requestOrigin = req.headers.get('origin');
-  const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'http://localhost:8080')
+  // Include common development ports and production origins
+  const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'http://localhost:8080,http://localhost:8082,http://localhost:8083,http://127.0.0.1:8082,http://127.0.0.1:8083')
     .split(',')
     .map((origin) => origin.trim());
 
@@ -27,6 +28,12 @@ export function getAllowedOrigin(req: Request): string {
   // Return the requesting origin if it's in our allowed list
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     console.log('✅ Origin allowed:', requestOrigin);
+    return requestOrigin;
+  }
+
+  // For development, allow localhost and 127.0.0.1 variants
+  if (requestOrigin && (requestOrigin.includes('localhost') || requestOrigin.includes('127.0.0.1'))) {
+    console.log('✅ Development origin allowed:', requestOrigin);
     return requestOrigin;
   }
 

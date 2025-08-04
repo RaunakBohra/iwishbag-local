@@ -7,8 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { Input } from './input';
 import { Label } from './label';
 import { ValidatedInput, ValidationStatus } from './ValidatedInput';
+import { ValidatedSelectTrigger } from './ValidatedSelect';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { AlertCircle, CheckCircle2, Loader2, MapPin, Truck, Clock } from 'lucide-react';
 import { useDelhiveryAddressValidation } from '@/hooks/useDelhiveryAddressValidation';
+import { StateProvinceService } from '@/services/StateProvinceService';
 import { cn } from '@/lib/utils';
 
 interface DelhiveryValidatedAddressInputProps {
@@ -45,6 +48,9 @@ export function DelhiveryValidatedAddressInput({
 }: DelhiveryValidatedAddressInputProps) {
   const [pincodeValidationStatus, setPincodeValidationStatus] = useState<ValidationStatus>('idle');
   const [showValidationDetails, setShowValidationDetails] = useState(false);
+  
+  // Get Indian states for dropdown
+  const indianStates = StateProvinceService.getStatesForCountry('IN');
 
   // Use the Delhivery address validation hook
   const {
@@ -69,8 +75,6 @@ export function DelhiveryValidatedAddressInput({
 
   // Handle pincode validation separately for immediate feedback
   const handlePincodeChange = async (value: string) => {
-    onAddressChange('pincode', value);
-    
     if (!isIndianAddress || !value) {
       setPincodeValidationStatus('idle');
       return;
@@ -84,6 +88,69 @@ export function DelhiveryValidatedAddressInput({
         
         if (result) {
           setPincodeValidationStatus(result.isValid && result.serviceable ? 'valid' : 'invalid');
+          
+          // Auto-fill state based on pincode validation result
+          if (result.isValid && result.state && result.state !== 'Unknown State') {
+            console.log('🔍 [Delhivery Address] Auto-filling state:', result.state);
+            
+            // Create a mapping for common state name variations
+            const stateNameMappings: Record<string, string> = {
+              'delhi': 'Delhi',
+              'new delhi': 'Delhi',
+              'ncr': 'Delhi',
+              'maharashtra': 'Maharashtra',
+              'karnataka': 'Karnataka',
+              'bengaluru': 'Karnataka',
+              'bangalore': 'Karnataka',
+              'tamil nadu': 'Tamil Nadu',
+              'tamilnadu': 'Tamil Nadu',
+              'west bengal': 'West Bengal',
+              'westbengal': 'West Bengal',
+              'uttar pradesh': 'Uttar Pradesh',
+              'uttarpradesh': 'Uttar Pradesh',
+              'up': 'Uttar Pradesh',
+              'madhya pradesh': 'Madhya Pradesh',
+              'madhyapradesh': 'Madhya Pradesh',
+              'mp': 'Madhya Pradesh',
+              'andhra pradesh': 'Andhra Pradesh',
+              'andhrapradesh': 'Andhra Pradesh',
+              'ap': 'Andhra Pradesh',
+              'himachal pradesh': 'Himachal Pradesh',
+              'himachalpradesh': 'Himachal Pradesh',
+              'hp': 'Himachal Pradesh',
+              'jammu and kashmir': 'Jammu and Kashmir',
+              'jammu & kashmir': 'Jammu and Kashmir',
+              'j&k': 'Jammu and Kashmir',
+              'jk': 'Jammu and Kashmir'
+            };
+            
+            // Normalize the state name from API
+            const normalizedApiState = stateNameMappings[result.state.toLowerCase()] || result.state;
+            
+            // Find the matching state code from our Indian states list
+            const matchingState = indianStates?.find(indianState => 
+              indianState.name.toLowerCase() === normalizedApiState.toLowerCase()
+            );
+            
+            if (matchingState) {
+              console.log('✅ [Delhivery Address] Found matching state code:', matchingState.code, 'for state:', normalizedApiState);
+              onAddressChange('state_province_region', matchingState.code);
+            } else {
+              console.log('⚠️ [Delhivery Address] No exact match found, trying partial matching for:', normalizedApiState);
+              // For states that don't match exactly, try partial matching
+              const partialMatch = indianStates?.find(indianState => 
+                indianState.name.toLowerCase().includes(normalizedApiState.toLowerCase()) ||
+                normalizedApiState.toLowerCase().includes(indianState.name.toLowerCase())
+              );
+              
+              if (partialMatch) {
+                console.log('✅ [Delhivery Address] Found partial match state code:', partialMatch.code);
+                onAddressChange('state_province_region', partialMatch.code);
+              } else {
+                console.log('❌ [Delhivery Address] No state match found for:', result.state, '→', normalizedApiState);
+              }
+            }
+          }
         } else {
           setPincodeValidationStatus('invalid');
         }
@@ -147,7 +214,7 @@ export function DelhiveryValidatedAddressInput({
             <Input
               id="state"
               value={state}
-              onChange={(e) => onAddressChange('state', e.target.value)}
+              onChange={(e) => onAddressChange('state_province_region', e.target.value)}
               placeholder="State"
               className="h-11 bg-white border-gray-300 rounded text-base"
             />
@@ -158,7 +225,7 @@ export function DelhiveryValidatedAddressInput({
             <Input
               id="pincode"
               value={pincode}
-              onChange={(e) => onAddressChange('pincode', e.target.value)}
+              onChange={(e) => onAddressChange('postal_code', e.target.value)}
               placeholder="Postal Code"
               className="h-11 bg-white border-gray-300 rounded text-base"
             />
@@ -215,18 +282,36 @@ export function DelhiveryValidatedAddressInput({
         </div>
         
         <div>
-          <Label htmlFor="state">State</Label>
-          <ValidatedInput
-            id="state"
-            value={state}
-            onChange={(e) => onAddressChange('state', e.target.value)}
-            placeholder="State"
-            validationStatus={
-              !enableRealTimeValidation ? 'idle' :
-              state.length === 0 ? 'idle' :
-              state.length >= 2 ? 'valid' : 'invalid'
-            }
-          />
+          <Label htmlFor="state">
+            State
+            {pincodeValidationStatus === 'valid' && state && (
+              <span className="ml-2 text-xs text-green-600">
+                ✓ Auto-filled
+              </span>
+            )}
+          </Label>
+          <Select
+            onValueChange={(value) => {
+              onAddressChange('state_province_region', value);
+            }}
+            value={state || ''}
+          >
+            <ValidatedSelectTrigger 
+              validationStatus={
+                !enableRealTimeValidation ? 'idle' :
+                state.length === 0 ? 'idle' : 'valid'
+              }
+            >
+              <SelectValue placeholder="Select state" />
+            </ValidatedSelectTrigger>
+            <SelectContent>
+              {indianStates?.map((indianState) => (
+                <SelectItem key={indianState.code} value={indianState.code}>
+                  {indianState.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         <div>
@@ -243,6 +328,7 @@ export function DelhiveryValidatedAddressInput({
             value={pincode}
             onChange={(e) => {
               const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+              onAddressChange('postal_code', value);
               handlePincodeChange(value);
             }}
             placeholder="6-digit pincode"
