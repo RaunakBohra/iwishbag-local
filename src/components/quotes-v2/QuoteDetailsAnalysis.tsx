@@ -57,35 +57,64 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     return currencyService.formatAmount(amount, 'USD');
   };
 
-  // Key metrics for dashboard
+  // Calculate key values
+  const itemsSubtotal = steps.items_subtotal || quote.items.reduce((sum: number, item: any) => {
+    const price = item.costprice_origin || item.unit_price_usd || 0;
+    const quantity = item.quantity || 1;
+    return sum + (price * quantity);
+  }, 0);
+
+  const totalShippingCost = steps.shipping_cost || steps.discounted_shipping_cost || 0;
+  const totalTaxAmount = steps.local_tax_amount || 0;
+  const finalTotalUSD = steps.total_usd || quote.total_usd || 0;
+  const finalTotalCustomer = steps.total_customer_currency || quote.total_customer_currency || 0;
+  const customerCurrency = quote.customer_currency || 'USD';
+
+  // Enhanced metrics for dashboard (6 cards in 2 rows)
   const keyMetrics = [
+    // Row 1: Quote & Items Overview
     {
-      icon: Scale,
-      title: 'Total Weight',
-      value: `${inputs.total_weight_kg || 0} kg`,
-      subtitle: 'Physical weight',
+      icon: Globe,
+      title: 'Route',
+      value: `${inputs.origin_country || quote.origin_country || 'US'} → ${inputs.destination_country || quote.destination_country || 'NP'}`,
+      subtitle: inputs.shipping_method || 'International',
       color: 'text-blue-600'
     },
     {
       icon: Package,
-      title: 'Chargeable Weight',
-      value: `${inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0} kg`,
-      subtitle: inputs.total_volumetric_weight_kg > inputs.total_weight_kg ? 'Volumetric' : 'Physical',
-      color: 'text-purple-600'
-    },
-    {
-      icon: Truck,
-      title: 'Shipping Rate',
-      value: `$${rates.shipping_rate_per_kg || 0}/kg`,
-      subtitle: 'International',
+      title: 'Items',
+      value: `${quote.items.length} items`,
+      subtitle: `${formatCurrency(itemsSubtotal)} total`,
       color: 'text-green-600'
     },
     {
+      icon: Scale,
+      title: 'Weight',
+      value: `${inputs.total_weight_kg || 0} kg`,
+      subtitle: `${inputs.total_chargeable_weight_kg || inputs.total_weight_kg || 0} kg bill`,
+      color: 'text-purple-600'
+    },
+    // Row 2: Costs & Final Totals
+    {
+      icon: Truck,
+      title: 'Shipping',
+      value: `$${rates.shipping_rate_per_kg || 0}/kg`,
+      subtitle: `$${totalShippingCost.toFixed(2)} cost`,
+      color: 'text-blue-600'
+    },
+    {
       icon: DollarSign,
-      title: 'Tax Rate',
-      value: `${rates.local_tax_percentage || 0}%`,
-      subtitle: taxInfo.local_tax_name,
+      title: 'Taxes',
+      value: `${rates.local_tax_percentage || 0}% ${taxInfo.local_tax_name}`,
+      subtitle: `$${totalTaxAmount.toFixed(2)} tax`,
       color: 'text-orange-600'
+    },
+    {
+      icon: DollarSign,
+      title: 'Total',
+      value: `$${finalTotalUSD.toFixed(2)} USD`,
+      subtitle: customerCurrency !== 'USD' ? `${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
+      color: 'text-green-600'
     }
   ];
 
@@ -98,20 +127,39 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Key Metrics Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {keyMetrics.map((metric, index) => (
-            <div key={index} className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <metric.icon className={`w-4 h-4 ${metric.color}`} />
-                <span className="text-sm font-medium text-gray-700">{metric.title}</span>
+        {/* Enhanced Metrics Dashboard - 6 Cards in 2 Rows */}
+        <div className="space-y-4">
+          {/* Row 1: Quote & Items Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {keyMetrics.slice(0, 3).map((metric, index) => (
+              <div key={index} className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <metric.icon className={`w-4 h-4 ${metric.color}`} />
+                  <span className="text-sm font-medium text-gray-700">{metric.title}</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold">{metric.value}</p>
+                  <p className="text-xs text-gray-500">{metric.subtitle}</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-lg font-bold">{metric.value}</p>
-                <p className="text-xs text-gray-500">{metric.subtitle}</p>
+            ))}
+          </div>
+          
+          {/* Row 2: Costs & Final Totals */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {keyMetrics.slice(3, 6).map((metric, index) => (
+              <div key={index + 3} className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <metric.icon className={`w-4 h-4 ${metric.color}`} />
+                  <span className="text-sm font-medium text-gray-700">{metric.title}</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold">{metric.value}</p>
+                  <p className="text-xs text-gray-500">{metric.subtitle}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* Enhanced Items Table */}
