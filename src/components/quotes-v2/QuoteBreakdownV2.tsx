@@ -558,7 +558,10 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
               </div>
               <div className="text-right">
                 <p className="font-bold text-2xl text-green-900">
-                  ${(steps.total_usd || quote.total_usd || 0).toFixed(2)}
+                  {currencyService.formatAmount(
+                    steps.total_origin_currency || steps.total_usd || quote.total_usd || 0,
+                    calc.inputs?.origin_currency || 'USD'
+                  )}
                 </p>
                 <p className="text-lg text-green-700">
                   {currencyService.formatAmount(
