@@ -265,7 +265,12 @@
       "WebFetch(domain:linear.app)",
       "WebFetch(domain:ui.shadcn.com)",
       "WebFetch(domain:www.navbar.gallery)",
-      "WebFetch(domain:runcopycat.com)"
+      "WebFetch(domain:runcopycat.com)",
+      "Bash(mcp:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(wrangler secret put:*)",
+      "Bash(compgen:*)",
+      "Bash(wrangler tail:*)"
     ],
     "deny": []
   }

@@ -1,0 +1,21 @@
+name = "brightdata-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-01-15"
+
+[vars]
+ENVIRONMENT = "production"
+
+# Environment variables (secrets set via wrangler secret put)
+# BRIGHTDATA_API_TOKEN will be set as a secret
+
+# KV bindings for caching (optional)
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "your-kv-namespace-id"
+# preview_id = "your-preview-kv-namespace-id"
+
+# Analytics bindings (optional)
+# [analytics_engine_datasets]
+# [[analytics_engine_datasets.bindings]]
+# name = "ANALYTICS"
+# dataset = "brightdata_mcp_analytics"

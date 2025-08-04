@@ -1,0 +1,19 @@
+{
+  "name": "brightdata-mcp-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for Bright Data MCP Integration",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "echo \"No tests specified\"",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": ["cloudflare", "worker", "brightdata", "mcp", "scraping"],
+  "author": "iwishBag",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241205.0",
+    "wrangler": "^3.86.1"
+  }
+}

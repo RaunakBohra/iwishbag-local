@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield, Plus, Trash2, FileText, MapPin } from 'lucide-react';
+import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield, Plus, Trash2, FileText, MapPin, Loader2, Download, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,7 @@ import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
 import { useCountryUnit } from '@/hooks/useCountryUnits';
 import { useUrlAutoDetection } from '@/hooks/useUrlAnalysis';
+import { useProductScraping } from '@/hooks/useProductScraping';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
 
@@ -494,6 +495,9 @@ export default function QuoteRequestPage() {
                   const urlAnalysis = useUrlAutoDetection(currentUrl);
                   const { data: purchaseCountries = [] } = usePurchaseCountries();
                   
+                  // Product scraping integration
+                  const productScraping = useProductScraping(currentUrl);
+                  
                   // Auto-detect country when URL changes
                   useEffect(() => {
                     // Only process if we have a valid URL analysis and countries are loaded
@@ -523,6 +527,37 @@ export default function QuoteRequestPage() {
                     }
                   }, [urlAnalysis.suggestedCountry, urlAnalysis.shouldAutoSetCountry, index, form, purchaseCountries]);
                   
+                  // Auto-fill product data when scraping completes
+                  useEffect(() => {
+                    if (productScraping.shouldAutoFill && productScraping.autoFillData) {
+                      const { productName, price, weight, currency: scrapedCurrency } = productScraping.autoFillData;
+                      
+                      // Only auto-fill empty fields to avoid overwriting user input
+                      const currentProductName = form.getValues(`items.${index}.product_name`);
+                      const currentPrice = form.getValues(`items.${index}.price_usd`);
+                      const currentWeight = form.getValues(`items.${index}.weight_kg`);
+                      
+                      if (!currentProductName && productName) {
+                        form.setValue(`items.${index}.product_name`, productName, { shouldValidate: true });
+                      }
+                      
+                      if ((!currentPrice || currentPrice === 0) && price && price > 0) {
+                        form.setValue(`items.${index}.price_usd`, price, { shouldValidate: true });
+                      }
+                      
+                      if ((!currentWeight || currentWeight === 0) && weight && weight > 0) {
+                        form.setValue(`items.${index}.weight_kg`, weight, { shouldValidate: true });
+                      }
+                      
+                      // Show success toast
+                      toast({
+                        title: "Product data loaded!",
+                        description: `Auto-filled from ${productScraping.urlAnalysis.domain}`,
+                        duration: 3000,
+                      });
+                    }
+                  }, [productScraping.shouldAutoFill, productScraping.autoFillData, index, form, toast]);
+                  
                   return (
                     <div key={item.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
@@ -547,11 +582,51 @@ export default function QuoteRequestPage() {
                         name={`items.${index}.product_url`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Product URL</FormLabel>
+                            <FormLabel className="flex items-center justify-between">
+                              <span>Product URL</span>
+                              <div className="flex items-center space-x-2">
+                                {productScraping.isLoading && (
+                                  <div className="flex items-center text-xs text-blue-600">
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    Fetching...
+                                  </div>
+                                )}
+                                {productScraping.isScraped && !productScraping.error && (
+                                  <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                    ✓ Data loaded
+                                  </span>
+                                )}
+                                {productScraping.error && (
+                                  <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                                    <AlertCircle className="h-3 w-3 inline mr-1" />
+                                    Scraping failed
+                                  </span>
+                                )}
+                                {currentUrl && !productScraping.isLoading && !productScraping.isScraped && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 px-2 text-xs"
+                                    onClick={() => productScraping.scrapeProduct(currentUrl)}
+                                  >
+                                    <Download className="h-3 w-3 mr-1" />
+                                    Fetch Data
+                                  </Button>
+                                )}
+                              </div>
+                            </FormLabel>
                             <FormControl>
-                              <Input placeholder="https://amazon.com/..." {...field} />
+                              <Input 
+                                placeholder="https://amazon.com/..." 
+                                {...field} 
+                                className={productScraping.isScraped ? 'border-green-200 bg-green-50/30' : ''}
+                              />
                             </FormControl>
                             <FormMessage />
+                            {productScraping.error && (
+                              <p className="text-xs text-red-600 mt-1">{productScraping.error}</p>
+                            )}
                           </FormItem>
                         )}
                       />
@@ -560,9 +635,19 @@ export default function QuoteRequestPage() {
                         name={`items.${index}.product_name`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Product Name *</FormLabel>
+                            <FormLabel>
+                              Product Name *
+                              {productScraping.isScraped && productScraping.autoFillData?.productName && (
+                                <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                  Auto-filled
+                                </span>
+                              )}
+                            </FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input 
+                                {...field} 
+                                className={productScraping.isScraped && productScraping.autoFillData?.productName ? 'border-green-200 bg-green-50/30' : ''}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -638,7 +723,14 @@ export default function QuoteRequestPage() {
                         name={`items.${index}.weight_kg`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Weight ({weightUnit})</FormLabel>
+                            <FormLabel>
+                              Weight ({weightUnit})
+                              {productScraping.isScraped && productScraping.autoFillData?.weight && (
+                                <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                  Auto-filled
+                                </span>
+                              )}
+                            </FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -647,6 +739,7 @@ export default function QuoteRequestPage() {
                                 placeholder={weightUnit === 'kg' ? '0.5' : '1.1'}
                                 {...field}
                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                className={productScraping.isScraped && productScraping.autoFillData?.weight ? 'border-green-200 bg-green-50/30' : ''}
                               />
                             </FormControl>
                             <FormMessage />
@@ -658,7 +751,14 @@ export default function QuoteRequestPage() {
                         name={`items.${index}.price_usd`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Price ({currency})</FormLabel>
+                            <FormLabel>
+                              Price ({currency})
+                              {productScraping.isScraped && productScraping.autoFillData?.price && (
+                                <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                  Auto-filled
+                                </span>
+                              )}
+                            </FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -667,6 +767,7 @@ export default function QuoteRequestPage() {
                                 placeholder={currency === 'USD' ? '999.99' : currency === 'INR' ? '8299.99' : '999.99'}
                                 {...field}
                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                                className={productScraping.isScraped && productScraping.autoFillData?.price ? 'border-green-200 bg-green-50/30' : ''}
                               />
                             </FormControl>
                             <FormMessage />
