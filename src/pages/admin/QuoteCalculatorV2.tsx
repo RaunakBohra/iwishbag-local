@@ -63,6 +63,7 @@ import { DiscountEligibilityChecker } from '@/components/quotes-v2/DiscountEligi
 import { DiscountHelpTooltips } from '@/components/quotes-v2/DiscountHelpTooltips';
 import VolumetricWeightModal from '@/components/quotes-v2/VolumetricWeightModal';
 import { UnifiedHSNSearch } from '@/components/forms/quote-form-fields/UnifiedHSNSearch';
+import { ShareQuoteButtonV2 } from '@/components/admin/ShareQuoteButtonV2';
 
 interface QuoteItem {
   id: string;
@@ -218,7 +219,6 @@ const QuoteCalculatorV2: React.FC = () => {
   const [isDiscountSectionCollapsed, setIsDiscountSectionCollapsed] = useState(true);
   const [isStatusSectionCollapsed, setIsStatusSectionCollapsed] = useState(true);
   const [isDocumentsSectionCollapsed, setIsDocumentsSectionCollapsed] = useState(true);
-  const [isShareSectionCollapsed, setIsShareSectionCollapsed] = useState(true);
   const [isExportSectionCollapsed, setIsExportSectionCollapsed] = useState(true);
   
   // Items
@@ -890,30 +890,6 @@ const QuoteCalculatorV2: React.FC = () => {
     });
   };
 
-  const copyShareUrl = async () => {
-    if (!shareToken) return;
-    
-    const shareUrl = `${window.location.origin}/quote/view/${shareToken}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      toast({
-        title: "Copied!",
-        description: "Share URL copied to clipboard",
-      });
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Could not copy to clipboard",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const openShareUrl = () => {
-    if (!shareToken) return;
-    const shareUrl = `${window.location.origin}/quote/view/${shareToken}`;
-    window.open(shareUrl, '_blank');
-  };
 
   const getExpiryStatus = () => {
     if (!expiresAt) return null;
@@ -2150,6 +2126,25 @@ const QuoteCalculatorV2: React.FC = () => {
                     {loading ? 'Saving...' : (isEditMode ? 'Update Quote' : 'Save Quote')}
                   </Button>
                   
+                  {/* Share Quote Button - Show when quote exists */}
+                  {quoteId && shareToken && (
+                    <ShareQuoteButtonV2
+                      quote={{
+                        id: quoteId,
+                        display_id: null,
+                        email: customerEmail,
+                        final_total_usd: calculationResult?.total || 0,
+                        status: currentQuoteStatus,
+                        created_at: new Date().toISOString(),
+                        share_token: shareToken,
+                        expires_at: expiresAt,
+                      } as any}
+                      variant="button"
+                      size="default"
+                      className="w-full"
+                    />
+                  )}
+                  
                   {/* Email sending for edit mode */}
                   {isEditMode && calculationResult && currentQuoteStatus === 'calculated' && !emailSent && (
                     <Button 
@@ -2294,67 +2289,6 @@ const QuoteCalculatorV2: React.FC = () => {
             </Card>
           )}
 
-          {/* Share URL Section */}
-          {shareToken && (
-            <Card>
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setIsShareSectionCollapsed(!isShareSectionCollapsed)}
-              >
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    Share Quote
-                  </div>
-                  {isShareSectionCollapsed ? (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  )}
-                </CardTitle>
-                <CardDescription>Customer can view this quote directly</CardDescription>
-              </CardHeader>
-              {!isShareSectionCollapsed && (
-                <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 p-2 bg-gray-50 rounded border">
-                  <code className="flex-1 text-sm font-mono text-gray-700 truncate">
-                    /quote/view/{shareToken}
-                  </code>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    onClick={copyShareUrl}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy URL
-                  </Button>
-                  <Button
-                    onClick={openShareUrl}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Preview
-                  </Button>
-                </div>
-                
-                {expiresAt && (() => {
-                  const expiryStatus = getExpiryStatus();
-                  return expiryStatus ? (
-                    <div className={`text-sm ${expiryStatus.color} flex items-center gap-1`}>
-                      <Clock className="w-4 h-4" />
-                      {expiryStatus.text}
-                    </div>
-                  ) : null;
-                })()}
-                </CardContent>
-              )}
-            </Card>
-          )}
 
           {/* Export Controls - Show in edit mode for saved quotes */}
           {isEditMode && quoteId && calculationResult && (
