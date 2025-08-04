@@ -141,6 +141,24 @@ const QuoteCalculatorV2: React.FC = () => {
     return countryMap[code] || code;
   };
 
+  // Format address for inline display
+  const getAddressDisplay = (address: any, showDetails: boolean) => {
+    if (!address) return 'Not provided';
+    
+    if (showDetails) {
+      // Show full address inline
+      const parts = [
+        address.address_line1,
+        address.address_line2,
+        address.city
+      ].filter(Boolean);
+      return parts.join(', ');
+    } else {
+      // Show city, country summary
+      return `${address.city}, ${getCountryName(address.destination_country)}`;
+    }
+  };
+
   const [originCountry, setOriginCountry] = useState('US');
   const [originState, setOriginState] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('NP');
@@ -923,146 +941,120 @@ const QuoteCalculatorV2: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Form */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Customer Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-blue-600" />
-                Customer Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Customer Contact & Address - Single Row */}
-              <div className="bg-gradient-to-r from-slate-50 to-gray-50 border border-gray-200 rounded-lg p-3">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  {/* Name */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="h-3 w-3 text-blue-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-medium text-blue-700 uppercase tracking-wide">Name</div>
-                      <div className="text-xs font-medium text-gray-900 truncate">
-                        {customerName || 'Not provided'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                      <Mail className="h-3 w-3 text-green-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Email</div>
-                      <div className="text-xs font-medium text-gray-900 truncate">
-                        {customerEmail || 'Not provided'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Phone */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
-                      <Phone className="h-3 w-3 text-purple-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-medium text-purple-700 uppercase tracking-wide">Phone</div>
-                      <div className="text-xs font-medium text-gray-900 truncate">
-                        {customerPhone || 'Not provided'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Delivery Address - Compact */}
-                  {deliveryAddress ? (
-                    <div className="flex items-center gap-1">
-                      <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center relative">
-                        <MapPin className="h-3 w-3 text-teal-600" />
-                        {deliveryAddress.is_default && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
-                            <CheckCircle className="h-2 w-2 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[10px] font-medium text-teal-700 uppercase tracking-wide">Address</div>
-                        <div className="text-xs font-medium text-gray-900 truncate">
-                          {deliveryAddress.city}, {getCountryName(deliveryAddress.destination_country)}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setShowAddressDetails(!showAddressDetails)}
-                        className="w-5 h-5 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
-                        title={showAddressDetails ? "Hide address details" : "Show address details"}
-                      >
-                        {showAddressDetails ? (
-                          <EyeOff className="h-2.5 w-2.5 text-gray-600" />
-                        ) : (
-                          <Eye className="h-2.5 w-2.5 text-gray-600" />
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
-                        <MapPin className="h-3 w-3 text-gray-400" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Address</div>
-                        <div className="text-xs text-gray-500">
-                          Not provided
-                        </div>
-                      </div>
-                    </div>
-                  )}
+          {/* Customer Contact & Address - Single Row */}
+          <div className="bg-gradient-to-r from-slate-50 to-gray-50 border border-gray-200 rounded-lg p-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              {/* Name */}
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="h-3 w-3 text-blue-600" />
                 </div>
-
-                {/* Full Address Details - Toggleable */}
-                {deliveryAddress && showAddressDetails && (
-                  <div className="mt-3 pt-2 border-t border-gray-200">
-                    <div className="text-xs text-gray-600">
-                      <span className="font-medium">{deliveryAddress.recipient_name}</span> • 
-                      {deliveryAddress.address_line1}
-                      {deliveryAddress.address_line2 && `, ${deliveryAddress.address_line2}`} • 
-                      {deliveryAddress.city}, {deliveryAddress.state_province_region} {deliveryAddress.postal_code}
-                      {deliveryAddress.phone && (
-                        <> • <Phone className="inline h-2.5 w-2.5 mx-1" />{deliveryAddress.phone}</>
-                      )}
-                    </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-medium text-blue-700 uppercase tracking-wide">Name</div>
+                  <div className="text-xs font-medium text-gray-900 truncate">
+                    {customerName || 'Not provided'}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Edit Customer Info - Only show for new quotes */}
-              {!isEditMode && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
-                  <div className="text-[10px] font-medium text-gray-600 mb-1">Edit Customer Details</div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <Input
-                      placeholder="Customer Name"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="text-xs h-7"
-                    />
-                    <Input
-                      type="email"
-                      placeholder="Email Address"
-                      value={customerEmail}
-                      onChange={(e) => setCustomerEmail(e.target.value)}
-                      className="text-xs h-7"
-                    />
-                    <Input
-                      placeholder="Phone Number"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="text-xs h-7"
-                    />
+              {/* Email */}
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                  <Mail className="h-3 w-3 text-green-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-medium text-green-700 uppercase tracking-wide">Email</div>
+                  <div className="text-xs font-medium text-gray-900 truncate">
+                    {customerEmail || 'Not provided'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Phone className="h-3 w-3 text-purple-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-medium text-purple-700 uppercase tracking-wide">Phone</div>
+                  <div className="text-xs font-medium text-gray-900 truncate">
+                    {customerPhone || 'Not provided'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Address - Compact */}
+              {deliveryAddress ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center relative">
+                    <MapPin className="h-3 w-3 text-teal-600" />
+                    {deliveryAddress.is_default && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                        <CheckCircle className="h-2 w-2 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-medium text-teal-700 uppercase tracking-wide">Address</div>
+                    <div className="text-xs font-medium text-gray-900 truncate">
+                      {getAddressDisplay(deliveryAddress, showAddressDetails)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAddressDetails(!showAddressDetails)}
+                    className="w-5 h-5 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                    title={showAddressDetails ? "Hide address details" : "Show address details"}
+                  >
+                    {showAddressDetails ? (
+                      <EyeOff className="h-2.5 w-2.5 text-gray-600" />
+                    ) : (
+                      <Eye className="h-2.5 w-2.5 text-gray-600" />
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center">
+                    <MapPin className="h-3 w-3 text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Address</div>
+                    <div className="text-xs text-gray-500">
+                      Not provided
+                    </div>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Edit Customer Info - Only show for new quotes */}
+          {!isEditMode && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+              <div className="text-[10px] font-medium text-gray-600 mb-1">Edit Customer Details</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Input
+                  placeholder="Customer Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="text-xs h-7"
+                />
+                <Input
+                  type="email"
+                  placeholder="Email Address"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  className="text-xs h-7"
+                />
+                <Input
+                  placeholder="Phone Number"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="text-xs h-7"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Route Info */}
           <Card>
