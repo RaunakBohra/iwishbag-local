@@ -53,10 +53,10 @@ import {
   DropdownMenuLabel 
 } from '@/components/ui/dropdown-menu';
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card';
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -377,10 +377,10 @@ export const AdminSidebar = () => {
                   // Multiple items - different behavior for collapsed vs expanded
                   <>
                     {isCollapsed ? (
-                      // In collapsed state, show category icon with flyout menu on hover
+                      // In collapsed state, show category icon with popover menu on click
                       <SidebarMenuItem key={group.title}>
-                        <HoverCard openDelay={200} closeDelay={100}>
-                          <HoverCardTrigger asChild>
+                        <Popover>
+                          <PopoverTrigger asChild>
                             <SidebarMenuButton className="flex items-center justify-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
                               <div className="flex items-center justify-center w-full">
                                 {React.createElement((group as any).categoryIcon, {
@@ -388,10 +388,10 @@ export const AdminSidebar = () => {
                                 })}
                               </div>
                             </SidebarMenuButton>
-                          </HoverCardTrigger>
-                          <HoverCardContent 
+                          </PopoverTrigger>
+                          <PopoverContent 
                             side="right" 
-                            className="w-64 p-3 ml-2"
+                            className="w-64 p-3"
                             sideOffset={8}
                           >
                             <div className="space-y-1">
@@ -438,8 +438,8 @@ export const AdminSidebar = () => {
                                 </Button>
                               </div>
                             </div>
-                          </HoverCardContent>
-                        </HoverCard>
+                          </PopoverContent>
+                        </Popover>
                       </SidebarMenuItem>
                     ) : (
                       // In expanded state, use collapsible groups
