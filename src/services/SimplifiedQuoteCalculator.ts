@@ -48,8 +48,6 @@ interface CalculationInput {
   delhivery_service_type?: 'standard' | 'express' | 'same_day'; // For Indian deliveries
   ncm_service_type?: 'pickup' | 'collect'; // For Nepal NCM deliveries
   shipping_method?: 'standard' | 'express' | 'economy';
-  insurance_required?: boolean;
-  handling_fee_type?: 'fixed' | 'percentage' | 'both';
   payment_gateway?: 'stripe' | 'paypal' | 'esewa' | 'khalti' | 'payu';
   
   // Discount fields
@@ -584,20 +582,18 @@ class SimplifiedQuoteCalculator {
     let insuranceAmount = 0;
     let insurancePercentage = 0;
     
-    if (routeCalculations && routeCalculations.insurance.available && input.insurance_required !== false) {
+    if (routeCalculations && routeCalculations.insurance.available) {
       // Use dynamic insurance from shipping route
       insuranceAmount = routeCalculations.insurance.amount;
       insurancePercentage = routeCalculations.insurance.percentage;
       
       console.log(`🛡️ [Dynamic Insurance] Percentage: ${insurancePercentage}%, Amount: ${insuranceAmount}`);
     } else {
-      // Fallback to hardcoded insurance
-      insurancePercentage = input.insurance_required !== false ? 1 : 0;
-      insuranceAmount = insurancePercentage > 0 
-        ? Math.max((finalItemsSubtotal + originSalesTax) * (insurancePercentage / 100), 5)
-        : 0;
+      // No insurance available - set to 0
+      insuranceAmount = 0;
+      insurancePercentage = 0;
         
-      console.log(`🛡️ [Fallback Insurance] Using hardcoded 1%, Amount: ${insuranceAmount}`);
+      console.log(`🛡️ [No Insurance] Route has no insurance configuration, Amount: $0`);
     }
 
     // Step 7: Calculate CIF (Cost + Insurance + Freight) 
@@ -802,19 +798,12 @@ class SimplifiedQuoteCalculator {
       
       console.log(`🤝 [Dynamic Handling] Base: ${handlingFeeFixed}, Percentage: ${handlingFeePercentage}, Total: ${handlingFee} (capped between ${routeCalculations.handling.min_fee}-${routeCalculations.handling.max_fee})`);
     } else {
-      // Fallback to hardcoded handling fees
-      const handlingFeeType = input.handling_fee_type || 'both';
+      // No handling available - set to 0
+      handlingFee = 0;
+      handlingFeeFixed = 0;
+      handlingFeePercentage = 0;
       
-      if (handlingFeeType === 'fixed' || handlingFeeType === 'both') {
-        handlingFeeFixed = HANDLING_FEES.fixed;
-        handlingFee += handlingFeeFixed;
-      }
-      if (handlingFeeType === 'percentage' || handlingFeeType === 'both') {
-        handlingFeePercentage = HANDLING_FEES.percentage;
-        handlingFee += finalItemsSubtotal * (handlingFeePercentage / 100);
-      }
-      
-      console.log(`🤝 [Fallback Handling] Using hardcoded fees, Total: ${handlingFee}`);
+      console.log(`🤝 [No Handling] Route has no handling configuration, Amount: $0`);
     }
 
     // Apply handling fee discounts if available
@@ -1159,14 +1148,6 @@ class SimplifiedQuoteCalculator {
     }));
   }
 
-  // Get handling fee options
-  getHandlingFeeOptions() {
-    return [
-      { value: 'fixed', label: `Fixed ($${HANDLING_FEES.fixed})` },
-      { value: 'percentage', label: `Percentage (${HANDLING_FEES.percentage}%)` },
-      { value: 'both', label: `Both ($${HANDLING_FEES.fixed} + ${HANDLING_FEES.percentage}%)` }
-    ];
-  }
 
   // Get delivery location types
   getDeliveryTypes() {

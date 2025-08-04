@@ -222,8 +222,6 @@ const QuoteCalculatorV2: React.FC = () => {
   const [ncmRates, setNCMRates] = useState<any>(null);
   const [loadingNCMRates, setLoadingNCMRates] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
-  const [insuranceRequired, setInsuranceRequired] = useState(true);
-  const [handlingFeeType, setHandlingFeeType] = useState<'fixed' | 'percentage' | 'both'>('both');
   const [paymentGateway, setPaymentGateway] = useState('stripe');
   const [adminNotes, setAdminNotes] = useState('');
   const [customerCurrency, setCustomerCurrency] = useState('NPR');
@@ -300,7 +298,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, destinationAddress, shippingMethod, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -743,8 +741,6 @@ const QuoteCalculatorV2: React.FC = () => {
         delhivery_service_type: delhiveryServiceType,
         ncm_service_type: ncmServiceType,
         shipping_method: shippingMethod,
-        insurance_required: insuranceRequired,
-        handling_fee_type: handlingFeeType,
         payment_gateway: paymentGateway,
         order_discount: orderDiscountValue > 0 ? {
           type: orderDiscountType,
@@ -820,7 +816,6 @@ const QuoteCalculatorV2: React.FC = () => {
         origin_country: originCountry,
         destination_country: destinationCountry,
         shipping_method: shippingMethod,
-        insurance_required: insuranceRequired,
         items: items.filter(item => item.name && item.unit_price_usd > 0).map(item => ({
           ...item,
           costprice_origin: item.unit_price_usd, // Map back to V2 format
@@ -1531,26 +1526,37 @@ const QuoteCalculatorV2: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select value={handlingFeeType} onValueChange={(value: any) => setHandlingFeeType(value)}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Handling" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {simplifiedQuoteCalculator.getHandlingFeeOptions().map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label.replace('Both', 'Both ($10+2%)').replace('Fixed', 'Fixed $10').replace('Percentage', '2%')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        id="insurance" 
-                        checked={insuranceRequired} 
-                        onCheckedChange={setInsuranceRequired}
-                        className="scale-75"
-                      />
-                      <Label htmlFor="insurance" className="text-xs">Insurance</Label>
+                    {/* Dynamic Handling Display */}
+                    <div className="p-2 bg-gray-50 rounded border text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-700">Handling</span>
+                        {calculationResult?.route_calculations?.handling ? (
+                          <span className="text-green-600 font-mono">
+                            ${calculationResult.route_calculations.handling.base_fee}+{(calculationResult.route_calculations.handling.percentage_fee / (calculationResult.calculation_steps?.items_subtotal || 1) * 100).toFixed(1)}%
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">Route handling</span>
+                        )}
+                      </div>
+                      {calculationResult?.route_calculations?.handling && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Min: ${calculationResult.route_calculations.handling.min_fee} - Max: ${calculationResult.route_calculations.handling.max_fee}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Dynamic Insurance Display */}
+                    <div className="p-2 bg-gray-50 rounded border text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-700">Insurance</span>
+                        {calculationResult?.route_calculations?.insurance?.available ? (
+                          <span className="text-green-600 font-mono">
+                            {calculationResult.route_calculations.insurance.percentage}% (Min: ${calculationResult.route_calculations.insurance.min_fee})
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">Not available</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
