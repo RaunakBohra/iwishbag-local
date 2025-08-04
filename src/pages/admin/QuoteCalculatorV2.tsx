@@ -1734,7 +1734,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         <Calculator className="w-4 h-4" />
                         Essential Details
                       </h5>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <Label className="text-sm font-medium text-gray-600 mb-1 block">Quantity *</Label>
                           <Input
@@ -1759,6 +1759,97 @@ const QuoteCalculatorV2: React.FC = () => {
                               className="pl-9 font-medium"
                             />
                           </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <Label className="text-sm font-medium text-gray-600">Weight (kg)</Label>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  if (item.name || item.category) {
+                                    const loadingKey = `weight-${item.id}`;
+                                    setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
+                                    try {
+                                      const suggestion = await productIntelligenceService.getSmartSuggestions({
+                                        product_name: item.name || '',
+                                        destination_country: destinationCountry,
+                                        category: item.category || 'general'
+                                      });
+                                      if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
+                                        updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
+                                        toast({
+                                          title: "⚖️ Weight Estimated",
+                                          description: `Estimated weight: ${suggestion.suggested_weight_kg}kg based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
+                                          duration: 4000,
+                                        });
+                                      } else {
+                                        toast({
+                                          variant: "destructive",
+                                          title: "Weight Estimation Failed",
+                                          description: "No weight data available for this product type.",
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error('Weight estimation error:', error);
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Estimation Failed",
+                                        description: "Unable to estimate weight. Please enter manually.",
+                                      });
+                                    } finally {
+                                      setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
+                                    }
+                                  }
+                                }}
+                                className="h-5 px-2 text-xs bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                                disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
+                              >
+                                <Brain className={`w-3 h-3 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
+                              </Button>
+                              <button
+                                type="button"
+                                onClick={() => setVolumetricModalOpen(item.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1 h-5 px-1"
+                              >
+                                <Ruler className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.001"
+                            value={item.weight_kg || ''}
+                            onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
+                            placeholder="0.5"
+                            className="text-sm font-medium"
+                          />
+                          {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
+                            const { length, width, height, unit = 'cm' } = item.dimensions;
+                            let l = length, w = width, h = height;
+                            if (unit === 'in') {
+                              l *= 2.54; w *= 2.54; h *= 2.54;
+                            }
+                            const volume = l * w * h;
+                            const divisor = item.volumetric_divisor || 5000;
+                            const volumetricWeightPerItem = volume / divisor;
+                            const volumetricWeight = volumetricWeightPerItem * item.quantity;
+                            const actualWeight = (item.weight_kg || 0.5) * item.quantity;
+                            const isVolumetric = volumetricWeight > actualWeight;
+                            
+                            return (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <p className="text-blue-700 font-medium">📦 {length}×{width}×{height} {unit}</p>
+                                <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
+                                  Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}kg
+                                  {isVolumetric && ' (volumetric)'}
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1841,174 +1932,6 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Weight & Discount Section */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        Weight & Pricing
-                      </h5>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <Label className="text-sm font-medium text-gray-600">Weight per unit (kg)</Label>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={async () => {
-                                  if (item.name || item.category) {
-                                    const loadingKey = `weight-${item.id}`;
-                                    setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: true }));
-                                    try {
-                                      const suggestion = await productIntelligenceService.getSmartSuggestions({
-                                        product_name: item.name || '',
-                                        destination_country: destinationCountry,
-                                        category: item.category || 'general'
-                                      });
-                                      if (suggestion && suggestion.suggested_weight_kg && suggestion.suggested_weight_kg > 0) {
-                                        updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
-                                        toast({
-                                          title: "⚖️ Weight Estimated",
-                                          description: `Estimated weight: ${suggestion.suggested_weight_kg}kg based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
-                                          duration: 4000,
-                                        });
-                                      } else {
-                                        toast({
-                                          variant: "destructive",
-                                          title: "Weight Estimation Failed",
-                                          description: "No weight data available for this product type.",
-                                        });
-                                      }
-                                    } catch (error) {
-                                      console.error('Weight estimation error:', error);
-                                      toast({
-                                        variant: "destructive",
-                                        title: "Estimation Failed",
-                                        description: "Unable to estimate weight. Please enter manually.",
-                                      });
-                                    } finally {
-                                      setSmartFeatureLoading(prev => ({ ...prev, [loadingKey]: false }));
-                                    }
-                                  }
-                                }}
-                                className="h-6 px-2 text-xs bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
-                                disabled={(!item.name && !item.category) || smartFeatureLoading[`weight-${item.id}`]}
-                              >
-                                <Brain className={`w-3 h-3 mr-1 ${smartFeatureLoading[`weight-${item.id}`] ? 'animate-spin' : ''}`} />
-                                {smartFeatureLoading[`weight-${item.id}`] ? 'AI' : 'AI Weight'}
-                              </Button>
-                              <button
-                                type="button"
-                                onClick={() => setVolumetricModalOpen(item.id)}
-                                className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1 h-6 px-1"
-                              >
-                                <Ruler className="w-3 h-3" />
-                                {item.dimensions ? 'Edit' : 'Dimensions'}
-                              </button>
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.001"
-                              value={item.weight_kg || ''}
-                              onChange={(e) => updateItem(item.id, 'weight_kg', parseFloat(e.target.value) || undefined)}
-                              placeholder="0.5"
-                              className="text-sm"
-                            />
-                          </div>
-                          {item.dimensions && item.dimensions.length > 0 && item.dimensions.width > 0 && item.dimensions.height > 0 && (() => {
-                            const { length, width, height, unit = 'cm' } = item.dimensions;
-                            let l = length, w = width, h = height;
-                            if (unit === 'in') {
-                              l *= 2.54; w *= 2.54; h *= 2.54;
-                            }
-                            const volume = l * w * h;
-                            const divisor = item.volumetric_divisor || 5000;
-                            const volumetricWeightPerItem = volume / divisor;
-                            const volumetricWeight = volumetricWeightPerItem * item.quantity;
-                            const actualWeight = (item.weight_kg || 0.5) * item.quantity;
-                            const isVolumetric = volumetricWeight > actualWeight;
-                            
-                            return (
-                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                                <p className="text-blue-700 font-medium">📦 {length}×{width}×{height} {unit}</p>
-                                <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
-                                  Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}kg
-                                  {isVolumetric && ' (volumetric)'}
-                                </p>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <Label className="text-sm font-medium text-gray-600">Item Discount</Label>
-                            <div className="flex items-center gap-2">
-                              <select
-                                className="text-xs border rounded px-2 py-1 bg-white"
-                                value={item.discount_type || 'percentage'}
-                                onChange={(e) => {
-                                  const newType = e.target.value as 'percentage' | 'amount';
-                                  setItems(items.map(currentItem => 
-                                    currentItem.id === item.id ? {
-                                      ...currentItem,
-                                      discount_type: newType,
-                                      discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
-                                      discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
-                                    } : currentItem
-                                  ));
-                                }}
-                              >
-                                <option value="percentage">%</option>
-                                <option value="amount">$</option>
-                              </select>
-                              {/* Show savings */}
-                              {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
-                                (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
-                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                  Save ${item.discount_type === 'percentage' 
-                                    ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
-                                    : (item.discount_amount || 0).toFixed(2)
-                                  }
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              min="0"
-                              max={item.discount_type === 'percentage' ? "100" : undefined}
-                              step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
-                              value={item.discount_type === 'amount' 
-                                ? (item.discount_amount || '') 
-                                : (item.discount_percentage || '')
-                              }
-                              onChange={(e) => {
-                                const value = parseFloat(e.target.value) || undefined;
-                                if (item.discount_type === 'amount') {
-                                  updateItem(item.id, 'discount_amount', value);
-                                } else {
-                                  updateItem(item.id, 'discount_percentage', value);
-                                }
-                              }}
-                              placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
-                              className="text-sm pr-8"
-                            />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                              <span className="text-gray-500 text-sm">
-                                {item.discount_type === 'amount' ? '$' : '%'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Advanced Options Section */}
                     {(item.hsn_code || item.notes) && (
                       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -2067,6 +1990,78 @@ const QuoteCalculatorV2: React.FC = () => {
                         </div>
                       </div>
                     )}
+
+                    {/* Discount Section */}
+                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                      <h5 className="text-sm font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                        <Tag className="w-4 h-4" />
+                        Item Discount
+                      </h5>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm font-medium text-yellow-700">Type:</Label>
+                          <select
+                            className="text-sm border rounded px-3 py-1 bg-white"
+                            value={item.discount_type || 'percentage'}
+                            onChange={(e) => {
+                              const newType = e.target.value as 'percentage' | 'amount';
+                              setItems(items.map(currentItem => 
+                                currentItem.id === item.id ? {
+                                  ...currentItem,
+                                  discount_type: newType,
+                                  discount_amount: newType === 'percentage' ? undefined : currentItem.discount_amount,
+                                  discount_percentage: newType === 'amount' ? undefined : currentItem.discount_percentage
+                                } : currentItem
+                              ));
+                            }}
+                          >
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="amount">Fixed Amount ($)</option>
+                          </select>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="relative">
+                            <Input
+                              type="number"
+                              min="0"
+                              max={item.discount_type === 'percentage' ? "100" : undefined}
+                              step={item.discount_type === 'percentage' ? "0.1" : "0.01"}
+                              value={item.discount_type === 'amount' 
+                                ? (item.discount_amount || '') 
+                                : (item.discount_percentage || '')
+                              }
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || undefined;
+                                if (item.discount_type === 'amount') {
+                                  updateItem(item.id, 'discount_amount', value);
+                                } else {
+                                  updateItem(item.id, 'discount_percentage', value);
+                                }
+                              }}
+                              placeholder={item.discount_type === 'amount' ? "0.00" : "0"}
+                              className="text-sm pr-8"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <span className="text-gray-500 text-sm">
+                                {item.discount_type === 'amount' ? '$' : '%'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Show savings */}
+                        {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
+                          (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
+                            Save ${item.discount_type === 'percentage' 
+                              ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
+                              : (item.discount_amount || 0).toFixed(2)
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

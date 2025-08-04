@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Search,
@@ -318,8 +317,13 @@ export const UnifiedHSNSearch: React.FC<UnifiedHSNSearchProps> = ({
                     {suggestions.length} found
                   </Badge>
                 </div>
-                <ScrollArea className="max-h-80 pr-4">
-                  <div className="space-y-2">
+                <div 
+                  className="max-h-80 overflow-y-auto pr-2 space-y-2 border rounded-md bg-gray-50 p-2"
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#cbd5e1 #f1f5f9'
+                  }}
+                >
                     {suggestions.map((suggestion, idx) => {
                       const ConfidenceIcon = getConfidenceIcon(suggestion.confidence_score);
                       return (
@@ -376,8 +380,7 @@ export const UnifiedHSNSearch: React.FC<UnifiedHSNSearchProps> = ({
                         </Card>
                       );
                     })}
-                  </div>
-                </ScrollArea>
+                </div>
               </div>
             )}
 
