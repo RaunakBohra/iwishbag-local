@@ -511,7 +511,7 @@ serve(async (req) => {
         p_payment_data: paymentData,
         p_guest_session_token: guestSessionToken,
         p_guest_session_data: guestSessionData,
-        p_create_order: orderStatus === 'paid',
+        p_create_order: false, // IMPORTANT: Orders created after goods arrive in Kathmandu, not on payment
       },
     );
 

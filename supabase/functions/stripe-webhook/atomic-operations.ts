@@ -116,7 +116,7 @@ export async function processPaymentSuccessAtomic(
       },
       p_guest_session_token: null,
       p_guest_session_data: null,
-      p_create_order: true // Enable order creation for successful payments
+      p_create_order: false // IMPORTANT: Orders created after goods arrive in Kathmandu, not on payment
     });
 
     // End performance tracking
