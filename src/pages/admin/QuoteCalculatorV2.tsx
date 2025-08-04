@@ -348,9 +348,19 @@ const QuoteCalculatorV2: React.FC = () => {
           
           console.log(`✅ [QuoteCalculator] Loaded ${deliveryOptions.length} delivery options for ${originCountry} → ${destinationCountry}`);
           
-          // Auto-select the cheapest option if we have options and no method is selected
-          if (deliveryOptions.length > 0 && !shippingMethod) {
-            setShippingMethod(deliveryOptions[0].value);
+          // Auto-select shipping method intelligently
+          if (deliveryOptions.length > 0) {
+            // If no method is selected, or current method doesn't exist in available options
+            const currentMethodExists = deliveryOptions.some(option => option.value === shippingMethod);
+            
+            if (!shippingMethod || !currentMethodExists) {
+              // Prefer 'standard' if available, otherwise select the first option
+              const standardOption = deliveryOptions.find(option => option.value === 'standard');
+              const selectedMethod = standardOption ? 'standard' : deliveryOptions[0].value;
+              
+              console.log(`🎯 [Auto-Select] Setting shipping method to: ${selectedMethod} (${standardOption ? 'preferred standard' : 'first available'})`);
+              setShippingMethod(selectedMethod);
+            }
           }
         } catch (error) {
           console.error('Error fetching dynamic shipping methods:', error);
@@ -765,6 +775,13 @@ const QuoteCalculatorV2: React.FC = () => {
 
       setCalculationResult(result);
       setShippingError(null); // Clear any previous shipping errors
+      
+      // Auto-update shipping method dropdown to reflect the actual shipping option used
+      if (result.route_calculations?.delivery_option_used?.id) {
+        const usedShippingMethodId = result.route_calculations.delivery_option_used.id;
+        console.log(`🎯 [Auto-Select] Setting shipping method to: ${usedShippingMethodId} (${result.route_calculations.delivery_option_used.name})`);
+        setShippingMethod(usedShippingMethodId);
+      }
     } catch (error) {
       console.error('Calculation error:', error);
       
@@ -1455,19 +1472,37 @@ const QuoteCalculatorV2: React.FC = () => {
 
                 {/* Shipping Column */}
                 <div>
-                  <Label className="text-xs font-medium text-gray-600">Shipping</Label>
+                  <Label className="text-xs font-medium text-gray-600">
+                    Shipping
+                    {calculationResult?.route_calculations?.delivery_option_used && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        ✓ Used in calculation
+                      </span>
+                    )}
+                  </Label>
                   <div className="space-y-2">
                     <Select value={shippingMethod} onValueChange={(value: any) => setShippingMethod(value)}>
-                      <SelectTrigger className="h-8 text-xs">
+                      <SelectTrigger className={`h-8 text-xs ${
+                        calculationResult?.route_calculations?.delivery_option_used?.id === shippingMethod 
+                          ? 'border-green-500 bg-green-50' 
+                          : ''
+                      }`}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {shippingMethods.map(method => (
                           <SelectItem key={method.value} value={method.value}>
-                            {dynamicShippingMethods.length > 0 
-                              ? `${method.label} - $${method.rate}/kg (${method.delivery_days})`
-                              : `${method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - $${method.rate}/kg`
-                            }
+                            <div className="flex items-center justify-between w-full">
+                              <span>
+                                {dynamicShippingMethods.length > 0 
+                                  ? `${method.label} - $${method.rate}/kg (${method.delivery_days})`
+                                  : `${method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - $${method.rate}/kg`
+                                }
+                              </span>
+                              {calculationResult?.route_calculations?.delivery_option_used?.id === method.value && (
+                                <span className="ml-2 text-green-600 text-xs">✓ Used</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
