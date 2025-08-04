@@ -1763,9 +1763,8 @@ const QuoteCalculatorV2: React.FC = () => {
                       </div>
                     </div>
 
-                  {/* Unified HSN Search Component - Positioned after price as requested */}
-                  {item.name && item.unit_price_usd > 0 && (
-                    <div className="mt-6">
+                    {/* HSN Search Section */}
+                    {item.name && item.unit_price_usd > 0 && (
                       <UnifiedHSNSearch
                         control={null}
                         index={0}
@@ -1782,107 +1781,65 @@ const QuoteCalculatorV2: React.FC = () => {
                         currentHSN={item.hsn_code}
                         onSelection={(data) => handleHSNSelection(item.id, data)}
                       />
-                    </div>
-                  )}
+                    )}
 
-                  {/* HSN Rate Toggle - Show when HSN code is available */}
-                  {item.hsn_code && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Label htmlFor={`hsn-toggle-${item.id}`} className="cursor-pointer font-medium">
-                            Use HSN-specific customs rates
-                          </Label>
-                          <Badge variant="outline" className="text-xs">
-                            {item.use_hsn_rates ? 'HSN Rate' : 'Default Rate'}
-                          </Badge>
-                        </div>
-                        <Switch
-                          id={`hsn-toggle-${item.id}`}
-                          checked={item.use_hsn_rates || false}
-                          onCheckedChange={(checked) => updateItem(item.id, 'use_hsn_rates', checked)}
-                        />
-                      </div>
-                      {item.hsn_code && (() => {
-                        const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
-                        return hsnInfo ? (
-                          <div className="text-xs mt-2 space-y-1">
-                            <p className="text-blue-600">{hsnInfo.description}</p>
-                            <div className="flex items-center justify-between">
-                              <span>HSN Rate: {hsnInfo.customsRate}%</span>
-                              <span>Default Rate: {hsnInfo.countryRate}%</span>
+                    {/* HSN Rate Toggle - Show when HSN code is available */}
+                    {item.hsn_code && (
+                      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                        <h5 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          HSN Configuration
+                        </h5>
+                        <div className="space-y-4">
+                          {/* HSN Rate Toggle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Label htmlFor={`hsn-toggle-${item.id}`} className="cursor-pointer font-medium text-green-700">
+                                Use HSN-specific customs rates
+                              </Label>
+                              <Badge variant="outline" className="text-xs bg-white">
+                                {item.use_hsn_rates ? 'HSN Rate' : 'Default Rate'}
+                              </Badge>
                             </div>
-                            {item.use_hsn_rates ? (
-                              <p className="text-green-600 font-medium">
-                                ✅ Using HSN rate: {hsnInfo.customsRate}%
-                                {hsnInfo.customsRate < hsnInfo.countryRate && 
-                                  <span className="text-green-700"> (saves {hsnInfo.countryRate - hsnInfo.customsRate}%)</span>
-                                }
-                              </p>
-                            ) : (
-                              <p className="text-orange-600 font-medium">
-                                ⚠️ Using default rate: {hsnInfo.countryRate}%
-                              </p>
-                            )}
+                            <Switch
+                              id={`hsn-toggle-${item.id}`}
+                              checked={item.use_hsn_rates || false}
+                              onCheckedChange={(checked) => updateItem(item.id, 'use_hsn_rates', checked)}
+                            />
                           </div>
-                        ) : (
-                          <p className="text-xs text-gray-500 mt-2">
-                            HSN code not found - will use default country rate
-                          </p>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Valuation Method Toggle */}
-                  {item.hsn_code && (
-                    <div className="border rounded-lg p-3 bg-blue-50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Label htmlFor={`valuation-${item.id}`} className="cursor-pointer font-medium">
-                            Customs Valuation Method
-                          </Label>
-                          <Badge variant="outline" className="text-xs">
-                            {(() => {
-                              const pref = item.valuation_preference || 'auto';
-                              switch (pref) {
-                                case 'auto': return 'Auto (Higher)';
-                                case 'minimum_valuation': return 'Min Valuation';
-                                case 'product_price': return 'Product Price';
-                                default: return 'Auto (Higher)';
-                              }
-                            })()}
-                          </Badge>
+                          
+                          {/* HSN Rate Information */}
+                          {item.hsn_code && (() => {
+                            const hsnInfo = simplifiedQuoteCalculator.getHSNInfo(item.hsn_code, destinationCountry);
+                            return hsnInfo ? (
+                              <div className="text-xs mt-2 space-y-2 bg-white rounded p-3 border">
+                                <p className="text-green-700 font-medium">{hsnInfo.description}</p>
+                                <div className="flex items-center justify-between">
+                                  <span>HSN Rate: {hsnInfo.customsRate}%</span>
+                                  <span>Default Rate: {hsnInfo.countryRate}%</span>
+                                </div>
+                                {item.use_hsn_rates ? (
+                                  <p className="text-green-600 font-medium">
+                                    ✅ Using HSN rate: {hsnInfo.customsRate}%
+                                    {hsnInfo.customsRate < hsnInfo.countryRate && 
+                                      <span className="text-green-700"> (saves {hsnInfo.countryRate - hsnInfo.customsRate}%)</span>
+                                    }
+                                  </p>
+                                ) : (
+                                  <p className="text-orange-600 font-medium">
+                                    ⚠️ Using default rate: {hsnInfo.countryRate}%
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500 bg-white rounded p-3 border">
+                                HSN code not found - will use default country rate
+                              </p>
+                            );
+                          })()}
                         </div>
-                        <select
-                          id={`valuation-${item.id}`}
-                          className="text-xs border rounded px-2 py-1"
-                          value={item.valuation_preference || 'auto'}
-                          onChange={(e) => {
-                            const newValuation = e.target.value as 'auto' | 'product_price' | 'minimum_valuation';
-                            console.log(`🔄 [Valuation] Switching from ${item.valuation_preference || 'auto'} to ${newValuation} for item ${item.id}`);
-                            
-                            // Direct state update to ensure React detects the change
-                            setItems(items.map(currentItem => 
-                              currentItem.id === item.id ? {
-                                ...currentItem,
-                                valuation_preference: newValuation
-                              } : currentItem
-                            ));
-                          }}
-                        >
-                          <option value="auto">🤖 Auto (Higher)</option>
-                          <option value="product_price">💰 Product Price</option>
-                          <option value="minimum_valuation">🏛️ Minimum Valuation</option>
-                        </select>
                       </div>
-                      <p className="text-xs text-gray-600 mt-2">
-                        <strong>Auto:</strong> Uses higher of product price vs minimum valuation (recommended) <br/>
-                        <strong>Product Price:</strong> Forces actual product price for customs calculation <br/>
-                        <strong>Minimum Valuation:</strong> Forces minimum valuation even if product price is lower
-                      </p>
-                    </div>
-                  )}
+                    )}
 
                     {/* Weight & Discount Section */}
                     <div className="bg-gray-50 rounded-lg p-4">
