@@ -122,8 +122,11 @@ const QuoteCalculatorV2: React.FC = () => {
   // NCM (Nepal) service states
   const [ncmServiceType, setNcmServiceType] = useState<'pickup' | 'collect'>('pickup');
   const [destinationDistrict, setDestinationDistrict] = useState('');
+  const [selectedNCMBranch, setSelectedNCMBranch] = useState<any>(null);
   const [availableNCMBranches, setAvailableNCMBranches] = useState<any[]>([]);
   const [loadingNCMBranches, setLoadingNCMBranches] = useState(false);
+  const [ncmRates, setNCMRates] = useState<any>(null);
+  const [loadingNCMRates, setLoadingNCMRates] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'economy'>('standard');
   const [insuranceRequired, setInsuranceRequired] = useState(true);
   const [handlingFeeType, setHandlingFeeType] = useState<'fixed' | 'percentage' | 'both'>('both');
@@ -204,7 +207,7 @@ const QuoteCalculatorV2: React.FC = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, destinationDistrict, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
+  }, [items, originCountry, originState, destinationCountry, destinationState, destinationPincode, delhiveryServiceType, ncmServiceType, selectedNCMBranch, shippingMethod, insuranceRequired, handlingFeeType, paymentGateway, orderDiscountValue, orderDiscountType, shippingDiscountValue, shippingDiscountType, loadingQuote]);
 
   // Fetch available services when pincode or destination country changes
   useEffect(() => {
@@ -218,17 +221,25 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   }, [destinationPincode, destinationCountry, items]);
 
-  // Fetch available NCM branches when district or destination country changes
+  // Load NCM branches when Nepal is selected
   useEffect(() => {
-    if (destinationCountry === 'NP' && destinationDistrict) {
-      const timeoutId = setTimeout(() => {
-        fetchAvailableNCMBranches(destinationDistrict);
-      }, 500); // Debounce API calls
-      return () => clearTimeout(timeoutId);
+    if (destinationCountry === 'NP') {
+      loadAllNCMBranches();
     } else {
       setAvailableNCMBranches([]);
+      setSelectedNCMBranch(null);
+      setNCMRates(null);
     }
-  }, [destinationDistrict, destinationCountry, destinationAddress.city, destinationAddress.line1]);
+  }, [destinationCountry]);
+
+  // Fetch NCM rates when branch is selected
+  useEffect(() => {
+    if (selectedNCMBranch && destinationCountry === 'NP') {
+      fetchNCMRates();
+    } else {
+      setNCMRates(null);
+    }
+  }, [selectedNCMBranch, destinationCountry]);
 
   const loadQuoteDocuments = async (quoteId: string) => {
     try {
@@ -412,55 +423,62 @@ const QuoteCalculatorV2: React.FC = () => {
     }
   };
 
-  // Fetch available NCM branches when district changes for Nepal
-  const fetchAvailableNCMBranches = async (district: string) => {
-    if (!district || destinationCountry !== 'NP') {
+  // Load all NCM branches for dropdown selection
+  const loadAllNCMBranches = async () => {
+    if (destinationCountry !== 'NP') {
       setAvailableNCMBranches([]);
       return;
     }
 
     setLoadingNCMBranches(true);
     try {
-      console.log('🏔️ [UI] Fetching available NCM branches for district:', district);
+      console.log('🏔️ [UI] Loading all NCM branches');
       
-      // Check if the address is serviceable
-      const isServiceable = await ncmBranchMappingService.isServiceable({
-        district: district,
-        city: destinationAddress.city
-      });
+      const branches = await ncmBranchMappingService.getBranches();
+      setAvailableNCMBranches(branches);
       
-      if (isServiceable) {
-        // Get branch mapping for display
-        const branchPair = await ncmBranchMappingService.getBranchPair({
-          district: district,
-          city: destinationAddress.city,
-          addressLine1: destinationAddress.line1
-        });
-        
-        if (branchPair.pickup && branchPair.destination) {
-          setAvailableNCMBranches([
-            {
-              name: branchPair.destination.name,
-              district: branchPair.destination.district,
-              confidence: branchPair.mapping?.confidence,
-              pickup_branch: branchPair.pickup.name
-            }
-          ]);
-          console.log('✅ [UI] NCM branch mapping:', branchPair);
-        } else {
-          setAvailableNCMBranches([]);
-          console.log('⚠️ [UI] No suitable NCM branches found');
-        }
-      } else {
-        setAvailableNCMBranches([]);
-        console.log('⚠️ [UI] Address not serviceable by NCM');
-      }
+      console.log(`✅ [UI] Loaded ${branches.length} NCM branches`);
       
     } catch (error) {
-      console.error('❌ [UI] Failed to fetch NCM branches:', error);
+      console.error('❌ [UI] Failed to load NCM branches:', error);
       setAvailableNCMBranches([]);
     } finally {
       setLoadingNCMBranches(false);
+    }
+  };
+
+  // Fetch NCM rates for service type display
+  const fetchNCMRates = async () => {
+    if (!selectedNCMBranch || destinationCountry !== 'NP') {
+      setNCMRates(null);
+      return;
+    }
+
+    setLoadingNCMRates(true);
+    try {
+      console.log('💰 [UI] Fetching NCM rates for branch:', selectedNCMBranch.name);
+      
+      const pickupBranch = await ncmBranchMappingService.getPickupBranch();
+      if (!pickupBranch) {
+        throw new Error('No pickup branch available');
+      }
+
+      const ncmService = NCMService.getInstance();
+      const rates = await ncmService.getDeliveryRates({
+        creation: pickupBranch.name,
+        destination: selectedNCMBranch.name,
+        type: 'pickup', // Get both rates
+        weight: 1 // Default weight for display
+      });
+
+      setNCMRates(rates);
+      console.log('✅ [UI] NCM rates fetched:', rates);
+      
+    } catch (error) {
+      console.error('❌ [UI] Failed to fetch NCM rates:', error);
+      setNCMRates(null);
+    } finally {
+      setLoadingNCMRates(false);
     }
   };
 
@@ -504,7 +522,7 @@ const QuoteCalculatorV2: React.FC = () => {
           city: destinationAddress.city,
           state: destinationAddress.state,
           pincode: destinationAddress.pincode,
-          district: destinationDistrict // For Nepal NCM mapping
+          district: selectedNCMBranch?.district || destinationDistrict // For Nepal NCM mapping
         },
         delhivery_service_type: delhiveryServiceType,
         ncm_service_type: ncmServiceType,
@@ -992,52 +1010,70 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 )}
 
-                {/* Nepal District Field - Only show for Nepal */}
+                {/* Nepal Branch Selector - Only show for Nepal */}
                 {destinationCountry === 'NP' && (
                   <div>
-                    <Label htmlFor="destinationDistrict">
-                      District 
+                    <Label htmlFor="ncmBranchSelector">
+                      NCM Delivery Branch 
                       <span className="text-xs text-blue-600 ml-2">
-                        (Required for NCM branch mapping)
+                        (Select nearest branch for delivery)
                       </span>
                     </Label>
-                    <Input
-                      id="destinationDistrict"
-                      type="text"
-                      placeholder="e.g., Kathmandu, Kaski, Morang"
-                      value={destinationDistrict}
-                      onChange={(e) => setDestinationDistrict(e.target.value)}
-                      className={`${
-                        destinationDistrict && availableNCMBranches.length > 0
-                          ? 'border-green-300 focus:border-green-500' 
-                          : destinationDistrict
-                            ? 'border-orange-300 focus:border-orange-500'
-                            : ''
-                      }`}
-                    />
-                    {destinationDistrict && (
-                      <div className="text-xs mt-1">
-                        {loadingNCMBranches ? (
-                          <span className="text-blue-600 flex items-center">
-                            <Clock className="h-3 w-3 mr-1 animate-spin" />
-                            Checking NCM branch availability...
-                          </span>
-                        ) : availableNCMBranches.length > 0 ? (
-                          <span className="text-green-600 flex items-center">
-                            <Check className="h-3 w-3 mr-1" />
-                            Serviceable via {availableNCMBranches[0].name} branch
-                            {availableNCMBranches[0].confidence && (
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                {availableNCMBranches[0].confidence} match
-                              </Badge>
-                            )}
-                          </span>
+                    <Select 
+                      value={selectedNCMBranch?.name || ''} 
+                      onValueChange={(branchName) => {
+                        const branch = availableNCMBranches.find(b => b.name === branchName);
+                        setSelectedNCMBranch(branch || null);
+                      }}
+                      disabled={loadingNCMBranches || availableNCMBranches.length === 0}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          loadingNCMBranches 
+                            ? "Loading branches..." 
+                            : availableNCMBranches.length === 0
+                              ? "No branches available"
+                              : "Select NCM branch"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableNCMBranches.length > 0 ? (
+                          availableNCMBranches.map((branch) => (
+                            <SelectItem key={branch.name} value={branch.name}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  📍 {branch.name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {branch.district} • {branch.region}
+                                  {branch.coveredAreas && ` • Covers: ${branch.coveredAreas.slice(0, 2).join(', ')}`}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : loadingNCMBranches ? (
+                          <SelectItem value="loading" disabled>
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 mr-2 animate-spin" />
+                              Loading branches...
+                            </div>
+                          </SelectItem>
                         ) : (
-                          <span className="text-orange-600 flex items-center">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            No NCM branch found - will use fallback rates
-                          </span>
+                          <SelectItem value="none" disabled>
+                            <div className="flex items-center text-gray-400">
+                              <AlertCircle className="h-3 w-3 mr-2" />
+                              No branches available
+                            </div>
+                          </SelectItem>
                         )}
+                      </SelectContent>
+                    </Select>
+                    {selectedNCMBranch && (
+                      <div className="text-xs mt-1">
+                        <span className="text-green-600 flex items-center">
+                          <Check className="h-3 w-3 mr-1" />
+                          Selected: {selectedNCMBranch.name} ({selectedNCMBranch.district})
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1106,22 +1142,22 @@ const QuoteCalculatorV2: React.FC = () => {
                   </div>
                 )}
 
-                {/* NCM Service Type - Only show for Nepal with district */}
-                {destinationCountry === 'NP' && destinationDistrict && (
+                {/* NCM Service Type - Only show for Nepal with selected branch */}
+                {destinationCountry === 'NP' && selectedNCMBranch && (
                   <div>
                     <Label htmlFor="ncmServiceType">
                       NCM Service Type
                       <span className="text-xs text-blue-600 ml-2">
-                        (Pickup is faster, Collect is cheaper)
+                        {loadingNCMRates ? "(Loading rates...)" : "(Choose delivery method)"}
                       </span>
                     </Label>
                     <Select 
                       value={ncmServiceType} 
                       onValueChange={(value: 'pickup' | 'collect') => setNcmServiceType(value)}
-                      disabled={loadingNCMBranches || availableNCMBranches.length === 0}
+                      disabled={loadingNCMRates}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingNCMBranches ? "Loading services..." : "Select NCM service"} />
+                        <SelectValue placeholder={loadingNCMRates ? "Loading rates..." : "Select service type"} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pickup">
@@ -1130,7 +1166,12 @@ const QuoteCalculatorV2: React.FC = () => {
                               🚚 Pickup Service
                             </span>
                             <span className="text-xs text-gray-500">
-                              Faster delivery (1-2 days) - NCM picks up from branch
+                              Faster delivery (1-2 days) - NCM delivers to address
+                              {ncmRates?.rates && (
+                                <span className="ml-2 font-semibold text-green-600">
+                                  ₨{ncmRates.rates.find((r: any) => r.service_type === 'pickup')?.rate || 'N/A'}
+                                </span>
+                              )}
                             </span>
                           </div>
                         </SelectItem>
@@ -1141,13 +1182,32 @@ const QuoteCalculatorV2: React.FC = () => {
                             </span>
                             <span className="text-xs text-gray-500">
                               Lower cost (2-4 days) - Customer collects from branch
+                              {ncmRates?.rates && (
+                                <span className="ml-2 font-semibold text-green-600">
+                                  ₨{ncmRates.rates.find((r: any) => r.service_type === 'collect')?.rate || 'N/A'}
+                                </span>
+                              )}
                             </span>
                           </div>
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="text-xs text-blue-600 mt-1">
-                      🏔️ Nepal delivery via NCM (Nepal Can Move)
+                    <div className="text-xs mt-1">
+                      {loadingNCMRates ? (
+                        <span className="text-blue-600 flex items-center">
+                          <Clock className="h-3 w-3 mr-1 animate-spin" />
+                          Loading NCM rates...
+                        </span>
+                      ) : ncmRates?.rates ? (
+                        <span className="text-green-600 flex items-center">
+                          <Check className="h-3 w-3 mr-1" />
+                          Rates loaded • {ncmRates.markup_applied}% markup applied
+                        </span>
+                      ) : (
+                        <span className="text-blue-600">
+                          🏔️ Nepal delivery via NCM (Nepal Can Move)
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
