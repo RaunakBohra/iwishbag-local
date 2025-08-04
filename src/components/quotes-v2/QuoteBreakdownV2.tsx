@@ -523,28 +523,6 @@ export const QuoteBreakdownV2: React.FC<QuoteBreakdownV2Props> = ({ quote }) => 
             </div>
           )}
 
-          <Separator />
-
-          {/* Final Total */}
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-bold text-green-900 text-lg">Total Amount</p>
-                <p className="text-sm text-green-700">All costs included</p>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-2xl text-green-900">
-                  ${(steps.total_usd || quote.total_usd || 0).toFixed(2)}
-                </p>
-                <p className="text-lg text-green-700">
-                  {currencyService.formatAmount(
-                    steps.total_customer_currency || quote.total_customer_currency || 0, 
-                    quote.customer_currency
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Calculation Info */}
           <div className="text-xs text-gray-500 pt-2 flex items-center justify-between">
