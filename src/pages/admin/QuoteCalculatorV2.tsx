@@ -54,7 +54,6 @@ import { currencyService } from '@/services/CurrencyService';
 import { QuoteBreakdownV2 } from '@/components/quotes-v2/QuoteBreakdownV2';
 import { QuoteSendEmailSimple } from '@/components/admin/QuoteSendEmailSimple';
 import QuoteReminderControls from '@/components/admin/QuoteReminderControls';
-import { QuoteStatusManager } from '@/components/quotes-v2/QuoteStatusManager';
 import { QuoteFileUpload } from '@/components/quotes-v2/QuoteFileUpload';
 import { QuoteExportControls } from '@/components/quotes-v2/QuoteExportControls';
 import { CouponCodeInput } from '@/components/quotes-v2/CouponCodeInput';
@@ -230,7 +229,6 @@ const QuoteCalculatorV2: React.FC = () => {
   const [discountCodes, setDiscountCodes] = useState<string[]>([]);
   const [applyComponentDiscounts, setApplyComponentDiscounts] = useState(true);
   const [isDiscountSectionCollapsed, setIsDiscountSectionCollapsed] = useState(true);
-  const [isStatusSectionCollapsed, setIsStatusSectionCollapsed] = useState(true);
   const [isDocumentsSectionCollapsed, setIsDocumentsSectionCollapsed] = useState(true);
   const [isExportSectionCollapsed, setIsExportSectionCollapsed] = useState(true);
   
@@ -2306,42 +2304,6 @@ const QuoteCalculatorV2: React.FC = () => {
             />
           )}
 
-          {/* Status Management Section */}
-          {isEditMode && quoteId && (
-            <Card>
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setIsStatusSectionCollapsed(!isStatusSectionCollapsed)}
-              >
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    Status Management
-                  </div>
-                  {isStatusSectionCollapsed ? (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  )}
-                </CardTitle>
-              </CardHeader>
-              {!isStatusSectionCollapsed && (
-                <CardContent>
-                  <QuoteStatusManager
-                    quoteId={quoteId}
-                    currentStatus={currentQuoteStatus}
-                    onStatusChange={(newStatus) => {
-                      setCurrentQuoteStatus(newStatus);
-                      // Refresh the quote data to get updated status
-                      if (quoteId) {
-                        loadExistingQuote(quoteId);
-                      }
-                    }}
-                    isEditMode={isEditMode}
-                  />
-                </CardContent>
-              )}
-            </Card>
-          )}
 
           {/* File Upload Section */}
           {isEditMode && quoteId && (
