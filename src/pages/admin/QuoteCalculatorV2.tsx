@@ -177,10 +177,9 @@ const QuoteCalculatorV2: React.FC = () => {
         isMultiline: true
       };
     } else {
-      // Show recipient name and city/country summary
-      const recipientInfo = address.recipient_name ? `${address.recipient_name} • ` : '';
+      // Show only city/country summary (no recipient info when collapsed)
       return {
-        text: `${recipientInfo}${address.city}, ${getCountryName(address.destination_country)}`,
+        text: `${address.city}, ${getCountryName(address.destination_country)}`,
         isMultiline: false
       };
     }
@@ -998,7 +997,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-blue-700 uppercase tracking-wide">Name</div>
-                  <div className="text-sm font-semibold text-gray-900 truncate">
+                  <div className="text-sm font-medium text-gray-900 truncate">
                     {customerName || 'Not provided'}
                   </div>
                 </div>
@@ -1011,7 +1010,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-green-700 uppercase tracking-wide">Email</div>
-                  <div className="text-sm font-semibold text-gray-900 truncate">
+                  <div className="text-sm font-medium text-gray-900 truncate">
                     {customerEmail || 'Not provided'}
                   </div>
                 </div>
@@ -1024,7 +1023,7 @@ const QuoteCalculatorV2: React.FC = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-purple-700 uppercase tracking-wide">Phone</div>
-                  <div className="text-sm font-semibold text-gray-900 truncate">
+                  <div className="text-sm font-medium text-gray-900 truncate">
                     {customerPhone || 'Not provided'}
                   </div>
                 </div>
@@ -1046,7 +1045,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     {(() => {
                       const addressDisplay = getAddressDisplay(deliveryAddress, showAddressDetails);
                       return addressDisplay.isMultiline ? (
-                        <div className="text-sm font-semibold text-gray-900">
+                        <div className="text-sm font-medium text-gray-900">
                           {addressDisplay.lines?.map((line, index) => (
                             <div key={index} className="leading-tight">
                               {line}
@@ -1054,7 +1053,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-sm font-semibold text-gray-900 truncate">
+                        <div className="text-sm font-medium text-gray-900 truncate">
                           {addressDisplay.text}
                         </div>
                       );
