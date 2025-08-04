@@ -38,6 +38,8 @@ import {
   EyeOff
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
+import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
 import NCMService from '@/services/NCMService';
 import { ncmBranchMappingService } from '@/services/NCMBranchMappingService';
@@ -94,6 +96,12 @@ const QuoteCalculatorV2: React.FC = () => {
   const [smartFeatureLoading, setSmartFeatureLoading] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
   const { id: quoteId } = useParams<{ id: string }>();
+  
+  // Country data
+  const { data: purchaseCountries = [], isLoading: loadingCountries } = usePurchaseCountries();
+  
+  // Sort countries with popular ones first
+  const sortedCountries = sortCountriesByPopularity(purchaseCountries);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -1092,15 +1100,22 @@ const QuoteCalculatorV2: React.FC = () => {
                 <div>
                   <Label className="text-xs font-medium text-gray-600">Origin</Label>
                   <div className="space-y-2">
-                    <Select value={originCountry} onValueChange={setOriginCountry}>
+                    <Select value={originCountry} onValueChange={setOriginCountry} disabled={loadingCountries}>
                       <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
+                        <SelectValue placeholder={loadingCountries ? "Loading..." : "Select origin"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="US">🇺🇸 US</SelectItem>
-                        <SelectItem value="CN">🇨🇳 China</SelectItem>
-                        <SelectItem value="GB">🇬🇧 UK</SelectItem>
-                        <SelectItem value="JP">🇯🇵 Japan</SelectItem>
+                        {loadingCountries ? (
+                          <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                        ) : sortedCountries.length > 0 ? (
+                          sortedCountries.map((country) => (
+                            <SelectItem key={country.code} value={country.code}>
+                              {formatCountryDisplay(country, true)}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     {originCountry === 'US' && (

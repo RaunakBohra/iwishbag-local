@@ -13,6 +13,8 @@ import { Sparkles, Clock, CheckCircle, Package, Mail, User, Shield, Plus, Trash2
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
 
 // Form schema - dynamic based on user authentication
@@ -44,6 +46,12 @@ export default function QuoteRequestPage() {
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
   const [submittedQuoteNumber, setSubmittedQuoteNumber] = useState('');
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  
+  // Country data
+  const { data: purchaseCountries = [], isLoading: loadingCountries } = usePurchaseCountries();
+  
+  // Sort countries with popular ones first
+  const sortedCountries = sortCountriesByPopularity(purchaseCountries);
 
   // Create schema based on user authentication status  
   const quoteRequestSchema = createQuoteRequestSchema(!!user);
@@ -515,20 +523,24 @@ export default function QuoteRequestPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Origin Country *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingCountries}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select country" />
+                                  <SelectValue placeholder={loadingCountries ? "Loading countries..." : "Select country"} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="US">🇺🇸 United States</SelectItem>
-                                <SelectItem value="UK">🇬🇧 United Kingdom</SelectItem>
-                                <SelectItem value="CN">🇨🇳 China</SelectItem>
-                                <SelectItem value="JP">🇯🇵 Japan</SelectItem>
-                                <SelectItem value="DE">🇩🇪 Germany</SelectItem>
-                                <SelectItem value="CA">🇨🇦 Canada</SelectItem>
-                                <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                                {loadingCountries ? (
+                                  <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                                ) : sortedCountries.length > 0 ? (
+                                  sortedCountries.map((country) => (
+                                    <SelectItem key={country.code} value={country.code}>
+                                      {formatCountryDisplay(country, false)}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                             <FormMessage />
