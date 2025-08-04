@@ -20,7 +20,7 @@ import AdminProtectedRoute from '@/components/auth/AdminProtectedRoute';
 
 // Lazy load pages for code splitting
 const Index = React.lazy(() => import('@/pages/Index'));
-// const Quote = React.lazy(() => import('@/pages/Quote')); // REMOVED: V1 quote page
+const Quote = React.lazy(() => import('@/pages/Quote'));
 const Auth = React.lazy(() => import('@/pages/Auth'));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 // const Quotes = React.lazy(() => import('@/pages/dashboard/Quotes')); // REMOVED: V1 customer quotes page
@@ -345,7 +345,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'quote',
-        element: <Navigate to="/admin/quote-calculator-v2" replace />,
+        element: (
+          <ErrorBoundary fallback={QuoteFormErrorFallback}>
+            <Quote />
+          </ErrorBoundary>
+        ),
       },
       {
         path: 'about',
