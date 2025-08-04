@@ -465,8 +465,8 @@ const QuoteCalculatorV2: React.FC = () => {
 
       const ncmService = NCMService.getInstance();
       const rates = await ncmService.getDeliveryRates({
-        creation: pickupBranch.name,
-        destination: selectedNCMBranch.name,
+        creation: pickupBranch.district,
+        destination: selectedNCMBranch.district,
         type: 'pickup', // Get both rates
         weight: 1 // Default weight for display
       });
@@ -1014,9 +1014,9 @@ const QuoteCalculatorV2: React.FC = () => {
                 {destinationCountry === 'NP' && (
                   <div>
                     <Label htmlFor="ncmBranchSelector">
-                      NCM Delivery Branch 
+                      Customer's Local NCM Branch 
                       <span className="text-xs text-blue-600 ml-2">
-                        (Select nearest branch for delivery)
+                        (Where NCM will deliver the package in Nepal)
                       </span>
                     </Label>
                     <Select 
@@ -1142,7 +1142,7 @@ const QuoteCalculatorV2: React.FC = () => {
                     </div>
                     
                     <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                      💡 <strong>Delivery Flow:</strong> US Warehouse → {selectedNCMBranch?.name || 'NCM Branch'} → Customer Address
+                      💡 <strong>Delivery Flow:</strong> US Warehouse → Tinkune NCM Hub → {selectedNCMBranch?.name || 'Local NCM Branch'} → Customer Address
                     </div>
                   </div>
                 )}
@@ -1234,7 +1234,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               🚚 Pickup Service
                             </span>
                             <span className="text-xs text-gray-500">
-                              Faster delivery (1-2 days) - NCM delivers to address
+                              Faster delivery (1-2 days) - NCM delivers from branch to customer's address
                               {ncmRates?.rates && (
                                 <span className="ml-2 font-semibold text-green-600">
                                   ₨{ncmRates.rates.find((r: any) => r.service_type === 'pickup')?.rate || 'N/A'}
@@ -1249,7 +1249,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               🏪 Collect Service
                             </span>
                             <span className="text-xs text-gray-500">
-                              Lower cost (2-4 days) - Customer collects from branch
+                              Lower cost (2-4 days) - Customer collects from selected branch
                               {ncmRates?.rates && (
                                 <span className="ml-2 font-semibold text-green-600">
                                   ₨{ncmRates.rates.find((r: any) => r.service_type === 'collect')?.rate || 'N/A'}

@@ -19,7 +19,7 @@ class NCMBranchMappingService {
   private static instance: NCMBranchMappingService;
   private cache = new Map<string, { data: NCMBranch[]; timestamp: number }>();
   private readonly CACHE_DURATION = 300000; // 5 minutes like other services
-  private readonly KATHMANDU_PICKUP_BRANCH = 'TINKUNE'; // Default pickup for international
+  private readonly KATHMANDU_PICKUP_BRANCH = 'TINKUNE'; // Default pickup for international (NCM district name)
 
   static getInstance(): NCMBranchMappingService {
     if (!NCMBranchMappingService.instance) {
@@ -69,17 +69,17 @@ class NCMBranchMappingService {
     
     const branches = await this.getBranches();
     const pickupBranch = branches.find(b => 
-      b.name === this.KATHMANDU_PICKUP_BRANCH ||
-      b.name.toUpperCase().includes('KATHMANDU') ||
-      b.district.toLowerCase() === 'kathmandu'
+      b.district === this.KATHMANDU_PICKUP_BRANCH ||
+      b.district.toUpperCase().includes('TINKUNE') ||
+      (b.district && b.district.toLowerCase().includes('kathmandu'))
     );
 
     if (!pickupBranch) {
-      console.warn('⚠️ [NCM] No Kathmandu pickup branch found, using first available');
+      console.warn('⚠️ [NCM] No TINKUNE pickup branch found, using first available');
       return branches[0] || null;
     }
 
-    console.log(`✅ [NCM] Using pickup branch: ${pickupBranch.name}`);
+    console.log(`✅ [NCM] Using pickup branch: ${pickupBranch.district} (${pickupBranch.name})`);
     return pickupBranch;
   }
 
@@ -281,10 +281,10 @@ class NCMBranchMappingService {
     console.log('🔄 [NCM] Using fallback branches');
     return [
       {
-        name: 'TINKUNE',
+        name: 'TINK',
         phone: '015199684',
-        coveredAreas: ['Kathmandu', 'Lalitpur', 'Bhaktapur'],
-        district: 'Kathmandu',
+        coveredAreas: ['Kathmandu', 'Tinkune', 'Lalitpur'],
+        district: 'TINKUNE',
         region: 'Central'
       },
       {

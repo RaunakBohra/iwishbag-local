@@ -97,17 +97,26 @@ export async function processPaymentSuccessAtomic(
     }
 
     // Use database function for atomic operations
-    const { data: _result, error } = await supabaseAdmin.rpc('process_stripe_payment_success', {
-      p_payment_intent_id: paymentIntent.id,
-      p_user_id: userId,
+    const { data: _result, error } = await supabaseAdmin.rpc('process_payment_webhook_atomic', {
       p_quote_ids: quoteIds,
-      p_amount: amount,
-      p_currency: currency,
-      p_gateway_response: {
-        ...paymentIntent,
-        customer_details: customerDetails,
+      p_payment_status: 'success',
+      p_payment_data: {
+        transaction_id: paymentIntent.id,
+        gateway_transaction_id: paymentIntent.id,
+        amount: amount,
+        currency: currency,
+        customer_email: customerDetails.email,
+        customer_name: customerDetails.name,
+        customer_phone: customerDetails.phone,
+        payment_method: 'stripe',
+        gateway_response: {
+          ...paymentIntent,
+          customer_details: customerDetails,
+        }
       },
-      p_customer_details: customerDetails,
+      p_guest_session_token: null,
+      p_guest_session_data: null,
+      p_create_order: true // Enable order creation for successful payments
     });
 
     // End performance tracking

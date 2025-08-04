@@ -392,7 +392,7 @@ class NCMService {
     }
     
     // Kathmandu valley deliveries are faster
-    const kathmanduBranches = ['TINKUNE', 'KATHMANDU', 'LALITPUR', 'BHAKTAPUR'];
+    const kathmanduBranches = ['TINKUNE', 'KATHMANDU', 'LALITPUR', 'BHAKTAPUR', 'BANEPA', 'DHULIKHEL'];
     if (kathmanduBranches.includes(fromBranch.toUpperCase()) && 
         kathmanduBranches.includes(toBranch.toUpperCase())) {
       return serviceType === 'pickup' ? 1 : 2;

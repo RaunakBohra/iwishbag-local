@@ -80,8 +80,10 @@ serve(async (req) => {
 
     // Process pickup rate
     if (pickupResult.status === 'fulfilled' && pickupResult.value) {
-      const originalRate = pickupResult.value.deliveryCharge;
+      const originalRate = parseFloat(pickupResult.value.charge || '0');
       const markedUpRate = Math.round(originalRate * (1 + NCM_CONFIG.markup_percentage / 100));
+      
+      console.log(`💰 [NCM] Pickup rate: ${originalRate} NPR → ${markedUpRate} NPR (${NCM_CONFIG.markup_percentage}% markup)`);
       
       rates.push({
         service_type: 'pickup',
@@ -94,8 +96,10 @@ serve(async (req) => {
 
     // Process collect rate
     if (collectResult.status === 'fulfilled' && collectResult.value) {
-      const originalRate = collectResult.value.deliveryCharge;
+      const originalRate = parseFloat(collectResult.value.charge || '0');
       const markedUpRate = Math.round(originalRate * (1 + NCM_CONFIG.markup_percentage / 100));
+      
+      console.log(`💰 [NCM] Collect rate: ${originalRate} NPR → ${markedUpRate} NPR (${NCM_CONFIG.markup_percentage}% markup)`);
       
       rates.push({
         service_type: 'collect',
@@ -159,21 +163,39 @@ async function fetchNCMRate(creation: string, destination: string, type: 'Pickup
   const url = `${NCM_CONFIG.base_url}/api/v1/shipping-rate?creation=${encodeURIComponent(creation)}&destination=${encodeURIComponent(destination)}&type=${encodeURIComponent(type)}`;
   
   console.log(`🚚 [NCM] Fetching ${type} rate: ${creation} → ${destination}`);
+  console.log(`🔍 [NCM] API URL: ${url}`);
+  console.log(`🔑 [NCM] Using token: ${NCM_CONFIG.api_token.substring(0, 8)}...`);
   
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Token ${NCM_CONFIG.api_token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${NCM_CONFIG.api_token}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (!response.ok) {
-    console.error(`❌ [NCM] API error for ${type}:`, response.status);
+    console.log(`📡 [NCM] Response status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ [NCM] API error for ${type}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorText,
+        url: url
+      });
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`✅ [NCM] API response for ${type}:`, JSON.stringify(data, null, 2));
+    
+    return data;
+  } catch (error) {
+    console.error(`💥 [NCM] Fetch error for ${type}:`, error);
     return null;
   }
-
-  return await response.json();
 }
 
 // Helper function to estimate delivery days
@@ -188,7 +210,7 @@ function estimateDeliveryDays(fromBranch: string, toBranch: string, serviceType:
   }
   
   // Kathmandu valley deliveries are faster
-  const kathmanduBranches = ['TINKUNE', 'KATHMANDU', 'LALITPUR', 'BHAKTAPUR'];
+  const kathmanduBranches = ['TINKUNE', 'KATHMANDU', 'LALITPUR', 'BHAKTAPUR', 'BANEPA', 'DHULIKHEL'];
   if (kathmanduBranches.includes(fromBranch.toUpperCase()) && 
       kathmanduBranches.includes(toBranch.toUpperCase())) {
     return serviceType === 'pickup' ? 1 : 2;
@@ -202,23 +224,25 @@ function getFallbackRates(): NCMMultiRateResponse {
   const pickupRate = NCM_CONFIG.fallback_rates.pickup;
   const collectRate = NCM_CONFIG.fallback_rates.collect;
 
+  console.log(`⚠️ [NCM] Using fallback rates: Pickup ${pickupRate} NPR, Collect ${collectRate} NPR`);
+
   return {
     rates: [
       {
         service_type: 'pickup',
         rate: pickupRate,
         estimated_days: 3,
-        service_name: 'NCM Pickup Service',
+        service_name: 'NCM Pickup Service (FALLBACK)',
         available: false,
-        error: 'Using fallback rate (API unavailable)'
+        error: 'Using fallback rate (NCM API unavailable)'
       },
       {
         service_type: 'collect',
         rate: collectRate,
         estimated_days: 5,
-        service_name: 'NCM Collect Service',
+        service_name: 'NCM Collect Service (FALLBACK)',
         available: false,
-        error: 'Using fallback rate (API unavailable)'
+        error: 'Using fallback rate (NCM API unavailable)'
       }
     ],
     currency: 'NPR',

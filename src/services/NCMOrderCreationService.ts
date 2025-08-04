@@ -179,10 +179,13 @@ class NCMOrderCreationService {
   }
 
   /**
-   * Auto-create NCM order when iwishBag order is paid (called from payment webhook)
+   * Create NCM order from paid iwishBag order (manual admin action)
    */
-  async autoCreateFromPaidOrder(iwishbag_order_id: string): Promise<NCMOrderCreationResult> {
-    logger.business('🔄 [NCM Order] Auto-creating NCM order for paid order:', iwishbag_order_id);
+  async createFromPaidOrder(iwishbag_order_id: string, options?: {
+    service_type?: 'Pickup' | 'Collect';
+    special_instructions?: string;
+  }): Promise<NCMOrderCreationResult> {
+    logger.business('🔄 [NCM Order] Creating NCM order for paid order:', iwishbag_order_id);
 
     try {
       // Get the paid order details
@@ -206,28 +209,29 @@ class NCMOrderCreationService {
 
       // Only create NCM orders for Nepal deliveries
       if (quote.destination_country !== 'NP') {
-        logger.debug('⏭️ [NCM Order] Skipping non-Nepal order');
-        return { success: true }; // Not an error, just not applicable
+        throw new Error('NCM orders are only available for Nepal deliveries');
       }
 
       // Check if NCM order already exists
       const { data: existingNCM } = await supabase
         .from('ncm_order_tracking')
-        .select('ncm_order_id')
+        .select('ncm_order_id, tracking_id')
         .eq('iwishbag_order_id', iwishbag_order_id)
         .single();
 
       if (existingNCM) {
-        logger.debug('⏭️ [NCM Order] NCM order already exists for this iwishBag order');
-        return { success: true };
+        return {
+          success: false,
+          error: `NCM order already exists (Order ID: ${existingNCM.ncm_order_id}, Tracking: ${existingNCM.tracking_id})`
+        };
       }
 
       // Extract customer info from order/quote
       const customerInfo = this.extractCustomerInfo(orderData, quote);
       const deliveryAddress = this.extractDeliveryAddress(quote);
 
-      // Determine service type (default to Pickup for door delivery)
-      const serviceType: 'Pickup' | 'Collect' = 'Pickup';
+      // Use provided service type or default to Pickup
+      const serviceType: 'Pickup' | 'Collect' = options?.service_type || 'Pickup';
 
       // Calculate COD amount if payment is cash-on-delivery
       const codAmount = orderData.payment_method === 'cod' ? quote.final_total_usd * 133 : 0; // Rough USD to NPR conversion
@@ -239,16 +243,16 @@ class NCMOrderCreationService {
         delivery_address: deliveryAddress,
         service_type: serviceType,
         cod_amount: codAmount,
-        special_instructions: `Auto-created from iwishBag order ${quote.display_id}`
+        special_instructions: options?.special_instructions || `Manual creation from iwishBag order ${quote.display_id}`
       };
 
       return await this.createNCMOrderFromQuote(request);
 
     } catch (error) {
-      logger.error('❌ [NCM Order] Auto-creation failed:', error);
+      logger.error('❌ [NCM Order] Manual creation failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Auto-creation failed'
+        error: error instanceof Error ? error.message : 'Manual creation failed'
       };
     }
   }
@@ -402,11 +406,132 @@ class NCMOrderCreationService {
   /**
    * Retry failed NCM order creation
    */
-  async retryFailedOrderCreation(iwishbag_order_id: string): Promise<NCMOrderCreationResult> {
+  async retryFailedOrderCreation(iwishbag_order_id: string, options?: {
+    service_type?: 'Pickup' | 'Collect';
+    special_instructions?: string;
+  }): Promise<NCMOrderCreationResult> {
     logger.business('🔄 [NCM Order] Retrying failed NCM order creation:', iwishbag_order_id);
     
-    // Simply call auto-create again - it will handle all the logic
-    return await this.autoCreateFromPaidOrder(iwishbag_order_id);
+    // Update retry count in failure log
+    await supabase
+      .from('ncm_order_creation_failures')
+      .update({ 
+        retry_count: supabase.raw('retry_count + 1'),
+        attempted_at: new Date().toISOString()
+      })
+      .eq('iwishbag_order_id', iwishbag_order_id)
+      .eq('resolved', false);
+    
+    // Call manual creation method
+    const result = await this.createFromPaidOrder(iwishbag_order_id, options);
+    
+    // Mark as resolved if successful
+    if (result.success) {
+      await supabase
+        .from('ncm_order_creation_failures')
+        .update({ 
+          resolved: true,
+          resolved_at: new Date().toISOString()
+        })
+        .eq('iwishbag_order_id', iwishbag_order_id);
+    }
+    
+    return result;
+  }
+
+  /**
+   * Check if an order is eligible for NCM order creation
+   */
+  async checkOrderEligibility(iwishbag_order_id: string): Promise<{
+    eligible: boolean;
+    reason?: string;
+    order_info?: {
+      quote_id: string;
+      destination_country: string;
+      status: string;
+      customer_name?: string;
+      ncm_order_exists: boolean;
+    };
+  }> {
+    try {
+      // Get order details
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          quotes:quote_id (
+            id,
+            destination_country,
+            display_id,
+            customer_data
+          )
+        `)
+        .eq('id', iwishbag_order_id)
+        .single();
+
+      if (orderError || !orderData) {
+        return {
+          eligible: false,
+          reason: 'Order not found'
+        };
+      }
+
+      const quote = orderData.quotes as any;
+
+      // Check if NCM order already exists
+      const { data: existingNCM } = await supabase
+        .from('ncm_order_tracking')
+        .select('ncm_order_id, tracking_id')
+        .eq('iwishbag_order_id', iwishbag_order_id)
+        .single();
+
+      const ncmOrderExists = !!existingNCM;
+
+      const orderInfo = {
+        quote_id: quote.id,
+        destination_country: quote.destination_country,
+        status: orderData.status,
+        customer_name: quote.customer_data?.info?.name || orderData.customer_name,
+        ncm_order_exists: ncmOrderExists
+      };
+
+      // Check eligibility criteria
+      if (quote.destination_country !== 'NP') {
+        return {
+          eligible: false,
+          reason: 'Order is not for Nepal delivery',
+          order_info: orderInfo
+        };
+      }
+
+      if (ncmOrderExists) {
+        return {
+          eligible: false,
+          reason: `NCM order already exists (ID: ${existingNCM.ncm_order_id})`,
+          order_info: orderInfo
+        };
+      }
+
+      if (orderData.status !== 'paid' && orderData.status !== 'confirmed') {
+        return {
+          eligible: false,
+          reason: `Order status is ${orderData.status}, must be paid or confirmed`,
+          order_info: orderInfo
+        };
+      }
+
+      return {
+        eligible: true,
+        order_info: orderInfo
+      };
+
+    } catch (error) {
+      logger.error('❌ [NCM Order] Error checking eligibility:', error);
+      return {
+        eligible: false,
+        reason: 'Failed to check order eligibility'
+      };
+    }
   }
 
   /**

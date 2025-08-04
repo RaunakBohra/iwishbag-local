@@ -62,20 +62,22 @@ export class NCMProvider implements DeliveryProvider {
       throw new Error('Service not available for these locations');
     }
 
-    const rate = await this.ncmService.getDeliveryRate({
-      creation: fromBranch.name,
-      destination: toBranch.name,
+    const rates = await this.ncmService.getDeliveryRates({
+      creation: fromBranch.district,
+      destination: toBranch.district,
       type: 'Pickup'
     });
 
-    return [{
+    // Return both pickup and collect options
+    return rates.rates.map(rate => ({
       provider: this.code,
-      service: 'Standard',
-      amount: parseFloat(rate.deliveryCharge.toString()),
-      currency: 'NPR',
-      estimatedDays: this.calculateEstimatedDays(fromBranch.district, toBranch.district),
-      cutoffTime: '17:00'
-    }];
+      service: rate.service_type === 'pickup' ? 'NCM Pickup' : 'NCM Collect',
+      amount: rate.rate,
+      currency: rates.currency,
+      estimatedDays: rate.estimated_days,
+      cutoffTime: '17:00',
+      available: rate.available
+    }));
   }
 
   async createOrder(orderData: CreateOrderData): Promise<DeliveryOrder> {
@@ -93,8 +95,8 @@ export class NCMProvider implements DeliveryProvider {
       phone2: orderData.to.alternatePhone ? this.formatPhoneForNCM(orderData.to.alternatePhone) : undefined,
       cod_charge: orderData.cod ? orderData.cod.amount.toFixed(2) : '0',
       address: `${orderData.to.addressLine1}, ${orderData.to.addressLine2 || ''}, ${orderData.to.city}`,
-      fbranch: fromBranch.name,
-      branch: toBranch.name,
+      fbranch: fromBranch.district,
+      branch: toBranch.district,
       package: orderData.invoice?.items.map(i => i.description).join(', '),
       vref_id: orderData.reference || orderData.orderId,
       instruction: orderData.instructions

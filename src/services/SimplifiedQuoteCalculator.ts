@@ -824,11 +824,11 @@ class SimplifiedQuoteCalculator {
         });
         
         if (branchPair.pickup && branchPair.destination) {
-          console.log(`🏔️ [NCM] Branch mapping: ${branchPair.pickup.name} → ${branchPair.destination.name}`);
+          console.log(`🏔️ [NCM] Branch mapping: ${branchPair.pickup.district} → ${branchPair.destination.district}`);
           
           const ncmRequest: NCMRateRequest = {
-            creation: branchPair.pickup.name,
-            destination: branchPair.destination.name,
+            creation: branchPair.pickup.district,
+            destination: branchPair.destination.district,
             type: input.ncm_service_type || 'pickup', // Default to pickup
             weight: totalChargeableWeight
           };
