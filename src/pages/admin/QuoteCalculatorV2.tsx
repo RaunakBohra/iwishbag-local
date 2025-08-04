@@ -699,8 +699,12 @@ const QuoteCalculatorV2: React.FC = () => {
   const calculateQuote = async () => {
     setCalculating(true);
     try {
-      // Filter valid items
-      const validItems = items.filter(item => item.name && item.unit_price_usd > 0);
+      // Filter valid items and map to new interface
+      const validItems = items.filter(item => item.name && item.unit_price_usd > 0).map(item => ({
+        ...item,
+        costprice_origin: item.unit_price_usd, // Map unit_price_usd to costprice_origin
+        weight_kg: item.weight_kg || 0
+      }));
       
       if (validItems.length === 0) {
         setCalculationResult(null);
@@ -726,6 +730,7 @@ const QuoteCalculatorV2: React.FC = () => {
       const result = await simplifiedQuoteCalculator.calculate({
         items: validItems,
         origin_country: originCountry,
+        origin_currency: await getCustomerCurrency(originCountry), // CRITICAL: Add missing origin currency
         origin_state: originState,
         destination_country: destinationCountry,
         destination_state: destinationState,

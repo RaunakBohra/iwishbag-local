@@ -24,7 +24,8 @@ export function ShippingRouteDebug({
   className = ""
 }: ShippingRouteDebugProps) {
   
-  const formatCurrency = (amount: number, currency = 'INR') => {
+  const formatCurrency = (amount: number | null, currency = 'INR') => {
+    if (amount === null || amount === undefined) return 'N/A';
     if (currency === 'INR') return `₹${amount.toFixed(2)}`;
     if (currency === 'NPR') return `NPR ${amount.toFixed(2)}`;
     return `$${amount.toFixed(2)}`;
