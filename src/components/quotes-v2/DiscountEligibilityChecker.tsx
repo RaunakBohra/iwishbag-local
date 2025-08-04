@@ -19,11 +19,13 @@ import {
   Sparkles
 } from 'lucide-react';
 import { DiscountService } from '@/services/DiscountService';
+import { currencyService } from '@/services/CurrencyService';
 
 interface DiscountEligibilityCheckerProps {
   customerId?: string;
   orderTotal: number;
   countryCode: string;
+  originCurrency?: string; // NEW: Currency of the order total (INR, USD, NPR, etc.)
   isFirstOrder?: boolean;
   hasAccount?: boolean;
   className?: string;
@@ -52,6 +54,7 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
   customerId,
   orderTotal,
   countryCode,
+  originCurrency = 'USD',
   isFirstOrder = false,
   hasAccount = false,
   className = ''
@@ -62,11 +65,21 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
 
   useEffect(() => {
     checkEligibility();
-  }, [orderTotal, countryCode, customerId]);
+  }, [orderTotal, countryCode, customerId, originCurrency]);
+
+  // Helper function to format amounts in origin currency
+  const formatOriginAmount = (amount: number): string => {
+    return currencyService.formatAmount(amount, originCurrency);
+  };
 
   const checkEligibility = async () => {
     setIsLoading(true);
     try {
+      // Convert USD thresholds to origin currency
+      const exchangeRate = await currencyService.getExchangeRate('USD', originCurrency);
+      const volumeThresholdUSD = 1000;
+      const volumeThresholdOrigin = volumeThresholdUSD * exchangeRate;
+
       // Mock eligibility check - in real implementation, this would call DiscountService
       const mockChecks: EligibilityCheck[] = [
         {
@@ -98,18 +111,18 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
           discountName: 'Volume Discount Tier 3',
           discountType: 'percentage',
           discountValue: 15,
-          eligible: orderTotal >= 1000,
-          potentialSavings: orderTotal >= 1000 ? Math.min(orderTotal * 0.15, 1000) : (1000 * 0.15),
+          eligible: orderTotal >= volumeThresholdOrigin,
+          potentialSavings: orderTotal >= volumeThresholdOrigin ? Math.min(orderTotal * 0.15, volumeThresholdOrigin) : (volumeThresholdOrigin * 0.15),
           appliesTo: 'shipping, customs',
           priority: 'high',
           reasons: [
             {
-              type: orderTotal >= 1000 ? 'met' : 'not_met',
-              requirement: 'Minimum order $1,000',
-              status: orderTotal >= 1000 
-                ? `Your order of $${orderTotal.toFixed(2)} qualifies` 
-                : `Add $${(1000 - orderTotal).toFixed(2)} more to qualify`,
-              suggestion: orderTotal < 1000 ? 'Add more items to reach the minimum order value' : undefined
+              type: orderTotal >= volumeThresholdOrigin ? 'met' : 'not_met',
+              requirement: `Minimum order ${formatOriginAmount(volumeThresholdOrigin)}`,
+              status: orderTotal >= volumeThresholdOrigin 
+                ? `Your order of ${formatOriginAmount(orderTotal)} qualifies` 
+                : `Add ${formatOriginAmount(volumeThresholdOrigin - orderTotal)} more to qualify`,
+              suggestion: orderTotal < volumeThresholdOrigin ? 'Add more items to reach the minimum order value' : undefined
             }
           ]
         },
@@ -223,7 +236,7 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
             </div>
             <div className="text-lg font-bold text-green-800">{eligibleDiscounts.length}</div>
             <div className="text-xs text-green-600">
-              Save up to ${totalPotentialSavings.toFixed(2)}
+              Save up to {formatOriginAmount(totalPotentialSavings)}
             </div>
           </div>
           
@@ -255,7 +268,7 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
                       </Badge>
                     </div>
                     <div className="text-sm font-medium text-green-800">
-                      Save ${check.potentialSavings.toFixed(2)}
+                      Save {formatOriginAmount(check.potentialSavings)}
                     </div>
                   </div>
                   <p className="text-sm text-green-700 mb-2">{check.discountName}</p>
@@ -306,7 +319,7 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
                       </Badge>
                     </div>
                     <div className="text-sm font-medium text-blue-800">
-                      Could save ${check.potentialSavings.toFixed(2)}
+                      Could save {formatOriginAmount(check.potentialSavings)}
                     </div>
                   </div>
                   <p className="text-sm text-gray-700 mb-2">{check.discountName}</p>
@@ -342,7 +355,7 @@ export const DiscountEligibilityChecker: React.FC<DiscountEligibilityCheckerProp
           </div>
           <ul className="text-xs text-blue-700 space-y-1">
             <li>• Discounts are automatically applied during checkout</li>
-            <li>• Volume discounts activate at $100, $500, and $1000+ orders</li>
+            <li>• Volume discounts activate based on order total thresholds</li>
             <li>• Country-specific shipping discounts apply automatically</li>
             <li>• Student and membership discounts require verification</li>
             <li>• Subscribe to our newsletter for exclusive discount codes</li>

@@ -80,7 +80,7 @@ export function getCurrencySymbol(countryCode: string): string {
     JP: '¥',
   };
 
-  return symbols[countryCode] || '$';
+  return symbols[countryCode] || '¤'; // Generic currency symbol instead of hardcoded $
 }
 
 /**
@@ -99,7 +99,7 @@ export function getCurrencyCode(countryCode: string): string {
     JP: 'JPY',
   };
 
-  return codes[countryCode] || 'USD';
+  return codes[countryCode] || 'XXX'; // ISO 4217 unknown currency code instead of hardcoded USD
 }
 
 /**
@@ -108,7 +108,9 @@ export function getCurrencyCode(countryCode: string): string {
  * @param currencyCode - Currency code (USD, INR, NPR, etc.)
  * @returns Formatted currency string
  */
-export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
+export function formatCurrency(amount: number, currencyCode?: string): string {
+  // Don't default to USD - show generic currency if none provided
+  const currency = currencyCode || 'XXX';
   const symbolMap: Record<string, string> = {
     USD: '$',
     INR: '₹',
@@ -122,7 +124,7 @@ export function formatCurrency(amount: number, currencyCode: string = 'USD'): st
     SGD: 'S$',
   };
 
-  const symbol = symbolMap[currencyCode] || currencyCode + ' ';
+  const symbol = symbolMap[currency] || currency + ' ';
 
   // Format with proper decimal places
   const formatted = new Intl.NumberFormat('en-US', {

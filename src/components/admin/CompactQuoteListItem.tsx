@@ -2,6 +2,7 @@ import React from 'react';
 import type { UnifiedQuote } from '@/types/unified-quote';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Mail, Share2 } from 'lucide-react';
+import { currencyService } from '@/services/CurrencyService';
 
 interface CompactQuoteListItemProps {
   quote: UnifiedQuote;
@@ -16,11 +17,17 @@ export const CompactQuoteListItem: React.FC<CompactQuoteListItemProps> = ({
   isSelected,
   showActions = true,
 }) => {
+  // currencyService is already imported as instance
+  
   const handleClick = () => {
     if (onQuoteClick && quote.id) {
       onQuoteClick(quote.id);
     }
   };
+
+  // Get the appropriate currency - prefer origin currency for admin view
+  const currency = quote.origin_currency || 'USD';
+  const amount = quote.origin_total_amount || quote.final_total_usd || 0;
 
   return (
     <div 
@@ -65,7 +72,7 @@ export const CompactQuoteListItem: React.FC<CompactQuoteListItemProps> = ({
         </div>
         <div className="text-right">
           <p className="font-bold text-gray-900">
-            ${(quote.final_total_usd || 0).toFixed(2)}
+            {currencyService.formatAmount(amount, currency)}
           </p>
           <p className="text-xs text-gray-500 mt-1">
             {quote.customer_data?.info?.name || 'Unknown'}

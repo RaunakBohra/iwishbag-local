@@ -25,6 +25,7 @@ interface MetricsData {
 
 interface CompactQuoteMetricsProps {
   metrics: MetricsData;
+  currency?: string; // Currency for displaying metrics
   isLoading?: boolean;
 }
 
@@ -65,7 +66,7 @@ const CompactMetric = ({ label, value, change, changeType, icon }: CompactMetric
   </div>
 );
 
-export const CompactQuoteMetrics = ({ metrics, isLoading }: CompactQuoteMetricsProps) => {
+export const CompactQuoteMetrics = ({ metrics, currency = 'USD', isLoading }: CompactQuoteMetricsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (isLoading) {
@@ -125,7 +126,7 @@ export const CompactQuoteMetrics = ({ metrics, isLoading }: CompactQuoteMetricsP
   const primaryMetrics = [
     {
       label: 'Revenue',
-      value: formatCurrencyCompact(totalRevenue),
+      value: formatCurrencyCompact(totalRevenue, currency),
       change: revenueChange.change,
       changeType: revenueChange.type,
       icon: <DollarSign className="h-3.5 w-3.5" />,
@@ -159,7 +160,7 @@ export const CompactQuoteMetrics = ({ metrics, isLoading }: CompactQuoteMetricsP
     { label: 'Approved', value: approvedQuotes.toString(), status: 'approved' },
     { label: 'Paid', value: paidQuotes.toString(), status: 'paid' },
     { label: 'Completed', value: completedQuotes.toString(), status: 'completed' },
-    { label: 'Avg Value', value: formatCurrencyCompact(averageValue), status: 'neutral' },
+    { label: 'Avg Value', value: formatCurrencyCompact(averageValue, currency), status: 'neutral' },
   ];
 
   const getStatusColor = (status: string) => {

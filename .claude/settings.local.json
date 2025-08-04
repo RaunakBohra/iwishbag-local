@@ -264,7 +264,8 @@
       "Bash(for:*)",
       "WebFetch(domain:linear.app)",
       "WebFetch(domain:ui.shadcn.com)",
-      "WebFetch(domain:www.navbar.gallery)"
+      "WebFetch(domain:www.navbar.gallery)",
+      "WebFetch(domain:runcopycat.com)"
     ],
     "deny": []
   }

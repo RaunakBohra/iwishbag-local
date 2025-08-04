@@ -3,13 +3,19 @@
  * Consistent formatting patterns for admin interface
  */
 
+import { currencyService } from '@/services/CurrencyService';
+
 /**
  * Format currency amount for compact displays (metrics, cards)
  * Uses K/M suffixes for space efficiency
  */
-export const formatCurrencyCompact = (amount: number, currency = 'USD'): string => {
-  const symbol =
-    currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'NPR' ? 'रू' : currency;
+export const formatCurrencyCompact = (amount: number, currency?: string): string => {
+  // Require explicit currency, no USD default
+  if (!currency) {
+    throw new Error('formatCurrencyCompact requires explicit currency - no default provided');
+  }
+
+  const symbol = currencyService.getCurrencySymbol(currency);
 
   if (amount >= 1000000) {
     return `${symbol}${(amount / 1000000).toFixed(1)}M`;
@@ -23,10 +29,13 @@ export const formatCurrencyCompact = (amount: number, currency = 'USD'): string 
  * Format currency amount for admin displays
  * Full precision for detailed views
  */
-export const formatCurrencyAdmin = (amount: number, currency = 'USD'): string => {
-  const symbol =
-    currency === 'USD' ? '$' : currency === 'INR' ? '₹' : currency === 'NPR' ? 'रू' : currency;
-  return `${symbol}${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const formatCurrencyAdmin = (amount: number, currency?: string): string => {
+  // Require explicit currency, no USD default
+  if (!currency) {
+    throw new Error('formatCurrencyAdmin requires explicit currency - no default provided');
+  }
+
+  return currencyService.formatAmount(amount, currency);
 };
 
 /**

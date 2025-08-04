@@ -39,6 +39,7 @@ interface SmartCustomsPreviewProps {
   control: Control<any>;
   index: number;
   countryCode?: string;
+  originCurrency?: string;
   className?: string;
 }
 
@@ -46,6 +47,7 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
   control,
   index,
   countryCode = 'IN',
+  originCurrency = 'USD',
   className,
 }) => {
   const [customsCalculation, setCustomsCalculation] = useState<CustomsCalculation | null>(null);
@@ -178,10 +180,13 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
     return AlertTriangle;
   };
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
+  const formatCurrency = (amount: number, currency?: string) => {
+    // Try to determine the origin currency from the form context
+    // For now, default to USD but this should be enhanced to get actual origin currency
+    const defaultCurrency = currency || 'USD';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency,
+      currency: defaultCurrency,
       minimumFractionDigits: 2,
     }).format(amount);
   };
@@ -246,9 +251,9 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
                   <div className="space-y-1">
                     <p className="font-medium">Minimum Valuation Applied</p>
                     <p>
-                      Customs calculated on ${customsCalculation.minimum_valuation_usd} minimum valuation 
+                      Customs calculated on {formatCurrency(customsCalculation.minimum_valuation_usd, originCurrency)} minimum valuation 
                       {costPrice && parseFloat(costPrice) < customsCalculation.minimum_valuation_usd 
-                        ? ` (product price $${costPrice} is below minimum)`
+                        ? ` (product price ${formatCurrency(parseFloat(costPrice), originCurrency)} is below minimum)`
                         : ' (classification requires minimum valuation)'}
                     </p>
                   </div>
@@ -264,7 +269,7 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
                   <span className="font-medium">{customsCalculation.base_rate}%</span>
                   {costPrice && (
                     <span className="text-xs text-muted-foreground">
-                      {formatCurrency(calculateCustomsAmount(customsCalculation.base_rate))}
+                      {formatCurrency(calculateCustomsAmount(customsCalculation.base_rate), originCurrency)}
                     </span>
                   )}
                 </div>
@@ -277,7 +282,7 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
                     <span className="font-medium">{customsCalculation.gst_rate}%</span>
                     {costPrice && (
                       <span className="text-xs text-muted-foreground">
-                        {formatCurrency(calculateCustomsAmount(customsCalculation.gst_rate))}
+                        {formatCurrency(calculateCustomsAmount(customsCalculation.gst_rate), originCurrency)}
                       </span>
                     )}
                   </div>
@@ -291,7 +296,7 @@ export const SmartCustomsPreview: React.FC<SmartCustomsPreviewProps> = ({
                     <span className="font-bold text-lg">{customsCalculation.total_rate}%</span>
                     {costPrice && (
                       <span className="text-sm font-medium text-blue-600">
-                        {formatCurrency(calculateCustomsAmount(customsCalculation.total_rate))}
+                        {formatCurrency(calculateCustomsAmount(customsCalculation.total_rate), originCurrency)}
                       </span>
                     )}
                   </div>

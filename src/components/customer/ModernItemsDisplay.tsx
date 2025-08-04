@@ -19,6 +19,7 @@ interface ModernItemsDisplayProps {
   items: UnifiedQuote['items'];
   currency: string;
   currencySymbol: string;
+  formatAmount?: (amount: number) => string; // Optional formatter function
   onViewProduct?: (url: string) => void;
 }
 
@@ -26,9 +27,15 @@ export const ModernItemsDisplay: React.FC<ModernItemsDisplayProps> = ({
   items,
   currency,
   currencySymbol,
+  formatAmount,
   onViewProduct,
 }) => {
   const formatPrice = (amount: number) => {
+    // Use the provided formatter if available, otherwise fallback to symbol-based formatting
+    if (formatAmount) {
+      return formatAmount(amount);
+    }
+    
     return `${currencySymbol}${amount.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -68,7 +75,7 @@ export const ModernItemsDisplay: React.FC<ModernItemsDisplayProps> = ({
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-lg text-gray-900 mb-2 line-clamp-2">
-                            {item.product_name}
+                            {item.name || item.product_name}
                           </h3>
                           {item.description && (
                             <p className="text-sm text-gray-600 mb-3 line-clamp-2">
@@ -111,14 +118,14 @@ export const ModernItemsDisplay: React.FC<ModernItemsDisplayProps> = ({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        {item.customs_amount > 0 && (
+                        {(item.customs_amount || 0) > 0 && (
                           <Badge variant="outline" className="text-xs text-orange-600">
-                            Customs: {formatPrice(item.customs_amount)}
+                            Customs: {formatPrice(item.customs_amount || 0)}
                           </Badge>
                         )}
-                        {(item.sales_tax_amount > 0 || item.destination_tax_amount > 0) && (
+                        {((item.sales_tax_amount || 0) > 0 || (item.destination_tax_amount || 0) > 0) && (
                           <Badge variant="outline" className="text-xs text-blue-600">
-                            Tax: {formatPrice(item.sales_tax_amount + item.destination_tax_amount)}
+                            Tax: {formatPrice((item.sales_tax_amount || 0) + (item.destination_tax_amount || 0))}
                           </Badge>
                         )}
                       </div>
@@ -128,18 +135,18 @@ export const ModernItemsDisplay: React.FC<ModernItemsDisplayProps> = ({
                     <div className="flex flex-col items-end gap-3">
                       <div className="text-right">
                         <p className="text-2xl font-bold text-gray-900">
-                          {formatPrice(item.price * item.quantity)}
+                          {formatPrice((item.costprice_origin || 0) * item.quantity)}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {formatPrice(item.price)} × {item.quantity}
+                          {formatPrice(item.costprice_origin || 0)} × {item.quantity}
                         </p>
                       </div>
 
-                      {item.product_url && onViewProduct && (
+                      {(item.url || item.product_url) && onViewProduct && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onViewProduct(item.product_url)}
+                          onClick={() => onViewProduct(item.url || item.product_url)}
                           className="group-hover:bg-primary group-hover:text-white transition-colors"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />

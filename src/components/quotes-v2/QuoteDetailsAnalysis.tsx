@@ -53,8 +53,10 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     setExpandedItems(newExpanded);
   };
 
-  const formatCurrency = (amount: number) => {
-    return currencyService.formatAmount(amount, 'USD');
+  const formatCurrency = (amount: number, currency?: string) => {
+    // Try to get origin currency from quote data
+    const originCurrency = calc.inputs?.origin_currency || quote.origin_currency || 'USD';
+    return currencyService.formatAmount(amount, currency || originCurrency);
   };
 
   // Calculate key values
@@ -73,7 +75,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
   // Validation: Check for impossible scenarios
   const isImpossibleScenario = finalTotalUSD < itemsSubtotal && itemsSubtotal > 0;
   if (isImpossibleScenario) {
-    console.error(`🚨 [VALIDATION ERROR] Total ($${finalTotalUSD.toFixed(2)}) is less than items cost ($${itemsSubtotal.toFixed(2)}) - this is impossible!`);
+    const originCurrency = calc.inputs?.origin_currency || quote.origin_currency || 'USD';
+    console.error(`🚨 [VALIDATION ERROR] Total (${formatCurrency(finalTotalUSD)}) is less than items cost (${formatCurrency(itemsSubtotal)}) - this is impossible!`);
     console.error(`🔍 [DEBUG] Quote ID: ${quote.id}, Items:`, quote.items.map(item => ({
       name: item.name,
       price: item.costprice_origin || item.unit_price_usd || 0,
@@ -110,21 +113,21 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     {
       icon: Truck,
       title: 'Shipping',
-      value: `$${rates.shipping_rate_per_kg || 0}/kg`,
-      subtitle: `$${totalShippingCost.toFixed(2)} cost`,
+      value: `${formatCurrency(rates.shipping_rate_per_kg || 0)}/kg`,
+      subtitle: `${formatCurrency(totalShippingCost)} cost`,
       color: 'text-blue-600'
     },
     {
       icon: DollarSign,
       title: 'Taxes',
       value: `${rates.local_tax_percentage || 0}% ${taxInfo.local_tax_name}`,
-      subtitle: `$${totalTaxAmount.toFixed(2)} tax`,
+      subtitle: `${formatCurrency(totalTaxAmount)} tax`,
       color: 'text-orange-600'
     },
     {
       icon: DollarSign,
       title: 'Total',
-      value: `$${finalTotalUSD.toFixed(2)} USD`,
+      value: `${formatCurrency(finalTotalUSD)} USD`,
       subtitle: customerCurrency !== 'USD' ? `${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
       color: 'text-green-600'
     }
@@ -152,7 +155,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
               <span className="font-semibold">Calculation Error Detected</span>
             </div>
             <p className="text-sm text-red-700 mt-1">
-              Total amount (${finalTotalUSD.toFixed(2)}) is less than items cost (${itemsSubtotal.toFixed(2)}). 
+              Total amount ({formatCurrency(finalTotalUSD)}) is less than items cost ({formatCurrency(itemsSubtotal)}). 
               This indicates a calculation bug that needs to be fixed.
             </p>
           </div>
@@ -347,7 +350,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping Rate:</span>
-                    <span>${rates.shipping_rate_per_kg || 0}/kg</span>
+                    <span>{formatCurrency(rates.shipping_rate_per_kg || 0)}/kg</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Insurance:</span>
@@ -363,7 +366,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   </div>
                   <div className="flex justify-between">
                     <span>Payment Gateway:</span>
-                    <span>{rates.payment_gateway_percentage || 0}% + ${rates.payment_gateway_fixed || 0}</span>
+                    <span>{rates.payment_gateway_percentage || 0}% + {formatCurrency(rates.payment_gateway_fixed || 0)}</span>
                   </div>
                 </div>
               </div>

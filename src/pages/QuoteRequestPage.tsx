@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,6 +15,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
 import { useShippingCountries } from '@/hooks/useShippingCountries';
+import { useCountryUnit } from '@/hooks/useCountryUnits';
+import { useUrlAutoDetection } from '@/hooks/useUrlAnalysis';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
 
@@ -365,7 +367,7 @@ export default function QuoteRequestPage() {
                         <FormItem>
                           <FormLabel>Email Address *</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="your@email.com" {...field} />
+                            <Input type="email" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -380,7 +382,7 @@ export default function QuoteRequestPage() {
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="+1234567890" {...field} />
+                            <Input {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -485,37 +487,61 @@ export default function QuoteRequestPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {items.map((item, index) => (
-                  <div key={item.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-medium">Product {index + 1}</h4>
-                      {items.length > 1 && (
-                        <Button
-                          type="button"
-                          onClick={() => removeItemAt(index)}
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+                {items.map((item, index) => {
+                  const selectedOriginCountry = form.watch(`items.${index}.origin_country`);
+                  const currentUrl = form.watch(`items.${index}.product_url`);
+                  const { currency, weightUnit } = useCountryUnit(selectedOriginCountry);
+                  const urlAnalysis = useUrlAutoDetection(currentUrl);
+                  const { data: purchaseCountries = [] } = usePurchaseCountries();
+                  
+                  // Auto-detect country when URL changes
+                  useEffect(() => {
+                    // Only process if we have a valid URL analysis and countries are loaded
+                    if (!urlAnalysis.shouldAutoSetCountry || !urlAnalysis.suggestedCountry || purchaseCountries.length === 0) {
+                      return;
+                    }
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.product_name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Product Name *</FormLabel>
-                            <FormControl>
-                              <Input placeholder="iPhone 15 Pro Max" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                    const currentCountry = form.getValues(`items.${index}.origin_country`);
+                    
+                    // Only auto-set if current country is default (US) or empty
+                    if (!currentCountry || currentCountry === 'US') {
+                      // Check if the suggested country exists in the dropdown options
+                      const countryExists = purchaseCountries.some(country => country.code === urlAnalysis.suggestedCountry);
+                      
+                      if (countryExists) {
+                        console.log(`🔄 Auto-detecting country for ${urlAnalysis.domain}: ${currentCountry} → ${urlAnalysis.suggestedCountry}`);
+                        
+                        form.setValue(`items.${index}.origin_country`, urlAnalysis.suggestedCountry, { 
+                          shouldValidate: true,
+                          shouldDirty: true,
+                          shouldTouch: true
+                        });
+                        console.log(`✅ Country auto-set to: ${urlAnalysis.suggestedCountry}`);
+                      } else {
+                        console.warn(`⚠️ Country ${urlAnalysis.suggestedCountry} not available for purchase`);
+                      }
+                    }
+                  }, [urlAnalysis.suggestedCountry, urlAnalysis.shouldAutoSetCountry, index, form, purchaseCountries]);
+                  
+                  return (
+                    <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-medium">Product {index + 1}</h4>
+                        {items.length > 1 && (
+                          <Button
+                            type="button"
+                            onClick={() => removeItemAt(index)}
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
-                      />
+                      </div>
+                    
+                    {/* First row: URL and Product Name */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name={`items.${index}.product_url`}
@@ -529,19 +555,40 @@ export default function QuoteRequestPage() {
                           </FormItem>
                         )}
                       />
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.product_name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Product Name *</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    {/* Second row: Origin Country, Quantity, Weight, Price */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
                       <FormField
                         control={form.control}
                         name={`items.${index}.origin_country`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Origin Country *</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loadingCountries}>
+                            <FormLabel>
+                              Origin Country *
+                              {urlAnalysis.shouldAutoSetCountry && urlAnalysis.suggestedCountry === field.value && (
+                                <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                  Auto-detected
+                                </span>
+                              )}
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={loadingCountries}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder={loadingCountries ? "Loading countries..." : "Select country"} />
+                                  <SelectValue placeholder={loadingCountries ? "Loading..." : "Select"} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -558,6 +605,11 @@ export default function QuoteRequestPage() {
                                 )}
                               </SelectContent>
                             </Select>
+                            {urlAnalysis.isValid && urlAnalysis.domain && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Detected from: {urlAnalysis.domain}
+                              </div>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -572,6 +624,7 @@ export default function QuoteRequestPage() {
                               <Input 
                                 type="number" 
                                 min="1" 
+                                placeholder="1"
                                 {...field}
                                 onChange={e => field.onChange(parseInt(e.target.value) || 1)}
                               />
@@ -585,13 +638,13 @@ export default function QuoteRequestPage() {
                         name={`items.${index}.weight_kg`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Weight (kg)</FormLabel>
+                            <FormLabel>Weight ({weightUnit})</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
                                 step="0.1" 
                                 min="0"
-                                placeholder="0.5"
+                                placeholder={weightUnit === 'kg' ? '0.5' : '1.1'}
                                 {...field}
                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                               />
@@ -600,21 +653,18 @@ export default function QuoteRequestPage() {
                           </FormItem>
                         )}
                       />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 mt-4">
                       <FormField
                         control={form.control}
                         name={`items.${index}.price_usd`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Price (USD)</FormLabel>
+                            <FormLabel>Price ({currency})</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
                                 step="0.01" 
                                 min="0" 
-                                placeholder="999.99"
+                                placeholder={currency === 'USD' ? '999.99' : currency === 'INR' ? '8299.99' : '999.99'}
                                 {...field}
                                 onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                               />
@@ -630,20 +680,33 @@ export default function QuoteRequestPage() {
                       name={`items.${index}.notes`}
                       render={({ field }) => (
                         <FormItem className="mt-4">
-                          <FormLabel>Additional Notes</FormLabel>
+                          <FormLabel>
+                            Additional Notes
+                            {urlAnalysis.category && (
+                              <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                                {urlAnalysis.category}
+                              </span>
+                            )}
+                          </FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Color, size, model, or any special requirements..."
+                              placeholder={urlAnalysis.notesPlaceholder}
                               className="min-h-[80px]"
                               {...field}
                             />
                           </FormControl>
+                          {urlAnalysis.tips.length > 0 && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              <strong>Tips:</strong> {urlAnalysis.tips.join(' • ')}
+                            </div>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
 
@@ -696,7 +759,9 @@ export default function QuoteRequestPage() {
                               field.onChange(address.id);
                               setSelectedAddress(address);
                               // Auto-update destination country based on selected address
-                              form.setValue('destination_country', address.destination_country);
+                              if (address.destination_country) {
+                                form.setValue('destination_country', address.destination_country);
+                              }
                             }}
                             showAddButton={true}
                             className="mt-2"

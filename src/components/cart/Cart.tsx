@@ -37,7 +37,12 @@ const CartItemPrice = ({ item, quantity }: { item: CartItem; quantity: number })
 
 // Component to display cart total with proper currency conversion
 const CartTotal = ({ items }: { items: CartItem[] }) => {
-  if (items.length === 0) return <>$0.00</>;
+  // Get default currency for empty cart display
+  const { formatAmount: formatEmptyAmount } = useQuoteCurrency({
+    destination_currency: 'USD' // Default fallback - could be enhanced with user geo-detection
+  });
+  
+  if (items.length === 0) return <>{formatEmptyAmount(0)}</>;
 
   // Use the first item's currency context for the total - all items should have same destination
   const firstItem = items[0];
