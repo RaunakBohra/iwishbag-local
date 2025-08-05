@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,6 +93,9 @@ interface QuoteItem {
   use_hsn_rates?: boolean; // Feature flag per item
   // Valuation method preference - safe addition
   valuation_preference?: 'auto' | 'product_price' | 'minimum_valuation'; // Per-item valuation choice
+  // Product images from scraping
+  images?: string[]; // Array of image URLs
+  main_image?: string; // Primary product image
   // Optional volumetric weight fields
   dimensions?: {
     length: number;
@@ -592,9 +596,32 @@ const QuoteCalculatorV2: React.FC = () => {
   };
 
   const updateItem = (id: string, field: keyof QuoteItem, value: any) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    ));
+    console.log('🔄 updateItem called:', { id, field, value, currentItems: items.length });
+    
+    setItems(prevItems => {
+      const updatedItems = prevItems.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          console.log('📝 Item updated:', { 
+            field, 
+            oldValue: item[field], 
+            newValue: value, 
+            itemName: item.name 
+          });
+          return updatedItem;
+        }
+        return item;
+      });
+      
+      console.log('📋 Updated items array:', updatedItems.map(item => ({ 
+        id: item.id, 
+        name: item.name, 
+        price: item.unit_price_usd, 
+        weight: item.weight_kg 
+      })));
+      
+      return updatedItems;
+    });
   };
 
   const handleHSNSelection = (itemId: string, data: {
@@ -1812,29 +1839,126 @@ const QuoteCalculatorV2: React.FC = () => {
                             placeholder="https://www.amazon.com/product-link or any international store"
                             showFetchButton={true}
                             onDataFetched={(data) => {
-                              // Auto-fill product data from scraping
-                              if (data.productName) {
-                                updateItem(item.id, 'name', data.productName);
-                              }
-                              if (data.price) {
-                                updateItem(item.id, 'costprice_origin', data.price);
-                              }
-                              if (data.weight) {
-                                updateItem(item.id, 'weight', data.weight);
-                              }
-                              if (data.category) {
-                                updateItem(item.id, 'category', data.category);
-                              }
-                              if (data.brand) {
-                                updateItem(item.id, 'brand', data.brand);
-                              }
-                              if (data.currency) {
-                                // Currency is handled at quote level, not item level
-                                console.log('Currency from scraping:', data.currency);
-                              }
-                              if (data.hsn) {
-                                // HSN code would be handled by HSN service
-                                console.log('HSN suggestion from scraping:', data.hsn);
+                              try {
+                                // Auto-fill product data from scraping
+                                console.log('🤖 Auto-filling scraped data:', data);
+                                console.log('🎯 Current item before update:', { 
+                                  id: item.id, 
+                                  name: item.name, 
+                                  price: item.unit_price_usd, 
+                                  weight: item.weight_kg 
+                                });
+                                
+                                const updatedFields: string[] = [];
+                                
+                                // Update product name
+                                if (data.productName && typeof data.productName === 'string' && data.productName.trim()) {
+                                  console.log('🎯 About to update product name:', data.productName, 'for item:', item.id);
+                                  flushSync(() => {
+                                    updateItem(item.id, 'name', data.productName.trim());
+                                  });
+                                  updatedFields.push('name');
+                                  console.log('✅ Updated product name:', data.productName);
+                                }
+                                
+                                // Update price with validation
+                                if (data.price && typeof data.price === 'number' && data.price > 0 && isFinite(data.price)) {
+                                  console.log('🎯 About to update price:', data.price, 'for item:', item.id);
+                                  flushSync(() => {
+                                    updateItem(item.id, 'unit_price_usd', data.price);
+                                  });
+                                  updatedFields.push('price');
+                                  console.log('✅ Updated price:', data.price);
+                                } else if (data.price) {
+                                  console.warn('⚠️ Invalid price data:', data.price);
+                                }
+                                
+                                // Update weight with validation
+                                if (data.weight && typeof data.weight === 'number' && data.weight > 0 && isFinite(data.weight)) {
+                                  console.log('🎯 About to update weight:', data.weight, 'for item:', item.id);
+                                  flushSync(() => {
+                                    updateItem(item.id, 'weight_kg', data.weight);
+                                  });
+                                  updatedFields.push('weight');
+                                  console.log('✅ Updated weight:', data.weight);
+                                } else if (data.weight) {
+                                  console.warn('⚠️ Invalid weight data:', data.weight);
+                                }
+                                
+                                // Update category
+                                if (data.category && typeof data.category === 'string' && data.category.trim()) {
+                                  flushSync(() => {
+                                    updateItem(item.id, 'category', data.category.trim());
+                                  });
+                                  updatedFields.push('category');
+                                  console.log('✅ Updated category:', data.category);
+                                }
+                                
+                                // Log brand information (not stored in QuoteItem)
+                                if (data.brand) {
+                                  console.log('ℹ️ Brand from scraping (not stored):', data.brand);
+                                }
+                                
+                                // Update HSN code if available
+                                if (data.hsn && typeof data.hsn === 'string' && data.hsn.trim()) {
+                                  flushSync(() => {
+                                    updateItem(item.id, 'hsn_code', data.hsn.trim());
+                                  });
+                                  updatedFields.push('HSN code');
+                                  console.log('✅ Updated HSN code:', data.hsn);
+                                }
+                                
+                                // Log currency information (handled at quote level)
+                                if (data.currency) {
+                                  console.log('ℹ️ Currency from scraping:', data.currency);
+                                }
+                                
+                                // Handle product images from scraping with validation
+                                const images = (data as any).images;
+                                if (images && Array.isArray(images) && images.length > 0) {
+                                  // Filter valid image URLs
+                                  const validImages = images.filter(img => 
+                                    typeof img === 'string' && 
+                                    img.trim() && 
+                                    (img.startsWith('http://') || img.startsWith('https://'))
+                                  );
+                                  
+                                  if (validImages.length > 0) {
+                                    flushSync(() => {
+                                      updateItem(item.id, 'images', validImages);
+                                      updateItem(item.id, 'main_image', validImages[0]); // First image as main
+                                    });
+                                    updatedFields.push(`${validImages.length} image${validImages.length > 1 ? 's' : ''}`);
+                                    console.log('✅ Updated images:', validImages.length, 'valid images');
+                                  } else {
+                                    console.warn('⚠️ No valid image URLs found in:', images);
+                                  }
+                                }
+                                
+                                // Show success toast with detailed feedback
+                                if (updatedFields.length > 0) {
+                                  toast({
+                                    title: "🎉 Product Data Auto-Filled",
+                                    description: `Successfully populated: ${updatedFields.join(', ')}`,
+                                    duration: 4000,
+                                  });
+                                } else {
+                                  toast({
+                                    title: "⚠️ Limited Data Retrieved",
+                                    description: "Product scraped but no fields could be auto-filled. Please check manually.",
+                                    duration: 3000,
+                                    variant: "default"
+                                  });
+                                }
+                                
+                              } catch (error) {
+                                console.error('❌ Error during auto-fill:', error);
+                                toast({
+                                  title: "❌ Auto-Fill Error",
+                                  description: "Product data was retrieved but couldn't be populated due to an error.",
+                                  duration: 3000,
+                                  variant: "destructive"
+                                });
                               }
                             }}
                           />
@@ -1852,6 +1976,54 @@ const QuoteCalculatorV2: React.FC = () => {
                             className="text-base"
                           />
                         </div>
+
+                        {/* Product Images Section */}
+                        {item.images && item.images.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Eye className="w-4 h-4 text-gray-500" />
+                              <Label className="text-sm font-medium text-gray-700">Product Images</Label>
+                              <Badge variant="secondary" className="text-xs">
+                                {item.images.length} image{item.images.length > 1 ? 's' : ''}
+                              </Badge>
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              {item.images.slice(0, 4).map((imageUrl, imageIndex) => (
+                                <div 
+                                  key={imageIndex} 
+                                  className="relative group cursor-pointer"
+                                  onClick={() => window.open(imageUrl, '_blank')}
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${item.name} - Image ${imageIndex + 1}`}
+                                    className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:border-blue-300 transition-colors"
+                                    onError={(e) => {
+                                      // Hide image if it fails to load
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-lg transition-all flex items-center justify-center">
+                                    <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                  {imageIndex === 0 && (
+                                    <Badge 
+                                      variant="default" 
+                                      className="absolute -top-1 -right-1 text-xs px-1 py-0 h-4"
+                                    >
+                                      Main
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                              {item.images.length > 4 && (
+                                <div className="w-16 h-16 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-500">
+                                  +{item.images.length - 4} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

@@ -121,15 +121,21 @@ export const useProductScraping = (initialUrl?: string, deliveryCountry?: string
    */
   const shouldAutoFill = isScraped && productData !== null && !error;
   
-  const autoFillData = useMemo(() => ({
-    productName: productData?.title,
-    price: productData?.price,
-    weight: productData?.weight || productData?.weight_value,
-    currency: productData?.currency,
-    category: productData?.category,
-    brand: productData?.brand,
-    hsn: (productData as any)?.suggested_hsn
-  }), [productData, isScraped, error]);
+  const autoFillData = useMemo(() => {
+    const data = {
+      productName: productData?.title,
+      price: productData?.price,
+      weight: productData?.weight || productData?.weight_value,
+      currency: productData?.currency,
+      category: productData?.category,
+      brand: productData?.brand,
+      hsn: (productData as any)?.suggested_hsn,
+      images: productData?.images // Add images to auto-fill data
+    };
+    
+    console.log('🎯 useProductScraping autoFillData prepared:', data);
+    return data;
+  }, [productData, isScraped, error]);
 
   return {
     // State

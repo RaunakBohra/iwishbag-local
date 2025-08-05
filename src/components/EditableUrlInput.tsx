@@ -65,16 +65,33 @@ export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
   };
   
   const handleFetch = async () => {
-    if (!value || !productScraping || !onDataFetched) return;
+    if (!value || !productScraping || !onDataFetched) {
+      console.log('🚫 HandleFetch early return:', { value: !!value, productScraping: !!productScraping, onDataFetched: !!onDataFetched });
+      return;  
+    }
+    
+    console.log('🚀 HandleFetch starting for URL:', value);
     
     try {
       await productScraping.scrapeProduct(value);
       
+      console.log('✅ Scraping completed:', {
+        shouldAutoFill: productScraping.shouldAutoFill,
+        hasAutoFillData: !!productScraping.autoFillData,
+        autoFillData: productScraping.autoFillData
+      });
+      
       if (productScraping.shouldAutoFill && productScraping.autoFillData) {
+        console.log('🎯 Calling onDataFetched with:', productScraping.autoFillData);
         onDataFetched(productScraping.autoFillData);
+      } else {
+        console.log('⚠️ Not calling onDataFetched:', {
+          shouldAutoFill: productScraping.shouldAutoFill,
+          hasData: !!productScraping.autoFillData
+        });
       }
     } catch (error) {
-      console.error('Fetch failed:', error);
+      console.error('❌ Fetch failed:', error);
     }
   };
 
