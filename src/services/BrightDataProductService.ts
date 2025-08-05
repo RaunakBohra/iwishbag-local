@@ -1846,11 +1846,26 @@ class BrightDataProductService {
     try {
       const data = Array.isArray(rawData) ? rawData[0] : rawData;
       
-      // Extract price information
+      // Extract price information with robust parsing
       let price = 0;
       if (data.final_price) {
-        price = typeof data.final_price === 'number' ? data.final_price : parseFloat(data.final_price) || 0;
+        if (typeof data.final_price === 'number') {
+          price = data.final_price;
+        } else {
+          // Clean price string and parse
+          const priceStr = data.final_price.toString().replace(/[^0-9.]/g, '');
+          price = parseFloat(priceStr) || 0;
+        }
+      } else if (data.initial_price) {
+        if (typeof data.initial_price === 'number') {
+          price = data.initial_price;
+        } else {
+          const priceStr = data.initial_price.toString().replace(/[^0-9.]/g, '');
+          price = parseFloat(priceStr) || 0;
+        }
       }
+      
+      console.log(`🏷️  Walmart price extraction: final_price=${data.final_price}, initial_price=${data.initial_price}, parsed_price=${price}`);
       
       // Handle images
       const images = [];
@@ -1868,7 +1883,7 @@ class BrightDataProductService {
       const specs = data.specifications || [];
       let weight = this.extractWalmartWeight(specs);
       if (!weight) {
-        weight = this.estimateProductWeight(data.product_name, category);
+        weight = this.estimateWeight(data.product_name, category);
       }
       
       return {
@@ -4377,7 +4392,10 @@ class BrightDataProductService {
    */
   private normalizeCartersData(rawData: any, url: string): ProductData {
     try {
-      const title = rawData.product_name || 'Carter\'s Product';
+      const data = Array.isArray(rawData) ? rawData[0] : rawData;
+      const title = data.product_name || data.name || data.title || 'Carter\'s Product';
+      
+      console.log(`👶 Carter's product name extraction: product_name=${data.product_name}, name=${data.name}, title=${data.title}, final_title=${title}`);
       
       // Parse Carter's prices
       const parsePrice = (priceStr: any): number => {
@@ -4386,19 +4404,19 @@ class BrightDataProductService {
         return parseFloat(priceStr.toString().replace(/[^0-9.]/g, '')) || 0;
       };
       
-      const finalPrice = parsePrice(rawData.final_price || rawData.initial_price);
-      const currency = rawData.currency === '$' ? 'USD' : rawData.currency || 'USD';
+      const finalPrice = parsePrice(data.final_price || data.initial_price || data.price);
+      const currency = data.currency === '$' ? 'USD' : data.currency || 'USD';
       
       // Handle images
       let images: string[] = [];
-      if (Array.isArray(rawData.image_urls)) {
-        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      if (Array.isArray(data.image_urls)) {
+        images = data.image_urls.filter(Boolean).slice(0, 8);
       }
       
       // Categorize baby clothing
       let category = 'baby-clothing';
-      if (rawData.category) {
-        const categoryLower = rawData.category.toLowerCase();
+      if (data.category) {
+        const categoryLower = data.category.toLowerCase();
         if (categoryLower.includes('sock') || categoryLower.includes('tight')) category = 'baby-socks';
         else if (categoryLower.includes('pajama') || categoryLower.includes('sleepwear')) category = 'baby-sleepwear';
         else if (categoryLower.includes('onesie') || categoryLower.includes('bodysuit')) category = 'baby-onesies';
@@ -4408,7 +4426,7 @@ class BrightDataProductService {
       }
       
       // Estimate weight for baby clothing
-      const weight = this.estimateBabyClothingWeight(title, category, rawData.size);
+      const weight = this.estimateBabyClothingWeight(title, category, data.size);
       
       return {
         title,
@@ -4416,11 +4434,11 @@ class BrightDataProductService {
         currency,
         images,
         weight,
-        brand: rawData.brand || 'Carter\'s',
+        brand: data.brand || 'Carter\'s',
         category,
-        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
-        description: rawData.description || '',
-        specifications: rawData.features ? { features: rawData.features } : undefined,
+        availability: data.in_stock ? 'in-stock' : 'out-of-stock',
+        description: data.description || '',
+        specifications: data.features ? { features: data.features } : undefined,
         seller_name: 'Carter\'s',
         url
       };
