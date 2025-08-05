@@ -187,7 +187,39 @@ async function callAmazonProductAPI(url: string, apiToken: string, requestId: st
 }
 
 /**
- * Trigger Bright Data collection using proper API workflow
+ * Detect region parameters based on Amazon domain
+ * Based on validation error: country field not allowed, language must be empty string
+ */
+function getRegionParameters(url: string) {
+  const domain = new URL(url).hostname.toLowerCase();
+  
+  // Region-specific parameters - using only allowed fields
+  if (domain.includes('amazon.in')) {
+    return {
+      zipcode: '110001', // New Delhi
+      language: '' // Must be empty string per API requirements
+    };
+  } else if (domain.includes('amazon.co.uk')) {
+    return {
+      zipcode: 'SW1A 1AA', // London
+      language: '' // Must be empty string per API requirements
+    };
+  } else if (domain.includes('amazon.ae')) {
+    return {
+      zipcode: '00000', // Dubai  
+      language: '' // Must be empty string per API requirements
+    };
+  } else {
+    // Default US parameters
+    return {
+      zipcode: '94107', // San Francisco
+      language: '' // Must be empty string per API requirements
+    };
+  }
+}
+
+/**
+ * Trigger Bright Data collection using proper API workflow with region-specific parameters
  */
 async function triggerBrightDataCollection(url: string, apiToken: string, requestId: string) {
   try {
@@ -195,6 +227,10 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
     
     const DATASET_ID = 'gd_l7q7dkf244hwjntr0';
     const triggerUrl = `https://api.brightdata.com/datasets/v3/trigger?dataset_id=${DATASET_ID}&include_errors=true`;
+    
+    // Get region-specific parameters
+    const regionParams = getRegionParameters(url);
+    console.log(`🌍 [${requestId}] Region parameters:`, regionParams);
     
     // Trigger data collection
     console.log(`📡 [${requestId}] POST ${triggerUrl}`);
@@ -206,8 +242,8 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
       },
       body: JSON.stringify([{
         url: url,
-        zipcode: '94107', // Default US zipcode
-        language: '' // Empty string as per Bright Data API requirements
+        zipcode: regionParams.zipcode,
+        language: regionParams.language
       }])
     });
 
@@ -216,8 +252,8 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
       console.log(`❌ [${requestId}] Trigger failed: ${triggerResponse.status} - ${errorText}`);
       console.log(`📋 [${requestId}] Request body was:`, JSON.stringify([{
         url: url,
-        zipcode: '94107',
-        language: ''
+        zipcode: regionParams.zipcode,
+        language: regionParams.language
       }]));
       throw new Error(`Bright Data trigger failed: ${triggerResponse.status} - ${errorText}`);
     }
@@ -230,9 +266,13 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
       throw new Error('No snapshot ID returned from trigger API');
     }
 
-    // Wait for data collection to complete
+    // Wait for data collection to complete with region-specific timeout
     console.log(`⏳ [${requestId}] Waiting for data collection...`);
-    const productData = await waitForBrightDataResults(snapshotId, apiToken, requestId, url);
+    const isInternational = !new URL(url).hostname.includes('amazon.com');
+    const maxAttempts = isInternational ? 60 : 30; // 2 minutes for international, 1 minute for US
+    console.log(`⏱️ [${requestId}] Max attempts: ${maxAttempts} (${isInternational ? 'international' : 'US'} region)`);
+    
+    const productData = await waitForBrightDataResults(snapshotId, apiToken, requestId, url, maxAttempts);
     
     return productData;
     
@@ -327,29 +367,7 @@ async function downloadBrightDataResults(snapshotId: string, apiToken: string, r
   }
 }
 
-/**
- * Determine target weight unit based on marketplace region
- */
-function getTargetWeightUnit(url: string): 'lbs' | 'kg' {
-  try {
-    const domain = new URL(url).hostname.toLowerCase();
-    
-    // US/North America → lbs
-    if (domain.includes('amazon.com') || 
-        domain.includes('amazon.ca') ||
-        domain.includes('walmart.com') || 
-        domain.includes('bestbuy.com') ||
-        domain.includes('ebay.com')) {
-      return 'lbs';
-    }
-    
-    // Rest of world → kg
-    return 'kg';
-  } catch (error) {
-    // Fallback to kg for international markets
-    return 'kg';
-  }
-}
+// Removed getTargetWeightUnit - using native Bright Data values instead
 
 /**
  * Map Bright Data response to our expected product data format
@@ -358,64 +376,53 @@ function mapBrightDataToProductData(brightDataProduct: any, requestId: string, o
   try {
     console.log(`🗺️ [${requestId}] Mapping Bright Data response to product format`);
     
-    // Extract weight value and unit with region-specific conversion
+    // Extract weight value and unit (preserve native Bright Data values)
     let weightValue = null;
-    let weightUnit = getTargetWeightUnit(originalUrl);
+    let weightUnit = null;
     
-    console.log(`🌍 [${requestId}] Target weight unit for ${new URL(originalUrl).hostname}: ${weightUnit}`);
+    console.log(`🌍 [${requestId}] Processing weight for ${new URL(originalUrl).hostname}`);
     
     if (brightDataProduct.item_weight) {
       const weightMatch = brightDataProduct.item_weight.match(/([0-9.]+)\s*(\w+)/i);
       if (weightMatch) {
         weightValue = parseFloat(weightMatch[1]);
-        const sourceUnit = weightMatch[2].toLowerCase();
+        const rawUnit = weightMatch[2].toLowerCase();
         
-        console.log(`⚖️ [${requestId}] Source weight: ${weightValue} ${sourceUnit} → converting to ${weightUnit}`);
-        
-        if (weightUnit === 'lbs') {
-          // Convert to lbs for US/North America
-          if (sourceUnit.includes('gram') || sourceUnit.includes('g')) {
-            weightValue = weightValue / 453.592; // grams to lbs
-          } else if (sourceUnit.includes('kg') || sourceUnit.includes('kilogram')) {
-            weightValue = weightValue * 2.20462; // kg to lbs
-          } else if (sourceUnit.includes('ounce') || sourceUnit.includes('oz')) {
-            weightValue = weightValue / 16; // oz to lbs
-          } else if (sourceUnit.includes('pound') || sourceUnit.includes('lb')) {
-            // Already in lbs, keep as-is
-          }
+        // Standardize unit names (no conversion, just cleanup)
+        if (rawUnit.includes('pound') || rawUnit.includes('lb')) {
+          weightUnit = 'lbs';
+        } else if (rawUnit.includes('kilogram') || rawUnit.includes('kg')) {
+          weightUnit = 'kg';
+        } else if (rawUnit.includes('gram') || rawUnit === 'g') {
+          weightUnit = 'g';
+        } else if (rawUnit.includes('ounce') || rawUnit.includes('oz')) {
+          weightUnit = 'oz';
         } else {
-          // Convert to kg for rest of world
-          if (sourceUnit.includes('gram') || sourceUnit.includes('g')) {
-            weightValue = weightValue / 1000; // grams to kg
-          } else if (sourceUnit.includes('pound') || sourceUnit.includes('lb')) {
-            weightValue = weightValue / 2.20462; // lbs to kg
-          } else if (sourceUnit.includes('ounce') || sourceUnit.includes('oz')) {
-            weightValue = weightValue / 35.274; // oz to kg
-          } else if (sourceUnit.includes('kg') || sourceUnit.includes('kilogram')) {
-            // Already in kg, keep as-is
-          }
+          weightUnit = rawUnit; // Keep original if unknown
         }
         
-        // Round to 3 decimal places for cleaner display
-        weightValue = Math.round(weightValue * 1000) / 1000;
-        console.log(`✅ [${requestId}] Final weight: ${weightValue} ${weightUnit}`);
+        console.log(`⚖️ [${requestId}] Native weight: ${weightValue} ${weightUnit} (no conversion applied)`);
       }
     }
     
-    // Extract numeric price
+    // Extract numeric price (preserve native values)
     let price = null;
-    if (brightDataProduct.final_price) {
-      price = parseFloat(brightDataProduct.final_price.toString().replace(/[^0-9.]/g, ''));
-    } else if (brightDataProduct.initial_price) {
-      price = parseFloat(brightDataProduct.initial_price.toString().replace(/[^0-9.]/g, ''));
+    let currency = brightDataProduct.currency || 'USD';
+    
+    if (brightDataProduct.final_price !== null && brightDataProduct.final_price !== undefined) {
+      price = typeof brightDataProduct.final_price === 'number' ? brightDataProduct.final_price : parseFloat(brightDataProduct.final_price.toString().replace(/[^0-9.]/g, ''));
+    } else if (brightDataProduct.initial_price !== null && brightDataProduct.initial_price !== undefined) {
+      price = typeof brightDataProduct.initial_price === 'number' ? brightDataProduct.initial_price : parseFloat(brightDataProduct.initial_price.toString().replace(/[^0-9.]/g, ''));
     }
+    
+    console.log(`💰 [${requestId}] Native price: ${price} ${currency} (no conversion applied)`);
     
     const productData = {
       title: brightDataProduct.title || 'Unknown Product',
       brand: brightDataProduct.brand || null,
       initial_price: price,
       final_price: price,
-      currency: brightDataProduct.currency || 'USD',
+      currency: currency,
       availability: brightDataProduct.availability || 'Unknown',
       rating: brightDataProduct.rating || 0,
       reviews_count: brightDataProduct.reviews_count || 0,
