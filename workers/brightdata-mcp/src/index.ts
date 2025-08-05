@@ -144,7 +144,7 @@ async function callBrightDataMCP(toolName: string, args: any, apiToken: string, 
 }
 
 /**
- * Call Amazon Product API - Real data only, no mock/fallback data
+ * Call Amazon Product API using proper Bright Data API integration
  */
 async function callAmazonProductAPI(url: string, apiToken: string, requestId: string) {
   const funcStart = Date.now();
@@ -152,7 +152,7 @@ async function callAmazonProductAPI(url: string, apiToken: string, requestId: st
     console.log(`🛒 [${requestId}] callAmazonProductAPI started`);
     console.log(`📡 [${requestId}] Processing Amazon URL: ${url}`);
     
-    // Extract ASIN for real scraping
+    // Extract ASIN for validation
     const asin = extractASIN(url);
     console.log(`🏷️ [${requestId}] Extracted ASIN: ${asin}`);
     
@@ -161,248 +161,240 @@ async function callAmazonProductAPI(url: string, apiToken: string, requestId: st
       throw new Error('Invalid ASIN extracted from URL');
     }
     
-    // Attempt real HTML scraping first
-    console.log(`🌐 [${requestId}] Attempting real HTML scraping for ASIN: ${asin}`);
-    try {
-      const scrapedData = await scrapeAmazonByASIN(asin, requestId);
-      if (scrapedData) {
-        console.log(`✅ [${requestId}] Real HTML scraping successful`);
-        return {
-          content: [{
-            text: JSON.stringify([scrapedData])
-          }]
-        };
-      }
-    } catch (error) {
-      console.log(`⚠️ [${requestId}] HTML scraping failed: ${error.message}`);
+    // Use proper Bright Data API with trigger/monitor/download workflow
+    console.log(`🚀 [${requestId}] Using Bright Data trigger API`);
+    const productData = await triggerBrightDataCollection(url, apiToken, requestId);
+    
+    if (productData) {
+      console.log(`✅ [${requestId}] Bright Data API successful`);
+      return {
+        content: [{
+          text: JSON.stringify([productData])
+        }]
+      };
     }
     
-    // Attempt Bright Data MCP as backup
-    console.log(`🔍 [${requestId}] Attempting Bright Data MCP API call`);
-    try {
-      const realApiResult = await attemptRealBrightDataCall(url, asin, apiToken, requestId);
-      if (realApiResult) {
-        console.log(`✅ [${requestId}] Bright Data API call successful`);
-        return realApiResult;
-      }
-    } catch (error) {
-      console.log(`⚠️ [${requestId}] Bright Data API failed: ${error.message}`);
-    }
-    
-    // No fallback data - return failure
+    // No data found
     const funcDuration = Date.now() - funcStart;
-    console.log(`❌ [${requestId}] All scraping methods failed after ${funcDuration}ms`);
-    throw new Error('Could not extract real product data from any source');
+    console.log(`❌ [${requestId}] No product data found after ${funcDuration}ms`);
+    throw new Error('Could not extract real product data from Bright Data API');
 
   } catch (error) {
     const funcDuration = Date.now() - funcStart;
     console.error(`💥 [${requestId}] Amazon API call failed after ${funcDuration}ms:`, error);
-    // No fallback data - return error
     throw error;
   }
 }
 
 /**
- * Real HTML scraping function for Amazon products by ASIN
+ * Trigger Bright Data collection using proper API workflow
  */
-async function scrapeAmazonByASIN(asin: string, requestId: string) {
+async function triggerBrightDataCollection(url: string, apiToken: string, requestId: string) {
   try {
-    console.log(`🌐 [${requestId}] Scraping Amazon page for ASIN: ${asin}`);
+    console.log(`🚀 [${requestId}] Triggering Bright Data collection`);
     
-    // Build clean Amazon URL
-    const cleanUrl = `https://www.amazon.com/dp/${asin}`;
-    console.log(`📡 [${requestId}] Fetching: ${cleanUrl}`);
+    const DATASET_ID = 'gd_l7q7dkf244hwjntr0';
+    const triggerUrl = `https://api.brightdata.com/datasets/v3/trigger?dataset_id=${DATASET_ID}&include_errors=true`;
     
-    const response = await fetch(cleanUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ProductBot/1.0; +https://iwishbag.com)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    });
-
-    if (!response.ok) {
-      console.log(`❌ [${requestId}] Amazon returned status: ${response.status}`);
-      throw new Error(`Amazon responded with status ${response.status}`);
-    }
-
-    const html = await response.text();
-    console.log(`📄 [${requestId}] HTML received, length: ${html.length} chars`);
-    
-    // Parse the HTML to extract product data
-    const productData = parseAmazonHTML(html, asin, requestId);
-    
-    if (productData) {
-      console.log(`✅ [${requestId}] Successfully parsed product data`);
-      return productData;
-    } else {
-      console.log(`❌ [${requestId}] Could not parse product data from HTML`);
-      return null;
-    }
-    
-  } catch (error) {
-    console.log(`💥 [${requestId}] HTML scraping error:`, error.message);
-    throw error;
-  }
-}
-
-/**
- * Parse Amazon HTML to extract real product data
- */
-function parseAmazonHTML(html: string, asin: string, requestId: string) {
-  try {
-    console.log(`🔍 [${requestId}] Parsing Amazon HTML for product data`);
-
-    // Extract product title
-    let title = null;
-    const titlePatterns = [
-      /<span[^>]+id="productTitle"[^>]*>([^<]+)<\/span>/i,
-      /<h1[^>]+class="[^"]*product[^"]*title[^"]*"[^>]*>([^<]+)<\/h1>/i,
-      /<title>([^<]+)<\/title>/i
-    ];
-    
-    for (const pattern of titlePatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        title = match[1].trim().replace(/\s+/g, ' ');
-        if (title && !title.includes('Amazon.com') && title.length > 5) {
-          console.log(`📝 [${requestId}] Found title: "${title}"`);
-          break;
-        }
-      }
-    }
-
-    // Extract price
-    let price = null;
-    const pricePatterns = [
-      /<span[^>]+class="[^"]*a-price-whole[^"]*"[^>]*>([0-9,]+)<\/span>/i,
-      /<span[^>]+class="[^"]*price[^"]*"[^>]*>\$([0-9,.]+)<\/span>/i,
-      /\$([0-9,]+\.?[0-9]*)/
-    ];
-    
-    for (const pattern of pricePatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        const priceStr = match[1].replace(/,/g, '');
-        const priceNum = parseFloat(priceStr);
-        if (priceNum > 0 && priceNum < 100000) { // Reasonable price range
-          price = priceNum;
-          console.log(`💰 [${requestId}] Found price: $${price}`);
-          break;
-        }
-      }
-    }
-
-    // Extract brand
-    let brand = null;
-    const brandPatterns = [
-      /<a[^>]+id="bylineInfo"[^>]*>([^<]+)<\/a>/i,
-      /<span[^>]+class="[^"]*brand[^"]*"[^>]*>([^<]+)<\/span>/i
-    ];
-    
-    for (const pattern of brandPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        brand = match[1].trim().replace(/^(by |Brand: )/i, '');
-        if (brand && brand.length > 0) {
-          console.log(`🏪 [${requestId}] Found brand: "${brand}"`);
-          break;
-        }
-      }
-    }
-
-    // Extract weight from shipping/product details
-    let weight = null;
-    const weightPatterns = [
-      /shipping\s+weight:?\s*([0-9.]+)\s*(pounds?|lbs?)/i,
-      /item\s+weight:?\s*([0-9.]+)\s*(pounds?|lbs?)/i,
-      /weight:?\s*([0-9.]+)\s*(pounds?|lbs?)/i
-    ];
-    
-    for (const pattern of weightPatterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) {
-        const weightNum = parseFloat(match[1]);
-        if (weightNum > 0 && weightNum < 1000) { // Reasonable weight range
-          weight = weightNum;
-          console.log(`⚖️ [${requestId}] Found weight: ${weight} lbs`);
-          break;
-        }
-      }
-    }
-
-    // Only return data if we have at least a title
-    if (title) {
-      const productData = {
-        title: title,
-        brand: brand || null,
-        initial_price: price || null,
-        final_price: price || null,
-        currency: "USD",
-        availability: "Unknown", // Would need more parsing for this
-        asin: asin,
-        url: `https://www.amazon.com/dp/${asin}`,
-        item_weight: weight ? `${weight} lbs` : null,
-        timestamp: new Date().toISOString(),
-        source: "html_scraping"
-      };
-
-      console.log(`✅ [${requestId}] Successfully extracted product data`);
-      return productData;
-    } else {
-      console.log(`❌ [${requestId}] Could not extract minimum required data (title)`);
-      return null;
-    }
-
-  } catch (error) {
-    console.log(`💥 [${requestId}] HTML parsing error:`, error.message);
-    return null;
-  }
-}
-
-/**
- * Attempt real Bright Data API call for clean ASIN URLs
- */
-async function attemptRealBrightDataCall(url: string, asin: string, apiToken: string, requestId: string) {
-  try {
-    console.log(`🌐 [${requestId}] Attempting real Bright Data MCP API...`);
-    
-    // Try the MCP endpoint first
-    const response = await fetch(`https://mcp.brightdata.com/mcp?token=${apiToken}`, {
+    // Trigger data collection
+    console.log(`📡 [${requestId}] POST ${triggerUrl}`);
+    const triggerResponse = await fetch(triggerUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/event-stream',
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: Math.random().toString(36).substring(7),
-        method: "tools/call",
-        params: {
-          name: "web_data_amazon_product",
-          arguments: { url: url }
-        }
-      }),
+      body: JSON.stringify([{
+        url: url,
+        zipcode: '94107', // Default US zipcode
+        language: 'en'
+      }])
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`📡 [${requestId}] Real API response:`, JSON.stringify(data, null, 2));
+    if (!triggerResponse.ok) {
+      const errorText = await triggerResponse.text();
+      console.log(`❌ [${requestId}] Trigger failed: ${triggerResponse.status} - ${errorText}`);
+      console.log(`📋 [${requestId}] Request body was:`, JSON.stringify([{
+        url: url,
+        zipcode: '94107',
+        language: 'en'
+      }]));
+      throw new Error(`Bright Data trigger failed: ${triggerResponse.status} - ${errorText}`);
+    }
+
+    const triggerData = await triggerResponse.json();
+    const snapshotId = triggerData.snapshot_id;
+    console.log(`📸 [${requestId}] Snapshot ID: ${snapshotId}`);
+    
+    if (!snapshotId) {
+      throw new Error('No snapshot ID returned from trigger API');
+    }
+
+    // Wait for data collection to complete
+    console.log(`⏳ [${requestId}] Waiting for data collection...`);
+    const productData = await waitForBrightDataResults(snapshotId, apiToken, requestId);
+    
+    return productData;
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] Bright Data collection error:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Wait for Bright Data results and download when ready
+ */
+async function waitForBrightDataResults(snapshotId: string, apiToken: string, requestId: string, maxAttempts: number = 30) {
+  try {
+    console.log(`⏳ [${requestId}] Monitoring snapshot: ${snapshotId}`);
+    
+    const progressUrl = `https://api.brightdata.com/datasets/v3/progress/${snapshotId}`;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`🔍 [${requestId}] Progress check ${attempt}/${maxAttempts}`);
       
-      if (data.result && data.result.content) {
-        return data.result;
+      const progressResponse = await fetch(progressUrl, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+      
+      if (!progressResponse.ok) {
+        console.log(`❌ [${requestId}] Progress check failed: ${progressResponse.status}`);
+        throw new Error(`Progress check failed: ${progressResponse.status}`);
+      }
+      
+      const progressData = await progressResponse.json();
+      console.log(`📊 [${requestId}] Status: ${progressData.status}`);
+      
+      if (progressData.status === 'ready') {
+        console.log(`✅ [${requestId}] Data collection complete, downloading...`);
+        return await downloadBrightDataResults(snapshotId, apiToken, requestId);
+      } else if (progressData.status === 'failed') {
+        throw new Error('Bright Data collection failed');
+      }
+      
+      // Wait 2 seconds before next check
+      if (attempt < maxAttempts) {
+        console.log(`⏱️ [${requestId}] Waiting 2s before next check...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
     
-    return null;
+    throw new Error('Timeout waiting for Bright Data results');
+    
   } catch (error) {
-    console.log(`❌ [${requestId}] Real API attempt failed:`, error.message);
-    return null;
+    console.log(`💥 [${requestId}] Wait for results error:`, error.message);
+    throw error;
   }
 }
+
+/**
+ * Download and parse Bright Data results
+ */
+async function downloadBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`📥 [${requestId}] Downloading results for snapshot: ${snapshotId}`);
+    
+    const downloadUrl = `https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`;
+    
+    const downloadResponse = await fetch(downloadUrl, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!downloadResponse.ok) {
+      console.log(`❌ [${requestId}] Download failed: ${downloadResponse.status}`);
+      throw new Error(`Download failed: ${downloadResponse.status}`);
+    }
+    
+    const resultsData = await downloadResponse.json();
+    console.log(`📋 [${requestId}] Downloaded ${Array.isArray(resultsData) ? resultsData.length : 1} result(s)`);
+    
+    if (!Array.isArray(resultsData) || resultsData.length === 0) {
+      throw new Error('No product data in results');
+    }
+    
+    // Map Bright Data response to our format
+    const productData = mapBrightDataToProductData(resultsData[0], requestId);
+    return productData;
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] Download results error:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Map Bright Data response to our expected product data format
+ */
+function mapBrightDataToProductData(brightDataProduct: any, requestId: string) {
+  try {
+    console.log(`🗺️ [${requestId}] Mapping Bright Data response to product format`);
+    
+    // Extract weight value and unit
+    let weightValue = null;
+    let weightUnit = 'lbs';
+    
+    if (brightDataProduct.item_weight) {
+      const weightMatch = brightDataProduct.item_weight.match(/([0-9.]+)\s*(\w+)/i);
+      if (weightMatch) {
+        weightValue = parseFloat(weightMatch[1]);
+        weightUnit = weightMatch[2].toLowerCase();
+        
+        // Convert to kg if needed
+        if (weightUnit.includes('ounce') || weightUnit.includes('oz')) {
+          weightValue = weightValue * 0.028; // oz to kg
+        } else if (weightUnit.includes('pound') || weightUnit.includes('lb')) {
+          weightValue = weightValue * 0.453; // lbs to kg
+        }
+      }
+    }
+    
+    // Extract numeric price
+    let price = null;
+    if (brightDataProduct.final_price) {
+      price = parseFloat(brightDataProduct.final_price.toString().replace(/[^0-9.]/g, ''));
+    } else if (brightDataProduct.initial_price) {
+      price = parseFloat(brightDataProduct.initial_price.toString().replace(/[^0-9.]/g, ''));
+    }
+    
+    const productData = {
+      title: brightDataProduct.title || 'Unknown Product',
+      brand: brightDataProduct.brand || null,
+      initial_price: price,
+      final_price: price,
+      currency: brightDataProduct.currency || 'USD',
+      availability: brightDataProduct.availability || 'Unknown',
+      rating: brightDataProduct.rating || 0,
+      reviews_count: brightDataProduct.reviews_count || 0,
+      description: brightDataProduct.description || '',
+      images: brightDataProduct.images || [],
+      asin: brightDataProduct.asin || brightDataProduct.parent_asin,
+      url: brightDataProduct.url || brightDataProduct.origin_url,
+      item_weight: brightDataProduct.item_weight,
+      weight_value: weightValue,
+      weight_unit: 'kg',
+      categories: brightDataProduct.categories || [],
+      features: brightDataProduct.features || [],
+      manufacturer: brightDataProduct.manufacturer,
+      model_number: brightDataProduct.model_number,
+      timestamp: new Date().toISOString(),
+      source: 'brightdata_api'
+    };
+    
+    console.log(`✅ [${requestId}] Successfully mapped product data: ${productData.title}`);
+    return productData;
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] Mapping error:`, error.message);
+    throw error;
+  }
+}
+
+// Removed - now using proper Bright Data API workflow
 
 // Mock data functions removed - real data only approach
 
