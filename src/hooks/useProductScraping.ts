@@ -33,7 +33,7 @@ export interface UseProductScrapingResult {
   };
 }
 
-export const useProductScraping = (initialUrl?: string): UseProductScrapingResult => {
+export const useProductScraping = (initialUrl?: string, deliveryCountry?: string): UseProductScrapingResult => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScraped, setIsScraped] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +61,7 @@ export const useProductScraping = (initialUrl?: string): UseProductScrapingResul
         includeImages: true,
         includeVariants: true,
         enhanceWithAI: true,
+        deliveryCountry, // Pass delivery country for regional URL processing
         ...options
       };
 

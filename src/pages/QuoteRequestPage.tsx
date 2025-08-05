@@ -40,8 +40,9 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
   const urlAnalysis = useUrlAutoDetection(currentUrl);
   const { data: purchaseCountries = [] } = usePurchaseCountries();
   
-  // Product scraping integration
-  const productScraping = useProductScraping(currentUrl);
+  // Product scraping integration with delivery country
+  const deliveryCountry = form.watch('destination_country');
+  const productScraping = useProductScraping(currentUrl, deliveryCountry);
   
   // Auto-detect country when URL changes
   useEffect(() => {
@@ -167,7 +168,7 @@ function ProductItem({ item, index, form, sortedCountries, loadingCountries, onR
               </FormLabel>
               <FormControl>
                 <Input 
-                  placeholder="https://amazon.com/..." 
+                  placeholder="https://amazon.com/..., https://zara.com/..., https://lego.com/..." 
                   {...field} 
                   className={productScraping.isScraped ? 'border-green-200 bg-green-50/30' : ''}
                 />

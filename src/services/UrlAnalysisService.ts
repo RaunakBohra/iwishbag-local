@@ -327,12 +327,132 @@ class UrlAnalysisService {
       }
     }
 
-    // Future: Add other platform-specific URL pattern detection here
-    // e.g., Zara, Nike, Adidas regional URL patterns
+    // Zara country detection (pattern: /country/en/ or /country/)
+    if (domain.includes('zara.com')) {
+      // Zara regional URLs like:
+      // https://www.zara.com/in/en/
+      // https://www.zara.com/us/
+      // https://www.zara.com/uk/
+      const zaraCountryMatch = urlLower.match(/zara\.com\/([a-z]{2})(?:\/|$)/);
+      if (zaraCountryMatch) {
+        const countryCode = zaraCountryMatch[1].toUpperCase();
+        // Map some special cases
+        if (countryCode === 'UK') return 'GB'; // UK -> GB for consistency
+        return countryCode;
+      }
+      
+      // Fallback patterns for Zara regional URLs
+      if (urlLower.includes('/in/en/')) return 'IN';
+      if (urlLower.includes('/us/')) return 'US';
+      if (urlLower.includes('/uk/')) return 'GB';
+      if (urlLower.includes('/de/')) return 'DE';
+      if (urlLower.includes('/fr/')) return 'FR';
+      if (urlLower.includes('/es/')) return 'ES';
+      if (urlLower.includes('/it/')) return 'IT';
+      if (urlLower.includes('/ca/')) return 'CA';
+      if (urlLower.includes('/au/')) return 'AU';
+      if (urlLower.includes('/jp/')) return 'JP';
+      if (urlLower.includes('/kr/')) return 'KR';
+      if (urlLower.includes('/mx/')) return 'MX';
+      if (urlLower.includes('/br/')) return 'BR';
+      if (urlLower.includes('/ar/')) return 'AR';
+      if (urlLower.includes('/cl/')) return 'CL';
+      if (urlLower.includes('/co/')) return 'CO';
+      if (urlLower.includes('/pe/')) return 'PE';
+      return 'ES'; // Zara default (Spanish company)
+    }
+
+    // Future: Add Nike, Adidas, and other platform-specific URL pattern detection here
     
     return null;
   }
   
+  /**
+   * Convert URL to country-specific format for supported platforms
+   * This is used to ensure scraping works with the correct regional site
+   */
+  processUrlForCountry(url: string, targetCountry: string): string {
+    try {
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname.replace('www.', '').toLowerCase();
+      
+      // Zara URL processing
+      if (domain.includes('zara.com')) {
+        return this.processZaraUrlForCountry(url, targetCountry);
+      }
+      
+      // H&M URL processing (if needed)
+      if (domain.includes('hm.com')) {
+        return this.processHMUrlForCountry(url, targetCountry);
+      }
+      
+      // Return original URL if no processing needed
+      return url;
+    } catch (error) {
+      console.warn('URL processing failed:', error);
+      return url;
+    }
+  }
+
+  /**
+   * Process Zara URL to ensure correct regional format
+   */
+  private processZaraUrlForCountry(url: string, targetCountry: string): string {
+    try {
+      const urlObj = new URL(url);
+      
+      // Map target country to Zara regional codes
+      const countryToZaraRegion: Record<string, string> = {
+        'IN': 'in/en',
+        'US': 'us',
+        'GB': 'uk',
+        'CA': 'ca',
+        'AU': 'au',
+        'DE': 'de',
+        'FR': 'fr',
+        'ES': 'es',
+        'IT': 'it',
+        'JP': 'jp',
+        'KR': 'kr',
+        'MX': 'mx',
+        'BR': 'br',
+        'AR': 'ar',
+        'CL': 'cl',
+        'CO': 'co',
+        'PE': 'pe'
+      };
+      
+      const zaraRegion = countryToZaraRegion[targetCountry] || 'us'; // Default to US
+      
+      // Check if URL already has correct region
+      if (url.includes(`zara.com/${zaraRegion}/`)) {
+        return url;
+      }
+      
+      // Remove existing region from path if any
+      let pathname = urlObj.pathname;
+      // Remove patterns like /in/en/, /us/, /uk/, etc.
+      pathname = pathname.replace(/^\/[a-z]{2}(?:\/[a-z]{2})?\//, '/');
+      
+      // Construct new URL with correct region
+      const newUrl = `${urlObj.protocol}//${urlObj.hostname}/${zaraRegion}${pathname}${urlObj.search}${urlObj.hash}`;
+      
+      console.log(`🔄 Zara URL conversion: ${targetCountry} -> ${newUrl}`);
+      return newUrl;
+    } catch (error) {
+      console.warn('Zara URL processing failed:', error);
+      return url;
+    }
+  }
+
+  /**
+   * Process H&M URL to ensure correct regional format
+   */
+  private processHMUrlForCountry(url: string, targetCountry: string): string {
+    // H&M URL processing logic can be added here if needed
+    return url;
+  }
+
   /**
    * Get alternative domain suggestion for a different country
    */

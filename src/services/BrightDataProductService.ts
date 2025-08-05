@@ -5,6 +5,7 @@
  */
 
 import { ProductData, FetchResult } from './ProductDataFetchService';
+import { urlAnalysisService } from './UrlAnalysisService';
 
 export interface BrightDataConfig {
   apiToken: string;
@@ -16,6 +17,7 @@ export interface ScrapeOptions {
   includeImages?: boolean;
   includeVariants?: boolean;
   enhanceWithAI?: boolean;
+  deliveryCountry?: string; // For regional URL processing (e.g., 'IN', 'US', 'GB')
 }
 
 /**
@@ -26,17 +28,23 @@ const PLATFORM_CONFIGS = {
     scraperType: 'amazon_product',
     fields: ['title', 'price', 'currency', 'images', 'weight', 'brand', 'availability', 'rating', 'reviews_count'],
     weightSelectors: ['shipping_weight', 'item_weight', 'package_weight'],
-    currencyMap: { '$': 'USD', '£': 'GBP', '€': 'EUR', '¥': 'JPY' }
+    currencyMap: { '$': 'USD', '£': 'GBP', '€': 'EUR', '¥': 'JPY' },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   ebay: {
     scraperType: 'ebay_product',
     fields: ['title', 'price', 'currency', 'images', 'condition', 'shipping'],
-    currencyDetection: true
+    currencyDetection: true,
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   walmart: {
     scraperType: 'walmart_product',
     fields: ['title', 'price', 'images', 'brand', 'model', 'specifications'],
-    defaultCurrency: 'USD'
+    defaultCurrency: 'USD',
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   bestbuy: {
     scraperType: 'bestbuy_products',
@@ -60,7 +68,9 @@ const PLATFORM_CONFIGS = {
       'Cameras': 'electronics',
       'Cell Phones': 'electronics',
       'Video Games': 'electronics'
-    }
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   ae: {
     scraperType: 'ae_product',
@@ -77,13 +87,17 @@ const PLATFORM_CONFIGS = {
       'Dresses': 'fashion',
       'Tops': 'fashion',
       'Clearance': 'fashion'
-    }
+    },
+    estimatedTime: '5-30 minutes',
+    pollingInterval: '5 minutes'
   },
   myntra: {
     scraperType: 'myntra_product',
     fields: ['title', 'final_price', 'currency', 'images', 'brand', 'specifications', 'offers'],
     fashionFocus: true,
-    defaultCurrency: 'INR'
+    defaultCurrency: 'INR',
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   target: {
     scraperType: 'target_product',
@@ -102,7 +116,9 @@ const PLATFORM_CONFIGS = {
       'Beauty': 'beauty-health',
       'Toys': 'toys',
       'Books': 'books'
-    }
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   hm: {
     scraperType: 'hm_product',
@@ -121,13 +137,289 @@ const PLATFORM_CONFIGS = {
       'Home': 'home',
       'Beauty': 'beauty-health',
       'Sport': 'sports'
-    }
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  asos: {
+    scraperType: 'asos_product',
+    fields: ['name', 'price', 'currency', 'image', 'brand', 'color', 'size', 'availability'],
+    fashionFocus: true,
+    defaultCurrency: 'USD',
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  etsy: {
+    scraperType: 'etsy_product',
+    fields: [
+      'title', 'final_price', 'initial_price', 'currency', 'images', 'rating',
+      'reviews_count_item', 'reviews_count_shop', 'seller_name', 'seller_shop_name',
+      'product_id', 'specifications', 'variations', 'top_reviews', 'category_tree',
+      'breadcrumbs', 'item_details', 'shipping_return_policies', 'discount_percentage'
+    ],
+    handmadeFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'Art & Collectibles': 'art',
+      'Prints': 'art',
+      'Digital Prints': 'art',
+      'Jewelry': 'jewelry',
+      'Clothing': 'fashion',
+      'Home & Living': 'home',
+      'Craft Supplies': 'crafts',
+      'Vintage': 'vintage',
+      'Wedding': 'wedding',
+      'Toys & Games': 'toys'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  zara: {
+    scraperType: 'zara_product',
+    fields: [
+      'product_name', 'price', 'currency', 'colour', 'color', 'size', 'description', 
+      'image[]', 'availability', 'low_on_stock', 'sku', 'product_id', 'section',
+      'product_family', 'product_subfamily', 'care', 'materials', 'dimension'
+    ],
+    fashionFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'WOMAN': 'fashion-women',
+      'MAN': 'fashion-men', 
+      'KIDS': 'fashion-kids',
+      'KID': 'fashion-kids',
+      'DRESS': 'fashion',
+      'SHIRT': 'fashion',
+      'PANTS': 'fashion',
+      'JACKET': 'fashion',
+      'SKIRT': 'fashion',
+      'SHOES': 'footwear',
+      'ACCESSORIES': 'accessories',
+      'BAGS': 'bags'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  lego: {
+    scraperType: 'lego_product',
+    fields: [
+      'product_name', 'initial_price', 'final_price', 'currency', 'image_urls[]', 
+      'main_image', 'rating', 'reviews_count', 'description', 'in_stock',
+      'age_range', 'piece_count', 'product_code', 'features[]', 'brand',
+      'manufacturer', 'category', 'bullet_text', 'vip_points'
+    ],
+    toysFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'Architecture': 'building-sets',
+      'City': 'building-sets',
+      'Creator': 'building-sets', 
+      'Friends': 'building-sets',
+      'Star Wars': 'building-sets',
+      'Technic': 'building-sets',
+      'DUPLO': 'early-learning',
+      'Classic': 'building-sets',
+      'Ninjago': 'building-sets',
+      'Harry Potter': 'building-sets',
+      'Disney': 'building-sets'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  hermes: {
+    scraperType: 'hermes_product',
+    fields: [
+      'product_name', 'initial_price', 'final_price', 'currency', 'image_urls[]',
+      'main_image', 'description', 'in_stock', 'size', 'color', 'brand',
+      'category_name', 'sku', 'material', 'country', 'product_details'
+    ],
+    luxuryFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'Bags': 'luxury-bags',
+      'Scarves': 'luxury-accessories',
+      'Jewelry': 'luxury-jewelry',
+      'Watches': 'luxury-watches',
+      'Belts': 'luxury-accessories',
+      'Perfume': 'luxury-fragrance',
+      'Ready-to-wear': 'luxury-fashion',
+      'Shoes': 'luxury-footwear',
+      'Home': 'luxury-home'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   },
   flipkart: {
     scraperType: 'flipkart_product',
     fields: ['title', 'final_price', 'currency', 'brand', 'specifications', 'highlights', 'rating'],
     defaultCurrency: 'INR',
-    fallbackToMarkdown: true
+    fallbackToMarkdown: true,
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  toysrus: {
+    scraperType: 'toysrus_product',
+    fields: [
+      'product_name', 'brand', 'initial_price', 'final_price', 'currency', 'image_urls[]',
+      'main_image', 'description', 'in_stock', 'weight', 'model_number', 'rating',
+      'reviews_count', 'category_tree[]', 'delivery[]', 'gtin_ean_pn'
+    ],
+    toysFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'Home': 'toys-general',
+      'Outdoor': 'outdoor-toys', 
+      'Educational': 'educational-toys',
+      'Action Figures': 'action-figures',
+      'Dolls': 'dolls',
+      'Building': 'building-sets',
+      'Electronic': 'electronic-toys'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  carters: {
+    scraperType: 'carters_product',
+    fields: [
+      'product_name', 'description', 'in_stock', 'color', 'size', 'reviews_count',
+      'category', 'features[]', 'similar_products[]', 'other_attributes[]',
+      'image_urls[]', 'brand', 'initial_price', 'final_price', 'currency'
+    ],
+    babyClothingFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'Baby': 'baby-clothing',
+      'Toddler': 'toddler-clothing', 
+      'Kids': 'kids-clothing',
+      'Newborn': 'newborn-clothing',
+      'Pajamas': 'sleepwear',
+      'Accessories': 'baby-accessories',
+      'Socks & Tights': 'baby-socks'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  prada: {
+    scraperType: 'prada_product',
+    fields: [
+      'product_name', 'description', 'in_stock', 'size', 'color', 'initial_price',
+      'final_price', 'currency', 'image_urls[]', 'brand', 'category_name',
+      'breadcrumbs[]', 'sku', 'material', 'product_details', 'variations[]',
+      'features', 'dimensions', 'tags'
+    ],
+    luxuryFocus: true,
+    defaultCurrency: 'EUR',
+    categoryMapping: {
+      'Totes': 'luxury-bags',
+      'Handbags': 'luxury-bags',
+      'Shoes': 'luxury-footwear',
+      'Sneakers': 'luxury-sneakers',
+      'Ready-to-wear': 'luxury-fashion',
+      'Accessories': 'luxury-accessories',
+      'Eyewear': 'luxury-eyewear'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  ysl: {
+    scraperType: 'ysl_product',
+    fields: [
+      'product_name', 'description', 'in_stock', 'size', 'color', 'initial_price',
+      'final_price', 'currency', 'image_urls[]', 'brand', 'category_name',
+      'breadcrumbs[]', 'sku', 'material', 'product_details', 'features[]',
+      'dimensions', 'tags[]', 'variations[]'
+    ],
+    luxuryFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'small-leather-goods-women': 'luxury-accessories',
+      'handbags-woman': 'luxury-bags',
+      'shoes-woman': 'luxury-footwear',
+      'ready-to-wear-woman': 'luxury-fashion',
+      'beauty': 'luxury-beauty',
+      'fragrance': 'luxury-fragrance',
+      'jewelry': 'luxury-jewelry'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  balenciaga: {
+    scraperType: 'balenciaga_product',
+    fields: [
+      'product_name', 'description', 'country', 'currency', 'in_stock', 'size', 
+      'color', 'main_image', 'category_url', 'category_name', 'category_path',
+      'url', 'sku', 'root_category_url', 'root_category_name', 'breadcrumbs[]',
+      'seller', 'brand', 'image_urls[]', 'product_details', 'product_story',
+      'features[]', 'dimensions', 'variations[]', 'tags[]', 'gtin', 'mpn',
+      'material', 'product_id', 'initial_price', 'final_price', 'reviews_count', 'top_reviews[]'
+    ],
+    luxuryFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'Sneakers': 'luxury-sneakers',
+      'Shoes': 'luxury-footwear',
+      'Bags': 'luxury-bags',
+      'Handbags': 'luxury-bags',
+      'Ready-to-wear': 'luxury-fashion',
+      'Accessories': 'luxury-accessories',
+      'Jewelry': 'luxury-jewelry',
+      'Sunglasses': 'luxury-eyewear'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  dior: {
+    scraperType: 'dior_product',
+    fields: [
+      'timestamp', 'product_name', 'description', 'country', 'currency', 'in_stock',
+      'size', 'color', 'main_image', 'category_url', 'category_name', 'category_path',
+      'url', 'sku', 'root_category_url', 'root_category_name', 'breadcrumbs[]',
+      'seller', 'brand', 'image_urls[]', 'product_details', 'product_story',
+      'features[]', 'dimensions', 'variations[]', 'tags[]', 'gtin', 'mpn',
+      'material', 'product_id', 'initial_price', 'final_price', 'reviews_count', 'top_reviews[]'
+    ],
+    luxuryFocus: true,
+    defaultCurrency: 'EUR',
+    categoryMapping: {
+      'Sakkos': 'luxury-fashion',
+      'Jacken': 'luxury-fashion',
+      'Hemden': 'luxury-fashion',
+      'Hosen': 'luxury-fashion',
+      'Schuhe': 'luxury-footwear',
+      'Taschen': 'luxury-bags',
+      'Accessories': 'luxury-accessories',
+      'Parfum': 'luxury-fragrance',
+      'Make-up': 'luxury-beauty',
+      'Schmuck': 'luxury-jewelry'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
+  },
+  chanel: {
+    scraperType: 'chanel_product',
+    fields: [
+      'product_name', 'product_description', 'country', 'currency', 'color',
+      'variations[]', 'free_sample', 'image_slider[]', 'loyalty_points',
+      'member_price', 'pdp_plus', 'product_brand', 'product_gift[]',
+      'product_url', 'regular_price', 'retailer_price', 'material',
+      'product_category', 'image', 'shade', 'sku', 'stock', 'stock_availability',
+      'type', 'volume', 'video[]', 'breadcrumbs[]', 'url'
+    ],
+    luxuryFocus: true,
+    defaultCurrency: 'VND', // Chanel has VND pricing in sample data
+    categoryMapping: {
+      'Kính mát dáng phi công': 'luxury-eyewear',
+      'Mắt kính': 'luxury-eyewear',
+      'Kính mát': 'luxury-eyewear',
+      'Make-up': 'luxury-beauty',
+      'Parfum': 'luxury-fragrance',
+      'Handbags': 'luxury-bags',
+      'Ready-to-wear': 'luxury-fashion',
+      'Jewelry': 'luxury-jewelry',
+      'Watches': 'luxury-watches'
+    },
+    estimatedTime: '15-60 seconds',
+    pollingInterval: '15 seconds'
   }
 };
 
@@ -137,6 +429,75 @@ class BrightDataProductService {
 
   constructor(private config: BrightDataConfig) {
     this.cacheTimeout = config.cacheTimeout || 30 * 60 * 1000; // 30 minutes default
+  }
+
+  /**
+   * Get platform-specific timing information for user feedback
+   */
+  getPlatformTimingInfo(url: string): { estimatedTime: string; pollingInterval: string } {
+    const platform = this.detectPlatform(url);
+    if (!platform) {
+      return { estimatedTime: '15-60 seconds', pollingInterval: '15 seconds' };
+    }
+
+    const config = PLATFORM_CONFIGS[platform as keyof typeof PLATFORM_CONFIGS];
+    return {
+      estimatedTime: config?.estimatedTime || '15-60 seconds',
+      pollingInterval: config?.pollingInterval || '15 seconds'
+    };
+  }
+
+  /**
+   * Get user-friendly status message for a platform
+   */
+  getPlatformStatusMessage(url: string, status: 'starting' | 'polling' | 'completed' | 'failed'): string {
+    const platform = this.detectPlatform(url);
+    const platformName = this.getPlatformDisplayName(platform);
+    const timing = this.getPlatformTimingInfo(url);
+
+    switch (status) {
+      case 'starting':
+        return `Starting ${platformName} product data collection. Expected time: ${timing.estimatedTime}...`;
+      case 'polling':
+        return `Collecting ${platformName} product data (checking every ${timing.pollingInterval})...`;
+      case 'completed':
+        return `Successfully collected ${platformName} product data!`;
+      case 'failed':
+        return `Failed to collect ${platformName} product data. Please try again.`;
+      default:
+        return `Processing ${platformName} product data...`;
+    }
+  }
+
+  /**
+   * Get display-friendly platform name
+   */
+  private getPlatformDisplayName(platform: string | null): string {
+    const displayNames: Record<string, string> = {
+      'amazon': 'Amazon',
+      'ebay': 'eBay',
+      'walmart': 'Walmart',
+      'bestbuy': 'Best Buy',
+      'ae': 'American Eagle',
+      'myntra': 'Myntra',
+      'target': 'Target',
+      'hm': 'H&M',
+      'asos': 'ASOS',
+      'etsy': 'Etsy',
+      'zara': 'Zara',
+      'lego': 'LEGO',
+      'hermes': 'Hermès',
+      'flipkart': 'Flipkart',
+      'toysrus': 'Toys"R"Us',
+      'carters': 'Carter\'s',
+      'prada': 'Prada',
+      'ysl': 'Yves Saint Laurent',
+      'balenciaga': 'Balenciaga',
+      'dior': 'Dior',
+      'chanel': 'Chanel'
+    };
+    
+    return displayNames[platform || 'unknown'] || 'Product';
   }
 
   /**
@@ -189,8 +550,41 @@ class BrightDataProductService {
         case 'asos':
           result = await this.scrapeASOSProduct(url, options);
           break;
+        case 'etsy':
+          result = await this.scrapeEtsyProduct(url, options);
+          break;
+        case 'zara':
+          result = await this.scrapeZaraProduct(url, options);
+          break;
+        case 'lego':
+          result = await this.scrapeLegoProduct(url, options);
+          break;
+        case 'hermes':
+          result = await this.scrapeHermesProduct(url, options);
+          break;
         case 'flipkart':
           result = await this.scrapeFlipkartProduct(url, options);
+          break;
+        case 'toysrus':
+          result = await this.scrapeToysrusProduct(url, options);
+          break;
+        case 'carters':
+          result = await this.scrapeCartersProduct(url, options);
+          break;
+        case 'prada':
+          result = await this.scrapePradaProduct(url, options);
+          break;
+        case 'ysl':
+          result = await this.scrapeYSLProduct(url, options);
+          break;
+        case 'balenciaga':
+          result = await this.scrapeBalenciagaProduct(url, options);
+          break;
+        case 'dior':
+          result = await this.scrapeDiorProduct(url, options);
+          break;
+        case 'chanel':
+          result = await this.scrapeChanelProduct(url, options);
           break;
         default:
           result = await this.scrapeGenericProduct(url, options);
@@ -530,6 +924,151 @@ class BrightDataProductService {
   }
 
   /**
+   * Scrape Etsy product using Bright Data MCP
+   */
+  private async scrapeEtsyProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('etsy_product', {
+        url,
+        include_specifications: true,
+        include_variations: options.includeVariants !== false,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_seller_info: true,
+        include_shipping_policies: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Etsy scraping failed');
+      }
+
+      const productData = this.normalizeEtsyData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Etsy scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Zara product using Bright Data MCP
+   */
+  private async scrapeZaraProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      // Process URL to ensure correct regional format for better scraping
+      let processedUrl = url;
+      if (options.deliveryCountry) {
+        processedUrl = urlAnalysisService.processUrlForCountry(url, options.deliveryCountry);
+        console.log(`🌍 Zara URL processed for ${options.deliveryCountry}: ${url} -> ${processedUrl}`);
+      }
+      
+      const mcpResult = await this.callBrightDataMCP('zara_product', {
+        url: processedUrl,
+        include_sections: true,
+        include_materials: options.includeVariants !== false,
+        include_care_instructions: true,
+        include_size_variants: options.includeVariants !== false
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Zara scraping failed');
+      }
+
+      const productData = this.normalizeZaraData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Zara scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape LEGO product using Bright Data MCP
+   */
+  private async scrapeLegoProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('lego_product', {
+        url,
+        include_features: true,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_related_products: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'LEGO scraping failed');
+      }
+
+      const productData = this.normalizeLegoData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'LEGO scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Hermes product using Bright Data MCP
+   */
+  private async scrapeHermesProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('hermes_product', {
+        url,
+        include_materials: true,
+        include_product_details: true,
+        include_dimensions: true,
+        include_craftsmanship: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Hermes scraping failed');
+      }
+
+      const productData = this.normalizeHermesData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Hermes scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
    * Scrape Flipkart product using Bright Data MCP
    */
   private async scrapeFlipkartProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
@@ -557,6 +1096,253 @@ class BrightDataProductService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Flipkart scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Toys"R"Us product using Bright Data MCP
+   */
+  private async scrapeToysrusProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('toysrus_product', {
+        url,
+        include_specifications: true,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_variants: options.includeVariants !== false
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Toys"R"Us scraping failed');
+      }
+
+      const productData = this.normalizeToysrusData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Toys"R"Us scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Carter's product using Bright Data MCP
+   */
+  private async scrapeCartersProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('carters_product', {
+        url,
+        include_features: true,
+        include_similar_products: options.includeVariants !== false,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_attributes: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Carter\'s scraping failed');
+      }
+
+      const productData = this.normalizeCartersData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Carter\'s scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Prada product using Bright Data MCP
+   */
+  private async scrapePradaProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('prada_product', {
+        url,
+        include_variations: options.includeVariants !== false,
+        include_materials: true,
+        include_details: true,
+        include_images: options.includeImages !== false,
+        include_breadcrumbs: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Prada scraping failed');
+      }
+
+      const productData = this.normalizePradaData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Prada scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape YSL product using Bright Data MCP
+   */
+  private async scrapeYSLProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('ysl_product', {
+        url,
+        include_features: true,
+        include_variations: options.includeVariants !== false,
+        include_materials: true,
+        include_dimensions: true,
+        include_images: options.includeImages !== false,
+        include_tags: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'YSL scraping failed');
+      }
+
+      const productData = this.normalizeYSLData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'YSL scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Balenciaga product using Bright Data MCP
+   */
+  private async scrapeBalenciagaProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('balenciaga_product', {
+        url,
+        include_features: true,
+        include_variations: options.includeVariants !== false,
+        include_materials: true,
+        include_dimensions: true,
+        include_images: options.includeImages !== false,
+        include_tags: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Balenciaga scraping failed');
+      }
+
+      const productData = this.normalizeBalenciagaData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Balenciaga scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Dior product using Bright Data MCP
+   */
+  private async scrapeDiorProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('dior_product', {
+        url,
+        include_features: true,
+        include_variations: options.includeVariants !== false,
+        include_materials: true,
+        include_dimensions: true,
+        include_images: options.includeImages !== false,
+        include_tags: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Dior scraping failed');
+      }
+
+      const productData = this.normalizeDiorData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Dior scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Chanel product using Bright Data MCP
+   */
+  private async scrapeChanelProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('chanel_product', {
+        url,
+        include_images: options.includeImages !== false,
+        include_variations: options.includeVariants !== false,
+        include_material: true,
+        include_color: true,
+        include_breadcrumbs: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Chanel scraping failed');
+      }
+
+      const productData = this.normalizeChanelData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Chanel scraping failed',
         source: 'scraper'
       };
     }
@@ -616,8 +1402,30 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeHMProduct(params.url, params);
       case 'asos_product':
         return await mcpBrightDataBridge.scrapeASOSProduct(params.url, params);
+      case 'etsy_product':
+        return await mcpBrightDataBridge.scrapeEtsyProduct(params.url, params);
+      case 'zara_product':
+        return await mcpBrightDataBridge.scrapeZaraProduct(params.url, params);
+      case 'lego_product':
+        return await mcpBrightDataBridge.scrapeLegoProduct(params.url, params);
+      case 'hermes_product':
+        return await mcpBrightDataBridge.scrapeHermesProduct(params.url, params);
       case 'flipkart_product':
         return await mcpBrightDataBridge.scrapeFlipkartProduct(params.url, params);
+      case 'toysrus_product':
+        return await mcpBrightDataBridge.scrapeToysRUsProduct(params.url, params);
+      case 'carters_product':
+        return await mcpBrightDataBridge.scrapeCartersProduct(params.url, params);
+      case 'prada_product':
+        return await mcpBrightDataBridge.scrapePradaProduct(params.url, params);
+      case 'ysl_product':
+        return await mcpBrightDataBridge.scrapeYSLProduct(params.url, params);
+      case 'balenciaga_product':
+        return await mcpBrightDataBridge.scrapeBalenciagaProduct(params.url, params);
+      case 'dior_product':
+        return await mcpBrightDataBridge.scrapeDiorProduct(params.url, params);
+      case 'chanel_product':
+        return await mcpBrightDataBridge.scrapeChanelProduct(params.url, params);
       case 'scrape_as_markdown':
         return await mcpBrightDataBridge.scrapeAsMarkdown(params.url);
       default:
@@ -644,7 +1452,18 @@ class BrightDataProductService {
     if (urlLower.includes('target.com')) return 'target';
     if (urlLower.includes('hm.com')) return 'hm';
     if (urlLower.includes('asos.com')) return 'asos';
+    if (urlLower.includes('etsy.com')) return 'etsy';
+    if (urlLower.includes('zara.com')) return 'zara';
+    if (urlLower.includes('lego.com')) return 'lego';
+    if (urlLower.includes('hermes.com')) return 'hermes';
     if (urlLower.includes('flipkart.com')) return 'flipkart';
+    if (urlLower.includes('toysrus.com')) return 'toysrus';
+    if (urlLower.includes('carters.com')) return 'carters';
+    if (urlLower.includes('prada.com')) return 'prada';
+    if (urlLower.includes('ysl.com')) return 'ysl';
+    if (urlLower.includes('balenciaga.com')) return 'balenciaga';
+    if (urlLower.includes('dior.com')) return 'dior';
+    if (urlLower.includes('chanel.com')) return 'chanel';
     
     return null;
   }
@@ -2363,6 +3182,609 @@ class BrightDataProductService {
   }
 
   /**
+   * Normalize Etsy product data to common format
+   */
+  private normalizeEtsyData(rawData: any, url: string): ProductData {
+    try {
+      // Extract basic product information
+      const title = rawData.title || 'Etsy Product';
+      const finalPrice = rawData.final_price || rawData.price || 0;
+      const initialPrice = rawData.initial_price || finalPrice;
+      const currency = rawData.currency || 'USD';
+      
+      // Safely parse images and limit to first 8
+      let images: string[] = [];
+      try {
+        if (Array.isArray(rawData.images)) {
+          images = rawData.images.filter(Boolean).slice(0, 8);
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse Etsy images:', imgError);
+        images = [];
+      }
+
+      // Extract seller information
+      const brand = rawData.seller_name || rawData.seller_shop_name || 'Etsy Seller';
+      
+      // Map Etsy category to our standard categories
+      let category = 'handmade'; // Default for Etsy
+      try {
+        if (rawData.category_tree && Array.isArray(rawData.category_tree) && rawData.category_tree.length > 0) {
+          category = this.mapEtsyCategory(rawData.category_tree[0]);
+        } else if (rawData.root_category) {
+          category = this.mapEtsyCategory(rawData.root_category);
+        }
+      } catch (categoryError) {
+        console.warn('Failed to map Etsy category:', categoryError);
+      }
+
+      // Estimate weight based on category and product details
+      let weight: number | undefined;
+      try {
+        weight = this.estimateEtsyWeight(category, title, rawData.specifications || []);
+      } catch (weightError) {
+        console.warn('Failed to estimate Etsy weight:', weightError);
+      }
+
+      // Handle availability (Etsy products are usually available unless explicitly stated)
+      let availability = 'in-stock'; // Default for Etsy unless stated otherwise
+      if (rawData.in_stock === false || rawData.availability === 'out of stock') {
+        availability = 'out-of-stock';
+      }
+
+      // Build comprehensive description from Etsy's rich product details
+      let description = '';
+      try {
+        const descriptionParts = [
+          Array.isArray(rawData.item_details) 
+            ? rawData.item_details.join(' ') 
+            : rawData.item_details,
+          rawData.shipping_return_policies && Array.isArray(rawData.shipping_return_policies)
+            ? `Shipping & Returns: ${rawData.shipping_return_policies.join(', ')}`
+            : undefined,
+          rawData.highlights_lines && Array.isArray(rawData.highlights_lines)
+            ? rawData.highlights_lines.map((h: any) => `${h.name}: ${h.value}`).join(', ')
+            : undefined
+        ].filter(Boolean);
+        
+        description = descriptionParts.join('\n\n');
+      } catch (descError) {
+        console.warn('Failed to build Etsy description:', descError);
+        description = title;
+      }
+
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand,
+        category,
+        availability,
+        rating: rawData.rating || 0,
+        reviews_count: rawData.reviews_count_item || rawData.reviews_count_shop || 0,
+        description,
+        specifications: this.normalizeEtsySpecifications(rawData.product_specifications || []),
+        seller_name: rawData.seller_name || rawData.seller_shop_name,
+        url
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Etsy data:', error);
+      // Return minimal safe data structure
+      return {
+        title: rawData.title || 'Etsy Product',
+        price: rawData.final_price || rawData.price || 0,
+        currency: rawData.currency || 'USD',
+        images: [],
+        brand: rawData.seller_name || 'Etsy Seller',
+        category: 'handmade',
+        availability: 'unknown',
+        description: rawData.title || 'Etsy Product',
+        url
+      };
+    }
+  }
+
+  /**
+   * Map Etsy categories to our standard categories
+   */
+  private mapEtsyCategory(etsyCategory: string): string {
+    const categoryLower = etsyCategory.toLowerCase();
+    
+    // Art & Collectibles
+    if (categoryLower.includes('art') || categoryLower.includes('print') || categoryLower.includes('painting') ||
+        categoryLower.includes('poster') || categoryLower.includes('collectible')) {
+      return 'art';
+    }
+    
+    // Jewelry
+    if (categoryLower.includes('jewelry') || categoryLower.includes('necklace') || categoryLower.includes('earring') ||
+        categoryLower.includes('bracelet') || categoryLower.includes('ring')) {
+      return 'jewelry';
+    }
+    
+    // Clothing & Fashion
+    if (categoryLower.includes('clothing') || categoryLower.includes('dress') || categoryLower.includes('shirt') ||
+        categoryLower.includes('skirt') || categoryLower.includes('pants') || categoryLower.includes('fashion') ||
+        categoryLower.includes('accessories')) {
+      return 'fashion';
+    }
+    
+    // Home & Living
+    if (categoryLower.includes('home') || categoryLower.includes('living') || categoryLower.includes('decor') ||
+        categoryLower.includes('furniture') || categoryLower.includes('kitchen') || categoryLower.includes('bath')) {
+      return 'home';
+    }
+    
+    // Craft Supplies & Tools
+    if (categoryLower.includes('craft') || categoryLower.includes('supplies') || categoryLower.includes('material') ||
+        categoryLower.includes('tool') || categoryLower.includes('fabric')) {
+      return 'crafts';
+    }
+    
+    // Toys & Games
+    if (categoryLower.includes('toy') || categoryLower.includes('game') || categoryLower.includes('puzzle') ||
+        categoryLower.includes('doll') || categoryLower.includes('plush')) {
+      return 'toys';
+    }
+    
+    // Wedding & Party
+    if (categoryLower.includes('wedding') || categoryLower.includes('party') || categoryLower.includes('celebration')) {
+      return 'wedding';
+    }
+    
+    // Vintage items
+    if (categoryLower.includes('vintage') || categoryLower.includes('antique')) {
+      return 'vintage';
+    }
+    
+    // Default to handmade for Etsy
+    return 'handmade';
+  }
+
+  /**
+   * Estimate Etsy product weight based on category, title, and specifications
+   */
+  private estimateEtsyWeight(category: string, title: string, specifications: any[]): number | undefined {
+    const categoryLower = category.toLowerCase();
+    const titleLower = title.toLowerCase();
+    
+    // Check specifications for weight information first
+    try {
+      for (const spec of specifications) {
+        if (spec.specification_name && spec.specification_value) {
+          const specName = spec.specification_name.toLowerCase();
+          const specValue = spec.specification_value.toLowerCase();
+          
+          if (specName.includes('weight') && specValue.match(/\d/)) {
+            // Try to extract weight from specifications
+            const weightMatch = specValue.match(/(\d+\.?\d*)\s*(lb|lbs|pound|kg|kilogram|oz|ounce)/i);
+            if (weightMatch) {
+              const value = parseFloat(weightMatch[1]);
+              const unit = weightMatch[2].toLowerCase();
+              
+              // Convert to kg
+              if (unit.startsWith('lb') || unit.startsWith('pound')) {
+                return value * 0.453592; // lbs to kg
+              } else if (unit.startsWith('oz') || unit.startsWith('ounce')) {
+                return value * 0.0283495; // oz to kg
+              } else {
+                return value; // already in kg
+              }
+            }
+          }
+        }
+      }
+    } catch (specError) {
+      console.warn('Failed to extract weight from Etsy specifications:', specError);
+    }
+    
+    // Category-based estimates (in kg)
+    if (categoryLower === 'jewelry') {
+      return 0.05; // Very light jewelry
+    }
+    
+    if (categoryLower === 'art' || titleLower.includes('print') || titleLower.includes('poster')) {
+      return 0.1; // Art prints
+    }
+    
+    if (categoryLower === 'fashion' || titleLower.includes('clothing')) {
+      if (titleLower.includes('dress') || titleLower.includes('coat') || titleLower.includes('jacket')) {
+        return 0.5; // Heavier clothing
+      }
+      return 0.3; // General clothing
+    }
+    
+    if (categoryLower === 'home' || titleLower.includes('decor')) {
+      if (titleLower.includes('furniture') || titleLower.includes('table') || titleLower.includes('chair')) {
+        return 5.0; // Furniture
+      } else if (titleLower.includes('pillow') || titleLower.includes('cushion')) {
+        return 0.8; // Textiles
+      }
+      return 1.0; // General home items
+    }
+    
+    if (categoryLower === 'crafts' || titleLower.includes('supplies')) {
+      return 0.3; // Craft supplies
+    }
+    
+    if (categoryLower === 'toys' || titleLower.includes('toy')) {
+      return 0.5; // Toys
+    }
+    
+    // Default handmade item weight
+    return 0.4;
+  }
+
+  /**
+   * Normalize Etsy specifications to our standard format
+   */
+  private normalizeEtsySpecifications(specs: any[]): Array<{name: string; value: string}> {
+    if (!Array.isArray(specs)) return [];
+    
+    return specs.map(spec => ({
+      name: spec.specification_name || 'Specification',
+      value: spec.specification_values || spec.specification_value || spec.value || ''
+    })).filter(spec => spec.name && spec.value);
+  }
+
+  /**
+   * Normalize Zara product data to common format
+   */
+  private normalizeZaraData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.title || rawData.product_name || 'Zara Product';
+      const price = rawData.final_price || rawData.price || 0;
+      const currency = rawData.currency || 'USD';
+      
+      // Handle Zara images array
+      let images: string[] = [];
+      if (Array.isArray(rawData.images)) {
+        images = rawData.images.filter(Boolean).slice(0, 8);
+      } else if (rawData.image && Array.isArray(rawData.image)) {
+        images = rawData.image.filter(Boolean).slice(0, 8);
+      }
+
+      // Map Zara category to our standard categories
+      let category = 'fashion';
+      if (rawData.section) {
+        const section = rawData.section.toLowerCase();
+        if (section.includes('woman') || section.includes('girl')) {
+          category = 'fashion-women';
+        } else if (section.includes('man') || section.includes('boy')) {
+          category = 'fashion-men';
+        } else if (section.includes('kid') || section.includes('baby')) {
+          category = 'fashion-kids';
+        }
+      }
+      
+      // Further refine by product family
+      if (rawData.product_family) {
+        const family = rawData.product_family.toLowerCase();
+        if (family.includes('shoes')) category = 'footwear';
+        else if (family.includes('bag')) category = 'bags';
+        else if (family.includes('accessory')) category = 'accessories';
+      }
+
+      // Estimate weight based on Zara product type
+      let weight: number | undefined;
+      if (rawData.product_family) {
+        weight = this.estimateZaraWeight(rawData.product_family, title);
+      }
+
+      return {
+        title,
+        price,
+        currency,
+        images,
+        weight,
+        brand: 'Zara',
+        category,
+        availability: rawData.availability ? 'in-stock' : (rawData.low_on_stock ? 'low-stock' : 'out-of-stock'),
+        description: rawData.description || '',
+        specifications: this.normalizeZaraSpecifications(rawData),
+        seller_name: 'Zara',
+        url
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Zara data:', error);
+      return {
+        title: rawData.product_name || 'Zara Product',
+        price: rawData.price || 0,
+        currency: rawData.currency || 'USD',
+        images: [],
+        brand: 'Zara',
+        category: 'fashion',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Estimate Zara product weight based on product family and title
+   */
+  private estimateZaraWeight(productFamily: string, title: string): number | undefined {
+    const familyLower = productFamily.toLowerCase();
+    const titleLower = title.toLowerCase();
+    
+    // Zara fashion weight estimates (in kg)
+    if (familyLower.includes('dress')) return 0.5;
+    if (familyLower.includes('shirt') || familyLower.includes('blouse')) return 0.3;
+    if (familyLower.includes('jacket') || familyLower.includes('coat')) return 0.8;
+    if (familyLower.includes('pants') || familyLower.includes('jeans')) return 0.6;
+    if (familyLower.includes('skirt')) return 0.4;
+    if (familyLower.includes('shoes')) return 0.8;
+    if (familyLower.includes('bag')) return 0.7;
+    if (familyLower.includes('accessory')) return 0.2;
+    if (familyLower.includes('underwear')) return 0.1;
+    
+    // Default fashion item weight
+    return 0.4;
+  }
+
+  /**
+   * Normalize Zara specifications to our standard format
+   */
+  private normalizeZaraSpecifications(rawData: any): Array<{name: string; value: string}> {
+    const specs: Array<{name: string; value: string}> = [];
+    
+    if (rawData.color || rawData.colour) {
+      specs.push({ name: 'Color', value: rawData.color || rawData.colour });
+    }
+    if (rawData.size) {
+      specs.push({ name: 'Size', value: rawData.size });
+    }
+    if (rawData.materials || rawData.materials_description) {
+      specs.push({ name: 'Materials', value: rawData.materials || rawData.materials_description });
+    }
+    if (rawData.care?.instructions?.length) {
+      specs.push({ name: 'Care Instructions', value: rawData.care.instructions.join(', ') });
+    }
+    if (rawData.dimension) {
+      specs.push({ name: 'Dimensions', value: rawData.dimension });
+    }
+    
+    return specs;
+  }
+
+  /**
+   * Normalize LEGO product data to common format
+   */
+  private normalizeLegoData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.title || rawData.product_name || 'LEGO Set';
+      const finalPrice = rawData.final_price || rawData.initial_price || 0;
+      const initialPrice = rawData.initial_price || rawData.final_price || 0;
+      const currency = rawData.currency || 'USD';
+      
+      // Handle LEGO images
+      let images: string[] = [];
+      if (Array.isArray(rawData.images)) {
+        images = rawData.images.filter(Boolean).slice(0, 8);
+      } else if (Array.isArray(rawData.image_urls)) {
+        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      } else if (rawData.main_image) {
+        images = [rawData.main_image];
+      }
+
+      // Estimate weight based on piece count (average 0.8g per piece)
+      let weight: number | undefined;
+      if (rawData.piece_count) {
+        weight = Math.round((rawData.piece_count * 0.0008) * 100) / 100; // Convert to kg, round to 2 decimals
+        // Add packaging weight (typically 20% of brick weight)
+        weight = Math.round(weight * 1.2 * 100) / 100;
+      }
+
+      // Map LEGO category
+      let category = 'building-sets';
+      if (rawData.category) {
+        const categoryLower = rawData.category.toLowerCase();
+        if (categoryLower.includes('duplo') || categoryLower.includes('junior')) {
+          category = 'early-learning';
+        } else if (categoryLower.includes('technic') || categoryLower.includes('mindstorms')) {
+          category = 'advanced-building';
+        }
+      }
+
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand: rawData.brand || rawData.manufacturer || 'LEGO',
+        category,
+        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+        rating: rawData.rating || 0,
+        reviews_count: rawData.reviews_count || 0,
+        description: rawData.description || rawData.features_text || rawData.headline_text || '',
+        specifications: this.normalizeLegoSpecifications(rawData),
+        seller_name: 'LEGO',
+        url
+      };
+
+    } catch (error) {
+      console.error('Error normalizing LEGO data:', error);
+      return {
+        title: rawData.product_name || 'LEGO Set',
+        price: rawData.final_price || rawData.initial_price || 0,
+        currency: rawData.currency || 'USD',
+        images: [],
+        brand: 'LEGO',
+        category: 'building-sets',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize LEGO specifications to our standard format
+   */
+  private normalizeLegoSpecifications(rawData: any): Array<{name: string; value: string}> {
+    const specs: Array<{name: string; value: string}> = [];
+    
+    if (rawData.age_range) {
+      specs.push({ name: 'Age Range', value: rawData.age_range });
+    }
+    if (rawData.piece_count) {
+      specs.push({ name: 'Piece Count', value: rawData.piece_count.toString() });
+    }
+    if (rawData.product_code) {
+      specs.push({ name: 'Product Code', value: rawData.product_code.toString() });
+    }
+    if (rawData.vip_points) {
+      specs.push({ name: 'VIP Points', value: rawData.vip_points.toString() });
+    }
+    if (rawData.category) {
+      specs.push({ name: 'Category', value: rawData.category });
+    }
+    
+    return specs;
+  }
+
+  /**
+   * Normalize Hermes product data to common format
+   */
+  private normalizeHermesData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.title || rawData.product_name || 'Hermès Product';
+      
+      // Parse Hermes prices (format like "$4,135.00")
+      const parseHermesPrice = (priceStr: string | number): number => {
+        if (typeof priceStr === 'number') return priceStr;
+        if (!priceStr) return 0;
+        return parseFloat(priceStr.toString().replace(/[^0-9.]/g, '')) || 0;
+      };
+      
+      const finalPrice = parseHermesPrice(rawData.final_price);
+      const initialPrice = parseHermesPrice(rawData.initial_price);
+      const currency = rawData.currency || 'USD';
+      
+      // Handle Hermes images
+      let images: string[] = [];
+      if (Array.isArray(rawData.images)) {
+        images = rawData.images.filter(Boolean).slice(0, 8);
+      } else if (Array.isArray(rawData.image_urls)) {
+        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      } else if (rawData.main_image) {
+        images = [rawData.main_image];
+      }
+
+      // Map Hermes luxury categories
+      let category = 'luxury';
+      if (rawData.category_name) {
+        const categoryLower = rawData.category_name.toLowerCase();
+        if (categoryLower.includes('bag')) category = 'luxury-bags';
+        else if (categoryLower.includes('scarf') || categoryLower.includes('silk')) category = 'luxury-accessories';
+        else if (categoryLower.includes('jewelry')) category = 'luxury-jewelry';
+        else if (categoryLower.includes('watch')) category = 'luxury-watches';
+        else if (categoryLower.includes('belt')) category = 'luxury-accessories';
+        else if (categoryLower.includes('perfume') || categoryLower.includes('fragrance')) category = 'luxury-fragrance';
+        else if (categoryLower.includes('shoe')) category = 'luxury-footwear';
+        else if (categoryLower.includes('ready-to-wear') || categoryLower.includes('clothing')) category = 'luxury-fashion';
+      }
+
+      // Estimate weight for luxury goods
+      let weight: number | undefined;
+      if (rawData.category_name) {
+        weight = this.estimateHermesWeight(rawData.category_name, title);
+      }
+
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand: rawData.brand || rawData.seller || 'Hermès',
+        category,
+        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+        description: rawData.description || rawData.product_details || '',
+        specifications: this.normalizeHermesSpecifications(rawData),
+        seller_name: 'Hermès',
+        url
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Hermes data:', error);
+      return {
+        title: rawData.product_name || 'Hermès Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: 'Hermès',
+        category: 'luxury',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Estimate Hermes product weight based on category and title
+   */
+  private estimateHermesWeight(categoryName: string, title: string): number | undefined {
+    const categoryLower = categoryName.toLowerCase();
+    const titleLower = title.toLowerCase();
+    
+    // Hermes luxury goods weight estimates (in kg)
+    if (categoryLower.includes('bag')) {
+      if (titleLower.includes('birkin') || titleLower.includes('kelly')) return 1.2; // Iconic bags
+      if (titleLower.includes('wallet') || titleLower.includes('cardholder')) return 0.3;
+      return 0.8; // Default bag weight
+    }
+    if (categoryLower.includes('scarf') || categoryLower.includes('silk')) return 0.2;
+    if (categoryLower.includes('belt')) return 0.4;
+    if (categoryLower.includes('jewelry')) return 0.1;
+    if (categoryLower.includes('watch')) return 0.3;
+    if (categoryLower.includes('perfume') || categoryLower.includes('fragrance')) return 0.5;
+    if (categoryLower.includes('shoe')) return 1.0;
+    if (categoryLower.includes('ready-to-wear') || categoryLower.includes('clothing')) return 0.6;
+    
+    // Default luxury item weight
+    return 0.5;
+  }
+
+  /**
+   * Normalize Hermes specifications to our standard format
+   */
+  private normalizeHermesSpecifications(rawData: any): Array<{name: string; value: string}> {
+    const specs: Array<{name: string; value: string}> = [];
+    
+    if (rawData.size) {
+      specs.push({ name: 'Size', value: rawData.size });
+    }
+    if (rawData.color) {
+      specs.push({ name: 'Color', value: rawData.color });
+    }
+    if (rawData.material) {
+      specs.push({ name: 'Material', value: rawData.material });
+    }
+    if (rawData.dimensions) {
+      specs.push({ name: 'Dimensions', value: rawData.dimensions });
+    }
+    if (rawData.sku) {
+      specs.push({ name: 'SKU', value: rawData.sku });
+    }
+    if (rawData.country) {
+      specs.push({ name: 'Made In', value: rawData.country });
+    }
+    if (rawData.product_story) {
+      specs.push({ name: 'Product Story', value: rawData.product_story });
+    }
+    
+    return specs;
+  }
+
+  /**
    * Estimate eBay product weight based on category and product title
    */
   private estimateEbayWeight(category: string, productTitle: string): number | undefined {
@@ -2751,6 +4173,709 @@ class BrightDataProductService {
       category: 'general',
       availability: 'unknown'
     };
+  }
+
+  /**
+   * Normalize Toys"R"Us data
+   */
+  private normalizeToysrusData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.product_name || 'Toys"R"Us Product';
+      
+      // Parse Toys"R"Us prices
+      const parsePrice = (priceStr: any): number => {
+        if (typeof priceStr === 'number') return priceStr;
+        if (!priceStr) return 0;
+        return parseFloat(priceStr.toString().replace(/[^0-9.]/g, '')) || 0;
+      };
+      
+      const finalPrice = parsePrice(rawData.final_price || rawData.initial_price);
+      const currency = 'USD'; // Toys"R"Us typically uses USD
+      
+      // Handle images
+      let images: string[] = [];
+      if (Array.isArray(rawData.image_urls)) {
+        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      } else if (rawData.main_image) {
+        images = [rawData.main_image];
+      }
+      
+      // Categorize toys
+      let category = 'toys';
+      if (rawData.category || rawData.breadcrumbs) {
+        const categoryText = (rawData.category || '').toLowerCase();
+        const breadcrumbText = Array.isArray(rawData.breadcrumbs) 
+          ? rawData.breadcrumbs.map((b: any) => b.name || b).join(' ').toLowerCase()
+          : '';
+        const combined = `${categoryText} ${breadcrumbText}`;
+        
+        if (combined.includes('educational') || combined.includes('learning')) category = 'educational-toys';
+        else if (combined.includes('electronic') || combined.includes('tech')) category = 'electronic-toys';
+        else if (combined.includes('outdoor') || combined.includes('sport')) category = 'outdoor-toys';
+        else if (combined.includes('craft') || combined.includes('art')) category = 'craft-toys';
+        else if (combined.includes('baby') || combined.includes('infant')) category = 'baby-toys';
+      }
+      
+      // Estimate weight based on toy type
+      const weight = this.estimateToyWeight(title, category);
+      
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand: rawData.brand || 'Toys"R"Us',
+        category,
+        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+        description: rawData.description || '',
+        seller_name: 'Toys"R"Us',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Toys"R"Us data:', error);
+      return {
+        title: rawData.product_name || 'Toys"R"Us Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: 'Toys"R"Us',
+        category: 'toys',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize Carter's data
+   */
+  private normalizeCartersData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.product_name || 'Carter\'s Product';
+      
+      // Parse Carter's prices
+      const parsePrice = (priceStr: any): number => {
+        if (typeof priceStr === 'number') return priceStr;
+        if (!priceStr) return 0;
+        return parseFloat(priceStr.toString().replace(/[^0-9.]/g, '')) || 0;
+      };
+      
+      const finalPrice = parsePrice(rawData.final_price || rawData.initial_price);
+      const currency = rawData.currency === '$' ? 'USD' : rawData.currency || 'USD';
+      
+      // Handle images
+      let images: string[] = [];
+      if (Array.isArray(rawData.image_urls)) {
+        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      }
+      
+      // Categorize baby clothing
+      let category = 'baby-clothing';
+      if (rawData.category) {
+        const categoryLower = rawData.category.toLowerCase();
+        if (categoryLower.includes('sock') || categoryLower.includes('tight')) category = 'baby-socks';
+        else if (categoryLower.includes('pajama') || categoryLower.includes('sleepwear')) category = 'baby-sleepwear';
+        else if (categoryLower.includes('onesie') || categoryLower.includes('bodysuit')) category = 'baby-onesies';
+        else if (categoryLower.includes('pant') || categoryLower.includes('bottom')) category = 'baby-bottoms';
+        else if (categoryLower.includes('dress') || categoryLower.includes('skirt')) category = 'baby-dresses';
+        else if (categoryLower.includes('shoe') || categoryLower.includes('boot')) category = 'baby-shoes';
+      }
+      
+      // Estimate weight for baby clothing
+      const weight = this.estimateBabyClothingWeight(title, category, rawData.size);
+      
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand: rawData.brand || 'Carter\'s',
+        category,
+        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+        description: rawData.description || '',
+        specifications: rawData.features ? { features: rawData.features } : undefined,
+        seller_name: 'Carter\'s',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Carter\'s data:', error);
+      return {
+        title: rawData.product_name || 'Carter\'s Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: 'Carter\'s',
+        category: 'baby-clothing',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize Prada data
+   */
+  private normalizePradaData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.product_name || 'Prada Product';
+      
+      // Parse Prada prices (EUR format like "€1,100.00")
+      const parsePrice = (priceStr: any): number => {
+        if (typeof priceStr === 'number') return priceStr;
+        if (!priceStr) return 0;
+        return parseFloat(priceStr.toString().replace(/[^0-9.]/g, '')) || 0;
+      };
+      
+      const finalPrice = parsePrice(rawData.final_price || rawData.initial_price);
+      const currency = rawData.currency || 'EUR';
+      
+      // Handle images
+      let images: string[] = [];
+      if (Array.isArray(rawData.image_urls)) {
+        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      }
+      
+      // Categorize luxury fashion
+      let category = 'luxury-fashion';
+      if (rawData.category_name) {
+        const categoryLower = rawData.category_name.toLowerCase();
+        if (categoryLower.includes('bag') || categoryLower.includes('tote') || categoryLower.includes('handbag')) category = 'luxury-bags';
+        else if (categoryLower.includes('shoe') || categoryLower.includes('sneaker') || categoryLower.includes('boot')) category = 'luxury-footwear';
+        else if (categoryLower.includes('wallet') || categoryLower.includes('accessory')) category = 'luxury-accessories';
+        else if (categoryLower.includes('sunglasses') || categoryLower.includes('eyewear')) category = 'luxury-eyewear';
+        else if (categoryLower.includes('clothing') || categoryLower.includes('dress') || categoryLower.includes('shirt')) category = 'luxury-clothing';
+      }
+      
+      // Estimate weight for luxury goods
+      const weight = this.estimateLuxuryWeight(title, category);
+      
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand: rawData.brand || 'PRADA',
+        category,
+        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+        description: rawData.description || rawData.product_details || '',
+        specifications: rawData.material ? { material: rawData.material } : undefined,
+        seller_name: 'Prada',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Prada data:', error);
+      return {
+        title: rawData.product_name || 'Prada Product',
+        price: 0,
+        currency: 'EUR',
+        images: [],
+        brand: 'PRADA',
+        category: 'luxury-fashion',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize YSL data
+   */
+  private normalizeYSLData(rawData: any, url: string): ProductData {
+    try {
+      const title = rawData.product_name || 'YSL Product';
+      
+      // Parse YSL prices (multiple currencies: SAR, USD, EUR)
+      const parsePrice = (priceStr: any): number => {
+        if (typeof priceStr === 'number') return priceStr;
+        if (!priceStr) return 0;
+        // Handle formats like "SAR 1,400.00", "$1,400.00", "€1,400.00"
+        return parseFloat(priceStr.toString().replace(/[^0-9.]/g, '')) || 0;
+      };
+      
+      const finalPrice = parsePrice(rawData.final_price || rawData.initial_price);
+      let currency = rawData.currency || 'USD';
+      
+      // Detect currency from price string if not provided
+      if (!rawData.currency && rawData.initial_price) {
+        const priceStr = rawData.initial_price.toString();
+        if (priceStr.includes('SAR')) currency = 'SAR';
+        else if (priceStr.includes('€')) currency = 'EUR';
+        else if (priceStr.includes('$')) currency = 'USD';
+      }
+      
+      // Handle images
+      let images: string[] = [];
+      if (Array.isArray(rawData.image_urls)) {
+        images = rawData.image_urls.filter(Boolean).slice(0, 8);
+      }
+      
+      // Categorize luxury fashion
+      let category = 'luxury-fashion';
+      if (rawData.category_name) {
+        const categoryLower = rawData.category_name.toLowerCase();
+        if (categoryLower.includes('bag') || categoryLower.includes('handbag')) category = 'luxury-bags';
+        else if (categoryLower.includes('card') || categoryLower.includes('wallet') || categoryLower.includes('leather-goods')) category = 'luxury-accessories';
+        else if (categoryLower.includes('fragrance') || categoryLower.includes('perfume')) category = 'luxury-fragrance';
+        else if (categoryLower.includes('shoe') || categoryLower.includes('boot')) category = 'luxury-footwear';
+        else if (categoryLower.includes('jewelry')) category = 'luxury-jewelry';
+        else if (categoryLower.includes('sunglasses') || categoryLower.includes('eyewear')) category = 'luxury-eyewear';
+      }
+      
+      // Estimate weight for luxury goods
+      const weight = this.estimateLuxuryWeight(title, category);
+      
+      return {
+        title,
+        price: finalPrice,
+        currency,
+        images,
+        weight,
+        brand: rawData.brand || 'Yves Saint Laurent',
+        category,
+        availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+        description: rawData.description || rawData.product_details || '',
+        specifications: rawData.material ? { material: rawData.material } : undefined,
+        seller_name: 'YSL',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing YSL data:', error);
+      return {
+        title: rawData.product_name || 'YSL Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: 'Yves Saint Laurent',
+        category: 'luxury-fashion',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize Balenciaga product data
+   */
+  private normalizeBalenciagaData(rawData: any, url: string): ProductData {
+    try {
+      const data = Array.isArray(rawData) ? rawData[0] : rawData;
+      
+      // Extract price information
+      let price = 0;
+      let currency = 'USD';
+      
+      if (data.final_price) {
+        if (typeof data.final_price === 'string') {
+          const priceMatch = data.final_price.match(/[\d,]+\.?\d*/);
+          price = priceMatch ? parseFloat(priceMatch[0].replace(/,/g, '')) : 0;
+        } else {
+          price = data.final_price;
+        }
+      } else if (data.initial_price) {
+        if (typeof data.initial_price === 'string') {
+          const priceMatch = data.initial_price.match(/[\d,]+\.?\d*/);
+          price = priceMatch ? parseFloat(priceMatch[0].replace(/,/g, '')) : 0;
+        } else {
+          price = data.initial_price;
+        }
+      }
+      
+      currency = data.currency || 'USD';
+      
+      // Handle images
+      const images = [];
+      if (data.image_urls && Array.isArray(data.image_urls)) {
+        images.push(...data.image_urls.filter(Boolean));
+      }
+      if (data.main_image) {
+        images.unshift(data.main_image);
+      }
+      
+      // Map category
+      const category = this.mapBalenciagaCategory(data.category_name, data.category_path);
+      
+      // Estimate weight for luxury goods
+      const weight = this.estimateLuxuryWeight(data.product_name, category);
+      
+      return {
+        title: data.product_name || 'Balenciaga Product',
+        price,
+        currency,
+        images,
+        weight,
+        brand: data.brand || 'Balenciaga',
+        category,
+        availability: data.in_stock ? 'in-stock' : 'out-of-stock',
+        description: data.description || data.product_details || data.product_story || '',
+        specifications: data.material ? { material: data.material } : undefined,
+        seller_name: 'Balenciaga',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Balenciaga data:', error);
+      return {
+        title: rawData.product_name || 'Balenciaga Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: 'Balenciaga',
+        category: 'luxury-fashion',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize Dior product data
+   */
+  private normalizeDiorData(rawData: any, url: string): ProductData {
+    try {
+      const data = Array.isArray(rawData) ? rawData[0] : rawData;
+      
+      // Extract price information
+      let price = 0;
+      let currency = 'EUR';
+      
+      if (data.final_price) {
+        price = typeof data.final_price === 'number' ? data.final_price : parseFloat(data.final_price) || 0;
+      } else if (data.initial_price) {
+        price = typeof data.initial_price === 'number' ? data.initial_price : parseFloat(data.initial_price) || 0;
+      }
+      
+      currency = data.currency || 'EUR';
+      
+      // Handle images
+      const images = [];
+      if (data.image_urls && Array.isArray(data.image_urls)) {
+        images.push(...data.image_urls.filter(Boolean));
+      }
+      if (data.main_image) {
+        images.unshift(data.main_image);
+      }
+      
+      // Map category
+      const category = this.mapDiorCategory(data.category_name);
+      
+      // Estimate weight for luxury goods
+      const weight = this.estimateLuxuryWeight(data.product_name, category);
+      
+      return {
+        title: data.product_name || 'Dior Product',
+        price,
+        currency,
+        images,
+        weight,
+        brand: data.brand || 'Dior',
+        category,
+        availability: data.in_stock !== false ? 'in-stock' : 'out-of-stock',
+        description: data.description || data.product_details || '',
+        specifications: data.material ? { material: data.material } : undefined,
+        seller_name: 'Dior',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Dior data:', error);
+      return {
+        title: rawData.product_name || 'Dior Product',
+        price: 0,
+        currency: 'EUR',
+        images: [],
+        brand: 'Dior',
+        category: 'luxury-fashion',
+        availability: 'unknown',
+        description: rawData.description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Normalize Chanel product data
+   */
+  private normalizeChanelData(rawData: any, url: string): ProductData {
+    try {
+      const data = Array.isArray(rawData) ? rawData[0] : rawData;
+      
+      // Extract price information
+      let price = 0;
+      let currency = 'VND';
+      
+      if (data.regular_price) {
+        price = typeof data.regular_price === 'number' ? data.regular_price : parseFloat(data.regular_price) || 0;
+      }
+      
+      currency = data.currency || 'VND';
+      
+      // Handle images
+      const images = [];
+      if (data.image_slider && Array.isArray(data.image_slider)) {
+        images.push(...data.image_slider.filter(Boolean));
+      }
+      if (data.image) {
+        images.unshift(data.image);
+      }
+      
+      // Map category
+      const category = this.mapChanelCategory(data.product_category);
+      
+      // Estimate weight for luxury goods
+      const weight = this.estimateLuxuryWeight(data.product_name, category);
+      
+      return {
+        title: data.product_name || 'Chanel Product',
+        price,
+        currency,
+        images,
+        weight,
+        brand: data.product_brand || 'Chanel',
+        category,
+        availability: data.stock !== false ? 'in-stock' : 'out-of-stock',
+        description: data.product_description || '',
+        specifications: data.material ? { material: data.material } : undefined,
+        seller_name: 'Chanel',
+        url
+      };
+    } catch (error) {
+      console.error('Error normalizing Chanel data:', error);
+      return {
+        title: rawData.product_name || 'Chanel Product',
+        price: 0,
+        currency: 'VND',
+        images: [],
+        brand: 'Chanel',
+        category: 'luxury-beauty',
+        availability: 'unknown',
+        description: rawData.product_description || '',
+        url
+      };
+    }
+  }
+
+  /**
+   * Map Balenciaga category to our standard categories
+   */
+  private mapBalenciagaCategory(categoryName?: string, categoryPath?: string): string {
+    const category = (categoryName || categoryPath || '').toLowerCase();
+    
+    if (category.includes('sneaker')) return 'luxury-sneakers';
+    if (category.includes('shoe')) return 'luxury-footwear';
+    if (category.includes('bag') || category.includes('handbag')) return 'luxury-bags';
+    if (category.includes('ready-to-wear')) return 'luxury-fashion';
+    if (category.includes('accessorie')) return 'luxury-accessories';
+    if (category.includes('jewelry')) return 'luxury-jewelry';
+    if (category.includes('sunglass') || category.includes('eyewear')) return 'luxury-eyewear';
+    
+    return 'luxury-fashion';
+  }
+
+  /**
+   * Map Dior category to our standard categories
+   */
+  private mapDiorCategory(categoryName?: string): string {
+    const category = (categoryName || '').toLowerCase();
+    
+    if (category.includes('sakko') || category.includes('jacket') || category.includes('shirt') || category.includes('pant')) return 'luxury-fashion';
+    if (category.includes('schuh') || category.includes('shoe')) return 'luxury-footwear';
+    if (category.includes('tasche') || category.includes('bag')) return 'luxury-bags';
+    if (category.includes('accessoire') || category.includes('accessory')) return 'luxury-accessories';
+    if (category.includes('parfum') || category.includes('fragrance')) return 'luxury-fragrance';
+    if (category.includes('make-up') || category.includes('beauty')) return 'luxury-beauty';
+    if (category.includes('schmuck') || category.includes('jewelry')) return 'luxury-jewelry';
+    
+    return 'luxury-fashion';
+  }
+
+  /**
+   * Map Chanel category to our standard categories
+   */
+  private mapChanelCategory(categoryName?: string): string {
+    const category = (categoryName || '').toLowerCase();
+    
+    if (category.includes('kính') || category.includes('eyewear') || category.includes('sunglass')) return 'luxury-eyewear';
+    if (category.includes('make-up') || category.includes('beauty')) return 'luxury-beauty';
+    if (category.includes('parfum') || category.includes('fragrance')) return 'luxury-fragrance';
+    if (category.includes('handbag') || category.includes('bag')) return 'luxury-bags';
+    if (category.includes('ready-to-wear') || category.includes('fashion')) return 'luxury-fashion';
+    if (category.includes('jewelry')) return 'luxury-jewelry';
+    if (category.includes('watch')) return 'luxury-watches';
+    
+    return 'luxury-beauty';
+  }
+
+  /**
+   * Estimate weight for luxury goods
+   */
+  private estimateLuxuryWeight(title: string, category: string): number {
+    const titleLower = title.toLowerCase();
+    
+    // Luxury bags vary significantly
+    if (category.includes('bags')) {
+      if (titleLower.includes('tote') || titleLower.includes('large')) return 1.2;
+      if (titleLower.includes('clutch') || titleLower.includes('small')) return 0.4;
+      return 0.8;
+    }
+    
+    // Footwear
+    if (category.includes('footwear') || category.includes('sneakers')) {
+      if (titleLower.includes('sneaker')) return 0.7;
+      if (titleLower.includes('heel') || titleLower.includes('pump')) return 0.6;
+      return 0.8;
+    }
+    
+    // Fashion items
+    if (category.includes('fashion')) {
+      if (titleLower.includes('jacket') || titleLower.includes('coat')) return 1.0;
+      if (titleLower.includes('shirt') || titleLower.includes('top')) return 0.3;
+      if (titleLower.includes('pants') || titleLower.includes('trouser')) return 0.5;
+      return 0.4;
+    }
+    
+    // Beauty and cosmetics
+    if (category.includes('beauty')) return 0.2;
+    
+    // Fragrance
+    if (category.includes('fragrance')) return 0.3;
+    
+    // Eyewear
+    if (category.includes('eyewear')) return 0.2;
+    
+    // Jewelry
+    if (category.includes('jewelry')) return 0.1;
+    
+    // Watches
+    if (category.includes('watches')) return 0.3;
+    
+    // Accessories
+    if (category.includes('accessories')) return 0.3;
+    
+    return 0.5; // Default luxury item weight
+  }
+
+  /**
+   * Estimate toy weight based on category and title
+   */
+  private estimateToyWeight(title: string, category: string): number {
+    const titleLower = title.toLowerCase();
+    
+    // Electronic toys are typically heavier
+    if (category === 'electronic-toys' || titleLower.includes('electronic')) return 0.8;
+    
+    // Outdoor toys vary widely
+    if (category === 'outdoor-toys') {
+      if (titleLower.includes('bike') || titleLower.includes('scooter')) return 3.0;
+      if (titleLower.includes('ball')) return 0.3;
+      return 1.2;
+    }
+    
+    // Educational toys
+    if (category === 'educational-toys') return 0.5;
+    
+    // Baby toys are typically lighter
+    if (category === 'baby-toys') return 0.3;
+    
+    // Craft toys
+    if (category === 'craft-toys') return 0.4;
+    
+    // General toy weight based on common keywords
+    if (titleLower.includes('lego') || titleLower.includes('block')) return 0.6;
+    if (titleLower.includes('doll') || titleLower.includes('figure')) return 0.4;
+    if (titleLower.includes('car') || titleLower.includes('truck')) return 0.5;
+    if (titleLower.includes('puzzle')) return 0.3;
+    
+    // Default toy weight
+    return 0.4;
+  }
+
+  /**
+   * Estimate baby clothing weight based on category and size
+   */
+  private estimateBabyClothingWeight(title: string, category: string, size?: string): number {
+    // Base weights for different baby clothing categories (in kg)
+    const baseWeights: Record<string, number> = {
+      'baby-socks': 0.05,
+      'baby-onesies': 0.1,
+      'baby-sleepwear': 0.15,
+      'baby-bottoms': 0.12,
+      'baby-dresses': 0.15,
+      'baby-shoes': 0.2,
+      'baby-clothing': 0.12
+    };
+    
+    let weight = baseWeights[category] || 0.12;
+    
+    // Adjust based on size
+    if (size) {
+      const sizeLower = size.toLowerCase();
+      if (sizeLower.includes('newborn') || sizeLower.includes('0-3')) weight *= 0.8;
+      else if (sizeLower.includes('6-9') || sizeLower.includes('12')) weight *= 1.1;
+      else if (sizeLower.includes('18') || sizeLower.includes('24') || sizeLower.includes('2t')) weight *= 1.3;
+      else if (sizeLower.includes('3t') || sizeLower.includes('4t')) weight *= 1.5;
+    }
+    
+    // Multi-pack items
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('2-pack')) weight *= 2;
+    else if (titleLower.includes('3-pack')) weight *= 3;
+    else if (titleLower.includes('4-pack')) weight *= 4;
+    else if (titleLower.includes('5-pack')) weight *= 5;
+    else if (titleLower.includes('6-pack')) weight *= 6;
+    
+    return Math.round(weight * 100) / 100; // Round to 2 decimal places
+  }
+
+  /**
+   * Estimate luxury item weight based on category
+   */
+  private estimateLuxuryWeight(title: string, category: string): number {
+    const titleLower = title.toLowerCase();
+    
+    // Category-based weights (in kg)
+    switch (category) {
+      case 'luxury-bags':
+        if (titleLower.includes('tote') || titleLower.includes('large')) return 1.2;
+        if (titleLower.includes('clutch') || titleLower.includes('small')) return 0.6;
+        return 0.9; // Default bag weight
+        
+      case 'luxury-accessories':
+        if (titleLower.includes('wallet') || titleLower.includes('card')) return 0.3;
+        if (titleLower.includes('belt')) return 0.4;
+        if (titleLower.includes('scarf')) return 0.2;
+        return 0.3; // Default accessory weight
+        
+      case 'luxury-footwear':
+        if (titleLower.includes('boot')) return 1.3;
+        if (titleLower.includes('sneaker')) return 1.0;
+        return 1.1; // Default shoe weight
+        
+      case 'luxury-eyewear':
+        return 0.15;
+        
+      case 'luxury-fragrance':
+        if (titleLower.includes('100ml') || titleLower.includes('large')) return 0.5;
+        if (titleLower.includes('50ml') || titleLower.includes('small')) return 0.3;
+        return 0.4; // Default fragrance weight
+        
+      case 'luxury-jewelry':
+        return 0.1;
+        
+      case 'luxury-clothing':
+        if (titleLower.includes('coat') || titleLower.includes('jacket')) return 1.5;
+        if (titleLower.includes('dress')) return 0.8;
+        if (titleLower.includes('shirt') || titleLower.includes('top')) return 0.4;
+        return 0.6; // Default clothing weight
+        
+      default:
+        return 0.5; // Default luxury item weight
+    }
   }
 
   /**

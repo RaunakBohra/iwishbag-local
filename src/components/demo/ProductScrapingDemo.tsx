@@ -15,6 +15,13 @@ export const ProductScrapingDemo = () => {
     'https://www.ebay.com/itm/123456789', // Sample eBay
     'https://www.walmart.com/ip/sample-product/123', // Sample Walmart
     'https://www.etsy.com/listing/sample', // Sample Etsy
+    'https://www.toysrus.com/product/sample-toy', // Sample Toys"R"Us
+    'https://www.carters.com/p/baby-product/sample', // Sample Carter's
+    'https://www.prada.com/ww/en/p/luxury-bag/sample', // Sample Prada
+    'https://www.ysl.com/en-us/handbags/sample-bag.html', // Sample YSL
+    'https://www.balenciaga.com/en-us/sneakers/sample-sneaker', // Sample Balenciaga
+    'https://www.dior.com/en_int/fashion/products/sample-jacket', // Sample Dior
+    'https://www.chanel.com/vn/makeup/p/sample-product/nail-color/', // Sample Chanel
   ]);
   
   const [currentUrl, setCurrentUrl] = useState('');
@@ -55,7 +62,7 @@ export const ProductScrapingDemo = () => {
           {/* Manual URL Input */}
           <div className="flex space-x-2">
             <Input
-              placeholder="Enter product URL..."
+              placeholder="Enter product URL (Amazon, eBay, Walmart, Toys\"R\"Us, Carter's, Prada, YSL, Balenciaga, Dior, Chanel, etc.)..."
               value={currentUrl}
               onChange={(e) => setCurrentUrl(e.target.value)}
               className="flex-1"
@@ -99,7 +106,14 @@ export const ProductScrapingDemo = () => {
                       {url.includes('amazon') ? '📦 Amazon' : 
                        url.includes('ebay') ? '🏪 eBay' :
                        url.includes('walmart') ? '🛒 Walmart' : 
-                       url.includes('etsy') ? '🎨 Etsy' : '🌐 Other'}
+                       url.includes('etsy') ? '🎨 Etsy' :
+                       url.includes('toysrus') ? '🧸 Toys"R"Us' :
+                       url.includes('carters') ? '👶 Carter\'s' :
+                       url.includes('prada') ? '👜 Prada' :
+                       url.includes('ysl') ? '💄 YSL' :
+                       url.includes('balenciaga') ? '🏃 Balenciaga' :
+                       url.includes('dior') ? '👑 Dior' :
+                       url.includes('chanel') ? '💎 Chanel' : '🌐 Other'}
                     </div>
                     <div className="text-xs text-gray-500 truncate">{url}</div>
                   </div>
@@ -202,6 +216,34 @@ export const ProductScrapingDemo = () => {
             <div className="flex items-center space-x-2">
               <span className="text-green-600">✓</span>
               <span>Zara</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>Toys"R"Us</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>Carter's</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>Prada</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>YSL</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>Balenciaga</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>Dior</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-green-600">✓</span>
+              <span>Chanel</span>
             </div>
           </div>
           
