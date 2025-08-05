@@ -59,6 +59,9 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     return currencyService.formatAmount(amount, currency || originCurrency);
   };
 
+  // Get origin currency for display purposes
+  const originCurrency = calc.inputs?.origin_currency || quote.origin_currency || 'USD';
+
   // Calculate key values
   const itemsSubtotal = steps.items_subtotal || quote.items.reduce((sum: number, item: any) => {
     const price = item.costprice_origin || item.unit_price_usd || 0;
@@ -127,8 +130,8 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
     {
       icon: DollarSign,
       title: 'Total',
-      value: `${formatCurrency(finalTotalUSD)} USD`,
-      subtitle: customerCurrency !== 'USD' ? `${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
+      value: `${formatCurrency(finalTotalUSD)} ${originCurrency}`,
+      subtitle: customerCurrency !== originCurrency ? `${currencyService.formatAmount(finalTotalCustomer, customerCurrency)}` : 'Final amount',
       color: 'text-green-600'
     }
   ];
@@ -419,7 +422,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
                   </div>
                   <div className="flex justify-between">
                     <span>Exchange Rate:</span>
-                    <span>{inputs.exchange_rate || 1} {quote.customer_currency}/USD</span>
+                    <span>{inputs.exchange_rate || 1} {quote.customer_currency}/{originCurrency}</span>
                   </div>
                 </div>
               </div>

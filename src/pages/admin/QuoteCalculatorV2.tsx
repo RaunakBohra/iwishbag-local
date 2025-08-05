@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
 import { usePurchaseCountries } from '@/hooks/usePurchaseCountries';
+import { useCountryUnit } from '@/hooks/useCountryUnits';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { delhiveryService, type DelhiveryServiceOption } from '@/services/DelhiveryService';
 import NCMService from '@/services/NCMService';
@@ -200,6 +201,12 @@ const QuoteCalculatorV2: React.FC = () => {
   const [originCountry, setOriginCountry] = useState('US');
   const [originState, setOriginState] = useState('');
   const [destinationCountry, setDestinationCountry] = useState('NP');
+  
+  // Get dynamic currency and weight units based on origin country
+  const { currency: originCurrency, weightUnit } = useCountryUnit(originCountry);
+  
+  // Get currency symbol for display
+  const currencySymbol = currencyService.getCurrencySymbolSync(originCurrency);
   const [destinationState, setDestinationState] = useState('urban');
   const [destinationPincode, setDestinationPincode] = useState('');
   const [destinationAddress, setDestinationAddress] = useState({
@@ -1495,8 +1502,8 @@ const QuoteCalculatorV2: React.FC = () => {
                             <div className="flex items-center justify-between w-full">
                               <span>
                                 {dynamicShippingMethods.length > 0 
-                                  ? `${method.label} - $${method.rate}/kg (${method.delivery_days})`
-                                  : `${method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - $${method.rate}/kg`
+                                  ? `${method.label} - ${currencySymbol}${method.rate}/${weightUnit} (${method.delivery_days})`
+                                  : `${method.label.replace('Standard', 'Std').replace('Express', 'Exp')} - ${currencySymbol}${method.rate}/${weightUnit}`
                                 }
                               </span>
                               {calculationResult?.route_calculations?.delivery_option_used?.id === method.value && (
@@ -1731,7 +1738,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                   updateItem(item.id, 'category', suggestion.category);
                                   toast({
                                     title: "🤖 Smart Enhancement Applied",
-                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.suggested_weight_kg}kg, Category: ${suggestion.category} (${confidence}% confidence)`,
+                                    description: `Applied HSN: ${suggestion.classification_code}, Weight: ${suggestion.suggested_weight_kg}${weightUnit}, Category: ${suggestion.category} (${confidence}% confidence)`,
                                     duration: 5000,
                                   });
                                   
@@ -1839,7 +1846,7 @@ const QuoteCalculatorV2: React.FC = () => {
                           />
                         </div>
                         <div>
-                          <Label className="text-sm font-medium text-gray-600 mb-1 block">Unit Price (USD) *</Label>
+                          <Label className="text-sm font-medium text-gray-600 mb-1 block">Unit Price ({originCurrency}) *</Label>
                           <div className="relative">
                             <DollarSign className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                             <Input
@@ -1855,7 +1862,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         </div>
                         <div>
                           <div className="flex items-center justify-between mb-1">
-                            <Label className="text-sm font-medium text-gray-600">Weight (kg)</Label>
+                            <Label className="text-sm font-medium text-gray-600">Weight ({weightUnit})</Label>
                             <div className="flex items-center gap-1">
                               <Button
                                 type="button"
@@ -1875,7 +1882,7 @@ const QuoteCalculatorV2: React.FC = () => {
                                         updateItem(item.id, 'weight_kg', suggestion.suggested_weight_kg);
                                         toast({
                                           title: "⚖️ Weight Estimated",
-                                          description: `Estimated weight: ${suggestion.suggested_weight_kg}kg based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
+                                          description: `Estimated weight: ${suggestion.suggested_weight_kg}${weightUnit} based on product analysis (${Math.round(suggestion.weight_confidence * 100)}% confidence)`,
                                           duration: 4000,
                                         });
                                       } else {
@@ -1937,7 +1944,7 @@ const QuoteCalculatorV2: React.FC = () => {
                               <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
                                 <p className="text-blue-700 font-medium">📦 {length}×{width}×{height} {unit}</p>
                                 <p className={`${isVolumetric ? 'text-orange-600' : 'text-green-600'} font-medium`}>
-                                  Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}kg
+                                  Chargeable: {Math.max(actualWeight, volumetricWeight).toFixed(3)}{weightUnit}
                                   {isVolumetric && ' (volumetric)'}
                                 </p>
                               </div>
@@ -2000,7 +2007,7 @@ const QuoteCalculatorV2: React.FC = () => {
                             }}
                           >
                             <option value="percentage">Percentage (%)</option>
-                            <option value="amount">Fixed Amount ($)</option>
+                            <option value="amount">Fixed Amount ({currencySymbol})</option>
                           </select>
                         </div>
                         
@@ -2028,7 +2035,7 @@ const QuoteCalculatorV2: React.FC = () => {
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                               <span className="text-gray-500 text-sm">
-                                {item.discount_type === 'amount' ? '$' : '%'}
+                                {item.discount_type === 'amount' ? currencySymbol : '%'}
                               </span>
                             </div>
                           </div>
@@ -2038,7 +2045,7 @@ const QuoteCalculatorV2: React.FC = () => {
                         {((item.discount_type === 'percentage' && item.discount_percentage && item.discount_percentage > 0) ||
                           (item.discount_type === 'amount' && item.discount_amount && item.discount_amount > 0)) && (
                           <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-300">
-                            Save ${item.discount_type === 'percentage' 
+                            Save {currencySymbol}{item.discount_type === 'percentage' 
                               ? ((item.quantity * item.unit_price_usd * (item.discount_percentage || 0)) / 100).toFixed(2)
                               : (item.discount_amount || 0).toFixed(2)
                             }
@@ -2239,7 +2246,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="percentage">%</SelectItem>
-                        <SelectItem value="fixed">$</SelectItem>
+                        <SelectItem value="fixed">{currencySymbol}</SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
@@ -2273,7 +2280,7 @@ const QuoteCalculatorV2: React.FC = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="percentage">%</SelectItem>
-                        <SelectItem value="fixed">$</SelectItem>
+                        <SelectItem value="fixed">{currencySymbol}</SelectItem>
                         <SelectItem value="free">Free</SelectItem>
                       </SelectContent>
                     </Select>
