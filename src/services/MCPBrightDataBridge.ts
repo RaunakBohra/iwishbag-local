@@ -232,11 +232,11 @@ class MCPBrightDataBridge {
   }
 
   /**
-   * Scrape eBay product data using real Bright Data MCP
+   * Scrape eBay product data using dedicated Bright Data dataset
    */
   async scrapeEbayProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
     try {
-      const result = await this.callMCPTool('web_data_ebay_product', { url });
+      const result = await this.callMCPTool('ebay_product', { url });
       
       if (result && result.content && result.content[0] && result.content[0].text) {
         const productData = JSON.parse(result.content[0].text)[0];

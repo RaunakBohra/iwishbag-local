@@ -265,7 +265,7 @@ class BrightDataProductService {
         throw new Error(mcpResult.error || 'eBay scraping failed');
       }
 
-      const productData = this.normalizeEbayData(mcpResult.data);
+      const productData = this.normalizeEbayData(mcpResult.data, url);
       
       return {
         success: true,
@@ -909,16 +909,154 @@ class BrightDataProductService {
     return this.estimateWeight(rawData.title || '', this.inferCategory(rawData.title || ''));
   }
 
-  private normalizeEbayData(rawData: any): ProductData {
-    return {
-      title: rawData.title,
-      price: this.parsePrice(rawData.price),
-      currency: rawData.currency || 'USD',
-      images: rawData.images || [],
-      brand: rawData.brand,
-      category: this.inferCategory(rawData.title),
-      availability: rawData.quantity > 0 ? 'in-stock' : 'out-of-stock'
-    };
+  private normalizeEbayData(rawData: any, url?: string): ProductData {
+    try {
+      // Detect country and currency from URL
+      const detectedCountry = url ? this.detectCountryFromUrl(url) : 'US';
+      const detectedCurrency = this.getCountryCurrency(detectedCountry);
+      
+      // Handle eBay's comprehensive response format
+      const priceString = rawData.price || rawData.final_price;
+      let finalPrice = 0;
+      
+      // Parse price from eBay format (e.g., "$19.98")
+      if (priceString) {
+        const priceMatch = priceString.match(/[\d,.]+/);
+        if (priceMatch) {
+          finalPrice = parseFloat(priceMatch[0].replace(/,/g, ''));
+        }
+      }
+      
+      // Safely parse images and limit to first 8 to prevent memory issues
+      let images: string[] = [];
+      try {
+        if (Array.isArray(rawData.images)) {
+          images = rawData.images.filter(Boolean).slice(0, 8);
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse eBay images:', imgError);
+        images = [];
+      }
+
+      // Extract brand from product specifications
+      let brand = 'Unknown Brand';
+      try {
+        if (Array.isArray(rawData.product_specifications)) {
+          const brandSpec = rawData.product_specifications.find(
+            (spec: any) => spec.specification_name?.toLowerCase() === 'brand'
+          );
+          if (brandSpec) {
+            brand = brandSpec.specification_value;
+          }
+        }
+      } catch (brandError) {
+        console.warn('Failed to extract eBay brand:', brandError);
+      }
+
+      // Determine category from eBay's root category or breadcrumbs
+      let category = 'general';
+      try {
+        if (rawData.root_category) {
+          category = this.mapEbayCategory(rawData.root_category);
+        } else if (Array.isArray(rawData.breadcrumbs) && rawData.breadcrumbs.length > 0) {
+          // Use the most specific category from breadcrumbs
+          const specificCategory = rawData.breadcrumbs[rawData.breadcrumbs.length - 1]?.name;
+          if (specificCategory) {
+            category = this.mapEbayCategory(specificCategory);
+          }
+        } else {
+          category = this.inferCategory(rawData.title || '');
+        }
+      } catch (categoryError) {
+        console.warn('Failed to map eBay category:', categoryError);
+      }
+
+      // Handle availability status based on condition and count
+      let availability = 'unknown';
+      try {
+        if (rawData.condition) {
+          if (rawData.condition === 'New' || rawData.available_count > 0) {
+            availability = 'in-stock';
+          } else if (rawData.available_count === 0) {
+            availability = 'out-of-stock';
+          }
+        }
+      } catch (availError) {
+        console.warn('Failed to parse eBay availability:', availError);
+      }
+
+      // Build comprehensive description from seller description
+      let description = '';
+      try {
+        description = rawData.description_from_the_seller || 
+                     rawData.description_from_the_seller_parsed || 
+                     `eBay ${rawData.condition || ''} condition item from ${rawData.seller_name || 'seller'}`;
+      } catch (descError) {
+        console.warn('Failed to build eBay description:', descError);
+        description = rawData.title || 'eBay Product';
+      }
+
+      // Estimate weight for eBay items (they rarely provide weight)
+      let weight: number | undefined;
+      try {
+        weight = this.estimateEbayWeight(category, rawData.title || '');
+      } catch (weightError) {
+        console.warn('Failed to estimate eBay weight:', weightError);
+      }
+
+      // Handle variants from tags
+      let variants: any[] = [];
+      try {
+        if (Array.isArray(rawData.tags)) {
+          variants = rawData.tags
+            .filter(Boolean)
+            .map((tag: string) => ({ type: 'feature', value: tag }));
+        }
+      } catch (variantError) {
+        console.warn('Failed to parse eBay variants:', variantError);
+      }
+
+      // Return normalized data with safe fallbacks
+      return {
+        title: rawData.title || `eBay Product ${rawData.product_id || ''}`,
+        price: finalPrice,
+        currency: rawData.currency || detectedCurrency,
+        weight: weight,
+        images: images,
+        brand: brand,
+        category: category,
+        availability: availability,
+        description: description.substring(0, 1000), // Limit description length
+        variants: variants,
+        // eBay-specific fields
+        condition: rawData.condition,
+        seller_name: rawData.seller_name,
+        seller_rating: rawData.seller_rating,
+        seller_reviews: rawData.seller_reviews,
+        item_location: rawData.item_location,
+        ships_to: rawData.ships_to,
+        shipping: rawData.shipping,
+        return_policy: rawData.return_policy
+      };
+
+    } catch (error) {
+      console.error('Error normalizing eBay data:', error);
+      // Detect country and currency for fallback
+      const detectedCountry = url ? this.detectCountryFromUrl(url) : 'US';
+      const detectedCurrency = this.getCountryCurrency(detectedCountry);
+      
+      // Return minimal safe data structure
+      return {
+        title: rawData?.title || 'Unknown eBay Product',
+        price: this.parsePrice(rawData?.price) || 0,
+        currency: rawData?.currency || detectedCurrency,
+        category: 'general',
+        availability: 'unknown',
+        images: [],
+        variants: [],
+        brand: 'Unknown Brand'
+      };
+    }
   }
 
   private normalizeWalmartData(rawData: any, url: string): ProductData {
@@ -2128,6 +2266,147 @@ class BrightDataProductService {
     
     // Default to fashion for ASOS (primarily a fashion retailer)
     return 'fashion';
+  }
+
+  /**
+   * Estimate eBay product weight based on category and product title
+   */
+  private estimateEbayWeight(category: string, productTitle: string): number | undefined {
+    const categoryLower = category.toLowerCase();
+    const titleLower = productTitle.toLowerCase();
+    
+    // eBay weight estimates in kg (international market standard)
+    
+    // Electronics
+    if (categoryLower.includes('electronics') || categoryLower.includes('computer') || categoryLower.includes('phone')) {
+      if (titleLower.includes('laptop')) return 2.5;
+      if (titleLower.includes('phone') || titleLower.includes('smartphone')) return 0.2;
+      if (titleLower.includes('tablet') || titleLower.includes('ipad')) return 0.5;
+      if (titleLower.includes('headphone') || titleLower.includes('earbuds')) return 0.3;
+      if (titleLower.includes('charger') || titleLower.includes('cable')) return 0.1;
+      return 0.5; // Default electronics weight
+    }
+    
+    // Collectibles (common on eBay)
+    if (categoryLower.includes('collectible') || categoryLower.includes('antique')) {
+      if (titleLower.includes('coin') || titleLower.includes('stamp')) return 0.05;
+      if (titleLower.includes('card') || titleLower.includes('trading')) return 0.02;
+      if (titleLower.includes('figure') || titleLower.includes('toy')) return 0.3;
+      if (titleLower.includes('knife') || titleLower.includes('blade')) return 0.2;
+      return 0.2; // Default collectibles weight
+    }
+    
+    // Fashion items
+    if (categoryLower.includes('fashion') || categoryLower.includes('clothing') || categoryLower.includes('apparel')) {
+      if (titleLower.includes('dress')) return 0.4;
+      if (titleLower.includes('shirt') || titleLower.includes('top')) return 0.2;
+      if (titleLower.includes('jean') || titleLower.includes('pant')) return 0.5;
+      if (titleLower.includes('jacket') || titleLower.includes('coat')) return 0.8;
+      return 0.3; // Default fashion weight
+    }
+    
+    // Footwear
+    if (categoryLower.includes('shoes') || categoryLower.includes('footwear')) {
+      if (titleLower.includes('boot')) return 1.2;
+      if (titleLower.includes('sneaker') || titleLower.includes('running')) return 0.8;
+      if (titleLower.includes('sandal') || titleLower.includes('flip')) return 0.3;
+      return 0.8; // Default shoe weight
+    }
+    
+    // Books
+    if (categoryLower.includes('book') || categoryLower.includes('media')) {
+      if (titleLower.includes('textbook')) return 1.5;
+      if (titleLower.includes('hardcover')) return 0.8;
+      if (titleLower.includes('paperback')) return 0.3;
+      return 0.5; // Default book weight
+    }
+    
+    // Home & Garden
+    if (categoryLower.includes('home') || categoryLower.includes('garden')) {
+      if (titleLower.includes('tool')) return 1.0;
+      if (titleLower.includes('decor') || titleLower.includes('decoration')) return 0.5;
+      if (titleLower.includes('kitchen')) return 0.8;
+      return 0.6; // Default home weight
+    }
+    
+    // Automotive (common category on eBay)
+    if (categoryLower.includes('automotive') || categoryLower.includes('motor') || categoryLower.includes('car')) {
+      if (titleLower.includes('filter')) return 0.5;
+      if (titleLower.includes('part') || titleLower.includes('component')) return 1.0;
+      if (titleLower.includes('accessory')) return 0.3;
+      return 0.8; // Default automotive weight
+    }
+    
+    // Default weight for unrecognized categories
+    return 0.5;
+  }
+
+  /**
+   * Map eBay category to our standardized categories
+   */
+  private mapEbayCategory(ebayCategory: string): string {
+    const categoryLower = ebayCategory.toLowerCase();
+    
+    // Electronics
+    if (categoryLower.includes('electronics') || categoryLower.includes('computer') || 
+        categoryLower.includes('phone') || categoryLower.includes('tablet') ||
+        categoryLower.includes('audio') || categoryLower.includes('video')) {
+      return 'electronics';
+    }
+    
+    // Fashion & Clothing
+    if (categoryLower.includes('clothing') || categoryLower.includes('fashion') || 
+        categoryLower.includes('apparel') || categoryLower.includes('dress') ||
+        categoryLower.includes('shirt') || categoryLower.includes('pant') ||
+        categoryLower.includes('jacket') || categoryLower.includes('accessory')) {
+      return 'fashion';
+    }
+    
+    // Footwear
+    if (categoryLower.includes('shoes') || categoryLower.includes('footwear') || 
+        categoryLower.includes('boot') || categoryLower.includes('sneaker') ||
+        categoryLower.includes('sandal')) {
+      return 'footwear';
+    }
+    
+    // Books & Media
+    if (categoryLower.includes('book') || categoryLower.includes('media') || 
+        categoryLower.includes('magazine') || categoryLower.includes('dvd') ||
+        categoryLower.includes('cd') || categoryLower.includes('vinyl')) {
+      return 'books';
+    }
+    
+    // Home & Garden
+    if (categoryLower.includes('home') || categoryLower.includes('garden') || 
+        categoryLower.includes('kitchen') || categoryLower.includes('furniture') ||
+        categoryLower.includes('decor') || categoryLower.includes('tool')) {
+      return 'home';
+    }
+    
+    // Beauty & Health
+    if (categoryLower.includes('beauty') || categoryLower.includes('health') || 
+        categoryLower.includes('cosmetic') || categoryLower.includes('skincare') ||
+        categoryLower.includes('fragrance') || categoryLower.includes('makeup')) {
+      return 'beauty';
+    }
+    
+    // Sports & Recreation
+    if (categoryLower.includes('sport') || categoryLower.includes('fitness') || 
+        categoryLower.includes('outdoor') || categoryLower.includes('recreation') ||
+        categoryLower.includes('exercise') || categoryLower.includes('gym')) {
+      return 'sports';
+    }
+    
+    // Collectibles (very common on eBay)
+    if (categoryLower.includes('collectible') || categoryLower.includes('antique') || 
+        categoryLower.includes('vintage') || categoryLower.includes('memorabilia') ||
+        categoryLower.includes('coin') || categoryLower.includes('stamp') ||
+        categoryLower.includes('card') || categoryLower.includes('figure')) {
+      return 'general'; // We don't have a collectibles category, so use general
+    }
+    
+    // Default to general for unrecognized categories
+    return 'general';
   }
 
   /**

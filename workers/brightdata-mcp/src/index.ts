@@ -58,7 +58,7 @@ export default {
         'hm_product': 'hm_product', // Custom H&M implementation
         'asos_product': 'asos_product', // Custom ASOS implementation
         'bestbuy_product': 'web_data_bestbuy_products',
-        'ebay_product': 'web_data_ebay_product', 
+        'ebay_product': 'ebay_product', // Custom eBay implementation 
         'walmart_product': 'web_data_walmart_product',
         'etsy_product': 'web_data_etsy_products',
         'zara_product': 'web_data_zara_products',
@@ -123,6 +123,28 @@ export default {
         
         return new Response(
           JSON.stringify(asosResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle eBay with custom implementation
+      if (tool === 'ebay_product') {
+        console.log(`🛍️ [${requestId}] Using custom eBay implementation`);
+        const ebayApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const ebayResult = await callEbayProductAPI(args?.url, ebayApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] eBay request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(ebayResult),
           {
             headers: {
               ...corsHeaders,
@@ -885,6 +907,181 @@ function mapASOSDataToProductData(rawData: any, url: string): any {
     category_tree: rawData.breadcrumbs || [],
     url: url,
     source: 'asos-dataset'
+  };
+}
+
+/**
+ * eBay Product API Implementation
+ * Uses Bright Data Datasets API with dataset: gd_ltr9mjt81n0zzdk1fb
+ */
+async function callEbayProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🛍️ [${requestId}] Starting eBay product scraping for: ${url}`);
+    
+    // Trigger data collection using eBay dataset
+    const datasetId = 'gd_ltr9mjt81n0zzdk1fb'; // eBay dataset ID from documentation
+    const triggerResult = await triggerEbayBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from eBay dataset trigger');
+    }
+    
+    console.log(`📋 [${requestId}] eBay data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
+    
+    // Wait for results with polling
+    const results = await waitForEbayBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Download and process results
+    const finalData = await downloadEbayBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Transform data to our expected format
+    const transformedData = mapEbayDataToProductData(finalData[0] || {}, url);
+    
+    console.log(`✅ [${requestId}] eBay scraping completed successfully`);
+    
+    return {
+      content: [{
+        text: JSON.stringify([transformedData])
+      }]
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] eBay API call failed:`, error);
+    throw new Error(`eBay scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Trigger eBay data collection using Bright Data Datasets API
+ */
+async function triggerEbayBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering eBay data collection...`);
+  
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ url }])
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`eBay dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log(`📋 [${requestId}] eBay trigger response:`, result);
+  
+  return result;
+}
+
+/**
+ * Wait for eBay Bright Data results with polling
+ */
+async function waitForEbayBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for eBay data collection...`);
+  
+  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] eBay polling attempt ${attempts}/${maxAttempts}...`);
+    
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      throw new Error(`eBay progress check failed: ${progressResponse.status}`);
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] eBay progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      console.log(`✅ [${requestId}] eBay data ready!`);
+      return progressResult;
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`eBay data collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error(`eBay data collection timeout after ${maxAttempts} attempts`);
+}
+
+/**
+ * Download eBay Bright Data results
+ */
+async function downloadEbayBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`📥 [${requestId}] Downloading eBay data...`);
+  
+  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`
+    }
+  });
+  
+  if (!dataResponse.ok) {
+    throw new Error(`eBay data download failed: ${dataResponse.status}`);
+  }
+  
+  const data = await dataResponse.json();
+  console.log(`📊 [${requestId}] Downloaded ${data.length || 0} eBay records`);
+  
+  return data;
+}
+
+/**
+ * Map raw eBay data to our product data format
+ */
+function mapEbayDataToProductData(rawData: any, url: string): any {
+  console.log(`🔄 Mapping eBay data to product format...`);
+  
+  // Parse price safely
+  let priceNumber = 0;
+  if (rawData.price) {
+    const priceMatch = rawData.price.match(/[\d,.]+/);
+    if (priceMatch) {
+      priceNumber = parseFloat(priceMatch[0].replace(/,/g, ''));
+    }
+  }
+  
+  return {
+    title: rawData.title || rawData.product_name || 'eBay Product',
+    final_price: rawData.price || `$${priceNumber}`,
+    price: priceNumber,
+    currency: rawData.currency || 'USD',
+    images: rawData.images || [],
+    brand: rawData.product_specifications?.find((spec: any) => spec.specification_name === 'Brand')?.specification_value || 'Unknown Brand',
+    specifications: rawData.product_specifications || [],
+    availability: rawData.condition === 'New' || rawData.available_count > 0 ? 'in-stock' : 'unknown',
+    rating: rawData.product_ratings || 0,
+    reviews_count: rawData.item_reviews || 0,
+    highlights: rawData.tags?.filter(Boolean) || [],
+    product_description: rawData.description_from_the_seller || rawData.description_from_the_seller_parsed || '',
+    category: rawData.root_category || 'general',
+    seller_name: rawData.seller_name || '',
+    seller_rating: rawData.seller_rating || '',
+    seller_reviews: rawData.seller_reviews || '',
+    condition: rawData.condition || 'Unknown',
+    item_location: rawData.item_location || '',
+    ships_to: rawData.ships_to || '',
+    shipping: rawData.shipping || '',
+    return_policy: rawData.return_policy || '',
+    breadcrumbs: rawData.breadcrumbs || [],
+    seller_total_reviews: rawData.seller_total_reviews || 0,
+    seller_ratings: rawData.seller_ratings || [],
+    amount_of_stars: rawData.amount_of_stars || [],
+    url: url,
+    source: 'ebay-dataset'
   };
 }
 

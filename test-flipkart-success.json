@@ -1,0 +1,47 @@
+{
+  "success": true,
+  "data": {
+    "title": "WomenBuzz Medium 25 L Laptop Backpack Backpack Purse for Women Convertible 25L Travel Vintage PU Leather Shoulder Bag  (Pink)",
+    "final_price": "₹672",
+    "price": 672,
+    "initial_price": "₹2,499", 
+    "currency": "INR",
+    "images": [
+      "https://rukminim2.flixcart.com/image/832/832/xif0q/backpack/p/u/o/15-backpack-purse-for-women-convertible-25l-travel-vintage-pu-original-imah4fpmhb6eu4pw.jpeg?q=70&crop=false",
+      "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/o/q/l/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmckhjhzeu.jpeg?q=70&crop=false",
+      "https://rukminim2.flixcart.com/image/128/128/xif0q/backpack/t/o/d/13-5-women-backpack-student-backpack-lightweight-comfortable-5-original-imah4fzmzvzpjmgt.jpeg?q=70&crop=false"
+    ],
+    "main_image": "https://rukminim2.flixcart.com/image/832/832/xif0q/backpack/p/u/o/15-backpack-purse-for-women-convertible-25l-travel-vintage-pu-original-imah4fpmhb6eu4pw.jpeg?q=70&crop=false",
+    "brand": "WomenBuzz",
+    "specifications": [
+      {"specification_name": "Brand", "specification_value": "WomenBuzz"},
+      {"specification_name": "Type", "specification_value": "Backpack"},
+      {"specification_name": "Ideal For", "specification_value": "Women"},
+      {"specification_name": "Capacity", "specification_value": "25 L"},
+      {"specification_name": "Weight", "specification_value": "440 g"},
+      {"specification_name": "Dimensions", "specification_value": "W x H: 13 x 15 inch"}
+    ],
+    "availability": "in-stock",
+    "weight": 0.44,
+    "rating": 4.24,
+    "reviews_count": 27298,
+    "highlights": ["Black", "Blue-USA1", "BlueLE", "Brown", "Coco", "Cream", "DarkGrey", "Grey", "Peach"],
+    "product_description": "Bottle Pocket",
+    "category": "Backpack",
+    "seller_name": "ProArch",
+    "seller_rating": 4.2,
+    "discount_percentage": "73% off",
+    "delivery_date": "12 Aug, Tuesday?",
+    "color_variants": ["Black", "Blue-USA1", "BlueLE", "Brown", "Coco", "Cream", "DarkGrey", "Grey", "Peach"],
+    "return_policy": "Cash on Delivery available",
+    "payment_options": "10 days return policy",
+    "capacity": "25 L",
+    "dimensions": "W x H: 13 x 15 inch",
+    "url": "https://www.flipkart.com/womenbuzz-backpack-purse-women-convertible-25l-travel-vintage-pu-leather-shoulder-bag-25-l/p/itm8f0802d1227f2",
+    "source": "flipkart-dca",
+    "platform": "flipkart",
+    "timestamp": "2025-08-05T08:00:00.000Z"
+  },
+  "requestId": "test123",
+  "duration": 45000
+}

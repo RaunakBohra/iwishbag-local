@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": {
+    "title": "vivo T4 5G (Phantom Grey, 256 GB) (8 GB RAM)",
+    "final_price": "₹23,999",
+    "price": 23999,
+    "initial_price": "₹27,999",
+    "currency": "INR",
+    "images": [
+      "https://rukminim2.flixcart.com/image/128/128/xif0q/mobile/k/t/x/-original-imahbgpzbumfzkbh.jpeg?q=70&crop=false",
+      "https://rukminim2.flixcart.com/image/128/128/xif0q/mobile/o/g/p/-original-imahbfd4wnzbhngb.jpeg?q=70&crop=false",
+      "https://rukminim2.flixcart.com/image/128/128/xif0q/mobile/i/0/l/-original-imahbfd4eqsjyu76.jpeg?q=70&crop=false",
+      "https://rukminim2.flixcart.com/image/128/128/xif0q/mobile/e/l/m/-original-imahbfd4uyzrzdfr.jpeg?q=70&crop=false"
+    ],
+    "main_image": "https://rukminim2.flixcart.com/image/128/128/xif0q/mobile/k/t/x/-original-imahbgpzbumfzkbh.jpeg?q=70&crop=false",
+    "brand": "vivo",
+    "specifications": [
+      {"specification_name": "Weight", "specification_value": "199 g"}
+    ],
+    "availability": "in-stock",
+    "weight": 0.199,
+    "rating": 4.54,
+    "reviews_count": 40354,
+    "highlights": ["Emerald Blaze", "Phantom Grey", "128 GB", "256 GB", "8 GB", "12 GB"],
+    "product_description": "7 Days Brand Support",
+    "category": "electronics",
+    "seller_name": "BTPLD",
+    "seller_rating": 4.4,
+    "discount_percentage": "14% off",
+    "delivery_date": "8 Aug, Friday?",
+    "return_policy": "7 Days Brand Support",
+    "payment_options": "GST invoice available",
+    "url": "https://www.flipkart.com/vivo-t4-5g-phantom-grey-256-gb/p/itmc2634fd4daeb9",
+    "source": "flipkart-dca",
+    "platform": "flipkart",
+    "timestamp": "2025-08-05T08:30:00.000Z"
+  },
+  "requestId": "test456",
+  "duration": 35000
+}
