@@ -344,11 +344,13 @@ function mapBrightDataToProductData(brightDataProduct: any, requestId: string) {
         weightValue = parseFloat(weightMatch[1]);
         weightUnit = weightMatch[2].toLowerCase();
         
-        // Convert to kg if needed
+        // Convert to lbs for Amazon products
         if (weightUnit.includes('ounce') || weightUnit.includes('oz')) {
-          weightValue = weightValue * 0.028; // oz to kg
+          weightValue = weightValue / 16; // oz to lbs
+          weightUnit = 'lbs';
         } else if (weightUnit.includes('pound') || weightUnit.includes('lb')) {
-          weightValue = weightValue * 0.453; // lbs to kg
+          // Already in lbs, keep as-is
+          weightUnit = 'lbs';
         }
       }
     }
@@ -376,7 +378,7 @@ function mapBrightDataToProductData(brightDataProduct: any, requestId: string) {
       url: brightDataProduct.url || brightDataProduct.origin_url,
       item_weight: brightDataProduct.item_weight,
       weight_value: weightValue,
-      weight_unit: 'kg',
+      weight_unit: weightUnit,
       categories: brightDataProduct.categories || [],
       features: brightDataProduct.features || [],
       manufacturer: brightDataProduct.manufacturer,
