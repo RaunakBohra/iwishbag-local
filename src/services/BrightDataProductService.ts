@@ -62,16 +62,6 @@ const PLATFORM_CONFIGS = {
       'Video Games': 'electronics'
     }
   },
-  etsy: {
-    scraperType: 'etsy_product',
-    fields: ['title', 'price', 'currency', 'images', 'shop_name', 'variations'],
-    customizations: true
-  },
-  zara: {
-    scraperType: 'zara_product',
-    fields: ['title', 'price', 'currency', 'images', 'sizes', 'colors'],
-    fashionFocus: true
-  },
   myntra: {
     scraperType: 'myntra_product',
     fields: ['title', 'final_price', 'currency', 'images', 'brand', 'specifications', 'offers'],
@@ -166,12 +156,6 @@ class BrightDataProductService {
           break;
         case 'bestbuy':
           result = await this.scrapeBestBuyProduct(url, options);
-          break;
-        case 'etsy':
-          result = await this.scrapeEtsyProduct(url, options);
-          break;
-        case 'zara':
-          result = await this.scrapeZaraProduct(url, options);
           break;
         case 'myntra':
           result = await this.scrapeMyntraProduct(url, options);
@@ -350,69 +334,6 @@ class BrightDataProductService {
     }
   }
 
-  /**
-   * Scrape Etsy product using Bright Data MCP
-   */
-  private async scrapeEtsyProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
-    try {
-      const mcpResult = await this.callBrightDataMCP('etsy_product', {
-        url,
-        include_variations: options.includeVariants !== false,
-        include_shop_info: true
-      });
-
-      if (!mcpResult.success) {
-        throw new Error(mcpResult.error || 'Etsy scraping failed');
-      }
-
-      const productData = this.normalizeEtsyData(mcpResult.data);
-      
-      return {
-        success: true,
-        data: productData,
-        source: 'scraper'
-      };
-
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Etsy scraping failed',
-        source: 'scraper'
-      };
-    }
-  }
-
-  /**
-   * Scrape Zara product using Bright Data MCP
-   */
-  private async scrapeZaraProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
-    try {
-      const mcpResult = await this.callBrightDataMCP('zara_product', {
-        url,
-        include_sizes: true,
-        include_colors: true
-      });
-
-      if (!mcpResult.success) {
-        throw new Error(mcpResult.error || 'Zara scraping failed');
-      }
-
-      const productData = this.normalizeZaraData(mcpResult.data);
-      
-      return {
-        success: true,
-        data: productData,
-        source: 'scraper'
-      };
-
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Zara scraping failed',
-        source: 'scraper'
-      };
-    }
-  }
 
   /**
    * Scrape Myntra product using Bright Data MCP
@@ -631,10 +552,6 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeWalmartProduct(params.url, params);
       case 'bestbuy_product':
         return await mcpBrightDataBridge.scrapeBestBuyProduct(params.url, params);
-      case 'etsy_product':
-        return await mcpBrightDataBridge.scrapeEtsyProduct(params.url, params);
-      case 'zara_product':
-        return await mcpBrightDataBridge.scrapeZaraProduct(params.url, params);
       case 'myntra_product':
         return await mcpBrightDataBridge.scrapeMyntraProduct(params.url, params);
       case 'target_product':
@@ -666,8 +583,6 @@ class BrightDataProductService {
     if (urlLower.includes('ebay.')) return 'ebay';
     if (urlLower.includes('walmart.com')) return 'walmart';
     if (urlLower.includes('bestbuy.com')) return 'bestbuy';
-    if (urlLower.includes('etsy.com')) return 'etsy';
-    if (urlLower.includes('zara.com')) return 'zara';
     if (urlLower.includes('myntra.com')) return 'myntra';
     if (urlLower.includes('target.com')) return 'target';
     if (urlLower.includes('hm.com')) return 'hm';
@@ -755,19 +670,6 @@ class BrightDataProductService {
       return 'GB'; // ASOS default (UK-based company)
     }
     
-    // Zara country detection
-    if (urlLower.includes('zara.com')) {
-      if (urlLower.includes('/us/')) return 'US';
-      if (urlLower.includes('/gb/')) return 'GB';
-      if (urlLower.includes('/in/')) return 'IN';
-      if (urlLower.includes('/ca/')) return 'CA';
-      if (urlLower.includes('/au/')) return 'AU';
-      if (urlLower.includes('/de/')) return 'DE';
-      if (urlLower.includes('/fr/')) return 'FR';
-      if (urlLower.includes('/es/')) return 'ES';
-      if (urlLower.includes('/it/')) return 'IT';
-      return 'ES'; // Zara default (Spanish company)
-    }
     
     // Myntra (India only)
     if (urlLower.includes('myntra.com')) return 'IN';
@@ -843,15 +745,13 @@ class BrightDataProductService {
     // International marketplaces that use metric system (kg)
     const internationalMarketplaces = [
       'hm.com',         // H&M (Swedish, uses metric)
-      'zara.com',       // Zara (Spanish, uses metric)
       'myntra.com',     // Myntra (Indian, uses metric)
       'flipkart.com',   // Flipkart (Indian, uses metric)
       'amazon.co.uk',   // Amazon UK
       'amazon.de',      // Amazon Germany
       'amazon.fr',      // Amazon France
       'amazon.co.jp',   // Amazon Japan
-      'amazon.com.au',  // Amazon Australia
-      'etsy.com'        // Etsy (international, primarily metric)
+      'amazon.com.au'   // Amazon Australia
     ];
     
     // Check if it's a US marketplace

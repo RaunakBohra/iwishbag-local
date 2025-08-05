@@ -60,8 +60,6 @@ export default {
         'bestbuy_product': 'web_data_bestbuy_products',
         'ebay_product': 'ebay_product', // Custom eBay implementation 
         'walmart_product': 'web_data_walmart_product',
-        'etsy_product': 'web_data_etsy_products',
-        'zara_product': 'web_data_zara_products',
         'scrape_as_markdown': 'scrape_as_markdown'
       };
 
@@ -464,8 +462,6 @@ function getBrightDataAPIEndpoint(toolName: string): string {
     'web_data_ebay_product': 'https://api.brightdata.com/datasets/v3/trigger', 
     'web_data_walmart_product': 'https://api.brightdata.com/datasets/v3/trigger',
     'web_data_bestbuy_products': 'https://api.brightdata.com/datasets/v3/trigger',
-    'web_data_etsy_products': 'https://api.brightdata.com/datasets/v3/trigger',
-    'web_data_zara_products': 'https://api.brightdata.com/datasets/v3/trigger',
     'scraping_browser': 'https://api.brightdata.com/scraper-api/collect',
     'scrape_as_markdown': 'https://api.brightdata.com/scraper-api/collect'
   };
@@ -481,9 +477,7 @@ function getDatasetId(toolName: string): string | null {
     'web_data_amazon_product': 'gd_l7q7dkf244hwjntr0',
     'web_data_ebay_product': 'gd_ltr9mjt81n0zzdk1fb',
     'web_data_bestbuy_products': 'gd_ltre1jqe1jfr7cccf',
-    'web_data_walmart_product': 'your_walmart_dataset_id', // Not provided
-    'web_data_etsy_products': 'your_etsy_dataset_id', // Not provided
-    'web_data_zara_products': 'your_zara_dataset_id' // Not provided
+    'web_data_walmart_product': 'your_walmart_dataset_id' // Not provided
     // 'flipkart_product': Uses DCA API with collector c_mdy5p87619oyypd0k3
   };
   
