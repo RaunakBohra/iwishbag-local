@@ -58,6 +58,7 @@ export default {
         'hm_product': 'hm_product', // Custom H&M implementation
         'asos_product': 'asos_product', // Custom ASOS implementation
         'ae_product': 'ae_product', // Custom American Eagle implementation
+        'etsy_product': 'etsy_product', // Custom Etsy implementation
         'bestbuy_product': 'web_data_bestbuy_products',
         'ebay_product': 'ebay_product', // Custom eBay implementation 
         'walmart_product': 'web_data_walmart_product',
@@ -144,6 +145,28 @@ export default {
         
         return new Response(
           JSON.stringify(aeResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle Etsy with custom implementation
+      if (tool === 'etsy_product') {
+        console.log(`🎨 [${requestId}] Using custom Etsy implementation`);
+        const etsyApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const etsyResult = await callEtsyProductAPI(args?.url, etsyApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] Etsy request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(etsyResult),
           {
             headers: {
               ...corsHeaders,
@@ -423,14 +446,14 @@ async function callDatasetAPI(args: any, apiToken: string, requestId: string, to
  * Wait for dataset results with proper polling
  */
 async function waitForDatasetResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for dataset collection to complete...`);
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for dataset collection to complete (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 20; // 20 attempts * 5 seconds = 100 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] Dataset polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] Dataset polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     // Check progress
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
@@ -441,7 +464,7 @@ async function waitForDatasetResults(snapshotId: string, apiToken: string, reque
     
     if (!progressResponse.ok) {
       console.error(`❌ [${requestId}] Progress check failed: ${progressResponse.status}`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, config.interval));
       continue;
     }
     
@@ -469,11 +492,11 @@ async function waitForDatasetResults(snapshotId: string, apiToken: string, reque
       throw new Error(`Dataset collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 5 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error(`Dataset collection timeout - data not ready after ${maxAttempts * 5} seconds`);
+  throw new Error(`Dataset collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -578,14 +601,14 @@ async function triggerTargetBrightDataCollection(url: string, datasetId: string,
  * Wait for Target Bright Data results with polling
  */
 async function waitForTargetBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for Target data collection...`);
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for Target data collection (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] Target polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] Target polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
       headers: {
@@ -607,11 +630,11 @@ async function waitForTargetBrightDataResults(snapshotId: string, apiToken: stri
       throw new Error(`Target data collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error('Target data collection timeout - data not ready within 60 seconds');
+  throw new Error(`Target data collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -736,14 +759,14 @@ async function triggerHMBrightDataCollection(url: string, datasetId: string, api
  * Wait for H&M Bright Data results with polling
  */
 async function waitForHMBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for H&M data collection...`);
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for H&M data collection (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] H&M polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] H&M polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
       headers: {
@@ -765,11 +788,11 @@ async function waitForHMBrightDataResults(snapshotId: string, apiToken: string, 
       throw new Error(`H&M data collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error('H&M data collection timeout - data not ready within 60 seconds');
+  throw new Error(`H&M data collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -897,14 +920,14 @@ async function triggerASOSBrightDataCollection(url: string, datasetId: string, a
  * Wait for ASOS Bright Data results with polling
  */
 async function waitForASOSBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for ASOS data collection...`);
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for ASOS data collection (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] ASOS polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] ASOS polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
       headers: {
@@ -926,11 +949,11 @@ async function waitForASOSBrightDataResults(snapshotId: string, apiToken: string
       throw new Error(`ASOS data collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error(`ASOS data collection timeout after ${maxAttempts} attempts`);
+  throw new Error(`ASOS data collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -1059,17 +1082,42 @@ async function triggerAEBrightDataCollection(url: string, datasetId: string, api
 }
 
 /**
- * Wait for American Eagle Bright Data results with polling
+ * Platform-specific polling configuration
+ */
+const POLLING_CONFIG = {
+  'ae_product': {
+    interval: 5 * 60 * 1000,  // 5 minutes
+    maxAttempts: 6,           // 30 minutes total
+    displayName: 'American Eagle',
+    totalTimeout: '30 minutes'
+  },
+  'default': {
+    interval: 15 * 1000,      // 15 seconds
+    maxAttempts: 20,          // 5 minutes total  
+    displayName: 'Platform',
+    totalTimeout: '5 minutes'
+  }
+};
+
+/**
+ * Get polling configuration for a specific platform
+ */
+function getPollingConfig(platform: string) {
+  return POLLING_CONFIG[platform] || POLLING_CONFIG['default'];
+}
+
+/**
+ * Wait for American Eagle Bright Data results with platform-specific polling (5-minute intervals)
  */
 async function waitForAEBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for AE data collection...`);
+  const config = getPollingConfig('ae_product');
+  console.log(`⏳ [${requestId}] Waiting for ${config.displayName} data collection (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] AE polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] ${config.displayName} polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000/60}min intervals)...`);
     
     // Check progress
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
@@ -1079,17 +1127,17 @@ async function waitForAEBrightDataResults(snapshotId: string, apiToken: string, 
     });
     
     if (!progressResponse.ok) {
-      console.error(`❌ [${requestId}] AE progress check failed: ${progressResponse.status}`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.error(`❌ [${requestId}] ${config.displayName} progress check failed: ${progressResponse.status}`);
+      await new Promise(resolve => setTimeout(resolve, config.interval));
       continue;
     }
     
     const progressResult = await progressResponse.json();
-    console.log(`📊 [${requestId}] AE progress status: ${progressResult.status}`);
+    console.log(`📊 [${requestId}] ${config.displayName} progress status: ${progressResult.status}`);
     
     if (progressResult.status === 'ready') {
       // Data is ready, download it
-      console.log(`✅ [${requestId}] AE data ready! Downloading...`);
+      console.log(`✅ [${requestId}] ${config.displayName} data ready! Downloading...`);
       
       const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
         headers: {
@@ -1098,23 +1146,24 @@ async function waitForAEBrightDataResults(snapshotId: string, apiToken: string, 
       });
       
       if (!dataResponse.ok) {
-        throw new Error(`AE data download failed: ${dataResponse.status}`);
+        throw new Error(`${config.displayName} data download failed: ${dataResponse.status}`);
       }
       
       const data = await dataResponse.json();
-      console.log(`📥 [${requestId}] Downloaded ${data.length || 0} AE records`);
+      console.log(`📥 [${requestId}] Downloaded ${data.length || 0} ${config.displayName} records`);
       
       return data;
       
     } else if (progressResult.status === 'failed') {
-      throw new Error(`AE dataset collection failed: ${progressResult.error || 'Unknown error'}`);
+      throw new Error(`${config.displayName} dataset collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for platform-specific interval before next poll
+    console.log(`⏳ [${requestId}] Waiting ${config.interval/1000/60} minutes before next ${config.displayName} poll...`);
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error('AE dataset collection timeout - data not ready within 60 seconds');
+  throw new Error(`${config.displayName} dataset collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -1188,14 +1237,14 @@ async function triggerEbayBrightDataCollection(url: string, datasetId: string, a
  * Wait for eBay Bright Data results with polling
  */
 async function waitForEbayBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for eBay data collection...`);
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for eBay data collection (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] eBay polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] eBay polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
       headers: {
@@ -1217,11 +1266,11 @@ async function waitForEbayBrightDataResults(snapshotId: string, apiToken: string
       throw new Error(`eBay data collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error(`eBay data collection timeout after ${maxAttempts} attempts`);
+  throw new Error(`eBay data collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -1388,13 +1437,13 @@ async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: s
   
   console.log(`🔍 [${requestId}] Polling for results with ID: ${resultId}`);
   
-  // Simplified polling - just try the most common DCA endpoints
-  const maxAttempts = 20; // Reduce attempts for faster timeout
+  // Simplified polling - use optimized intervals for DCA
+  const config = getPollingConfig('default');
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] DCA polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] DCA polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     try {
       // Try the most common DCA result endpoint
@@ -1417,11 +1466,11 @@ async function waitAndDownloadFlipkartDCAResults(triggerResult: any, apiToken: s
       console.log(`⚠️ [${requestId}] DCA polling error:`, error);
     }
     
-    // Wait 3 seconds before next attempt (longer intervals)
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Wait for optimized interval before next attempt
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error(`Flipkart DCA collection timeout after ${maxAttempts} attempts - no results received`);
+  throw new Error(`Flipkart DCA collection timeout after ${config.maxAttempts} attempts - no results received`);
 }
 
 
@@ -1615,14 +1664,14 @@ async function triggerMyntraBrightDataCollection(url: string, datasetId: string,
  * Wait for Myntra Bright Data results with polling
  */
 async function waitForMyntraBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
-  console.log(`⏳ [${requestId}] Waiting for Myntra data collection...`);
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for Myntra data collection (up to ${config.totalTimeout})...`);
   
-  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
   let attempts = 0;
   
-  while (attempts < maxAttempts) {
+  while (attempts < config.maxAttempts) {
     attempts++;
-    console.log(`🔄 [${requestId}] Myntra polling attempt ${attempts}/${maxAttempts}...`);
+    console.log(`🔄 [${requestId}] Myntra polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
     
     const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
       headers: {
@@ -1644,11 +1693,11 @@ async function waitForMyntraBrightDataResults(snapshotId: string, apiToken: stri
       throw new Error(`Myntra data collection failed: ${progressResult.error || 'Unknown error'}`);
     }
     
-    // Wait 2 seconds before next poll
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
   }
   
-  throw new Error(`Myntra data collection timeout after ${maxAttempts} attempts`);
+  throw new Error(`Myntra data collection timeout - data not ready within ${config.totalTimeout}`);
 }
 
 /**
@@ -1700,5 +1749,197 @@ function mapMyntraDataToProductData(rawData: any, url: string): any {
     discount: rawData.discount || rawData.discount_percentage,
     url: url,
     source: 'myntra-dataset'
+  };
+}
+
+/**
+ * Etsy Product API Implementation
+ * Uses Bright Data Datasets API with dataset: gd_ltppk0jdv1jqz25mz
+ */
+async function callEtsyProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🎨 [${requestId}] Starting Etsy product scraping for: ${url}`);
+    
+    // Trigger data collection using Etsy dataset
+    const datasetId = 'gd_ltppk0jdv1jqz25mz'; // Etsy dataset ID
+    const triggerResult = await triggerEtsyBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from Etsy dataset trigger');
+    }
+    
+    console.log(`📋 [${requestId}] Etsy data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
+    
+    // Wait for results with polling
+    const results = await waitForEtsyBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Download and process results
+    const finalData = await downloadEtsyBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Transform data to our expected format
+    const transformedData = mapEtsyDataToProductData(finalData[0] || {}, url);
+    
+    console.log(`✅ [${requestId}] Etsy scraping completed successfully`);
+    
+    return {
+      content: [{
+        text: JSON.stringify([transformedData])
+      }]
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] Etsy API call failed:`, error);
+    throw new Error(`Etsy scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Trigger Etsy data collection using Bright Data Datasets API
+ */
+async function triggerEtsyBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering Etsy data collection...`);
+  
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ url }])
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Etsy dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log(`📋 [${requestId}] Etsy trigger response:`, result);
+  
+  return result;
+}
+
+/**
+ * Wait for Etsy Bright Data results with polling
+ */
+async function waitForEtsyBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  const config = getPollingConfig('default');
+  console.log(`⏳ [${requestId}] Waiting for Etsy data collection (up to ${config.totalTimeout})...`);
+  
+  let attempts = 0;
+  
+  while (attempts < config.maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] Etsy polling attempt ${attempts}/${config.maxAttempts} (${config.interval/1000}s intervals)...`);
+    
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      throw new Error(`Etsy progress check failed: ${progressResponse.status}`);
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] Etsy progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      console.log(`✅ [${requestId}] Etsy data ready!`);
+      return progressResult;
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`Etsy data collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait for optimized interval before next poll
+    await new Promise(resolve => setTimeout(resolve, config.interval));
+  }
+  
+  throw new Error(`Etsy data collection timeout - data not ready within ${config.totalTimeout}`);
+}
+
+/**
+ * Download Etsy Bright Data results
+ */
+async function downloadEtsyBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`📥 [${requestId}] Downloading Etsy data...`);
+  
+  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`
+    }
+  });
+  
+  if (!dataResponse.ok) {
+    throw new Error(`Etsy data download failed: ${dataResponse.status}`);
+  }
+  
+  const data = await dataResponse.json();
+  console.log(`📊 [${requestId}] Downloaded ${data.length || 0} Etsy records`);
+  
+  return data;
+}
+
+/**
+ * Map raw Etsy data to our product data format
+ */
+function mapEtsyDataToProductData(rawData: any, url: string): any {
+  console.log(`🔄 Mapping Etsy data to product format...`);
+  
+  // Extract variations and specifications
+  let specifications = [];
+  if (rawData.product_specifications && Array.isArray(rawData.product_specifications)) {
+    specifications = rawData.product_specifications.map((spec: any) => ({
+      specification_name: spec.specification_name || 'Specification',
+      specification_value: spec.specification_values || spec.value || ''
+    }));
+  }
+  
+  // Extract category from breadcrumbs or category_tree
+  let category = 'handmade';
+  if (rawData.category_tree && Array.isArray(rawData.category_tree) && rawData.category_tree.length > 0) {
+    category = rawData.category_tree[0].toLowerCase();
+  } else if (rawData.root_category) {
+    category = rawData.root_category.toLowerCase();
+  }
+  
+  // Calculate discount percentage
+  let discount_percentage = rawData.discount_percentage || 0;
+  if (!discount_percentage && rawData.initial_price && rawData.final_price && rawData.initial_price > rawData.final_price) {
+    discount_percentage = Math.round(((rawData.initial_price - rawData.final_price) / rawData.initial_price) * 100);
+  }
+  
+  return {
+    title: rawData.title || 'Etsy Product',
+    final_price: rawData.final_price || rawData.price,
+    initial_price: rawData.initial_price,
+    currency: rawData.currency || 'USD',
+    images: rawData.images || [],
+    brand: rawData.seller_name || rawData.seller_shop_name || 'Etsy Seller',
+    specifications: specifications,
+    availability: rawData.in_stock !== false ? 'in-stock' : 'out-of-stock',
+    rating: rawData.rating || 0,
+    reviews_count: rawData.reviews_count_item || rawData.reviews_count_shop || 0,
+    highlights: rawData.highlights_lines?.map((h: any) => `${h.name}: ${h.value}`) || rawData.highlights || [],
+    product_description: Array.isArray(rawData.item_details) ? rawData.item_details.join(' ') : (rawData.item_details || ''),
+    category: category,
+    seller_name: rawData.seller_name || rawData.seller_shop_name,
+    seller_shop_name: rawData.seller_shop_name,
+    seller_shop_url: rawData.seller_shop_url,
+    product_id: rawData.product_id,
+    listing_inventory_id: rawData.listing_inventory_id,
+    discount_percentage: discount_percentage,
+    shipping_return_policies: rawData.shipping_return_policies || [],
+    variations: rawData.variations || [],
+    variation: rawData.variation || [],
+    top_reviews: rawData.top_reviews || [],
+    photos_from_reviews: rawData.photos_from_reviews || [],
+    breadcrumbs: rawData.breadcrumbs || [],
+    category_tree: rawData.category_tree || [],
+    listed_date: rawData.liisted_date || rawData.listed_date,
+    is_star_seller: rawData.is_star_seller,
+    url: url,
+    source: 'etsy-dataset'
   };
 }
