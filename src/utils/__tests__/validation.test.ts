@@ -242,6 +242,7 @@ describe('Validation Utils', () => {
           'etsy.com',
           'zara.com',
           'myntra.com',
+          'hm.com',
         ];
         
         try {

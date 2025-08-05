@@ -477,17 +477,56 @@ class MCPBrightDataBridge {
   }
 
   /**
-   * Scrape Flipkart product data using proper Bright Data markdown scraping
+   * Scrape H&M product data using dedicated Bright Data MCP tool
+   */
+  async scrapeHMProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    try {
+      const result = await this.callMCPTool('hm_product', { url });
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        if (productData.warning) {
+          return {
+            success: false,
+            error: `H&M scraping warning: ${productData.warning}`
+          };
+        }
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No product data received from H&M'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'H&M scraping failed'
+      };
+    }
+  }
+
+  /**
+   * Scrape Flipkart product data using proper Bright Data dataset API
    */
   async scrapeFlipkartProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
     try {
-      // Use Bright Data's scrape_as_markdown tool
       const result = await this.callMCPTool('flipkart_product', { url });
       
       if (result && result.content && result.content[0] && result.content[0].text) {
-        // Parse the markdown content for structured data
-        const markdownContent = result.content[0].text;
-        const productData = this.parseFlipkartFromMarkdown(markdownContent, url);
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        if (productData.warning) {
+          return {
+            success: false,
+            error: `Flipkart scraping warning: ${productData.warning}`
+          };
+        }
         
         return {
           success: true,
@@ -507,92 +546,6 @@ class MCPBrightDataBridge {
     }
   }
 
-  /**
-   * Parse Flipkart product data from markdown content (clean implementation)
-   */
-  private parseFlipkartFromMarkdown(markdown: string, url: string): any {
-    const data: any = {
-      url: url,
-      currency: 'INR',
-      source: 'flipkart',
-      platform: 'flipkart'
-    };
-
-    // Extract title (look for main heading or title patterns)
-    const titleMatch = markdown.match(/^#\s+(.+)$/m) || 
-                      markdown.match(/\*\*([^*]+)\*\*/) ||
-                      markdown.match(/title[^\n]*?:\s*([^\n]+)/i);
-    if (titleMatch) {
-      data.title = titleMatch[1].trim().replace(/\s*-\s*Flipkart.*$/, '');
-    }
-
-    // Extract price (₹ symbol patterns)
-    const priceMatches = markdown.match(/₹[\d,]+(?:\.\d{2})?/g);
-    if (priceMatches && priceMatches.length > 0) {
-      const priceStr = priceMatches[0];
-      data.final_price = priceStr;
-      data.price = parseFloat(priceStr.replace(/₹|,/g, ''));
-    }
-
-    // Extract rating
-    const ratingMatch = markdown.match(/(\d+\.?\d*)\s*(?:★|star|out of|\/)5?/i);
-    if (ratingMatch) {
-      data.rating = parseFloat(ratingMatch[1]);
-    }
-
-    // Extract brand (look for brand mentions)
-    const brandMatch = markdown.match(/(?:Brand|by)\s*:?\s*([A-Za-z][A-Za-z\s&]+)/i);
-    if (brandMatch) {
-      data.brand = brandMatch[1].trim().split(/\s+/).slice(0, 2).join(' ');
-    }
-
-    // Extract images from markdown image syntax
-    const imageMatches = markdown.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/g);
-    if (imageMatches) {
-      data.images = imageMatches.map(match => {
-        const urlMatch = match.match(/\((https?:\/\/[^\)]+)\)/);
-        return urlMatch ? urlMatch[1] : null;
-      }).filter(Boolean);
-    }
-
-    // Extract basic specifications
-    data.specifications = [];
-    const specPattern = /([A-Za-z\s]+?)\s*[:–-]\s*([^\n]+)/g;
-    let specMatch;
-    while ((specMatch = specPattern.exec(markdown)) !== null) {
-      const key = specMatch[1].trim();
-      const value = specMatch[2].trim();
-      if (key.length > 2 && key.length < 50 && value.length > 0 && value.length < 100) {
-        data.specifications.push({
-          specification_name: key,
-          specification_value: value
-        });
-      }
-    }
-
-    // Set availability based on common indicators
-    if (markdown.toLowerCase().includes('out of stock') || markdown.toLowerCase().includes('currently unavailable')) {
-      data.availability = 'out-of-stock';
-    } else {
-      data.availability = 'in-stock';
-    }
-
-    // Extract category from URL if possible
-    const urlParts = url.split('/');
-    const categoryPart = urlParts.find(part => 
-      part.length > 3 && 
-      !part.includes('www') && 
-      !part.includes('flipkart') &&
-      !part.includes('p') &&
-      !part.includes('pid') &&
-      !part.includes('?')
-    );
-    if (categoryPart) {
-      data.category = categoryPart.replace(/-/g, ' ');
-    }
-
-    return data;
-  }
 
 
   /**
@@ -754,13 +707,8 @@ export class AIProductEnhancer {
         enhanced.weight = this.estimateWeight(enhanced.title || '', enhanced.category || '');
       }
 
-      // HSN code suggestion (for Indian customs)
-      enhanced.suggested_hsn = this.suggestHSNCode(enhanced.category || '', enhanced.title || '');
-
-      // Price validation and currency normalization
-      if (enhanced.price && enhanced.currency) {
-        enhanced.price_usd = await this.convertToUSD(enhanced.price, enhanced.currency);
-      }
+      // Note: HSN code and price_usd suggestions would be handled by other services
+      // since they're not part of the ProductData interface
 
       return enhanced;
 

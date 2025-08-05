@@ -97,6 +97,25 @@ const PLATFORM_CONFIGS = {
       'Books': 'books'
     }
   },
+  hm: {
+    scraperType: 'hm_product',
+    fields: [
+      'product_name', 'final_price', 'initial_price', 'currency', 'image_urls', 'brand',
+      'specifications', 'in_stock', 'rating', 'reviews_count', 'description',
+      'category', 'color', 'size', 'product_code', 'seller_name', 'category_tree'
+    ],
+    defaultCurrency: 'USD', // H&M supports multiple currencies
+    fashionFocus: true,
+    categoryMapping: {
+      'Women': 'fashion',
+      'Men': 'fashion', 
+      'Kids': 'fashion',
+      'Baby': 'fashion',
+      'Home': 'home',
+      'Beauty': 'beauty-health',
+      'Sport': 'sports'
+    }
+  },
   flipkart: {
     scraperType: 'flipkart_product',
     fields: ['title', 'final_price', 'currency', 'brand', 'specifications', 'highlights', 'rating'],
@@ -159,6 +178,9 @@ class BrightDataProductService {
           break;
         case 'target':
           result = await this.scrapeTargetProduct(url, options);
+          break;
+        case 'hm':
+          result = await this.scrapeHMProduct(url, options);
           break;
         case 'flipkart':
           result = await this.scrapeFlipkartProduct(url, options);
@@ -458,6 +480,42 @@ class BrightDataProductService {
   }
 
   /**
+   * Scrape H&M product using Bright Data MCP
+   */
+  private async scrapeHMProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('hm_product', {
+        url,
+        include_specifications: true,
+        include_availability: true,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_category_tree: true,
+        include_variants: options.includeVariants !== false
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'H&M scraping failed');
+      }
+
+      const productData = this.normalizeHMData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'H&M scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
    * Scrape Flipkart product using Bright Data MCP
    */
   private async scrapeFlipkartProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
@@ -542,6 +600,8 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeMyntraProduct(params.url, params);
       case 'target_product':
         return await mcpBrightDataBridge.scrapeTargetProduct(params.url, params);
+      case 'hm_product':
+        return await mcpBrightDataBridge.scrapeHMProduct(params.url, params);
       case 'flipkart_product':
         return await mcpBrightDataBridge.scrapeFlipkartProduct(params.url, params);
       case 'scrape_as_markdown':
@@ -569,22 +629,123 @@ class BrightDataProductService {
     if (urlLower.includes('zara.com')) return 'zara';
     if (urlLower.includes('myntra.com')) return 'myntra';
     if (urlLower.includes('target.com')) return 'target';
+    if (urlLower.includes('hm.com')) return 'hm';
     if (urlLower.includes('flipkart.com')) return 'flipkart';
     
     return null;
   }
 
   /**
-   * Detect country from Amazon URL
+   * Detect country from marketplace URL
    */
   private detectCountryFromUrl(url: string): string {
-    if (url.includes('amazon.co.uk')) return 'GB';
-    if (url.includes('amazon.de')) return 'DE';
-    if (url.includes('amazon.fr')) return 'FR';
-    if (url.includes('amazon.ca')) return 'CA';
-    if (url.includes('amazon.com.au')) return 'AU';
-    if (url.includes('amazon.co.jp')) return 'JP';
-    return 'US'; // Default
+    const urlLower = url.toLowerCase();
+    
+    // Amazon country detection
+    if (urlLower.includes('amazon.')) {
+      if (urlLower.includes('amazon.co.uk')) return 'GB';
+      if (urlLower.includes('amazon.de')) return 'DE';
+      if (urlLower.includes('amazon.fr')) return 'FR';
+      if (urlLower.includes('amazon.ca')) return 'CA';
+      if (urlLower.includes('amazon.com.au')) return 'AU';
+      if (urlLower.includes('amazon.co.jp')) return 'JP';
+      if (urlLower.includes('amazon.in')) return 'IN';
+      if (urlLower.includes('amazon.it')) return 'IT';
+      if (urlLower.includes('amazon.es')) return 'ES';
+      if (urlLower.includes('amazon.com.mx')) return 'MX';
+      if (urlLower.includes('amazon.com.br')) return 'BR';
+      if (urlLower.includes('amazon.nl')) return 'NL';
+      if (urlLower.includes('amazon.se')) return 'SE';
+      if (urlLower.includes('amazon.com')) return 'US';
+    }
+    
+    // H&M country detection (pattern: en_{country_code})
+    if (urlLower.includes('hm.com')) {
+      const hmCountryMatch = urlLower.match(/\/en_([a-z]{2})\//);
+      if (hmCountryMatch) {
+        return hmCountryMatch[1].toUpperCase();
+      }
+      // Fallback for H&M URLs without clear country pattern
+      if (urlLower.includes('hm.com/en_us/')) return 'US';
+      if (urlLower.includes('hm.com/en_gb/')) return 'GB';
+      if (urlLower.includes('hm.com/en_in/')) return 'IN';
+      if (urlLower.includes('hm.com/en_ca/')) return 'CA';
+      if (urlLower.includes('hm.com/en_au/')) return 'AU';
+      if (urlLower.includes('hm.com/de_de/')) return 'DE';
+      if (urlLower.includes('hm.com/fr_fr/')) return 'FR';
+      if (urlLower.includes('hm.com/es_es/')) return 'ES';
+      if (urlLower.includes('hm.com/it_it/')) return 'IT';
+      if (urlLower.includes('hm.com/nl_nl/')) return 'NL';
+      if (urlLower.includes('hm.com/se_se/')) return 'SE';
+      if (urlLower.includes('hm.com/dk_dk/')) return 'DK';
+      if (urlLower.includes('hm.com/no_no/')) return 'NO';
+      if (urlLower.includes('hm.com/fi_fi/')) return 'FI';
+      return 'SE'; // H&M default (Swedish company)
+    }
+    
+    // Zara country detection
+    if (urlLower.includes('zara.com')) {
+      if (urlLower.includes('/us/')) return 'US';
+      if (urlLower.includes('/gb/')) return 'GB';
+      if (urlLower.includes('/in/')) return 'IN';
+      if (urlLower.includes('/ca/')) return 'CA';
+      if (urlLower.includes('/au/')) return 'AU';
+      if (urlLower.includes('/de/')) return 'DE';
+      if (urlLower.includes('/fr/')) return 'FR';
+      if (urlLower.includes('/es/')) return 'ES';
+      if (urlLower.includes('/it/')) return 'IT';
+      return 'ES'; // Zara default (Spanish company)
+    }
+    
+    // Myntra (India only)
+    if (urlLower.includes('myntra.com')) return 'IN';
+    
+    // Flipkart (India only) 
+    if (urlLower.includes('flipkart.com')) return 'IN';
+    
+    // Target (US only)
+    if (urlLower.includes('target.com')) return 'US';
+    
+    // Best Buy (US/Canada)
+    if (urlLower.includes('bestbuy.com')) return 'US';
+    if (urlLower.includes('bestbuy.ca')) return 'CA';
+    
+    // Walmart
+    if (urlLower.includes('walmart.com')) return 'US';
+    if (urlLower.includes('walmart.ca')) return 'CA';
+    
+    // eBay country detection
+    if (urlLower.includes('ebay.')) {
+      if (urlLower.includes('ebay.co.uk')) return 'GB';
+      if (urlLower.includes('ebay.de')) return 'DE';
+      if (urlLower.includes('ebay.fr')) return 'FR';
+      if (urlLower.includes('ebay.ca')) return 'CA';
+      if (urlLower.includes('ebay.com.au')) return 'AU';
+      if (urlLower.includes('ebay.in')) return 'IN';
+      if (urlLower.includes('ebay.it')) return 'IT';
+      if (urlLower.includes('ebay.es')) return 'ES';
+      if (urlLower.includes('ebay.com')) return 'US';
+    }
+    
+    return 'US'; // Default fallback
+  }
+
+  /**
+   * Get default currency for a country
+   */
+  private getCountryCurrency(countryCode: string): string {
+    const currencyMap: Record<string, string> = {
+      'US': 'USD', 'CA': 'CAD', 'GB': 'GBP', 'AU': 'AUD',
+      'DE': 'EUR', 'FR': 'EUR', 'ES': 'EUR', 'IT': 'EUR', 'NL': 'EUR',
+      'SE': 'SEK', 'DK': 'DKK', 'NO': 'NOK', 'FI': 'EUR',
+      'IN': 'INR', 'JP': 'JPY', 'BR': 'BRL', 'MX': 'MXN',
+      'CH': 'CHF', 'KR': 'KRW', 'SG': 'SGD', 'HK': 'HKD',
+      'MY': 'MYR', 'TH': 'THB', 'PH': 'PHP', 'ID': 'IDR',
+      'VN': 'VND', 'TW': 'TWD', 'TR': 'TRY', 'IL': 'ILS',
+      'AE': 'AED', 'SA': 'SAR', 'EG': 'EGP', 'ZA': 'ZAR'
+    };
+    
+    return currencyMap[countryCode] || 'USD';
   }
 
   /**
@@ -607,7 +768,28 @@ class BrightDataProductService {
       'lowes.com'       // Lowe's US
     ];
     
-    return usMarketplaces.some(domain => urlLower.includes(domain));
+    // International marketplaces that use metric system (kg)
+    const internationalMarketplaces = [
+      'hm.com',         // H&M (Swedish, uses metric)
+      'zara.com',       // Zara (Spanish, uses metric)
+      'myntra.com',     // Myntra (Indian, uses metric)
+      'flipkart.com',   // Flipkart (Indian, uses metric)
+      'amazon.co.uk',   // Amazon UK
+      'amazon.de',      // Amazon Germany
+      'amazon.fr',      // Amazon France
+      'amazon.co.jp',   // Amazon Japan
+      'amazon.com.au',  // Amazon Australia
+      'etsy.com'        // Etsy (international, primarily metric)
+    ];
+    
+    // Check if it's a US marketplace
+    const isUS = usMarketplaces.some(domain => urlLower.includes(domain));
+    
+    // If it's explicitly international, return false (use metric)
+    const isInternational = internationalMarketplaces.some(domain => urlLower.includes(domain));
+    if (isInternational) return false;
+    
+    return isUS;
   }
 
   /**
@@ -828,15 +1010,7 @@ class BrightDataProductService {
         category: category,
         availability: availability,
         description: description.substring(0, 1000), // Limit description length
-        variants: variants,
-        rating: typeof rawData.rating === 'number' ? rawData.rating : undefined,
-        reviewsCount: typeof rawData.reviews_count === 'number' ? rawData.reviews_count : undefined,
-        // Add Best Buy specific fields
-        originalPrice: this.parsePrice(initialPrice),
-        discount: discountInfo,
-        sku: rawData.sku,
-        model: rawData.model,
-        upc: rawData.upc
+        variants: variants
       };
 
     } catch (error) {
@@ -1134,14 +1308,7 @@ class BrightDataProductService {
         category: category,
         availability: availability,
         description: description.substring(0, 1000), // Limit description length
-        variants: variants,
-        rating: typeof rawData.rating === 'number' ? rawData.rating : undefined,
-        reviewsCount: typeof rawData.reviews_count === 'number' ? rawData.reviews_count : undefined,
-        // Add Target specific fields
-        originalPrice: this.parsePrice(initialPrice),
-        discount: discountInfo,
-        sku: rawData.sku,
-        model: rawData.model
+        variants: variants
       };
 
     } catch (error) {
@@ -1155,6 +1322,155 @@ class BrightDataProductService {
         availability: 'unknown',
         images: [],
         variants: []
+      };
+    }
+  }
+
+  private normalizeHMData(rawData: any, url: string): ProductData {
+    try {
+      // Detect country and currency from URL
+      const detectedCountry = this.detectCountryFromUrl(url);
+      const detectedCurrency = this.getCountryCurrency(detectedCountry);
+      
+      // Handle H&M's comprehensive response format
+      const finalPrice = rawData.final_price || rawData.price || rawData.current_price;
+      const initialPrice = rawData.initial_price || rawData.original_price;
+      
+      // Safely parse images and limit to first 8 to prevent memory issues
+      let images: string[] = [];
+      try {
+        if (Array.isArray(rawData.image_urls)) {
+          // H&M uses relative URLs, convert to full URLs
+          images = rawData.image_urls
+            .map((img: string) => {
+              if (img && !img.startsWith('http')) {
+                return `https://${img}`;
+              }
+              return img;
+            })
+            .filter(Boolean)
+            .slice(0, 8);
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse H&M images:', imgError);
+        images = [];
+      }
+
+      // H&M doesn't typically have weight in clothing, but estimate based on category
+      let weight: number | undefined;
+      try {
+        // Estimate weight based on H&M product category and size
+        weight = this.estimateHMWeight(rawData.category || '', rawData.size || '', rawData.product_name || '');
+      } catch (weightError) {
+        console.warn('Failed to estimate H&M weight:', weightError);
+      }
+
+      // Extract brand (always H&M for H&M products)
+      const brand = rawData.brand || rawData.manufacturer || 'H&M';
+
+      // Determine category from H&M's category tree
+      let category = 'fashion'; // Default for H&M (primarily fashion)
+      try {
+        if (rawData.category_tree && Array.isArray(rawData.category_tree)) {
+          // Use the most specific category from the tree
+          const specificCategory = rawData.category_tree[rawData.category_tree.length - 1]?.name;
+          if (specificCategory) {
+            category = this.mapHMCategory(specificCategory);
+          }
+        } else if (rawData.category) {
+          category = this.mapHMCategory(rawData.category);
+        }
+      } catch (categoryError) {
+        console.warn('Failed to extract category from H&M data:', categoryError);
+      }
+
+      // Parse availability from in_stock boolean
+      let availability: 'in-stock' | 'out-of-stock' | 'unknown' = 'unknown';
+      try {
+        if (typeof rawData.in_stock === 'boolean') {
+          availability = rawData.in_stock ? 'in-stock' : 'out-of-stock';
+        }
+      } catch (availError) {
+        console.warn('Failed to parse H&M availability:', availError);
+      }
+
+      // Build product description from H&M data
+      let description = rawData.description || rawData.product_description || '';
+      
+      // Add H&M-specific details to description
+      const hmDetails = [];
+      if (rawData.color) hmDetails.push(`Color: ${rawData.color}`);
+      if (rawData.size) hmDetails.push(`Size: ${rawData.size}`);
+      if (rawData.county_of_origin) hmDetails.push(`Origin: ${rawData.county_of_origin}`);
+      
+      if (hmDetails.length > 0) {
+        description = description ? `${description}\n\n${hmDetails.join(' • ')}` : hmDetails.join(' • ');
+      }
+
+      // Build product variants from H&M color and size data
+      const variants = [];
+      try {
+        if (rawData.color) {
+          variants.push({
+            name: 'Color',
+            options: [rawData.color]
+          });
+        }
+        if (rawData.size) {
+          variants.push({
+            name: 'Size',
+            options: [rawData.size]
+          });
+        }
+      } catch (variantError) {
+        console.warn('Failed to extract variants from H&M data:', variantError);
+      }
+
+      // Calculate discount percentage if both prices available
+      let discountInfo: string | undefined;
+      try {
+        if (initialPrice && finalPrice) {
+          const initial = this.parsePrice(initialPrice) || 0;
+          const final = this.parsePrice(finalPrice) || 0;
+          if (initial > final) {
+            const discountPercent = Math.round(((initial - final) / initial) * 100);
+            discountInfo = `Save ${discountPercent}% (was ${initialPrice})`;
+          }
+        }
+      } catch (discountError) {
+        console.warn('Failed to calculate H&M discount:', discountError);
+      }
+
+      // Return normalized data with safe fallbacks
+      return {
+        title: rawData.product_name || rawData.title || `H&M Product ${rawData.product_code || ''}`,
+        price: this.parsePrice(finalPrice) || 0,
+        currency: rawData.currency || detectedCurrency,
+        weight: weight,
+        images: images,
+        brand: brand,
+        category: category,
+        availability: availability,
+        description: description.substring(0, 1000), // Limit description length
+        variants: variants
+      };
+
+    } catch (error) {
+      console.error('Error normalizing H&M data:', error);
+      // Detect country and currency for fallback
+      const detectedCountry = this.detectCountryFromUrl(url);
+      const detectedCurrency = this.getCountryCurrency(detectedCountry);
+      
+      // Return minimal safe data structure
+      return {
+        title: rawData?.product_name || rawData?.title || 'Unknown H&M Product',
+        price: this.parsePrice(rawData?.final_price || rawData?.price) || 0,
+        currency: rawData?.currency || detectedCurrency,
+        category: 'fashion',
+        availability: 'unknown',
+        images: [],
+        variants: [],
+        brand: 'H&M'
       };
     }
   }
@@ -1414,6 +1730,142 @@ class BrightDataProductService {
     }
     
     return undefined;
+  }
+
+  /**
+   * Estimate weight for H&M products based on category, size, and product type
+   */
+  private estimateHMWeight(category: string, size: string, productName: string): number | undefined {
+    const categoryLower = category.toLowerCase();
+    const productLower = productName.toLowerCase();
+    const sizeLower = size.toLowerCase();
+    
+    // Base weights for different H&M product categories (in kg for international market)
+    let baseWeight = 0.2; // Default lightweight clothing
+    
+    // Category-based estimates
+    if (categoryLower.includes('jacket') || categoryLower.includes('coat') || categoryLower.includes('blazer')) {
+      baseWeight = 0.8;
+    } else if (categoryLower.includes('sweater') || categoryLower.includes('hoodie') || categoryLower.includes('sweatshirt')) {
+      baseWeight = 0.5;
+    } else if (categoryLower.includes('jeans') || categoryLower.includes('pants') || categoryLower.includes('trousers')) {
+      baseWeight = 0.4;
+    } else if (categoryLower.includes('dress') || categoryLower.includes('skirt')) {
+      baseWeight = 0.3;
+    } else if (categoryLower.includes('shirt') || categoryLower.includes('blouse') || categoryLower.includes('top')) {
+      baseWeight = 0.2;
+    } else if (categoryLower.includes('underwear') || categoryLower.includes('socks') || categoryLower.includes('accessories')) {
+      baseWeight = 0.1;
+    } else if (categoryLower.includes('shoes') || categoryLower.includes('boots')) {
+      baseWeight = 0.6;
+    } else if (categoryLower.includes('bag') || categoryLower.includes('backpack')) {
+      baseWeight = 0.3;
+    } else if (categoryLower.includes('home') || categoryLower.includes('bedding')) {
+      baseWeight = 0.7;
+    }
+    
+    // Product name adjustments
+    if (productLower.includes('pack') && productLower.match(/\d+-pack/)) {
+      const packMatch = productLower.match(/(\d+)-pack/);
+      if (packMatch) {
+        const packCount = parseInt(packMatch[1]);
+        baseWeight *= packCount;
+      }
+    }
+    
+    // Size adjustments
+    if (sizeLower.includes('xs') || sizeLower.includes('2-4') || sizeLower.includes('baby')) {
+      baseWeight *= 0.7;
+    } else if (sizeLower.includes('xl') || sizeLower.includes('xxl') || sizeLower.includes('16+')) {
+      baseWeight *= 1.3;
+    } else if (sizeLower.includes('l') && !sizeLower.includes('xl')) {
+      baseWeight *= 1.1;
+    }
+    
+    return Math.round(baseWeight * 1000) / 1000; // Round to 3 decimals
+  }
+
+  /**
+   * Map H&M category to our standard categories
+   */
+  private mapHMCategory(hmCategory: string): string {
+    if (!hmCategory) return 'fashion';
+    
+    const category = hmCategory.toLowerCase();
+    
+    // H&M specific category mappings
+    if (category.includes('women') || category.includes('men') || category.includes('kids') || 
+        category.includes('baby') || category.includes('clothing') || category.includes('fashion')) {
+      return 'fashion';
+    }
+    if (category.includes('shoes') || category.includes('footwear') || category.includes('boots') || 
+        category.includes('sneakers') || category.includes('sandals')) {
+      return 'footwear';
+    }
+    if (category.includes('home') || category.includes('bedding') || category.includes('decor') || 
+        category.includes('kitchen') || category.includes('bath')) {
+      return 'home';
+    }
+    if (category.includes('beauty') || category.includes('cosmetics') || category.includes('skincare')) {
+      return 'beauty-health';
+    }
+    if (category.includes('sport') || category.includes('fitness') || category.includes('active') || 
+        category.includes('gym') || category.includes('workout')) {
+      return 'sports';
+    }
+    if (category.includes('accessory') || category.includes('bag') || category.includes('jewelry') || 
+        category.includes('watch') || category.includes('belt')) {
+      return 'fashion'; // Accessories are part of fashion
+    }
+    
+    // Default to fashion for H&M (primarily a fashion retailer)
+    return 'fashion';
+  }
+
+  /**
+   * Generic weight estimation based on title and category
+   */
+  private estimateWeight(title: string, category: string): number | undefined {
+    const titleLower = title.toLowerCase();
+    const categoryLower = category.toLowerCase();
+    
+    // Base weights for different categories (in kg for international market)
+    let baseWeight = 0.5; // Default
+    
+    // Category-based estimates
+    if (categoryLower.includes('electronics')) {
+      baseWeight = 0.8;
+      if (titleLower.includes('laptop')) baseWeight = 2.0;
+      if (titleLower.includes('phone') || titleLower.includes('smartphone')) baseWeight = 0.2;
+      if (titleLower.includes('tablet')) baseWeight = 0.5;
+      if (titleLower.includes('tv')) baseWeight = 8.0;
+    } else if (categoryLower.includes('fashion') || categoryLower.includes('clothing')) {
+      baseWeight = 0.3;
+      if (titleLower.includes('jacket') || titleLower.includes('coat')) baseWeight = 0.8;
+      if (titleLower.includes('jeans') || titleLower.includes('pants')) baseWeight = 0.4;
+    } else if (categoryLower.includes('footwear') || categoryLower.includes('shoes')) {
+      baseWeight = 0.6;
+    } else if (categoryLower.includes('home') || categoryLower.includes('furniture')) {
+      baseWeight = 2.0;
+      if (titleLower.includes('furniture')) baseWeight = 15.0;
+    } else if (categoryLower.includes('beauty') || categoryLower.includes('health')) {
+      baseWeight = 0.2;
+    } else if (categoryLower.includes('books')) {
+      baseWeight = 0.4;
+    } else if (categoryLower.includes('toys') || categoryLower.includes('games')) {
+      baseWeight = 0.6;
+    } else if (categoryLower.includes('sports') || categoryLower.includes('outdoors')) {
+      baseWeight = 1.0;
+    }
+    
+    // Size adjustments
+    if (titleLower.includes('mini') || titleLower.includes('small')) {
+      baseWeight *= 0.5;
+    } else if (titleLower.includes('large') || titleLower.includes('big') || titleLower.includes('xl')) {
+      baseWeight *= 1.5;
+    }
+    
+    return Math.round(baseWeight * 1000) / 1000; // Round to 3 decimals
   }
 
   /**

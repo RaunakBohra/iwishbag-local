@@ -53,8 +53,9 @@ export default {
       const toolMapping: Record<string, string> = {
         'amazon_product': 'web_data_amazon_product',
         'myntra_product': 'scraping_browser', // Use browser automation for Myntra
-        'flipkart_product': 'scrape_as_markdown', // Use markdown scraping for Flipkart
+        'flipkart_product': 'flipkart_product', // Custom Flipkart dataset implementation
         'target_product': 'target_product', // Custom Target implementation
+        'hm_product': 'hm_product', // Custom H&M implementation
         'bestbuy_product': 'web_data_bestbuy_products',
         'ebay_product': 'web_data_ebay_product', 
         'walmart_product': 'web_data_walmart_product',
@@ -77,6 +78,50 @@ export default {
         
         return new Response(
           JSON.stringify(targetResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle H&M with custom implementation
+      if (tool === 'hm_product') {
+        console.log(`👕 [${requestId}] Using custom H&M implementation`);
+        const hmApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const hmResult = await callHMProductAPI(args?.url, hmApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] H&M request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(hmResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle Flipkart with custom dataset implementation
+      if (tool === 'flipkart_product') {
+        console.log(`🛒 [${requestId}] Using custom Flipkart dataset implementation`);
+        const flipkartApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const flipkartResult = await callFlipkartProductAPI(args?.url, flipkartApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] Flipkart request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(flipkartResult),
           {
             headers: {
               ...corsHeaders,
@@ -183,11 +228,6 @@ async function callBrightDataMCP(toolName: string, args: any, apiToken: string, 
     // For dataset APIs, use the trigger/monitor workflow
     if (apiEndpoint.includes('/datasets/v3/trigger')) {
       return await callDatasetAPI(args, apiToken, requestId, toolName);
-    }
-    
-    // For scrape_as_markdown, use a simple web scraper approach
-    if (toolName === 'scrape_as_markdown') {
-      return await callBasicWebScraper(args, apiToken, requestId);
     }
     
     // Default fallback - shouldn't reach here with current mapping
@@ -331,6 +371,7 @@ function getBrightDataAPIEndpoint(toolName: string): string {
 function getDatasetId(toolName: string): string | null {
   const datasetIds: Record<string, string> = {
     'web_data_amazon_product': 'gd_l7q7zkd11qzin7vg6', // Example dataset ID
+    'flipkart_product': 'REPLACE_WITH_REAL_FLIPKART_DATASET_ID', // TODO: Replace with actual Flipkart dataset ID
     'web_data_ebay_product': 'your_ebay_dataset_id',
     'web_data_walmart_product': 'your_walmart_dataset_id',
     'web_data_bestbuy_products': 'your_bestbuy_dataset_id',
@@ -500,252 +541,380 @@ function mapTargetDataToProductData(rawData: any, url: string): any {
 }
 
 /**
- * Basic web scraper for Flipkart using HTML fetching and parsing
+ * H&M Product API Implementation
+ * Uses Bright Data Datasets API with H&M dataset: gd_lebec5ir293umvxh5g
  */
-async function callBasicWebScraper(args: any, apiToken: string, requestId: string) {
-  console.log(`🌐 [${requestId}] Using HTML web scraper for Flipkart`);
-  
+async function callHMProductAPI(url: string, apiToken: string, requestId: string) {
   try {
-    // Fetch the HTML content
-    console.log(`📡 [${requestId}] Fetching HTML from: ${args.url}`);
-    const response = await fetch(args.url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      }
-    });
+    console.log(`👕 [${requestId}] Starting H&M product scraping for: ${url}`);
     
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    // Trigger data collection using H&M dataset
+    const datasetId = 'gd_lebec5ir293umvxh5g'; // H&M dataset ID from documentation
+    const triggerResult = await triggerHMBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from H&M dataset trigger');
     }
     
-    const html = await response.text();
-    console.log(`📄 [${requestId}] HTML fetched, size: ${html.length} characters`);
+    console.log(`📋 [${requestId}] H&M data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
     
-    // Parse the HTML for product data
-    const flipkartData = parseFlipkartHTML(html, args.url, requestId);
+    // Wait for results with polling
+    const results = await waitForHMBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
     
-    console.log(`✅ [${requestId}] HTML web scraper completed`);
+    // Download and process results
+    const finalData = await downloadHMBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Transform data to our expected format
+    const transformedData = mapHMDataToProductData(finalData[0] || {}, url);
+    
+    console.log(`✅ [${requestId}] H&M scraping completed successfully`);
     
     return {
       content: [{
-        text: JSON.stringify([flipkartData])
+        text: JSON.stringify([transformedData])
       }]
     };
     
   } catch (error) {
-    console.error(`💥 [${requestId}] HTML web scraper failed:`, error);
-    
-    // Fallback to realistic demo data based on the URL
-    const fallbackData = extractDataFromFlipkartURL(args.url, error instanceof Error ? error.message : 'Unknown error');
-    
-    return {
-      content: [{
-        text: JSON.stringify([fallbackData])
-      }]
-    };
+    console.error(`💥 [${requestId}] H&M API call failed:`, error);
+    throw new Error(`H&M scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 /**
- * Parse Flipkart HTML to extract product data
+ * Trigger H&M data collection using Bright Data Datasets API
  */
-function parseFlipkartHTML(html: string, url: string, requestId: string): any {
-  console.log(`🔍 [${requestId}] Parsing Flipkart HTML...`);
+async function triggerHMBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering H&M data collection...`);
   
-  const data: any = {
-    url: url,
-    currency: 'INR',
-    source: 'flipkart-html-parser',
-    platform: 'flipkart',
-    timestamp: new Date().toISOString()
-  };
-
-  // Extract title from og:title meta tag or title tag
-  const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) ||
-                    html.match(/<title>([^<]+)</i);
-  if (titleMatch) {
-    data.title = titleMatch[1].trim().replace(/\s*-\s*Flipkart.*$/i, '');
-    console.log(`📝 [${requestId}] Title: ${data.title}`);
-  }
-
-  // Extract price from various possible patterns
-  const pricePatterns = [
-    /₹([\d,]+(?:\.\d{2})?)/g,
-    /"price":\s*"?₹?([\d,]+(?:\.\d{2})?)"?/g,
-    /"final_price":\s*"?₹?([\d,]+(?:\.\d{2})?)"?/g
-  ];
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ url }])
+  });
   
-  for (const pattern of pricePatterns) {
-    const priceMatches = Array.from(html.matchAll(pattern));
-    if (priceMatches.length > 0) {
-      const priceStr = priceMatches[0][1];
-      data.price = parseFloat(priceStr.replace(/,/g, ''));
-      data.final_price = `₹${priceStr}`;
-      console.log(`💰 [${requestId}] Price: ${data.final_price} (${data.price})`);
-      break;
-    }
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`H&M dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
-
-  // Extract brand
-  const brandMatch = html.match(/"brand":\s*"([^"]+)"/i) ||
-                    html.match(/brand[^>]*>([^<]+)</i);
-  if (brandMatch) {
-    data.brand = brandMatch[1].trim();
-    console.log(`🏷️ [${requestId}] Brand: ${data.brand}`);
-  }
-
-  // Extract images from og:image or JSON-LD
-  const imagePatterns = [
-    /<meta property="og:image" content="([^"]+)"/gi,
-    /"image":\s*"([^"]+)"/gi,
-    /"images":\s*\[([^\]]+)\]/gi
-  ];
   
-  data.images = [];
-  for (const pattern of imagePatterns) {
-    const imageMatches = Array.from(html.matchAll(pattern));
-    for (const match of imageMatches) {
-      const imageUrl = match[1];
-      if (imageUrl && imageUrl.startsWith('http') && !data.images.includes(imageUrl)) {
-        data.images.push(imageUrl);
-      }
-    }
-  }
-  console.log(`🖼️ [${requestId}] Images: ${data.images.length} found`);
+  const result = await response.json();
+  console.log(`📋 [${requestId}] H&M trigger response:`, result);
+  
+  return result;
+}
 
-  // Extract rating
-  const ratingMatch = html.match(/"rating":\s*"?([\d.]+)"?/i) ||
-                     html.match(/([\d.]+)\s*★/i);
-  if (ratingMatch) {
-    data.rating = parseFloat(ratingMatch[1]);
-    console.log(`⭐ [${requestId}] Rating: ${data.rating}`);
-  }
-
-  // Basic availability check
-  if (html.toLowerCase().includes('out of stock') || 
-      html.toLowerCase().includes('currently unavailable')) {
-    data.availability = 'out-of-stock';
-  } else if (html.toLowerCase().includes('in stock') || 
-             html.toLowerCase().includes('add to cart')) {
-    data.availability = 'in-stock';
-  } else {
-    data.availability = 'unknown';
-  }
-  console.log(`📦 [${requestId}] Availability: ${data.availability}`);
-
-  // Extract basic specifications from structured data
-  data.specifications = [];
-  const specPattern = /"([^"]+)":\s*"([^"]+)"/g;
-  let specMatch;
-  let specCount = 0;
-  while ((specMatch = specPattern.exec(html)) !== null && specCount < 10) {
-    const key = specMatch[1].trim();
-    const value = specMatch[2].trim();
+/**
+ * Wait for H&M Bright Data results with polling
+ */
+async function waitForHMBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for H&M data collection...`);
+  
+  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] H&M polling attempt ${attempts}/${maxAttempts}...`);
     
-    // Only include relevant specifications
-    if (key.length > 2 && key.length < 50 && value.length > 0 && value.length < 100 &&
-        !key.includes('http') && !value.includes('http') &&
-        (key.toLowerCase().includes('color') || 
-         key.toLowerCase().includes('size') || 
-         key.toLowerCase().includes('material') ||
-         key.toLowerCase().includes('capacity') ||
-         key.toLowerCase().includes('weight'))) {
-      data.specifications.push({
-        specification_name: key,
-        specification_value: value
-      });
-      specCount++;
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      throw new Error(`H&M progress check failed: ${progressResponse.status}`);
     }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] H&M progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      console.log(`✅ [${requestId}] H&M data ready!`);
+      return progressResult;
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`H&M data collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
-  console.log(`📋 [${requestId}] Specifications: ${data.specifications.length} found`);
-
-  // Try to extract category from URL or page content
-  const urlParts = url.split('/');
-  const categoryPart = urlParts.find(part => 
-    part.length > 3 && 
-    !part.includes('www') && 
-    !part.includes('flipkart') &&
-    !part.includes('p') &&
-    !part.includes('pid') &&
-    !part.includes('?') &&
-    !part.includes('itm')
-  );
   
-  if (categoryPart) {
-    data.category = categoryPart.replace(/-/g, ' ');
-    console.log(`🏷️ [${requestId}] Category: ${data.category}`);
-  } else {
-    data.category = 'general';
-  }
+  throw new Error('H&M data collection timeout - data not ready within 60 seconds');
+}
 
-  console.log(`✅ [${requestId}] HTML parsing completed`);
+/**
+ * Download H&M Bright Data results
+ */
+async function downloadHMBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`📥 [${requestId}] Downloading H&M results...`);
+  
+  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`
+    }
+  });
+  
+  if (!dataResponse.ok) {
+    throw new Error(`H&M data download failed: ${dataResponse.status}`);
+  }
+  
+  const data = await dataResponse.json();
+  console.log(`📥 [${requestId}] Downloaded ${data.length || 0} H&M records`);
+  
   return data;
 }
 
 /**
- * Extract demo data from Flipkart URL (when real scraping fails)
+ * Map H&M data to our expected product data format
  */
-function extractDataFromFlipkartURL(url: string, errorMessage: string): any {
-  // Extract product info from URL patterns
-  let title = "Flipkart Product";
-  let category = "general";
-  let price = 445; // Default to the expected ₹445
-  let brand = "Unknown Brand";
+function mapHMDataToProductData(rawData: any, url: string): any {
+  console.log(`🔄 Mapping H&M data to product format...`);
   
-  // Try to extract product info from URL
-  if (url.includes('vivo')) {
-    title = "Vivo T4 5G (Phantom Grey, 256 GB)";
-    brand = "Vivo";
-    category = "electronics";
-    price = 16999; // Typical Vivo T4 5G price
-  } else if (url.includes('milton')) {
-    title = "Milton Thermosteel Flask 500ml";
-    brand = "Milton";
-    category = "home-kitchen";
-    price = 445; // As requested
-  } else if (url.includes('samsung')) {
-    title = "Samsung Smartphone";
-    brand = "Samsung";
-    category = "electronics";
-    price = 15999;
+  return {
+    title: rawData.product_name || rawData.title || rawData.name,
+    final_price: rawData.final_price || rawData.price || rawData.current_price,
+    initial_price: rawData.initial_price || rawData.original_price,
+    currency: rawData.currency || 'USD',
+    images: rawData.image_urls || rawData.images || [],
+    brand: rawData.brand || rawData.manufacturer || 'H&M',
+    specifications: rawData.specifications || [],
+    availability: rawData.in_stock ? 'in-stock' : 'out-of-stock',
+    rating: rawData.rating || rawData.average_rating,
+    reviews_count: rawData.reviews_count || rawData.total_reviews,
+    highlights: rawData.highlights || rawData.features || [],
+    product_description: rawData.description || rawData.product_description,
+    category: rawData.category || rawData.product_category,
+    color: rawData.color,
+    size: rawData.size,
+    product_code: rawData.product_code,
+    seller_name: rawData.seller_name,
+    country_code: rawData.country_code,
+    county_of_origin: rawData.county_of_origin,
+    category_tree: rawData.category_tree || [],
+    url: url,
+    source: 'hm-dataset'
+  };
+}
+
+/**
+ * Flipkart Product API Implementation
+ * Uses Bright Data Datasets API with Flipkart custom dataset (AI-generated parser)
+ */
+async function callFlipkartProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🛒 [${requestId}] Starting Flipkart product scraping for: ${url}`);
+    
+    // Trigger data collection using Flipkart dataset
+    const datasetId = 'REPLACE_WITH_REAL_FLIPKART_DATASET_ID'; // TODO: Replace with actual Flipkart dataset ID from Bright Data dashboard
+    const triggerResult = await triggerFlipkartBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from Flipkart dataset trigger');
+    }
+    
+    console.log(`📋 [${requestId}] Flipkart data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
+    
+    // Wait for results with polling
+    const results = await waitForFlipkartBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Download and process results
+    const finalData = await downloadFlipkartBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    // Transform data to our expected format
+    const transformedData = mapFlipkartDataToProductData(finalData[0] || {}, url, requestId);
+    
+    console.log(`✅ [${requestId}] Flipkart scraping completed successfully`);
+    
+    return {
+      content: [{
+        text: JSON.stringify([transformedData])
+      }]
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] Flipkart API call failed:`, error);
+    throw new Error(`Flipkart scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Trigger Flipkart data collection using Bright Data Datasets API
+ */
+async function triggerFlipkartBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`📤 [${requestId}] Triggering Flipkart data collection...`);
+  
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([{ url }])
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Flipkart dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log(`📋 [${requestId}] Flipkart trigger response:`, result);
+  
+  return result;
+}
+
+/**
+ * Wait for Flipkart Bright Data results with polling
+ */
+async function waitForFlipkartBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for Flipkart data collection...`);
+  
+  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] Flipkart polling attempt ${attempts}/${maxAttempts}...`);
+    
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      throw new Error(`Flipkart progress check failed: ${progressResponse.status}`);
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] Flipkart progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      console.log(`✅ [${requestId}] Flipkart data ready!`);
+      return progressResult;
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`Flipkart data collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error('Flipkart data collection timeout - data not ready within 60 seconds');
+}
+
+/**
+ * Download Flipkart Bright Data results
+ */
+async function downloadFlipkartBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`📥 [${requestId}] Downloading Flipkart results...`);
+  
+  const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+    headers: {
+      'Authorization': `Bearer ${apiToken}`
+    }
+  });
+  
+  if (!dataResponse.ok) {
+    throw new Error(`Flipkart data download failed: ${dataResponse.status}`);
+  }
+  
+  const data = await dataResponse.json();
+  console.log(`📥 [${requestId}] Downloaded ${data.length || 0} Flipkart records`);
+  
+  return data;
+}
+
+/**
+ * Map Flipkart data to our expected product data format
+ * Processes data from the AI-generated Bright Data parser
+ */
+function mapFlipkartDataToProductData(rawData: any, url: string, requestId: string): any {
+  console.log(`🔄 [${requestId}] Mapping Flipkart data to product format...`);
+  
+  // Clean price data - remove ₹ symbol and commas, convert to number
+  let current_price_number = 0;
+  let original_price_number = 0;
+  
+  if (rawData.current_price) {
+    current_price_number = parseFloat(rawData.current_price.replace(/₹|,/g, '')) || 0;
+  }
+  
+  if (rawData.original_price) {
+    original_price_number = parseFloat(rawData.original_price.replace(/₹|,/g, '')) || 0;
+  }
+  
+  // Fix image URLs - handle relative URLs
+  let main_image = rawData.main_image;
+  if (main_image && !main_image.startsWith('http')) {
+    main_image = 'https://rukminim1.flixcart.com' + main_image;
+  }
+  
+  // Process image gallery
+  let images = [];
+  if (rawData.image_gallery && Array.isArray(rawData.image_gallery)) {
+    images = rawData.image_gallery.map((img: string) => {
+      if (img && !img.startsWith('http')) {
+        return 'https://rukminim1.flixcart.com' + img;
+      }
+      return img;
+    }).filter(Boolean);
+  }
+  
+  // Add main image to gallery if not already there
+  if (main_image && !images.includes(main_image)) {
+    images.unshift(main_image);
+  }
+  
+  // Extract weight from specifications
+  let weight_kg = 0;
+  if (rawData.specifications && rawData.specifications.weight) {
+    const weightStr = rawData.specifications.weight.replace(/[^\d.]/g, '');
+    weight_kg = parseFloat(weightStr) || 0;
+  }
+  
+  // Build specifications array
+  let specifications = [];
+  if (rawData.specifications) {
+    Object.keys(rawData.specifications).forEach(key => {
+      if (rawData.specifications[key]) {
+        specifications.push({
+          specification_name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          specification_value: rawData.specifications[key]
+        });
+      }
+    });
   }
   
   return {
-    title: title,
-    final_price: `₹${price.toLocaleString('en-IN')}`,
-    price: price,
-    currency: "INR",
-    brand: brand,
-    availability: "in-stock",
-    images: [
-      `https://example.com/${brand.toLowerCase()}-product-1.jpg`,
-      `https://example.com/${brand.toLowerCase()}-product-2.jpg`
-    ],
-    specifications: [
-      { specification_name: "Brand", specification_value: brand },
-      { specification_name: "Category", specification_value: category },
-      { specification_name: "Weight", specification_value: "0.5 kg" },
-      { specification_name: "Material", specification_value: "High Quality" }
-    ],
-    highlights: [
-      "Premium Quality Product",
-      "Fast Delivery Available",
-      "1 Year Warranty",
-      "Easy Returns"
-    ],
-    category: category,
-    rating: 4.2,
-    reviews_count: 1250,
+    title: rawData.product_title || rawData.title || 'Flipkart Product',
+    final_price: rawData.current_price || `₹${current_price_number}`,
+    price: current_price_number,
+    initial_price: rawData.original_price || `₹${original_price_number}`,
+    currency: 'INR',
+    images: images,
+    main_image: main_image,
+    brand: rawData.specifications?.brand || rawData.brand || 'Unknown Brand',
+    specifications: specifications,
+    availability: rawData.delivery_date ? 'in-stock' : 'unknown',
+    weight: weight_kg,
+    rating: rawData.rating || 0,
+    reviews_count: rawData.review_count || rawData.rating_count || 0,
+    highlights: rawData.color_variants || [],
+    product_description: rawData.specifications?.features || '',
+    category: rawData.specifications?.type || 'general',
+    seller_name: rawData.seller_name || '',
+    seller_rating: rawData.seller_rating || 0,
+    discount_percentage: rawData.discount_percentage || '',
+    delivery_date: rawData.delivery_date || '',
+    return_policy: rawData.return_policy || '',
+    payment_options: rawData.payment_options || '',
     url: url,
-    source: "flipkart-intelligent-fallback",
-    scraping_note: "Real scraping blocked by anti-bot protection - showing intelligent demo data",
-    error: errorMessage,
-    timestamp: new Date().toISOString()
+    source: 'flipkart-dataset'
   };
 }
