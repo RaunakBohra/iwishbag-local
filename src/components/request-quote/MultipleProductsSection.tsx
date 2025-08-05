@@ -68,6 +68,8 @@ export function MultipleProductsSection({ control }: MultipleProductsSectionProp
           'bestbuy.com', 'newegg.com',
           'etsy.com', 'shopify.com',
           'flipkart.com', 'myntra.com',
+          'prada.com', 'ysl.com', 'balenciaga.com', 'dior.com', 'chanel.com',
+          'toysrus.com', 'carters.com',
         ];
 
         const isKnownSite = knownSites.some(site => domain.includes(site));
@@ -211,7 +213,7 @@ export function MultipleProductsSection({ control }: MultipleProductsSectionProp
                       <FormControl>
                         <Input 
                           type="url"
-                          placeholder="https://amazon.com/product-page or https://ebay.com/item/..."
+                          placeholder="https://amazon.com/product-page, https://prada.com/item, or any international store..."
                           className="h-11"
                           {...field}
                         />

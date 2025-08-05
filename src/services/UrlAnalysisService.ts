@@ -24,6 +24,9 @@ export type ProductCategory =
   | 'home'
   | 'beauty'
   | 'sports'
+  | 'luxury'
+  | 'toys'
+  | 'baby'
   | 'general';
 
 // Domain to country mapping
@@ -90,6 +93,17 @@ const DOMAIN_COUNTRY_MAP: Record<string, string> = {
   'boohoo.com': 'GB',
   'shein.com': 'CN',
   
+  // Luxury fashion brands
+  'prada.com': 'IT',
+  'ysl.com': 'FR',
+  'balenciaga.com': 'FR',
+  'dior.com': 'FR',
+  'chanel.com': 'FR',
+  
+  // Toys and baby products
+  'toysrus.com': 'US',
+  'carters.com': 'US',
+  
   // Electronics
   'apple.com': 'US',
   'samsung.com': 'KR',
@@ -120,6 +134,18 @@ const CATEGORY_PATTERNS: Record<ProductCategory, { domains: string[], keywords: 
   fashion: {
     domains: ['myntra.com', 'ajio.com', 'zara.com', 'hm.com', 'uniqlo.com', 'forever21.com', 'gap.com', 'asos.com', 'boohoo.com', 'shein.com'],
     keywords: ['clothing', 'apparel', 'fashion', 'dress', 'shirt', 'pants', 'jeans', 'jacket']
+  },
+  luxury: {
+    domains: ['prada.com', 'ysl.com', 'balenciaga.com', 'dior.com', 'chanel.com'],
+    keywords: ['luxury', 'haute couture', 'designer', 'premium', 'handbag', 'fragrance', 'jewelry', 'runway']
+  },
+  toys: {
+    domains: ['toysrus.com'],
+    keywords: ['toys', 'games', 'playset', 'action figure', 'doll', 'building blocks', 'educational', 'puzzle']
+  },
+  baby: {
+    domains: ['carters.com'],
+    keywords: ['baby', 'infant', 'toddler', 'newborn', 'onesie', 'sleepwear', 'organic cotton', 'baby clothes']
   },
   footwear: {
     domains: ['nike.com', 'adidas.com', 'puma.com', 'reebok.com', 'underarmour.com'],
@@ -180,6 +206,18 @@ const CATEGORY_PROMPTS: Record<ProductCategory, CategoryPrompts> = {
   sports: {
     notesPlaceholder: 'Size, color, specific model (e.g., L, Blue, Pro version)',
     tips: ['Include size for apparel', 'Specify model variations', 'Mention color preference']
+  },
+  luxury: {
+    notesPlaceholder: 'Size, color, material preference (e.g., Medium, Black, Leather)',
+    tips: ['Luxury items often have limited sizes', 'Specify color carefully', 'Material choice affects price', 'Authentication may be required']
+  },
+  toys: {
+    notesPlaceholder: 'Age range, color preference, specific features (e.g., 3-6 years, Pink, LED lights)',
+    tips: ['Check age recommendations', 'Mention color if multiple options', 'Include special features needed', 'Safety certifications important']
+  },
+  baby: {
+    notesPlaceholder: 'Size, color, organic preference (e.g., 6M, Neutral, Organic cotton)',
+    tips: ['Baby sizes change quickly', 'Organic materials preferred', 'Consider growth room', 'Safety first for all items']
   },
   general: {
     notesPlaceholder: 'Size, color, variant, or any specific requirements',

@@ -241,7 +241,7 @@ export const EnhancedProductInfoFields: React.FC<EnhancedProductInfoFieldsProps>
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="https://www.amazon.com/product-link or any international store"
+                    placeholder="https://www.amazon.com/product-link, https://www.balenciaga.com, or any international store"
                     {...field}
                     className="flex-1"
                   />

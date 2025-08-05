@@ -26,7 +26,7 @@ interface EditableUrlInputProps {
 export const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
   value,
   onChange,
-  placeholder = "https://www.amazon.com/product-link or any international store",
+  placeholder = "https://www.amazon.com/product-link, https://www.dior.com/luxury-item, or any international store",
   className,
   disabled = false,
   showFetchButton = false,
