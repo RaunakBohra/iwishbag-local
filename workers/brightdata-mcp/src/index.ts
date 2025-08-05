@@ -232,7 +232,7 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
 
     // Wait for data collection to complete
     console.log(`⏳ [${requestId}] Waiting for data collection...`);
-    const productData = await waitForBrightDataResults(snapshotId, apiToken, requestId);
+    const productData = await waitForBrightDataResults(snapshotId, apiToken, requestId, url);
     
     return productData;
     
@@ -245,7 +245,7 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
 /**
  * Wait for Bright Data results and download when ready
  */
-async function waitForBrightDataResults(snapshotId: string, apiToken: string, requestId: string, maxAttempts: number = 30) {
+async function waitForBrightDataResults(snapshotId: string, apiToken: string, requestId: string, originalUrl: string, maxAttempts: number = 30) {
   try {
     console.log(`⏳ [${requestId}] Monitoring snapshot: ${snapshotId}`);
     
@@ -270,7 +270,7 @@ async function waitForBrightDataResults(snapshotId: string, apiToken: string, re
       
       if (progressData.status === 'ready') {
         console.log(`✅ [${requestId}] Data collection complete, downloading...`);
-        return await downloadBrightDataResults(snapshotId, apiToken, requestId);
+        return await downloadBrightDataResults(snapshotId, apiToken, requestId, originalUrl);
       } else if (progressData.status === 'failed') {
         throw new Error('Bright Data collection failed');
       }
@@ -293,7 +293,7 @@ async function waitForBrightDataResults(snapshotId: string, apiToken: string, re
 /**
  * Download and parse Bright Data results
  */
-async function downloadBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+async function downloadBrightDataResults(snapshotId: string, apiToken: string, requestId: string, originalUrl: string) {
   try {
     console.log(`📥 [${requestId}] Downloading results for snapshot: ${snapshotId}`);
     
@@ -318,7 +318,7 @@ async function downloadBrightDataResults(snapshotId: string, apiToken: string, r
     }
     
     // Map Bright Data response to our format
-    const productData = mapBrightDataToProductData(resultsData[0], requestId);
+    const productData = mapBrightDataToProductData(resultsData[0], requestId, originalUrl);
     return productData;
     
   } catch (error) {
@@ -328,30 +328,77 @@ async function downloadBrightDataResults(snapshotId: string, apiToken: string, r
 }
 
 /**
+ * Determine target weight unit based on marketplace region
+ */
+function getTargetWeightUnit(url: string): 'lbs' | 'kg' {
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    
+    // US/North America → lbs
+    if (domain.includes('amazon.com') || 
+        domain.includes('amazon.ca') ||
+        domain.includes('walmart.com') || 
+        domain.includes('bestbuy.com') ||
+        domain.includes('ebay.com')) {
+      return 'lbs';
+    }
+    
+    // Rest of world → kg
+    return 'kg';
+  } catch (error) {
+    // Fallback to kg for international markets
+    return 'kg';
+  }
+}
+
+/**
  * Map Bright Data response to our expected product data format
  */
-function mapBrightDataToProductData(brightDataProduct: any, requestId: string) {
+function mapBrightDataToProductData(brightDataProduct: any, requestId: string, originalUrl: string) {
   try {
     console.log(`🗺️ [${requestId}] Mapping Bright Data response to product format`);
     
-    // Extract weight value and unit
+    // Extract weight value and unit with region-specific conversion
     let weightValue = null;
-    let weightUnit = 'lbs';
+    let weightUnit = getTargetWeightUnit(originalUrl);
+    
+    console.log(`🌍 [${requestId}] Target weight unit for ${new URL(originalUrl).hostname}: ${weightUnit}`);
     
     if (brightDataProduct.item_weight) {
       const weightMatch = brightDataProduct.item_weight.match(/([0-9.]+)\s*(\w+)/i);
       if (weightMatch) {
         weightValue = parseFloat(weightMatch[1]);
-        weightUnit = weightMatch[2].toLowerCase();
+        const sourceUnit = weightMatch[2].toLowerCase();
         
-        // Convert to lbs for Amazon products
-        if (weightUnit.includes('ounce') || weightUnit.includes('oz')) {
-          weightValue = weightValue / 16; // oz to lbs
-          weightUnit = 'lbs';
-        } else if (weightUnit.includes('pound') || weightUnit.includes('lb')) {
-          // Already in lbs, keep as-is
-          weightUnit = 'lbs';
+        console.log(`⚖️ [${requestId}] Source weight: ${weightValue} ${sourceUnit} → converting to ${weightUnit}`);
+        
+        if (weightUnit === 'lbs') {
+          // Convert to lbs for US/North America
+          if (sourceUnit.includes('gram') || sourceUnit.includes('g')) {
+            weightValue = weightValue / 453.592; // grams to lbs
+          } else if (sourceUnit.includes('kg') || sourceUnit.includes('kilogram')) {
+            weightValue = weightValue * 2.20462; // kg to lbs
+          } else if (sourceUnit.includes('ounce') || sourceUnit.includes('oz')) {
+            weightValue = weightValue / 16; // oz to lbs
+          } else if (sourceUnit.includes('pound') || sourceUnit.includes('lb')) {
+            // Already in lbs, keep as-is
+          }
+        } else {
+          // Convert to kg for rest of world
+          if (sourceUnit.includes('gram') || sourceUnit.includes('g')) {
+            weightValue = weightValue / 1000; // grams to kg
+          } else if (sourceUnit.includes('pound') || sourceUnit.includes('lb')) {
+            weightValue = weightValue / 2.20462; // lbs to kg
+          } else if (sourceUnit.includes('ounce') || sourceUnit.includes('oz')) {
+            weightValue = weightValue / 35.274; // oz to kg
+          } else if (sourceUnit.includes('kg') || sourceUnit.includes('kilogram')) {
+            // Already in kg, keep as-is
+          }
         }
+        
+        // Round to 3 decimal places for cleaner display
+        weightValue = Math.round(weightValue * 1000) / 1000;
+        console.log(`✅ [${requestId}] Final weight: ${weightValue} ${weightUnit}`);
       }
     }
     
