@@ -18,6 +18,114 @@ export interface MCPBrightDataResult {
  */
 class MCPBrightDataBridge {
   /**
+   * Call Bright Data Datasets API directly for specific datasets like Best Buy
+   */
+  private async callBrightDataDatasets(url: string, datasetId: string): Promise<any> {
+    const startTime = Date.now();
+    const sessionId = Math.random().toString(36).substring(7);
+    
+    console.group(`🗂️ [${sessionId}] Bright Data Datasets API Call`);
+    console.log(`🔗 URL: ${url}`);
+    console.log(`📊 Dataset ID: ${datasetId}`);
+    console.log(`⏱️ Started at: ${new Date().toISOString()}`);
+    
+    try {
+      // For Best Buy dataset, trigger data collection
+      const triggerPayload = [{ url }];
+      
+      console.log(`📤 Triggering dataset collection...`);
+      const triggerResponse = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(triggerPayload)
+      });
+
+      if (!triggerResponse.ok) {
+        throw new Error(`Dataset trigger failed: ${triggerResponse.status} ${triggerResponse.statusText}`);
+      }
+
+      const triggerResult = await triggerResponse.json();
+      console.log(`📋 Trigger response:`, triggerResult);
+      
+      if (!triggerResult.snapshot_id) {
+        throw new Error('No snapshot_id received from dataset trigger');
+      }
+
+      const snapshotId = triggerResult.snapshot_id;
+      console.log(`🆔 Snapshot ID: ${snapshotId}`);
+
+      // Poll for results (with timeout)
+      const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+      let attempts = 0;
+      
+      while (attempts < maxAttempts) {
+        attempts++;
+        console.log(`🔄 Polling attempt ${attempts}/${maxAttempts}...`);
+        
+        // Check progress
+        const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+          headers: {
+            'Authorization': 'Bearer bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b'
+          }
+        });
+
+        if (!progressResponse.ok) {
+          throw new Error(`Progress check failed: ${progressResponse.status}`);
+        }
+
+        const progressResult = await progressResponse.json();
+        console.log(`📊 Progress status: ${progressResult.status}`);
+
+        if (progressResult.status === 'ready') {
+          // Data is ready, download it
+          console.log(`✅ Data ready! Downloading...`);
+          
+          const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+            headers: {
+              'Authorization': 'Bearer bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b'
+            }
+          });
+
+          if (!dataResponse.ok) {
+            throw new Error(`Data download failed: ${dataResponse.status}`);
+          }
+
+          const data = await dataResponse.json();
+          const duration = Date.now() - startTime;
+          
+          console.log(`📥 Downloaded ${data.length || 0} records in ${duration}ms`);
+          console.groupEnd();
+
+          return {
+            success: true,
+            data: data
+          };
+        } else if (progressResult.status === 'failed') {
+          throw new Error(`Dataset collection failed: ${progressResult.error || 'Unknown error'}`);
+        }
+
+        // Wait 2 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      throw new Error('Dataset collection timeout - data not ready within 60 seconds');
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`💥 Datasets API call failed after ${duration}ms:`, error);
+      console.groupEnd();
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Datasets API call failed'
+      };
+    }
+  }
+
+  /**
    * Call the actual Bright Data MCP tool via Cloudflare Workers
    */
   private async callMCPTool(toolName: string, args: any): Promise<any> {
@@ -194,11 +302,11 @@ class MCPBrightDataBridge {
   }
 
   /**
-   * Scrape Best Buy product data using real Bright Data MCP
+   * Scrape Best Buy product data using dedicated Bright Data MCP tool
    */
   async scrapeBestBuyProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
     try {
-      const result = await this.callMCPTool('web_data_bestbuy_products', { url });
+      const result = await this.callMCPTool('bestbuy_product', { url });
       
       if (result && result.content && result.content[0] && result.content[0].text) {
         const productData = JSON.parse(result.content[0].text)[0];
@@ -224,6 +332,41 @@ class MCPBrightDataBridge {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Best Buy scraping failed'
+      };
+    }
+  }
+
+  /**
+   * Scrape Target product data using dedicated Bright Data MCP tool
+   */
+  async scrapeTargetProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    try {
+      const result = await this.callMCPTool('target_product', { url });
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        if (productData.warning) {
+          return {
+            success: false,
+            error: `Target scraping warning: ${productData.warning}`
+          };
+        }
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No product data received from Target'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Target scraping failed'
       };
     }
   }
@@ -334,70 +477,29 @@ class MCPBrightDataBridge {
   }
 
   /**
-   * Scrape Flipkart product data using Bright Data MCP tools
+   * Scrape Flipkart product data using proper Bright Data markdown scraping
    */
   async scrapeFlipkartProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
-    const startTime = Date.now();
-    const sessionId = Math.random().toString(36).substring(7);
-    
-    console.group(`🏬 [${sessionId}] Flipkart Product Scraping`);
-    console.log(`🔗 URL: ${url}`);
-    console.log(`⏱️ Started at: ${new Date().toISOString()}`);
-    
     try {
-      // Try scrape_as_markdown first (most reliable for Flipkart)
-      console.log(`🛠️ Using scrape_as_markdown for Flipkart...`);
-      const result = await this.callMCPTool('scrape_as_markdown', { url });
+      // Use Bright Data's scrape_as_markdown tool
+      const result = await this.callMCPTool('flipkart_product', { url });
       
       if (result && result.content && result.content[0] && result.content[0].text) {
+        // Parse the markdown content for structured data
         const markdownContent = result.content[0].text;
-        console.log(`📄 Markdown content length: ${markdownContent.length} characters`);
-        
-        // Parse Flipkart-specific data from markdown
         const productData = this.parseFlipkartFromMarkdown(markdownContent, url);
         
-        const duration = Date.now() - startTime;
-        console.log(`✅ Flipkart scraping completed in ${duration}ms`);
-        console.groupEnd();
-        
         return {
           success: true,
           data: productData
         };
       }
-      
-      // Fallback: Try HTML scraping if markdown fails
-      console.log(`🔄 Markdown failed, trying scrape_as_html...`);
-      const htmlResult = await this.callMCPTool('scrape_as_html', { url });
-      
-      if (htmlResult && htmlResult.content && htmlResult.content[0] && htmlResult.content[0].text) {
-        const htmlContent = htmlResult.content[0].text;
-        const productData = this.parseFlipkartFromHTML(htmlContent, url);
-        
-        const duration = Date.now() - startTime;
-        console.log(`✅ Flipkart HTML scraping completed in ${duration}ms`);
-        console.groupEnd();
-        
-        return {
-          success: true,
-          data: productData
-        };
-      }
-      
-      const duration = Date.now() - startTime;
-      console.error(`❌ No data received from Flipkart after ${duration}ms`);
-      console.groupEnd();
       
       return {
         success: false,
         error: 'No product data received from Flipkart'
       };
-      
     } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error(`💥 Flipkart scraping failed after ${duration}ms:`, error);
-      console.groupEnd();
-      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Flipkart scraping failed'
@@ -406,144 +508,92 @@ class MCPBrightDataBridge {
   }
 
   /**
-   * Parse Flipkart product data from markdown content
+   * Parse Flipkart product data from markdown content (clean implementation)
    */
   private parseFlipkartFromMarkdown(markdown: string, url: string): any {
-    console.log(`🔍 Parsing Flipkart markdown content...`);
-    
     const data: any = {
       url: url,
       currency: 'INR',
-      source: 'flipkart'
+      source: 'flipkart',
+      platform: 'flipkart'
     };
 
-    // Extract title (look for main heading)
+    // Extract title (look for main heading or title patterns)
     const titleMatch = markdown.match(/^#\s+(.+)$/m) || 
-                      markdown.match(/\*\*([^*]+)\*\*/);
+                      markdown.match(/\*\*([^*]+)\*\*/) ||
+                      markdown.match(/title[^\n]*?:\s*([^\n]+)/i);
     if (titleMatch) {
-      data.title = titleMatch[1].trim();
-      console.log(`📝 Title: ${data.title}`);
+      data.title = titleMatch[1].trim().replace(/\s*-\s*Flipkart.*$/, '');
     }
 
     // Extract price (₹ symbol patterns)
-    const priceMatches = markdown.match(/₹[\d,]+/g);
+    const priceMatches = markdown.match(/₹[\d,]+(?:\.\d{2})?/g);
     if (priceMatches && priceMatches.length > 0) {
-      // Take the first price found (usually the main price)
       const priceStr = priceMatches[0];
       data.final_price = priceStr;
       data.price = parseFloat(priceStr.replace(/₹|,/g, ''));
-      console.log(`💰 Price: ${data.final_price} (${data.price})`);
     }
 
     // Extract rating
-    const ratingMatch = markdown.match(/(\d+\.?\d*)\s*(?:★|star|out of|\/)/i);
+    const ratingMatch = markdown.match(/(\d+\.?\d*)\s*(?:★|star|out of|\/)5?/i);
     if (ratingMatch) {
       data.rating = parseFloat(ratingMatch[1]);
-      console.log(`⭐ Rating: ${data.rating}`);
     }
 
-    // Extract brand/seller
-    const brandMatch = markdown.match(/(?:Brand|Seller|by)\s*:?\s*([A-Za-z][A-Za-z\s]+)/i);
+    // Extract brand (look for brand mentions)
+    const brandMatch = markdown.match(/(?:Brand|by)\s*:?\s*([A-Za-z][A-Za-z\s&]+)/i);
     if (brandMatch) {
-      data.brand = brandMatch[1].trim().split(/\s+/).slice(0, 2).join(' '); // Limit to 2 words
-      console.log(`🏷️ Brand: ${data.brand}`);
+      data.brand = brandMatch[1].trim().split(/\s+/).slice(0, 2).join(' ');
     }
 
-    // Extract specifications
+    // Extract images from markdown image syntax
+    const imageMatches = markdown.match(/!\[.*?\]\((https?:\/\/[^\)]+)\)/g);
+    if (imageMatches) {
+      data.images = imageMatches.map(match => {
+        const urlMatch = match.match(/\((https?:\/\/[^\)]+)\)/);
+        return urlMatch ? urlMatch[1] : null;
+      }).filter(Boolean);
+    }
+
+    // Extract basic specifications
     data.specifications = [];
-    const specLines = markdown.split('\n').filter(line => 
-      line.includes(':') && 
-      !line.startsWith('#') && 
-      line.trim().length > 5 &&
-      line.trim().length < 100
-    );
-    
-    specLines.forEach(line => {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0) {
-        const key = line.substring(0, colonIndex).trim().replace(/\*|\-|\•/g, '');
-        const value = line.substring(colonIndex + 1).trim();
-        
-        if (key && value && key.length < 50 && value.length < 100) {
-          data.specifications.push({
-            specification_name: key,
-            specification_value: value
-          });
-        }
+    const specPattern = /([A-Za-z\s]+?)\s*[:–-]\s*([^\n]+)/g;
+    let specMatch;
+    while ((specMatch = specPattern.exec(markdown)) !== null) {
+      const key = specMatch[1].trim();
+      const value = specMatch[2].trim();
+      if (key.length > 2 && key.length < 50 && value.length > 0 && value.length < 100) {
+        data.specifications.push({
+          specification_name: key,
+          specification_value: value
+        });
       }
-    });
+    }
 
-    console.log(`📋 Specifications: ${data.specifications.length} items`);
-
-    // Extract availability
-    if (markdown.toLowerCase().includes('out of stock')) {
+    // Set availability based on common indicators
+    if (markdown.toLowerCase().includes('out of stock') || markdown.toLowerCase().includes('currently unavailable')) {
       data.availability = 'out-of-stock';
-    } else if (markdown.toLowerCase().includes('in stock') || markdown.toLowerCase().includes('available')) {
-      data.availability = 'in-stock';
     } else {
-      data.availability = 'unknown';
+      data.availability = 'in-stock';
     }
 
-    // Extract product highlights/features
-    data.highlights = [];
-    const bulletPoints = markdown.match(/(?:^|\n)[\*\-\•]\s*(.+)/gm);
-    if (bulletPoints) {
-      data.highlights = bulletPoints
-        .map(point => point.replace(/^[\n\*\-\•]\s*/, '').trim())
-        .filter(point => point.length > 10 && point.length < 150)
-        .slice(0, 5); // Limit to 5 highlights
-    }
-
-    console.log(`✨ Highlights: ${data.highlights.length} items`);
-
-    // Try to extract category from URL structure
+    // Extract category from URL if possible
     const urlParts = url.split('/');
     const categoryPart = urlParts.find(part => 
       part.length > 3 && 
       !part.includes('www') && 
       !part.includes('flipkart') &&
       !part.includes('p') &&
-      !part.includes('pid')
+      !part.includes('pid') &&
+      !part.includes('?')
     );
     if (categoryPart) {
       data.category = categoryPart.replace(/-/g, ' ');
-      console.log(`🏷️ Category: ${data.category}`);
     }
 
     return data;
   }
 
-  /**
-   * Parse Flipkart product data from HTML content (fallback)
-   */
-  private parseFlipkartFromHTML(html: string, url: string): any {
-    console.log(`🔍 Parsing Flipkart HTML content...`);
-    
-    const data: any = {
-      url: url,
-      currency: 'INR',
-      source: 'flipkart-html'
-    };
-
-    // Extract title from title tag or h1
-    const titleMatch = html.match(/<title>([^<]+)</i) || 
-                      html.match(/<h1[^>]*>([^<]+)</i);
-    if (titleMatch) {
-      data.title = titleMatch[1].trim().replace(/\s*-\s*Flipkart.*$/, '');
-    }
-
-    // Extract price
-    const priceMatch = html.match(/₹[\d,]+/);
-    if (priceMatch) {
-      data.final_price = priceMatch[0];
-      data.price = parseFloat(priceMatch[0].replace(/₹|,/g, ''));
-    }
-
-    // Basic availability check
-    data.availability = html.toLowerCase().includes('out of stock') ? 'out-of-stock' : 'in-stock';
-
-    return data;
-  }
 
   /**
    * Generic markdown scraping

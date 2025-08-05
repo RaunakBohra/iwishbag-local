@@ -188,12 +188,14 @@ class ProductDataFetchService {
       }
     }
 
-    // Flipkart
+    // Flipkart  
     if (urlLower.includes('flipkart.com')) {
       const match = url.match(PRODUCT_PATTERNS.flipkart.idPattern);
       if (match) {
         return { site: 'flipkart', productId: match[1] };
       }
+      // Fallback for Flipkart URLs without clear product ID pattern
+      return { site: 'flipkart', productId: 'flipkart-product' };
     }
 
     // eBay
@@ -251,6 +253,22 @@ class ProductDataFetchService {
           };
         } else {
           throw new Error(result.error || 'Myntra scraping failed');
+        }
+      }
+
+      // For Flipkart, use MCP Bright Data Bridge directly
+      if (siteInfo.site === 'flipkart') {
+        const { mcpBrightDataBridge } = await import('./MCPBrightDataBridge');
+        const result = await mcpBrightDataBridge.scrapeFlipkartProduct(url);
+        
+        if (result.success && result.data) {
+          return {
+            success: true,
+            data: this.normalizeProductData(result.data),
+            source: 'scraper'
+          };
+        } else {
+          throw new Error(result.error || 'Flipkart scraping failed');
         }
       }
 

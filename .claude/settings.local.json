@@ -270,7 +270,8 @@
       "WebFetch(domain:www.npmjs.com)",
       "Bash(wrangler secret put:*)",
       "Bash(compgen:*)",
-      "Bash(wrangler tail:*)"
+      "Bash(wrangler tail:*)",
+      "WebFetch(domain:brightdata.com)"
     ],
     "deny": []
   }

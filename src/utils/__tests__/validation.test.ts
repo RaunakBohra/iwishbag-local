@@ -236,6 +236,12 @@ describe('Validation Utils', () => {
           'ebay.com',
           'alibaba.com',
           'apple.com',
+          'bestbuy.com',
+          'target.com',
+          'walmart.com',
+          'etsy.com',
+          'zara.com',
+          'myntra.com',
         ];
         
         try {

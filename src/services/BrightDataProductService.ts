@@ -39,9 +39,28 @@ const PLATFORM_CONFIGS = {
     defaultCurrency: 'USD'
   },
   bestbuy: {
-    scraperType: 'bestbuy_product',
-    fields: ['title', 'price', 'images', 'brand', 'model', 'specifications', 'availability'],
-    defaultCurrency: 'USD'
+    scraperType: 'bestbuy_products',
+    fields: [
+      'title', 'final_price', 'initial_price', 'currency', 'discount', 'images', 
+      'brand', 'model', 'sku', 'upc', 'product_specifications', 'availability',
+      'rating', 'reviews_count', 'questions_count', 'highlights', 'variations',
+      'product_description', 'features', 'whats_included', 'breadcrumbs', 'root_category'
+    ],
+    defaultCurrency: 'USD',
+    weightFields: ['Product Weight', 'Shipping Weight', 'Weight'],
+    categoryMapping: {
+      'Computer Desks': 'home',
+      'Office Furniture': 'home',
+      'Furniture & Decor': 'home',
+      'Laptops': 'electronics',
+      'Desktop Computers': 'electronics',
+      'Gaming': 'electronics',
+      'TV & Home Theater': 'electronics',
+      'Audio': 'electronics',
+      'Cameras': 'electronics',
+      'Cell Phones': 'electronics',
+      'Video Games': 'electronics'
+    }
   },
   etsy: {
     scraperType: 'etsy_product',
@@ -58,6 +77,31 @@ const PLATFORM_CONFIGS = {
     fields: ['title', 'final_price', 'currency', 'images', 'brand', 'specifications', 'offers'],
     fashionFocus: true,
     defaultCurrency: 'INR'
+  },
+  target: {
+    scraperType: 'target_product',
+    fields: [
+      'title', 'final_price', 'initial_price', 'currency', 'images', 'brand', 
+      'specifications', 'availability', 'weight', 'rating', 'reviews_count', 
+      'highlights', 'product_description', 'breadcrumbs', 'category'
+    ],
+    defaultCurrency: 'USD',
+    weightFields: ['Product Weight', 'Shipping Weight', 'Weight'],
+    categoryMapping: {
+      'Electronics': 'electronics',
+      'Clothing': 'fashion',
+      'Home': 'home',
+      'Sports & Outdoors': 'sports',
+      'Beauty': 'beauty-health',
+      'Toys': 'toys',
+      'Books': 'books'
+    }
+  },
+  flipkart: {
+    scraperType: 'flipkart_product',
+    fields: ['title', 'final_price', 'currency', 'brand', 'specifications', 'highlights', 'rating'],
+    defaultCurrency: 'INR',
+    fallbackToMarkdown: true
   }
 };
 
@@ -112,6 +156,12 @@ class BrightDataProductService {
           break;
         case 'myntra':
           result = await this.scrapeMyntraProduct(url, options);
+          break;
+        case 'target':
+          result = await this.scrapeTargetProduct(url, options);
+          break;
+        case 'flipkart':
+          result = await this.scrapeFlipkartProduct(url, options);
           break;
         default:
           result = await this.scrapeGenericProduct(url, options);
@@ -247,7 +297,11 @@ class BrightDataProductService {
       const mcpResult = await this.callBrightDataMCP('bestbuy_product', {
         url,
         include_specifications: true,
-        include_availability: true
+        include_availability: true,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_highlights: true,
+        include_variations: options.includeVariants !== false
       });
 
       if (!mcpResult.success) {
@@ -368,6 +422,75 @@ class BrightDataProductService {
   }
 
   /**
+   * Scrape Target product using Bright Data MCP
+   */
+  private async scrapeTargetProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('target_product', {
+        url,
+        include_specifications: true,
+        include_availability: true,
+        include_reviews: options.includeReviews !== false,
+        include_images: options.includeImages !== false,
+        include_highlights: true,
+        include_variations: options.includeVariants !== false
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Target scraping failed');
+      }
+
+      const productData = this.normalizeTargetData(mcpResult.data);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Target scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
+   * Scrape Flipkart product using Bright Data MCP
+   */
+  private async scrapeFlipkartProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('flipkart_product', {
+        url,
+        include_specifications: true,
+        include_highlights: true,
+        include_rating: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Flipkart scraping failed');
+      }
+
+      const productData = this.normalizeFlipkartData(mcpResult.data);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Flipkart scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
    * Generic product scraping using scrape_as_markdown
    */
   private async scrapeGenericProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
@@ -417,6 +540,10 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeZaraProduct(params.url, params);
       case 'myntra_product':
         return await mcpBrightDataBridge.scrapeMyntraProduct(params.url, params);
+      case 'target_product':
+        return await mcpBrightDataBridge.scrapeTargetProduct(params.url, params);
+      case 'flipkart_product':
+        return await mcpBrightDataBridge.scrapeFlipkartProduct(params.url, params);
       case 'scrape_as_markdown':
         return await mcpBrightDataBridge.scrapeAsMarkdown(params.url);
       default:
@@ -441,6 +568,8 @@ class BrightDataProductService {
     if (urlLower.includes('etsy.com')) return 'etsy';
     if (urlLower.includes('zara.com')) return 'zara';
     if (urlLower.includes('myntra.com')) return 'myntra';
+    if (urlLower.includes('target.com')) return 'target';
+    if (urlLower.includes('flipkart.com')) return 'flipkart';
     
     return null;
   }
@@ -529,16 +658,177 @@ class BrightDataProductService {
   }
 
   private normalizeBestBuyData(rawData: any): ProductData {
-    return {
-      title: rawData.title || rawData.name,
-      price: this.parsePrice(rawData.price),
-      currency: 'USD',
-      weight: this.parseWeight(rawData.weight),
-      images: rawData.images || [],
-      brand: rawData.brand || rawData.manufacturer,
-      category: rawData.category || 'electronics',
-      availability: rawData.availability === 'Available' ? 'in-stock' : 'out-of-stock'
-    };
+    try {
+      // Handle Best Buy's comprehensive response format
+      const finalPrice = rawData.final_price || rawData.offer_price || rawData.price;
+      const initialPrice = rawData.initial_price;
+      
+      // Safely parse images and limit to first 8 to prevent memory issues
+      let images: string[] = [];
+      try {
+        if (Array.isArray(rawData.images)) {
+          // Filter out duplicate images and prefer high-quality ones
+          const uniqueImages = new Set<string>();
+          rawData.images.forEach((img: string) => {
+            // Prefer higher quality images (500x500 over scaled versions)
+            if (img && (img.includes('500/500') || !img.includes('prescaled'))) {
+              uniqueImages.add(img);
+            }
+          });
+          images = Array.from(uniqueImages).slice(0, 8);
+          
+          // If no high-quality images, fall back to any available images
+          if (images.length === 0) {
+            images = rawData.images.slice(0, 8);
+          }
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse Best Buy images:', imgError);
+        images = [];
+      }
+
+      // Extract weight from specifications (safely)
+      let weight: number | undefined;
+      try {
+        weight = this.extractWeightFromBestBuySpecs(rawData.product_specifications);
+      } catch (weightError) {
+        console.warn('Failed to extract weight from Best Buy specifications:', weightError);
+      }
+
+      // Extract brand from specifications or fallback to manual extraction
+      let brand: string | undefined;
+      try {
+        if (rawData.product_specifications && Array.isArray(rawData.product_specifications)) {
+          const brandSpec = rawData.product_specifications.find((spec: any) => 
+            spec?.specification_name === 'Brand'
+          );
+          brand = brandSpec?.specification_value;
+        }
+        // Fallback to model extraction or title parsing
+        brand = brand || rawData.model || this.extractBrandFromTitle(rawData.title || '');
+      } catch (brandError) {
+        console.warn('Failed to extract brand from Best Buy data:', brandError);
+      }
+
+      // Determine category from breadcrumbs or root_category
+      let category = 'electronics'; // Default for Best Buy
+      try {
+        if (rawData.breadcrumbs && Array.isArray(rawData.breadcrumbs)) {
+          // Use the most specific breadcrumb (last in array)
+          const specificCategory = rawData.breadcrumbs[rawData.breadcrumbs.length - 1]?.name;
+          if (specificCategory) {
+            category = this.mapBestBuyCategory(specificCategory);
+          }
+        } else if (rawData.root_category) {
+          category = this.mapBestBuyCategory(rawData.root_category);
+        }
+      } catch (categoryError) {
+        console.warn('Failed to extract category from Best Buy data:', categoryError);
+      }
+
+      // Parse availability from availability array
+      let availability: 'in-stock' | 'out-of-stock' | 'unknown' = 'unknown';
+      try {
+        if (rawData.availability && Array.isArray(rawData.availability)) {
+          // If any availability option exists (Pickup, Shipping), consider in-stock
+          availability = rawData.availability.length > 0 ? 'in-stock' : 'out-of-stock';
+        }
+      } catch (availError) {
+        console.warn('Failed to parse Best Buy availability:', availError);
+      }
+
+      // Extract product highlights for description
+      let description = rawData.product_description || '';
+      try {
+        if (rawData.highlights && Array.isArray(rawData.highlights)) {
+          const highlightTexts = rawData.highlights
+            .map((highlight: any) => {
+              if (highlight.description && Array.isArray(highlight.description)) {
+                return highlight.description.join(' ');
+              }
+              return highlight.title || '';
+            })
+            .filter(Boolean)
+            .slice(0, 3); // Limit to first 3 highlights
+          
+          if (highlightTexts.length > 0) {
+            description = description ? `${description}\n\nKey Features:\n• ${highlightTexts.join('\n• ')}` : highlightTexts.join('\n• ');
+          }
+        }
+      } catch (highlightError) {
+        console.warn('Failed to extract highlights from Best Buy data:', highlightError);
+      }
+
+      // Build product variants from variations
+      const variants = [];
+      try {
+        if (rawData.variations && Array.isArray(rawData.variations)) {
+          const variantOptions = rawData.variations
+            .map((variation: any) => variation?.variations_name || variation?.name)
+            .filter(Boolean)
+            .slice(0, 5); // Limit variants
+          
+          if (variantOptions.length > 0) {
+            variants.push({
+              name: 'Model',
+              options: variantOptions
+            });
+          }
+        }
+      } catch (variantError) {
+        console.warn('Failed to extract variants from Best Buy data:', variantError);
+      }
+
+      // Calculate discount percentage if both prices available
+      let discountInfo: string | undefined;
+      try {
+        if (initialPrice && finalPrice) {
+          const initial = this.parsePrice(initialPrice) || 0;
+          const final = this.parsePrice(finalPrice) || 0;
+          if (initial > final) {
+            const discountPercent = Math.round(((initial - final) / initial) * 100);
+            discountInfo = `Save ${discountPercent}% (was ${initialPrice})`;
+          }
+        }
+      } catch (discountError) {
+        console.warn('Failed to calculate Best Buy discount:', discountError);
+      }
+
+      // Return normalized data with safe fallbacks
+      return {
+        title: rawData.title || `Best Buy Product ${rawData.product_id || ''}`,
+        price: this.parsePrice(finalPrice) || 0,
+        currency: rawData.currency || 'USD',
+        weight: weight,
+        images: images,
+        brand: brand,
+        category: category,
+        availability: availability,
+        description: description.substring(0, 1000), // Limit description length
+        variants: variants,
+        rating: typeof rawData.rating === 'number' ? rawData.rating : undefined,
+        reviewsCount: typeof rawData.reviews_count === 'number' ? rawData.reviews_count : undefined,
+        // Add Best Buy specific fields
+        originalPrice: this.parsePrice(initialPrice),
+        discount: discountInfo,
+        sku: rawData.sku,
+        model: rawData.model,
+        upc: rawData.upc
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Best Buy data:', error);
+      // Return minimal safe data structure
+      return {
+        title: rawData?.title || 'Unknown Best Buy Product',
+        price: this.parsePrice(rawData?.final_price || rawData?.price) || 0,
+        currency: 'USD',
+        category: 'electronics',
+        availability: 'unknown',
+        images: [],
+        variants: []
+      };
+    }
   }
 
   private normalizeEtsyData(rawData: any): ProductData {
@@ -676,6 +966,512 @@ class BrightDataProductService {
         variants: []
       };
     }
+  }
+
+  private normalizeTargetData(rawData: any): ProductData {
+    try {
+      // Handle Target's comprehensive response format
+      const finalPrice = rawData.final_price || rawData.offer_price || rawData.price;
+      const initialPrice = rawData.initial_price;
+      
+      // Safely parse images and limit to first 8 to prevent memory issues
+      let images: string[] = [];
+      try {
+        if (Array.isArray(rawData.images)) {
+          // Filter out duplicate images and prefer high-quality ones
+          const uniqueImages = new Set<string>();
+          rawData.images.forEach((img: string) => {
+            if (img && img.includes('http')) {
+              uniqueImages.add(img);
+            }
+          });
+          images = Array.from(uniqueImages).slice(0, 8);
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse Target images:', imgError);
+        images = [];
+      }
+
+      // Extract weight from specifications (safely)
+      let weight: number | undefined;
+      try {
+        weight = this.extractWeightFromTargetSpecs(rawData.specifications || rawData.product_specifications);
+        
+        // Fallback to weight field directly
+        if (!weight && rawData.weight) {
+          weight = this.parseWeight(rawData.weight);
+        }
+      } catch (weightError) {
+        console.warn('Failed to extract weight from Target specifications:', weightError);
+      }
+
+      // Extract brand from specifications or fallback to manual extraction
+      let brand: string | undefined;
+      try {
+        if (rawData.specifications && Array.isArray(rawData.specifications)) {
+          const brandSpec = rawData.specifications.find((spec: any) => 
+            spec?.specification_name === 'Brand' || 
+            spec?.specification_name === 'Manufacturer'
+          );
+          brand = brandSpec?.specification_value;
+        }
+        // Fallback to brand field or title parsing
+        brand = brand || rawData.brand || this.extractBrandFromTitle(rawData.title || '');
+      } catch (brandError) {
+        console.warn('Failed to extract brand from Target data:', brandError);
+      }
+
+      // Determine category from breadcrumbs or category field
+      let category = 'general'; // Default for Target
+      try {
+        if (rawData.breadcrumbs && Array.isArray(rawData.breadcrumbs)) {
+          // Use the most specific breadcrumb (last in array)
+          const specificCategory = rawData.breadcrumbs[rawData.breadcrumbs.length - 1]?.name;
+          if (specificCategory) {
+            category = this.mapTargetCategory(specificCategory);
+          }
+        } else if (rawData.category) {
+          category = this.mapTargetCategory(rawData.category);
+        }
+      } catch (categoryError) {
+        console.warn('Failed to extract category from Target data:', categoryError);
+      }
+
+      // Parse availability 
+      let availability: 'in-stock' | 'out-of-stock' | 'unknown' = 'unknown';
+      try {
+        if (rawData.availability) {
+          const availStr = rawData.availability.toString().toLowerCase();
+          availability = availStr.includes('in stock') || availStr.includes('available') ? 'in-stock' : 
+                        availStr.includes('out of stock') ? 'out-of-stock' : 'unknown';
+        }
+      } catch (availError) {
+        console.warn('Failed to parse Target availability:', availError);
+      }
+
+      // Extract product highlights for description
+      let description = rawData.product_description || '';
+      try {
+        if (rawData.highlights && Array.isArray(rawData.highlights)) {
+          const highlightTexts = rawData.highlights
+            .filter(Boolean)
+            .slice(0, 3); // Limit to first 3 highlights
+          
+          if (highlightTexts.length > 0) {
+            description = description ? `${description}\n\nKey Features:\n• ${highlightTexts.join('\n• ')}` : highlightTexts.join('\n• ');
+          }
+        }
+      } catch (highlightError) {
+        console.warn('Failed to extract highlights from Target data:', highlightError);
+      }
+
+      // Build product variants from variations
+      const variants = [];
+      try {
+        if (rawData.variations && Array.isArray(rawData.variations)) {
+          const variantOptions = rawData.variations
+            .map((variation: any) => variation?.name || variation?.value)
+            .filter(Boolean)
+            .slice(0, 5); // Limit variants
+          
+          if (variantOptions.length > 0) {
+            variants.push({
+              name: 'Options',
+              options: variantOptions
+            });
+          }
+        }
+      } catch (variantError) {
+        console.warn('Failed to extract variants from Target data:', variantError);
+      }
+
+      // Calculate discount percentage if both prices available
+      let discountInfo: string | undefined;
+      try {
+        if (initialPrice && finalPrice) {
+          const initial = this.parsePrice(initialPrice) || 0;
+          const final = this.parsePrice(finalPrice) || 0;
+          if (initial > final) {
+            const discountPercent = Math.round(((initial - final) / initial) * 100);
+            discountInfo = `Save ${discountPercent}% (was ${initialPrice})`;
+          }
+        }
+      } catch (discountError) {
+        console.warn('Failed to calculate Target discount:', discountError);
+      }
+
+      // Return normalized data with safe fallbacks
+      return {
+        title: rawData.title || `Target Product ${rawData.product_id || ''}`,
+        price: this.parsePrice(finalPrice) || 0,
+        currency: rawData.currency || 'USD',
+        weight: weight,
+        images: images,
+        brand: brand,
+        category: category,
+        availability: availability,
+        description: description.substring(0, 1000), // Limit description length
+        variants: variants,
+        rating: typeof rawData.rating === 'number' ? rawData.rating : undefined,
+        reviewsCount: typeof rawData.reviews_count === 'number' ? rawData.reviews_count : undefined,
+        // Add Target specific fields
+        originalPrice: this.parsePrice(initialPrice),
+        discount: discountInfo,
+        sku: rawData.sku,
+        model: rawData.model
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Target data:', error);
+      // Return minimal safe data structure
+      return {
+        title: rawData?.title || 'Unknown Target Product',
+        price: this.parsePrice(rawData?.final_price || rawData?.price) || 0,
+        currency: 'USD',
+        category: 'general',
+        availability: 'unknown',
+        images: [],
+        variants: []
+      };
+    }
+  }
+
+  private normalizeFlipkartData(rawData: any): ProductData {
+    try {
+      // Handle Flipkart's response format from our custom scraper
+      const price = rawData.final_price || rawData.price;
+      
+      // Extract weight from specifications (safely)
+      let weight: number | undefined;
+      try {
+        if (rawData.specifications && Array.isArray(rawData.specifications)) {
+          const specs = rawData.specifications;
+          const weightSpec = specs.find((spec: any) => 
+            spec?.specification_name && 
+            spec.specification_name.toLowerCase().includes('weight')
+          );
+          if (weightSpec && weightSpec.specification_value) {
+            const weightMatch = weightSpec.specification_value.match(/(\d+(?:\.\d+)?)\s*(g|kg|ml|oz|lb)/i);
+            if (weightMatch) {
+              let extractedWeight = parseFloat(weightMatch[1]);
+              const unit = weightMatch[2].toLowerCase();
+              // Convert to kg
+              if (unit === 'g') extractedWeight = extractedWeight / 1000;
+              else if (unit === 'ml') extractedWeight = extractedWeight / 1000;
+              else if (unit === 'oz') extractedWeight = extractedWeight * 0.0283495;
+              else if (unit === 'lb') extractedWeight = extractedWeight * 0.453592;
+              weight = Math.round(extractedWeight * 1000) / 1000;
+            }
+          }
+        }
+      } catch (weightError) {
+        console.warn('Failed to extract weight from Flipkart specifications:', weightError);
+      }
+
+      // Extract category from URL or fallback to general
+      let category = rawData.category || 'general';
+      if (category === 'general') {
+        // Try to infer from title or URL
+        const title = rawData.title || '';
+        if (title.toLowerCase().includes('phone') || title.toLowerCase().includes('mobile')) {
+          category = 'electronics';
+        } else if (title.toLowerCase().includes('shirt') || title.toLowerCase().includes('dress')) {
+          category = 'fashion';
+        }
+      }
+
+      // Return normalized data
+      return {
+        title: rawData.title || 'Unknown Product',
+        price: this.parsePrice(price) || 0,
+        currency: rawData.currency || 'INR',
+        weight: weight,
+        images: rawData.images || [],
+        brand: rawData.brand,
+        category: category,
+        availability: rawData.availability || 'unknown',
+        description: rawData.highlights ? rawData.highlights.join('. ') : '',
+        variants: []
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Flipkart data:', error);
+      return {
+        title: rawData?.title || 'Unknown Product',
+        price: 0,
+        currency: 'INR',
+        category: 'general',
+        availability: 'unknown',
+        images: [],
+        variants: []
+      };
+    }
+  }
+
+  /**
+   * Extract weight from Best Buy product specifications with intelligent parsing
+   */
+  private extractWeightFromBestBuySpecs(specifications: any[]): number | undefined {
+    if (!specifications || !Array.isArray(specifications)) return undefined;
+    
+    // Priority order for weight specifications
+    const weightPriority = [
+      'Product Weight',
+      'Shipping Weight', 
+      'Weight',
+      'Item Weight',
+      'Package Weight'
+    ];
+    
+    // Try to find weight in priority order
+    for (const priorityName of weightPriority) {
+      const weightSpec = specifications.find((spec: any) => 
+        spec?.specification_name === priorityName
+      );
+      
+      if (weightSpec && weightSpec.specification_value) {
+        const weight = this.parseWeight(weightSpec.specification_value);
+        if (weight !== undefined) {
+          console.log(`🏋️ Found weight from ${priorityName}: ${weight} kg`);
+          return weight;
+        }
+      }
+    }
+    
+    // Fallback: look for any specification with "weight" in the name
+    const anyWeightSpec = specifications.find((spec: any) => 
+      spec?.specification_name && 
+      spec.specification_name.toLowerCase().includes('weight')
+    );
+    
+    if (anyWeightSpec && anyWeightSpec.specification_value) {
+      const weight = this.parseWeight(anyWeightSpec.specification_value);
+      if (weight !== undefined) {
+        console.log(`🏋️ Found weight from ${anyWeightSpec.specification_name}: ${weight} kg`);
+        return weight;
+      }
+    }
+    
+    // If no weight found, try to estimate based on category and other specs
+    return this.estimateWeightFromBestBuySpecs(specifications);
+  }
+
+  /**
+   * Estimate weight based on Best Buy product specifications when actual weight not available
+   */
+  private estimateWeightFromBestBuySpecs(specifications: any[]): number | undefined {
+    if (!specifications || !Array.isArray(specifications)) return undefined;
+    
+    // Look for dimensions to estimate weight
+    const heightSpec = specifications.find(s => s?.specification_name === 'Product Height');
+    const widthSpec = specifications.find(s => s?.specification_name === 'Product Width');
+    const depthSpec = specifications.find(s => s?.specification_name === 'Product Depth');
+    
+    if (heightSpec && widthSpec && depthSpec) {
+      try {
+        // Parse dimensions (assuming inches)
+        const height = parseFloat(heightSpec.specification_value.replace(/[^\d.]/g, ''));
+        const width = parseFloat(widthSpec.specification_value.replace(/[^\d.]/g, ''));
+        const depth = parseFloat(depthSpec.specification_value.replace(/[^\d.]/g, ''));
+        
+        if (height > 0 && width > 0 && depth > 0) {
+          // Rough volume-based estimation (very approximate)
+          const volumeCubicInches = height * width * depth;
+          
+          // Different density estimates based on product type
+          let densityFactor = 0.1; // Default: lightweight electronics
+          
+          // Check for category indicators in specifications
+          const categoryIndicators = specifications.map(s => 
+            (s.specification_name + ' ' + s.specification_value).toLowerCase()
+          ).join(' ');
+          
+          if (categoryIndicators.includes('laptop') || categoryIndicators.includes('computer')) {
+            densityFactor = 0.15; // Laptops are denser
+          } else if (categoryIndicators.includes('tv') || categoryIndicators.includes('monitor')) {
+            densityFactor = 0.08; // TVs are larger but lighter per volume
+          } else if (categoryIndicators.includes('furniture') || categoryIndicators.includes('desk')) {
+            densityFactor = 0.3; // Furniture is much heavier
+          } else if (categoryIndicators.includes('phone') || categoryIndicators.includes('tablet')) {
+            densityFactor = 0.2; // Small electronics are dense
+          }
+          
+          // Convert to kg (rough estimation)
+          const estimatedWeightKg = (volumeCubicInches * densityFactor) / 100;
+          
+          if (estimatedWeightKg > 0.01 && estimatedWeightKg < 100) { // Sanity check
+            console.log(`📐 Estimated weight from dimensions: ${estimatedWeightKg.toFixed(2)} kg`);
+            return Math.round(estimatedWeightKg * 100) / 100; // Round to 2 decimals
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to estimate weight from dimensions:', error);
+      }
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Extract brand from product title (fallback method)
+   */
+  private extractBrandFromTitle(title: string): string | undefined {
+    if (!title) return undefined;
+    
+    // Common electronics brands that might appear in Best Buy titles
+    const commonBrands = [
+      'Apple', 'Samsung', 'Sony', 'LG', 'Dell', 'HP', 'Lenovo', 'ASUS', 'Acer',
+      'Microsoft', 'Google', 'Nintendo', 'Xbox', 'PlayStation', 'Canon', 'Nikon',
+      'JBL', 'Bose', 'Beats', 'Logitech', 'Razer', 'Corsair', 'SteelSeries',
+      'Roku', 'Amazon', 'Tesla', 'Fitbit', 'Garmin', 'GoPro', 'DJI', 'Costway'
+    ];
+    
+    const titleWords = title.split(/[\s\-]+/);
+    for (const brand of commonBrands) {
+      if (titleWords.some(word => word.toLowerCase() === brand.toLowerCase())) {
+        return brand;
+      }
+    }
+    
+    // Fallback: use first word if it looks like a brand (capitalized)
+    const firstWord = titleWords[0];
+    if (firstWord && /^[A-Z][a-z]+$/.test(firstWord) && firstWord.length > 2) {
+      return firstWord;
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Extract weight from Target product specifications with intelligent parsing
+   */
+  private extractWeightFromTargetSpecs(specifications: any[]): number | undefined {
+    if (!specifications || !Array.isArray(specifications)) return undefined;
+    
+    // Priority order for weight specifications
+    const weightPriority = [
+      'Product Weight',
+      'Shipping Weight', 
+      'Weight',
+      'Item Weight',
+      'Package Weight'
+    ];
+    
+    // Try to find weight in priority order
+    for (const priorityName of weightPriority) {
+      const weightSpec = specifications.find((spec: any) => 
+        spec?.specification_name === priorityName
+      );
+      
+      if (weightSpec && weightSpec.specification_value) {
+        const weight = this.parseWeight(weightSpec.specification_value);
+        if (weight !== undefined) {
+          console.log(`🏋️ Found Target weight from ${priorityName}: ${weight} kg`);
+          return weight;
+        }
+      }
+    }
+    
+    // Fallback: look for any specification with "weight" in the name
+    const anyWeightSpec = specifications.find((spec: any) => 
+      spec?.specification_name && 
+      spec.specification_name.toLowerCase().includes('weight')
+    );
+    
+    if (anyWeightSpec && anyWeightSpec.specification_value) {
+      const weight = this.parseWeight(anyWeightSpec.specification_value);
+      if (weight !== undefined) {
+        console.log(`🏋️ Found Target weight from ${anyWeightSpec.specification_name}: ${weight} kg`);
+        return weight;
+      }
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Map Target category to our standard categories
+   */
+  private mapTargetCategory(targetCategory: string): string {
+    if (!targetCategory) return 'general';
+    
+    const category = targetCategory.toLowerCase();
+    
+    // Target specific category mappings
+    if (category.includes('electronic') || category.includes('computer') || category.includes('phone') || category.includes('tablet')) {
+      return 'electronics';
+    }
+    if (category.includes('clothing') || category.includes('apparel') || category.includes('fashion') || category.includes('shirt') || category.includes('dress')) {
+      return 'fashion';
+    }
+    if (category.includes('shoes') || category.includes('footwear') || category.includes('sneaker') || category.includes('boot')) {
+      return 'footwear';
+    }
+    if (category.includes('home') || category.includes('furniture') || category.includes('kitchen') || category.includes('garden')) {
+      return 'home';
+    }
+    if (category.includes('beauty') || category.includes('health') || category.includes('cosmetic') || category.includes('skincare')) {
+      return 'beauty-health';
+    }
+    if (category.includes('sports') || category.includes('outdoor') || category.includes('fitness') || category.includes('exercise')) {
+      return 'sports';
+    }
+    if (category.includes('toys') || category.includes('games') || category.includes('kids') || category.includes('children')) {
+      return 'toys';
+    }
+    if (category.includes('books') || category.includes('media') || category.includes('magazine')) {
+      return 'books';
+    }
+    
+    // Default to general for Target
+    return 'general';
+  }
+
+  /**
+   * Map Best Buy category to our standard categories
+   */
+  private mapBestBuyCategory(bestBuyCategory: string): string {
+    if (!bestBuyCategory) return 'electronics';
+    
+    const category = bestBuyCategory.toLowerCase();
+    
+    // Best Buy specific category mappings
+    if (category.includes('computer') || category.includes('laptop') || category.includes('desktop')) {
+      return 'electronics';
+    }
+    if (category.includes('phone') || category.includes('mobile') || category.includes('smartphone')) {
+      return 'electronics';
+    }
+    if (category.includes('tv') || category.includes('television') || category.includes('monitor')) {
+      return 'electronics';
+    }
+    if (category.includes('gaming') || category.includes('video game') || category.includes('console')) {
+      return 'electronics';
+    }
+    if (category.includes('audio') || category.includes('headphone') || category.includes('speaker')) {
+      return 'electronics';
+    }
+    if (category.includes('camera') || category.includes('photography')) {
+      return 'electronics';
+    }
+    if (category.includes('furniture') || category.includes('desk') || category.includes('chair')) {
+      return 'home';
+    }
+    if (category.includes('appliance') || category.includes('kitchen') || category.includes('home')) {
+      return 'home';
+    }
+    if (category.includes('fitness') || category.includes('sports') || category.includes('outdoor')) {
+      return 'sports';
+    }
+    if (category.includes('book') || category.includes('media')) {
+      return 'books';
+    }
+    if (category.includes('toy') || category.includes('game')) {
+      return 'toys';
+    }
+    
+    // Default to electronics for Best Buy
+    return 'electronics';
   }
 
   /**
