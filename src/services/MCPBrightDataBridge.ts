@@ -77,67 +77,15 @@ class MCPBrightDataBridge {
       const duration = Date.now() - startTime;
       console.error(`💥 MCP call failed after ${duration}ms:`, error);
       
-      // Fallback to mock data for development
-      console.warn(`🔄 Using fallback mock data for ${toolName}`);
-      const mockData = this.getMockData(toolName, args);
-      console.log(`🎭 Mock data:`, JSON.stringify(mockData, null, 2));
+      // No fallback data - honest failure approach
+      console.error(`❌ Real data extraction failed for ${toolName}`);
       console.groupEnd();
       
-      return mockData;
+      throw error;
     }
   }
   
-  /**
-   * Fallback mock data for development
-   */
-  private getMockData(toolName: string, args: any): any {
-    switch (toolName) {
-      case 'web_data_amazon_product':
-        return {
-          content: [{
-            text: JSON.stringify([{
-              title: "Amazon Echo Dot (5th Gen)",
-              brand: "Amazon",
-              initial_price: 49.99,
-              final_price: 49.99,
-              currency: "USD",
-              availability: "In Stock",
-              rating: 4.6,
-              reviews_count: 165700,
-              description: "Our best sounding Echo Dot yet – Enjoy an improved audio experience...",
-              images: ["https://m.media-amazon.com/images/I/71yRY8YlAbL._AC_SL1500_.jpg"],
-              asin: "B09B8V1LZ3",
-              url: args.url
-            }])
-          }]
-        };
-      case 'web_data_ebay_product':
-        return {
-          content: [{
-            text: JSON.stringify([{
-              title: "Sample eBay Product",
-              price: "$25.50",
-              currency: "USD",
-              condition: "New",
-              seller_rating: 98.5,
-              shipping: "$5.99",
-              images: ["https://example.com/ebay-image.jpg"]
-            }])
-          }]
-        };
-      default:
-        return {
-          content: [{
-            text: JSON.stringify([{
-              title: "Sample Product",
-              price: "$29.99",
-              currency: "USD",
-              availability: "In Stock"
-            }])
-          }]
-        };
-    }
-  }
+  // All mock data removed - real data only approach
   /**
    * Scrape Amazon product data using real Bright Data MCP
    */

@@ -527,32 +527,28 @@ export default function QuoteRequestPage() {
                     }
                   }, [urlAnalysis.suggestedCountry, urlAnalysis.shouldAutoSetCountry, index, form, purchaseCountries]);
                   
-                  // Auto-fill product data when scraping completes
+                  // Auto-fill product data when scraping completes - OVERWRITE all fields
                   useEffect(() => {
                     if (productScraping.shouldAutoFill && productScraping.autoFillData) {
                       const { productName, price, weight, currency: scrapedCurrency } = productScraping.autoFillData;
                       
-                      // Only auto-fill empty fields to avoid overwriting user input
-                      const currentProductName = form.getValues(`items.${index}.product_name`);
-                      const currentPrice = form.getValues(`items.${index}.price_usd`);
-                      const currentWeight = form.getValues(`items.${index}.weight_kg`);
-                      
-                      if (!currentProductName && productName) {
+                      // OVERWRITE all form fields with scraped data (user's requirement)
+                      if (productName) {
                         form.setValue(`items.${index}.product_name`, productName, { shouldValidate: true });
                       }
                       
-                      if ((!currentPrice || currentPrice === 0) && price && price > 0) {
+                      if (price && price > 0) {
                         form.setValue(`items.${index}.price_usd`, price, { shouldValidate: true });
                       }
                       
-                      if ((!currentWeight || currentWeight === 0) && weight && weight > 0) {
+                      if (weight && weight > 0) {
                         form.setValue(`items.${index}.weight_kg`, weight, { shouldValidate: true });
                       }
                       
                       // Show success toast
                       toast({
                         title: "Product data loaded!",
-                        description: `Auto-filled from ${productScraping.urlAnalysis.domain}`,
+                        description: `Auto-filled from ${productScraping.urlAnalysis.domain} (overwrote existing data)`,
                         duration: 3000,
                       });
                     }

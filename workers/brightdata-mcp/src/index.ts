@@ -144,7 +144,7 @@ async function callBrightDataMCP(toolName: string, args: any, apiToken: string, 
 }
 
 /**
- * Call Amazon Product API - Enhanced intelligent fallback system
+ * Call Amazon Product API - Real data only, no mock/fallback data
  */
 async function callAmazonProductAPI(url: string, apiToken: string, requestId: string) {
   const funcStart = Date.now();
@@ -152,199 +152,259 @@ async function callAmazonProductAPI(url: string, apiToken: string, requestId: st
     console.log(`🛒 [${requestId}] callAmazonProductAPI started`);
     console.log(`📡 [${requestId}] Processing Amazon URL: ${url}`);
     
-    // TODO: Implement real Bright Data API call when session handling is resolved
-    // For now, use intelligent analysis of the URL to provide better mock data
-    
-    // Extract ASIN and other details from URL for intelligent mock data
+    // Extract ASIN for real scraping
     const asin = extractASIN(url);
     console.log(`🏷️ [${requestId}] Extracted ASIN: ${asin}`);
     
-    // Use intelligent mock data based on URL analysis
-    console.log(`🧠 [${requestId}] Generating intelligent product data...`);
-    const productData = await generateIntelligentAmazonData(url, asin, requestId);
+    if (!asin || asin.length !== 10) {
+      console.log(`❌ [${requestId}] Invalid or missing ASIN, cannot proceed`);
+      throw new Error('Invalid ASIN extracted from URL');
+    }
     
-    const result = {
-      content: [{
-        text: JSON.stringify([productData])
-      }]
-    };
+    // Attempt real HTML scraping first
+    console.log(`🌐 [${requestId}] Attempting real HTML scraping for ASIN: ${asin}`);
+    try {
+      const scrapedData = await scrapeAmazonByASIN(asin, requestId);
+      if (scrapedData) {
+        console.log(`✅ [${requestId}] Real HTML scraping successful`);
+        return {
+          content: [{
+            text: JSON.stringify([scrapedData])
+          }]
+        };
+      }
+    } catch (error) {
+      console.log(`⚠️ [${requestId}] HTML scraping failed: ${error.message}`);
+    }
     
+    // Attempt Bright Data MCP as backup
+    console.log(`🔍 [${requestId}] Attempting Bright Data MCP API call`);
+    try {
+      const realApiResult = await attemptRealBrightDataCall(url, asin, apiToken, requestId);
+      if (realApiResult) {
+        console.log(`✅ [${requestId}] Bright Data API call successful`);
+        return realApiResult;
+      }
+    } catch (error) {
+      console.log(`⚠️ [${requestId}] Bright Data API failed: ${error.message}`);
+    }
+    
+    // No fallback data - return failure
     const funcDuration = Date.now() - funcStart;
-    console.log(`✅ [${requestId}] Amazon API completed in ${funcDuration}ms`);
-    console.log(`📊 [${requestId}] Generated product:`, JSON.stringify(productData, null, 2));
-    
-    return result;
+    console.log(`❌ [${requestId}] All scraping methods failed after ${funcDuration}ms`);
+    throw new Error('Could not extract real product data from any source');
 
   } catch (error) {
     const funcDuration = Date.now() - funcStart;
     console.error(`💥 [${requestId}] Amazon API call failed after ${funcDuration}ms:`, error);
-    // Return fallback data
-    console.log(`🔄 [${requestId}] Using fallback Amazon data`);
-    return getFallbackAmazonData(url);
+    // No fallback data - return error
+    throw error;
   }
 }
 
 /**
- * Generate intelligent Amazon product data based on URL analysis
+ * Real HTML scraping function for Amazon products by ASIN
  */
-async function generateIntelligentAmazonData(url: string, asin: string, requestId: string) {
-  console.log(`🧠 [${requestId}] generateIntelligentAmazonData - Analyzing URL patterns`);
-  
-  // Analyze URL for product type hints
-  const urlLower = url.toLowerCase();
-  console.log(`🔍 [${requestId}] URL analysis - lowercase: ${urlLower}`);
-  
-  // Extract product name from URL path (before /dp/)
-  const productNameMatch = url.match(/amazon\.com\/([^\/]+)/);
-  const productNameFromUrl = productNameMatch ? productNameMatch[1].replace(/-/g, ' ') : '';
-  console.log(`🏷️ [${requestId}] Extracted product name from URL: "${productNameFromUrl}"`);
-  
-  // Base product data
-  let productData = {
-    title: "Amazon Product",
-    brand: "Unknown Brand",
-    initial_price: 29.99,
-    final_price: 29.99,
-    currency: "USD",
-    availability: "In Stock",
-    rating: 4.0,
-    reviews_count: 1500,
-    description: "Product description from Amazon...",
-    images: [],
-    asin: asin,
-    url: url,
-    item_weight: "1.0 lbs",
-    timestamp: new Date().toISOString()
-  };
+async function scrapeAmazonByASIN(asin: string, requestId: string) {
+  try {
+    console.log(`🌐 [${requestId}] Scraping Amazon page for ASIN: ${asin}`);
+    
+    // Build clean Amazon URL
+    const cleanUrl = `https://www.amazon.com/dp/${asin}`;
+    console.log(`📡 [${requestId}] Fetching: ${cleanUrl}`);
+    
+    const response = await fetch(cleanUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ProductBot/1.0; +https://iwishbag.com)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
 
-  let detectedCategory = "general";
-
-  // Enhanced intelligent categorization based on URL patterns and product names
-  const fullText = (urlLower + ' ' + productNameFromUrl.toLowerCase()).trim();
-  console.log(`🔍 [${requestId}] Full analysis text: "${fullText}"`);
-  
-  if (fullText.includes('echo') || fullText.includes('alexa')) {
-    detectedCategory = "echo/alexa";
-    console.log(`🎵 [${requestId}] Detected Echo/Alexa product`);
-    productData = {
-      ...productData,
-      title: "Amazon Echo Dot (5th Gen) - Smart Speaker",
-      brand: "Amazon", 
-      initial_price: 49.99,
-      final_price: 49.99,
-      rating: 4.6,
-      reviews_count: 165700,
-      description: "Our best sounding Echo Dot yet – Enjoy an improved audio experience compared to any previous Echo Dot with Alexa for clearer vocals, deeper bass and vibrant sound in any room.",
-      images: ["https://m.media-amazon.com/images/I/71yRY8YlAbL._AC_SL1500_.jpg"],
-      item_weight: "0.6 lbs",
-      category: "electronics"
-    };
-  } else if (fullText.includes('cleanser') || fullText.includes('lotion') || fullText.includes('cream') || 
-             fullText.includes('shampoo') || fullText.includes('soap') || fullText.includes('skincare') ||
-             fullText.includes('beauty') || fullText.includes('cosmetic') || fullText.includes('moisturizer')) {
-    detectedCategory = "beauty/health";
-    console.log(`🧴 [${requestId}] Detected Beauty/Health product`);
-    const productTitle = productNameFromUrl ? 
-      productNameFromUrl.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') :
-      "Beauty & Health Product";
-    productData = {
-      ...productData,
-      title: productTitle,
-      brand: fullText.includes('vanicream') ? "Vanicream" : "Beauty Brand",
-      initial_price: 12.99,
-      final_price: 11.49,
-      rating: 4.5,
-      reviews_count: 8432,
-      description: "Gentle formula suitable for sensitive skin, dermatologist recommended...",
-      item_weight: "0.8 lbs",
-      category: "beauty-health"
-    };
-  } else if (fullText.includes('book') || fullText.includes('novel') || fullText.includes('kindle')) {
-    detectedCategory = "book";
-    console.log(`📚 [${requestId}] Detected Book product`);
-    productData = {
-      ...productData,
-      title: productNameFromUrl ? 
-        productNameFromUrl.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') :
-        "Sample Book Title",
-      brand: "Publisher Name",
-      initial_price: 15.99,
-      final_price: 15.99,
-      rating: 4.3,
-      reviews_count: 2847,
-      description: "A compelling book that...",
-      item_weight: "0.8 lbs",
-      category: "books"
-    };
-  } else if (fullText.includes('clothing') || fullText.includes('shirt') || fullText.includes('dress') ||
-             fullText.includes('pants') || fullText.includes('jacket') || fullText.includes('sweater')) {
-    detectedCategory = "clothing";
-    console.log(`👕 [${requestId}] Detected Clothing product`);
-    productData = {
-      ...productData,
-      title: productNameFromUrl ? 
-        productNameFromUrl.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') :
-        "Fashion Item",
-      brand: "Fashion Brand",
-      initial_price: 39.99,
-      final_price: 34.99,
-      rating: 4.2,
-      reviews_count: 892,
-      description: "Stylish and comfortable...",
-      item_weight: "0.5 lbs",
-      category: "fashion"
-    };
-  } else if (fullText.includes('laptop') || fullText.includes('computer') || fullText.includes('macbook')) {
-    detectedCategory = "laptop/computer";
-    console.log(`💻 [${requestId}] Detected Laptop/Computer product`);
-    productData = {
-      ...productData,
-      title: productNameFromUrl ? 
-        productNameFromUrl.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') :
-        "Laptop Computer",
-      brand: "Tech Brand",
-      initial_price: 899.99,
-      final_price: 799.99,
-      rating: 4.4,
-      reviews_count: 3421,
-      description: "High-performance laptop with...",
-      item_weight: "4.2 lbs",
-      category: "electronics"
-    };
-  } else if (fullText.includes('phone') || fullText.includes('iphone') || fullText.includes('samsung') ||
-             fullText.includes('mobile') || fullText.includes('smartphone')) {
-    detectedCategory = "phone";
-    console.log(`📱 [${requestId}] Detected Phone product`);
-    productData = {
-      ...productData,
-      title: productNameFromUrl ? 
-        productNameFromUrl.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') :
-        "Smartphone",
-      brand: fullText.includes('iphone') ? "Apple" : fullText.includes('samsung') ? "Samsung" : "Phone Brand",
-      initial_price: 699.99,
-      final_price: 649.99,
-      rating: 4.3,
-      reviews_count: 12430,
-      description: "Advanced smartphone with cutting-edge features...",
-      item_weight: "0.4 lbs",
-      category: "electronics"
-    };
-  } else {
-    // Use the actual product name from URL if available
-    if (productNameFromUrl && productNameFromUrl.length > 3) {
-      console.log(`🏷️ [${requestId}] Using extracted product name: "${productNameFromUrl}"`);
-      productData.title = productNameFromUrl.split(' ').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ');
-    } else {
-      console.log(`❓ [${requestId}] No specific category detected, using general product`);
+    if (!response.ok) {
+      console.log(`❌ [${requestId}] Amazon returned status: ${response.status}`);
+      throw new Error(`Amazon responded with status ${response.status}`);
     }
-  }
 
-  console.log(`✨ [${requestId}] Generated product data - Category: ${detectedCategory}, Title: ${productData.title}, Price: $${productData.final_price}`);
-  
-  return productData;
+    const html = await response.text();
+    console.log(`📄 [${requestId}] HTML received, length: ${html.length} chars`);
+    
+    // Parse the HTML to extract product data
+    const productData = parseAmazonHTML(html, asin, requestId);
+    
+    if (productData) {
+      console.log(`✅ [${requestId}] Successfully parsed product data`);
+      return productData;
+    } else {
+      console.log(`❌ [${requestId}] Could not parse product data from HTML`);
+      return null;
+    }
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] HTML scraping error:`, error.message);
+    throw error;
+  }
 }
+
+/**
+ * Parse Amazon HTML to extract real product data
+ */
+function parseAmazonHTML(html: string, asin: string, requestId: string) {
+  try {
+    console.log(`🔍 [${requestId}] Parsing Amazon HTML for product data`);
+
+    // Extract product title
+    let title = null;
+    const titlePatterns = [
+      /<span[^>]+id="productTitle"[^>]*>([^<]+)<\/span>/i,
+      /<h1[^>]+class="[^"]*product[^"]*title[^"]*"[^>]*>([^<]+)<\/h1>/i,
+      /<title>([^<]+)<\/title>/i
+    ];
+    
+    for (const pattern of titlePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        title = match[1].trim().replace(/\s+/g, ' ');
+        if (title && !title.includes('Amazon.com') && title.length > 5) {
+          console.log(`📝 [${requestId}] Found title: "${title}"`);
+          break;
+        }
+      }
+    }
+
+    // Extract price
+    let price = null;
+    const pricePatterns = [
+      /<span[^>]+class="[^"]*a-price-whole[^"]*"[^>]*>([0-9,]+)<\/span>/i,
+      /<span[^>]+class="[^"]*price[^"]*"[^>]*>\$([0-9,.]+)<\/span>/i,
+      /\$([0-9,]+\.?[0-9]*)/
+    ];
+    
+    for (const pattern of pricePatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        const priceStr = match[1].replace(/,/g, '');
+        const priceNum = parseFloat(priceStr);
+        if (priceNum > 0 && priceNum < 100000) { // Reasonable price range
+          price = priceNum;
+          console.log(`💰 [${requestId}] Found price: $${price}`);
+          break;
+        }
+      }
+    }
+
+    // Extract brand
+    let brand = null;
+    const brandPatterns = [
+      /<a[^>]+id="bylineInfo"[^>]*>([^<]+)<\/a>/i,
+      /<span[^>]+class="[^"]*brand[^"]*"[^>]*>([^<]+)<\/span>/i
+    ];
+    
+    for (const pattern of brandPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        brand = match[1].trim().replace(/^(by |Brand: )/i, '');
+        if (brand && brand.length > 0) {
+          console.log(`🏪 [${requestId}] Found brand: "${brand}"`);
+          break;
+        }
+      }
+    }
+
+    // Extract weight from shipping/product details
+    let weight = null;
+    const weightPatterns = [
+      /shipping\s+weight:?\s*([0-9.]+)\s*(pounds?|lbs?)/i,
+      /item\s+weight:?\s*([0-9.]+)\s*(pounds?|lbs?)/i,
+      /weight:?\s*([0-9.]+)\s*(pounds?|lbs?)/i
+    ];
+    
+    for (const pattern of weightPatterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) {
+        const weightNum = parseFloat(match[1]);
+        if (weightNum > 0 && weightNum < 1000) { // Reasonable weight range
+          weight = weightNum;
+          console.log(`⚖️ [${requestId}] Found weight: ${weight} lbs`);
+          break;
+        }
+      }
+    }
+
+    // Only return data if we have at least a title
+    if (title) {
+      const productData = {
+        title: title,
+        brand: brand || null,
+        initial_price: price || null,
+        final_price: price || null,
+        currency: "USD",
+        availability: "Unknown", // Would need more parsing for this
+        asin: asin,
+        url: `https://www.amazon.com/dp/${asin}`,
+        item_weight: weight ? `${weight} lbs` : null,
+        timestamp: new Date().toISOString(),
+        source: "html_scraping"
+      };
+
+      console.log(`✅ [${requestId}] Successfully extracted product data`);
+      return productData;
+    } else {
+      console.log(`❌ [${requestId}] Could not extract minimum required data (title)`);
+      return null;
+    }
+
+  } catch (error) {
+    console.log(`💥 [${requestId}] HTML parsing error:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Attempt real Bright Data API call for clean ASIN URLs
+ */
+async function attemptRealBrightDataCall(url: string, asin: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🌐 [${requestId}] Attempting real Bright Data MCP API...`);
+    
+    // Try the MCP endpoint first
+    const response = await fetch(`https://mcp.brightdata.com/mcp?token=${apiToken}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: Math.random().toString(36).substring(7),
+        method: "tools/call",
+        params: {
+          name: "web_data_amazon_product",
+          arguments: { url: url }
+        }
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`📡 [${requestId}] Real API response:`, JSON.stringify(data, null, 2));
+      
+      if (data.result && data.result.content) {
+        return data.result;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.log(`❌ [${requestId}] Real API attempt failed:`, error.message);
+    return null;
+  }
+}
+
+// Mock data functions removed - real data only approach
 
 /**
  * Call generic scraping API for other platforms using Bright Data MCP
@@ -396,9 +456,8 @@ async function callGenericScrapingAPI(url: string, toolName: string, apiToken: s
 
   } catch (error) {
     console.error(`💥 [${requestId}] Generic scraping failed:`, error);
-    // Return platform-specific fallback data
-    console.log(`🔄 [${requestId}] Using fallback data for ${toolName}`);
-    return getFallbackData(url, toolName);
+    // No fallback data - throw error for real data only approach
+    throw new Error(`Could not extract real product data from ${toolName}: ${error.message}`);
   }
 }
 
@@ -537,61 +596,7 @@ function parseGenericHTML(html: string, url: string) {
   };
 }
 
-/**
- * Fallback data generators
- */
-function getFallbackAmazonData(url: string) {
-  return {
-    content: [{
-      text: JSON.stringify([{
-        title: "Amazon Echo Dot (5th Gen)",
-        brand: "Amazon",
-        initial_price: 49.99,
-        final_price: 49.99,
-        currency: "USD",
-        availability: "In Stock",
-        rating: 4.6,
-        reviews_count: 165700,
-        description: "Our best sounding Echo Dot yet – Enjoy an improved audio experience...",
-        images: ["https://m.media-amazon.com/images/I/71yRY8YlAbL._AC_SL1500_.jpg"],
-        asin: extractASIN(url),
-        url: url,
-        item_weight: "0.6 lbs",
-        timestamp: new Date().toISOString()
-      }])
-    }]
-  };
-}
-
-function getFallbackData(url: string, toolName: string) {
-  const domain = new URL(url).hostname.toLowerCase();
-  
-  let fallbackData = {
-    title: "Sample Product",
-    price: "$29.99",
-    currency: "USD",
-    url: url,
-    timestamp: new Date().toISOString()
-  };
-  
-  if (domain.includes('ebay')) {
-    fallbackData = { ...fallbackData, title: "eBay Sample Product", price: "$25.50" };
-  } else if (domain.includes('walmart')) {
-    fallbackData = { ...fallbackData, title: "Walmart Sample Product", price: "$19.99" };
-  } else if (domain.includes('bestbuy')) {
-    fallbackData = { ...fallbackData, title: "Best Buy Electronics", price: "$299.99", category: "electronics" };
-  } else if (domain.includes('etsy')) {
-    fallbackData = { ...fallbackData, title: "Etsy Handmade Item", price: "$45.00", category: "handmade" };
-  } else if (domain.includes('zara')) {
-    fallbackData = { ...fallbackData, title: "Zara Fashion Item", price: "€39.95", currency: "EUR", category: "fashion" };
-  }
-  
-  return {
-    content: [{
-      text: JSON.stringify([fallbackData])
-    }]
-  };
-}
+// All fallback/mock data functions removed - real data only approach
 
 /**
  * Utility functions
