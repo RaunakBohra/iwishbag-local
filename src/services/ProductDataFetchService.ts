@@ -104,6 +104,11 @@ const PRODUCT_PATTERNS = {
     idPattern: /\/itm\/(\d+)/,
     titleSelector: '.it-ttl',
     priceSelector: '.prcIsum',
+  },
+  myntra: {
+    idPattern: /\/([a-zA-Z0-9-]+)\/(\d+)\/buy/,
+    titleSelector: '.pdp-product-name',
+    priceSelector: '.pdp-price',
   }
 };
 
@@ -199,6 +204,14 @@ class ProductDataFetchService {
       }
     }
 
+    // Myntra
+    if (urlLower.includes('myntra.com')) {
+      const match = url.match(PRODUCT_PATTERNS.myntra.idPattern);
+      if (match) {
+        return { site: 'myntra', productId: match[2] }; // Use the product ID part
+      }
+    }
+
     // Nike
     if (urlLower.includes('nike.com')) {
       return { site: 'nike', productId: 'nike-shoes' }; // Mock for now
@@ -225,11 +238,42 @@ class ProductDataFetchService {
    */
   private async fetchFromScraper(url: string, siteInfo: { site: string; productId: string }): Promise<FetchResult> {
     try {
-      // Get the Supabase URL from environment or use default
+      // For Myntra, use MCP Bright Data Bridge directly
+      if (siteInfo.site === 'myntra') {
+        const { mcpBrightDataBridge } = await import('./MCPBrightDataBridge');
+        const result = await mcpBrightDataBridge.scrapeMyntraProduct(url);
+        
+        if (result.success && result.data) {
+          return {
+            success: true,
+            data: this.normalizeProductData(result.data),
+            source: 'scraper'
+          };
+        } else {
+          throw new Error(result.error || 'Myntra scraping failed');
+        }
+      }
+
+      // For Amazon, use MCP Bright Data Bridge directly
+      if (siteInfo.site === 'amazon') {
+        const { mcpBrightDataBridge } = await import('./MCPBrightDataBridge');
+        const result = await mcpBrightDataBridge.scrapeAmazonProduct(url);
+        
+        if (result.success && result.data) {
+          return {
+            success: true,
+            data: this.normalizeProductData(result.data),
+            source: 'scraper'
+          };
+        } else {
+          throw new Error(result.error || 'Amazon scraping failed');
+        }
+      }
+
+      // For other sites, fall back to Supabase Edge Function
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:54321';
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
       
-      // Call Supabase Edge Function (MCP-powered for better results)
       const response = await fetch(`${supabaseUrl}/functions/v1/scrape-product`, {
         method: 'POST',
         headers: { 
@@ -309,32 +353,41 @@ class ProductDataFetchService {
   private normalizeProductData(rawData: any): ProductData {
     const normalized: ProductData = {};
 
-    // Title
-    normalized.title = rawData.title || rawData.name || rawData.productTitle;
+    // Title - handle Myntra's title field with description
+    const titlePart = rawData.title || rawData.name || rawData.productTitle || rawData.product_name || '';
+    const descriptionPart = rawData.product_description || rawData.description || '';
+    
+    if (titlePart && descriptionPart && descriptionPart !== titlePart) {
+      // Combine title and description for Myntra products
+      normalized.title = `${titlePart} - ${descriptionPart}`;
+    } else {
+      normalized.title = titlePart || descriptionPart;
+    }
 
-    // Price
-    if (rawData.price) {
-      if (typeof rawData.price === 'string') {
-        // Extract number from string like "$49.99" or "₹1,299"
-        const priceMatch = rawData.price.match(/[\d,]+\.?\d*/);
+    // Price - handle different price formats including Myntra
+    if (rawData.final_price || rawData.price) {
+      const priceSource = rawData.final_price || rawData.price;
+      if (typeof priceSource === 'string') {
+        // Extract number from string like "$49.99" or "₹1,299" or "₹573.00"
+        const priceMatch = priceSource.match(/[\d,]+\.?\d*/);
         if (priceMatch) {
           normalized.price = parseFloat(priceMatch[0].replace(/,/g, ''));
         }
       } else {
-        normalized.price = rawData.price;
+        normalized.price = priceSource;
       }
     }
 
-    // Currency - prefer rawData.currency if available
+    // Currency - prefer rawData.currency if available, detect from price format
     if (rawData.currency) {
       normalized.currency = rawData.currency;
-    } else if (rawData.price) {
-      normalized.currency = this.detectCurrency(rawData.price);
+    } else if (rawData.final_price || rawData.price) {
+      normalized.currency = this.detectCurrency(rawData.final_price || rawData.price);
     } else {
       normalized.currency = 'USD';
     }
 
-    // Weight - handle both old and new formats
+    // Weight - handle both old and new formats, plus estimate from product specs
     if (rawData.weight_value !== undefined && rawData.weight_unit) {
       // New format with separate value and unit
       normalized.weight = rawData.weight; // Already in kg for backward compatibility
@@ -357,14 +410,83 @@ class ProductDataFetchService {
       } else {
         normalized.weight = rawData.weight;
       }
+    } else if (rawData.product_specifications) {
+      // Extract weight from product specifications (Myntra format)
+      const specs = rawData.product_specifications;
+      const weightSpec = specs.find((spec: any) => 
+        spec.specification_name === 'Net Weight' || 
+        spec.specification_name === 'Weight' ||
+        spec.specification_name.toLowerCase().includes('weight')
+      );
+      if (weightSpec) {
+        const weightMatch = weightSpec.specification_value.match(/(\d+(?:\.\d+)?)\s*(g|kg|ml|oz|lb)/i);
+        if (weightMatch) {
+          let weight = parseFloat(weightMatch[1]);
+          const unit = weightMatch[2].toLowerCase();
+          // Convert to kg
+          if (unit === 'g') weight = weight / 1000;
+          else if (unit === 'ml') weight = weight / 1000; // Approximate for cosmetics
+          else if (unit === 'oz') weight = weight * 0.0283495;
+          else if (unit === 'lb') weight = weight * 0.453592;
+          normalized.weight = Math.round(weight * 1000) / 1000; // Round to 3 decimals
+        }
+      }
     }
 
-    // Other fields
-    normalized.brand = rawData.brand || rawData.manufacturer;
-    normalized.category = rawData.category;
-    normalized.availability = rawData.availability || 'unknown';
-    normalized.images = rawData.images || [];
-    normalized.variants = rawData.variants || [];
+    // Brand - handle Myntra brand extraction
+    normalized.brand = rawData.brand || rawData.manufacturer || rawData.seller_name;
+
+    // Category - detect from breadcrumbs or title
+    if (rawData.category) {
+      normalized.category = rawData.category;
+    } else if (rawData.breadcrumbs && Array.isArray(rawData.breadcrumbs)) {
+      // Use the most specific breadcrumb (usually the last one before brand)
+      const categoryBreadcrumb = rawData.breadcrumbs.find((bc: any) => 
+        bc.name && !bc.name.includes('More by') && bc.name !== rawData.brand
+      );
+      if (categoryBreadcrumb) {
+        normalized.category = categoryBreadcrumb.name.toLowerCase().replace(/\s+/g, '-');
+      }
+    }
+
+    // Availability - infer from stock status
+    normalized.availability = rawData.availability || 'in-stock'; // Assume available if listed
+
+    // Images - handle Myntra's JSON string format
+    if (rawData.images) {
+      if (typeof rawData.images === 'string') {
+        try {
+          normalized.images = JSON.parse(rawData.images);
+        } catch {
+          normalized.images = [rawData.images];
+        }
+      } else if (Array.isArray(rawData.images)) {
+        normalized.images = rawData.images;
+      } else {
+        normalized.images = [];
+      }
+    } else {
+      normalized.images = [];
+    }
+
+    // Variants - handle Myntra sizes
+    normalized.variants = [];
+    if (rawData.sizes && Array.isArray(rawData.sizes)) {
+      normalized.variants.push({
+        name: 'Size',
+        options: rawData.sizes.map((size: any) => size.size || size)
+      });
+    }
+    if (rawData.variants && Array.isArray(rawData.variants)) {
+      normalized.variants.push(...rawData.variants);
+    }
+
+    // Description - extract from product details
+    if (rawData.product_description) {
+      normalized.description = rawData.product_description;
+    } else if (rawData.product_details && rawData.product_details.description) {
+      normalized.description = rawData.product_details.description;
+    }
 
     return normalized;
   }

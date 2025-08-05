@@ -52,6 +52,12 @@ const PLATFORM_CONFIGS = {
     scraperType: 'zara_product',
     fields: ['title', 'price', 'currency', 'images', 'sizes', 'colors'],
     fashionFocus: true
+  },
+  myntra: {
+    scraperType: 'myntra_product',
+    fields: ['title', 'final_price', 'currency', 'images', 'brand', 'specifications', 'offers'],
+    fashionFocus: true,
+    defaultCurrency: 'INR'
   }
 };
 
@@ -103,6 +109,9 @@ class BrightDataProductService {
           break;
         case 'zara':
           result = await this.scrapeZaraProduct(url, options);
+          break;
+        case 'myntra':
+          result = await this.scrapeMyntraProduct(url, options);
           break;
         default:
           result = await this.scrapeGenericProduct(url, options);
@@ -327,6 +336,38 @@ class BrightDataProductService {
   }
 
   /**
+   * Scrape Myntra product using Bright Data MCP
+   */
+  private async scrapeMyntraProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('myntra_product', {
+        url,
+        include_specifications: true,
+        include_offers: true
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'Myntra scraping failed');
+      }
+
+      const productData = this.normalizeMyntraData(mcpResult.data);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Myntra scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
+
+  /**
    * Generic product scraping using scrape_as_markdown
    */
   private async scrapeGenericProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
@@ -374,6 +415,8 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeEtsyProduct(params.url, params);
       case 'zara_product':
         return await mcpBrightDataBridge.scrapeZaraProduct(params.url, params);
+      case 'myntra_product':
+        return await mcpBrightDataBridge.scrapeMyntraProduct(params.url, params);
       case 'scrape_as_markdown':
         return await mcpBrightDataBridge.scrapeAsMarkdown(params.url);
       default:
@@ -397,6 +440,7 @@ class BrightDataProductService {
     if (urlLower.includes('bestbuy.com')) return 'bestbuy';
     if (urlLower.includes('etsy.com')) return 'etsy';
     if (urlLower.includes('zara.com')) return 'zara';
+    if (urlLower.includes('myntra.com')) return 'myntra';
     
     return null;
   }
@@ -527,6 +571,111 @@ class BrightDataProductService {
         ...(rawData.colors ? [{ name: 'Color', options: rawData.colors }] : [])
       ]
     };
+  }
+
+  private normalizeMyntraData(rawData: any): ProductData {
+    try {
+      // Handle Myntra's specific response format
+      const price = rawData.final_price || rawData.price;
+      
+      // Safely parse images and limit to first 5 to prevent memory issues
+      let images: string[] = [];
+      try {
+        if (typeof rawData.images === 'string') {
+          const parsedImages = JSON.parse(rawData.images);
+          images = Array.isArray(parsedImages) ? parsedImages.slice(0, 5) : [];
+        } else if (Array.isArray(rawData.images)) {
+          images = rawData.images.slice(0, 5);
+        }
+      } catch (imgError) {
+        console.warn('Failed to parse Myntra images:', imgError);
+        images = [];
+      }
+
+      // Extract weight from specifications (safely)
+      let weight: number | undefined;
+      try {
+        if (rawData.product_specifications && Array.isArray(rawData.product_specifications)) {
+          const specs = rawData.product_specifications;
+          const weightSpec = specs.find((spec: any) => 
+            spec?.specification_name === 'Net Weight' || 
+            spec?.specification_name === 'Weight' ||
+            (spec?.specification_name && spec.specification_name.toLowerCase().includes('weight'))
+          );
+          if (weightSpec && weightSpec.specification_value) {
+            const weightMatch = weightSpec.specification_value.match(/(\d+(?:\.\d+)?)\s*(g|kg|ml|oz|lb)/i);
+            if (weightMatch) {
+              let extractedWeight = parseFloat(weightMatch[1]);
+              const unit = weightMatch[2].toLowerCase();
+              // Convert to kg
+              if (unit === 'g') extractedWeight = extractedWeight / 1000;
+              else if (unit === 'ml') extractedWeight = extractedWeight / 1000; // Approximate for cosmetics
+              else if (unit === 'oz') extractedWeight = extractedWeight * 0.0283495;
+              else if (unit === 'lb') extractedWeight = extractedWeight * 0.453592;
+              weight = Math.round(extractedWeight * 1000) / 1000; // Round to 3 decimals
+            }
+          }
+        }
+      } catch (weightError) {
+        console.warn('Failed to extract weight from Myntra specifications:', weightError);
+      }
+
+      // Extract brand from title or seller (safely)
+      const brand = rawData.brand || rawData.seller_name || (rawData.title ? rawData.title.split(' ')[0] : undefined);
+
+      // Build variants from sizes (safely and limit to prevent memory issues)
+      const variants = [];
+      try {
+        if (rawData.sizes && Array.isArray(rawData.sizes)) {
+          const sizeOptions = rawData.sizes.slice(0, 10).map((size: any) => size?.size || size).filter(Boolean);
+          if (sizeOptions.length > 0) {
+            variants.push({
+              name: 'Size',
+              options: sizeOptions
+            });
+          }
+        }
+      } catch (variantError) {
+        console.warn('Failed to extract variants from Myntra data:', variantError);
+      }
+
+      // Combine title and description for a complete product name (safely)
+      const titlePart = rawData.title || rawData.product_name || '';
+      const descriptionPart = rawData.product_description || rawData.description || '';
+      
+      let fullProductName = titlePart;
+      if (descriptionPart && descriptionPart !== titlePart && descriptionPart.length < 200) {
+        // Only add description if it's different from title and not too long
+        fullProductName = titlePart ? `${titlePart} - ${descriptionPart}` : descriptionPart;
+      }
+
+      // Return normalized data with safe fallbacks
+      return {
+        title: fullProductName || 'Unknown Product',
+        price: this.parsePrice(price) || 0,
+        currency: rawData.currency || 'INR',
+        weight: weight,
+        images: images,
+        brand: brand,
+        category: 'fashion', // Myntra is primarily fashion
+        availability: 'in-stock', // Assume available if listed
+        description: (rawData.product_description || rawData.description || '').substring(0, 500), // Limit description length
+        variants: variants
+      };
+
+    } catch (error) {
+      console.error('Error normalizing Myntra data:', error);
+      // Return minimal safe data structure
+      return {
+        title: rawData?.title || 'Unknown Product',
+        price: 0,
+        currency: 'INR',
+        category: 'fashion',
+        availability: 'unknown',
+        images: [],
+        variants: []
+      };
+    }
   }
 
   /**

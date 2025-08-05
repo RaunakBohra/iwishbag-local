@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,343 @@ import { useUrlAutoDetection } from '@/hooks/useUrlAnalysis';
 import { useProductScraping } from '@/hooks/useProductScraping';
 import { formatCountryDisplay, sortCountriesByPopularity } from '@/utils/countryUtils';
 import { CompactAddressSelector } from '@/components/profile/CompactAddressSelector';
+
+// Product item component to fix hooks rule violation
+interface ProductItemProps {
+  item: any;
+  index: number;
+  form: UseFormReturn<any>;
+  sortedCountries: any[];
+  loadingCountries: boolean;
+  onRemoveItem: (index: number) => void;
+  canRemoveItem: boolean;
+}
+
+function ProductItem({ item, index, form, sortedCountries, loadingCountries, onRemoveItem, canRemoveItem }: ProductItemProps) {
+  const { toast } = useToast();
+  const selectedOriginCountry = form.watch(`items.${index}.origin_country`);
+  const currentUrl = form.watch(`items.${index}.product_url`);
+  const { currency, weightUnit } = useCountryUnit(selectedOriginCountry);
+  const urlAnalysis = useUrlAutoDetection(currentUrl);
+  const { data: purchaseCountries = [] } = usePurchaseCountries();
+  
+  // Product scraping integration
+  const productScraping = useProductScraping(currentUrl);
+  
+  // Auto-detect country when URL changes
+  useEffect(() => {
+    // Only process if we have a valid URL analysis and countries are loaded
+    if (!urlAnalysis.shouldAutoSetCountry || !urlAnalysis.suggestedCountry || purchaseCountries.length === 0) {
+      return;
+    }
+    
+    const currentCountry = form.getValues(`items.${index}.origin_country`);
+    
+    // Only auto-set if current country is default (US) or empty
+    if (!currentCountry || currentCountry === 'US') {
+      // Check if the suggested country exists in the dropdown options
+      const countryExists = purchaseCountries.some(country => country.code === urlAnalysis.suggestedCountry);
+      
+      if (countryExists) {
+        console.log(`🔄 Auto-detecting country for ${urlAnalysis.domain}: ${currentCountry} → ${urlAnalysis.suggestedCountry}`);
+        
+        form.setValue(`items.${index}.origin_country`, urlAnalysis.suggestedCountry, { 
+          shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true
+        });
+        console.log(`✅ Country auto-set to: ${urlAnalysis.suggestedCountry}`);
+      } else {
+        console.warn(`⚠️ Country ${urlAnalysis.suggestedCountry} not available for purchase`);
+      }
+    }
+  }, [urlAnalysis.suggestedCountry, urlAnalysis.shouldAutoSetCountry, index, form, purchaseCountries]);
+  
+  // Auto-fill product data when scraping completes - OVERWRITE all fields
+  useEffect(() => {
+    if (productScraping.shouldAutoFill && productScraping.autoFillData) {
+      console.log(`🎯 Auto-filling data for item ${index}:`, productScraping.autoFillData);
+      
+      try {
+        const { productName, price, weight } = productScraping.autoFillData;
+        
+        // Apply form updates without triggering validation to prevent loops
+        if (productName && typeof productName === 'string') {
+          form.setValue(`items.${index}.product_name`, productName, { shouldValidate: false, shouldDirty: false });
+        }
+        
+        if (price && typeof price === 'number' && price > 0) {
+          form.setValue(`items.${index}.price_usd`, price, { shouldValidate: false, shouldDirty: false });
+        }
+        
+        if (weight && typeof weight === 'number' && weight > 0) {
+          form.setValue(`items.${index}.weight_kg`, weight, { shouldValidate: false, shouldDirty: false });
+        }
+        
+        // Show success toast once
+        toast({
+          title: "Product data loaded!",
+          description: `Auto-filled from ${productScraping.urlAnalysis.domain}`,
+          duration: 3000,
+        });
+        
+        console.log(`✅ Auto-fill completed for item ${index}`);
+      } catch (autoFillError) {
+        console.error(`❌ Auto-fill failed for item ${index}:`, autoFillError);
+      }
+    }
+  }, [productScraping.shouldAutoFill, productScraping.autoFillData?.productName, index]);
+
+  return (
+    <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-medium">Product {index + 1}</h4>
+        {canRemoveItem && (
+          <Button
+            type="button"
+            onClick={() => onRemoveItem(index)}
+            size="sm"
+            variant="outline"
+            className="text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    
+      {/* First row: URL and Product Name */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name={`items.${index}.product_url`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center justify-between">
+                <span>Product URL</span>
+                <div className="flex items-center space-x-2">
+                  {productScraping.isLoading && (
+                    <div className="flex items-center text-xs text-blue-600">
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Fetching...
+                    </div>
+                  )}
+                  {productScraping.isScraped && !productScraping.error && (
+                    <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                      ✓ Data loaded
+                    </span>
+                  )}
+                  {productScraping.error && (
+                    <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                      <AlertCircle className="h-3 w-3 inline mr-1" />
+                      Scraping failed
+                    </span>
+                  )}
+                  {currentUrl && !productScraping.isLoading && !productScraping.isScraped && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => productScraping.scrapeProduct(currentUrl)}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Fetch Data
+                    </Button>
+                  )}
+                </div>
+              </FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="https://amazon.com/..." 
+                  {...field} 
+                  className={productScraping.isScraped ? 'border-green-200 bg-green-50/30' : ''}
+                />
+              </FormControl>
+              <FormMessage />
+              {productScraping.error && (
+                <p className="text-xs text-red-600 mt-1">{productScraping.error}</p>
+              )}
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`items.${index}.product_name`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Product Name *
+                {productScraping.isScraped && productScraping.autoFillData?.productName && (
+                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                    Auto-filled
+                  </span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  className={productScraping.isScraped && productScraping.autoFillData?.productName ? 'border-green-200 bg-green-50/30' : ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      {/* Second row: Origin Country, Quantity, Weight, Price */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
+        <FormField
+          control={form.control}
+          name={`items.${index}.origin_country`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Origin Country *
+                {urlAnalysis.shouldAutoSetCountry && urlAnalysis.suggestedCountry === field.value && (
+                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                    Auto-detected
+                  </span>
+                )}
+              </FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={loadingCountries}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingCountries ? "Loading..." : "Select"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {loadingCountries ? (
+                    <SelectItem value="loading" disabled>Loading countries...</SelectItem>
+                  ) : sortedCountries.length > 0 ? (
+                    sortedCountries.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {formatCountryDisplay(country, false)}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-countries" disabled>No countries available</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {urlAnalysis.isValid && urlAnalysis.domain && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Detected from: {urlAnalysis.domain}
+                </div>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`items.${index}.quantity`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quantity *</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  min="1" 
+                  placeholder="1"
+                  {...field}
+                  onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`items.${index}.weight_kg`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Weight ({weightUnit})
+                {productScraping.isScraped && productScraping.autoFillData?.weight && (
+                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                    Auto-filled
+                  </span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.1" 
+                  min="0"
+                  placeholder={weightUnit === 'kg' ? '0.5' : '1.1'}
+                  {...field}
+                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                  className={productScraping.isScraped && productScraping.autoFillData?.weight ? 'border-green-200 bg-green-50/30' : ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`items.${index}.price_usd`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                Price ({currency})
+                {productScraping.isScraped && productScraping.autoFillData?.price && (
+                  <span className="ml-2 text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                    Auto-filled
+                  </span>
+                )}
+              </FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  placeholder={currency === 'USD' ? '999.99' : currency === 'INR' ? '8299.99' : '999.99'}
+                  {...field}
+                  onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                  className={productScraping.isScraped && productScraping.autoFillData?.price ? 'border-green-200 bg-green-50/30' : ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`items.${index}.notes`}
+        render={({ field }) => (
+          <FormItem className="mt-4">
+            <FormLabel>
+              Additional Notes
+              {urlAnalysis.category && (
+                <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                  {urlAnalysis.category}
+                </span>
+              )}
+            </FormLabel>
+            <FormControl>
+              <Textarea 
+                placeholder={urlAnalysis.notesPlaceholder}
+                className="min-h-[80px]"
+                {...field}
+              />
+            </FormControl>
+            {urlAnalysis.tips.length > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                <strong>Tips:</strong> {urlAnalysis.tips.join(' • ')}
+              </div>
+            )}
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+}
 
 // Form schema - dynamic based on user authentication
 const createQuoteRequestSchema = (isLoggedIn: boolean) => z.object({
@@ -530,29 +867,37 @@ export default function QuoteRequestPage() {
                   // Auto-fill product data when scraping completes - OVERWRITE all fields
                   useEffect(() => {
                     if (productScraping.shouldAutoFill && productScraping.autoFillData) {
-                      const { productName, price, weight, currency: scrapedCurrency } = productScraping.autoFillData;
+                      console.log(`🎯 Auto-filling data for item ${index}:`, productScraping.autoFillData);
                       
-                      // OVERWRITE all form fields with scraped data (user's requirement)
-                      if (productName) {
-                        form.setValue(`items.${index}.product_name`, productName, { shouldValidate: true });
+                      try {
+                        const { productName, price, weight } = productScraping.autoFillData;
+                        
+                        // Apply form updates without triggering validation to prevent loops
+                        if (productName && typeof productName === 'string') {
+                          form.setValue(`items.${index}.product_name`, productName, { shouldValidate: false, shouldDirty: false });
+                        }
+                        
+                        if (price && typeof price === 'number' && price > 0) {
+                          form.setValue(`items.${index}.price_usd`, price, { shouldValidate: false, shouldDirty: false });
+                        }
+                        
+                        if (weight && typeof weight === 'number' && weight > 0) {
+                          form.setValue(`items.${index}.weight_kg`, weight, { shouldValidate: false, shouldDirty: false });
+                        }
+                        
+                        // Show success toast once
+                        toast({
+                          title: "Product data loaded!",
+                          description: `Auto-filled from ${productScraping.urlAnalysis.domain}`,
+                          duration: 3000,
+                        });
+                        
+                        console.log(`✅ Auto-fill completed for item ${index}`);
+                      } catch (autoFillError) {
+                        console.error(`❌ Auto-fill failed for item ${index}:`, autoFillError);
                       }
-                      
-                      if (price && price > 0) {
-                        form.setValue(`items.${index}.price_usd`, price, { shouldValidate: true });
-                      }
-                      
-                      if (weight && weight > 0) {
-                        form.setValue(`items.${index}.weight_kg`, weight, { shouldValidate: true });
-                      }
-                      
-                      // Show success toast
-                      toast({
-                        title: "Product data loaded!",
-                        description: `Auto-filled from ${productScraping.urlAnalysis.domain} (overwrote existing data)`,
-                        duration: 3000,
-                      });
                     }
-                  }, [productScraping.shouldAutoFill, productScraping.autoFillData, index, form, toast]);
+                  }, [productScraping.shouldAutoFill, productScraping.autoFillData?.productName, index]);
                   
                   return (
                     <div key={item.id} className="border border-gray-200 rounded-lg p-4">

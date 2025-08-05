@@ -54,6 +54,7 @@ export default {
       // Map our tool names to Bright Data MCP tool names
       const toolMapping: Record<string, string> = {
         'amazon_product': 'web_data_amazon_product',
+        'myntra_product': 'myntra_product', // Custom Myntra implementation
         'ebay_product': 'web_data_ebay_product', 
         'walmart_product': 'web_data_walmart_product',
         'bestbuy_product': 'web_data_bestbuy_products',
@@ -72,6 +73,29 @@ export default {
       }
       
       console.log(`🔑 [${requestId}] API token available: ${env.BRIGHTDATA_API_TOKEN.substring(0, 10)}...`);
+
+      // Handle custom Myntra implementation
+      if (tool === 'myntra_product') {
+        console.log(`🛍️ [${requestId}] Using custom Myntra implementation`);
+        // Use specific Myntra API token from documentation
+        const myntraApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        console.log(`🔑 [${requestId}] Using Myntra-specific API token: ${myntraApiToken.substring(0, 10)}...`);
+        const myntraResult = await callMyntraProductAPI(args?.url, myntraApiToken, requestId);
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] Myntra request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(myntraResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
 
       // Call Bright Data MCP using fetch with subprocess simulation
       console.log(`🌐 [${requestId}] Calling Bright Data MCP...`);
@@ -183,6 +207,329 @@ async function callAmazonProductAPI(url: string, apiToken: string, requestId: st
     const funcDuration = Date.now() - funcStart;
     console.error(`💥 [${requestId}] Amazon API call failed after ${funcDuration}ms:`, error);
     throw error;
+  }
+}
+
+/**
+ * Call Myntra Product API using Bright Data
+ * Dataset ID: gd_lptvxr8b1qx1d9thgp
+ */
+async function callMyntraProductAPI(url: string, apiToken: string, requestId: string) {
+  const funcStart = Date.now();
+  try {
+    console.log(`🛍️ [${requestId}] callMyntraProductAPI started`);
+    console.log(`📡 [${requestId}] Processing Myntra URL: ${url}`);
+    
+    // Validate Myntra URL
+    if (!url.includes('myntra.com')) {
+      console.log(`❌ [${requestId}] Invalid Myntra URL`);
+      throw new Error('Invalid Myntra URL provided');
+    }
+    
+    // Use Myntra-specific Bright Data API with trigger/monitor/download workflow
+    console.log(`🚀 [${requestId}] Using Bright Data trigger API for Myntra`);
+    const productData = await triggerMyntraBrightDataCollection(url, apiToken, requestId);
+    
+    if (productData) {
+      console.log(`✅ [${requestId}] Myntra product data retrieved successfully`);
+      return {
+        content: [{ text: JSON.stringify(productData) }]
+      };
+    } else {
+      console.log(`❌ [${requestId}] No Myntra product data found`);
+      throw new Error('No product data found for Myntra URL');
+    }
+    
+  } catch (error) {
+    const duration = Date.now() - funcStart;
+    console.log(`💥 [${requestId}] callMyntraProductAPI error after ${duration}ms:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Trigger Myntra Bright Data collection using dataset gd_lptvxr8b1qx1d9thgp
+ */
+async function triggerMyntraBrightDataCollection(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🚀 [${requestId}] Triggering Myntra Bright Data collection`);
+    
+    const MYNTRA_DATASET_ID = 'gd_lptvxr8b1qx1d9thgp';
+    const triggerUrl = `https://api.brightdata.com/datasets/v3/trigger?dataset_id=${MYNTRA_DATASET_ID}&include_errors=true`;
+    
+    console.log(`🌍 [${requestId}] Using Myntra dataset: ${MYNTRA_DATASET_ID}`);
+    
+    // Trigger data collection for Myntra
+    console.log(`📡 [${requestId}] POST ${triggerUrl}`);
+    const triggerResponse = await fetch(triggerUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([{
+        url: url
+      }])
+    });
+
+    if (!triggerResponse.ok) {
+      const errorText = await triggerResponse.text();
+      console.log(`❌ [${requestId}] Myntra trigger failed: ${triggerResponse.status} - ${errorText}`);
+      console.log(`📋 [${requestId}] Request body was:`, JSON.stringify([{ url: url }]));
+      throw new Error(`Myntra Bright Data trigger failed: ${triggerResponse.status} - ${errorText}`);
+    }
+
+    const triggerData = await triggerResponse.json();
+    const snapshotId = triggerData.snapshot_id;
+    console.log(`📸 [${requestId}] Myntra Snapshot ID: ${snapshotId}`);
+    
+    if (!snapshotId) {
+      throw new Error('No snapshot ID returned from Myntra trigger API');
+    }
+
+    // Wait for data collection to complete
+    console.log(`⏳ [${requestId}] Waiting for Myntra data collection...`);
+    const maxAttempts = 40; // ~80 seconds for Myntra
+    console.log(`⏱️ [${requestId}] Max attempts: ${maxAttempts} for Myntra`);
+    
+    const productData = await waitForMyntraBrightDataResults(snapshotId, apiToken, requestId, url, maxAttempts);
+    
+    return productData;
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] Myntra Bright Data collection error:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Wait for Myntra Bright Data results and download when ready
+ */
+async function waitForMyntraBrightDataResults(snapshotId: string, apiToken: string, requestId: string, originalUrl: string, maxAttempts: number = 40) {
+  try {
+    console.log(`⏳ [${requestId}] Waiting for Myntra results, snapshot: ${snapshotId}`);
+    
+    let attempts = 0;
+    const delayMs = 2000; // 2 seconds between checks
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`🔄 [${requestId}] Myntra attempt ${attempts}/${maxAttempts}`);
+      
+      // Check collection status
+      const statusResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+      
+      if (!statusResponse.ok) {
+        console.log(`❌ [${requestId}] Myntra status check failed: ${statusResponse.status}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      
+      const statusData = await statusResponse.json();
+      console.log(`📊 [${requestId}] Myntra status: ${statusData.status}, discovery_progress: ${statusData.discovery_progress}%`);
+      
+      if (statusData.status === 'ready') {
+        console.log(`🎉 [${requestId}] Myntra data collection completed!`);
+        return await downloadMyntraBrightDataResults(snapshotId, apiToken, requestId, originalUrl);
+      }
+      
+      if (statusData.status === 'failed') {
+        console.log(`💥 [${requestId}] Myntra data collection failed`);
+        throw new Error('Myntra data collection failed');
+      }
+      
+      // Wait before next attempt
+      console.log(`⏸️ [${requestId}] Myntra waiting ${delayMs}ms before next check...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+    
+    console.log(`⏰ [${requestId}] Myntra timeout after ${maxAttempts} attempts`);
+    throw new Error('Timeout waiting for Myntra Bright Data results');
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] waitForMyntraBrightDataResults error:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Download Myntra results from Bright Data
+ */
+async function downloadMyntraBrightDataResults(snapshotId: string, apiToken: string, requestId: string, originalUrl: string) {
+  try {
+    console.log(`⬇️ [${requestId}] Downloading Myntra results for snapshot: ${snapshotId}`);
+    
+    const downloadResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!downloadResponse.ok) {
+      console.log(`❌ [${requestId}] Myntra download failed: ${downloadResponse.status}`);
+      throw new Error(`Failed to download Myntra results: ${downloadResponse.status}`);
+    }
+    
+    const rawData = await downloadResponse.text();
+    console.log(`📦 [${requestId}] Myntra raw data size: ${rawData.length} chars`);
+    
+    // Parse JSON response - could be array format or NDJSON format
+    let myntraProducts: any[] = [];
+    
+    try {
+      // First try parsing as JSON array
+      const jsonData = JSON.parse(rawData);
+      if (Array.isArray(jsonData)) {
+        myntraProducts = jsonData;
+        console.log(`📊 [${requestId}] Parsed as JSON array with ${myntraProducts.length} products`);
+      } else {
+        myntraProducts = [jsonData];
+        console.log(`📊 [${requestId}] Parsed as single JSON object`);
+      }
+    } catch (jsonError: any) {
+      console.log(`⚠️ [${requestId}] Failed to parse as JSON array, trying NDJSON format:`, jsonError.message);
+      
+      // Fallback to NDJSON format (one JSON object per line)
+      const lines = rawData.trim().split('\n');
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const product = JSON.parse(line);
+            myntraProducts.push(product);
+          } catch (parseError: any) {
+            console.log(`⚠️ [${requestId}] Failed to parse Myntra line:`, parseError.message);
+          }
+        }
+      }
+      console.log(`📊 [${requestId}] Parsed as NDJSON with ${myntraProducts.length} products`);
+    }
+    
+    console.log(`📊 [${requestId}] Parsed ${myntraProducts.length} Myntra products`);
+    
+    if (myntraProducts.length === 0) {
+      console.log(`❌ [${requestId}] No Myntra products found in response`);
+      throw new Error('No Myntra products found in response');
+    }
+    
+    // Map first product to our format
+    const mappedProducts = myntraProducts.map(product => mapMyntraDataToProductData(product, requestId, originalUrl));
+    return mappedProducts;
+    
+  } catch (error) {
+    console.log(`💥 [${requestId}] downloadMyntraBrightDataResults error:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Map Myntra response to our expected product data format
+ * Based on actual Myntra API response structure from documentation
+ */
+function mapMyntraDataToProductData(myntraProduct: any, requestId: string, originalUrl: string) {
+  try {
+    console.log(`🗺️ [${requestId}] Mapping Myntra response to product format`);
+    console.log(`📦 [${requestId}] Raw Myntra product data:`, JSON.stringify(myntraProduct, null, 2));
+    
+    // Extract initial and final prices with proper handling
+    let initialPrice: number | null = null;
+    let finalPrice: number | null = null;
+    
+    if (myntraProduct.initial_price) {
+      const initialPriceStr = myntraProduct.initial_price.toString().replace(/[₹,]/g, '');
+      initialPrice = parseFloat(initialPriceStr);
+    }
+    
+    if (myntraProduct.final_price) {
+      const finalPriceStr = myntraProduct.final_price.toString().replace(/[₹,]/g, '');
+      finalPrice = parseFloat(finalPriceStr);
+    }
+    
+    // Use final price as fallback if initial price not available
+    const displayPrice = finalPrice || initialPrice;
+    
+    console.log(`💰 [${requestId}] Myntra prices - Initial: ${initialPrice}, Final: ${finalPrice}, Display: ${displayPrice} ${myntraProduct.currency || 'INR'}`);
+    
+    // Extract brand from title (format: "Brand Name - Product Description")
+    const title = myntraProduct.title || 'Unknown Product';
+    let brand = null;
+    if (title.includes(' - ') || title.includes(' ')) {
+      brand = title.split(' ')[0] || title.split(' - ')[0];
+    }
+    
+    // Map categories from breadcrumbs
+    let categories: string[] = [];
+    if (myntraProduct.breadcrumbs && Array.isArray(myntraProduct.breadcrumbs)) {
+      categories = myntraProduct.breadcrumbs.map((b: any) => b.name || b).filter(Boolean);
+    }
+    
+    // Map features from product specifications
+    let features: string[] = [];
+    if (myntraProduct.product_specifications && Array.isArray(myntraProduct.product_specifications)) {
+      features = myntraProduct.product_specifications
+        .map((s: any) => {
+          if (s.specification_name && s.specification_value && s.specification_value !== 'NA') {
+            return `${s.specification_name}: ${s.specification_value}`;
+          }
+          return null;
+        })
+        .filter(Boolean);
+    }
+    
+    // Handle sizes information
+    let sizeInfo: string[] = [];
+    if (myntraProduct.sizes && Array.isArray(myntraProduct.sizes)) {
+      sizeInfo = myntraProduct.sizes.map((s: any) => {
+        if (s.size && s.value && s.value_name) {
+          return `${s.size} (${s.value_name}: ${s.value})`;
+        }
+        return s.size || s;
+      }).filter(Boolean);
+    }
+    
+    // Add size information to features if available
+    if (sizeInfo.length > 0) {
+      features.push(`Available Sizes: ${sizeInfo.join(', ')}`);
+    }
+    
+    const productData = {
+      title: title,
+      brand: brand,
+      initial_price: initialPrice,
+      final_price: finalPrice,
+      currency: myntraProduct.currency || 'INR',
+      availability: myntraProduct.delivery_options && myntraProduct.delivery_options.length > 0 ? 'In Stock' : 'Unknown',
+      rating: myntraProduct.rating || 0,
+      reviews_count: myntraProduct.ratings_count || 0,
+      description: myntraProduct.product_description || '',
+      images: myntraProduct.images || [],
+      weight_value: null, // Myntra doesn't provide weight data
+      weight_unit: null,
+      categories: categories,
+      features: features,
+      asin: myntraProduct.product_id || null,
+      url: originalUrl,
+      timestamp: new Date().toISOString(),
+      source: 'brightdata_myntra_api',
+      // Additional Myntra-specific fields
+      discount: myntraProduct.discount || null,
+      delivery_options: myntraProduct.delivery_options || [],
+      seller_name: myntraProduct.seller_name || null,
+      best_offer: myntraProduct.best_offer || null,
+      more_offers: myntraProduct.more_offers || []
+    };
+    
+    console.log(`✅ [${requestId}] Myntra product mapped successfully: ${productData.title}`);
+    console.log(`📊 [${requestId}] Mapped features: ${features.length}, categories: ${categories.length}, images: ${productData.images.length}`);
+    
+    return productData;
+    
+  } catch (error: any) {
+    console.log(`💥 [${requestId}] Error mapping Myntra product data:`, error.message);
+    throw new Error('Failed to map Myntra product data');
   }
 }
 

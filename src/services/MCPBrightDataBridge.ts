@@ -299,6 +299,253 @@ class MCPBrightDataBridge {
   }
 
   /**
+   * Scrape Myntra product data using real Bright Data MCP
+   */
+  async scrapeMyntraProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    try {
+      const result = await this.callMCPTool('myntra_product', { url });
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        if (productData.warning) {
+          return {
+            success: false,
+            error: `Myntra scraping warning: ${productData.warning}`
+          };
+        }
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No product data received from Myntra'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Myntra scraping failed'
+      };
+    }
+  }
+
+  /**
+   * Scrape Flipkart product data using Bright Data MCP tools
+   */
+  async scrapeFlipkartProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    const startTime = Date.now();
+    const sessionId = Math.random().toString(36).substring(7);
+    
+    console.group(`🏬 [${sessionId}] Flipkart Product Scraping`);
+    console.log(`🔗 URL: ${url}`);
+    console.log(`⏱️ Started at: ${new Date().toISOString()}`);
+    
+    try {
+      // Try scrape_as_markdown first (most reliable for Flipkart)
+      console.log(`🛠️ Using scrape_as_markdown for Flipkart...`);
+      const result = await this.callMCPTool('scrape_as_markdown', { url });
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        const markdownContent = result.content[0].text;
+        console.log(`📄 Markdown content length: ${markdownContent.length} characters`);
+        
+        // Parse Flipkart-specific data from markdown
+        const productData = this.parseFlipkartFromMarkdown(markdownContent, url);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ Flipkart scraping completed in ${duration}ms`);
+        console.groupEnd();
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      // Fallback: Try HTML scraping if markdown fails
+      console.log(`🔄 Markdown failed, trying scrape_as_html...`);
+      const htmlResult = await this.callMCPTool('scrape_as_html', { url });
+      
+      if (htmlResult && htmlResult.content && htmlResult.content[0] && htmlResult.content[0].text) {
+        const htmlContent = htmlResult.content[0].text;
+        const productData = this.parseFlipkartFromHTML(htmlContent, url);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ Flipkart HTML scraping completed in ${duration}ms`);
+        console.groupEnd();
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      const duration = Date.now() - startTime;
+      console.error(`❌ No data received from Flipkart after ${duration}ms`);
+      console.groupEnd();
+      
+      return {
+        success: false,
+        error: 'No product data received from Flipkart'
+      };
+      
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      console.error(`💥 Flipkart scraping failed after ${duration}ms:`, error);
+      console.groupEnd();
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Flipkart scraping failed'
+      };
+    }
+  }
+
+  /**
+   * Parse Flipkart product data from markdown content
+   */
+  private parseFlipkartFromMarkdown(markdown: string, url: string): any {
+    console.log(`🔍 Parsing Flipkart markdown content...`);
+    
+    const data: any = {
+      url: url,
+      currency: 'INR',
+      source: 'flipkart'
+    };
+
+    // Extract title (look for main heading)
+    const titleMatch = markdown.match(/^#\s+(.+)$/m) || 
+                      markdown.match(/\*\*([^*]+)\*\*/);
+    if (titleMatch) {
+      data.title = titleMatch[1].trim();
+      console.log(`📝 Title: ${data.title}`);
+    }
+
+    // Extract price (₹ symbol patterns)
+    const priceMatches = markdown.match(/₹[\d,]+/g);
+    if (priceMatches && priceMatches.length > 0) {
+      // Take the first price found (usually the main price)
+      const priceStr = priceMatches[0];
+      data.final_price = priceStr;
+      data.price = parseFloat(priceStr.replace(/₹|,/g, ''));
+      console.log(`💰 Price: ${data.final_price} (${data.price})`);
+    }
+
+    // Extract rating
+    const ratingMatch = markdown.match(/(\d+\.?\d*)\s*(?:★|star|out of|\/)/i);
+    if (ratingMatch) {
+      data.rating = parseFloat(ratingMatch[1]);
+      console.log(`⭐ Rating: ${data.rating}`);
+    }
+
+    // Extract brand/seller
+    const brandMatch = markdown.match(/(?:Brand|Seller|by)\s*:?\s*([A-Za-z][A-Za-z\s]+)/i);
+    if (brandMatch) {
+      data.brand = brandMatch[1].trim().split(/\s+/).slice(0, 2).join(' '); // Limit to 2 words
+      console.log(`🏷️ Brand: ${data.brand}`);
+    }
+
+    // Extract specifications
+    data.specifications = [];
+    const specLines = markdown.split('\n').filter(line => 
+      line.includes(':') && 
+      !line.startsWith('#') && 
+      line.trim().length > 5 &&
+      line.trim().length < 100
+    );
+    
+    specLines.forEach(line => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        const key = line.substring(0, colonIndex).trim().replace(/\*|\-|\•/g, '');
+        const value = line.substring(colonIndex + 1).trim();
+        
+        if (key && value && key.length < 50 && value.length < 100) {
+          data.specifications.push({
+            specification_name: key,
+            specification_value: value
+          });
+        }
+      }
+    });
+
+    console.log(`📋 Specifications: ${data.specifications.length} items`);
+
+    // Extract availability
+    if (markdown.toLowerCase().includes('out of stock')) {
+      data.availability = 'out-of-stock';
+    } else if (markdown.toLowerCase().includes('in stock') || markdown.toLowerCase().includes('available')) {
+      data.availability = 'in-stock';
+    } else {
+      data.availability = 'unknown';
+    }
+
+    // Extract product highlights/features
+    data.highlights = [];
+    const bulletPoints = markdown.match(/(?:^|\n)[\*\-\•]\s*(.+)/gm);
+    if (bulletPoints) {
+      data.highlights = bulletPoints
+        .map(point => point.replace(/^[\n\*\-\•]\s*/, '').trim())
+        .filter(point => point.length > 10 && point.length < 150)
+        .slice(0, 5); // Limit to 5 highlights
+    }
+
+    console.log(`✨ Highlights: ${data.highlights.length} items`);
+
+    // Try to extract category from URL structure
+    const urlParts = url.split('/');
+    const categoryPart = urlParts.find(part => 
+      part.length > 3 && 
+      !part.includes('www') && 
+      !part.includes('flipkart') &&
+      !part.includes('p') &&
+      !part.includes('pid')
+    );
+    if (categoryPart) {
+      data.category = categoryPart.replace(/-/g, ' ');
+      console.log(`🏷️ Category: ${data.category}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Parse Flipkart product data from HTML content (fallback)
+   */
+  private parseFlipkartFromHTML(html: string, url: string): any {
+    console.log(`🔍 Parsing Flipkart HTML content...`);
+    
+    const data: any = {
+      url: url,
+      currency: 'INR',
+      source: 'flipkart-html'
+    };
+
+    // Extract title from title tag or h1
+    const titleMatch = html.match(/<title>([^<]+)</i) || 
+                      html.match(/<h1[^>]*>([^<]+)</i);
+    if (titleMatch) {
+      data.title = titleMatch[1].trim().replace(/\s*-\s*Flipkart.*$/, '');
+    }
+
+    // Extract price
+    const priceMatch = html.match(/₹[\d,]+/);
+    if (priceMatch) {
+      data.final_price = priceMatch[0];
+      data.price = parseFloat(priceMatch[0].replace(/₹|,/g, ''));
+    }
+
+    // Basic availability check
+    data.availability = html.toLowerCase().includes('out of stock') ? 'out-of-stock' : 'in-stock';
+
+    return data;
+  }
+
+  /**
    * Generic markdown scraping
    */
   async scrapeAsMarkdown(url: string): Promise<MCPBrightDataResult> {
@@ -484,8 +731,8 @@ export class AIProductEnhancer {
       return 'electronics';
     }
     
-    // Fashion
-    if (titleLower.match(/shirt|t-shirt|dress|pants|jeans|jacket|coat|sweater|hoodie|blazer|suit|clothing|apparel/)) {
+    // Fashion (including Myntra-specific terms)
+    if (titleLower.match(/shirt|t-shirt|dress|pants|jeans|jacket|coat|sweater|hoodie|blazer|suit|clothing|apparel|kurta|saree|lehenga|kurti|ethnic|wear|polo|collar|regular fit|slim fit|cotton|denim|casual|formal/)) {
       return 'fashion';
     }
     
@@ -499,8 +746,8 @@ export class AIProductEnhancer {
       return 'home-garden';
     }
     
-    // Beauty & Health
-    if (titleLower.match(/makeup|cosmetics|skincare|perfume|beauty|health|supplement|vitamin|cream|serum/)) {
+    // Beauty & Health (including Myntra-specific terms)
+    if (titleLower.match(/makeup|cosmetics|skincare|perfume|beauty|health|supplement|vitamin|cream|serum|whitening|brightening|moisturizer|face cream|day cream|night cream|spf|sunscreen|lotion|gel|toner|cleanser|scrub/)) {
       return 'beauty-health';
     }
     

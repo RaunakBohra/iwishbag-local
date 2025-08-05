@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { brightDataProductService, ScrapeOptions } from '@/services/BrightDataProductService';
 import { ProductData, FetchResult } from '@/services/ProductDataFetchService';
 import { useUrlAutoDetection } from './useUrlAnalysis';
@@ -100,26 +100,27 @@ export const useProductScraping = (initialUrl?: string): UseProductScrapingResul
   }, []);
 
   /**
-   * Auto-scrape when URL changes (if it's a supported platform)
+   * Auto-scrape disabled - only manual scraping via button clicks
+   * This prevents automatic fetching when URLs are pasted
    */
-  useEffect(() => {
-    if (initialUrl && urlAnalysis.isValid && urlAnalysis.suggestedCountry) {
-      // Only auto-scrape for major e-commerce platforms
-      const domain = urlAnalysis.domain.toLowerCase();
-      const supportedDomains = ['amazon', 'ebay', 'walmart', 'bestbuy', 'etsy', 'zara'];
-      
-      if (supportedDomains.some(d => domain.includes(d))) {
-        scrapeProduct(initialUrl, { enhanceWithAI: true });
-      }
-    }
-  }, [initialUrl, urlAnalysis.isValid, urlAnalysis.domain, scrapeProduct]);
+  // useEffect(() => {
+  //   if (initialUrl && urlAnalysis.isValid && urlAnalysis.suggestedCountry) {
+  //     // Only auto-scrape for major e-commerce platforms
+  //     const domain = urlAnalysis.domain.toLowerCase();
+  //     const supportedDomains = ['amazon', 'ebay', 'walmart', 'bestbuy', 'etsy', 'zara', 'myntra'];
+  //     
+  //     if (supportedDomains.some(d => domain.includes(d))) {
+  //       scrapeProduct(initialUrl, { enhanceWithAI: true });
+  //     }
+  //   }
+  // }, [initialUrl, urlAnalysis.isValid, urlAnalysis.domain, scrapeProduct]);
 
   /**
-   * Auto-fill data preparation
+   * Auto-fill data preparation - memoized to prevent infinite re-renders
    */
   const shouldAutoFill = isScraped && productData !== null && !error;
   
-  const autoFillData = {
+  const autoFillData = useMemo(() => ({
     productName: productData?.title,
     price: productData?.price,
     weight: productData?.weight || productData?.weight_value,
@@ -127,7 +128,7 @@ export const useProductScraping = (initialUrl?: string): UseProductScrapingResul
     category: productData?.category,
     brand: productData?.brand,
     hsn: (productData as any)?.suggested_hsn
-  };
+  }), [productData, isScraped, error]);
 
   return {
     // State
