@@ -62,6 +62,23 @@ const PLATFORM_CONFIGS = {
       'Video Games': 'electronics'
     }
   },
+  ae: {
+    scraperType: 'ae_product',
+    fields: ['product_name', 'final_price', 'currency', 'main_image', 'brand', 'description', 'availability', 'color', 'size'],
+    fashionFocus: true,
+    defaultCurrency: 'USD',
+    categoryMapping: {
+      'T-Shirts': 'fashion',
+      'Shirts': 'fashion', 
+      'Hoodies & Sweatshirts': 'fashion',
+      'Sweaters': 'fashion',
+      'Jeans': 'fashion',
+      'Pants': 'fashion',
+      'Dresses': 'fashion',
+      'Tops': 'fashion',
+      'Clearance': 'fashion'
+    }
+  },
   myntra: {
     scraperType: 'myntra_product',
     fields: ['title', 'final_price', 'currency', 'images', 'brand', 'specifications', 'offers'],
@@ -156,6 +173,9 @@ class BrightDataProductService {
           break;
         case 'bestbuy':
           result = await this.scrapeBestBuyProduct(url, options);
+          break;
+        case 'ae':
+          result = await this.scrapeAEProduct(url, options);
           break;
         case 'myntra':
           result = await this.scrapeMyntraProduct(url, options);
@@ -334,6 +354,40 @@ class BrightDataProductService {
     }
   }
 
+
+  /**
+   * Scrape American Eagle product using Bright Data MCP
+   */
+  private async scrapeAEProduct(url: string, options: ScrapeOptions): Promise<FetchResult> {
+    try {
+      const mcpResult = await this.callBrightDataMCP('ae_product', {
+        url,
+        include_images: options.includeImages !== false,
+        include_variants: options.includeVariants !== false,
+        include_availability: true,
+        include_reviews: options.includeReviews !== false
+      });
+
+      if (!mcpResult.success) {
+        throw new Error(mcpResult.error || 'American Eagle scraping failed');
+      }
+
+      const productData = this.normalizeAEData(mcpResult.data, url);
+      
+      return {
+        success: true,
+        data: productData,
+        source: 'scraper'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'American Eagle scraping failed',
+        source: 'scraper'
+      };
+    }
+  }
 
   /**
    * Scrape Myntra product using Bright Data MCP
@@ -552,6 +606,8 @@ class BrightDataProductService {
         return await mcpBrightDataBridge.scrapeWalmartProduct(params.url, params);
       case 'bestbuy_product':
         return await mcpBrightDataBridge.scrapeBestBuyProduct(params.url, params);
+      case 'ae_product':
+        return await mcpBrightDataBridge.scrapeAEProduct(params.url, params);
       case 'myntra_product':
         return await mcpBrightDataBridge.scrapeMyntraProduct(params.url, params);
       case 'target_product':
@@ -583,6 +639,7 @@ class BrightDataProductService {
     if (urlLower.includes('ebay.')) return 'ebay';
     if (urlLower.includes('walmart.com')) return 'walmart';
     if (urlLower.includes('bestbuy.com')) return 'bestbuy';
+    if (urlLower.includes('ae.com')) return 'ae';
     if (urlLower.includes('myntra.com')) return 'myntra';
     if (urlLower.includes('target.com')) return 'target';
     if (urlLower.includes('hm.com')) return 'hm';
@@ -684,6 +741,12 @@ class BrightDataProductService {
     if (urlLower.includes('bestbuy.com')) return 'US';
     if (urlLower.includes('bestbuy.ca')) return 'CA';
     
+    // American Eagle (primarily US, some international)
+    if (urlLower.includes('ae.com')) {
+      if (urlLower.includes('/ca/')) return 'CA';
+      return 'US'; // Default to US for American Eagle
+    }
+    
     // Walmart
     if (urlLower.includes('walmart.com')) return 'US';
     if (urlLower.includes('walmart.ca')) return 'CA';
@@ -736,6 +799,7 @@ class BrightDataProductService {
       'walmart.com',    // Walmart US
       'bestbuy.com',    // Best Buy US
       'target.com',     // Target US
+      'ae.com',         // American Eagle US
       'ebay.com',       // eBay US (primary domain)
       'costco.com',     // Costco US
       'homedepot.com',  // Home Depot US
@@ -1168,6 +1232,136 @@ class BrightDataProductService {
         ...(rawData.colors ? [{ name: 'Color', options: rawData.colors }] : [])
       ]
     };
+  }
+
+  /**
+   * Normalize American Eagle product data to our standard format
+   */
+  private normalizeAEData(rawData: any, url: string): ProductData {
+    try {
+      // Handle American Eagle's response format from the dataset
+      const aeProduct = Array.isArray(rawData) ? rawData[0] : rawData;
+      
+      // Extract price (final_price is the discounted price, initial_price is original)
+      const price = aeProduct.final_price || aeProduct.initial_price;
+      
+      // Build product data
+      return {
+        title: aeProduct.product_name || aeProduct.title || '',
+        price: price ? this.parsePrice(price.toString()) : 0,
+        currency: aeProduct.currency || 'USD',
+        images: this.extractAEImages(aeProduct),
+        brand: aeProduct.brand || aeProduct.seller_name || 'American Eagle',
+        category: this.normalizeAECategory(aeProduct.category || aeProduct.root_category),
+        availability: aeProduct.in_stock ? 'in-stock' : 'out-of-stock',
+        description: aeProduct.description || '',
+        rating: aeProduct.rating || 0,
+        reviews_count: aeProduct.reviews_count || 0,
+        variants: this.extractAEVariants(aeProduct),
+        weight: this.estimateWeight(aeProduct.product_name || '', this.normalizeAECategory(aeProduct.category)),
+        url: aeProduct.url || url
+      };
+    } catch (error) {
+      console.error('Error normalizing AE data:', error);
+      // Return minimal data structure with what we can safely extract
+      return {
+        title: rawData?.product_name || 'Unknown Product',
+        price: 0,
+        currency: 'USD',
+        images: [],
+        brand: 'American Eagle',
+        category: 'fashion',
+        availability: 'unknown',
+        variants: []
+      };
+    }
+  }
+
+  /**
+   * Extract and clean AE images
+   */
+  private extractAEImages(aeProduct: any): string[] {
+    const images: string[] = [];
+    
+    // Add main image
+    if (aeProduct.main_image) {
+      images.push(aeProduct.main_image);
+    }
+    
+    // Add additional images from image_urls array
+    if (Array.isArray(aeProduct.image_urls)) {
+      aeProduct.image_urls.forEach((img: string) => {
+        if (img && img !== 'undefined' && !images.includes(img)) {
+          images.push(img);
+        }
+      });
+    }
+    
+    return images.slice(0, 5); // Limit to 5 images
+  }
+
+  /**
+   * Normalize AE category to our standard categories
+   */
+  private normalizeAECategory(category: string): string {
+    if (!category) return 'fashion';
+    
+    const categoryLower = category.toLowerCase();
+    
+    // American Eagle is primarily a fashion retailer
+    if (categoryLower.includes('clearance')) return 'fashion';
+    if (categoryLower.includes('t-shirt') || categoryLower.includes('shirt')) return 'fashion';
+    if (categoryLower.includes('jean') || categoryLower.includes('pant')) return 'fashion';
+    if (categoryLower.includes('dress') || categoryLower.includes('top')) return 'fashion';
+    if (categoryLower.includes('hoodie') || categoryLower.includes('sweatshirt')) return 'fashion';
+    if (categoryLower.includes('sweater') || categoryLower.includes('cardigan')) return 'fashion';
+    if (categoryLower.includes('jacket') || categoryLower.includes('coat')) return 'fashion';
+    if (categoryLower.includes('underwear') || categoryLower.includes('bra')) return 'fashion';
+    if (categoryLower.includes('swimwear') || categoryLower.includes('bikini')) return 'fashion';
+    if (categoryLower.includes('shoe') || categoryLower.includes('boot')) return 'footwear';
+    if (categoryLower.includes('accessory') || categoryLower.includes('bag')) return 'accessories';
+    
+    return 'fashion'; // Default for American Eagle
+  }
+
+  /**
+   * Extract AE variants (color, size, etc.)
+   */
+  private extractAEVariants(aeProduct: any): Array<{name: string, options: string[]}> {
+    const variants: Array<{name: string, options: string[]}> = [];
+    
+    // Add color variant if available
+    if (aeProduct.color) {
+      variants.push({
+        name: 'Color',
+        options: [aeProduct.color]
+      });
+    }
+    
+    // Add size variant if available
+    if (aeProduct.size) {
+      variants.push({
+        name: 'Size',
+        options: [aeProduct.size]
+      });
+    }
+    
+    // Add availability information as variant
+    if (Array.isArray(aeProduct.availability)) {
+      const availableSizes = aeProduct.availability.map((avail: string) => {
+        const match = avail.match(/^(\w+)/);
+        return match ? match[1] : avail;
+      });
+      
+      if (availableSizes.length > 0) {
+        variants.push({
+          name: 'Available Sizes',
+          options: availableSizes
+        });
+      }
+    }
+    
+    return variants;
   }
 
   private normalizeMyntraData(rawData: any): ProductData {

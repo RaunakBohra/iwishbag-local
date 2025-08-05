@@ -374,6 +374,41 @@ class MCPBrightDataBridge {
 
 
   /**
+   * Scrape American Eagle product data using real Bright Data MCP
+   */
+  async scrapeAEProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {
+    try {
+      const result = await this.callMCPTool('ae_product', { url });
+      
+      if (result && result.content && result.content[0] && result.content[0].text) {
+        const productData = JSON.parse(result.content[0].text)[0];
+        
+        if (productData.warning) {
+          return {
+            success: false,
+            error: `American Eagle scraping warning: ${productData.warning}`
+          };
+        }
+        
+        return {
+          success: true,
+          data: productData
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No product data received from American Eagle'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'American Eagle scraping failed'
+      };
+    }
+  }
+
+  /**
    * Scrape Myntra product data using real Bright Data MCP
    */
   async scrapeMyntraProduct(url: string, options: any = {}): Promise<MCPBrightDataResult> {

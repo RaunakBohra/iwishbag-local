@@ -57,6 +57,7 @@ export default {
         'target_product': 'target_product', // Custom Target implementation
         'hm_product': 'hm_product', // Custom H&M implementation
         'asos_product': 'asos_product', // Custom ASOS implementation
+        'ae_product': 'ae_product', // Custom American Eagle implementation
         'bestbuy_product': 'web_data_bestbuy_products',
         'ebay_product': 'ebay_product', // Custom eBay implementation 
         'walmart_product': 'web_data_walmart_product',
@@ -121,6 +122,28 @@ export default {
         
         return new Response(
           JSON.stringify(asosResult),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId,
+              'X-Duration-Ms': duration.toString(),
+            },
+          }
+        );
+      }
+      
+      // Handle American Eagle with custom implementation
+      if (tool === 'ae_product') {
+        console.log(`🦅 [${requestId}] Using custom American Eagle implementation`);
+        const aeApiToken = 'bb4c5d5e818b61cc192b25817a5f5f19e04352dbf5fcb9221e2a40d22b9cf19b';
+        const aeResult = await callAEProductAPI(args?.url, aeApiToken, requestId);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ [${requestId}] American Eagle request completed in ${duration}ms`);
+        
+        return new Response(
+          JSON.stringify(aeResult),
           {
             headers: {
               ...corsHeaders,
@@ -965,6 +988,133 @@ function mapASOSDataToProductData(rawData: any, url: string): any {
     url: url,
     source: 'asos-dataset'
   };
+}
+
+/**
+ * American Eagle Product API Implementation
+ * Uses Bright Data Datasets API with dataset: gd_le6plu065keypwyir
+ */
+async function callAEProductAPI(url: string, apiToken: string, requestId: string) {
+  try {
+    console.log(`🦅 [${requestId}] Starting American Eagle product scraping for: ${url}`);
+    
+    // Trigger data collection using American Eagle dataset
+    const datasetId = 'gd_le6plu065keypwyir'; // American Eagle dataset ID
+    const triggerResult = await triggerAEBrightDataCollection(url, datasetId, apiToken, requestId);
+    
+    if (!triggerResult.snapshot_id) {
+      throw new Error('No snapshot_id received from AE dataset trigger');
+    }
+    
+    console.log(`📋 [${requestId}] AE data collection triggered with snapshot: ${triggerResult.snapshot_id}`);
+    
+    // Wait for results with polling
+    const data = await waitForAEBrightDataResults(triggerResult.snapshot_id, apiToken, requestId);
+    
+    console.log(`📥 [${requestId}] AE data collection completed successfully`);
+    
+    return {
+      content: [{
+        text: JSON.stringify(data)
+      }]
+    };
+    
+  } catch (error) {
+    console.error(`💥 [${requestId}] AE product API call failed:`, error);
+    return {
+      content: [{
+        text: JSON.stringify({
+          error: error instanceof Error ? error.message : 'American Eagle scraping failed',
+          status: 'failed'
+        })
+      }]
+    };
+  }
+}
+
+/**
+ * Trigger American Eagle Bright Data collection
+ */
+async function triggerAEBrightDataCollection(url: string, datasetId: string, apiToken: string, requestId: string) {
+  console.log(`🚀 [${requestId}] Triggering AE data collection...`);
+  
+  const response = await fetch(`https://api.brightdata.com/datasets/v3/trigger?dataset_id=${datasetId}&include_errors=true`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify([{ url }])
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`AE dataset trigger failed: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  console.log(`📋 [${requestId}] AE trigger response:`, result);
+  
+  return result;
+}
+
+/**
+ * Wait for American Eagle Bright Data results with polling
+ */
+async function waitForAEBrightDataResults(snapshotId: string, apiToken: string, requestId: string) {
+  console.log(`⏳ [${requestId}] Waiting for AE data collection...`);
+  
+  const maxAttempts = 30; // 30 attempts * 2 seconds = 60 seconds max
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    console.log(`🔄 [${requestId}] AE polling attempt ${attempts}/${maxAttempts}...`);
+    
+    // Check progress
+    const progressResponse = await fetch(`https://api.brightdata.com/datasets/v3/progress/${snapshotId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiToken}`
+      }
+    });
+    
+    if (!progressResponse.ok) {
+      console.error(`❌ [${requestId}] AE progress check failed: ${progressResponse.status}`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      continue;
+    }
+    
+    const progressResult = await progressResponse.json();
+    console.log(`📊 [${requestId}] AE progress status: ${progressResult.status}`);
+    
+    if (progressResult.status === 'ready') {
+      // Data is ready, download it
+      console.log(`✅ [${requestId}] AE data ready! Downloading...`);
+      
+      const dataResponse = await fetch(`https://api.brightdata.com/datasets/v3/snapshot/${snapshotId}?format=json`, {
+        headers: {
+          'Authorization': `Bearer ${apiToken}`
+        }
+      });
+      
+      if (!dataResponse.ok) {
+        throw new Error(`AE data download failed: ${dataResponse.status}`);
+      }
+      
+      const data = await dataResponse.json();
+      console.log(`📥 [${requestId}] Downloaded ${data.length || 0} AE records`);
+      
+      return data;
+      
+    } else if (progressResult.status === 'failed') {
+      throw new Error(`AE dataset collection failed: ${progressResult.error || 'Unknown error'}`);
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error('AE dataset collection timeout - data not ready within 60 seconds');
 }
 
 /**
