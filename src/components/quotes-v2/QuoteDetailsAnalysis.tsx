@@ -14,8 +14,7 @@ import {
   Info,
   Settings,
   Tag,
-  Globe,
-  ArrowRightLeft
+  Globe
 } from 'lucide-react';
 import { currencyService } from '@/services/CurrencyService';
 import { simplifiedQuoteCalculator } from '@/services/SimplifiedQuoteCalculator';
@@ -96,7 +95,7 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
       icon: Globe,
       title: 'Route',
       value: `${inputs.origin_country || quote.origin_country || 'US'} → ${inputs.destination_country || quote.destination_country || 'NP'}`,
-      subtitle: inputs.shipping_method || 'International',
+      subtitle: `${inputs.shipping_method || 'International'} • Rate: ${(inputs.exchange_rate || 1).toFixed(4)}`,
       color: 'text-blue-600'
     },
     {
@@ -127,13 +126,6 @@ export const QuoteDetailsAnalysis: React.FC<QuoteDetailsAnalysisProps> = ({ quot
       value: `${rates.local_tax_percentage || 0}% ${taxInfo.local_tax_name}`,
       subtitle: `${formatCurrency(totalTaxAmount)} tax`,
       color: 'text-orange-600'
-    },
-    {
-      icon: ArrowRightLeft,
-      title: 'Exchange Rate',
-      value: `1 ${originCurrency} = ${(inputs.exchange_rate || 1).toFixed(4)}`,
-      subtitle: `${customerCurrency}/${originCurrency} rate`,
-      color: 'text-indigo-600'
     },
     {
       icon: DollarSign,

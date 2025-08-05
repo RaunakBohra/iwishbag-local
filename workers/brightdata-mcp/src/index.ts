@@ -207,7 +207,7 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
       body: JSON.stringify([{
         url: url,
         zipcode: '94107', // Default US zipcode
-        language: 'en'
+        language: '' // Empty string as per Bright Data API requirements
       }])
     });
 
@@ -217,7 +217,7 @@ async function triggerBrightDataCollection(url: string, apiToken: string, reques
       console.log(`📋 [${requestId}] Request body was:`, JSON.stringify([{
         url: url,
         zipcode: '94107',
-        language: 'en'
+        language: ''
       }]));
       throw new Error(`Bright Data trigger failed: ${triggerResponse.status} - ${errorText}`);
     }
