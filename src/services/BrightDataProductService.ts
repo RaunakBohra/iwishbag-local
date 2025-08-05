@@ -208,7 +208,7 @@ class BrightDataProductService {
         throw new Error(mcpResult.error || 'Amazon scraping failed');
       }
 
-      const productData = this.normalizeAmazonData(mcpResult.data);
+      const productData = this.normalizeAmazonData(mcpResult.data, url);
       
       return {
         success: true,
@@ -272,7 +272,7 @@ class BrightDataProductService {
         throw new Error(mcpResult.error || 'Walmart scraping failed');
       }
 
-      const productData = this.normalizeWalmartData(mcpResult.data);
+      const productData = this.normalizeWalmartData(mcpResult.data, url);
       
       return {
         success: true,
@@ -308,7 +308,7 @@ class BrightDataProductService {
         throw new Error(mcpResult.error || 'Best Buy scraping failed');
       }
 
-      const productData = this.normalizeBestBuyData(mcpResult.data);
+      const productData = this.normalizeBestBuyData(mcpResult.data, url);
       
       return {
         success: true,
@@ -440,7 +440,7 @@ class BrightDataProductService {
         throw new Error(mcpResult.error || 'Target scraping failed');
       }
 
-      const productData = this.normalizeTargetData(mcpResult.data);
+      const productData = this.normalizeTargetData(mcpResult.data, url);
       
       return {
         success: true,
@@ -588,15 +588,38 @@ class BrightDataProductService {
   }
 
   /**
+   * Detect if a marketplace is US/North American (uses Imperial system - lbs)
+   * vs Rest of World (uses Metric system - kg)
+   */
+  private isUSMarketplace(url: string): boolean {
+    const urlLower = url.toLowerCase();
+    
+    // US/North American marketplaces that use pounds (lbs)
+    const usMarketplaces = [
+      'amazon.com',     // Amazon US
+      'amazon.ca',      // Amazon Canada
+      'walmart.com',    // Walmart US
+      'bestbuy.com',    // Best Buy US
+      'target.com',     // Target US
+      'ebay.com',       // eBay US (primary domain)
+      'costco.com',     // Costco US
+      'homedepot.com',  // Home Depot US
+      'lowes.com'       // Lowe's US
+    ];
+    
+    return usMarketplaces.some(domain => urlLower.includes(domain));
+  }
+
+  /**
    * Data normalization methods for real Bright Data responses
    */
-  private normalizeAmazonData(rawData: any): ProductData {
+  private normalizeAmazonData(rawData: any, url: string): ProductData {
     // Handle real Bright Data Amazon response format
     return {
       title: rawData.title || rawData.product_title,
       price: rawData.final_price || rawData.initial_price || this.parsePrice(rawData.price),
       currency: rawData.currency || 'USD',
-      weight: this.extractWeightFromAmazon(rawData),
+      weight: this.extractWeightFromAmazon(rawData, url),
       weight_value: rawData.weight_value,
       weight_unit: rawData.weight_unit || 'lbs',
       weight_raw: rawData.weight_raw,
@@ -617,16 +640,16 @@ class BrightDataProductService {
   /**
    * Extract weight from Amazon data (shipping weight, dimensions, etc.)
    */
-  private extractWeightFromAmazon(rawData: any): number | undefined {
+  private extractWeightFromAmazon(rawData: any, url: string): number | undefined {
     // Try multiple weight sources from Amazon
     if (rawData.shipping_weight) {
-      return this.parseWeight(rawData.shipping_weight);
+      return this.parseWeight(rawData.shipping_weight, url);
     }
     if (rawData.item_weight) {
-      return this.parseWeight(rawData.item_weight);
+      return this.parseWeight(rawData.item_weight, url);
     }
     if (rawData.package_weight) {
-      return this.parseWeight(rawData.package_weight);
+      return this.parseWeight(rawData.package_weight, url);
     }
     // Estimate based on category if no weight available
     return this.estimateWeight(rawData.title || '', this.inferCategory(rawData.title || ''));
@@ -644,12 +667,12 @@ class BrightDataProductService {
     };
   }
 
-  private normalizeWalmartData(rawData: any): ProductData {
+  private normalizeWalmartData(rawData: any, url: string): ProductData {
     return {
       title: rawData.title || rawData.name,
       price: this.parsePrice(rawData.price),
       currency: 'USD',
-      weight: this.parseWeight(rawData.shipping_weight),
+      weight: this.parseWeight(rawData.shipping_weight, url),
       images: rawData.images || [],
       brand: rawData.brand,
       category: rawData.category || this.inferCategory(rawData.title),
@@ -657,7 +680,7 @@ class BrightDataProductService {
     };
   }
 
-  private normalizeBestBuyData(rawData: any): ProductData {
+  private normalizeBestBuyData(rawData: any, url: string): ProductData {
     try {
       // Handle Best Buy's comprehensive response format
       const finalPrice = rawData.final_price || rawData.offer_price || rawData.price;
@@ -690,7 +713,7 @@ class BrightDataProductService {
       // Extract weight from specifications (safely)
       let weight: number | undefined;
       try {
-        weight = this.extractWeightFromBestBuySpecs(rawData.product_specifications);
+        weight = this.extractWeightFromBestBuySpecs(rawData.product_specifications, url);
       } catch (weightError) {
         console.warn('Failed to extract weight from Best Buy specifications:', weightError);
       }
@@ -968,7 +991,7 @@ class BrightDataProductService {
     }
   }
 
-  private normalizeTargetData(rawData: any): ProductData {
+  private normalizeTargetData(rawData: any, url: string): ProductData {
     try {
       // Handle Target's comprehensive response format
       const finalPrice = rawData.final_price || rawData.offer_price || rawData.price;
@@ -995,11 +1018,11 @@ class BrightDataProductService {
       // Extract weight from specifications (safely)
       let weight: number | undefined;
       try {
-        weight = this.extractWeightFromTargetSpecs(rawData.specifications || rawData.product_specifications);
+        weight = this.extractWeightFromTargetSpecs(rawData.specifications || rawData.product_specifications, url);
         
         // Fallback to weight field directly
         if (!weight && rawData.weight) {
-          weight = this.parseWeight(rawData.weight);
+          weight = this.parseWeight(rawData.weight, url);
         }
       } catch (weightError) {
         console.warn('Failed to extract weight from Target specifications:', weightError);
@@ -1211,7 +1234,7 @@ class BrightDataProductService {
   /**
    * Extract weight from Best Buy product specifications with intelligent parsing
    */
-  private extractWeightFromBestBuySpecs(specifications: any[]): number | undefined {
+  private extractWeightFromBestBuySpecs(specifications: any[], url: string): number | undefined {
     if (!specifications || !Array.isArray(specifications)) return undefined;
     
     // Priority order for weight specifications
@@ -1230,9 +1253,10 @@ class BrightDataProductService {
       );
       
       if (weightSpec && weightSpec.specification_value) {
-        const weight = this.parseWeight(weightSpec.specification_value);
+        const weight = this.parseWeight(weightSpec.specification_value, url);
         if (weight !== undefined) {
-          console.log(`🏋️ Found weight from ${priorityName}: ${weight} kg`);
+          const unit = this.isUSMarketplace(url) ? 'lbs' : 'kg';
+          console.log(`🏋️ Found weight from ${priorityName}: ${weight} ${unit}`);
           return weight;
         }
       }
@@ -1245,21 +1269,22 @@ class BrightDataProductService {
     );
     
     if (anyWeightSpec && anyWeightSpec.specification_value) {
-      const weight = this.parseWeight(anyWeightSpec.specification_value);
+      const weight = this.parseWeight(anyWeightSpec.specification_value, url);
       if (weight !== undefined) {
-        console.log(`🏋️ Found weight from ${anyWeightSpec.specification_name}: ${weight} kg`);
+        const unit = this.isUSMarketplace(url) ? 'lbs' : 'kg';
+        console.log(`🏋️ Found weight from ${anyWeightSpec.specification_name}: ${weight} ${unit}`);
         return weight;
       }
     }
     
     // If no weight found, try to estimate based on category and other specs
-    return this.estimateWeightFromBestBuySpecs(specifications);
+    return this.estimateWeightFromBestBuySpecs(specifications, url);
   }
 
   /**
    * Estimate weight based on Best Buy product specifications when actual weight not available
    */
-  private estimateWeightFromBestBuySpecs(specifications: any[]): number | undefined {
+  private estimateWeightFromBestBuySpecs(specifications: any[], url: string): number | undefined {
     if (!specifications || !Array.isArray(specifications)) return undefined;
     
     // Look for dimensions to estimate weight
@@ -1345,7 +1370,7 @@ class BrightDataProductService {
   /**
    * Extract weight from Target product specifications with intelligent parsing
    */
-  private extractWeightFromTargetSpecs(specifications: any[]): number | undefined {
+  private extractWeightFromTargetSpecs(specifications: any[], url: string): number | undefined {
     if (!specifications || !Array.isArray(specifications)) return undefined;
     
     // Priority order for weight specifications
@@ -1364,9 +1389,10 @@ class BrightDataProductService {
       );
       
       if (weightSpec && weightSpec.specification_value) {
-        const weight = this.parseWeight(weightSpec.specification_value);
+        const weight = this.parseWeight(weightSpec.specification_value, url);
         if (weight !== undefined) {
-          console.log(`🏋️ Found Target weight from ${priorityName}: ${weight} kg`);
+          const unit = this.isUSMarketplace(url) ? 'lbs' : 'kg';
+          console.log(`🏋️ Found Target weight from ${priorityName}: ${weight} ${unit}`);
           return weight;
         }
       }
@@ -1379,9 +1405,10 @@ class BrightDataProductService {
     );
     
     if (anyWeightSpec && anyWeightSpec.specification_value) {
-      const weight = this.parseWeight(anyWeightSpec.specification_value);
+      const weight = this.parseWeight(anyWeightSpec.specification_value, url);
       if (weight !== undefined) {
-        console.log(`🏋️ Found Target weight from ${anyWeightSpec.specification_name}: ${weight} kg`);
+        const unit = this.isUSMarketplace(url) ? 'lbs' : 'kg';
+        console.log(`🏋️ Found Target weight from ${anyWeightSpec.specification_name}: ${unit}`);
         return weight;
       }
     }
@@ -1488,22 +1515,45 @@ class BrightDataProductService {
     return undefined;
   }
 
-  private parseWeight(weightStr: any): number | undefined {
+  private parseWeight(weightStr: any, url?: string): number | undefined {
     if (typeof weightStr === 'number') return weightStr;
     if (typeof weightStr === 'string') {
-      const match = weightStr.match(/(\d+(?:\.\d+)?)\s*(kg|lb|lbs|pound|pounds|oz|ounce|ounces)/i);
+      const match = weightStr.match(/(\d+(?:\.\d+)?)\s*(g|grams?|kg|kilograms?|lb|lbs|pound|pounds|oz|ounce|ounces)/i);
       if (match) {
         let weight = parseFloat(match[1]);
         const unit = match[2].toLowerCase();
         
-        // Convert to kg
-        if (unit.includes('lb') || unit.includes('pound')) {
-          weight *= 0.453592;
-        } else if (unit.includes('oz') || unit.includes('ounce')) {
-          weight *= 0.0283495;
+        // Determine target unit based on marketplace region
+        const isUSMarket = url ? this.isUSMarketplace(url) : false;
+        const targetUnit = isUSMarket ? 'lbs' : 'kg';
+        
+        console.log(`🏋️ Weight conversion: ${weight} ${unit} → ${targetUnit} (${isUSMarket ? 'US marketplace' : 'International marketplace'})`);
+        
+        if (targetUnit === 'lbs') {
+          // Convert to pounds (US/North American markets)
+          if (unit.includes('kg') || unit.includes('kilogram')) {
+            weight *= 2.20462; // kg to lbs
+          } else if (unit.includes('g') && !unit.includes('kg')) {
+            weight *= 0.00220462; // grams to lbs
+          } else if (unit.includes('oz') || unit.includes('ounce')) {
+            weight *= 0.0625; // oz to lbs
+          }
+          // If already in lbs/pounds, no conversion needed
+          
+        } else {
+          // Convert to kg (International markets)
+          if (unit.includes('lb') || unit.includes('pound')) {
+            weight *= 0.453592; // lbs to kg
+          } else if (unit.includes('oz') || unit.includes('ounce')) {
+            weight *= 0.0283495; // oz to kg
+          } else if (unit.includes('g') && !unit.includes('kg')) {
+            weight *= 0.001; // grams to kg
+          }
+          // If already in kg, no conversion needed
         }
         
-        return weight;
+        console.log(`🏋️ Final weight: ${weight.toFixed(3)} ${targetUnit}`);
+        return Math.round(weight * 1000) / 1000; // Round to 3 decimal places
       }
     }
     return undefined;
